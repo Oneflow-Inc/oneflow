@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/operator/op_attribute.cfg.h"
 
 namespace oneflow {
 namespace op_expr_helper {
@@ -38,18 +37,60 @@ Maybe<one::UserOpExpr> AddOp(const std::string& name) { return AddNOp(2, name); 
 
 Maybe<one::UserOpExpr> ZeroLikeOp() { return ZeroLikeOp(UniqueOpName("zero_like")); }
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
-  return one::OpBuilder("zero_like", name).Input("in").Output("out").Build();
+  return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("constant_like")); }
-Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name) {
-  AttrValue conf;
-  conf.set_at_float(1.0);
-  return one::OpBuilder("constant_like", name)
-      .Input("like")
-      .Output("out")
-      .Attr("value", conf)
-      .Build();
+#define DEFINE_FLOATING_CONSTATNT_OP(cpp_type, data_type)                        \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \
+                                    const std::string& name) {                   \
+    return one::OpBuilder("constant", name)                                      \
+        .Output("out")                                                           \
+        .Attr<double>("floating_value", value)                                   \
+        .Attr<int64_t>("integer_value", 0)                                       \
+        .Attr<bool>("is_floating_value", true)                                   \
+        .Attr<DataType>("dtype", data_type)                                      \
+        .Attr<Shape>("shape", shape)                                             \
+        .Build();                                                                \
+  }                                                                              \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value) { \
+    return ConstantOp(shape, value, UniqueOpName("constant"));                   \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CONSTATNT_OP, FLOATING_DATA_TYPE_SEQ);
+#undef DEFINE_FLOATING_CONSTATNT_OP
+
+#define DEFINE_INTEGER_CONSTATNT_OP(cpp_type, data_type)                         \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \
+                                    const std::string& name) {                   \
+    return one::OpBuilder("constant", name)                                      \
+        .Output("out")                                                           \
+        .Attr<double>("floating_value", 0.f)                                     \
+        .Attr<int64_t>("integer_value", value)                                   \
+        .Attr<bool>("is_floating_value", false)                                  \
+        .Attr<DataType>("dtype", data_type)                                      \
+        .Attr<Shape>("shape", shape)                                             \
+        .Build();                                                                \
+  }                                                                              \
+  template<>                                                                     \
+  Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value) { \
+    return ConstantOp(shape, value, UniqueOpName("constant"));                   \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
+#undef DEFINE_INTEGER_CONSTATNT_OP
+
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype) {
+  return OnesOp(shape, dtype, UniqueOpName("constant"));
+}
+Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  switch (dtype) {
+#define CONSTANT_DATA_TYPE_CASE(cpp_type, data_type) \
+  case data_type: return ConstantOp(shape, (cpp_type)1, name);
+    OF_PP_FOR_EACH_TUPLE(CONSTANT_DATA_TYPE_CASE, FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ);
+#undef CONSTANT_DATA_TYPE_CASE
+    default: UNIMPLEMENTED_THEN_RETURN();
+  }
 }
 
 Maybe<one::UserOpExpr> IdentityOp() { return IdentityOp(UniqueOpName("identity")); }
@@ -61,7 +102,11 @@ Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape) {
   return ReshapeOp(shape, UniqueOpName("reshape"));
 }
 Maybe<one::UserOpExpr> ReshapeOp(const Shape& shape, const std::string& name) {
-  return one::OpBuilder("reshape", name).Input("in").Output("out").Attr("shape", shape).Build();
+  return one::OpBuilder("reshape", name)
+      .Input("in")
+      .Output("out")
+      .Attr<Shape>("shape", shape)
+      .Build();
 }
 
 Maybe<one::UserOpExpr> ReshapeLikeOp() { return ReshapeLikeOp(UniqueOpName("reshape_like")); }
@@ -77,8 +122,8 @@ Maybe<one::UserOpExpr> ReduceSumOp(const std::vector<int32_t>& reduce_axes, cons
   return one::OpBuilder("reduce_sum", name)
       .Input("input_tensor")
       .Output("output_tensor")
-      .Attr("axis", reduce_axes)
-      .Attr("keepdims", keepdims)
+      .Attr<std::vector<int32_t>>("axis", reduce_axes)
+      .Attr<bool>("keepdims", keepdims)
       .Build();
 }
 
@@ -98,8 +143,8 @@ template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
       .Input("in")
-      .Attr("has_int_operand", false)
-      .Attr("has_float_operand", true)
+      .Attr<bool>("has_int_operand", false)
+      .Attr<bool>("has_float_operand", true)
       .Attr<int64_t>("int_operand", 0)
       .Attr<double>("float_operand", scalar)
       .Output("out")
@@ -115,8 +160,8 @@ template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const int32_t& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
       .Input("in")
-      .Attr("has_int_operand", true)
-      .Attr("has_float_operand", false)
+      .Attr<bool>("has_int_operand", true)
+      .Attr<bool>("has_float_operand", false)
       .Attr<int64_t>("int_operand", scalar)
       .Attr<double>("float_operand", 0.f)
       .Output("out")
@@ -132,8 +177,8 @@ template<>
 Maybe<one::UserOpExpr> ScalarAddOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_add", name)
       .Input("in")
-      .Attr("has_int_operand", false)
-      .Attr("has_float_operand", true)
+      .Attr<bool>("has_int_operand", false)
+      .Attr<bool>("has_float_operand", true)
       .Attr<int64_t>("int_operand", 0)
       .Attr<double>("float_operand", scalar)
       .Output("out")
@@ -149,8 +194,8 @@ template<>
 Maybe<one::UserOpExpr> ScalarAddOp(const int32_t& scalar, const std::string& name) {
   return one::OpBuilder("scalar_add", name)
       .Input("in")
-      .Attr("has_int_operand", true)
-      .Attr("has_float_operand", false)
+      .Attr<bool>("has_int_operand", true)
+      .Attr<bool>("has_float_operand", false)
       .Attr<int64_t>("int_operand", scalar)
       .Attr<double>("float_operand", 0.f)
       .Output("out")
@@ -191,7 +236,11 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type) {
   return CastOp(to_type, UniqueOpName("cast"));
 }
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) {
-  return one::OpBuilder("cast", name).Input("in").Output("out").Attr("dtype", to_type).Build();
+  return one::OpBuilder("cast", name)
+      .Input("in")
+      .Output("out")
+      .Attr<DataType>("dtype", to_type)
+      .Build();
 }
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon) {
@@ -209,8 +258,8 @@ Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& eps
       .Output("dx")
       .Output("gamma_diff")
       .Output("beta_diff")
-      .Attr("axis", axis)
-      .Attr("epsilon", epsilon)
+      .Attr<int32_t>("axis", axis)
+      .Attr<float>("epsilon", epsilon)
       .Build();
 }
 
@@ -237,8 +286,8 @@ Maybe<one::UserOpExpr> LayerNormGradOp(const int64_t& begin_norm_axis, const dou
       .Input("inv_variance")
       .Input("dy")
       .Output("dx")
-      .Attr("begin_norm_axis", begin_norm_axis)
-      .Attr("epsilon", epsilon)
+      .Attr<int64_t>("begin_norm_axis", begin_norm_axis)
+      .Attr<double>("epsilon", epsilon)
       .Build();
 }
 
@@ -259,7 +308,7 @@ Maybe<one::UserOpExpr> LayerNormParamGradOp(const int64_t& begin_params_axis,
   if (has_gamma_diff) { builder.Output("gamma_diff"); }
   if (has_normalized_diff) { builder.Output("normalized_diff"); }
   if (has_beta_diff || has_gamma_diff) { builder.Output("reduce_buf"); }
-  return builder.Attr("begin_params_axis", begin_params_axis).Build();
+  return builder.Attr<int64_t>("begin_params_axis", begin_params_axis).Build();
 }
 
 Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t& max_dim_size) {
@@ -271,8 +320,8 @@ Maybe<one::UserOpExpr> ConcatOp(const int& n, const int64_t& axis, const int64_t
   return one::OpBuilder("concat", name)
       .Input("in", n)
       .Output("out")
-      .Attr("axis", axis)
-      .Attr("max_dim_size", max_dim_size)
+      .Attr<int64_t>("axis", axis)
+      .Attr<int64_t>("max_dim_size", max_dim_size)
       .Build();
 }
 
@@ -284,7 +333,7 @@ Maybe<one::UserOpExpr> UnsortedBatchSegmentSumOp(const int& num_segments, const 
       .Input("data")
       .Input("segment_ids")
       .Output("out")
-      .Attr("num_segments", num_segments)
+      .Attr<int32_t>("num_segments", num_segments)
       .Build();
 }
 
@@ -358,11 +407,11 @@ Maybe<one::UserOpExpr> ConvNdOp(const int& filters, const std::vector<int32_t>& 
       .Output("out")
       .Attr<int32_t>("filters", filters)
       .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-      .Attr("strides", strides)
-      .Attr("padding_before", padding_before)
-      .Attr("dilation_rate", dilation_rate)
-      .Attr("groups", groups)
-      .Attr("data_format", data_format)
+      .Attr<std::vector<int32_t>>("strides", strides)
+      .Attr<std::vector<int32_t>>("padding_before", padding_before)
+      .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
+      .Attr<int32_t>("groups", groups)
+      .Attr<std::string>("data_format", data_format)
       .Build();
 }
 
@@ -384,13 +433,13 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
       .Input("dy")
       .Input("x")
       .Output("filter_diff")
-      .Attr("num_spatial_dims", (int)kernel_size.size())
-      .Attr("kernel_size", kernel_size)
-      .Attr("strides", strides)
-      .Attr("padding_before", padding_before)
-      .Attr("dilation_rate", dilation_rate)
-      .Attr("groups", groups)
-      .Attr("data_format", data_format)
+      .Attr<int32_t>("num_spatial_dims", kernel_size.size())
+      .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
+      .Attr<std::vector<int32_t>>("strides", strides)
+      .Attr<std::vector<int32_t>>("padding_before", padding_before)
+      .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
+      .Attr<int32_t>("groups", groups)
+      .Attr<std::string>("data_format", data_format)
       .Build();
 }
 

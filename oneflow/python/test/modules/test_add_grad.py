@@ -25,7 +25,7 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_add_case1(test_case):
-        add = flow.Add()
+        add = flow.add
         x = Parameter(flow.Tensor(np.random.randn(2, 3)))
         y = Parameter(flow.Tensor(np.random.randn(2, 3)))
         of_out = add(x, y)
@@ -35,7 +35,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
 
     def test_add_case2(test_case):
-        add = flow.Add()
+        add = flow.add
         x = Parameter(flow.Tensor(np.random.randn(2, 3)))
         y = 1
         of_out = add(x, y)
@@ -44,7 +44,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
 
     def test_add_case3(test_case):
-        add = flow.Add()
+        add = flow.add
         x = 1
         y = Parameter(flow.Tensor(np.random.randn(2, 3)))
         of_out = add(x, y)

@@ -28,7 +28,6 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.hob as hob
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
@@ -353,8 +352,8 @@ def GenerateVariableOpConf(
     if model_name is not None:
         op_conf.variable_conf.model_name = model_name
 
-    if parallel_distribution is None or len(parallel_distribution) == 0:
-        parallel_distribution = ["B"]
+    if parallel_distribution is None:
+        parallel_distribution = []
 
     op_conf.variable_conf.parallel_distribution.extend(parallel_distribution)
 

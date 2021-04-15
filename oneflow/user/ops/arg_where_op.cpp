@@ -21,14 +21,11 @@ namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
-  const DataType dtype = ctx->Attr<DataType>("dtype");
   user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *output_desc->mut_shape() = Shape({input_shape->elem_cnt(), input_shape->NumAxes()});
-  *output_desc->mut_data_type() = dtype;
   output_desc->set_is_dynamic(true);
   user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
   *output_size_desc->mut_shape() = Shape({1});
-  *output_size_desc->mut_data_type() = dtype;
   return Maybe<void>::Ok();
 }
 
@@ -39,6 +36,14 @@ REGISTER_USER_OP("argwhere")
     .Output("output")
     .Output("output_size")
     .Attr<DataType>("dtype", DataType::kInt32)
-    .SetTensorDescInferFn(InferTensorDesc);
+    .SetTensorDescInferFn(InferTensorDesc)
+    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const DataType dtype = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      *output_desc->mut_data_type() = dtype;
+      user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
+      *output_size_desc->mut_data_type() = dtype;
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

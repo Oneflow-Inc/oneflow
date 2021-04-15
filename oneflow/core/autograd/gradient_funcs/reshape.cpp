@@ -17,9 +17,9 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
@@ -42,9 +42,8 @@ class ReshapeOpExprGrad : public OpExprGradFunction {
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     const auto& saved_tensors = ctx->SavedTensors();
-    const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
     in_grads->resize(1);
-    JUST(interpreter->Apply(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}, in_grads));
+    in_grads->at(0) = JUST(Dispatch<Tensor>(*backward_op_, {out_grads.at(0), saved_tensors.at(0)}));
     return Maybe<void>::Ok();
   }
 

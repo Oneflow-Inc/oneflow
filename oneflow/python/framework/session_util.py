@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import threading
 from oneflow.core.job.job_set_pb2 import ConfigProto
 import oneflow.core.job.job_set_pb2 as job_set_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compiler as compiler
 import oneflow.python.framework.config_util as config_util
@@ -49,6 +48,7 @@ import inspect
 import oneflow
 import oneflow_api
 import traceback
+from google.protobuf import text_format
 
 
 class Session(object):
@@ -545,3 +545,10 @@ def _GetDefaultConfigProto():
 
 
 session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
+
+
+@oneflow_export("InitEagerGlobalSession")
+def TmpInitEagerGlobalSession():
+    config_pb = _GetDefaultConfigProto()
+    config_proto_str = text_format.MessageToString(config_pb)
+    oneflow_api.InitEagerGlobalSession(config_proto_str)

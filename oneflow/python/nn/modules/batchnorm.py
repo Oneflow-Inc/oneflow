@@ -39,6 +39,8 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _siz
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
+import oneflow_api
+
 
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm"""
@@ -58,21 +60,42 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+            )
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+            )
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features),
+                "running_mean",
+                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features),
+                "running_var",
+                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
             )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
+
+        self.reset_parameters()
+
+    def reset_running_stats(self) -> None:
+        if self.track_running_stats:
+            # running_mean/running_var/num_batches... are registered at runtime depending
+            # if self.track_running_stats is on
+            self.running_mean.fill_(0)  # type: ignore[operator]
+            self.running_var.fill_(1)  # type: ignore[operator]
+
+    def reset_parameters(self) -> None:
+        self.reset_running_stats()
+        if self.affine:
+            flow.nn.init.ones_(self.weight)
+            flow.nn.init.zeros_(self.bias)
 
     def _check_input_dim(self, input):
         raise NotImplementedError
@@ -108,8 +131,7 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self.training = False
-        self._op = (
+        self._training_op = (
             flow.builtin_op("normalization")
             .Input("x")
             .Input("moving_mean")
@@ -120,23 +142,36 @@ class _BatchNorm(_NormBase):
             .Attr("epsilon", eps)
             .Attr("momentum", momentum)
             .Output("y")
+            .Output("mean")
+            .Output("inv_variance")
+            .Attr("training", True)
+            .Build()
+        )
+        self._testing_op = (
+            flow.builtin_op("normalization")
+            .Input("x")
+            .Input("moving_mean")
+            .Input("moving_variance")
+            .Input("gamma")
+            .Input("beta")
+            .Attr("axis", 1)
+            .Attr("epsilon", eps)
+            .Attr("momentum", momentum)
+            .Output("y")
+            .Attr("training", False)
+            .Build()
         )
 
     def forward(self, x):
-        if self.training:
-            self._op = (
-                self._op.Output("mean")
-                .Output("inv_variance")
-                .Attr("training", self.training)
-                .Build()
-            )
-        else:
-            self._op = self._op.Attr("training", self.training).Build()
-
         self._check_input_dim(x)
-        res = self._op(x, self.running_mean, self.running_var, self.weight, self.bias)[
-            0
-        ]
+        if self.training:
+            res = self._training_op(
+                x, self.running_mean, self.running_var, self.weight, self.bias
+            )[0]
+        else:
+            res = self._testing_op(
+                x, self.running_mean, self.running_var, self.weight, self.bias
+            )[0]
         return res
 
 

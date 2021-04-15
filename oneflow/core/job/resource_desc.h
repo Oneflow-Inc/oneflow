@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
 #include <set>
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/env_desc.h"
 
@@ -28,6 +29,8 @@ class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
   ResourceDesc(const Resource& resource, int64_t num_process_per_node);
+  ResourceDesc(const Resource& resource)
+      : resource_(resource) {}  // TODO(yaochi): Only for eager, remove it later
 
   ~ResourceDesc() = default;
 
@@ -53,6 +56,7 @@ class ResourceDesc final {
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
+  bool enable_dry_run() const;
   CollectiveBoxingConf collective_boxing_conf() const;
   bool nccl_use_compute_stream() const;
 
@@ -60,6 +64,7 @@ class ResourceDesc final {
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
   bool enable_tensor_float_32_compute() const { return resource_.enable_tensor_float_32_compute(); }
   const Resource& resource() const { return resource_; }
+  void DumpCudnnConf(const JobConfigProto& job_conf);
 
  private:
   Resource resource_;

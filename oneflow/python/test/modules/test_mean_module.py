@@ -24,15 +24,13 @@ import numpy as np
 )
 class TestModule(flow.unittest.TestCase):
     def test_sum(test_case):
-        mean = flow.Mean(axis=1)
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = mean(input)
+        of_out = flow.mean(input, axis=1)
         np_out = np.mean(input.numpy(), axis=1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        mean = flow.Mean(axis=0)
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = mean(input)
+        of_out = flow.mean(input, axis=0)
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 

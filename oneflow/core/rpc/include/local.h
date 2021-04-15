@@ -55,6 +55,7 @@ class LocalCtrlClient : public CtrlClient {
   void EraseCount(const std::string& k) override;
 
   HashSet<std::string> done_names_;
+  HashSet<std::string> doing_names_;
   std::mutex done_names_mtx_;
   std::condition_variable done_names_cv_;
   HashMap<std::string, std::string> kv_;
@@ -69,7 +70,16 @@ class LocalRpcManager : public RpcManager {
   LocalRpcManager() = default;
   ~LocalRpcManager() override;
   Maybe<void> Bootstrap() override;
-  Maybe<void> CreateServer() override;
+  Maybe<void> CreateServer() override { return Maybe<void>::Ok(); }
+  Maybe<void> CreateClient() override;
+};
+
+class DryRunRpcManager : public RpcManager {
+ public:
+  DryRunRpcManager() = default;
+  ~DryRunRpcManager() override;
+  Maybe<void> Bootstrap() override;
+  Maybe<void> CreateServer() override { return Maybe<void>::Ok(); }
   Maybe<void> CreateClient() override;
 };
 
