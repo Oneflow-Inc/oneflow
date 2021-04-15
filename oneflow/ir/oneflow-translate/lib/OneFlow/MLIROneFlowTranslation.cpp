@@ -200,6 +200,13 @@ DenseIntElementsAttr Importer::DenseIntElementsAttrFromShape(const ::oneflow::Sh
   return DenseIntElementsAttr::get(tt, values);
 }
 
+void WriteDenseIntElementsToShape(mlir::Attribute& attr, ::oneflow::ShapeProto* shape) {
+  for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
+    assert(int_v.isSignedIntN(64));
+    shape->add_dim(int_v.getSExtValue());
+  }
+}
+
 LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf& op,
                                                   std::vector<NamedAttribute>& attr_vec) {
   if (op.has_user_conf() == false) {
@@ -745,10 +752,7 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
     } else if (attr_type == ::oneflow::kAtString) {
       user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
     } else if (attr_type == ::oneflow::kAtShape) {
-      for (auto int_v : attr.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-        assert(int_v.isSignedIntN(64));
-        user_attr.mutable_at_shape()->add_dim(int_v.getSExtValue());
-      }
+      WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
     } else if (attr_type == ::oneflow::kAtDataType) {
       ::oneflow::DataType dt;
       if (succeeded(ConvertDT(attr, dt))) {
