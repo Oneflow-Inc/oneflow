@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_
-#define ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_
+#ifndef ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
+#define ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
@@ -42,46 +42,57 @@ using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::E
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
-  EagerBlobObjectTensorView(const std::function<eager::EagerBlobObject*()>& getter)
-      : getter_(getter) {}
+  EagerBlobObjectTensorView(const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+      : mut_eager_blob_object_(mut_eager_blob_object) {}
 
-  const ShapeView& shape() const override { return getter_()->blob().shape(); }
+  const ShapeView& shape() const override { return mut_eager_blob_object_()->blob().shape(); }
 
-  MutShapeView* mut_shape() override { return getter_()->mut_blob()->mut_shape_view(); }
+  MutShapeView* mut_shape() override {
+    return mut_eager_blob_object_()->mut_blob()->mut_shape_view();
+  }
 
-  DataType data_type() const override { return getter_()->blob().data_type(); }
+  DataType data_type() const override { return mut_eager_blob_object_()->blob().data_type(); }
 
-  const MemoryCase& mem_case() const override { return getter_()->blob().mem_case(); }
+  const MemoryCase& mem_case() const override {
+    return mut_eager_blob_object_()->blob().mem_case();
+  }
 
-  const void* raw_dptr() const override { return getter_()->blob().dptr(); }
+  const void* raw_dptr() const override { return mut_eager_blob_object_()->blob().dptr(); }
 
-  void* mut_raw_dptr() override { return getter_()->mut_blob()->mut_dptr(); }
+  void* mut_raw_dptr() override { return mut_eager_blob_object_()->mut_blob()->mut_dptr(); }
 
  private:
-  std::function<eager::EagerBlobObject*()> getter_;
+  std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
  public:
-  EagerBlobObjectTensorDescView(const std::function<eager::EagerBlobObject*()>& getter)
-      : getter_(getter) {}
+  EagerBlobObjectTensorDescView(
+      const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+      : mut_eager_blob_object_(mut_eager_blob_object) {}
 
-  const Shape& shape() const override { return getter_()->blob_desc().shape(); }
+  const Shape& shape() const override { return mut_eager_blob_object_()->blob_desc().shape(); }
 
-  Shape* mut_shape() override { return &getter_()->mut_blob_desc()->mut_shape(); }
+  Shape* mut_shape() override { return &mut_eager_blob_object_()->mut_blob_desc()->mut_shape(); }
 
-  DataType data_type() const override { return getter_()->blob_desc().data_type(); }
+  DataType data_type() const override { return mut_eager_blob_object_()->blob_desc().data_type(); }
 
-  DataType* mut_data_type() override { return getter_()->mut_blob_desc()->mut_data_type(); }
+  DataType* mut_data_type() override {
+    return mut_eager_blob_object_()->mut_blob_desc()->mut_data_type();
+  }
 
-  bool is_dynamic() const override { return getter_()->blob_desc().is_dynamic(); }
+  bool is_dynamic() const override { return mut_eager_blob_object_()->blob_desc().is_dynamic(); }
 
-  bool* mut_is_dynamic() override { return getter_()->mut_blob_desc()->mut_is_dynamic(); }
+  bool* mut_is_dynamic() override {
+    return mut_eager_blob_object_()->mut_blob_desc()->mut_is_dynamic();
+  }
 
-  void set_is_dynamic(bool val) override { getter_()->mut_blob_desc()->set_is_dynamic(val); }
+  void set_is_dynamic(bool val) override {
+    mut_eager_blob_object_()->mut_blob_desc()->set_is_dynamic(val);
+  }
 
  private:
-  std::function<eager::EagerBlobObject*()> getter_;
+  std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class ZeroCopyBaseContext {
@@ -96,10 +107,7 @@ class ZeroCopyBaseContext {
   const ArgVec& inputs() const { return *indexed_input_pairs_; }
   const ArgVec& outputs() const { return *indexed_output_pairs_; }
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
-    input_tensors_ = inputs;
-    output_tensors_ = outputs;
-  }
+  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
   const ArgVec* indexed_input_pairs_;
@@ -221,7 +229,7 @@ class StatefulOpKernel final {
   bool need_check_mem_case() const { return need_check_mem_case_; }
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  void ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
+  Maybe<void> ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn() const;
 
@@ -252,4 +260,4 @@ class StatefulOpKernel final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_USER_KERNELS_STATEFUL_OPKERNEL_H_
+#endif  // ONEFLOW_USER_KERNELS_STATEFUL_LOCAL_OPKERNEL_H_

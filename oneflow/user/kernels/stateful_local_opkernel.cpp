@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
@@ -25,19 +25,19 @@ namespace oneflow {
 namespace one {
 
 template<class T>
-class TensorsPtrScope {
+class InputAndOutputListScope {
  public:
-  TensorsPtrScope(T* ctx, EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+  InputAndOutputListScope(T* ctx, EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
     ctx_ = ctx;
     ctx_->Update(inputs, outputs);
   }
-  ~TensorsPtrScope() { ctx_->Update(nullptr, nullptr); }
+  ~InputAndOutputListScope() { ctx_->Update(nullptr, nullptr); }
 
  private:
   T* ctx_;
 };
 
-int32_t GetIndex(
+int32_t GetTensorTupleIndex(
     const std::map<std::string, std::vector<int32_t>>& arg_name2bn_index2tensor_tuple_index_,
     const std::string& arg_name, const int32_t arg_index) {
   auto it = arg_name2bn_index2tensor_tuple_index_.find(arg_name);
@@ -48,54 +48,61 @@ int32_t GetIndex(
 ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
                                          const ArgVec* indexed_output_pairs)
     : indexed_input_pairs_(indexed_input_pairs), indexed_output_pairs_(indexed_output_pairs) {
-  auto InitArgPair2TensorTupleIndex =
+  auto InitArgName2BnIndex2TensorTupleIndex =
       [](const ArgVec* indexed_arg_pairs,
-         std::map<std::string, std::vector<int32_t>>* arg_pair2tensor_tuple_index) {
+         std::map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
         for (int i = 0; i < indexed_arg_pairs->size(); i++) {
-          const auto& pair = (*indexed_arg_pairs)[i];
+          const auto& pair = (*indexed_arg_pairs).at(i);
           const std::string& arg_name = pair.first;
-          const int32_t arg_index = pair.second;
-          auto it = arg_pair2tensor_tuple_index->find(arg_name);
-          if (it != arg_pair2tensor_tuple_index->end()) {
-            CHECK_EQ(it->second.size(), arg_index);
+          const int32_t bn_index = pair.second;
+          auto it = arg_name2bn_index2tensor_tuple_index->find(arg_name);
+          if (it != arg_name2bn_index2tensor_tuple_index->end()) {
+            CHECK_EQ(it->second.size(), bn_index);
             it->second.push_back(i);
           } else {
-            std::vector<int32_t> bn_index2input_tensor_tuple_index{i};
-            arg_pair2tensor_tuple_index->emplace(arg_name, bn_index2input_tensor_tuple_index);
+            std::vector<int32_t> bn_index2tensor_tuple_index{i};
+            arg_name2bn_index2tensor_tuple_index->emplace(arg_name, bn_index2tensor_tuple_index);
           }
         }
       };
-  InitArgPair2TensorTupleIndex(indexed_input_pairs, &arg_name2bn_index2input_tensor_tuple_index_);
-  InitArgPair2TensorTupleIndex(indexed_output_pairs, &arg_name2bn_index2output_tensor_tuple_index_);
+  InitArgName2BnIndex2TensorTupleIndex(indexed_input_pairs,
+                                       &arg_name2bn_index2input_tensor_tuple_index_);
+  InitArgName2BnIndex2TensorTupleIndex(indexed_output_pairs,
+                                       &arg_name2bn_index2output_tensor_tuple_index_);
   for (int i = 0; i < indexed_input_pairs->size(); i++) {
     input_tensor_views_.push_back(EagerBlobObjectTensorView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_)[i].get(); }));
+        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_).at(i).get(); }));
     input_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_)[i].get(); }));
+        [this, i]() -> eager::EagerBlobObject* { return (*this->input_tensors_).at(i).get(); }));
   }
   for (int i = 0; i < indexed_output_pairs->size(); i++) {
     output_tensor_views_.push_back(EagerBlobObjectTensorView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_)[i].get(); }));
+        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_).at(i).get(); }));
     output_tensor_desc_views_.push_back(EagerBlobObjectTensorDescView(
-        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_)[i].get(); }));
+        [this, i]() -> eager::EagerBlobObject* { return (*this->output_tensors_).at(i).get(); }));
   }
+}
+
+void ZeroCopyBaseContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+  input_tensors_ = inputs;
+  output_tensors_ = outputs;
 }
 
 user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                                      const int32_t index) const {
-  int32_t i = GetIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &input_tensor_desc_views_[i]; }
-  i = GetIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &output_tensor_desc_views_[i]; }
+  int32_t i = GetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return &input_tensor_desc_views_.at(i); }
+  i = GetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return &output_tensor_desc_views_.at(i); }
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
 
 user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
                                                              const int32_t index) const {
-  int32_t i = GetIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &input_tensor_views_[i]; }
-  i = GetIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
-  if (i >= 0) { return &output_tensor_views_[i]; }
+  int32_t i = GetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return &input_tensor_views_.at(i); }
+  i = GetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
+  if (i >= 0) { return &output_tensor_views_.at(i); }
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
 }
 
@@ -293,16 +300,18 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
 
 StatefulOpKernel::~StatefulOpKernel() = default;
 
-void StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
-  TensorsPtrScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
+Maybe<void> StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
+                                             EagerBlobObjectList outputs) {
+  InputAndOutputListScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
   const auto& op_type_name = op_conf_.user_conf().op_type_name();
-  const auto* kernel_reg_val = CHECK_JUST(
-      user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
+  const auto* kernel_reg_val =
+      JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);
+  // find cached kernel by registry result
   auto it = op_kernel_map_.find(kernel_reg_val);
   if (it != op_kernel_map_.end()) {
     current_op_kernel_ = it->second.get();
-    return;
+    return Maybe<void>::Ok();
   }
 
   auto* kernel = kernel_reg_val->create_fn(create_ctx_.get());
@@ -317,6 +326,7 @@ void StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs, EagerBlobObjec
 
   current_op_kernel_ = kernel;
   current_state_ = nullptr;
+  return Maybe<void>::Ok();
 }
 
 Maybe<user_op::OpKernelState> StatefulOpKernel::TryInitOpKernelState(DeviceCtx* device_ctx) {
