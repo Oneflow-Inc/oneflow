@@ -31,14 +31,12 @@ class RtBlobDesc final {
   explicit RtBlobDesc(const BlobDesc& blob_desc);
   explicit RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
-  const StructPodDesc& header_pod_desc() const { return header_; }
   bool is_dynamic() const { return is_dynamic_; }
 
-  DataType data_type() const { return body_.data_type(); }
-  int64_t NumAxes() const { return body_.shape().NumAxes(); }
-  int64_t Capacity() const { return body_.shape().elem_cnt() * GetSizeOfDataType(data_type()); }
-  const Shape& body_shape() const { return body_.shape(); }
-  const TensorPodDesc& body() const { return body_; }
+  DataType data_type() const { return data_type_; }
+  int64_t NumAxes() const { return shape_.NumAxes(); }
+  int64_t Capacity() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type()); }
+  const Shape& body_shape() const { return shape_; }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -48,10 +46,8 @@ class RtBlobDesc final {
   bool operator==(const RtBlobDesc& rhs) const;
 
  private:
-  void InitFromProto(const BlobDescProto& proto);
-
-  TensorPodDesc body_;
-  StructPodDesc header_;
+  Shape shape_;
+  DataType data_type_;
   bool is_dynamic_;
 };
 
