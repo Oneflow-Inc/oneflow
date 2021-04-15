@@ -86,8 +86,8 @@ class Importer {
   LogicalResult AddOpConf(const ::oneflow::OperatorConf& op, std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                              std::vector<NamedAttribute>& attr_vec);
-  LogicalResult AddPlacement(const ::oneflow::OperatorConf& op,
-                             std::vector<NamedAttribute>& attr_vec);
+  LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
+                              std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
                                        std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddResultSegmentSizes(int output_lbns_size, std::vector<NamedAttribute>& attr_vec);
@@ -421,11 +421,11 @@ LogicalResult Importer::AppendCtrlOutType(llvm::SmallVector<Type, 8>& out_types)
   return success();
 }
 
-LogicalResult Importer::AddPlacement(const ::oneflow::OperatorConf& op,
-                                     std::vector<NamedAttribute>& attr_vec) {
+LogicalResult Importer::AddDeviceName(const ::oneflow::OperatorConf& op,
+                                      std::vector<NamedAttribute>& attr_vec) {
   const ::oneflow::ParallelConf& pc = job_wrapper_.ParallelConf4OpName(op.name());
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
-  attr_vec.push_back(builder_.getNamedAttr("placement", builder_.getStrArrayAttr(device_vec)));
+  attr_vec.push_back(builder_.getNamedAttr("device_name", builder_.getStrArrayAttr(device_vec)));
   return success();
 }
 
@@ -454,7 +454,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
-  if (failed(AddPlacement(op, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_name", builder_.getStringAttr(op.user_conf().op_type_name())));
   std::vector<::mlir::Value> operand_vec;
@@ -534,7 +534,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   job_wrapper_.OutputLbns4OpName(op.name());
   std::vector<NamedAttribute> attr_vec;
   if (failed(AddOpConf(op, attr_vec))) { return failure(); }
-  if (failed(AddPlacement(op, attr_vec))) { return failure(); }
+  if (failed(AddDeviceName(op, attr_vec))) { return failure(); }
   attr_vec.push_back(builder_.getNamedAttr(
       "input_bns", builder_.getStrArrayAttr(
                        std::vector<llvm::StringRef>({input_bns.begin(), input_bns.end()}))));
@@ -698,7 +698,7 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
 
-    if (id.strref().equals("placement") || id.strref().contains("input_lbn_segment_keys")
+    if (id.strref().equals("device_name") || id.strref().contains("input_lbn_segment_keys")
         || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
         || id.strref().contains("output_lbn_segment_keys")
         || id.strref().contains("output_lbn_segment_sizes")
@@ -819,7 +819,7 @@ LogicalResult Importer::TryToUpdateJob() {
       auto* pg = new_job.mutable_placement()->add_placement_group();
       pg->mutable_parallel_conf()->set_device_tag(
           op->getAttrOfType<StringAttr>("device_tag").getValue().str());
-      for (auto p : op->getAttrOfType<ArrayAttr>("placement")) {
+      for (auto p : op->getAttrOfType<ArrayAttr>("device_name")) {
         pg->mutable_parallel_conf()->add_device_name(p.dyn_cast<StringAttr>().getValue().str());
       }
       // TODO: add hierarchy in .td

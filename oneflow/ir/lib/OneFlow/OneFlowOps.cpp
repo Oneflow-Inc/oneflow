@@ -117,9 +117,9 @@ bool HaveIdenticalPlacement(mlir::Operation* op, mlir::Operation* argument_op) {
   return op->hasAttr("device") && argument_op->hasAttr("device")
          && (op->getAttrOfType<StringAttr>("device")
              == argument_op->getAttrOfType<StringAttr>("device"))
-         && op->hasAttr("placement") && argument_op->hasAttr("placement")
-         && (op->getAttrOfType<ArrayAttr>("placement")
-             == argument_op->getAttrOfType<ArrayAttr>("placement"));
+         && op->hasAttr("device_name") && argument_op->hasAttr("device_name")
+         && (op->getAttrOfType<ArrayAttr>("device_name")
+             == argument_op->getAttrOfType<ArrayAttr>("device_name"));
 }
 
 OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {

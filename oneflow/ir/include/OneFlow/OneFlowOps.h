@@ -48,7 +48,7 @@ class IsIdempotentOfIdenticalPlacement
   }
 
   static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("placement"));
+    assert(op->hasAttr("device_name"));
     return impl::foldIdempotentOfIdenticalPlacement(op);
   }
 };
@@ -68,7 +68,7 @@ class IsInvolutionOfIdenticalPlacement
   }
 
   static OpFoldResult foldTrait(Operation* op, ArrayRef<Attribute> operands) {
-    assert(op->hasAttr("placement"));
+    assert(op->hasAttr("device_name"));
     return impl::foldInvolutionOfIdenticalPlacement(op);
   }
 };
