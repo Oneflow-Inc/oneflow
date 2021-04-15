@@ -134,10 +134,12 @@ class Importer {
 
 LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorConf& op,
                                                      std::vector<NamedAttribute>& attr_vec) {
-  std::vector<llvm::StringRef> input_lbn_segment_keys;
-  std::vector<int> input_lbn_segment_sizes;
+  using LBNVec = SmallVector<StringRef, 8>;
+  using LBNSegVec = SmallVector<int32_t, 8>;
+  LBNVec input_lbn_segment_keys;
+  LBNSegVec input_lbn_segment_sizes;
   int data_input_size = 0;
-  for (auto input : op.user_conf().input()) {
+  for (auto& input : op.user_conf().input()) {
     input_lbn_segment_keys.push_back(input.first);
     input_lbn_segment_sizes.push_back(input.second.s_size());
     data_input_size += input.second.s_size();
@@ -147,9 +149,9 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   attr_vec.push_back(builder_.getNamedAttr("input_lbn_segment_sizes",
                                            builder_.getI32ArrayAttr(input_lbn_segment_sizes)));
 
-  SmallVector<StringRef, 8> output_lbns;
-  SmallVector<StringRef, 8> output_lbn_segment_keys;
-  SmallVector<int32_t, 8> output_lbn_segment_sizes;
+  LBNVec output_lbns;
+  LBNVec output_lbn_segment_keys;
+  LBNSegVec output_lbn_segment_sizes;
   int data_output_size = 0;
   for (auto& output : op.user_conf().output()) {
     output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
