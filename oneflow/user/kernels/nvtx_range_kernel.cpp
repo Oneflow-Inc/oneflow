@@ -15,19 +15,28 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+
+#ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
+#endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
 
 namespace {
 
+#ifdef OF_ENABLE_PROFILER
 static thread_local HashMap<std::string, nvtxRangeId_t> mark2range_id;
+#endif
 
 }  // namespace
 
 class NvtxOpKernelState final : public user_op::OpKernelState {
  public:
-  NvtxOpKernelState() : counter_(0) {}
+  NvtxOpKernelState() : counter_(0) {
+#ifndef OF_ENABLE_PROFILER
+    LOG(WARNING)<<"To use NVTX, run cmake with -DBUILD_PROFILER=ON";
+#endif
+  }
   ~NvtxOpKernelState() override = default;
 
   int64_t counter() const { return counter_; }
@@ -58,11 +67,14 @@ class NvtxStartKernel final : public user_op::OpKernel {
     CHECK_EQ(out->data_type(), in_data_type);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
+#ifdef OF_ENABLE_PROFILER
     const std::string mark_prefix = ctx->user_op_conf().attr<std::string>("mark_prefix");
     const std::string mark = mark_prefix + "-" + std::to_string(kernel_state->counter());
     nvtxRangeId_t range_id = nvtxRangeStartA(mark.c_str());
     mark2range_id.emplace(mark, range_id);
+    CHECK(mark2range_id.emplace(mark, range_id).second);
     kernel_state->IncreaseCount();
+#endif  // OF_ENABLE_PROFILER
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -95,15 +107,18 @@ class NvtxEndKernel final : public user_op::OpKernel {
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
+#ifdef OF_ENABLE_PROFILER
     const std::string mark_prefix = ctx->user_op_conf().attr<std::string>("mark_prefix");
     const std::string mark = mark_prefix + "-" + std::to_string(kernel_state->counter());
     auto it = mark2range_id.find(mark.c_str());
     CHECK(it != mark2range_id.end());
     nvtxRangeId_t range_id = it->second;
+    mark2range_id.erase(it);
     nvtxRangeEnd(range_id);
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
     kernel_state->IncreaseCount();
+#endif
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
