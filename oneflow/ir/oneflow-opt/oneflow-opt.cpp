@@ -33,7 +33,7 @@ limitations under the License.
 namespace mlir {
 struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, FunctionPass> {
   void runOnFunction() override {
-    applyPatternsAndFoldGreedily(getFunction(), OwningRewritePatternList());
+    applyPatternsAndFoldGreedily(getFunction(), RewritePatternSet(&getContext()));
   }
 };
 void registerTestOneFlowTraitsPass() {

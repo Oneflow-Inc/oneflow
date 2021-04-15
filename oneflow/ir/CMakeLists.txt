@@ -20,8 +20,8 @@ project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/a4e2a5145a29af678139f33e94ab3df0fc973e59.zip" CACHE STRING "")
-set(LLVM_MONO_REPO_MD5 "d501547c39d344c6f52b5c2e757c3953" CACHE STRING "")
+set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/acd9cc74957ba63967015946fc3349988ab200b1.zip" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "eacd061e33280247c9791abd2b974782" CACHE STRING "")
 message("-- LLVM_MONO_REPO_URL: " ${LLVM_MONO_REPO_URL})
 message("-- LLVM_MONO_REPO_MD5: " ${LLVM_MONO_REPO_MD5})
 FetchContent_Declare(

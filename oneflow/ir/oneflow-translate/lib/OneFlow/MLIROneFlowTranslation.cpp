@@ -72,7 +72,7 @@ class Importer {
       : builder_(context),
         context_(context),
         module_(module),
-        unknown_loc_(FileLineColLoc::get("imported-protobuf", 0, 0, context)),
+        unknown_loc_(FileLineColLoc::get(context, "imported-protobuf", 0, 0)),
         job_(job_wrapper.job()),
         job_wrapper_(job_wrapper) {}
 
@@ -124,7 +124,7 @@ class Importer {
   MLIRContext* context_;
   /// The current module being created.
   ModuleOp module_;
-  /// Cached FileLineColLoc::get("imported-protobuf", 0, 0).
+  /// Cached FileLineColLoc
   Location unknown_loc_;
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
   std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
@@ -486,7 +486,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec);
     ArrayRef<NamedAttribute> named_attributes(attr_vec);
     created_op = builder_.create<oneflow::ConstantOp>(
-        FileLineColLoc::get(op.name(), 0, 0, context_), out_types, operands, named_attributes);
+        FileLineColLoc::get(context_, op.name(), 0, 0), out_types, operands, named_attributes);
   } else {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {
@@ -496,7 +496,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     }
     AppendCtrlOutType(out_types);
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
-    OperationState state(FileLineColLoc::get(op.name(), 0, 0, context_), "oneflow.user");
+    OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
         int data_input_size = 0;
@@ -549,7 +549,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   attr_vec.push_back(builder_.getNamedAttr(
       "output_lbns", builder_.getStrArrayAttr(
                          std::vector<llvm::StringRef>({output_lbns.begin(), output_lbns.end()}))));
-  OperationState state(FileLineColLoc::get(op.name(), 0, 0, context_), "oneflow.system");
+  OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.system");
   attr_vec.push_back(
       builder_.getNamedAttr("op_type_case", builder_.getI32IntegerAttr(op.op_type_case())));
   AddOperandSegmentSizes(static_cast<int>(input_lbns.size()), op.ctrl_in_op_name_size(), attr_vec);
@@ -857,8 +857,6 @@ LogicalResult Importer::TryToUpdateJob() {
       }
       ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (llvm::dyn_cast<ModuleTerminatorOp>(op)) {
-      // Do nothing
     } else if (llvm::dyn_cast<ReturnOp>(op)) {
       // Do nothing
     } else if (llvm::dyn_cast<FuncOp>(op)) {
@@ -913,7 +911,7 @@ OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext* co
   context->loadDialect<StandardOpsDialect>();
   // Reimplement the logic after this function is moved to a independent target
   OwningModuleRef module(
-      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, context)));
+      ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
 }
 }  // namespace
@@ -927,7 +925,7 @@ void RoundTripOneFlowJob(
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
-      ModuleOp::create(FileLineColLoc::get("", /*line=*/0, /*column=*/0, &context)));
+      ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   Importer imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc
   const bool is_strict = true;

@@ -47,7 +47,7 @@ LogicalResult TrimRedundantCtrl(OpType op, PatternRewriter& rewriter) {
     attributes.erase("result_segment_sizes");
     attributes.append("result_segment_sizes", rewriter.getI32VectorAttr({num_data_inputs, 0}));
     if (auto created = rewriter.create<OpType>(
-            op->getLoc(), op.getResultTypes().take_front(op.data_output().size()),
+            op->getLoc(), op->getResults().drop_back(op.data_output().size()).getTypes(),
             op->getOperands(), attributes)) {
       for (auto out : op.data_output()) {
         out.replaceAllUsesWith(created->getResult(out.getResultNumber()));
@@ -74,13 +74,13 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         NamedAttrList attributes(op->getAttrDictionary());
         attributes.erase("operand_segment_sizes");
         attributes.erase("result_segment_sizes");
-        auto unknownLoc = FileLineColLoc::get("imported-protobuf", 0, 0, rewriter.getContext());
+        auto unknownLoc = UnknownLoc::get(rewriter.getContext());
         OperationState state(unknownLoc, "oneflow." + op_type_name.str());
         state.addAttributes(attributes);
         state.addOperands(op->getOperands());
         assert(op.data_input().size() == 1);
         assert(op.data_output().size() == 1);
-        state.addTypes(op.getResultTypes().take_front(1));
+        state.addTypes(op.getResults().drop_back(1).getTypes());
         if (auto elementwise = rewriter.createOperation(state)) {
           op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
           op->erase();
@@ -94,7 +94,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   }
 };
 
-void UserOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList& results,
+void UserOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                          ::mlir::MLIRContext* context) {
   results.insert<ConcreteUserOps>(context);
 }
@@ -108,7 +108,7 @@ struct ConcreteSystemOps : public mlir::OpRewritePattern<oneflow::SystemOp> {
   }
 };
 
-void SystemOp::getCanonicalizationPatterns(::mlir::OwningRewritePatternList& results,
+void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
                                            ::mlir::MLIRContext* context) {
   results.insert<ConcreteSystemOps>(context);
 }
