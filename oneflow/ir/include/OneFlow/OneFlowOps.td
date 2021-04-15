@@ -9,7 +9,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   dag sys_attrs = (ins
     StrAttr:$op_name,
     OptionalAttr<BoolAttr>:$trainable,
-    OptionalAttr<StrAttr>:$device,
+    OptionalAttr<StrAttr>:$device_tag,
     StrArrayAttr:$placement, // TODO: change placement to dict and parse the literal fmt like "0:0-0"
     OptionalAttr<I64Attr>:$scope_symbol_id
   );

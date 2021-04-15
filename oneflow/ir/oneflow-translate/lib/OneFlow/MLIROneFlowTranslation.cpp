@@ -433,7 +433,8 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
                                   std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(builder_.getNamedAttr("op_name", builder_.getStringAttr(op.name())));
   if (op.has_device_tag()) {
-    attr_vec.push_back(builder_.getNamedAttr("device", builder_.getStringAttr(op.device_tag())));
+    attr_vec.push_back(
+        builder_.getNamedAttr("device_tag", builder_.getStringAttr(op.device_tag())));
   }
   attr_vec.push_back(
       builder_.getNamedAttr("scope_symbol_id", builder_.getI64IntegerAttr(op.scope_symbol_id())));
@@ -715,8 +716,8 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
       user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
       continue;
     }
-    if (id.strref().equals("device")) {
-      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device").getValue().str());
+    if (id.strref().equals("device_tag")) {
+      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device_tag").getValue().str());
       continue;
     }
     if (id.strref().equals("scope_symbol_id")) {
@@ -817,7 +818,7 @@ LogicalResult Importer::TryToUpdateJob() {
     if (is_user_op || is_sys_op) {
       auto* pg = new_job.mutable_placement()->add_placement_group();
       pg->mutable_parallel_conf()->set_device_tag(
-          op->getAttrOfType<StringAttr>("device").getValue().str());
+          op->getAttrOfType<StringAttr>("device_tag").getValue().str());
       for (auto p : op->getAttrOfType<ArrayAttr>("placement")) {
         pg->mutable_parallel_conf()->add_device_name(p.dyn_cast<StringAttr>().getValue().str());
       }
