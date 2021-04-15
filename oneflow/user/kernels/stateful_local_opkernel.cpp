@@ -273,7 +273,10 @@ void StatefulOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_kernel,
                                             EagerBlobObjectList outputs,
                                             user_op::OpKernelState** state) {
   auto it = op_kernel_state_map_.find(op_kernel);
-  if (it != op_kernel_state_map_.end()) { *state = it->second.get(); }
+  if (it != op_kernel_state_map_.end()) {
+    *state = it->second.get();
+    return;
+  }
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
       device_ctx, op_conf_, indexed_input_pairs_, indexed_output_pairs_, inputs, outputs);
