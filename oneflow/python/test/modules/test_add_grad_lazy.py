@@ -56,6 +56,7 @@ class Ones(flow.nn.Module):
 
 class TestModule(flow.unittest.TestCase):
     def test_add_case1(test_case):
+        flow.clear_default_session()
         def fn():
             x_ones = Ones(flow.float32)
             x = x_ones((2, 3))
@@ -76,6 +77,33 @@ class TestModule(flow.unittest.TestCase):
         of_out = graph_fn().get()
         print(of_out[0].numpy())
         print(of_out[1].numpy())
+
+    def test_add_case2(test_case):
+        flow.clear_default_session()
+        def fn():
+            x_ones = Ones(flow.float32)
+            x = x_ones((2, 3))
+            x.requires_grad = True
+
+            y_ones = Ones(flow.float32)
+            y = y_ones((2, 3))
+            y.requires_grad = True
+
+            add = flow.Add()
+            of_out = add(x, y)
+
+            g_ones = Ones(flow.float32)
+            grad = g_ones((2, 3))
+            of_out.backward(grad)
+            
+            opt = optimizer
+
+            return x.grad
+
+        graph_fn = flow.compiler.trace(fn, type="predict")
+
+        x_grad = graph_fn().get()
+        print(x_grad.numpy())
 
         # grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
         # of_out.backward(grad)
