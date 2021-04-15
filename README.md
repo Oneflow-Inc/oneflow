@@ -129,7 +129,7 @@
     - #### Option 2: Build on bare metal
       - Install dependencies. For instance, on Ubuntu 20.04:
         ```
-        sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb
+        sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
         ```
       - In the root directory of OneFlow source code, run:
 
