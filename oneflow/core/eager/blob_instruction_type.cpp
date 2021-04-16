@@ -125,32 +125,30 @@ namespace {
 void TryRegisterMemory(Blob* blob) {
   if (!blob) { return; }
   CHECK(blob->mem_case().has_host_mem());
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
-  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-    size_t size = blob->AlignedByteSizeOfBlobBody();
-    cudaError_t cuda_error = cudaHostRegister(register_dptr, size, cudaHostRegisterDefault);
-    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
+  size_t size = blob->AlignedByteSizeOfBlobBody();
+  cudaError_t cuda_error = cudaHostRegister(register_dptr, size, cudaHostRegisterDefault);
+  if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
+    cudaGetLastError();
+    return;
   }
+  OF_CUDA_CHECK(cuda_error);
 }
 
 void TryUnRegisterMemory(Blob* blob) {
   if (!blob) { return; }
   CHECK(blob->mem_case().has_host_mem());
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
-  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-    cudaError_t cuda_error = cudaHostUnregister(register_dptr);
-    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
+  cudaError_t cuda_error = cudaHostUnregister(register_dptr);
+  if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+    cudaGetLastError();
+    return;
   }
+  OF_CUDA_CHECK(cuda_error);
 }
 }  // namespace
 
