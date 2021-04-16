@@ -31,7 +31,9 @@ parser.add_argument("--build_dir", type=str, default="build")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
-
+build_dir_from_env = os.getenv("ONEFLOW_CMAKE_BUILD_DIR")
+if build_dir_from_env:
+    args.build_dir = build_dir_from_env
 
 REQUIRED_PACKAGES = [
     "numpy",

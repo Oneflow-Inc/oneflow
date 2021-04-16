@@ -311,7 +311,7 @@ add_dependencies(pip_install generate_api)
 add_custom_command(
   TARGET pip_install
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  COMMAND ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --install-option="--build_dir=${PROJECT_BINARY_DIR_RELATIVE}" --user)
+  COMMAND export ONEFLOW_CMAKE_BUILD_DIR=${PROJECT_BINARY_DIR_RELATIVE} && ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --user)
 
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
