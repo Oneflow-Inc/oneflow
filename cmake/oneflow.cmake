@@ -215,17 +215,21 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(of_protoobj ${PROTOBUF_STATIC_LIBRARIES})
 add_dependencies(of_protoobj make_pyproto_dir)
 
 # cfg obj lib
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
-target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
 add_dependencies(of_cfgobj of_protoobj)
 if (BUILD_SHARED_LIBS)
+  target_link_libraries(of_protoobj ${PROTOBUF_STATIC_LIBRARIES})
+  target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
   target_link_libraries(of_cfgobj of_protoobj)
+else()
+  # For some unknown reasons, when building static libraries, of_protoobj and of_cfgobj has to link oneflow_third_party_libs
+  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+  target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
 
 # cc obj lib
