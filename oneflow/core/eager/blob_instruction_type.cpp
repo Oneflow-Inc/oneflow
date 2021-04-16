@@ -121,6 +121,34 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
   dest_tensor->set_is_leaf(false);
 }
 
+namespace {
+
+void RegisterMemory(Blob* blob) {
+  void* register_dptr = blob->mut_dptr();
+  CHECK_NOTNULL(register_dptr);
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
+    size_t size = blob->AlignedByteSizeOfBlobBody();
+    cudaError_t cuda_error = cudaHostRegister(register_dptr, size, cudaHostRegisterDefault);
+    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
+      cudaGetLastError();
+      return;
+    }
+    OF_CUDA_CHECK(cuda_error);
+  }
+}
+
+void UnRegisterMemory(Blob* blob) {
+  void* register_dptr = blob->mut_dptr();
+  cudaError_t cuda_error = cudaHostUnregister(register_dptr);
+  if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+    cudaGetLastError();
+  } else {
+    OF_CUDA_CHECK(cuda_error);
+  }
+}
+
+}  // namespace
+
 Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
@@ -134,39 +162,16 @@ Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instructi
   Blob* src_blob = JUST(src_tensor->eager_blob_object())->mut_blob();
   Blob* dst_blob = JUST(dst_tensor->eager_blob_object())->mut_blob();
   CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
-  void* register_dptr = nullptr;
-  bool has_pinned_memory = true;
-  size_t aligned_byte_size = 0;
+  Blob* register_blob = nullptr;
   if (src_tensor->is_cuda() && !dst_tensor->is_cuda()) {
-    register_dptr = dst_blob->mut_dptr();
-    CHECK_NOTNULL(register_dptr);
-    has_pinned_memory = dst_blob->mem_case().host_mem().has_cuda_pinned_mem();
-    aligned_byte_size = dst_blob->AlignedByteSizeOfBlobBody();
+    register_blob = dst_blob;
   } else if (!src_tensor->is_cuda() && dst_tensor->is_cuda()) {
-    register_dptr = src_blob->mut_dptr();
-    CHECK_NOTNULL(register_dptr);
-    has_pinned_memory = src_blob->mem_case().host_mem().has_cuda_pinned_mem();
-    aligned_byte_size = src_blob->AlignedByteSizeOfBlobBody();
+    register_blob = src_blob;
   }
-  if (register_dptr && has_pinned_memory) {
-    cudaError_t cuda_error =
-        cudaHostRegister(register_dptr, aligned_byte_size, cudaHostRegisterDefault);
-    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-      cudaGetLastError();
-    } else {
-      OF_CUDA_CHECK(cuda_error);
-    }
-  }
+  RegisterMemory(register_blob);
   SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
                  src_blob->mem_case(), dst_blob->mem_case());
-  if (register_dptr && has_pinned_memory) {
-    cudaError_t cuda_error = cudaHostUnregister(register_dptr);
-    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-      cudaGetLastError();
-    } else {
-      OF_CUDA_CHECK(cuda_error);
-    }
-  }
+  UnRegisterMemory(register_blob);
   return Maybe<void>::Ok();
 }
 
