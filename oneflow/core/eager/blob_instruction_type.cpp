@@ -174,7 +174,7 @@ void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction)
 class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
  public:
   CpuCopyBlobToGpuInstructionType() = default;
-  ~CpuCopyBlobToGpuInstructionType() = default;
+  ~CpuCopyBlobToGpuInstructionType() override = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
 };
@@ -184,7 +184,7 @@ COMMAND(vm::RegisterInstructionType<CpuCopyBlobToGpuInstructionType>(
 class GpuCopyBlobToCpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
  public:
   GpuCopyBlobToCpuInstructionType() = default;
-  ~GpuCopyBlobToCpuInstructionType() = default;
+  ~GpuCopyBlobToCpuInstructionType() override = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
 };
