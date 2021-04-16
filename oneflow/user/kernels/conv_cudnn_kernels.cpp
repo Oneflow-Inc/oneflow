@@ -35,10 +35,10 @@ struct CudnnConvArgsAndAlgo final {
 
   // TODO(hanbinbin): remove arg job_desc and set cudnn_conv config as args of CudnnConvArgsAndAlgo
   CudnnConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w, const user_op::Tensor* y,
-                       user_op::Tensor* buf, const user_op::UserOpConfWrapper& user_op_conf,
+                       user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
                        DeviceCtx* device_ctx, bool has_forced_algo, int32_t forced_algo)
-      : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
+      : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
+             y->shape(), ctx->attr<std::string>("data_format"), buf->shape().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -51,7 +51,7 @@ struct CudnnConvArgsAndAlgo final {
                      ->resource()
                      .cudnn_conf()
                      .cudnn_conv_enable_pseudo_half()
-                 || (user_op_conf.attr<std::string>("data_format") == "channels_last"
+                 || (ctx->attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
@@ -64,12 +64,11 @@ struct CudnnConvArgsAndAlgo final {
       algo_perf = FindCudnnConvAlgorithmWithResource<PerfT>(&args, &res);
     }
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-        << "op (" << user_op_conf.op_name()
+        << "op (" << ctx->op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
     CHECK_LE(algo_perf.memory, byte_size_of_buf)
-        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
-        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-        << byte_size_of_buf;
+        << "op (" << ctx->op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
+        << algo_perf.memory << ", but cudnn_buf_limit_byte is " << byte_size_of_buf;
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(args.cdesc.Get(), algo_perf.mathType));
   }
   CudnnConvArgsAndAlgo() = delete;
@@ -176,8 +175,8 @@ class ConvGpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
     CudnnConvArgsAndAlgo<cudnnConvolutionFwdAlgoPerf_t> args_and_algo(
-        in, weight, out, buf, ctx->user_op_conf(), ctx->device_ctx(),
-        cudnn_conf.has_cudnn_conv_force_fwd_algo(), cudnn_conf.cudnn_conv_force_fwd_algo());
+        in, weight, out, buf, ctx, ctx->device_ctx(), cudnn_conf.has_cudnn_conv_force_fwd_algo(),
+        cudnn_conf.cudnn_conv_force_fwd_algo());
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
@@ -240,7 +239,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        dx, filter, dy, buf, ctx->user_op_conf(), ctx->device_ctx(),
+        dx, filter, dy, buf, ctx, ctx->device_ctx(),
         cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),
         cudnn_conf.cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;
@@ -248,7 +247,7 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel {
 
     const void* alpha = CudnnSPOnePtr<T>();
     const void* beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
@@ -311,7 +310,7 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel {
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnConvArgsAndAlgo<cudnnConvolutionBwdFilterAlgoPerf_t> args_and_algo(
-        x, filter_diff, dy, buf, ctx->user_op_conf(), ctx->device_ctx(),
+        x, filter_diff, dy, buf, ctx, ctx->device_ctx(),
         cudnn_conf.has_cudnn_conv_force_bwd_filter_algo(),
         cudnn_conf.cudnn_conv_force_bwd_filter_algo());
     const CudnnConvArgs& args = args_and_algo.args;

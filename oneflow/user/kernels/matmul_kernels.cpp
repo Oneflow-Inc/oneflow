@@ -53,7 +53,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -108,7 +108,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -154,7 +154,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -212,7 +212,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());

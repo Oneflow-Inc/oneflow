@@ -95,6 +95,10 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
+const HashMap<std::string, std::shared_ptr<AttrVal>>& UserOpConfWrapper::attr() const {
+  return attrs_;
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \

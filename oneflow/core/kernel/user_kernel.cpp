@@ -53,17 +53,23 @@ class UserKernelBaseContext {
     CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                           ArgVec* arg_vec) {
+                           ArgVec* arg_vec,
+                           HashMap<std::string, std::vector<std::string>>* arg2names) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           arg_vec->emplace_back(std::make_pair(it->first, i));
+          (*arg2names)[it->first].emplace_back(it->second.s(i));
         }
       }
     };
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_,
+                &input2arg_name_);
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_,
+                &output2arg_name_);
     device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
+    op_name_ = kernel_conf.op_attribute().op_conf().name();
+    op_type_name_ = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
@@ -73,6 +79,8 @@ class UserKernelBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
+  const std::string& op_name() const { return op_name_; }
+  const std::string& op_type_name() const { return op_type_name_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -84,12 +92,44 @@ class UserKernelBaseContext {
 
   const ArgVec& inputs() const { return inputs_; }
   const ArgVec& outputs() const { return outputs_; }
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    const auto& it = input2arg_name_.find(arg_name);
+    CHECK(it != input2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
+    CHECK(index >= 0 && index < it->second.size());
+    return it->second.at(index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    const auto& it = output2arg_name_.find(arg_name);
+    CHECK(it != output2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
+    CHECK(index >= 0 && index < it->second.size());
+    return it->second.at(index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return input_size(arg_name) > index;
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return output_size(arg_name) > index;
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    auto it = input2arg_name_.find(arg_name);
+    if (it == input2arg_name_.end()) { return 0; }
+    return it->second.size();
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    auto it = output2arg_name_.find(arg_name);
+    if (it == output2arg_name_.end()) { return 0; }
+    return it->second.size();
+  }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
+  HashMap<std::string, std::vector<std::string>> input2arg_name_;
+  HashMap<std::string, std::vector<std::string>> output2arg_name_;
   DeviceType device_type_;
   std::string device_tag_;
+  std::string op_name_;
+  std::string op_type_name_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
@@ -457,6 +497,23 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return base_ctx_.input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return base_ctx_.output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return base_ctx_.has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return base_ctx_.has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const { return base_ctx_.input_size(arg_name); }
+  int32_t output_size(const std::string& arg_name) const { return base_ctx_.output_size(arg_name); }
+  const std::string& op_name() const { return base_ctx_.op_name(); }
+  const std::string& op_type_name() const { return base_ctx_.op_type_name(); }
+  const std::string& device_tag() const { return base_ctx_.device_tag(); }
 
  private:
   DeviceCtx* device_ctx_;

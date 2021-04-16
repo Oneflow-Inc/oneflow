@@ -125,14 +125,14 @@ class SGDUpdateKernel final : public user_op::OpKernel {
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -397,14 +397,14 @@ class AdamUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -567,14 +567,14 @@ class LambUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -662,14 +662,14 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     const auto centered = ctx->Attr<bool>("centered");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
@@ -759,14 +759,14 @@ class LarsUpdateKernel final : public user_op::OpKernel {
     const auto lars_coefficient = ctx->Attr<float>("lars_coefficient");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const T* scale_by_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+    if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
       CHECK_EQ(scale_by_tensor->data_type(), model->data_type());
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
     const int64_t* skip_if_ptr = nullptr;
-    if (ctx->user_op_conf().has_input("skip_if", 0)) {
+    if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();

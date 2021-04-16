@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -29,6 +30,22 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
     if (mut_shape_view) { mut_shape_view->set_shape(shape); }
   }
 }
+
+#define KERNEL_COMPUTE_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                  \
+  template<>                                                                                 \
+  const cpp_type& KernelComputeContext::attr<cpp_type>(const std::string& attr_name) const { \
+    auto it = attrs_.find(attr_name);                                                        \
+    if (it != attrs_.end()) {                                                                \
+      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();           \
+    } else {                                                                                 \
+      LOG(FATAL) << "Cannot find the attr: " << attr_name                                    \
+                 << " with AttrType: " << static_cast<int32_t>(attr_type);                   \
+    }                                                                                        \
+  }
+
+OF_PP_FOR_EACH_TUPLE(KERNEL_COMPUTE_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
+
+#undef KERNEL_COMPUTE_CONTETX_ATTR_MEMBER_FUNC
 
 }  // namespace user_op
 

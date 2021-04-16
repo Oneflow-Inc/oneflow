@@ -35,10 +35,10 @@ struct CudnnDeConvArgsAndAlgo final {
   // CudnnDeConvArgsAndAlgo
   CudnnDeConvArgsAndAlgo(const user_op::Tensor* x, const user_op::Tensor* w,
                          const user_op::Tensor* y, user_op::Tensor* buf,
-                         const user_op::UserOpConfWrapper& user_op_conf, DeviceCtx* device_ctx,
+                         const user_op::KernelComputeContext* ctx, DeviceCtx* device_ctx,
                          bool has_forced_algo, int32_t forced_algo)
-      : args(user_op_conf, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), user_op_conf.attr<std::string>("data_format"), buf->shape().elem_cnt(),
+      : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
+             y->shape(), ctx->attr<std::string>("data_format"), buf->shape().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -62,12 +62,11 @@ struct CudnnDeConvArgsAndAlgo final {
       algo_perf = FindCudnnConvAlgorithmWithResource<PerfT>(&args, &res);
     }
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-        << "op (" << user_op_conf.op_name()
+        << "op (" << ctx->op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
     CHECK_LE(algo_perf.memory, byte_size_of_buf)
-        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
-        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-        << byte_size_of_buf;
+        << "op (" << ctx->op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
+        << algo_perf.memory << ", but cudnn_buf_limit_byte is " << byte_size_of_buf;
   }
   CudnnDeConvArgsAndAlgo() = delete;
   OF_DISALLOW_COPY_AND_MOVE(CudnnDeConvArgsAndAlgo);
@@ -127,7 +126,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
     CudnnDeConvArgsAndAlgo<cudnnConvolutionBwdDataAlgoPerf_t> args_and_algo(
-        out, weight, in, buf, ctx->user_op_conf(), ctx->device_ctx(),
+        out, weight, in, buf, ctx, ctx->device_ctx(),
         cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),
         cudnn_conf.cudnn_conv_force_bwd_data_algo());
     const CudnnConvArgs& args = args_and_algo.args;

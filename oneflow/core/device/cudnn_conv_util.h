@@ -26,6 +26,7 @@ namespace oneflow {
 namespace user_op {
 
 class UserOpConfWrapper;
+class KernelComputeContext;
 
 }  // namespace user_op
 
@@ -37,6 +38,9 @@ class CudnnConvDesc final {
 
   CudnnConvDesc(const DataType compute_type, const DataType data_type,
                 const ShapeView& in_blob_shape, const user_op::UserOpConfWrapper& conv_conf);
+
+  CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                const ShapeView& in_blob_shape, const user_op::KernelComputeContext& ctx);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -79,6 +83,11 @@ struct CudnnConvArgs final {
 
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvArgs);
   CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataType x_data_type,
+                const ShapeView& x_shape, DataType w_data_type, const ShapeView& w_shape,
+                DataType y_data_type, const ShapeView& y_shape, const std::string& data_format,
+                size_t max_workspace_size, bool heuristic_search, bool use_deterministic_algo_only,
+                bool enable_pseudo_half);
+  CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType x_data_type,
                 const ShapeView& x_shape, DataType w_data_type, const ShapeView& w_shape,
                 DataType y_data_type, const ShapeView& y_shape, const std::string& data_format,
                 size_t max_workspace_size, bool heuristic_search, bool use_deterministic_algo_only,
