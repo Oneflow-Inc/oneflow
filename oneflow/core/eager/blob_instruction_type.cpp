@@ -32,7 +32,6 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/copy_blob_to_other_device_phy_instr_operand.h"
-#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace eager {

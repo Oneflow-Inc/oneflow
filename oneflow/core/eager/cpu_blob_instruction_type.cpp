@@ -47,7 +47,7 @@ class CpuCopyBlobToCpuInstructionType final : public CopyBlobToOtherDeviceInstru
   using stream_type = vm::CpuStreamType;
 };
 COMMAND(
-    vm::RegisterInstructionType<CpuCopyBlobToCpuInstructionType>("cpu.cpu.CopyBlobToOtherDevice"));
+    vm::RegisterInstructionType<CpuCopyBlobToCpuInstructionType>("cpu.to.cpu.CopyBlobToOtherDevice"));
 
 }  // namespace eager
 }  // namespace oneflow

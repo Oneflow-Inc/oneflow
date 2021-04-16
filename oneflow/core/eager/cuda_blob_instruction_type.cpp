@@ -46,7 +46,7 @@ class GpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstru
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(
-    vm::RegisterInstructionType<GpuCopyBlobToGpuInstructionType>("gpu.gpu.CopyBlobToOtherDevice"));
+    vm::RegisterInstructionType<GpuCopyBlobToGpuInstructionType>("gpu.to.gpu.CopyBlobToOtherDevice"));
 
 }  // namespace eager
 }  // namespace oneflow

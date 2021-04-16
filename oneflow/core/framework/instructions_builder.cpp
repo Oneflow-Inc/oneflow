@@ -877,7 +877,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::shared_ptr<one::MirroredTensor>& tensor,
     const std::function<void(uint64_t)>& callback, const std::string& modifier) {
-  std::vector<std::string> available_modifier = {"mut", "const", "mut2"};
+  std::array<std::string, 3> available_modifier = {"mut", "const", "mut2"};
   bool legal_modifier = std::any_of(available_modifier.begin(), available_modifier.end(),
                                     [&](const std::string& str) { return str == modifier; });
   CHECK_OR_RETURN(legal_modifier) << "Unknow modifier";
