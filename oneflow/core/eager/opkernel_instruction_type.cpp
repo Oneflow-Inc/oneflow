@@ -100,18 +100,6 @@ COMMAND(vm::RegisterInstructionType<DeleteOpKernelObjectInstructionType>("Delete
 
 namespace {
 
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
-  const auto& mem_case = std::make_shared<MemoryCase>();
-  if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return mem_case;
-}
-
 template<typename T, typename CallbackT>
 Maybe<void> ForEachConstInputBnAndBlobObject(vm::Instruction* instruction, const T& args,
                                              const CallbackT& Callback) {
@@ -454,7 +442,7 @@ Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction
   auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -496,7 +484,7 @@ Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -533,7 +521,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
     const DeviceType device_type, const int64_t device_id) const {
-  return MakeMemCase(device_type, device_id);
+  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
 }
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
