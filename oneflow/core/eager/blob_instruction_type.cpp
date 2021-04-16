@@ -113,13 +113,8 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
   const auto* ptr =
       dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
-  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dst_tensor();
-  dst_tensor->set_shape(src_tensor->shape());
-  dst_tensor->set_requires_grad(src_tensor->requires_grad());
-  dst_tensor->set_retain_grad(src_tensor->retain_grad());
-  dst_tensor->set_is_leaf(false);
-  dst_tensor->set_dtype(src_tensor->dtype());
+  ptr->dst_eager_blob_object()->mut_blob()->mut_shape_view()->set_shape(
+      ptr->src_eager_blob_object()->blob().shape_view());
 }
 
 namespace {
@@ -152,7 +147,7 @@ void UnRegisterMemory(Blob* blob) {
 }
 }  // namespace
 
-Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instruction) const {
+void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
   CHECK(static_cast<bool>(phy_instr_operand));
@@ -160,26 +155,21 @@ Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instructi
       dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
-  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dst_tensor();
-  Blob* src_blob = JUST(src_tensor->eager_blob_object())->mut_blob();
-  Blob* dst_blob = JUST(dst_tensor->eager_blob_object())->mut_blob();
+  Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
+  Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
+  const bool src_on_cuda = ptr->src_on_cuda();
+  const bool dst_on_cuda = ptr->dst_on_cuda();
   CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
   Blob* register_blob = nullptr;
-  if (src_tensor->is_cuda() && !dst_tensor->is_cuda()) {
+  if (src_on_cuda && !dst_on_cuda) {
     register_blob = dst_blob;
-  } else if (!src_tensor->is_cuda() && dst_tensor->is_cuda()) {
+  } else if (!src_on_cuda && dst_on_cuda) {
     register_blob = src_blob;
   }
-  if (register_blob) {
-    RegisterMemory(register_blob);
-  }
+  if (register_blob) { RegisterMemory(register_blob); }
   SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
                  src_blob->mem_case(), dst_blob->mem_case());
-  if (register_blob) {
-    UnRegisterMemory(register_blob);
-  }
-  return Maybe<void>::Ok();
+  if (register_blob) { UnRegisterMemory(register_blob); }
 }
 
 class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {

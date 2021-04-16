@@ -58,12 +58,9 @@ class CopyBlobToOtherDeviceInstructionType : public vm::InstructionType {
   CopyBlobToOtherDeviceInstructionType() = default;
   ~CopyBlobToOtherDeviceInstructionType() override = default;
 
-  void Compute(vm::Instruction* instruction) const override { CHECK_OK(Run(instruction)); }
+  void Compute(vm::Instruction* instruction) const override;
 
   void Infer(vm::Instruction* instruction) const override;
-
- private:
-  Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
 }  // namespace eager

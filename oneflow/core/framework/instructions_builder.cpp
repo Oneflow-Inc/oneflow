@@ -877,6 +877,10 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::shared_ptr<one::MirroredTensor>& tensor,
     const std::function<void(uint64_t)>& callback, const std::string& modifier) {
+  std::vector<std::string> available_modifier = {"mut", "const", "mut2"};
+  bool legal_modifier = std::any_of(available_modifier.begin(), available_modifier.end(),
+                                    [&](const std::string& str) { return str == modifier; });
+  CHECK_OR_RETURN(legal_modifier) << "Unknow modifier";
   std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
@@ -899,13 +903,32 @@ Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
   if (tensor->is_cuda() && device->type() == "cuda") {
     CHECK_EQ_OR_RETURN(tensor->device()->device_id(), device->device_id());
   }
-  std::shared_ptr<one::MirroredTensor> dst_tensor = std::make_shared<one::MirroredTensor>();
-  dst_tensor->set_device(device);
+  std::shared_ptr<one::MirroredTensor> dst_tensor =
+      one::MirroredTensor::MakeTensor(std::make_shared<Shape>(), tensor->dtype(), device,
+                                      tensor->is_lazy(), tensor->requires_grad(),
+                                      /*is_leaf=*/false, tensor->retain_grad());
   std::string instr_name =
       tensor->parallel_desc()->device_tag() + ".to." + device->of_type() + ".CopyBlobToOtherDevice";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object =
+      JUST(tensor->eager_blob_object());
+  const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object =
+      JUST(dst_tensor->eager_blob_object());
+  const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object =
+      JUST(tensor->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object =
+      JUST(dst_tensor->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object =
+      JUST(tensor->compute_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object =
+      JUST(dst_tensor->compute_local_dep_object());
+  const bool src_on_cuda = tensor->is_cuda();
+  const bool dst_on_cuda = dst_tensor->is_cuda();
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(tensor, dst_tensor);
+      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(
+          src_eager_blob_object, dst_eager_blob_object, src_infer_local_dep_object,
+          dst_infer_local_dep_object, src_compute_local_dep_object, dst_compute_local_dep_object,
+          src_on_cuda, dst_on_cuda);
   if (dst_tensor->is_cuda()) {
     instruction->set_parallel_desc_symbol_id(JUST(dst_tensor->parallel_desc()->symbol_id()));
   } else {

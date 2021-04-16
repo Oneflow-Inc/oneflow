@@ -28,22 +28,36 @@ namespace eager {
 class EagerBlobObject;
 }
 
-namespace one {
-
-class MirroredTensor;
-}
-
 namespace vm {
 
 class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
  public:
-  CopyBlobToOtherDevicePhyInstrOperand(const std::shared_ptr<one::MirroredTensor>& tensor,
-                                       const std::shared_ptr<one::MirroredTensor>& dst_tensor)
-      : tensor_(tensor), dst_tensor_(dst_tensor) {}
+  CopyBlobToOtherDevicePhyInstrOperand(
+      const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object,
+      const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object,
+      const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object,
+      const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object,
+      const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object,
+      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object, const bool src_on_cuda,
+      const bool dst_on_cuda)
+      : src_eager_blob_object_(src_eager_blob_object),
+        dst_eager_blob_object_(dst_eager_blob_object),
+        src_infer_local_dep_object_(src_infer_local_dep_object),
+        dst_infer_local_dep_object_(dst_infer_local_dep_object),
+        src_compute_local_dep_object_(src_compute_local_dep_object),
+        dst_compute_local_dep_object_(dst_compute_local_dep_object),
+        src_on_cuda_(src_on_cuda),
+        dst_on_cuda_(dst_on_cuda) {}
   ~CopyBlobToOtherDevicePhyInstrOperand() override = default;
 
-  const std::shared_ptr<one::MirroredTensor>& src_tensor() const { return tensor_; }
-  const std::shared_ptr<one::MirroredTensor>& dst_tensor() const { return dst_tensor_; }
+  const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object() const {
+    return src_eager_blob_object_;
+  }
+  const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object() const {
+    return dst_eager_blob_object_;
+  }
+  const bool src_on_cuda() const { return src_on_cuda_; }
+  const bool dst_on_cuda() const { return dst_on_cuda_; }
 
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
@@ -55,8 +69,14 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
-  std::shared_ptr<one::MirroredTensor> tensor_;
-  std::shared_ptr<one::MirroredTensor> dst_tensor_;
+  std::shared_ptr<eager::EagerBlobObject> src_eager_blob_object_;
+  std::shared_ptr<eager::EagerBlobObject> dst_eager_blob_object_;
+  std::shared_ptr<VmLocalDepObject> src_infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> dst_infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> src_compute_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> dst_compute_local_dep_object_;
+  const bool src_on_cuda_;
+  const bool dst_on_cuda_;
 };
 
 }  // namespace vm
