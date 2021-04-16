@@ -42,14 +42,7 @@ def compare_with_numpy_sgd(
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
             loss = flow.sum(x * grad_tensor)
-            # grad = flow.Tensor([1.0], requires_grad=False)
             loss.backward()
-            # # print(loss.numpy())
-            # print(f"{x.numpy()=}")
-            # print(f"{mask=}")
-            # print(f"{x.grad.numpy()=}")
-            # print()
-            # print()
             sgd.step()
             sgd.zero_grad()
 
