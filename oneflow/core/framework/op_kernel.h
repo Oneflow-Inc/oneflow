@@ -39,11 +39,31 @@ class KernelCreateContext {
  public:
   virtual ~KernelCreateContext() = default;
 
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
+  virtual const std::string& output(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_input(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_output(const std::string& arg_name, int32_t index) const = 0;
+  virtual int32_t input_size(const std::string& arg_name) const = 0;
+  virtual int32_t output_size(const std::string& arg_name) const = 0;
+  virtual const std::string& op_name() const = 0;
+  virtual const std::string& op_type_name() const = 0;
+  bool has_attr(const std::string& attr_name) const {
+    return attrs_.find(attr_name) != attrs_.end();
+  }
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf().attr<T>(attr_name);
+    return attr<T>(attr_name);
   }
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
+
+ protected:
+  KernelCreateContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
+  KernelCreateContext(const KernelCreateContext&) = delete;
+
+ private:
+  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
 class KernelInitContext {

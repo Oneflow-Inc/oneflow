@@ -249,8 +249,8 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     l2_ = ctx->Attr<float>("l2");
     beta_ = ctx->Attr<float>("beta");
     weight_decay_ = ctx->Attr<float>("weight_decay");
-    has_scale_by_ptr_ = ctx->user_op_conf().has_input("scale_by_tensor", 0);
-    has_skip_if_ = ctx->user_op_conf().has_input("skip_if", 0);
+    has_scale_by_ptr_ = ctx->has_input("scale_by_tensor", 0);
+    has_skip_if_ = ctx->has_input("skip_if", 0);
   };
   ~MomentumUpdateKernel() override = default;
 

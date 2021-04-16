@@ -138,12 +138,62 @@ class UserKernelBaseContext {
 class KernelCreateContext final : public user_op::KernelCreateContext {
  public:
   explicit KernelCreateContext(const KernelConf& kernel_conf)
-      : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
+      : user_op::KernelCreateContext(
+          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())) {
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           HashMap<std::string, std::vector<std::string>>* arg2names) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          (*arg2names)[it->first].emplace_back(it->second.s(i));
+        }
+      }
+    };
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &input2arg_name_);
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &output2arg_name_);
+    op_name_ = kernel_conf.op_attribute().op_conf().name();
+    op_type_name_ = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
+  }
+
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    const auto& it = input2arg_name_.find(arg_name);
+    CHECK(it != input2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
+    CHECK(index >= 0 && index < it->second.size());
+    return it->second.at(index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    const auto& it = output2arg_name_.find(arg_name);
+    CHECK(it != output2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
+    CHECK(index >= 0 && index < it->second.size());
+    return it->second.at(index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return input_size(arg_name) > index;
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return output_size(arg_name) > index;
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    auto it = input2arg_name_.find(arg_name);
+    if (it == input2arg_name_.end()) { return 0; }
+    return it->second.size();
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    auto it = output2arg_name_.find(arg_name);
+    if (it == output2arg_name_.end()) { return 0; }
+    return it->second.size();
+  }
+
+  const std::string& op_name() const override { return op_name_; }
+  const std::string& op_type_name() const override { return op_type_name_; }
 
  private:
-  user_op::UserOpConfWrapper user_op_conf_;
+  std::string op_name_;
+  std::string op_type_name_;
+  HashMap<std::string, std::vector<std::string>> input2arg_name_;
+  HashMap<std::string, std::vector<std::string>> output2arg_name_;
 };
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
