@@ -62,19 +62,21 @@ class SGD(Optimizer):
         self,
         parameters: Union[List[Parameter], List[Dict]],
         lr: float,
-        momentum: float = 0.9,
+        scale: float = 1.0,
+        momentum: float = 0.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         self._default_state["lr"] = lr
-        self._default_state["momentum"] = momentum
+        self._default_state["scale"] = scale
+        # self._default_state["momentum"] = momentum # not use now
 
         self._op = (
             flow.builtin_op("sgd_update")
             .Input("model")
             .Input("model_diff")
             .Input("learning_rate")
-            .Attr("scale", self._default_state["momentum"])
+            .Attr("scale", self._default_state["scale"])
             .Attr("weight_decay", 0.0)
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
