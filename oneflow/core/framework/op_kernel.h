@@ -65,18 +65,23 @@ class KernelInitContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
+  bool has_attr(const std::string& attr_name) const {
+    return attrs_.find(attr_name) != attrs_.end();
+  }
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+    return attr<T>(attr_name);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
+  KernelInitContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
   KernelInitContext(const KernelInitContext&) = delete;
 
  private:
-  UserOpConfWrapper user_op_conf_;
+  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
 class KernelInferContext {
