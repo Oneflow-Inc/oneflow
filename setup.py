@@ -36,6 +36,7 @@ build_dir = args.build_dir
 if build_dir_from_env:
     build_dir = build_dir_from_env
 
+print("using cmake build dir:", build_dir)
 REQUIRED_PACKAGES = [
     "numpy",
     "protobuf>=3.9.2",
