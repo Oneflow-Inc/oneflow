@@ -119,6 +119,7 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
   dst_tensor->set_requires_grad(src_tensor->requires_grad());
   dst_tensor->set_retain_grad(src_tensor->retain_grad());
   dst_tensor->set_is_leaf(false);
+  dst_tensor->set_dtype(src_tensor->dtype());
 }
 
 namespace {
