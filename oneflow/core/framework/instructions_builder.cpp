@@ -899,29 +899,18 @@ Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
   if (tensor->is_cuda() && device->type() == "cuda") {
     CHECK_EQ_OR_RETURN(tensor->device()->device_id(), device->device_id());
   }
-  std::shared_ptr<one::MirroredTensor> dest_tensor = one::MirroredTensor::MakeTensor(
-      tensor->shape(), tensor->dtype(), device, tensor->is_lazy(), tensor->requires_grad(),
-      /* is_leaf */ false, tensor->retain_grad());
-  std::string instr_name = tensor->parallel_desc()->device_tag() + "."
-                           + dest_tensor->parallel_desc()->device_tag() + ".CopyBlobToOtherDevice";
+  std::shared_ptr<one::MirroredTensor> dest_tensor = std::make_shared<one::MirroredTensor>();
+  dest_tensor->set_device(device);
+  std::string instr_name =
+      tensor->parallel_desc()->device_tag() + ".to." + device->of_type() + ".CopyBlobToOtherDevice";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object =
-      JUST(tensor->eager_blob_object());
-  const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object =
-      JUST(dest_tensor->eager_blob_object());
-  const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object =
-      JUST(tensor->infer_local_dep_object());
-  const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object =
-      JUST(dest_tensor->infer_local_dep_object());
-  const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object =
-      JUST(tensor->compute_local_dep_object());
-  const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object =
-      JUST(dest_tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(
-          src_eager_blob_object, dst_eager_blob_object, src_infer_local_dep_object,
-          dst_infer_local_dep_object, src_compute_local_dep_object, dst_compute_local_dep_object);
-  instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
+      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(tensor, dest_tensor);
+  if (dest_tensor->is_cuda()) {
+    instruction->set_parallel_desc_symbol_id(JUST(dest_tensor->parallel_desc()->symbol_id()));
+  } else {
+    instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
+  }
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return dest_tensor;
 }

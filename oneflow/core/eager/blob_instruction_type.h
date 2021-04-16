@@ -53,5 +53,18 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   }
 };
 
+class CopyBlobToOtherDeviceInstructionType : public vm::InstructionType {
+ public:
+  CopyBlobToOtherDeviceInstructionType() = default;
+  ~CopyBlobToOtherDeviceInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override { CHECK_OK(Run(instruction)); }
+
+  void Infer(vm::Instruction* instruction) const override;
+
+ private:
+  Maybe<void> Run(vm::Instruction* instruction) const;
+};
+
 }  // namespace eager
 }  // namespace oneflow

@@ -32,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/copy_blob_to_other_device_phy_instr_operand.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 namespace eager {
@@ -105,99 +106,89 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
 COMMAND(
     vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 
-class CpuCopyBlobToGpuInstructionType final : public vm::InstructionType {
+void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
+  const std::shared_ptr<one::MirroredTensor>& dest_tensor = ptr->dest_tensor();
+  dest_tensor->set_shape(src_tensor->shape());
+  dest_tensor->set_requires_grad(src_tensor->requires_grad());
+  dest_tensor->set_retain_grad(src_tensor->retain_grad());
+  dest_tensor->set_is_leaf(false);
+}
+
+Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
+  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dest_tensor();
+  Blob* src_blob = JUST(src_tensor->eager_blob_object())->mut_blob();
+  Blob* dst_blob = JUST(dst_tensor->eager_blob_object())->mut_blob();
+  CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
+  void* register_dptr = nullptr;
+  bool has_pinned_memory = true;
+  size_t aligned_byte_size = 0;
+  if (src_tensor->is_cuda() && !dst_tensor->is_cuda()) {
+    register_dptr = dst_blob->mut_dptr();
+    CHECK_NOTNULL(register_dptr);
+    has_pinned_memory = dst_blob->mem_case().host_mem().has_cuda_pinned_mem();
+    aligned_byte_size = dst_blob->AlignedByteSizeOfBlobBody();
+  } else if (!src_tensor->is_cuda() && dst_tensor->is_cuda()) {
+    register_dptr = src_blob->mut_dptr();
+    CHECK_NOTNULL(register_dptr);
+    has_pinned_memory = src_blob->mem_case().host_mem().has_cuda_pinned_mem();
+    aligned_byte_size = src_blob->AlignedByteSizeOfBlobBody();
+  }
+  if (register_dptr && has_pinned_memory) {
+    cudaError_t cuda_error =
+        cudaHostRegister(register_dptr, aligned_byte_size, cudaHostRegisterDefault);
+    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
+      cudaGetLastError();
+    } else {
+      OF_CUDA_CHECK(cuda_error);
+    }
+  }
+  SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
+                 src_blob->mem_case(), dst_blob->mem_case());
+  if (register_dptr && has_pinned_memory) {
+    cudaError_t cuda_error = cudaHostUnregister(register_dptr);
+    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+      cudaGetLastError();
+    } else {
+      OF_CUDA_CHECK(cuda_error);
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
  public:
   CpuCopyBlobToGpuInstructionType() = default;
   ~CpuCopyBlobToGpuInstructionType() = default;
 
   using stream_type = vm::CudaCopyH2DStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    const vm::InstructionMsg& instr_msg = instruction->instr_msg();
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr =
-        dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-    Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
-    Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
-    void* src_dptr = src_blob->mut_dptr();
-    CHECK_NOTNULL(src_dptr);
-    CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
-    if (src_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      size_t size = src_blob->AlignedByteSizeOfBlobBody();
-      cudaError_t cuda_error = cudaHostRegister(src_dptr, size, cudaHostRegisterDefault);
-      if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-        cudaGetLastError();
-        return;
-      }
-      OF_CUDA_CHECK(cuda_error);
-    }
-    SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_dptr, src_blob->ByteSizeOfBlobBody(), src_blob->mem_case(),
-                   dst_blob->mem_case());
-    if (src_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      cudaError_t cuda_error = cudaHostUnregister(src_dptr);
-      if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-        cudaGetLastError();
-        return;
-      }
-      OF_CUDA_CHECK(cuda_error);
-    }
-  }
 };
-COMMAND(
-    vm::RegisterInstructionType<CpuCopyBlobToGpuInstructionType>("cpu.gpu.CopyBlobToOtherDevice"));
+COMMAND(vm::RegisterInstructionType<CpuCopyBlobToGpuInstructionType>(
+    "cpu.to.gpu.CopyBlobToOtherDevice"));
 
-class GpuCopyBlobToCpuInstructionType final : public vm::InstructionType {
+class GpuCopyBlobToCpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
  public:
   GpuCopyBlobToCpuInstructionType() = default;
   ~GpuCopyBlobToCpuInstructionType() = default;
 
   using stream_type = vm::CudaCopyD2HStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    const vm::InstructionMsg& instr_msg = instruction->instr_msg();
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr =
-        dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-    Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
-    Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
-    void* dst_dptr = dst_blob->mut_dptr();
-    CHECK_NOTNULL(dst_dptr);
-    CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
-    if (dst_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      size_t size = dst_blob->AlignedByteSizeOfBlobBody();
-      cudaError_t cuda_error = cudaHostRegister(dst_dptr, size, cudaHostRegisterDefault);
-      if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-        cudaGetLastError();
-        return;
-      }
-      OF_CUDA_CHECK(cuda_error);
-    }
-    SyncAutoMemcpy(device_ctx, dst_dptr, src_blob->dptr(), src_blob->ByteSizeOfBlobBody(), src_blob->mem_case(),
-                   dst_blob->mem_case());
-    if (dst_blob->mem_case().host_mem().has_cuda_pinned_mem()) {
-      cudaError_t cuda_error = cudaHostUnregister(dst_dptr);
-      if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-        cudaGetLastError();
-        return;
-      }
-      OF_CUDA_CHECK(cuda_error);
-    }
-  }
 };
-COMMAND(
-    vm::RegisterInstructionType<GpuCopyBlobToCpuInstructionType>("gpu.cpu.CopyBlobToOtherDevice"));
+COMMAND(vm::RegisterInstructionType<GpuCopyBlobToCpuInstructionType>(
+    "gpu.to.cpu.CopyBlobToOtherDevice"));
 
 #endif
 

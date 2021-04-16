@@ -16,25 +16,34 @@ limitations under the License.
 #include "oneflow/core/vm/copy_blob_to_other_device_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/object_msg/object_msg_list.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 
 namespace vm {
 
+namespace {
+
+Maybe<void> MaybeForEachConstMirroredObject(
+    const std::shared_ptr<one::MirroredTensor>& tensor,
+    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) {
+  auto* infer_local_dep_object = JUST(tensor->infer_local_dep_object())->mut_local_dep_object();
+  auto* compute_local_dep_object = JUST(tensor->infer_local_dep_object())->mut_local_dep_object();
+  DoEach(infer_local_dep_object->mut_mirrored_object(),
+         compute_local_dep_object->mut_mirrored_object());
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 void CopyBlobToOtherDevicePhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  auto* src_infer_local_dep_object = src_infer_local_dep_object_->mut_local_dep_object();
-  auto* src_compute_local_dep_object = src_compute_local_dep_object_->mut_local_dep_object();
-  DoEach(src_infer_local_dep_object->mut_mirrored_object(),
-         src_compute_local_dep_object->mut_mirrored_object());
+  CHECK_OK(MaybeForEachConstMirroredObject(tensor_, DoEach));
 }
 
 void CopyBlobToOtherDevicePhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  auto* dst_infer_local_dep_object = dst_infer_local_dep_object_->mut_local_dep_object();
-  auto* dst_compute_local_dep_object = dst_compute_local_dep_object_->mut_local_dep_object();
-  DoEach(dst_infer_local_dep_object->mut_mirrored_object(),
-         dst_compute_local_dep_object->mut_mirrored_object());
+  CHECK_OK(MaybeForEachConstMirroredObject(tensor_, DoEach));
 }
 
 void CopyBlobToOtherDevicePhyInstrOperand::ForEachMut2MirroredObject(

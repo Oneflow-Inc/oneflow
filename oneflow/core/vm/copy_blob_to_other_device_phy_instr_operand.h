@@ -28,31 +28,22 @@ namespace eager {
 class EagerBlobObject;
 }
 
+namespace one {
+
+class MirroredTensor;
+}
+
 namespace vm {
 
 class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
  public:
-  CopyBlobToOtherDevicePhyInstrOperand(
-      const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object,
-      const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object,
-      const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object,
-      const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object,
-      const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object,
-      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object)
-      : src_eager_blob_object_(src_eager_blob_object),
-        dst_eager_blob_object_(dst_eager_blob_object),
-        src_infer_local_dep_object_(src_infer_local_dep_object),
-        dst_infer_local_dep_object_(dst_infer_local_dep_object),
-        src_compute_local_dep_object_(src_compute_local_dep_object),
-        dst_compute_local_dep_object_(dst_compute_local_dep_object) {}
+  CopyBlobToOtherDevicePhyInstrOperand(const std::shared_ptr<one::MirroredTensor>& tensor,
+                                       const std::shared_ptr<one::MirroredTensor>& dest_tensor)
+      : tensor_(tensor), dest_tensor_(dest_tensor) {}
   ~CopyBlobToOtherDevicePhyInstrOperand() override = default;
 
-  const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object() const {
-    return src_eager_blob_object_;
-  }
-  const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object() const {
-    return dst_eager_blob_object_;
-  }
+  const std::shared_ptr<one::MirroredTensor>& src_tensor() const { return tensor_; }
+  const std::shared_ptr<one::MirroredTensor>& dest_tensor() const { return dest_tensor_; }
 
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
@@ -64,12 +55,8 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
-  std::shared_ptr<eager::EagerBlobObject> src_eager_blob_object_;
-  std::shared_ptr<eager::EagerBlobObject> dst_eager_blob_object_;
-  std::shared_ptr<VmLocalDepObject> src_infer_local_dep_object_;
-  std::shared_ptr<VmLocalDepObject> dst_infer_local_dep_object_;
-  std::shared_ptr<VmLocalDepObject> src_compute_local_dep_object_;
-  std::shared_ptr<VmLocalDepObject> dst_compute_local_dep_object_;
+  std::shared_ptr<one::MirroredTensor> tensor_;
+  std::shared_ptr<one::MirroredTensor> dest_tensor_;
 };
 
 }  // namespace vm
