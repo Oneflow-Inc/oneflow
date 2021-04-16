@@ -227,7 +227,7 @@ if (BUILD_SHARED_LIBS)
   target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
   target_link_libraries(of_cfgobj of_protoobj)
 else()
-  # For some unknown reasons, when building static libraries, of_protoobj and of_cfgobj has to link oneflow_third_party_libs
+  # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
   target_link_libraries(of_protoobj ${oneflow_third_party_libs})
   target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
