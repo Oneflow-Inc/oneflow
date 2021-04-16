@@ -38,8 +38,8 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
       const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object,
       const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object,
       const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object,
-      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object, const bool src_on_cuda,
-      const bool dst_on_cuda)
+      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object, bool src_on_cuda,
+      bool dst_on_cuda)
       : src_eager_blob_object_(src_eager_blob_object),
         dst_eager_blob_object_(dst_eager_blob_object),
         src_infer_local_dep_object_(src_infer_local_dep_object),
