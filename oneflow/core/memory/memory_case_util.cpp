@@ -80,4 +80,17 @@ int64_t MemoryCaseUtil::MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& me
   return (thrd_id << 21) | (MemoryCaseUtil::GenMemZoneId(mem_case));
 }
 
+std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
+                                                        const int64_t device_id) {
+  const auto& mem_case = std::make_shared<MemoryCase>();
+  if (device_type == DeviceType::kCPU) {
+    mem_case->mutable_host_mem();
+  } else if (device_type == DeviceType::kGPU) {
+    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
+  } else {
+    UNIMPLEMENTED();
+  }
+  return mem_case;
+}
+
 }  // namespace oneflow
