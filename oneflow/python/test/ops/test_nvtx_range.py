@@ -24,6 +24,7 @@ func_config.default_data_type(flow.float)
 
 @flow.unittest.skip_unless_1n1d()
 class TestProfilerNvtxRange(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_profiler_nvtx_range(test_case):
         @flow.global_function(type="train", function_config=func_config)
         def nvtx_range_job(x: oft.Numpy.Placeholder((4, 4, 1024, 1024))):
