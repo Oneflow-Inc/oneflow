@@ -112,13 +112,18 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
   const auto* ptr =
       dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  ptr->dst_eager_blob_object()->mut_blob()->mut_shape_view()->set_shape(
-      ptr->src_eager_blob_object()->blob().shape_view());
+  {
+    const auto& src_blob_desc = *ptr->src_eager_blob_object()->mut_blob_desc();
+    auto* dst_blob_desc = ptr->dst_eager_blob_object()->mut_blob_desc();
+    *dst_blob_desc = src_blob_desc;
+  }
+  CHECK_JUST(ptr->dst_eager_blob_object()->TryInitBlob());
 }
 
 namespace {
 
-void RegisterMemory(Blob* blob) {
+void TryRegisterMemory(Blob* blob) {
+  if (!blob) { return; }
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
@@ -132,7 +137,8 @@ void RegisterMemory(Blob* blob) {
   }
 }
 
-void UnRegisterMemory(Blob* blob) {
+void TryUnRegisterMemory(Blob* blob) {
+  if (!blob) { return; }
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
@@ -156,19 +162,19 @@ void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction)
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
   Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
-  const bool src_on_cuda = ptr->src_on_cuda();
-  const bool dst_on_cuda = ptr->dst_on_cuda();
+  bool is_src_on_cuda = src_blob->mem_case().has_device_cuda_mem();
+  bool is_dst_on_cuda = dst_blob->mem_case().has_device_cuda_mem();
   CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
   Blob* register_blob = nullptr;
-  if (src_on_cuda && !dst_on_cuda) {
+  if (is_src_on_cuda && !is_dst_on_cuda) {
     register_blob = dst_blob;
-  } else if (!src_on_cuda && dst_on_cuda) {
+  } else if (!is_src_on_cuda && is_dst_on_cuda) {
     register_blob = src_blob;
   }
-  if (register_blob) { RegisterMemory(register_blob); }
+  TryRegisterMemory(register_blob);
   SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
                  src_blob->mem_case(), dst_blob->mem_case());
-  if (register_blob) { UnRegisterMemory(register_blob); }
+  TryUnRegisterMemory(register_blob);
 }
 
 class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {

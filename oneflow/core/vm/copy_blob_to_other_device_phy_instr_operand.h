@@ -38,16 +38,13 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
       const std::shared_ptr<VmLocalDepObject>& src_infer_local_dep_object,
       const std::shared_ptr<VmLocalDepObject>& dst_infer_local_dep_object,
       const std::shared_ptr<VmLocalDepObject>& src_compute_local_dep_object,
-      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object, bool src_on_cuda,
-      bool dst_on_cuda)
+      const std::shared_ptr<VmLocalDepObject>& dst_compute_local_dep_object)
       : src_eager_blob_object_(src_eager_blob_object),
         dst_eager_blob_object_(dst_eager_blob_object),
         src_infer_local_dep_object_(src_infer_local_dep_object),
         dst_infer_local_dep_object_(dst_infer_local_dep_object),
         src_compute_local_dep_object_(src_compute_local_dep_object),
-        dst_compute_local_dep_object_(dst_compute_local_dep_object),
-        src_on_cuda_(src_on_cuda),
-        dst_on_cuda_(dst_on_cuda) {}
+        dst_compute_local_dep_object_(dst_compute_local_dep_object) {}
   ~CopyBlobToOtherDevicePhyInstrOperand() override = default;
 
   const std::shared_ptr<eager::EagerBlobObject>& src_eager_blob_object() const {
@@ -56,8 +53,6 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
   const std::shared_ptr<eager::EagerBlobObject>& dst_eager_blob_object() const {
     return dst_eager_blob_object_;
   }
-  const bool src_on_cuda() const { return src_on_cuda_; }
-  const bool dst_on_cuda() const { return dst_on_cuda_; }
 
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
@@ -75,8 +70,6 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
   std::shared_ptr<VmLocalDepObject> dst_infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> src_compute_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> dst_compute_local_dep_object_;
-  const bool src_on_cuda_;
-  const bool dst_on_cuda_;
 };
 
 }  // namespace vm
