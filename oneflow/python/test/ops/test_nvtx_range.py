@@ -17,6 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
+import os
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
