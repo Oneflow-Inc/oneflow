@@ -132,7 +132,7 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
       if (!op.InputBlobModifier4Ibn(bn).requires_grad()) { return nullptr; }
       return &ibn_to_grad_lbi_map_[bn];
     } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
-      if (op.OutputBlobModifier4Obn(bn).requires_grad()) { return nullptr; }
+      if (!op.OutputBlobModifier4Obn(bn).requires_grad()) { return nullptr; }
       auto it = obn_to_grad_lbi_map_.find(bn);
       if (it == obn_to_grad_lbi_map_.end()) {
         LogicalBlobId lbi;
