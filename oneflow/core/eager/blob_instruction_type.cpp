@@ -171,10 +171,14 @@ Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instructi
   } else if (!src_tensor->is_cuda() && dst_tensor->is_cuda()) {
     register_blob = src_blob;
   }
-  RegisterMemory(register_blob);
+  if (register_blob) {
+    RegisterMemory(register_blob);
+  }
   SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
                  src_blob->mem_case(), dst_blob->mem_case());
-  UnRegisterMemory(register_blob);
+  if (register_blob) {
+    UnRegisterMemory(register_blob);
+  }
   return Maybe<void>::Ok();
 }
 
