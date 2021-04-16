@@ -140,14 +140,16 @@ void RegisterMemory(Blob* blob) {
 
 void UnRegisterMemory(Blob* blob) {
   void* register_dptr = blob->mut_dptr();
-  cudaError_t cuda_error = cudaHostUnregister(register_dptr);
-  if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-    cudaGetLastError();
-  } else {
+  CHECK_NOTNULL(register_dptr);
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
+    cudaError_t cuda_error = cudaHostUnregister(register_dptr);
+    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+      cudaGetLastError();
+      return;
+    }
     OF_CUDA_CHECK(cuda_error);
   }
 }
-
 }  // namespace
 
 Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instruction) const {
