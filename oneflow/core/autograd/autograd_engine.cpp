@@ -134,7 +134,7 @@ Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
       << "This FunctionNode with name `" << GetOpName() << "` has been released.";
   if (!IsReadyToRun(out_grads_)) { return false; }
-  InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_);
+  JUST(InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_));
   TensorTuple input_grads(in_grads_.size());
   TensorTuple output_grads(out_grads_.size());
   for (int i = 0; i < out_grads_.size(); ++i) {
