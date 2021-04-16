@@ -40,19 +40,19 @@ Maybe<void> EagerBlobObject::InitBlob() {
   return Maybe<void>::Ok();
 }
 
-void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
+Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
-  CHECK_NOTNULL(allocator);
+  CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
-  CHECK_NOTNULL(blob);
+  CHECK_NOTNULL_OR_RETURN(blob);
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    CHECK_ISNULL(blob->dptr());
-    return;
+    CHECK_ISNULL_OR_RETURN(blob->dptr());
+    return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
-    CHECK_EQ(blob_body_bytes_, required_body_bytes);
-    return;
+    CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+    return Maybe<void>::Ok();
   }
   {
     // reset tensor_buffer_;
@@ -66,6 +66,7 @@ void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
   }
   blob_body_bytes_ = required_body_bytes;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace eager
