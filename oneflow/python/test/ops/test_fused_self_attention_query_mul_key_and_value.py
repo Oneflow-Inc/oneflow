@@ -20,9 +20,6 @@ import typing
 import oneflow as flow
 import test_global_storage
 
-from collections import OrderedDict
-from test_util import GenArgList, type_name_to_flow_type
-
 
 def get_func_conf():
     func_conf = flow.FunctionConfig()
@@ -32,6 +29,11 @@ def get_func_conf():
 
 def get_lr_scheduler():
     return flow.optimizer.PiecewiseConstantScheduler([], [0.001])
+
+
+def get_alpha(head_size):
+    # return 1.0 / np.sqrt(head_size)
+    return 1.0
 
 
 def make_self_attn_qk_v_func(batch_size, seq_len, num_heads, head_size, fused, fp16):
@@ -51,7 +53,7 @@ def make_self_attn_qk_v_func(batch_size, seq_len, num_heads, head_size, fused, f
             initializer=flow.constant_initializer(1.0, dtype=flow.float32),
             trainable=True,
         )
-        h = h + var
+        h = h * var
 
         # save grad
         if fused:
@@ -62,24 +64,21 @@ def make_self_attn_qk_v_func(batch_size, seq_len, num_heads, head_size, fused, f
         if fp16:
             h = flow.amp_white_identity(h)
 
-        alpha = 1.0 / np.sqrt(head_size)
+        alpha = get_alpha(head_size)
 
         if fused:
             qmk, v = flow.nn.fused_self_attention_query_mul_key_and_value(
                 h, head_size=head_size, alpha=alpha
             )
         else:
-            # (s, b, H) -> (s, b, n, 3, h) -> (s, b, n, 1, h) -> (s, b, n, h) -> (b, n, s, h)
-            h = flow.reshape(h, (seq_len, batch_size, num_heads, 3, head_size))
+            # (s, b, H) -> (s, b, n, 3 * h) -> (s, b, n, h) -> (b, n, s, h)
+            h = flow.reshape(h, (seq_len, batch_size, -1, 3 * head_size))
             q, k, v = (
                 flow.transpose(
-                    flow.squeeze(
-                        flow.slice(
-                            h,
-                            begin=[None, None, None, i, None],
-                            size=[None, None, None, 1, None],
-                        ),
-                        axis=[-2],
+                    flow.slice(
+                        h,
+                        begin=[None, None, None, head_size * i],
+                        size=[None, None, None, head_size],
                     ),
                     perm=[1, 2, 0, 3],
                 )
@@ -88,9 +87,9 @@ def make_self_attn_qk_v_func(batch_size, seq_len, num_heads, head_size, fused, f
             qmk = flow.matmul(q, k, transpose_b=True, alpha=alpha)
 
         # calc loss for grad
-        # h = flow.matmul(qmk, v)
-        # loss = flow.math.reduce_sum(h)
-        # flow.optimizer.SGD(get_lr_scheduler(), momentum=0).minimize(loss)
+        h = flow.matmul(qmk, v)
+        loss = flow.math.reduce_sum(h)
+        flow.optimizer.SGD(get_lr_scheduler(), momentum=0).minimize(loss)
 
         return qmk, v
 
@@ -101,37 +100,86 @@ def gen_random_input(shape):
     return np.random.rand(*shape).astype(np.float32)
 
 
-def compare_fused_with_no_fusion(
-    test_case, batch_size, seq_len, num_heads, head_size, fp16
+def compare_fused_with_no_fused(
+    test_case, batch_size, seq_len, num_heads, head_size, fp16, verbose=False
 ):
     hidden_size = num_heads * 3 * head_size
 
     input = gen_random_input((seq_len, batch_size, hidden_size))
 
+    # fused op
     func = make_self_attn_qk_v_func(
         batch_size, seq_len, num_heads, head_size, True, fp16
     )
     qmk, v = func(input)
 
+    # unfused op
     func_ = make_self_attn_qk_v_func(
         batch_size, seq_len, num_heads, head_size, False, fp16
     )
     qmk_, v_ = func_(input)
 
-    diff = qmk - qmk_
-    print("")
-    print("input:", input)
-    print("qmk:", qmk)
-    print("qmk_:", qmk_)
-    print("diff mean:", diff.mean())
-    print("diff max:", diff.max())
+    # np
+    _q, _k, _v = np_qkv(input, head_size)
+    _qmk = np_bgemm(
+        _q.transpose(1, 2, 0, 3), _k.transpose(1, 2, 3, 0), get_alpha(head_size)
+    )
+    _v = _v.transpose(1, 2, 0, 3)
+
+    if verbose:
+        print("")
+        print("=" * 80)
+        print(f"input: {input.shape}\n{input}")
+        print(f"_q: {_q.shape}\n{_q}")
+        print(f"_k: {_k.shape}\n{_k}")
+        print(f"_v: {_v.shape}\n{_v}")
+        print(f"_qmk: {_qmk.shape}\n{_qmk}")
+        print(f"qmk: {qmk.shape}\n{qmk}")
+        print(f"qmk_: {qmk_.shape}\n{qmk_}")
+        diff = qmk - qmk_
+        print("abs diff mean:", np.abs(diff).mean())
+        print("abs diff max:", np.abs(diff).max())
 
     test_case.assertTrue(np.allclose(qmk, qmk_))
+    test_case.assertTrue(np.allclose(qmk, _qmk))
     test_case.assertTrue(np.allclose(v, v_))
+    test_case.assertTrue(np.allclose(v, _v))
 
     h_grad = test_global_storage.Get("h_grad_fused")
     h_grad_ = test_global_storage.Get("h_grad")
+    if verbose:
+        print(f"h_grad: {h_grad.shape}\n{h_grad}")
+        print(f"h_grad_: {h_grad_.shape}\n{h_grad_}")
     test_case.assertTrue(np.allclose(h_grad, h_grad_))
+
+
+def np_qkv(h, head_size):
+    h = np.reshape(h, (h.shape[0], h.shape[1], -1, 3 * head_size))
+    q = h[:, :, :, :head_size]
+    k = h[:, :, :, head_size : head_size * 2]
+    v = h[:, :, :, head_size * 2 :]
+    return q, k, v
+
+
+def np_bgemm(a, b, alpha):
+    assert a.ndim == b.ndim
+    assert a.ndim >= 2
+    assert a.shape[-1] == b.shape[-2]
+
+    if a.ndim > 2:
+        a_ = np.reshape(a, (-1, a.shape[-2], a.shape[-1]))
+        b_ = np.reshape(b, (-1, b.shape[-2], b.shape[-1]))
+        assert a_.shape[0] == b_.shape[0]
+
+        c = np.zeros(shape=(a_.shape[0], a_.shape[-2], b_.shape[-1]), dtype=np.float32)
+        for i in range(a_.shape[0]):
+            c[i] = np.matmul(a_[i], b_[i]) * alpha
+
+    else:
+        c = np.matmul(a, b) * alpha
+
+    shape = a.shape[:-2] + c.shape[-2:]
+    return np.reshape(c, shape)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -142,10 +190,15 @@ class TestFusedSelfAttentionQueryMulKeyAndValue(flow.unittest.TestCase):
             print("\nSkip under erger mode!")
             return
 
-        compare_fused_with_no_fusion(self, 4, 1024, 12, 64, False)
+        compare_fused_with_no_fused(self, 4, 1024, 12, 64, False)
+        # compare_fused_with_no_fused(self, 1, 2, 1, 3, False)
 
     def test_fp16(self):
-        pass
+        if flow.eager_execution_enabled():
+            print("\nSkip under erger mode!")
+            return
+
+        compare_fused_with_no_fused(self, 4, 1024, 12, 64, True)
 
 
 if __name__ == "__main__":
