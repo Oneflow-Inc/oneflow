@@ -71,7 +71,6 @@ class NvtxStartKernel final : public user_op::OpKernel {
     const std::string mark_prefix = ctx->user_op_conf().attr<std::string>("mark_prefix");
     const std::string mark = mark_prefix + "-" + std::to_string(kernel_state->counter());
     nvtxRangeId_t range_id = nvtxRangeStartA(mark.c_str());
-    mark2range_id.emplace(mark, range_id);
     CHECK(mark2range_id.emplace(mark, range_id).second);
     kernel_state->IncreaseCount();
 #endif  // OF_ENABLE_PROFILER
