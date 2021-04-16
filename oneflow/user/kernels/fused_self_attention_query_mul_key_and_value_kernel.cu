@@ -198,17 +198,20 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
     int64_t batch_size = h_tensor->shape().At(1);
     int64_t hidden_size = h_tensor->shape().At(2);
     int64_t head_size = ctx->Attr<int64_t>("head_size");
+    int64_t num_heads = hidden_size / (3 * head_size);
     int64_t ld = batch_size * hidden_size;
     int64_t stride = 3 * head_size;
-    int64_t num_heads = hidden_size / stride;
+    int64_t k_offset = head_size;
 
-    // q * k: (s, b, n, h) x (s, b, n, h) => (b, n, s, h) x (b, n, s, h)
-    // => (b, n, s, h) x (b, n, h, s) -> (b, n, s, s)
+    // q * k: (sq, b, n, h) x (sk, b, n, h) => (b, n, sq, h) x (b, n, sk, h)
+    // => (b, n, sq, h) x (b, n, h, sk) -> (b, n, sq, sk)
     float alpha = ctx->Attr<float>("alpha");
     user_op::Tensor* qmk_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key", 0);
-    bgemm<T>(ctx->device_ctx(), 'N', 'T', seq_len, seq_len, head_size, alpha, h_tensor->dptr<T>(),
-             ld, stride, h_tensor->dptr<T>(), ld, stride, 0.0f, qmk_tensor->mut_dptr<T>(), seq_len,
-             seq_len * seq_len, batch_size * num_heads);
+    const T* q_dptr = h_tensor->dptr<T>();
+    const T* k_dptr = h_tensor->dptr<T>() + k_offset;
+    bgemm<T>(ctx->device_ctx(), 'N', 'T', seq_len, seq_len, head_size, alpha, q_dptr, ld, stride,
+             k_dptr, ld, stride, 0.0f, qmk_tensor->mut_dptr<T>(), seq_len, seq_len * seq_len,
+             batch_size * num_heads);
 
     // slice v
     user_op::Tensor* tmp_v_tensor = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -250,7 +253,7 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
 
     // transpose from (b, n, s, h) to (s, b, n, h)
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
-    transpose<T>(ctx->device_ctx(), v_grad_tensor->shape(), value_shape, {1, 2, 0, 3},
+    transpose<T>(ctx->device_ctx(), v_grad_tensor->shape(), value_shape, {2, 0, 1, 3},
                  v_grad_tensor->dptr<T>(), tmp_v_tensor->mut_dptr<T>());
     // slice v grad
     SliceParams params = ConstructSliceParams4Value(seq_len, batch_size, num_heads, head_size);
@@ -259,14 +262,19 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
 
     // grad_q = grad_qmk * k
     // (b, n, sq, sk) x (b, n, sk, h) -> (b, n, s, h) <= (s, b, n, h) <= (s, b, n, 3, h)
-    bgemm<T>(ctx->device_ctx(), 'N', 'N', seq_len, head_size, seq_len, alpha,
-             qmk_grad_tensor->dptr<T>(), seq_len, seq_len * seq_len, h_tensor->dptr<T>(), ld,
-             stride, 0.0f, h_grad_tensor->mut_dptr<T>(), ld, stride, batch_size * num_heads);
+    const T* qmk_grad_dptr = qmk_grad_tensor->dptr<T>();
+    const T* k_dptr = h_tensor->dptr<T>() + head_size;
+    T* grad_q_dptr = h_grad_tensor->mut_dptr<T>();
+    bgemm<T>(ctx->device_ctx(), 'N', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
+             seq_len, seq_len * seq_len, k_dptr, ld, stride, 0.0f, grad_q_dptr, ld, stride,
+             batch_size * num_heads);
     // grad_k = grad_qmk * q
     // (b, n, sk, sq) x (b, n, sq, h) -> (b, n, sk, h) <= (s, b, n, h) <= (s, b, n, 3, h)
-    bgemm<T>(ctx->device_ctx(), 'T', 'N', seq_len, head_size, seq_len, alpha,
-             qmk_grad_tensor->dptr<T>(), seq_len, seq_len * seq_len, h_tensor->dptr<T>(), ld,
-             stride, 0.0f, h_grad_tensor->mut_dptr<T>(), ld, stride, batch_size * num_heads);
+    const T* q_dptr = h_tensor->dptr<T>();
+    T* grad_k_dptr = h_grad_tensor->mut_dptr<T>() + head_size;
+    bgemm<T>(ctx->device_ctx(), 'T', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
+             seq_len, seq_len * seq_len, q_dptr, ld, stride, 0.0f, grad_k_dptr, ld, stride,
+             batch_size * num_heads);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
