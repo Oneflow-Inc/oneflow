@@ -96,11 +96,16 @@ class KernelInferContext {
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
 
+  bool has_attr(const std::string& attr_name) const {
+    return attrs_.find(attr_name) != attrs_.end();
+  }
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+    return attr<T>(attr_name);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
 
   virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
@@ -109,11 +114,11 @@ class KernelInferContext {
   virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
 
  protected:
-  KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelInferContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
   KernelInferContext(const KernelInferContext&) = delete;
 
  private:
-  UserOpConfWrapper user_op_conf_;
+  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
 class Tensor;
