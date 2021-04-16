@@ -72,6 +72,11 @@ class Tensor {
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
 
+  // Getters valid only for EagerMirroredTensor
+  virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
+  virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
+  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
@@ -176,6 +181,17 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   int64_t nelement() const override;
   std::shared_ptr<MirroredTensor> data() const;
 
+  // Getters valid only for EagerMirroredTensor
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+    return impl_->eager_blob_object();
+  }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
+    return impl_->infer_local_dep_object();
+  }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+    return impl_->compute_local_dep_object();
+  }
+
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
@@ -247,6 +263,17 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<ConsistentTensor> data() const;
+
+  // Getters valid only for EagerMirroredTensor
+  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+    return impl_->eager_blob_object();
+  }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
+    return impl_->infer_local_dep_object();
+  }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
+    return impl_->compute_local_dep_object();
+  }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
