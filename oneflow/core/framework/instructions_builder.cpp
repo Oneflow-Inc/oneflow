@@ -899,20 +899,20 @@ Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
   if (tensor->is_cuda() && device->type() == "cuda") {
     CHECK_EQ_OR_RETURN(tensor->device()->device_id(), device->device_id());
   }
-  std::shared_ptr<one::MirroredTensor> dest_tensor = std::make_shared<one::MirroredTensor>();
-  dest_tensor->set_device(device);
+  std::shared_ptr<one::MirroredTensor> dst_tensor = std::make_shared<one::MirroredTensor>();
+  dst_tensor->set_device(device);
   std::string instr_name =
       tensor->parallel_desc()->device_tag() + ".to." + device->of_type() + ".CopyBlobToOtherDevice";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(tensor, dest_tensor);
-  if (dest_tensor->is_cuda()) {
-    instruction->set_parallel_desc_symbol_id(JUST(dest_tensor->parallel_desc()->symbol_id()));
+      std::make_shared<vm::CopyBlobToOtherDevicePhyInstrOperand>(tensor, dst_tensor);
+  if (dst_tensor->is_cuda()) {
+    instruction->set_parallel_desc_symbol_id(JUST(dst_tensor->parallel_desc()->symbol_id()));
   } else {
     instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
   }
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
-  return dest_tensor;
+  return dst_tensor;
 }
 
 Maybe<void> InstructionsBuilder::RankFrontSeqCallback(const std::string& instruction_name,

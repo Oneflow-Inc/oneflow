@@ -38,12 +38,12 @@ namespace vm {
 class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
  public:
   CopyBlobToOtherDevicePhyInstrOperand(const std::shared_ptr<one::MirroredTensor>& tensor,
-                                       const std::shared_ptr<one::MirroredTensor>& dest_tensor)
-      : tensor_(tensor), dest_tensor_(dest_tensor) {}
+                                       const std::shared_ptr<one::MirroredTensor>& dst_tensor)
+      : tensor_(tensor), dst_tensor_(dst_tensor) {}
   ~CopyBlobToOtherDevicePhyInstrOperand() override = default;
 
   const std::shared_ptr<one::MirroredTensor>& src_tensor() const { return tensor_; }
-  const std::shared_ptr<one::MirroredTensor>& dest_tensor() const { return dest_tensor_; }
+  const std::shared_ptr<one::MirroredTensor>& dst_tensor() const { return dst_tensor_; }
 
   void ForEachConstMirroredObject(
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
@@ -56,7 +56,7 @@ class CopyBlobToOtherDevicePhyInstrOperand final : public PhyInstrOperand {
 
  private:
   std::shared_ptr<one::MirroredTensor> tensor_;
-  std::shared_ptr<one::MirroredTensor> dest_tensor_;
+  std::shared_ptr<one::MirroredTensor> dst_tensor_;
 };
 
 }  // namespace vm

@@ -114,11 +114,11 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
       dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
-  const std::shared_ptr<one::MirroredTensor>& dest_tensor = ptr->dest_tensor();
-  dest_tensor->set_shape(src_tensor->shape());
-  dest_tensor->set_requires_grad(src_tensor->requires_grad());
-  dest_tensor->set_retain_grad(src_tensor->retain_grad());
-  dest_tensor->set_is_leaf(false);
+  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dst_tensor();
+  dst_tensor->set_shape(src_tensor->shape());
+  dst_tensor->set_requires_grad(src_tensor->requires_grad());
+  dst_tensor->set_retain_grad(src_tensor->retain_grad());
+  dst_tensor->set_is_leaf(false);
 }
 
 namespace {
@@ -158,7 +158,7 @@ Maybe<void> CopyBlobToOtherDeviceInstructionType::Run(vm::Instruction* instructi
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   const std::shared_ptr<one::MirroredTensor>& src_tensor = ptr->src_tensor();
-  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dest_tensor();
+  const std::shared_ptr<one::MirroredTensor>& dst_tensor = ptr->dst_tensor();
   Blob* src_blob = JUST(src_tensor->eager_blob_object())->mut_blob();
   Blob* dst_blob = JUST(dst_tensor->eager_blob_object())->mut_blob();
   CHECK_EQ(src_blob->ByteSizeOfBlobBody(), dst_blob->ByteSizeOfBlobBody());
