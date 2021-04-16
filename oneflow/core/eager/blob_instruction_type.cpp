@@ -124,6 +124,7 @@ namespace {
 
 void TryRegisterMemory(Blob* blob) {
   if (!blob) { return; }
+  CHECK(blob->mem_case().has_host_mem());
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
@@ -139,6 +140,7 @@ void TryRegisterMemory(Blob* blob) {
 
 void TryUnRegisterMemory(Blob* blob) {
   if (!blob) { return; }
+  CHECK(blob->mem_case().has_host_mem());
   void* register_dptr = blob->mut_dptr();
   CHECK_NOTNULL(register_dptr);
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) {
