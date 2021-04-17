@@ -21,7 +21,16 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kUserConf>::BuildOpConf(OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_user_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<OperatorConf::kUserConf>::GetOrCreateOpGradClosure()
+    const {
   if (!op_grad_func_.get()) {
     if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
       op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
@@ -34,27 +43,103 @@ Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
-
-Maybe<OpExprGradClosure> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
-
-Maybe<OpExprGradClosure> CastFromMirroredOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kVariableConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_variable_conf()) = op_proto_;
+  return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeSplitOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<OperatorConf::kVariableConf>::GetOrCreateOpGradClosure()
+    const {
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> DistributeCloneOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kCastToMirroredConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
+  return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeConcatOpExpr::GetOrCreateOpGradClosure() const {
-  UNIMPLEMENTED();
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kCastToMirroredConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<OpExprGradClosure> DistributeAddOpExpr::GetOrCreateOpGradClosure() const { UNIMPLEMENTED(); }
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kCastFromMirroredConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kCastFromMirroredConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kDistributeSplitConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_split_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kDistributeSplitConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kDistributeCloneConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kDistributeCloneConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kDistributeConcatConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kDistributeConcatConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<OperatorConf::kDistributeAddConf>::BuildOpConf(
+    OperatorConf* op_conf) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_distribute_add_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure>
+BuiltinOpExprImpl<OperatorConf::kDistributeAddConf>::GetOrCreateOpGradClosure() const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
 
 }  // namespace one
 }  // namespace oneflow
