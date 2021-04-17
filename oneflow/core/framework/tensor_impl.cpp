@@ -82,8 +82,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
       shape_(shape),
       dtype_(dtype),
-      tensor_storage_(tensor_storage),
-      infer_local_dep_object_(new VmLocalDepObject(parallel_desc())) {}
+      tensor_storage_(tensor_storage) {}
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case) {

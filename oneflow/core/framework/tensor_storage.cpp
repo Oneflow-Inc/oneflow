@@ -21,8 +21,7 @@ namespace oneflow {
 namespace one {
 
 TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : buffer_(std::make_shared<eager::TensorBuffer>()),
-      compute_local_dep_object_(new VmLocalDepObject(parallel_desc)) {}
+    : buffer_(std::make_shared<eager::TensorBuffer>()) {}
 
 TensorStorage::~TensorStorage() {
   if (releaser_hook_) { (*releaser_hook_)(buffer_); }

@@ -34,8 +34,9 @@ using TensorIndexMap = std::vector<std::pair<std::string, int>>;
 namespace user_op {
 
 class InferContext;
+class OpKernel;
 
-}
+}  // namespace user_op
 
 namespace eager {
 
@@ -66,9 +67,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
   void ForEachInferMutMirroredObject(
-      const std::function<void(vm::MirroredObject*)>&) const override {
-    // TODO:
-  }
+      const std::function<void(vm::MirroredObject*)>& fn) const override;
   void ForEachInferConstMirroredObject(
       const std::function<void(vm::MirroredObject*)>&) const override {
     // TODO:
@@ -82,10 +81,15 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     // TODO:
   }
 
+  const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
+
+  void set_user_opkernel(const user_op::OpKernel* user_opkernel) { user_opkernel_ = user_opkernel; }
+
  private:
   std::shared_ptr<one::StatefulOpKernel> opkernel_;
   one::EagerBlobObjectList inputs_;
   one::EagerBlobObjectList outputs_;
+  const user_op::OpKernel* user_opkernel_;
 };
 
 }  // namespace eager

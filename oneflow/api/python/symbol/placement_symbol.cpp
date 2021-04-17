@@ -36,24 +36,10 @@ struct PlacementSymbolExportUtil {
     return ParallelDesc::New(symbol_id, symbol_pb).GetPtrOrThrow();
   }
 
-  static Maybe<ParallelDesc> CreatePlacementSymbol(
-      const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-      const std::shared_ptr<Shape>& hierarchy) {
-    const auto parallel_conf =
-        MakeParallelConf(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
-    std::shared_ptr<ParallelDesc> parallel_desc;
-    JUST(LogicalRun([&parallel_desc, &parallel_conf](
-                        const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-      parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
-      return Maybe<void>::Ok();
-    }));
-    return parallel_desc;
-  }
-
   static std::shared_ptr<ParallelDesc> ApiCreatePlacementSymbol(
       const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy) {
-    return CreatePlacementSymbol(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
+    return ParallelDesc::New(device_tag, machine_device_ids, hierarchy).GetPtrOrThrow();
   }
 
   static HashMap<int64_t, std::vector<int64_t>> MachineId2DeviceIdList(const ParallelDesc& x) {

@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/tensor_impl.h"
-#include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace eager {
@@ -443,7 +443,8 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
+    operand->set_user_opkernel(
+        JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InferOutputTensorDescs(operand));
     JUST(InitOutputBlobs(operand));
@@ -458,9 +459,11 @@ struct LocalCallOpKernelUtil final {
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
-    JUST(TryInitOpKernelState(operand, device_ctx));
-    JUST(OpKernelCompute(operand, device_ctx));
+    user_op::OpKernelState* state;
+    TryInitOpKernelState(operand, device_ctx, &state);
+    JUST(OpKernelCompute(operand, device_ctx, state));
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+    operand->set_user_opkernel(nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -517,7 +520,7 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
-    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn();
+    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
     CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
     JUST(WithOpInferContext(operand, [&](user_op::InferContext* infer_ctx) -> Maybe<void> {
@@ -560,10 +563,10 @@ struct LocalCallOpKernelUtil final {
     return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
   }
 
-  static inline Maybe<void> TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
-                                                 DeviceCtx* device_ctx) {
-    JUST(operand->mut_opkernel()->TryInitOpKernelState(device_ctx));
-    return Maybe<void>::Ok();
+  static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
+                                                  operand->inputs(), operand->outputs(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
@@ -582,13 +585,12 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
-                                            DeviceCtx* device_ctx) {
-    auto* opkernel = operand->mut_opkernel();
-    JUST(WithComputeContext(
-        operand, device_ctx, [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
-          opkernel->mut_user_opkernel()->Compute(compute_ctx, opkernel->mut_opkernel_state());
-          return Maybe<void>::Ok();
-        }));
+                                            DeviceCtx* device_ctx, user_op::OpKernelState* state) {
+    JUST(WithComputeContext(operand, device_ctx,
+                            [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
+                              operand->user_opkernel()->Compute(compute_ctx, state);
+                              return Maybe<void>::Ok();
+                            }));
     return Maybe<void>::Ok();
   }
 

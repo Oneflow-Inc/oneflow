@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
@@ -41,6 +42,13 @@ class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                  const std::shared_ptr<const ParallelDesc>& parallel_desc)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer) {
+    infer_local_dep_object_.reset(new VmLocalDepObject(parallel_desc));
+    compute_local_dep_object_.reset(new VmLocalDepObject(parallel_desc));
+  }
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
       : BlobObject(mem_case, shape, data_type), tensor_buffer_(tensor_buffer), blob_body_bytes_(0) {
@@ -68,6 +76,8 @@ class EagerBlobObject final : public BlobObject {
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
+  std::unique_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::unique_ptr<VmLocalDepObject> compute_local_dep_object_;
 
  protected:
   std::unique_ptr<RtBlobDesc> rt_blob_desc_;

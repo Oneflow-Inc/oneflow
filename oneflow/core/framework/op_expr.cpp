@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/user/kernels/stateful_opkernel.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace one {
@@ -30,9 +30,8 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
   // TODO: align with pytorch: set default device tag to cpu and update it in module.to()
   op_conf.set_device_tag("gpu");
   auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
-  kernel_ = std::make_shared<StatefulOpKernel>(
-      std::shared_ptr<const JobDesc>(&GlobalJobDesc(), [](const JobDesc*) {}), op_conf, mem_case,
-      &indexed_input_pairs(), &indexed_output_pairs());
+  kernel_ = std::make_shared<StatefulOpKernel>(op_conf, mem_case, &indexed_input_pairs(),
+                                               &indexed_output_pairs());
 }
 
 Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {

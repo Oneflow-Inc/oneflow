@@ -250,7 +250,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  std::unique_ptr<VmLocalDepObject> infer_local_dep_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
