@@ -38,7 +38,7 @@ class OpExpr {
   virtual int input_num() const = 0;
   virtual int output_num() const = 0;
 
-  virtual bool GradDisabled() const { return false; }
+  virtual bool IsGradDisabled() const { return false; }
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
