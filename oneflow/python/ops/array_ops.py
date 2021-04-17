@@ -2464,3 +2464,41 @@ def ones(
         dtype = flow.float32
 
     return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
+
+
+@oneflow_export("profiler.nvtx_start")
+def nvtx_start(
+    x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+
+    if name is None:
+        name = id_util.UniqueStr("NvtxStart_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("nvtx_start")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("mark_prefix", str(mark_prefix))
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
+
+
+@oneflow_export("profiler.nvtx_end")
+def nvtx_end(
+    x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
+) -> oneflow_api.BlobDesc:
+
+    if name is None:
+        name = id_util.UniqueStr("NvtxEnd_")
+
+    op = (
+        flow.user_op_builder(name)
+        .Op("nvtx_end")
+        .Input("in", [x])
+        .Output("out")
+        .Attr("mark_prefix", str(mark_prefix))
+        .Build()
+    )
+    return op.InferAndTryRun().SoleOutputBlob()
