@@ -70,14 +70,18 @@ class EagerBlobObject final : public BlobObject {
     return Maybe<void>::Ok();
   }
 
+  Maybe<VmLocalDepObject> infer_local_dep_object() const { return infer_local_dep_object_; }
+
+  Maybe<VmLocalDepObject> compute_local_dep_object() const { return compute_local_dep_object_; }
+
  private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
-  std::unique_ptr<VmLocalDepObject> infer_local_dep_object_;
-  std::unique_ptr<VmLocalDepObject> compute_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 
  protected:
   std::unique_ptr<RtBlobDesc> rt_blob_desc_;

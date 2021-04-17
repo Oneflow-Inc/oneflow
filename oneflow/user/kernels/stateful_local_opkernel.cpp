@@ -227,8 +227,8 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
       need_check_mem_case_(true) {
   op_infer_ctx_.reset(
       new LocalUserOpInferContext(op_conf, indexed_input_pairs, indexed_output_pairs));
-  compute_ctx_.reset(
-      new LocalUserKernelComputeContext(nullptr, op_conf, indexed_input_pairs, indexed_output_pairs));
+  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, indexed_input_pairs,
+                                                       indexed_output_pairs));
   create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
   reg_ctx_.reset(
       new LocalUserKernelRegContext(op_conf, indexed_input_pairs_, indexed_output_pairs_));

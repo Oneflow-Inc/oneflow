@@ -59,6 +59,9 @@ class TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
+  virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
+  virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
   const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
@@ -175,6 +178,9 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
@@ -220,6 +226,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override;
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
@@ -276,6 +284,9 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
@@ -324,6 +335,9 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
+
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }

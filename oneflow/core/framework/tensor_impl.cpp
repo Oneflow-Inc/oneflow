@@ -92,6 +92,13 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
                                  dtype_->data_type(), tensor_storage_->buffer()));
   return Maybe<void>::Ok();
 }
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
+  return eager_blob_object_->infer_local_dep_object();
+}
+
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
+  return eager_blob_object_->compute_local_dep_object();
+}
 
 }  // namespace one
 }  // namespace oneflow

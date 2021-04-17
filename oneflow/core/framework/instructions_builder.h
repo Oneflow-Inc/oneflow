@@ -44,6 +44,7 @@ namespace oneflow {
 namespace one {
 class StatefulOpKernel;
 class TensorTuple;
+class MirroredTensor;
 }  // namespace one
 
 namespace detail {
@@ -113,6 +114,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
+
+  Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
+                                   const std::function<void(uint64_t)>& callback,
+                                   const std::string& modifier);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
