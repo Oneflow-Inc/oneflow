@@ -31,10 +31,10 @@ namespace oneflow {
 namespace {
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs) {
-  CHECK_EQ_OR_RETURN(op.input_num(), inputs.size())
-      << "The operation requires " << op.input_num() << " inputs, but " << inputs.size()
+  CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
+      << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_num());
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
   JUST(interperter->Apply(op, inputs, outputs.get()));
   return outputs;
@@ -69,8 +69,8 @@ void PybindExportOpExpr(py::module& m, const char* op_type_name) {
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
       .def_property_readonly("type", &one::OpExpr::type)
-      .def_property_readonly("input_num", &one::OpExpr::input_num)
-      .def_property_readonly("output_num", &one::OpExpr::output_num)
+      .def_property_readonly("input_size", &one::OpExpr::input_size)
+      .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs) {
              return Interpret(op_expr, inputs).GetOrThrow();

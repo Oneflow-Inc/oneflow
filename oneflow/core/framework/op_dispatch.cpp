@@ -22,7 +22,7 @@ namespace one {
 
 template<>
 Maybe<TensorTuple> Dispatch<TensorTuple>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get());
   return outputs;
 }
