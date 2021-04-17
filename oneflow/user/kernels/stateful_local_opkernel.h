@@ -223,16 +223,16 @@ class StatefulOpKernel final {
                    const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
-  const std::vector<int64_t>& input_tuple_indexes4const_ibns() {
+  const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
-  const std::vector<int64_t>& input_tuple_indexes4mut_ibns() {
+  const std::vector<int64_t>& input_tuple_indexes4mut_ibns() const {
     return input_tuple_indexes4mut_ibns_;
   }
-  const std::vector<int64_t>& output_tuple_indexes4mut_obns() {
+  const std::vector<int64_t>& output_tuple_indexes4mut_obns() const {
     return output_tuple_indexes4mut_obns_;
   }
-  const std::vector<int64_t>& output_tuple_indexes4mut2_obns() {
+  const std::vector<int64_t>& output_tuple_indexes4mut2_obns() const {
     return output_tuple_indexes4mut2_obns_;
   }
 

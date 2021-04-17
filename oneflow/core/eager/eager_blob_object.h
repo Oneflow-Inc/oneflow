@@ -38,20 +38,28 @@ class TensorBuffer {
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
 };
 
+inline Maybe<VmLocalDepObject> GetVmLocalDepObject(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  return parallel_desc != nullptr
+             ? Maybe<VmLocalDepObject>(std::make_shared<VmLocalDepObject>(parallel_desc))
+             : Error::Unimplemented();
+}
+
 class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
+      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const std::shared_ptr<const ParallelDesc>& parallel_desc)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer) {
-    infer_local_dep_object_.reset(new VmLocalDepObject(parallel_desc));
-    compute_local_dep_object_.reset(new VmLocalDepObject(parallel_desc));
-  }
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
-      : BlobObject(mem_case, shape, data_type), tensor_buffer_(tensor_buffer), blob_body_bytes_(0) {
+      : BlobObject(mem_case, shape, data_type),
+        tensor_buffer_(tensor_buffer),
+        blob_body_bytes_(0),
+        infer_local_dep_object_(GetVmLocalDepObject(parallel_desc)),
+        compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
     CHECK(static_cast<bool>(shape));
     CHECK(static_cast<bool>(tensor_buffer));
   }
@@ -80,8 +88,8 @@ class EagerBlobObject final : public BlobObject {
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  Maybe<VmLocalDepObject> infer_local_dep_object_;
+  Maybe<VmLocalDepObject> compute_local_dep_object_;
 
  protected:
   std::unique_ptr<RtBlobDesc> rt_blob_desc_;

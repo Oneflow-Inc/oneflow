@@ -683,7 +683,7 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
       opkernel, input_eager_blob_objects, output_eager_blob_objects);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
-  instruction_list_->PushBack(instruction.Mutable());
+  instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
 
