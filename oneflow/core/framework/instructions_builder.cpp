@@ -159,10 +159,6 @@ Maybe<void> _Run(
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
   Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               ReleaseObject));
-
-  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list.get(), compute_instr_msg) {
-    LOG(INFO) << "want to run instr " << compute_instr_msg->instr_type_name();
-  }
   JUST(RunInstruction(instruction_list, eager_symbol_list));
   instruction_list->Clear();
   eager_symbol_list->clear_eager_symbol();
@@ -1569,12 +1565,6 @@ Maybe<void> LogicalRun(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SingleClientSyncLogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-  JUST(LogicalRun(Build));
-  return vm::SingleClientSync();
-}
-
 Maybe<void> PhysicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
   const auto& RunInstruction =
@@ -1587,12 +1577,6 @@ Maybe<void> PhysicalRun(
   JUST(_Run(Build, std::make_shared<vm::PhysicalIdGenerator>(), RunInstruction,
             _ReleasePhysicalObject));
   return Maybe<void>::Ok();
-}
-
-Maybe<void> SingleClientSyncPhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
-  JUST(PhysicalRun(Build));
-  return vm::SingleClientSync();
 }
 
 }  // namespace oneflow

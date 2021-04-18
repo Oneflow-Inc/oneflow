@@ -110,7 +110,7 @@ class UserOpExpr : public BuiltinOpExpr {
 
  private:
   UserOpConf proto_;
-  mutable std::shared_ptr<StatefulOpKernel> kernel_;
+  std::shared_ptr<StatefulOpKernel> kernel_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name)                                                 \

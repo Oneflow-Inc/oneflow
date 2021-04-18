@@ -442,12 +442,6 @@ Maybe<void> LogicalRun(
 Maybe<void> PhysicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
 
-Maybe<void> SingleClientSyncLogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
-
-Maybe<void> SingleClientSyncPhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_

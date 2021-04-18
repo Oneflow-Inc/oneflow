@@ -243,22 +243,34 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
   data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 
   ArgModifierSignature arg_modifier_signature;
-  user_op::GetInputArgModifier GetInputArgModifierFn =
-      [&arg_modifier_signature](const std::string& in_arg_name,
-                                int32_t in_arg_index) -> user_op::InputArgModifier* {
-    std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
-    auto* map = arg_modifier_signature.mutable_ibn2input_blob_modifier();
-    return &map->at(ibn);
-  };
-  op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
-  user_op::GetOutputArgModifier GetOutputArgModifierFn =
-      [&arg_modifier_signature](const std::string& in_arg_name,
-                                int32_t in_arg_index) -> user_op::OutputArgModifier* {
-    std::string obn = GenRepeatedBn(in_arg_name, in_arg_index);
-    auto* map = arg_modifier_signature.mutable_obn2output_blob_modifier();
-    return &map->at(obn);
-  };
-  op_reg_val->output_arg_modify_fn(GetOutputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
+  for (const auto &pair : *indexed_input_pairs) {
+    const std::string ibn = GenRepeatedBn(pair.first, pair.second);
+    arg_modifier_signature.mutable_ibn2input_blob_modifier()->insert({ibn, user_op::InputArgModifier()});
+  }
+  for (const auto &pair : *indexed_output_pairs) {
+    const std::string obn = GenRepeatedBn(pair.first, pair.second);
+    arg_modifier_signature.mutable_obn2output_blob_modifier()->insert({obn, user_op::OutputArgModifier()});
+  }
+  if (op_reg_val->input_arg_modify_fn) {
+    user_op::GetInputArgModifier GetInputArgModifierFn =
+        [&arg_modifier_signature](const std::string& in_arg_name,
+                                  int32_t in_arg_index) -> user_op::InputArgModifier* {
+      const std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+      auto* map = arg_modifier_signature.mutable_ibn2input_blob_modifier();
+      return &map->at(ibn);
+    };
+    op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
+  }
+  if (op_reg_val->output_arg_modify_fn) {
+    user_op::GetOutputArgModifier GetOutputArgModifierFn =
+        [&arg_modifier_signature](const std::string& in_arg_name,
+                                  int32_t in_arg_index) -> user_op::OutputArgModifier* {
+      const std::string obn = GenRepeatedBn(in_arg_name, in_arg_index);
+      auto* map = arg_modifier_signature.mutable_obn2output_blob_modifier();
+      return &map->at(obn);
+    };
+    op_reg_val->output_arg_modify_fn(GetOutputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
+  }
 
   for (int i = 0; i < indexed_input_pairs->size(); i++) {
     const auto& pair = indexed_input_pairs->at(i);
