@@ -23,17 +23,15 @@ namespace oneflow {
 
 namespace one {
 
-class TensorTuple;
 class StatefulOpKernel;
 
-using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
-using TensorIndexMap = std::vector<std::pair<std::string, int>>;
+using EagerBlobObjectList =
+    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 
 }  // namespace one
 
 namespace user_op {
 
-class InferContext;
 class OpKernel;
 
 }  // namespace user_op
@@ -52,17 +50,15 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs) {}
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
-  const one::EagerBlobObjectList inputs() const { return inputs_; }
-  const one::EagerBlobObjectList outputs() const { return outputs_; }
+  const one::EagerBlobObjectList& inputs() const { return inputs_; }
+  const one::EagerBlobObjectList& outputs() const { return outputs_; }
 
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
-  const one::EagerBlobObjectList mut_inputs() { return inputs_; }
-  const one::EagerBlobObjectList mut_outputs() { return outputs_; }
 
   using OutputFn = std::function<Maybe<void>(eager::EagerBlobObject* tensor)>;
 
   Maybe<void> ForEachOutputTensor(OutputFn func) {
-    for (auto& output : *mut_outputs()) { JUST(func(output.get())); }
+    for (auto& output : *outputs()) { JUST(func(output.get())); }
     return Maybe<void>::Ok();
   }
 

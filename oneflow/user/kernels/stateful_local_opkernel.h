@@ -37,7 +37,8 @@ class LocalUserOpInferContext;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+using EagerBlobObjectList =
+    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:

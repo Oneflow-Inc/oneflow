@@ -35,29 +35,27 @@ namespace one {
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
-  std::shared_ptr<const ParallelDesc> parallel_desc;
   std::shared_ptr<const Device> device;
   if (inputs.empty()) {
     // TODO: align with pytorch: default cpu
-    const auto& scope = JUST(GetCurrentScope());
-    parallel_desc = scope->device_parallel_desc_symbol();
-    device = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
+    device = std::make_shared<Device>("cuda", 0);
   } else {
-    device = inputs[0]->device();
-    for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs[i]->device()); }
-    parallel_desc = JUST(Device::MakeParallelDescByDevice(*device));
+    device = inputs.at(0)->device();
+    for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs.at(i)->device()); }
   }
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(Device::MakeParallelDescByDevice(*device));
   if (parallel_desc->device_tag() != "gpu") {
-    // TODO: update device in module.to()
+    // TODO: set device according to inputs
     return Error::Unimplemented();
   }
   auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
-  EagerBlobObjectList input_eager_blob_objects =
+  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
-    (*input_eager_blob_objects)[i] = JUST(inputs[i]->eager_blob_object());
+    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
-  EagerBlobObjectList output_eager_blob_objects =
+  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     auto mem_case = user_op_expr.mut_kernel()->mem_case();
@@ -65,19 +63,19 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
         mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
         std::make_shared<eager::TensorBuffer>(), parallel_desc);
-    (*output_eager_blob_objects)[i] = eager_blob_object;
+    output_eager_blob_objects->at(i) = eager_blob_object;
   }
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(user_op_expr.mut_kernel(), input_eager_blob_objects,
                                     output_eager_blob_objects, parallel_desc));
     return Maybe<void>::Ok();
   };
-  // TODO: remove sync when tensor is ready
   JUST(PhysicalRun(build_instruction));
+  // TODO: remove sync when tensor is ready
   JUST(vm::SingleClientSync());
   for (int i = 0; i < outputs->size(); ++i) {
-    (*outputs)[i] = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-        (*output_eager_blob_objects)[i], device));
+    outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
+        output_eager_blob_objects->at(i), device));
   }
   return Maybe<void>::Ok();
 }

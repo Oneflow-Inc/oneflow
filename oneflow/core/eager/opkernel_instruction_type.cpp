@@ -455,7 +455,6 @@ struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
-    operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs());
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
@@ -541,7 +540,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
                                                const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateInferContext(operand->mut_inputs(), operand->mut_outputs())));
+    JUST(Callback(opkernel->UpdateInferContext(operand->inputs(), operand->outputs())));
     // tensor tuples are not allowed to be hold by StatefulOpKernel
     opkernel->UpdateInferContext(nullptr, nullptr);
     return Maybe<void>::Ok();
@@ -552,7 +551,7 @@ struct LocalCallOpKernelUtil final {
                                                DeviceCtx* device_ctx, const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
     JUST(Callback(
-        opkernel->UpdateComputeContext(operand->mut_inputs(), operand->mut_outputs(), device_ctx)));
+        opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(), device_ctx)));
     // tensor tuples are not allowed to be hold by StatefulOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();

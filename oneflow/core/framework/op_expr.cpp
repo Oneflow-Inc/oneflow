@@ -21,11 +21,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+namespace {
 std::pair<std::string, int> GetPair(const std::string& bn) {
   const size_t pos = bn.rfind('_');
   CHECK_NE(pos, std::string::npos) << "bn: " << bn;
   return std::make_pair(bn.substr(0, pos), std::stoi(bn.substr(pos + 1)));
 };
+}  // namespace
 
 BuiltinOpExpr::BuiltinOpExpr(const std::string& type, const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
