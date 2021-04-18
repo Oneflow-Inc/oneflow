@@ -48,16 +48,7 @@ class BuiltinOpExpr : public OpExpr {
  public:
   explicit BuiltinOpExpr(const std::string& type, const std::string& op_name,
                          const std::vector<std::string>& indexed_ibns,
-                         const std::vector<std::string>& indexed_obns)
-      : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
-    auto GetPair = [](const std::string& name) -> std::pair<std::string, int> {
-      size_t pos = name.find('_');
-      CHECK_NE(pos, std::string::npos) << "name: " << name;
-      return std::make_pair(name.substr(0, pos), std::stoi(name.substr(pos + 1)));
-    };
-    for (const auto& ibn : indexed_ibns) { indexed_input_pairs_.push_back(GetPair(ibn)); }
-    for (const auto& obn : indexed_obns) { indexed_output_pairs_.push_back(GetPair(obn)); }
-  }
+                         const std::vector<std::string>& indexed_obns);
 
   virtual ~BuiltinOpExpr() = default;
 
@@ -84,8 +75,8 @@ class BuiltinOpExpr : public OpExpr {
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
   mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
-  std::vector<std::pair<std::string, int>> indexed_input_pairs_;
-  std::vector<std::pair<std::string, int>> indexed_output_pairs_;
+  std::vector<std::pair<std::string, int32_t>> indexed_input_pairs_;
+  std::vector<std::pair<std::string, int32_t>> indexed_output_pairs_;
 };
 
 class StatefulOpKernel;

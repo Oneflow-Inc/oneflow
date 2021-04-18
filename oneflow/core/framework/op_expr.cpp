@@ -21,13 +21,27 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+std::pair<std::string, int> GetPair(const std::string& bn) {
+  const size_t pos = bn.rfind('_');
+  CHECK_NE(pos, std::string::npos) << "bn: " << bn;
+  return std::make_pair(bn.substr(0, pos), std::stoi(bn.substr(pos + 1)));
+};
+
+BuiltinOpExpr::BuiltinOpExpr(const std::string& type, const std::string& op_name,
+                             const std::vector<std::string>& indexed_ibns,
+                             const std::vector<std::string>& indexed_obns)
+    : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
+  for (const auto& ibn : indexed_ibns) { indexed_input_pairs_.push_back(GetPair(ibn)); }
+  for (const auto& obn : indexed_obns) { indexed_output_pairs_.push_back(GetPair(obn)); }
+}
+
 UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
-  // TODO: align with pytorch: set default device tag to cpu and update it in module.to()
+  // TODO: align with pytorch: set device tag in Interpret according to inputs
   op_conf.set_device_tag("gpu");
   auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
   kernel_ = std::make_shared<StatefulOpKernel>(op_conf, mem_case, &indexed_input_pairs(),

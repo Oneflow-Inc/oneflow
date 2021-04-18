@@ -216,6 +216,70 @@ void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlob
   base_ctx_.Update(inputs, outputs);
 }
 
+void InitTensorTupleIndexes4Bns(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
+                                const ArgVec* indexed_output_pairs,
+                                std::vector<int64_t>* input_tuple_indexes4const_ibns,
+                                std::vector<int64_t>* input_tuple_indexes4mut_ibns,
+                                std::vector<int64_t>* output_tuple_indexes4mut_obns,
+                                std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
+  const auto* op_reg_val =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+  CHECK_NOTNULL(op_reg_val);
+
+  ArgModifierSignature arg_modifier_signature;
+  for (const auto& pair : *indexed_input_pairs) {
+    const std::string ibn = GenRepeatedBn(pair.first, pair.second);
+    arg_modifier_signature.mutable_ibn2input_blob_modifier()->insert(
+        {ibn, user_op::InputArgModifier()});
+  }
+  for (const auto& pair : *indexed_output_pairs) {
+    const std::string obn = GenRepeatedBn(pair.first, pair.second);
+    arg_modifier_signature.mutable_obn2output_blob_modifier()->insert(
+        {obn, user_op::OutputArgModifier()});
+  }
+  user_op::UserOpConfWrapper op_conf_wrapper(op_conf);
+  if (op_reg_val->input_arg_modify_fn) {
+    user_op::GetInputArgModifier GetInputArgModifierFn =
+        [&arg_modifier_signature](const std::string& in_arg_name,
+                                  int32_t in_arg_index) -> user_op::InputArgModifier* {
+      const std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
+      auto* map = arg_modifier_signature.mutable_ibn2input_blob_modifier();
+      return &map->at(ibn);
+    };
+    op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, op_conf_wrapper);
+  }
+  if (op_reg_val->output_arg_modify_fn) {
+    user_op::GetOutputArgModifier GetOutputArgModifierFn =
+        [&arg_modifier_signature](const std::string& in_arg_name,
+                                  int32_t in_arg_index) -> user_op::OutputArgModifier* {
+      const std::string obn = GenRepeatedBn(in_arg_name, in_arg_index);
+      auto* map = arg_modifier_signature.mutable_obn2output_blob_modifier();
+      return &map->at(obn);
+    };
+    op_reg_val->output_arg_modify_fn(GetOutputArgModifierFn, op_conf_wrapper);
+  }
+
+  for (int i = 0; i < indexed_input_pairs->size(); i++) {
+    const auto& pair = indexed_input_pairs->at(i);
+    const std::string ibn = GenRepeatedBn(pair.first, pair.second);
+    if (arg_modifier_signature.ibn2input_blob_modifier().at(ibn).is_mutable()) {
+      input_tuple_indexes4mut_ibns->push_back(i);
+    } else {
+      input_tuple_indexes4const_ibns->push_back(i);
+    }
+  }
+
+  for (int i = 0; i < indexed_output_pairs->size(); i++) {
+    const auto& pair = indexed_output_pairs->at(i);
+    const std::string obn = GenRepeatedBn(pair.first, pair.second);
+    if (arg_modifier_signature.obn2output_blob_modifier().at(obn).header_infered_before_compute()) {
+      output_tuple_indexes4mut_obns->push_back(i);
+    } else {
+      output_tuple_indexes4mut2_obns->push_back(i);
+    }
+  }
+}
+
 StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
                                    const std::shared_ptr<MemoryCase>& mem_case,
                                    const ArgVec* indexed_input_pairs,
@@ -242,55 +306,9 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
   }
   data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 
-  ArgModifierSignature arg_modifier_signature;
-  for (const auto &pair : *indexed_input_pairs) {
-    const std::string ibn = GenRepeatedBn(pair.first, pair.second);
-    arg_modifier_signature.mutable_ibn2input_blob_modifier()->insert({ibn, user_op::InputArgModifier()});
-  }
-  for (const auto &pair : *indexed_output_pairs) {
-    const std::string obn = GenRepeatedBn(pair.first, pair.second);
-    arg_modifier_signature.mutable_obn2output_blob_modifier()->insert({obn, user_op::OutputArgModifier()});
-  }
-  if (op_reg_val->input_arg_modify_fn) {
-    user_op::GetInputArgModifier GetInputArgModifierFn =
-        [&arg_modifier_signature](const std::string& in_arg_name,
-                                  int32_t in_arg_index) -> user_op::InputArgModifier* {
-      const std::string ibn = GenRepeatedBn(in_arg_name, in_arg_index);
-      auto* map = arg_modifier_signature.mutable_ibn2input_blob_modifier();
-      return &map->at(ibn);
-    };
-    op_reg_val->input_arg_modify_fn(GetInputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
-  }
-  if (op_reg_val->output_arg_modify_fn) {
-    user_op::GetOutputArgModifier GetOutputArgModifierFn =
-        [&arg_modifier_signature](const std::string& in_arg_name,
-                                  int32_t in_arg_index) -> user_op::OutputArgModifier* {
-      const std::string obn = GenRepeatedBn(in_arg_name, in_arg_index);
-      auto* map = arg_modifier_signature.mutable_obn2output_blob_modifier();
-      return &map->at(obn);
-    };
-    op_reg_val->output_arg_modify_fn(GetOutputArgModifierFn, user_op::UserOpConfWrapper(op_conf));
-  }
-
-  for (int i = 0; i < indexed_input_pairs->size(); i++) {
-    const auto& pair = indexed_input_pairs->at(i);
-    const std::string ibn = GenRepeatedBn(pair.first, pair.second);
-    if (arg_modifier_signature.ibn2input_blob_modifier().at(ibn).is_mutable()) {
-      input_tuple_indexes4mut_ibns_.push_back(i);
-    } else {
-      input_tuple_indexes4const_ibns_.push_back(i);
-    }
-  }
-
-  for (int i = 0; i < indexed_output_pairs->size(); i++) {
-    const auto& pair = indexed_output_pairs->at(i);
-    const std::string obn = GenRepeatedBn(pair.first, pair.second);
-    if (arg_modifier_signature.obn2output_blob_modifier().at(obn).header_infered_before_compute()) {
-      output_tuple_indexes4mut_obns_.push_back(i);
-    } else {
-      output_tuple_indexes4mut2_obns_.push_back(i);
-    }
-  }
+  InitTensorTupleIndexes4Bns(op_conf, indexed_input_pairs, indexed_output_pairs,
+                             &input_tuple_indexes4const_ibns_, &input_tuple_indexes4mut_ibns_,
+                             &output_tuple_indexes4mut_obns_, &output_tuple_indexes4mut2_obns_);
 
   tmp_blob_object_.reset(new eager::EagerBlobObject(mem_case_, std::make_shared<Shape>(),
                                                     DataType::kChar,
