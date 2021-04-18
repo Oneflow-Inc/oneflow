@@ -157,7 +157,7 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
 }
 
 Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
-  if (op.input_num() == 0) { return Maybe<void>::Ok(); }
+  if (op.input_size() == 0) { return Maybe<void>::Ok(); }
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
 
