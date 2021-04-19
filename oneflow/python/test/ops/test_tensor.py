@@ -34,6 +34,32 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_mirrored_numpy(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            shape = (2, 3)
+            op = (
+                flow.builtin_op("constant")
+                .Output("out")
+                .Attr("floating_value", 1.0)
+                .Attr("integer_value", 0)
+                .Attr("is_floating_value", True)
+                .Attr("dtype", flow.float32)
+                .Attr("shape", shape)
+                .Build()
+            )
+            tensor = op()[0]
+            test_case.assertTrue(np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32)))
+
+        job()
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_numpy(test_case):
         shape = (2, 3)
         test_case.assertTrue(

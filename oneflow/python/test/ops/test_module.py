@@ -29,11 +29,65 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
 class TestModule(flow.unittest.TestCase):
+    def test_matmul_speed_lazy(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
+
+        @flow.global_function(function_config=func_config)
+        def job() -> tp.Numpy:
+            x = flow.constant(3.1, flow.float32, [1000, 1000])
+            for _ in range(10):
+                x = flow.matmul(x, x)
+            return x
+
+        # init session
+        job()
+        start = time.time()
+        for _ in range(100):
+            job()
+        end = time.time()
+        print(end - start)
+
+    def test_matmul_speed_eager(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+        func_config.default_placement_scope(flow.scope.placement("gpu", "0:0"))
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            op1 = (
+                flow.builtin_op("constant")
+                .Output("out")
+                .Attr("is_floating_value", True)
+                .Attr("floating_value", 3.1)
+                .Attr("dtype", flow.float32)
+                .Attr("shape", [1000, 1000])
+                .Build()
+            )
+            op2 = (
+                flow.builtin_op("matmul")
+                .Input("a")
+                .Input("b")
+                .Attr("transpose_a", False)
+                .Attr("transpose_b", False)
+                .Attr("alpha", float(1.0))
+                .Output("out")
+                .Build()
+            )
+            x = op1()[0]
+            start = time.time()
+            for _ in range(100):
+                x = op1()[0]
+                for _ in range(10):
+                    x = op2(x, x)[0]
+
+            end = time.time()
+            print(end - start)
+
+        job()
+
     def test_nested_module(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):

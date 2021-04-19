@@ -71,8 +71,6 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     return Maybe<void>::Ok();
   };
   JUST(PhysicalRun(build_instruction));
-  // TODO: remove sync when tensor is ready
-  JUST(vm::SingleClientSync());
   for (int i = 0; i < outputs->size(); ++i) {
     outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         output_eager_blob_objects->at(i), device));

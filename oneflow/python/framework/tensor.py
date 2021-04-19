@@ -24,6 +24,8 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow.python.framework.runtime_mode as rt_mode
+import oneflow.python.framework.ofblob as ofblob_util
+import oneflow.python.lib.core.async_util as async_util
 import oneflow as flow
 from oneflow.python.nn.modules import *
 
@@ -206,8 +208,24 @@ class Tensor:
 
     @_auto_determine
     def numpy(self):
+        internal_tensor = self._local_or_consistent_tensor
+        if not internal_tensor.is_lazy and not internal_tensor.is_consistent:
+            def AsyncNumpy(Yield):
+                def MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield):
+                    def FetchFromOfBlobPtr(ofblob_ptr):
+                        ofblob = ofblob_util.OfBlob(ofblob_ptr)
+                        Yield(ofblob.CopyToNdarray())
+
+                    return FetchFromOfBlobPtr
+
+                fetcher = MakeFetcherEagerBlobBodyAsNumpyFromOfBlob(Yield)
+                def BuildInstruction(builder):
+                    builder.AccessBlobByCallback(internal_tensor, fetcher, "const")
+                oneflow_api.deprecated.PhysicalRun(BuildInstruction)
+            return async_util.Await(1, AsyncNumpy)[0]
+
         return remote_blob_util.BlobObjectNumpy(
-            self._local_or_consistent_tensor._blob_object
+            internal_tensor._blob_object
         )
 
     def tolist(self):
