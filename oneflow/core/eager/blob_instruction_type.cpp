@@ -46,11 +46,10 @@ FLAT_MSG_VIEW_END(PinBlobInstruction);
 
 }  // namespace
 
-#ifdef WITH_CUDA
-
 namespace {
 
 void TryRegisterMemory(Blob* blob) {
+#ifdef WITH_CUDA
   if (!blob) { return; }
   CHECK(blob->mem_case().has_host_mem());
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
@@ -63,9 +62,11 @@ void TryRegisterMemory(Blob* blob) {
     return;
   }
   OF_CUDA_CHECK(cuda_error);
+#endif
 }
 
 void TryUnregisterMemory(Blob* blob) {
+#ifdef WITH_CUDA
   if (!blob) { return; }
   CHECK(blob->mem_case().has_host_mem());
   if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
@@ -77,47 +78,9 @@ void TryUnregisterMemory(Blob* blob) {
     return;
   }
   OF_CUDA_CHECK(cuda_error);
+#endif
 }
 }  // namespace
-
-class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
- public:
-  CudaHostRegisterBlobInstructionType() = default;
-  ~CudaHostRegisterBlobInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
-    auto* blob = blob_obj->mut_blob();
-    TryRegisterMemory(blob);
-  }
-};
-COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
-
-class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
- public:
-  CudaHostUnregisterBlobInstructionType() = default;
-  ~CudaHostUnregisterBlobInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
-    auto* blob = blob_obj->mut_blob();
-    TryUnregisterMemory(blob);
-  }
-};
-COMMAND(
-    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 
 void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
@@ -158,6 +121,47 @@ void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction)
                  src_blob->mem_case(), dst_blob->mem_case());
   TryUnregisterMemory(register_blob);
 }
+
+#ifdef WITH_CUDA
+
+class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
+ public:
+  CudaHostRegisterBlobInstructionType() = default;
+  ~CudaHostRegisterBlobInstructionType() override = default;
+
+  using stream_type = vm::DeviceHelperStreamType;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override {
+    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
+    TryRegisterMemory(blob);
+  }
+};
+COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
+
+class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
+ public:
+  CudaHostUnregisterBlobInstructionType() = default;
+  ~CudaHostUnregisterBlobInstructionType() override = default;
+
+  using stream_type = vm::DeviceHelperStreamType;
+
+  void Infer(vm::Instruction* instruction) const override {
+    // do nothing
+  }
+  void Compute(vm::Instruction* instruction) const override {
+    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
+    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
+    auto* blob = blob_obj->mut_blob();
+    TryUnregisterMemory(blob);
+  }
+};
+COMMAND(
+    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
 
 class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
  public:
