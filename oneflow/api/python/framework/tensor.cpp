@@ -81,6 +81,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_consistent", &T::is_consistent)
       .def_property_readonly("_blob_object", &T::blob_object)
       // OneFlow tensor methods other than pytorch tensor
+      .def("_set_requires_grad", &T::set_requires_grad)
       .def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
         t.set_blob_object(blob_object).GetOrThrow();
       });
