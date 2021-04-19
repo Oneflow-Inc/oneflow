@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -137,11 +138,10 @@ class UserKernelBaseContext {
 
 class KernelCreateContext final : public user_op::KernelCreateContext {
  public:
-  explicit KernelCreateContext(const KernelConf& kernel_conf)
-      : user_op::KernelCreateContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())) {
+  explicit KernelCreateContext(const KernelConf& kernel_conf) {
     CHECK(kernel_conf.has_user_conf());
     CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+    const auto& op_conf = kernel_conf.op_attribute().op_conf();
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                            HashMap<std::string, std::vector<std::string>>* arg2names) {
@@ -151,10 +151,26 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
         }
       }
     };
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &input2arg_name_);
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &output2arg_name_);
-    op_name_ = kernel_conf.op_attribute().op_conf().name();
-    op_type_name_ = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
+    InitInOrOut(op_conf.user_conf().input(), &input2arg_name_);
+    InitInOrOut(op_conf.user_conf().output(), &output2arg_name_);
+    op_name_ = op_conf.name();
+    op_type_name_ = op_conf.user_conf().op_type_name();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
+    }
   }
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
@@ -190,19 +206,20 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
   const std::string& op_type_name() const override { return op_type_name_; }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   std::string op_name_;
   std::string op_type_name_;
   HashMap<std::string, std::vector<std::string>> input2arg_name_;
   HashMap<std::string, std::vector<std::string>> output2arg_name_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
-      : user_op::KernelInitContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        device_ctx_(device_ctx),
+      : device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
         parallel_distribution_signature_(
@@ -214,6 +231,25 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::NaiveTensorDesc(pair.second));
+    }
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+    const auto& op_conf = kernel_conf.op_attribute().op_conf();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
     }
   }
   ~UserKernelInitContext() override = default;
@@ -260,19 +296,21 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
   const ParallelDistributionSignature* parallel_distribution_signature_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
   UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc* job_desc)
-      : user_op::InferContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        job_desc_(job_desc),
+      : job_desc_(job_desc),
         base_ctx_(UserKernelBaseContext(kernel_conf, *job_desc)),
         parallel_distribution_signature_(
             kernel_conf.op_attribute().parallel_distribution_signature()),
@@ -295,6 +333,25 @@ class UserKernelOpInferContext : public user_op::InferContext {
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
                                        user_op::NaiveTensorDesc(pair.second));
+    }
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+    const auto& op_conf = kernel_conf.op_attribute().op_conf();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
     }
   }
   ~UserKernelOpInferContext() override = default;
@@ -390,6 +447,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const std::string& device_tag() const override { return base_ctx_.device_tag(); }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   const JobDesc* job_desc_;
   UserKernelBaseContext base_ctx_;
   SbpSignature sbp_signature_;
@@ -398,15 +457,14 @@ class UserKernelOpInferContext : public user_op::InferContext {
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
-      : user_op::KernelInferContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        device_ctx_(device_ctx),
+      : device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf, &job_desc) {
     auto InitArg2Blob = [this](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -427,6 +485,25 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
       tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
     } else {
       UNIMPLEMENTED();
+    }
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+    const auto& op_conf = kernel_conf.op_attribute().op_conf();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
     }
   }
   ~UserKernelInferContext() = default;
@@ -479,11 +556,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>> arg2tensor_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 namespace {
@@ -513,9 +593,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
-      : user_op::KernelComputeContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
-        device_ctx_(device_ctx),
+      : device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (const auto& it : arg_map) {
@@ -530,6 +608,25 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output());
     arg2bn_tensor_pair_.emplace(std::make_pair("tmp_buffer", 0),
                                 MakeBnTensorPair(GenRepeatedBn("tmp_buffer", 0)));
+    CHECK(kernel_conf.has_user_conf());
+    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
+    const auto& op_conf = kernel_conf.op_attribute().op_conf();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
+    }
   }
   ~UserKernelComputeContext() = default;
 
@@ -583,9 +680,12 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const std::string& device_tag() const { return base_ctx_.device_tag(); }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelRegContext final : public user_op::KernelRegContext {

@@ -54,7 +54,8 @@ class InferContext {
   virtual const std::string& device_tag() const = 0;
 
   bool has_attr(const std::string& attr_name) const {
-    return attrs_.find(attr_name) != attrs_.end();
+    const auto& attr_name2attr_val = attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
   T Attr(const std::string& attr_name) const {
@@ -81,11 +82,10 @@ class InferContext {
   virtual int64_t parallel_num() const = 0;
 
  protected:
-  InferContext(const UserOpConfWrapper& conf) : attrs_(conf.attr()) {}
+  InferContext() = default;
   InferContext(const InferContext&) = delete;
 
- private:
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  virtual const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const = 0;
 };
 
 struct TensorDescInferFnUtil {

@@ -115,10 +115,10 @@ class UserOpInferContext : public user_op::InferContext {
 
   UserOpInferContext(const UserOp* op, const ParallelContext* parallel_ctx, const JobDesc* job_desc,
                      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp)
-      : user_op::InferContext(op->user_op_conf()),
-        op_(op),
+      : op_(op),
         parallel_ctx_(parallel_ctx),
-        job_desc_(job_desc) {
+        job_desc_(job_desc),
+        attrs_(op->user_op_conf().attrs()) {
     bn2logical_tensor_desc_.reset(new HashMap<std::string, user_op::NaiveTensorDesc>());
     auto InitTensorDesc = [&](const ArgVec& arg_vec, const PbRpf<std::string>& bns) {
       CHECK_EQ(arg_vec.size(), bns.size());
@@ -229,12 +229,14 @@ class UserOpInferContext : public user_op::InferContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const { return op_->user_op_conf(); }
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
 
   const UserOp* op_;
   const ParallelContext* parallel_ctx_;
   const JobDesc* job_desc_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   std::unique_ptr<HashMap<std::string, user_op::NaiveTensorDesc>> bn2logical_tensor_desc_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserOpSbpContext : public user_op::SbpContext {

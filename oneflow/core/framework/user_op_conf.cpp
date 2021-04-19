@@ -95,7 +95,7 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
-const HashMap<std::string, std::shared_ptr<AttrVal>>& UserOpConfWrapper::attr() const {
+const HashMap<std::string, std::shared_ptr<AttrVal>>& UserOpConfWrapper::attrs() const {
   return attrs_;
 }
 

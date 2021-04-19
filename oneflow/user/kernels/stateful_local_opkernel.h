@@ -212,12 +212,15 @@ class LocalUserOpInferContext : public user_op::InferContext {
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   ZeroCopyBaseContext zero_copy_base_ctx_;
   std::string op_name_;
   std::string op_type_name_;
   std::string device_tag_;
   HashMap<std::string, std::vector<std::string>> input2arg_name_;
   HashMap<std::string, std::vector<std::string>> output2arg_name_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
@@ -278,6 +281,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const std::string& op_type_name() const override { return op_type_name_; }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
   std::string op_name_;
@@ -285,6 +290,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   std::string device_tag_;
   HashMap<std::string, std::vector<std::string>> input2arg_name_;
   HashMap<std::string, std::vector<std::string>> output2arg_name_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class StatefulOpKernel final {

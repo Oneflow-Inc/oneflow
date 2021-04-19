@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 namespace one {
@@ -136,8 +137,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
 class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
  public:
-  explicit LocalUserKernelCreateContext(const OperatorConf& op_conf)
-      : user_op::KernelCreateContext(user_op::UserOpConfWrapper(op_conf)) {
+  explicit LocalUserKernelCreateContext(const OperatorConf& op_conf) {
     CHECK(op_conf.has_user_conf());
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
@@ -152,6 +152,22 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
     InitInOrOut(op_conf.user_conf().output(), &output2arg_name_);
     op_name_ = op_conf.name();
     op_type_name_ = op_conf.user_conf().op_type_name();
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
+    }
   }
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {
@@ -187,10 +203,13 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
   const std::string& op_type_name() const override { return op_type_name_; }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   std::string op_name_;
   std::string op_type_name_;
   HashMap<std::string, std::vector<std::string>> input2arg_name_;
   HashMap<std::string, std::vector<std::string>> output2arg_name_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
@@ -199,10 +218,26 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                       const ArgVec* index_input_pairs,
                                       const ArgVec* indexed_output_pairs,
                                       EagerBlobObjectList inputs, EagerBlobObjectList outputs)
-      : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
-        device_ctx_(device_ctx),
+      : device_ctx_(device_ctx),
         base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
     base_ctx_.Update(inputs, outputs);
+    CHECK(op_conf.has_user_conf());
+    for (const auto& kv : op_conf.user_conf().attr()) {
+      AttrValue::ValueCase value_case = kv.second.value_case();
+      switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+      };
+    }
   }
   ~LocalUserKernelInitContext() override = default;
 
@@ -233,15 +268,18 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
  private:
+  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
+  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
                                                  const ArgVec* index_input_pairs,
                                                  const ArgVec* indexed_output_pairs)
-    : user_op::InferContext(user_op::UserOpConfWrapper(op_conf)),
-      zero_copy_base_ctx_(index_input_pairs, indexed_output_pairs) {
+    : zero_copy_base_ctx_(index_input_pairs, indexed_output_pairs) {
+  CHECK(op_conf.has_user_conf());
   auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                          HashMap<std::string, std::vector<std::string>>* arg2names) {
     for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
@@ -255,6 +293,22 @@ LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
   device_tag_ = op_conf.device_tag();
   op_name_ = op_conf.name();
   op_type_name_ = op_conf.user_conf().op_type_name();
+  for (const auto& kv : op_conf.user_conf().attr()) {
+    AttrValue::ValueCase value_case = kv.second.value_case();
+    switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+    };
+  }
 }
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
@@ -270,8 +324,7 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_c
                                                              const OperatorConf& op_conf,
                                                              const ArgVec* index_input_pairs,
                                                              const ArgVec* indexed_output_pairs)
-    : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
-      device_ctx_(device_ctx),
+    : device_ctx_(device_ctx),
       base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
   auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                          HashMap<std::string, std::vector<std::string>>* arg2names) {
@@ -286,6 +339,23 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_c
   device_tag_ = op_conf.device_tag();
   op_name_ = op_conf.name();
   op_type_name_ = op_conf.user_conf().op_type_name();
+  CHECK(op_conf.has_user_conf());
+  for (const auto& kv : op_conf.user_conf().attr()) {
+    AttrValue::ValueCase value_case = kv.second.value_case();
+    switch (value_case) {
+#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
+  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
+  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
+    CHECK(attrs_                                                                             \
+              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
+                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
+              .second);                                                                      \
+    break;
+      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
+#undef CASE_ENTRY
+      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
+    };
+  }
 }
 
 void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,

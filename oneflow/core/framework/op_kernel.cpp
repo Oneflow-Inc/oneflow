@@ -34,8 +34,9 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
 #define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                          \
   template<>                                                                                 \
   const cpp_type& KernelCreateContext::attr<cpp_type>(const std::string& attr_name) const {  \
-    auto it = attrs_.find(attr_name);                                                        \
-    if (it != attrs_.end()) {                                                                \
+    const auto& attr_name2attr_val = attrs();                                                \
+    const auto& it = attr_name2attr_val.find(attr_name);                                     \
+    if (it != attr_name2attr_val.end()) {                                                    \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();           \
     } else {                                                                                 \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                    \
@@ -44,8 +45,9 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
   }                                                                                          \
   template<>                                                                                 \
   const cpp_type& KernelInitContext::attr<cpp_type>(const std::string& attr_name) const {    \
-    auto it = attrs_.find(attr_name);                                                        \
-    if (it != attrs_.end()) {                                                                \
+    const auto& attr_name2attr_val = attrs();                                                \
+    const auto& it = attr_name2attr_val.find(attr_name);                                     \
+    if (it != attr_name2attr_val.end()) {                                                    \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();           \
     } else {                                                                                 \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                    \
@@ -54,8 +56,9 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
   }                                                                                          \
   template<>                                                                                 \
   const cpp_type& KernelInferContext::attr<cpp_type>(const std::string& attr_name) const {   \
-    auto it = attrs_.find(attr_name);                                                        \
-    if (it != attrs_.end()) {                                                                \
+    const auto& attr_name2attr_val = attrs();                                                \
+    const auto& it = attr_name2attr_val.find(attr_name);                                     \
+    if (it != attr_name2attr_val.end()) {                                                    \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();           \
     } else {                                                                                 \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                    \
@@ -64,8 +67,9 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
   }                                                                                          \
   template<>                                                                                 \
   const cpp_type& KernelComputeContext::attr<cpp_type>(const std::string& attr_name) const { \
-    auto it = attrs_.find(attr_name);                                                        \
-    if (it != attrs_.end()) {                                                                \
+    const auto& attr_name2attr_val = attrs();                                                \
+    const auto& it = attr_name2attr_val.find(attr_name);                                     \
+    if (it != attr_name2attr_val.end()) {                                                    \
       return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();           \
     } else {                                                                                 \
       LOG(FATAL) << "Cannot find the attr: " << attr_name                                    \

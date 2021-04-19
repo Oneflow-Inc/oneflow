@@ -48,7 +48,8 @@ class KernelCreateContext {
   virtual const std::string& op_name() const = 0;
   virtual const std::string& op_type_name() const = 0;
   bool has_attr(const std::string& attr_name) const {
-    return attrs_.find(attr_name) != attrs_.end();
+    const auto& attr_name2attr_val = attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
   T Attr(const std::string& attr_name) const {
@@ -59,11 +60,10 @@ class KernelCreateContext {
   const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelCreateContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
+  KernelCreateContext() = default;
   KernelCreateContext(const KernelCreateContext&) = delete;
 
- private:
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  virtual const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const = 0;
 };
 
 class KernelInitContext {
@@ -86,7 +86,8 @@ class KernelInitContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
   bool has_attr(const std::string& attr_name) const {
-    return attrs_.find(attr_name) != attrs_.end();
+    const auto& attr_name2attr_val = attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
   T Attr(const std::string& attr_name) const {
@@ -97,11 +98,10 @@ class KernelInitContext {
   const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelInitContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
+  KernelInitContext() = default;
   KernelInitContext(const KernelInitContext&) = delete;
 
- private:
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  virtual const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const = 0;
 };
 
 class KernelInferContext {
@@ -122,7 +122,8 @@ class KernelInferContext {
                                                      int32_t arg_index) = 0;
 
   bool has_attr(const std::string& attr_name) const {
-    return attrs_.find(attr_name) != attrs_.end();
+    const auto& attr_name2attr_val = attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
   T Attr(const std::string& attr_name) const {
@@ -139,11 +140,10 @@ class KernelInferContext {
   virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
 
  protected:
-  KernelInferContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
+  KernelInferContext() = default;
   KernelInferContext(const KernelInferContext&) = delete;
 
- private:
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  virtual const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const = 0;
 };
 
 class Tensor;
@@ -173,7 +173,8 @@ class KernelComputeContext {
   virtual const std::string& op_type_name() const = 0;
 
   bool has_attr(const std::string& attr_name) const {
-    return attrs_.find(attr_name) != attrs_.end();
+    const auto& attr_name2attr_val = attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
   T Attr(const std::string& attr_name) const {
@@ -184,11 +185,10 @@ class KernelComputeContext {
   const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelComputeContext(UserOpConfWrapper&& conf) : attrs_(conf.attr()) {}
+  KernelComputeContext() = default;
   KernelComputeContext(const KernelComputeContext&) = delete;
 
- private:
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  virtual const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const = 0;
 };
 
 class OpKernelState {
