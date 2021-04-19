@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
@@ -229,13 +230,14 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
                 lbn2identity_buffer_op_conf.emplace(
                     old_lbn, user_op::UserOpConfWrapperBuilder("System-buffer-" + old_lbn)
                                  .Op("identity_buffer")
-                                 .Input("in", lbn)
+                                 .Input("in", old_lbn)
                                  .Output("out")
-                                 .Attr<int64_t>("buffer_size", identity_buffer_size);
-                        .ScopeSymbolId(old_scope_symbol_id)
-                        .Build()
-                        .op_conf());
-                CHECK_JUST(job_builder->AddOp(node_parallel_conf, lbn2identity_buffer_op_conf.at(old_lbn));
+                                 .Attr<int64_t>("buffer_size", identity_buffer_size)
+                                 .ScopeSymbolId(old_scope_symbol_id)
+                                 .Build()
+                                 .op_conf());
+                JUST(job_builder->AddOp(node_parallel_conf,
+                                        lbn2identity_buffer_op_conf.at(old_lbn)));
               }
               const OperatorConf& identity_buffer_op = lbn2identity_buffer_op_conf.at(old_lbn);
               list_s.set_s(i, GenLogicalBlobName(identity_buffer_op.name(), "out"));

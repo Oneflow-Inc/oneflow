@@ -528,7 +528,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 
   CHECK_EQ(nccl_op_confs.size(), nccl_op_parallel_confs.size());
   for (int64_t i = 0; i < nccl_op_confs.size(); ++i) {
-    job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i));
+    JUST(job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i)));
   }
 
   return Maybe<void>::Ok();
