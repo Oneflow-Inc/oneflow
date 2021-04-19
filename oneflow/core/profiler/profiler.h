@@ -64,6 +64,9 @@ class HostMemoryGuard final {
 #define OF_PROFILER_RANGE_GUARD(name) \
   ::oneflow::profiler::RangeGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name) ::oneflow::profiler::LogHostMemoryUsage(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)                                       \
+  ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
+                                                 __COUNTER__)(name)
 #else
 #define OF_PROFILER_ONLY_CODE(...)
 #define OF_PROFILER_RANGE_PUSH(name)
@@ -71,9 +74,7 @@ class HostMemoryGuard final {
 #define OF_PROFILER_RANGE_GUARD(name)
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
-#define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)                                       \
-  ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
-                                                 __COUNTER__)(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)
 #endif
 
 }  // namespace profiler
