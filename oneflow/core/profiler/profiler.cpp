@@ -121,8 +121,10 @@ HostMemoryGuard::~HostMemoryGuard() {
   int64_t end_vm_size_ = 0;
   int64_t end_rss_size_ = 0;
   LogHostMemoryUsage("[END][" + name_ + "]", &end_vm_size_, &end_rss_size_);
-  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][VM]" << (end_vm_size_ - start_vm_size_);
-  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][RSS]" << (end_rss_size_ - start_rss_size_);
+  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][VM][GB]"
+            << (end_vm_size_ - start_vm_size_) / 1024. / 1024. / 1024.;
+  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][RSS][GB]"
+            << (end_rss_size_ - start_rss_size_) / 1024. / 1024. / 1024.;
 }
 
 }  // namespace profiler
