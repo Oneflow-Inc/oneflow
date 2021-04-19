@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/id_serialization.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
