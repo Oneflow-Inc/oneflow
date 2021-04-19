@@ -123,11 +123,16 @@ void LogHostMemoryUsage(const std::string& name) {
 #endif  // OF_ENABLE_PROFILER
 }
 
-HostMemoryGuard::HostMemoryGuard(const std::string& name) {
+HostMemoryGuard::HostMemoryGuard(const std::string& name, JSONCallback json_callback) {
 #ifdef OF_ENABLE_PROFILER
-  this->name_ = name;
   QueryHostMemoryUsage(&start_vm_size_, &start_rss_size_);
+  name_ = name;
+  json_callback_ = json_callback;
 #endif  // OF_ENABLE_PROFILER
+}
+
+HostMemoryGuard::HostMemoryGuard(const std::string& name) {
+  HostMemoryGuard(name, [](json& j) {});
 }
 
 HostMemoryGuard::~HostMemoryGuard() {

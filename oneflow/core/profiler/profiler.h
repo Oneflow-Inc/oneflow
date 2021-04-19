@@ -21,6 +21,8 @@ limitations under the License.
 
 namespace oneflow {
 
+using json = nlohmann::json;
+
 namespace profiler {
 
 void ParseBoolFlagFromEnv(const std::string& env_var, bool* flag);
@@ -46,7 +48,7 @@ class RangeGuard final {
 };
 
 class HostMemoryGuard final {
-  using JSONCallback = std::function<void(nlohmann::json&)>;
+  using JSONCallback = std::function<void(json&)>;
 
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostMemoryGuard);
