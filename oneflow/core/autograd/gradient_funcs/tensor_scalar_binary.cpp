@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 
@@ -69,7 +69,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}));
+      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}));
     }
     if (ctx->scalar_requires_grad) {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
@@ -77,7 +77,8 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       AttrValueMap attrs;
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
-      in_grads->at(1) = JUST(Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
+      in_grads->at(1) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
     }
     return Maybe<void>::Ok();
   }
@@ -89,7 +90,8 @@ class TensorScalarSub : public TensorScalarAddOrSub {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) = JUST(Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}, /*attrs=*/{}));
+      in_grads->at(0) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}, /*attrs=*/{}));
     }
     if (ctx->scalar_requires_grad) {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
@@ -97,8 +99,9 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
       AttrValueMap attrs;
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
-      const auto& reduce_sum = JUST(Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
-      in_grads->at(1) = JUST(Dispatch<Tensor>(*scalar_mul_op_, {reduce_sum}));
+      const auto& reduce_sum =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
+      in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*scalar_mul_op_, {reduce_sum}));
     }
     return Maybe<void>::Ok();
   }
@@ -146,17 +149,18 @@ Maybe<void> TensorScalarMul::Apply(const TensorScalarInterpState* ctx, const Ten
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*scalar_mul_op_, {out_grads.at(0), scalar}));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*scalar_mul_op_, {out_grads.at(0), scalar}));
   }
   if (ctx->scalar_requires_grad) {
     const auto& x = ctx->SavedTensors().at(ctx->x_requires_grad);
-    const auto& y = JUST(Dispatch<Tensor>(*multiply_op_, {out_grads.at(0), x}));
+    const auto& y = JUST(OpInterpUtil::Dispatch<Tensor>(*multiply_op_, {out_grads.at(0), x}));
     int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
     std::vector<int32_t> axes_vec(num_axes);
     std::iota(axes_vec.begin(), axes_vec.end(), 0);
     AttrValueMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
-    in_grads->at(1) = JUST(Dispatch<Tensor>(*reduce_sum_op_, {y}, attrs));
+    in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {y}, attrs));
   }
   return Maybe<void>::Ok();
 }
@@ -201,12 +205,14 @@ Maybe<void> TensorScalarDiv::Apply(const TensorScalarInterpState* ctx, const Ten
   in_grads->resize(2);
   if (ctx->x_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*tensor_scalar_div_op_, {out_grads.at(0), scalar}));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*tensor_scalar_div_op_, {out_grads.at(0), scalar}));
   }
   if (ctx->scalar_requires_grad) {
     const auto& scalar = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
-    in_grads->at(1) = JUST(Dispatch<Tensor>(*broadcast_div_op_, {out_grads.at(0), y, scalar}));
+    in_grads->at(1) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_div_op_, {out_grads.at(0), y, scalar}));
   }
   return Maybe<void>::Ok();
 }

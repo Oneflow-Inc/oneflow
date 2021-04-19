@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 
@@ -52,7 +52,7 @@ class ReduceSumLikeModule {
       }
       inputs.push_back(like);
     }
-    return JUST(Dispatch<Tensor>(*op, inputs, attrs));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs));
   }
 
  private:
@@ -133,7 +133,8 @@ class BroadcastSub : public BroadcastBinary {
     in_grads->resize(2);
     if (x->requires_grad()) { in_grads->at(0) = JUST(x_grad_op_->forward(out_grads.at(0), x)); }
     if (y->requires_grad()) {
-      const auto& grad = JUST(Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0)}, /*attrs=*/{}));
+      const auto& grad =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0)}, /*attrs=*/{}));
       in_grads->at(1) = JUST(y_grad_op_->forward(grad, y));
     }
     return Maybe<void>::Ok();
@@ -167,12 +168,12 @@ class BroadcastMul : public BroadcastBinary {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad =
-          JUST(Dispatch<Tensor>(*x_grad_mul_op_, {out_grads.at(0), y}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_mul_op_, {out_grads.at(0), y}, /*attrs=*/{}));
       in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
     }
     if (y->requires_grad()) {
       const auto& y_grad =
-          JUST(Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0), x}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_mul_op_, {out_grads.at(0), x}, /*attrs=*/{}));
       in_grads->at(1) = JUST(y_grad_op_->forward(y_grad, y));
     }
     return Maybe<void>::Ok();
@@ -206,11 +207,12 @@ class BroadcastDiv : public BroadcastBinary {
     in_grads->resize(2);
     if (x->requires_grad()) {
       const auto& x_grad =
-          JUST(Dispatch<Tensor>(*x_grad_div_op_, {out_grads.at(0), y}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_div_op_, {out_grads.at(0), y}, /*attrs=*/{}));
       in_grads->at(0) = JUST(x_grad_op_->forward(x_grad, x));
     }
     if (y->requires_grad()) {
-      in_grads->at(1) = JUST(Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), y, z}, /*attrs=*/{}));
+      in_grads->at(1) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), y, z}, /*attrs=*/{}));
     }
     return Maybe<void>::Ok();
   }

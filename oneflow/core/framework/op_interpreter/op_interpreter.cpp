@@ -50,7 +50,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 
 Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrValueMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_num());
+  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
   const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());

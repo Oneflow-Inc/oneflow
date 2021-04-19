@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/user_op_conf_trait.h"
 
@@ -94,12 +94,12 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     } else {
       const auto& moving_mean = ctx->SavedTensors().at(2);      // moving_mean
       const auto& moving_variance = ctx->SavedTensors().at(3);  // moving_variance
-      const auto& add_eps = JUST(Dispatch<Tensor>(*add_eps_op_, {moving_variance}));
+      const auto& add_eps = JUST(OpInterpUtil::Dispatch<Tensor>(*add_eps_op_, {moving_variance}));
       mean = moving_mean;
-      inv_variance = JUST(Dispatch<Tensor>(*rsqrt_op_, {add_eps}));
+      inv_variance = JUST(OpInterpUtil::Dispatch<Tensor>(*rsqrt_op_, {add_eps}));
     }
-    const auto& results = JUST(
-        Dispatch<TensorTuple>(*normalization_grad_op_, {x, y_grad, gamma, mean, inv_variance}));
+    const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(
+        *normalization_grad_op_, {x, y_grad, gamma, mean, inv_variance}));
     CHECK_EQ_OR_RETURN(results->size(), 3);
     // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and beta.
     in_grads->resize(5);
@@ -120,19 +120,20 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     }
     AttrValueMap shape_attr;
     shape_attr.SetAttr<Shape>("shape", Shape(dim_vec));
-    const auto& reshaped_gamma = JUST(Dispatch<Tensor>(*reshape_gamma_op_, {gamma}, shape_attr));
+    const auto& reshaped_gamma =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_gamma_op_, {gamma}, shape_attr));
     const auto& reshaped_inv_variance =
-        JUST(Dispatch<Tensor>(*reshape_variance_op_, {inv_variance}, shape_attr));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_variance_op_, {inv_variance}, shape_attr));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
     bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
-    if (is_fp16) { y_grad_fp32 = JUST(Dispatch<Tensor>(*h2f_cast_op_, {y_grad})); }
+    if (is_fp16) { y_grad_fp32 = JUST(OpInterpUtil::Dispatch<Tensor>(*h2f_cast_op_, {y_grad})); }
     const auto& dy_mul_gamma =
-        JUST(Dispatch<Tensor>(*broadcast_mul_op_, {reshaped_gamma, y_grad_fp32}));
-    const auto& dy_mul_inv_var =
-        JUST(Dispatch<Tensor>(*broadcast_mul_op_, {dy_mul_gamma, reshaped_inv_variance}));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {reshaped_gamma, y_grad_fp32}));
+    const auto& dy_mul_inv_var = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {dy_mul_gamma, reshaped_inv_variance}));
     if (is_fp16) {
-      in_grads->at(0) = JUST(Dispatch<Tensor>(*f2h_cast_op_, {dy_mul_inv_var}));
+      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*f2h_cast_op_, {dy_mul_inv_var}));
     } else {
       in_grads->at(0) = dy_mul_inv_var;
     }

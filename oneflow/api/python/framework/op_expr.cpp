@@ -33,8 +33,8 @@ namespace {
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
                                   const AttrValueMap& attrs) {
-  CHECK_EQ_OR_RETURN(op.input_num(), inputs.size())
-      << "The operation requires " << op.input_num() << " inputs, but " << inputs.size()
+  CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
+      << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
   auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
