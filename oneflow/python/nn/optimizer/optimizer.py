@@ -101,7 +101,6 @@ class SGD(Optimizer):
         lr_tensor = flow.Tensor([self._default_state["lr"]])
         for param in self._parameters:
             if param.grad is not None:
-                with flow.no_grad():
-                    self._op(param, param.grad, lr_tensor)
+                self._op(param, param.grad, lr_tensor)
         self._default_state["step"] = self._default_state["step"] + 1
         return loss
