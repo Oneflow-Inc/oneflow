@@ -31,11 +31,13 @@ class TensorBuffer {
     blob_dptr_ = std::move(blob_dptr);
   }
 
+  void reset() { blob_dptr_.reset(); }
+
  private:
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
 };
 
-class EagerBlobObject : public BlobObject {
+class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -45,19 +47,22 @@ class EagerBlobObject : public BlobObject {
     CHECK(static_cast<bool>(shape));
     CHECK(static_cast<bool>(tensor_buffer));
   }
-  virtual ~EagerBlobObject() override = default;
+  ~EagerBlobObject() override = default;
 
-  virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
-  virtual const Blob& blob() const override { return *blob_; }
-  virtual Blob* mut_blob() override { return blob_.get(); }
-  virtual Maybe<void> TryInitBlob() override;
-
-  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
-
- private:
+  const Blob& blob() const override { return *blob_; }
+  Blob* mut_blob() override { return blob_.get(); }
+  Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
 
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> DeallocateBlobDataPtr() override {
+    tensor_buffer_->reset();
+    return Maybe<void>::Ok();
+  }
+
+ private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
