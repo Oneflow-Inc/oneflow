@@ -46,6 +46,8 @@ FLAT_MSG_VIEW_END(PinBlobInstruction);
 
 }  // namespace
 
+#ifdef WITH_CUDA
+
 namespace {
 
 void TryRegisterMemory(Blob* blob) {
@@ -78,7 +80,6 @@ void TryUnregisterMemory(Blob* blob) {
 }
 }  // namespace
 
-#ifdef WITH_CUDA
 class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
  public:
   CudaHostRegisterBlobInstructionType() = default;
