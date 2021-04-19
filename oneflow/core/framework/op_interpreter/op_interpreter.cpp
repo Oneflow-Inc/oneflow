@@ -44,7 +44,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(BuiltinOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
                      << " has not been supported in LazyInterpreter::Apply.";
 }
 
@@ -117,7 +117,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(FunctionOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
                      << " has not been supported in EagerInterpreter::Apply.";
 }
 
@@ -149,7 +149,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs));
-    if (!op_expr.IsGradDisabled()) {
+    if (!JUST(op_expr.IsGradDisabled())) {
       requires_grad = std::any_of(
           inputs.begin(), inputs.end(),
           [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
