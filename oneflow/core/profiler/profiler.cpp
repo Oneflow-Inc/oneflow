@@ -94,7 +94,7 @@ RangeGuard::~RangeGuard() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void LogHostMemoryUsage(const std::string& name) {
+void LogHostMemoryUsage(const std::string& name, int64_t* vm_size, int64_t* rss_size) {
 #ifdef OF_ENABLE_PROFILER
   int64_t vm_pages;
   int64_t rss_pages;
@@ -102,9 +102,27 @@ void LogHostMemoryUsage(const std::string& name) {
   ifs >> vm_pages >> rss_pages;
   ifs.close();
   const int64_t page_size = sysconf(_SC_PAGE_SIZE);
-  LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS "
-            << rss_pages * page_size;
+  const int64_t vm_size_ = vm_pages * page_size;
+  const int64_t rss_size_ = rss_pages * page_size;
+  if (vm_size != nullptr) { *vm_size = vm_size_; }
+  if (rss_size != nullptr) { *rss_size = rss_size_; }
+  LOG(INFO) << "[HostMemoryUsage]" << name << " VM " << vm_size_ << " RSS " << rss_size_;
 #endif  // OF_ENABLE_PROFILER
+}
+
+void LogHostMemoryUsage(const std::string& name) { LogHostMemoryUsage(name, nullptr, nullptr); }
+
+HostMemoryGuard::HostMemoryGuard(const std::string& name) {
+  this->name_ = name;
+  LogHostMemoryUsage("[START][" + name + "]", &start_vm_size_, &start_rss_size_);
+}
+
+HostMemoryGuard::~HostMemoryGuard() {
+  int64_t end_vm_size_ = 0;
+  int64_t end_rss_size_ = 0;
+  LogHostMemoryUsage("[END][" + name_ + "]", &end_vm_size_, &end_rss_size_);
+  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][VM]" << (end_vm_size_ - start_vm_size_);
+  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][RSS]" << (end_rss_size_ - start_rss_size_);
 }
 
 }  // namespace profiler

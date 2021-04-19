@@ -44,6 +44,18 @@ class RangeGuard final {
   std::shared_ptr<RangeGuardCtx> ctx_;
 };
 
+class HostMemoryGuard final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(HostMemoryGuard);
+  explicit HostMemoryGuard(const std::string& name);
+  ~HostMemoryGuard();
+
+ private:
+  std::string name_;
+  int64_t start_vm_size_;
+  int64_t start_rss_size_;
+};
+
 #ifdef OF_ENABLE_PROFILER
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name) ::oneflow::profiler::NameThisHostThread(name)
 #define OF_PROFILER_ONLY_CODE(...) __VA_ARGS__
@@ -59,6 +71,9 @@ class RangeGuard final {
 #define OF_PROFILER_RANGE_GUARD(name)
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)                                       \
+  ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
+                                                 __COUNTER__)(name)
 #endif
 
 }  // namespace profiler
