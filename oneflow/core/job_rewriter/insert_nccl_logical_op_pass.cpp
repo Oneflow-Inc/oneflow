@@ -97,7 +97,8 @@ std::shared_ptr<const Shape> GetOpNodeInputTimeShape(const OpNode* op_node) {
   return CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape());
 }
 
-bool SharedPtrShapeEqual(std::shared_ptr<const Shape> lhs, std::shared_ptr<const Shape> rhs) {
+bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
+                         const std::shared_ptr<const Shape>& rhs) {
   return (*lhs) == (*rhs);
 }
 
@@ -488,7 +489,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
   }
 }
 
-bool IsOpEdgeAllowInsertNccl(const OpEdge* edge, std::shared_ptr<const Shape> seed_time_shape) {
+bool IsOpEdgeAllowInsertNccl(const OpEdge* edge,
+                             const std::shared_ptr<const Shape>& seed_time_shape) {
   const OpNode* src_node = edge->src_node();
   const OpNode* dst_node = edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();

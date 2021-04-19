@@ -37,6 +37,7 @@ REGISTER_USER_OP("cast_to_tick")
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
       const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_EQ(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
 
       ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
