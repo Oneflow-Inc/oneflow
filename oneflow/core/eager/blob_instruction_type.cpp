@@ -46,6 +46,38 @@ FLAT_MSG_VIEW_END(PinBlobInstruction);
 
 }  // namespace
 
+namespace {
+
+void TryRegisterMemory(Blob* blob) {
+  if (!blob) { return; }
+  CHECK(blob->mem_case().has_host_mem());
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
+  void* register_dptr = blob->mut_dptr();
+  CHECK_NOTNULL(register_dptr);
+  size_t size = blob->AlignedByteSizeOfBlobBody();
+  cudaError_t cuda_error = cudaHostRegister(register_dptr, size, cudaHostRegisterDefault);
+  if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
+    cudaGetLastError();
+    return;
+  }
+  OF_CUDA_CHECK(cuda_error);
+}
+
+void TryUnregisterMemory(Blob* blob) {
+  if (!blob) { return; }
+  CHECK(blob->mem_case().has_host_mem());
+  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
+  void* register_dptr = blob->mut_dptr();
+  CHECK_NOTNULL(register_dptr);
+  cudaError_t cuda_error = cudaHostUnregister(register_dptr);
+  if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+    cudaGetLastError();
+    return;
+  }
+  OF_CUDA_CHECK(cuda_error);
+}
+}  // namespace
+
 #ifdef WITH_CUDA
 class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
  public:
@@ -61,17 +93,7 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
     auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
     auto* blob = blob_obj->mut_blob();
-    CHECK(blob->mem_case().has_host_mem());
-    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-    void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    size_t size = blob->AlignedByteSizeOfBlobBody();
-    cudaError_t cuda_error = cudaHostRegister(dptr, size, cudaHostRegisterDefault);
-    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
+    TryRegisterMemory(blob);
   }
 };
 COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
@@ -90,16 +112,7 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
     auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
     auto* blob = blob_obj->mut_blob();
-    CHECK(blob->mem_case().has_host_mem());
-    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-    void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    cudaError_t cuda_error = cudaHostUnregister(dptr);
-    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
+    TryUnregisterMemory(blob);
   }
 };
 COMMAND(
@@ -119,38 +132,6 @@ void CopyBlobToOtherDeviceInstructionType::Infer(vm::Instruction* instruction) c
   }
   CHECK_JUST(ptr->dst_eager_blob_object()->TryInitBlob());
 }
-
-namespace {
-
-void TryRegisterMemory(Blob* blob) {
-  if (!blob) { return; }
-  CHECK(blob->mem_case().has_host_mem());
-  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-  void* register_dptr = blob->mut_dptr();
-  CHECK_NOTNULL(register_dptr);
-  size_t size = blob->AlignedByteSizeOfBlobBody();
-  cudaError_t cuda_error = cudaHostRegister(register_dptr, size, cudaHostRegisterDefault);
-  if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-    cudaGetLastError();
-    return;
-  }
-  OF_CUDA_CHECK(cuda_error);
-}
-
-void TryUnRegisterMemory(Blob* blob) {
-  if (!blob) { return; }
-  CHECK(blob->mem_case().has_host_mem());
-  if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-  void* register_dptr = blob->mut_dptr();
-  CHECK_NOTNULL(register_dptr);
-  cudaError_t cuda_error = cudaHostUnregister(register_dptr);
-  if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-    cudaGetLastError();
-    return;
-  }
-  OF_CUDA_CHECK(cuda_error);
-}
-}  // namespace
 
 void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
@@ -174,7 +155,7 @@ void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction)
   TryRegisterMemory(register_blob);
   SyncAutoMemcpy(device_ctx, dst_blob->mut_dptr(), src_blob->dptr(), src_blob->ByteSizeOfBlobBody(),
                  src_blob->mem_case(), dst_blob->mem_case());
-  TryUnRegisterMemory(register_blob);
+  TryUnregisterMemory(register_blob);
 }
 
 class CpuCopyBlobToGpuInstructionType final : public CopyBlobToOtherDeviceInstructionType {
