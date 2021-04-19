@@ -24,10 +24,11 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_argmax(test_case):
+    def test_argmax_v1(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        of_out = flow.argmax(input, axis=-1)
-        np_out = np.argmax(input.numpy())
+        axis = -1
+        of_out = flow.argmax(input, axis)
+        np_out = np.argmax(input.numpy(), axis=axis)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 

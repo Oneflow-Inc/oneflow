@@ -39,4 +39,4 @@ class Argmax(Module):
     def forward(self, input, axis=-1):
         assert axis <= len(input.size()), "axis should <= length of input tensor!"
         self._op = self._op.Build()
-        return self._op(input, axis=axis)[0]
+        return self._op(input)[0]
