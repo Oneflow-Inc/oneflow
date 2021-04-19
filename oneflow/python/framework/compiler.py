@@ -44,6 +44,7 @@ def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(session, function_desc)
         oneflow_api.CurJobBuildAndInferCtx_Complete()
+        session.StashJob(function_desc.job_func.__name__)
 
 
 def EagerRun(session, function_desc, config_proto, args):
@@ -111,7 +112,6 @@ def _CompileJob(session, function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
-    session.StashJob(func.__name__)
 
 
 def _InterpretGlobalFunction(function_desc, args):
