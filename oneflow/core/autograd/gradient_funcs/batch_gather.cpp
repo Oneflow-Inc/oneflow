@@ -15,9 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
@@ -66,8 +66,8 @@ Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTu
   const auto& indices = ctx->SavedTensors().at(0);
   AttrValueMap attrs;
   JUST(attrs.SetAttr<int32_t>("num_segments", ctx->num_segments));
-  in_grads->at(0) =
-      JUST(Dispatch<Tensor>(*bw_unsorted_batch_segment_sum_op_, {out_grads.at(0), indices}, attrs));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*bw_unsorted_batch_segment_sum_op_,
+                                                        {out_grads.at(0), indices}, attrs));
   return Maybe<void>::Ok();
 }
 
