@@ -115,18 +115,17 @@ bool CanBeMergedInChain(const TaskNode* node) {
   return true;
 }
 
-const Shape& GetTaskNodeTimeShape(const TaskNode* node) {
+std::shared_ptr<const Shape> GetTaskNodeTimeShape(const TaskNode* node) {
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   CHECK(fw_comp_node != nullptr);
-  const Operator* op = fw_comp_node->op().get();
-  return *(CHECK_JUST(op->GetOpTimeShape()).get());
+  return CHECK_JUST(fw_comp_node->op()->GetOpTimeShape());
 }
 
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
   CHECK_NE(this_chain_id, -1);
   CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
-  const Shape& seed_time_shape = GetTaskNodeTimeShape(this_node);
+  std::shared_ptr<const Shape> seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
@@ -141,7 +140,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
           && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
-          && GetTaskNodeTimeShape(next_node) == seed_time_shape) {
+          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);

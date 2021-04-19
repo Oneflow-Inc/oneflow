@@ -89,12 +89,16 @@ bool IsAccOpNode(const OpNode* node) {
          && node->op().op_conf().user_conf().op_type_name() == "acc";
 }
 
-const Shape& GetOpNodeTimeShape(const OpNode* op_node) {
-  return *(CHECK_JUST(op_node->op().GetOpTimeShape()).get());
+std::shared_ptr<const Shape> GetOpNodeTimeShape(const OpNode* op_node) {
+  return CHECK_JUST(op_node->op().GetOpTimeShape());
 }
 
-const Shape& GetOpNodeInputTimeShape(const OpNode* op_node) {
-  return *(CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape()).get());
+std::shared_ptr<const Shape> GetOpNodeInputTimeShape(const OpNode* op_node) {
+  return CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape());
+}
+
+bool SharedPtrShapeEqual(std::shared_ptr<const Shape> lhs, std::shared_ptr<const Shape> rhs) {
+  return (*lhs) == (*rhs);
 }
 
 void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
@@ -113,7 +117,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
     HashSet<const OpNode*> this_subgraph;
     std::queue<const OpNode*> queued_nodes;
 
-    const Shape& seed_time_shape = GetOpNodeTimeShape(seed_node);
+    std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(seed_node);
     queued_nodes.push(seed_node);
     while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
@@ -125,7 +129,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
         if (visited.find(next_node) == visited.end()
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
-            && GetOpNodeTimeShape(next_node) == seed_time_shape) {
+            && SharedPtrShapeEqual(GetOpNodeTimeShape(next_node), seed_time_shape)) {
           CHECK(visited.insert(next_node).second);
           queued_nodes.push(next_node);
         }
@@ -484,14 +488,14 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
   }
 }
 
-bool IsOpEdgeAllowInsertNccl(const OpEdge* edge, const Shape& seed_time_shape) {
+bool IsOpEdgeAllowInsertNccl(const OpEdge* edge, std::shared_ptr<const Shape> seed_time_shape) {
   const OpNode* src_node = edge->src_node();
   const OpNode* dst_node = edge->dst_node();
   const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
   return src_parallel_desc.device_type() == DeviceType::kGPU && src_parallel_desc.parallel_num() > 1
          && src_parallel_desc.EqualsIgnoringHierarchy(dst_node->parallel_desc())
-         && GetOpNodeTimeShape(src_node) == seed_time_shape
-         && GetOpNodeTimeShape(dst_node) == seed_time_shape;
+         && SharedPtrShapeEqual(GetOpNodeTimeShape(src_node), seed_time_shape)
+         && SharedPtrShapeEqual(GetOpNodeTimeShape(dst_node), seed_time_shape);
 }
 
 struct InsertedNcclInfo {
@@ -509,13 +513,14 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
                                   std::vector<OperatorConf>* nccl_op_confs,
                                   std::vector<ParallelConf>* nccl_op_parallel_confs) {
   HashMap<const OpNode*, int64_t> op_node2global_order;
+  op_node2global_order.reserve(ordered_op_nodes.size());
   for (int64_t i = 0; i < ordered_op_nodes.size(); ++i) {
-    op_node2global_order.emplace(ordered_op_nodes.at(i), i);
+    CHECK(op_node2global_order.emplace(ordered_op_nodes.at(i), i).second);
   }
 
   HashSet<const OpEdge*> visited;
-  const Shape& seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
-  std::vector<InsertedNcclInfo> unordered_nccl_op_infos;
+  std::shared_ptr<const Shape> seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
+  std::vector<InsertedNcclInfo> nccl_op_infos;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
     std::queue<const OpEdge*> queued_edges;
@@ -540,14 +545,17 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         const OpNode* dst_node = op_edge->dst_node();
         const std::string& src_op_name = src_node->op().op_name();
         const std::string& dst_op_name = dst_node->op().op_name();
-        if (mut_consumer_name2op->find(dst_op_name) == mut_consumer_name2op->end()) {
-          mut_consumer_name2op->emplace(dst_op_name, dst_node->op().op_conf());
+        auto it = mut_consumer_name2op->find(dst_op_name);
+        if (it == mut_consumer_name2op->end()) {
+          auto ret_pair = mut_consumer_name2op->emplace(dst_op_name, dst_node->op().op_conf());
+          CHECK(ret_pair.second);
+          it = ret_pair.first;
         }
         // insert nccl op
         user_op::UserOpConfWrapper nccl_op_wrapper(nccl_op);
         for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
-          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(
-              &mut_consumer_name2op->at(dst_op_name), ibn, nccl_op_wrapper.output("out", 0));
+          std::string old_lbn = ReplaceInputLbnInOpCustomizedConf(&(it->second), ibn,
+                                                                  nccl_op_wrapper.output("out", 0));
         }
 
         InsertedNcclInfo nccl_op_info;
@@ -560,7 +568,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
              + dst_op_name + "]("
              + ParallelDistributionToString(dst_node->ParallelDistribution4Lbi(lbi))
              + "), src_order = " + std::to_string(nccl_op_info.order) + "\n");
-        unordered_nccl_op_infos.push_back(nccl_op_info);
+        nccl_op_infos.push_back(nccl_op_info);
       }
 
       for (const OpEdge* dst_node_out_edge : op_edge->dst_node()->out_edges()) {
@@ -573,17 +581,17 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     }
   }
 
-  std::sort(unordered_nccl_op_infos.begin(), unordered_nccl_op_infos.end(),
+  std::sort(nccl_op_infos.begin(), nccl_op_infos.end(),
             [](const InsertedNcclInfo& lhs, const InsertedNcclInfo& rhs) {
               return lhs.order < rhs.order;
             });
 
-  for (int64_t i = 0; i < unordered_nccl_op_infos.size(); ++i) {
-    auto& info = unordered_nccl_op_infos.at(i);
+  for (int64_t i = 0; i < nccl_op_infos.size(); ++i) {
+    auto& info = nccl_op_infos.at(i);
     if (i == 0) {
       info.nccl_op_conf.add_ctrl_in_op_name(bw_sink_tick_op_name);
     } else {
-      info.nccl_op_conf.add_ctrl_in_op_name(unordered_nccl_op_infos.at(i - 1).nccl_op_conf.name());
+      info.nccl_op_conf.add_ctrl_in_op_name(nccl_op_infos.at(i - 1).nccl_op_conf.name());
     }
     nccl_op_confs->push_back(info.nccl_op_conf);
     nccl_op_parallel_confs->push_back(info.nccl_parallel_conf);
@@ -659,23 +667,22 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
                                                    subgraph_order, node2order);
   }
 
-  if (!ordered_acc_op_nodes.empty()
-      && Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+  if (!ordered_acc_op_nodes.empty()) {
     const OpNode* bw_sink_op = subgraph_order.back();
     const OpNode* first_acc_op = ordered_acc_op_nodes.front();
-    const Shape& time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
-    const Shape& time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
+    std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
+    std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
     LOG(WARNING) << " Find acc op in Job: " << job_builder->job().job_conf().job_name()
                  << ", we will try insert special identity and ctrl for "
                  << " UNSAFE handle ALL nccl ops between different time shape: "
-                 << time_shape_before_acc.DebugStr() << "->acc->" << time_shape_after_acc.DebugStr()
-                 << "\n\n";
-    CHECK_GT(time_shape_before_acc.elem_cnt(), time_shape_after_acc.elem_cnt());
-    CHECK_EQ(time_shape_before_acc.elem_cnt() % time_shape_after_acc.elem_cnt(), 0);
+                 << time_shape_before_acc->DebugStr() << "->acc->"
+                 << time_shape_after_acc->DebugStr() << "\n\n";
+    CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
+    CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
 
     for (const OpNode* acc : ordered_acc_op_nodes) {
-      CHECK_EQ(time_shape_before_acc, GetOpNodeInputTimeShape(acc));
-      CHECK_EQ(time_shape_after_acc, GetOpNodeTimeShape(acc));
+      CHECK(SharedPtrShapeEqual(time_shape_before_acc, GetOpNodeInputTimeShape(acc)));
+      CHECK(SharedPtrShapeEqual(time_shape_after_acc, GetOpNodeTimeShape(acc)));
     }
 
     // NOTE(chengcheng): insert acc_tick after bw_sink_op, and this tick op conf will control
@@ -700,7 +707,7 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     auto* acc_conf = bw_sink_acc_tick_conf.mutable_acc_tick_conf();
     acc_conf->set_one(cast_to_tick_op.output("out", 0));
     acc_conf->set_acc("acc");
-    acc_conf->set_max_acc_num(time_shape_before_acc.elem_cnt() / time_shape_after_acc.elem_cnt());
+    acc_conf->set_max_acc_num(time_shape_before_acc->elem_cnt() / time_shape_after_acc->elem_cnt());
     job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf);
     LOG(INFO) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
 

@@ -35,7 +35,7 @@ std::string GetNcclUniqueIdRpcKey(const std::vector<std::pair<int64_t, int64_t>>
 std::string NcclUniqueId2String(ncclUniqueId id) {
   std::stringstream ss;
   for (int i = 0; i < NCCL_UNIQUE_ID_BYTES; ++i) {
-    ss << std::hex << std::setfill('0') << std::setw(2) << (int)id.internal[i];
+    ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(id.internal[i]);
   }
   return ss.str();
 }
