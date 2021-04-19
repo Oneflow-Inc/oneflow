@@ -83,7 +83,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
     return true;
   }
   if (op_conf.has_user_conf()) {
-    const std::string user_type_name = op_conf.user_conf().op_type_name();
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
         || user_type_name == "unpack") {
       return true;
@@ -115,7 +115,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   return true;
 }
 
-const Shape GetTaskNodeTimeShape(const TaskNode* node) {
+const Shape& GetTaskNodeTimeShape(const TaskNode* node) {
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   CHECK(fw_comp_node != nullptr);
   const Operator* op = fw_comp_node->op().get();
@@ -126,7 +126,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
   CHECK_NE(this_chain_id, -1);
   CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
-  const Shape seed_time_shape = GetTaskNodeTimeShape(this_node);
+  const Shape& seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);

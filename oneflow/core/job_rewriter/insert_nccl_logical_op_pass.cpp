@@ -75,7 +75,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
     return true;
   }
   if (op_conf.has_user_conf()) {
-    const std::string user_type_name = op_conf.user_conf().op_type_name();
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
         || user_type_name == "unpack") {
       return true;
@@ -89,11 +89,11 @@ bool IsAccOpNode(const OpNode* node) {
          && node->op().op_conf().user_conf().op_type_name() == "acc";
 }
 
-const Shape GetOpNodeTimeShape(const OpNode* op_node) {
+const Shape& GetOpNodeTimeShape(const OpNode* op_node) {
   return *(CHECK_JUST(op_node->op().GetOpTimeShape()).get());
 }
 
-const Shape GetOpNodeInputTimeShape(const OpNode* op_node) {
+const Shape& GetOpNodeInputTimeShape(const OpNode* op_node) {
   return *(CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape()).get());
 }
 
@@ -113,7 +113,7 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
     HashSet<const OpNode*> this_subgraph;
     std::queue<const OpNode*> queued_nodes;
 
-    const Shape seed_time_shape = GetOpNodeTimeShape(seed_node);
+    const Shape& seed_time_shape = GetOpNodeTimeShape(seed_node);
     queued_nodes.push(seed_node);
     while (!queued_nodes.empty()) {
       const OpNode* cur_node = queued_nodes.front();
@@ -514,7 +514,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   }
 
   HashSet<const OpEdge*> visited;
-  const Shape seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
+  const Shape& seed_time_shape = GetOpNodeTimeShape(ordered_acc_op_nodes.front());
   std::vector<InsertedNcclInfo> unordered_nccl_op_infos;
 
   for (const OpNode* acc : ordered_acc_op_nodes) {
@@ -663,8 +663,8 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
       && Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     const OpNode* bw_sink_op = subgraph_order.back();
     const OpNode* first_acc_op = ordered_acc_op_nodes.front();
-    const Shape time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
-    const Shape time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
+    const Shape& time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
+    const Shape& time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
     LOG(WARNING) << " Find acc op in Job: " << job_builder->job().job_conf().job_name()
                  << ", we will try insert special identity and ctrl for "
                  << " UNSAFE handle ALL nccl ops between different time shape: "
