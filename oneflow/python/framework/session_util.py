@@ -242,7 +242,7 @@ class Session(object):
         assert isinstance(function_desc, FunctionDesc)
         self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
-    def StashJob(self, job_name=None):
+    def StashJob(self, job_name=None, save_model_before_pass: bool = False):
         assert self.status_ is SessionStatus.RUNNING, "current status {}".format(
             self.status_
         )
@@ -253,10 +253,14 @@ class Session(object):
             ), "{} is not current job name".format(job_name)
         else:
             job_name = job.job_conf.job_name
+        if save_model_before_pass:
+            job_name += "_original"
         self.job_name2job_[job_name] = job
 
-    def Job(self, job_name):
+    def Job(self, job_name, load_model_before_pass: bool = False):
         assert self.status_ is SessionStatus.RUNNING
+        if load_model_before_pass:
+            job_name += "_original"
         if job_name not in self.job_name2job_:
             return None
         return self.job_name2job_[job_name]
