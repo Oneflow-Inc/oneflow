@@ -14,9 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter.h"
+
+#include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -124,10 +128,52 @@ Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Ten
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+Maybe<void> DetermineIsLeaf(TensorTuple* outputs, const bool& is_leaf, const bool& requires_grad) {
+  bool logical_is_leaf = is_leaf || !requires_grad;
+  for (auto& output : *outputs) { output->set_is_leaf(logical_is_leaf); }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_grad) {
+  for (auto& output : *outputs) { output->set_requires_grad(requires_grad); }
+  return Maybe<void>::Ok();
+}
+
+}  // namespace
+
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrValueMap& attrs) const {
-  // TODO(hjchen2)
-  return internal_->Apply(op_expr, inputs, outputs, attrs);
+  bool requires_grad = false;
+  {
+    autograd::AutoGradMode mode(false);
+    JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
+    requires_grad =
+        std::any_of(inputs.begin(), inputs.end(),
+                    [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+    JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
+    JUST(DetermineRequiresGrad(outputs, requires_grad));
+  }
+  // Although current op `requires_grad` is false, we still need to add a
+  // function node for this op since it maybe reset to true by the user later,
+  // such as Variable op etc.
+  // if (autograd::GradMode::is_enabled() && requires_grad) {
+  if (autograd::GradMode::is_enabled()) {
+    const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
+    grad_closure->Capture(inputs, *outputs, attrs);
+
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              JUST(grad_closure->Apply(out_grads, in_grads));
+              return Maybe<void>::Ok();
+            });
+    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, outputs);
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace one
