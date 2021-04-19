@@ -131,9 +131,8 @@ HostMemoryGuard::HostMemoryGuard(const std::string& name, JSONCallback json_call
 #endif  // OF_ENABLE_PROFILER
 }
 
-HostMemoryGuard::HostMemoryGuard(const std::string& name) {
-  HostMemoryGuard(name, [](json& j) {});
-}
+HostMemoryGuard::HostMemoryGuard(const std::string& name)
+    : HostMemoryGuard(name, [](json& j) -> void {}) {}
 
 HostMemoryGuard::~HostMemoryGuard() {
   int64_t end_vm_size_ = 0;
@@ -146,7 +145,6 @@ HostMemoryGuard::~HostMemoryGuard() {
   const int64_t rss_size_diff = end_rss_size_ - start_rss_size_;
   j["vm_size_diff"] = vm_size_diff;
   j["rss_size_diff"] = rss_size_diff;
-  if (json_callback_) { json_callback_(j); }
   json_callback_(j);
   LOG(INFO) << "[JSON]" << j;
 }
