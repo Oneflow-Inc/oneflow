@@ -1,9 +1,12 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,11 +19,12 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
+
 @oneflow_export("Exp")
 @register_tensor_op_by_module("exp")
 @register_op_by_module("exp")
 class Exp(Module):
-   r"""
+    r"""
     Returns a new tensor with the exp of the elements of :attr:`x`.
     .. math::
         \text{y}_{i} = \exp(\text{x}_{i})
@@ -39,7 +43,7 @@ class Exp(Module):
     """
 
     def __init__(self) -> None:
-            super().__init__()
+        super().__init__()
         self._op = flow.builtin_op("exp").Input("x").Output("y").Build()
 
     def forward(self, x):
