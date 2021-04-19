@@ -74,17 +74,16 @@ struct CudnnDeConvArgsAndAlgo final {
 
 template<typename PerfT>
 size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::TensorDesc* w,
-                             const user_op::TensorDesc* y,
-                             const user_op::UserOpConfWrapper& user_op_conf, bool has_forced_algo,
-                             int32_t forced_algo) {
+                             const user_op::TensorDesc* y, const user_op::InferContext& ctx,
+                             bool has_forced_algo, int32_t forced_algo) {
   using AlgoT = decltype(std::declval<PerfT>().algo);
 
   const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
   size_t workspace_size = cudnn_conf.cudnn_buf_limit_mbyte() * 1024 * 1024;
   if (!x->is_dynamic()) {
-    CudnnConvArgs args(user_op_conf, x->data_type(), ShapeView(x->shape()), w->data_type(),
+    CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
-                       user_op_conf.attr<std::string>("data_format"), workspace_size,
+                       ctx.attr<std::string>("data_format"), workspace_size,
                        cudnn_conf.cudnn_conv_heuristic_search_algo(),
                        cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
                        cudnn_conf.cudnn_conv_enable_pseudo_half());
@@ -95,12 +94,11 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
       algo_perf = FindCudnnConvAlgorithm<PerfT>(&args);
     }
     CHECK_EQ(algo_perf.status, CUDNN_STATUS_SUCCESS)
-        << "op (" << user_op_conf.op_name()
+        << "op (" << ctx.op_name()
         << ") find algorithm perference failed. algo: " << algo_perf.algo;
     CHECK_LE(algo_perf.memory, workspace_size)
-        << "op (" << user_op_conf.op_name() << ") find algorithm " << algo_perf.algo
-        << ", need memory " << algo_perf.memory << ", but cudnn_buf_limit_byte is "
-        << workspace_size;
+        << "op (" << ctx.op_name() << ") find algorithm " << algo_perf.algo << ", need memory "
+        << algo_perf.memory << ", but cudnn_buf_limit_byte is " << workspace_size;
     workspace_size = algo_perf.memory;
   }
   workspace_size = std::max(size_t(1), workspace_size);
@@ -150,7 +148,7 @@ class DeConvGpuKernel final : public user_op::OpKernel {
         const auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);                               \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                           \
-            out, weight, in, ctx->user_op_conf(), cudnn_conf.has_cudnn_conv_force_bwd_data_algo(), \
+            out, weight, in, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),                \
             cudnn_conf.cudnn_conv_force_bwd_data_algo());                                          \
       })
 

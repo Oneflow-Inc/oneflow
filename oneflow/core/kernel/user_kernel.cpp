@@ -271,28 +271,26 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
 class UserKernelOpInferContext : public user_op::InferContext {
  public:
   UserKernelOpInferContext(const KernelConf& kernel_conf, const JobDesc* job_desc)
-      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
+      : user_op::InferContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
         job_desc_(job_desc),
-        parallel_ctx_(kernel_conf.parallel_ctx()),
+        base_ctx_(UserKernelBaseContext(kernel_conf, *job_desc)),
         parallel_distribution_signature_(
             kernel_conf.op_attribute().parallel_distribution_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
     }
-    auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                              ArgVec* arg_vec) {
+    auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           std::pair<std::string, int32_t> arg_pair = std::make_pair(arg_name, i);
-          arg_vec->emplace_back(arg_pair);
           arg2tensor_desc_.emplace(arg_pair, nullptr);
         }
       }
     };
-    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
-    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input());
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output());
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
@@ -324,13 +322,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
-  const ArgVec& inputs() const override { return inputs_; }
-  const ArgVec& outputs() const override { return outputs_; }
+  const ArgVec& inputs() const override { return base_ctx_.inputs(); }
+  const ArgVec& outputs() const override { return base_ctx_.outputs(); }
   const JobDesc* job_desc() const override {
     CHECK_NOTNULL(job_desc_);
     return job_desc_;
   }
-  const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
+  const ParallelContext& parallel_ctx() const override { return base_ctx_.parallel_ctx(); };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
   const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
                                                  int32_t index) const override {
@@ -365,16 +363,37 @@ class UserKernelOpInferContext : public user_op::InferContext {
     }
   }
 
-  int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
+  int64_t parallel_num() const override { return base_ctx_.parallel_ctx().parallel_num(); }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override { UNIMPLEMENTED(); }
+
+  DeviceType device_type() const { return base_ctx_.device_type(); }
+
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return base_ctx_.input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return base_ctx_.output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return base_ctx_.has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return base_ctx_.has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return base_ctx_.input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return base_ctx_.output_size(arg_name);
+  }
+  const std::string& op_name() const override { return base_ctx_.op_name(); }
+  const std::string& op_type_name() const override { return base_ctx_.op_type_name(); }
+  const std::string& device_tag() const override { return base_ctx_.device_tag(); }
 
  private:
-  user_op::UserOpConfWrapper user_op_conf_;
   const JobDesc* job_desc_;
-  ArgVec inputs_;
-  ArgVec outputs_;
-  ParallelContext parallel_ctx_;
+  UserKernelBaseContext base_ctx_;
   SbpSignature sbp_signature_;
   ParallelDistributionSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;

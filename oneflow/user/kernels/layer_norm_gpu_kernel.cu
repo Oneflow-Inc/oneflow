@@ -526,7 +526,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));          \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -737,9 +737,9 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
                      & (user_op::HobDataType("dy", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
-      const bool has_gamma_diff = ctx->user_op_conf().has_output("gamma_diff", 0);
-      const bool has_beta_diff = ctx->user_op_conf().has_output("beta_diff", 0);
-      const bool has_normalized_diff = ctx->user_op_conf().has_output("normalized_diff", 0);
+      const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);
+      const bool has_beta_diff = ctx->has_output("beta_diff", 0);
+      const bool has_normalized_diff = ctx->has_output("normalized_diff", 0);
       const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const int64_t instance_size = dy->shape().Count(begin_params_axis);
       size_t tmp_buffer_size = 0;

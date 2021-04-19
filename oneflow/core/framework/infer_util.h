@@ -43,11 +43,26 @@ class InferContext {
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+  virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
+  virtual const std::string& output(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_input(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_output(const std::string& arg_name, int32_t index) const = 0;
+  virtual int32_t input_size(const std::string& arg_name) const = 0;
+  virtual int32_t output_size(const std::string& arg_name) const = 0;
+  virtual const std::string& op_name() const = 0;
+  virtual const std::string& op_type_name() const = 0;
+  virtual const std::string& device_tag() const = 0;
 
+  bool has_attr(const std::string& attr_name) const {
+    return attrs_.find(attr_name) != attrs_.end();
+  }
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf().attr<T>(attr_name);
+    return attr<T>(attr_name);
   }
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
 
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
@@ -66,6 +81,13 @@ class InferContext {
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   virtual int64_t parallel_num() const = 0;
+
+ protected:
+  InferContext(const UserOpConfWrapper& conf) : attrs_(conf.attr()) {}
+  InferContext(const InferContext&) = delete;
+
+ private:
+  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
 };
 
 struct TensorDescInferFnUtil {

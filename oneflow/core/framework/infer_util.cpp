@@ -26,6 +26,21 @@ namespace oneflow {
 
 namespace user_op {
 
+#define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                  \
+  template<>                                                                         \
+  const cpp_type& InferContext::attr<cpp_type>(const std::string& attr_name) const { \
+    auto it = attrs_.find(attr_name);                                                \
+    if (it != attrs_.end()) {                                                        \
+      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();   \
+    } else {                                                                         \
+      LOG(FATAL) << "Cannot find the attr: " << attr_name                            \
+                 << " with AttrType: " << static_cast<int32_t>(attr_type);           \
+    }                                                                                \
+  }
+OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
+
+#undef KERNEL_CONTETX_ATTR_MEMBER_FUNC
+
 Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   const TensorDesc* first_tensor_desc = nullptr;
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {

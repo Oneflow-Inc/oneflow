@@ -76,7 +76,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -179,7 +179,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -236,7 +236,7 @@ REGISTER_USER_KERNEL("batch_matmul")
                      & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
