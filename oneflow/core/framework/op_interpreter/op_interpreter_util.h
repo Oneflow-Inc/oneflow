@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -31,6 +32,15 @@ namespace one {
 class OpInterpUtil {
  public:
   static Maybe<AutogradInterpreter> GetInterpreter();
+
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const AttrValueMap& attrs);
+
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
+    return Dispatch<T>(op_expr, inputs, AttrValueMap{});
+  }
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                               const AttrValueMap& attrs);
