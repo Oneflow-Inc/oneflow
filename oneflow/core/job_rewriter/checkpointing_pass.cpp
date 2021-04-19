@@ -168,7 +168,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (bw_consumers.empty()) { continue; }
 
     HashMap<std::string, const OpNode*> subgraph_op_name2op_node;
-    ParallelConf src_parallel_conf = (*subgraph.begin())->parallel_desc().parallel_conf();
+    const ParallelConf& src_parallel_conf = (*subgraph.begin())->parallel_desc().parallel_conf();
     for (const OpNode* node : subgraph) {
       subgraph_op_name2op_node.emplace(node->op().op_name(), node);
     }
@@ -228,7 +228,8 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
             if (identity_buffer_size > 1) {
               if (lbn2identity_buffer_op_conf.find(old_lbn) == lbn2identity_buffer_op_conf.end()) {
                 lbn2identity_buffer_op_conf.emplace(
-                    old_lbn, user_op::UserOpConfWrapperBuilder("System-buffer-" + old_lbn)
+                    old_lbn, user_op::UserOpConfWrapperBuilder("BufferIdentity-" + old_lbi.op_name()
+                                                               + "-" + old_lbi.blob_name())
                                  .Op("identity_buffer")
                                  .Input("in", old_lbn)
                                  .Output("out")
@@ -240,7 +241,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
                                         lbn2identity_buffer_op_conf.at(old_lbn)));
               }
               const OperatorConf& identity_buffer_op = lbn2identity_buffer_op_conf.at(old_lbn);
-              list_s.set_s(i, GenLogicalBlobName(identity_buffer_op.name(), "out"));
+              list_s.set_s(i, user_op::UserOpConfWrapper(identity_buffer_op).output("out", 0));
             }
           }
         }

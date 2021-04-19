@@ -22,7 +22,7 @@ namespace {
 REGISTER_USER_OP("identity_buffer")
     .Input("in")
     .Output("out")
-    .Attr<int32_t>("buffer_size")
+    .Attr<int64_t>("buffer_size")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
