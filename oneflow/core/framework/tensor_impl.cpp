@@ -14,12 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 namespace one {
@@ -54,8 +58,8 @@ Maybe<void> ConsistentTensorImpl::set_parallel_desc(
 
 Maybe<void> EagerMirroredTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  blob_object_ = blob_object;
-  return SyncBlobObject2Attributes(blob_object);
+  UNIMPLEMENTED();
+  return Maybe<void>::Ok();
 }
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
@@ -80,9 +84,15 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf,
     bool retain_grad)
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
-      shape_(shape),
-      dtype_(dtype),
       tensor_storage_(tensor_storage) {}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf, bool retain_grad)
+    : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
+      eager_blob_object_(eager_blob_object) {
+  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
+}
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
   return eager_blob_object_->infer_local_dep_object();
@@ -90,6 +100,41 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const 
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return eager_blob_object_->compute_local_dep_object();
+}
+
+const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
+  BlockingCounter bc(1);
+  std::shared_ptr<const Shape> result;
+  auto callback = [&bc, &result](int64_t ofblob_ptr) -> void {
+    OfBlob* ofblob = reinterpret_cast<OfBlob*>(ofblob_ptr);
+    // TODO: use shared_ptr after rt_blob_desc is removed
+    result = std::make_shared<const Shape>(ofblob->mut_blob()->blob_desc().body_shape());
+    bc.Decrease();
+  };
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(parallel_desc(), eager_blob_object_, callback, "const"));
+    return Maybe<void>::Ok();
+  };
+  CHECK_JUST(PhysicalRun(build_instruction));
+  bc.WaitUntilCntEqualZero();
+  return result;
+}
+
+const std::shared_ptr<const DType> EagerMirroredTensorImpl::dtype() const {
+  BlockingCounter bc(1);
+  std::shared_ptr<const DType> result;
+  auto callback = [&bc, &result](int64_t ofblob_ptr) -> void {
+    OfBlob* ofblob = reinterpret_cast<OfBlob*>(ofblob_ptr);
+    result = CHECK_JUST(DType::GetDTypeByDataType(ofblob->mut_blob()->data_type()));
+    bc.Decrease();
+  };
+  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(parallel_desc(), eager_blob_object_, callback, "const"));
+    return Maybe<void>::Ok();
+  };
+  CHECK_JUST(PhysicalRun(build_instruction));
+  bc.WaitUntilCntEqualZero();
+  return result;
 }
 
 }  // namespace one

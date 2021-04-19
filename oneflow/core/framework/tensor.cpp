@@ -38,6 +38,15 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
   return std::make_shared<MirroredTensor>(impl);
 }
 
+std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
+    const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
+    bool retain_grad) {
+  std::shared_ptr<MirroredTensorImpl> impl = std::make_shared<EagerMirroredTensorImpl>(
+      eager_blob_object, device, requires_grad, is_leaf, retain_grad);
+  return std::make_shared<MirroredTensor>(impl);
+}
+
 bool MirroredTensor::is_cuda() const { return device()->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
