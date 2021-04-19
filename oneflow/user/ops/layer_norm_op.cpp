@@ -137,7 +137,7 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       *dx->mut_shape() = dy->shape();
       *dx->mut_is_dynamic() = dy->is_dynamic();
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
       }
@@ -158,7 +158,7 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx->mut_data_type() = dy->data_type();
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
       }

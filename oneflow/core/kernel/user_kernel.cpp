@@ -365,8 +365,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return base_ctx_.parallel_ctx().parallel_num(); }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { UNIMPLEMENTED(); }
-
   DeviceType device_type() const { return base_ctx_.device_type(); }
 
   const std::string& input(const std::string& arg_name, int32_t index) const override {

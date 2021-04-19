@@ -78,8 +78,6 @@ class InferContext {
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
-
   virtual int64_t parallel_num() const = 0;
 
  protected:

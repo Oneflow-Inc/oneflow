@@ -57,7 +57,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
   out->mut_shape()->Set(num_axes - 2, m);
   out->mut_shape()->Set(num_axes - 1, n);
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+  if (ctx->has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
   }
@@ -65,7 +65,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 }
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+  if (ctx->has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
