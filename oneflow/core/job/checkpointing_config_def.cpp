@@ -19,9 +19,11 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_SCOPE_CONFIG_DEF().Bool(
-    "checkpointing", false,
-    "enable checkpointing op/tensor for backward recomputation to sublinear memory cost");
+REGISTER_SCOPE_CONFIG_DEF()
+    .Bool("checkpointing", false,
+          "enable checkpointing op/tensor for backward recomputation to sublinear memory cost")
+    .Int64("checkpointing_op_buffer_size", 1,
+           "manual set checkpointing op buffer size for pipeline parallelism.");
 
 }  // namespace
 
