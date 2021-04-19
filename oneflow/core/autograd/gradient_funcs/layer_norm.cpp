@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/user_op_conf_trait.h"
@@ -109,7 +109,8 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
     if (ctx->has_gamma_diff) {
       inputs.push_back(saved_tensors.at(offset++));  // normalized
     }
-    const auto& results = JUST(Dispatch<TensorTuple>(*param_grad_op, inputs, /*attrs=*/{}));
+    const auto& results =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs, /*attrs=*/{}));
     if (ctx->has_beta_diff) { in_grads->at(1) = results->at(0); }
     if (ctx->has_gamma_diff) {
       in_grads->at(ctx->has_beta_diff + 1) = results->at(ctx->has_beta_diff);
@@ -123,7 +124,8 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
     const auto& inv_variance = saved_tensors.at(offset + 2);
     AttrValueMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
   }
   return Maybe<void>::Ok();
 }

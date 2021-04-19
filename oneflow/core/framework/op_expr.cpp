@@ -41,7 +41,7 @@ template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                        const AttrValueMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_user_conf()) = proto_;
+  *(op_conf->mutable_user_conf()) = op_proto_;
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
@@ -57,7 +57,7 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(op_type_name);
   if (val) { return false; }
-  return !IsClassRegistered<std::string, OpExprGradFunction>(op_type_name);
+  return !IsClassRegistered<std::string, OpExprGradFunctionIf>(op_type_name);
 }
 
 template<>

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/user_op_conf_trait.h"
@@ -89,13 +89,14 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdInterpState* ctx,
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
     const auto& weight = ctx->SavedTensors().at(0);
-    in_grads->at(0) =
-        JUST(Dispatch<Tensor>(*activation_grad_op_, {out_grads.at(0), weight}, /*attrs=*/{}));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*activation_grad_op_,
+                                                          {out_grads.at(0), weight}, /*attrs=*/{}));
   }
   if (ctx->weight_requires_grad) {
     int idx = ctx->activation_requires_grad;
     const auto& x = ctx->SavedTensors().at(idx);
-    in_grads->at(1) = JUST(Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}, /*attrs=*/{}));
+    in_grads->at(1) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*weight_grad_op_, {x, out_grads.at(0)}, /*attrs=*/{}));
   }
   return Maybe<void>::Ok();
 }

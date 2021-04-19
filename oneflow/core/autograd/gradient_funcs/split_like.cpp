@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/user_op_conf_trait.h"
@@ -86,14 +86,15 @@ Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple&
     if (out_grad_i.get()) {
       inputs.push_back(out_grad_i);
     } else {
-      const auto& zero_grad = JUST(Dispatch<Tensor>(*zero_like_ops_.at(i), {saved_tensors.at(i)}));
+      const auto& zero_grad =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_ops_.at(i), {saved_tensors.at(i)}));
       inputs.push_back(zero_grad);
     }
   }
   AttrValueMap concat_attrs;
   concat_attrs.SetAttr<int>("axis", axis_);
   concat_attrs.SetAttr<int>("max_dim_size", ctx->max_dim_size);
-  in_grads->at(0) = JUST(Dispatch<Tensor>(*concat_op_, inputs, concat_attrs));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*concat_op_, inputs, concat_attrs));
   return Maybe<void>::Ok();
 }
 
