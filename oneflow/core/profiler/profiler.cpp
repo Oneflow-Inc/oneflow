@@ -142,6 +142,7 @@ HostMemoryGuard::~HostMemoryGuard() {
   QueryHostMemoryUsage(&end_vm_size_, &end_rss_size_);
   nlohmann::json j;
   j["event"] = "HostMemoryUsageDiff";
+  j["name"] = name_;
   const int64_t vm_size_diff = end_vm_size_ - start_vm_size_;
   const int64_t rss_size_diff = end_rss_size_ - start_rss_size_;
   j["vm_size_diff"] = vm_size_diff;
