@@ -63,6 +63,11 @@ class BlobDesc final {
 
   void CopyFrom(const BlobDesc&);
 
+  size_t ByteSizeOfBlobHeader() const;
+  size_t ByteSizeOfBlobBody() const;
+  size_t AlignedByteSizeOfBlobBody() const;
+  size_t AlignedTotalByteSize() const;
+
  private:
   std::shared_ptr<Shape> shape_;
   DataType data_type_;
