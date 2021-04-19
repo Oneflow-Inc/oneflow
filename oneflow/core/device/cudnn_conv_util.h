@@ -25,7 +25,6 @@ namespace oneflow {
 
 namespace user_op {
 
-class UserOpConfWrapper;
 class KernelComputeContext;
 class InferContext;
 

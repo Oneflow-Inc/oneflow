@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/op_kernel.h"
 
