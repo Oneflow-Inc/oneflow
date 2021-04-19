@@ -72,7 +72,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Sha
                                                  bool requires_grad, bool is_leaf, bool retain_grad)
     : EagerMirroredTensorImpl(
         shape, dtype, device,
-        std::make_shared<TensorStorage>(CHECK_JUST(Device::MakeParallelDescByDevice(*device))),
+        std::make_shared<TensorStorage>(device->parallel_desc_ptr()),
         requires_grad, is_leaf, retain_grad) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
@@ -85,7 +85,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       dtype_(dtype),
       tensor_storage_(tensor_storage),
       infer_local_dep_object_(
-          new VmLocalDepObject(CHECK_JUST(Device::MakeParallelDescByDevice(*device)))) {}
+          new VmLocalDepObject(device->parallel_desc_ptr())) {}
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case) {
