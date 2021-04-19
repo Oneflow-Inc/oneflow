@@ -36,8 +36,8 @@ NaiveTensorDesc::NaiveTensorDesc(const NaiveTensorDesc& rhs) { *this = rhs; }
 NaiveTensorDesc::NaiveTensorDesc(const BlobDescProto& proto) { *this = proto; }
 
 NaiveTensorDesc& NaiveTensorDesc::operator=(const BlobDescProto& proto) {
-  data_type_ = proto.body().data_type();
-  shape_ = Shape(proto.body().shape());
+  data_type_ = proto.data_type();
+  shape_ = Shape(proto.shape());
   is_dynamic_ = proto.is_dynamic();
   return *this;
 }

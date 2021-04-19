@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DefaultOpExprGradFunction : public OpExprGradFunction {
+class DefaultOpExprGradFunction : public OpExprGradFunction<OpExprInterpState> {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
   // by each backward operator.
@@ -39,8 +39,8 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
 
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override;
 
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -159,7 +159,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   OperatorConf fw_op_conf;
-  fw_op_expr->BuildOpConf(&fw_op_conf);
+  fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{});
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
@@ -275,7 +275,10 @@ Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple&
 }
 
 Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                               const TensorTuple& outputs) const {
+                                               const TensorTuple& outputs,
+                                               const AttrValueMap& attrs) const {
+  CHECK_OR_RETURN(attrs.empty())
+      << "The default op expr gradient func does not support dynamic attributes.";
   JUST(UpdateRequiresBackward(inputs));
   for (const auto& entry : backward_entries_) {
     if (!entry.requires_backward) { continue; }

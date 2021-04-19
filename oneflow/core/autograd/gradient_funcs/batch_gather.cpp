@@ -13,56 +13,64 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
+
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+
 
 namespace oneflow {
 namespace one {
 
-class BatchGather : public OpExprGradFunction {
+
+struct BatchGatherInterpState : public OpExprInterpState {
+  int64_t num_segments;
+  bool requires_grad;
+};
+
+class BatchGather : public OpExprGradFunction<BatchGatherInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+  Maybe<void> Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
-  std::string op_name_;
-  mutable int64_t num_segments_;
-  mutable bool requires_grad_;
+  std::shared_ptr<OpExpr> bw_unsorted_batch_segment_sum_op_;
 };
 
 Maybe<void> BatchGather::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  op_name_ = fw_op_expr->op_name();
+  const std::string& op_name = fw_op_expr->op_name();
+  bw_unsorted_batch_segment_sum_op_ =
+      JUST(op_expr_helper::UnsortedBatchSegmentSumOp(/*num_segments=*/1, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                 const TensorTuple& outputs) const {
-  requires_grad_ = inputs.at(0)->requires_grad();
-  if (!requires_grad_) { return Maybe<void>::Ok(); }
+Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
+                                 const TensorTuple& outputs, const AttrValueMap& attrs) const {
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& in_shape = inputs.at(0)->shape();
   const auto& indices_shape = inputs.at(1)->shape();
-  num_segments_ = in_shape->At(indices_shape->NumAxes() - 1);
+  ctx->num_segments = in_shape->At(indices_shape->NumAxes() - 1);
   ctx->SaveTensorForBackward(inputs.at(1));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchGather::Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
                                TensorTuple* in_grads) const {
   in_grads->resize(2);
-  if (!requires_grad_) { return Maybe<void>::Ok(); }
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  const auto& grad_op =
-      JUST(op_expr_helper::UnsortedBatchSegmentSumOp(num_segments_, GradientOpName(op_name_)));
-  in_grads->at(0) = JUST(Dispatch<Tensor>(*grad_op, {out_grads.at(0), indices}));
+  AttrValueMap attrs;
+  JUST(attrs.SetAttr<int32_t>("num_segments", ctx->num_segments));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*bw_unsorted_batch_segment_sum_op_,
+                                                        {out_grads.at(0), indices}, attrs));
   return Maybe<void>::Ok();
 }
 
