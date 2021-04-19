@@ -26,7 +26,7 @@ namespace oneflow {
 namespace one {
 
 class OpExprInterpState;
-class OpExprGradFunction;
+class OpExprGradFunctionIf;
 class OpExprGradClosure;
 
 class OpExpr {
@@ -70,7 +70,7 @@ class BuiltinOpExpr : public OpExpr {
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
 
-  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name)                                                 \
