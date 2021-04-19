@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_PROFILER_PROFILER_H_
 
 #include "oneflow/core/common/util.h"
+#include "json.hpp"
 
 namespace oneflow {
 
@@ -45,15 +46,19 @@ class RangeGuard final {
 };
 
 class HostMemoryGuard final {
+  using JSONCallback = std::function<void(nlohmann::json&)>;
+
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostMemoryGuard);
   explicit HostMemoryGuard(const std::string& name);
+  explicit HostMemoryGuard(const std::string& name, JSONCallback json_callback);
   ~HostMemoryGuard();
 
  private:
   std::string name_;
   int64_t start_vm_size_;
   int64_t start_rss_size_;
+  JSONCallback json_callback_;
 };
 
 #ifdef OF_ENABLE_PROFILER
@@ -67,6 +72,9 @@ class HostMemoryGuard final {
 #define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)                                       \
   ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
                                                  __COUNTER__)(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(name, json)                       \
+  ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
+                                                 __COUNTER__)(name, json)
 #else
 #define OF_PROFILER_ONLY_CODE(...)
 #define OF_PROFILER_RANGE_PUSH(name)
@@ -75,6 +83,7 @@ class HostMemoryGuard final {
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(name, json)
 #endif
 
 }  // namespace profiler

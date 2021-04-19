@@ -94,7 +94,7 @@ RangeGuard::~RangeGuard() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void LogHostMemoryUsage(const std::string& name, int64_t* vm_size, int64_t* rss_size) {
+void QueryHostMemoryUsage(int64_t* vm_size, int64_t* rss_size) {
 #ifdef OF_ENABLE_PROFILER
   int64_t vm_pages;
   int64_t rss_pages;
@@ -106,25 +106,44 @@ void LogHostMemoryUsage(const std::string& name, int64_t* vm_size, int64_t* rss_
   const int64_t rss_size_ = rss_pages * page_size;
   if (vm_size != nullptr) { *vm_size = vm_size_; }
   if (rss_size != nullptr) { *rss_size = rss_size_; }
-  LOG(INFO) << "[HostMemoryUsage]" << name << " VM " << vm_size_ << " RSS " << rss_size_;
 #endif  // OF_ENABLE_PROFILER
 }
 
-void LogHostMemoryUsage(const std::string& name) { LogHostMemoryUsage(name, nullptr, nullptr); }
+void LogHostMemoryUsage(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  int64_t vm_size_ = 0;
+  int64_t rss_size_ = 0;
+  QueryHostMemoryUsage(&vm_size_, &rss_size_);
+  nlohmann::json j;
+  j["event_type"] = "HostMemoryUsage";
+  j["event_name"] = name;
+  j["vm_size"] = vm_size_;
+  j["rss_size"] = rss_size_;
+  LOG(INFO) << "[JSON]" << j;
+#endif  // OF_ENABLE_PROFILER
+}
 
 HostMemoryGuard::HostMemoryGuard(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
   this->name_ = name;
-  LogHostMemoryUsage("[START][" + name + "]", &start_vm_size_, &start_rss_size_);
+  QueryHostMemoryUsage(&start_vm_size_, &start_rss_size_);
+#endif  // OF_ENABLE_PROFILER
 }
 
 HostMemoryGuard::~HostMemoryGuard() {
   int64_t end_vm_size_ = 0;
   int64_t end_rss_size_ = 0;
-  LogHostMemoryUsage("[END][" + name_ + "]", &end_vm_size_, &end_rss_size_);
-  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][VM][GB]"
-            << (end_vm_size_ - start_vm_size_) / 1024. / 1024. / 1024.;
-  LOG(INFO) << "[HostMemoryUsage][" + name_ + "][DIFF][RSS][GB]"
-            << (end_rss_size_ - start_rss_size_) / 1024. / 1024. / 1024.;
+  QueryHostMemoryUsage(&end_vm_size_, &end_rss_size_);
+  nlohmann::json j;
+  j["event_type"] = "HostMemoryUsageDiff";
+  j["event_name"] = name_;
+  const int64_t vm_size_diff = end_vm_size_ - start_vm_size_;
+  const int64_t rss_size_diff = end_rss_size_ - start_rss_size_;
+  j["vm_size_diff"] = vm_size_diff;
+  j["rss_size_diff"] = rss_size_diff;
+  if (json_callback_) { json_callback_(j); }
+  json_callback_(j);
+  LOG(INFO) << "[JSON]" << j;
 }
 
 }  // namespace profiler
