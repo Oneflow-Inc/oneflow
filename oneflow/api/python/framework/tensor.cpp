@@ -45,10 +45,6 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     bool retain_grad) {
     std::shared_ptr<MirroredTensor> tensor = MirroredTensor::MakeTensor(
         shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad);
-    if (is_leaf && requires_grad && autograd::GradMode::is_enabled()) {
-      TensorTuple tensor_tuple = {tensor};
-      AddAccumulateFunctionNode(&tensor_tuple);
-    }
     return tensor;
   }
 };
@@ -62,10 +58,6 @@ struct TensorExportUtil<ConsistentTensor> final {
       bool is_leaf, bool retain_grad) {
     std::shared_ptr<ConsistentTensor> tensor = ConsistentTensor::MakeTensor(
         shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf, retain_grad);
-    if (is_leaf && requires_grad && autograd::GradMode::is_enabled()) {
-      TensorTuple tensor_tuple = {tensor};
-      AddAccumulateFunctionNode(&tensor_tuple);
-    }
     return tensor;
   }
 };
