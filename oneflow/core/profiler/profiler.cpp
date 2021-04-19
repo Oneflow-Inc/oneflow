@@ -102,7 +102,8 @@ void LogHostMemoryUsage(const std::string& name) {
   ifs >> vm_pages >> rss_pages;
   ifs.close();
   const int64_t page_size = sysconf(_SC_PAGE_SIZE);
-  LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS " << rss_pages * page_size;
+  LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS "
+            << rss_pages * page_size;
 #endif  // OF_ENABLE_PROFILER
 }
 

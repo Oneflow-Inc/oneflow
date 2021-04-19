@@ -51,8 +51,7 @@ class RangeGuard final {
 #define OF_PROFILER_RANGE_POP() ::oneflow::profiler::RangePop()
 #define OF_PROFILER_RANGE_GUARD(name) \
   ::oneflow::profiler::RangeGuard OF_PP_CAT(_of_profiler_range_guard_, __COUNTER__)(name)
-#define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name) \
-  ::oneflow::profiler::LogHostMemoryUsage(name)
+#define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name) ::oneflow::profiler::LogHostMemoryUsage(name)
 #else
 #define OF_PROFILER_ONLY_CODE(...)
 #define OF_PROFILER_RANGE_PUSH(name)
