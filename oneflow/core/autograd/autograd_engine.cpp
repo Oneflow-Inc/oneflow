@@ -37,9 +37,6 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
 
 Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
                                             std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  // TODO: Delete this after refactoring user op which produce tensor
-  // Disable autograd mode because zeros_like op will find backward user op but failed
-  autograd::AutoGradMode autograd_mode(false);
   const auto& zero_like = JUST(op_expr_helper::ZeroLikeOp());
   for (int i = 0; i < out_grads.size(); ++i) {
     if (out_grads.at(i)->Empty()) {
