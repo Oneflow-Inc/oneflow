@@ -68,8 +68,11 @@ Maybe<void> PruneParallelCastOpsPass::Apply(const OpGraph& op_graph,
         op_node->ParallelDistribution4Lbi(parallel_cast_in_lbi);
     const ParallelDistribution& producer_parallel_distribution =
         producer->ParallelDistribution4Lbi(parallel_cast_in_lbi);
-    if (!op_node->parallel_desc().EqualsIgnoringHierarchy(producer->parallel_desc())) { return; }
     if (op_node->parallel_desc() != producer->parallel_desc()) { return; }
+    if (parallel_cast_parallel_distribution != producer_parallel_distribution
+        && op_node->out_edges().size() > 1) {
+      return;
+    }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       if (IsParallelCastOp(consumer->op().op_conf())) { return; }
