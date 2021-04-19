@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/op_type_trait.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -31,12 +30,12 @@ class OpExprGradClosure;
 class OpExpr {
  public:
   virtual ~OpExpr() = default;
-  virtual const std::string type() const = 0;
+  virtual const std::string type_name() const = 0;
 
   virtual int input_size() const = 0;
   virtual int output_size() const = 0;
 
-  virtual bool IsGradDisabled() const { return false; }
+  virtual Maybe<bool> IsGradDisabled() const { return false; }
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
@@ -68,42 +67,42 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
-
-  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
 };
 
-template<OperatorConf::OpTypeCase op_type_case>
+template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
-  using proto_type = typename OpTypeTrait<op_type_case>::proto_type;
-  explicit BuiltinOpExprImpl(const std::string& op_name, proto_type&& op_proto,
+  explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
       : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), op_proto_(std::move(op_proto)) {}
 
   virtual ~BuiltinOpExprImpl() = default;
 
-  const proto_type& proto() const { return op_proto_; }
-  proto_type* mutable_proto() { return &op_proto_; }
+  const ProtoType& proto() const { return op_proto_; }
+  ProtoType* mutable_proto() { return &op_proto_; }
 
-  Maybe<void> BuildOpConf(OperatorConf* op_conf) const override;
+  const std::string type_name() const override;
 
-  const std::string type() const override { return OpTypeTrait<op_type_case>::op_type_name(); }
+  Maybe<bool> IsGradDisabled() const override;
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
+  Maybe<void> BuildOpConf(OperatorConf* op_conf) const override;
+
  protected:
-  proto_type op_proto_;
+  ProtoType op_proto_;
+  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
 };
 
-using UserOpExpr = BuiltinOpExprImpl<OperatorConf::kUserConf>;
-using VariableOpExpr = BuiltinOpExprImpl<OperatorConf::kVariableConf>;
-using CastToMirroredOpExpr = BuiltinOpExprImpl<OperatorConf::kCastToMirroredConf>;
-using CastFromMirroredOpExpr = BuiltinOpExprImpl<OperatorConf::kCastFromMirroredConf>;
-using DistributeSplitOpExpr = BuiltinOpExprImpl<OperatorConf::kDistributeSplitConf>;
-using DistributeCloneOpExpr = BuiltinOpExprImpl<OperatorConf::kDistributeCloneConf>;
-using DistributeConcatOpExpr = BuiltinOpExprImpl<OperatorConf::kDistributeConcatConf>;
-using DistributeAddOpExpr = BuiltinOpExprImpl<OperatorConf::kDistributeAddConf>;
+using UserOpExpr = BuiltinOpExprImpl<UserOpConf>;
+using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
+using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
+using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
+using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
+using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
+using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
+using DistributeAddOpExpr = BuiltinOpExprImpl<DistributeAddOpConf>;
 
 class OpExprInterpState;
 // TODO(): Finish the class definition of `FunctionOpExpr`.
@@ -117,7 +116,7 @@ class FunctionOpExpr : public OpExpr {
       : OpExpr(), forward_(forward), backward_(backward) {}
   virtual ~FunctionOpExpr() = default;
 
-  const std::string type() const override { return "function"; }
+  const std::string type_name() const override { return "function"; }
 
   int input_size() const override { UNIMPLEMENTED(); }
   int output_size() const override { UNIMPLEMENTED(); }

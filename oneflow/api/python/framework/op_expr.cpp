@@ -68,7 +68,7 @@ void PybindExportOpExpr(py::module& m, const char* op_type_name) {
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def_property_readonly("type", &one::OpExpr::type)
+      .def_property_readonly("type_name", &one::OpExpr::type_name)
       .def_property_readonly("input_size", &one::OpExpr::input_size)
       .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
