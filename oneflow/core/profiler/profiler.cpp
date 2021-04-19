@@ -115,32 +115,33 @@ void LogHostMemoryUsage(const std::string& name) {
   int64_t rss_size_ = 0;
   QueryHostMemoryUsage(&vm_size_, &rss_size_);
   nlohmann::json j;
-  j["event_type"] = "HostMemoryUsage";
-  j["event_name"] = name;
+  j["event"] = "HostMemoryUsage";
+  j["name"] = name;
   j["vm_size"] = vm_size_;
   j["rss_size"] = rss_size_;
   LOG(INFO) << "[JSON]" << j;
 #endif  // OF_ENABLE_PROFILER
 }
 
-HostMemoryGuard::HostMemoryGuard(const std::string& name, JSONCallback json_callback) {
+HostMemoryGuard::HostMemoryGuard(JSONCallback json_callback) {
 #ifdef OF_ENABLE_PROFILER
   QueryHostMemoryUsage(&start_vm_size_, &start_rss_size_);
-  name_ = name;
+  name_ = "untitled";
   json_callback_ = json_callback;
 #endif  // OF_ENABLE_PROFILER
 }
 
 HostMemoryGuard::HostMemoryGuard(const std::string& name)
-    : HostMemoryGuard(name, [](json& j) -> void {}) {}
+    : HostMemoryGuard([](json& j) -> void {}) {
+  name_ = name;
+}
 
 HostMemoryGuard::~HostMemoryGuard() {
   int64_t end_vm_size_ = 0;
   int64_t end_rss_size_ = 0;
   QueryHostMemoryUsage(&end_vm_size_, &end_rss_size_);
   nlohmann::json j;
-  j["event_type"] = "HostMemoryUsageDiff";
-  j["event_name"] = name_;
+  j["event"] = "HostMemoryUsageDiff";
   const int64_t vm_size_diff = end_vm_size_ - start_vm_size_;
   const int64_t rss_size_diff = end_rss_size_ - start_rss_size_;
   j["vm_size_diff"] = vm_size_diff;

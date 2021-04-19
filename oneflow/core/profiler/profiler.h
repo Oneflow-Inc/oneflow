@@ -53,7 +53,7 @@ class HostMemoryGuard final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(HostMemoryGuard);
   explicit HostMemoryGuard(const std::string& name);
-  explicit HostMemoryGuard(const std::string& name, JSONCallback json_callback);
+  explicit HostMemoryGuard(JSONCallback json_callback);
   ~HostMemoryGuard();
 
  private:
@@ -74,9 +74,9 @@ class HostMemoryGuard final {
 #define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)                                       \
   ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
                                                  __COUNTER__)(name)
-#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(name, json)                       \
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(json_callback)                    \
   ::oneflow::profiler::HostMemoryGuard OF_PP_CAT(_of_profiler_log_host_memory_guard_, \
-                                                 __COUNTER__)(name, json)
+                                                 __COUNTER__)(json_callback)
 #else
 #define OF_PROFILER_ONLY_CODE(...)
 #define OF_PROFILER_RANGE_PUSH(name)
@@ -85,7 +85,7 @@ class HostMemoryGuard final {
 #define OF_PROFILER_NAME_THIS_HOST_THREAD(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_USAGE(name)
 #define OF_PROFILER_LOG_HOST_MEMORY_GUARD(name)
-#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(name, json)
+#define OF_PROFILER_LOG_HOST_MEMORY_GUARD_WITH_JSON(json_callback)
 #endif
 
 }  // namespace profiler
