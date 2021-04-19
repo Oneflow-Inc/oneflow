@@ -34,7 +34,7 @@ class Device final {
   std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
-  std::shared_ptr<const ParallelDesc> parallel_desc_ptr() const { return parallel_desc_; }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const { return parallel_desc_; }
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
