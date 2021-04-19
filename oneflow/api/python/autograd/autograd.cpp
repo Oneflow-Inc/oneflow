@@ -18,6 +18,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_expr_helper.h"
@@ -51,10 +52,11 @@ Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
     } else {
       CHECK_OR_RETURN(IsScalarTensor(*out_grads.at(i)))
           << "Grad can be implicitly created only for scalar outputs";
-      const auto& ones_like = JUST(op_expr_helper::OnesLikeOp());
+      const auto& ones_like = JUST(
+          op_expr_helper::OnesOp(*outputs.at(i)->shape(), outputs.at(i)->dtype()->data_type()));
       const auto& interpreter = JUST(one::OpInterpUtil::GetInterpreter());
       one::TensorTuple grad_output(1);
-      interpreter->Apply(*ones_like, one::TensorTuple({outputs.at(i)}), &grad_output);
+      interpreter->Apply(*ones_like, one::TensorTuple{}, &grad_output);
       gradients->at(i) = grad_output.at(0);
     }
   }
