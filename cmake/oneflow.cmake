@@ -255,7 +255,7 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 # py ext lib
-add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
+add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
