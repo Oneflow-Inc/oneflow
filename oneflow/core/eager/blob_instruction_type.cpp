@@ -26,6 +26,9 @@ limitations under the License.
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 namespace eager {
@@ -61,7 +64,10 @@ class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
     CHECK_NOTNULL(dptr);
     size_t size = blob->AlignedByteSizeOfBlobBody();
     cudaError_t cuda_error = cudaHostRegister(dptr, size, cudaHostRegisterDefault);
-    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) { return; }
+    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
+      cudaGetLastError();
+      return;
+    }
     OF_CUDA_CHECK(cuda_error);
   }
 };
@@ -86,7 +92,10 @@ class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
     void* dptr = blob->mut_dptr();
     CHECK_NOTNULL(dptr);
     cudaError_t cuda_error = cudaHostUnregister(dptr);
-    if (cuda_error == cudaErrorHostMemoryNotRegistered) { return; }
+    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
+      cudaGetLastError();
+      return;
+    }
     OF_CUDA_CHECK(cuda_error);
   }
 };
@@ -106,6 +115,18 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
                                                               parallel_ctx.parallel_id());
   eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
   return Maybe<void>::Ok();
+}
+
+void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+  ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
 }  // namespace eager

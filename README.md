@@ -26,34 +26,39 @@
 
   - Python >= 3.5
   - CUDA Toolkit Linux x86_64 Driver
-    | OneFlow |CUDA Driver Version|
-    |---|---|
-    | oneflow_cu111  | >= 450.80.02  |
-    | oneflow_cu110  | >= 450.36.06  |
-    | oneflow_cu102  | >= 440.33  |
-    | oneflow_cu101  | >= 418.39  |
-    | oneflow_cu100  | >= 410.48  |
-    | oneflow_cpu  | N/A  |
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
 
-    - Support for latest stable version of CUDA will be prioritized. Please upgrade your Nvidia driver to version 440.33 or above and install `oneflow_cu102` if possible.
-
-    - We are sorry that due to limits on bandwidth and other resources, we could only guarantee the efficiency and stability of `oneflow_cu102`. We will improve it ASAP.
+    - Please upgrade your Nvidia driver to version 440.33 or above and install OneFlow for CUDA 10.2 if possible.
 
   ### Install with Pip Package
 
-  - To install latest release of OneFlow with CUDA support:
+  - To install latest stable release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://release.oneflow.info oneflow_cu102 --user
+    python3 -m pip install -f https://release.oneflow.info oneflow_cu102 --user
     ```
 
-  - To install master branch release of OneFlow with CUDA support:
+  - To install nightly release of OneFlow with CUDA support:
 
     ```
-    python3 -m pip install --find-links https://staging.oneflow.info/branch/master oneflow_cu102 --user
+    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
     ```
+
+  - To install other available builds for different variants:
+    ```
+    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
+    ```
+
+    All available `[PLATFORM]`:
+    | Platform |CUDA Driver Version| Supported GPUs |
+    |---|---|---|
+    | cu111  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+    | cu110, cu110_xla  | >= 450.36.06  | GTX 10xx, RTX 20xx, A100|
+    | cu102, cu102_xla  | >= 440.33  | GTX 10xx, RTX 20xx |
+    | cu101, cu101_xla  | >= 418.39  | GTX 10xx, RTX 20xx |
+    | cu100, cu100_xla  | >= 410.48  | GTX 10xx, RTX 20xx |
+    | cpu  | N/A | N/A |
 
   - To install latest release of CPU-only OneFlow:
 
@@ -79,40 +84,7 @@
 
 ### Build from Source
 
-1. #### System Requirements to Build OneFlow
-
-    - Please use a newer version of CMake to build OneFlow. You could download cmake release from [here](https://github.com/Kitware/CMake/releases/download/v3.14.0/cmake-3.14.0-Linux-x86_64.tar.gz).
-
-    - Please make sure you have G++ and GCC >= 4.8.5 installed. Clang is not supported for now.
-
-    - To install dependencies, run:
-
-      On CentOS:
-
-      ```
-      yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
-      rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
-      yum update -y && yum install -y epel-release && \
-      yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel
-      ```
-
-      On CentOS, if you have MKL installed, please update the environment variable:
-
-      ```
-      export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
-      ```
-
-      If you don't want to build OneFlow with MKL, you could install OpenBLAS.
-      On CentOS:
-      ```
-      sudo yum -y install openblas-devel
-      ```
-      On Ubuntu:
-      ```
-      sudo apt install -y libopenblas-dev
-      ```
-
-2. #### Clone Source Code
+1. #### Clone Source Code
 
     - #### Option 1: Clone source code from GitHub
 
@@ -129,7 +101,7 @@
       unzip oneflow-src.zip
       ```
 
-3. #### Build and Install OneFlow
+2. #### Build and Install OneFlow
 
     - #### Option 1: Build in docker container (recommended)
       - In the root directory of OneFlow source code, run:
@@ -138,7 +110,7 @@
         python3 docker/package/manylinux/build_wheel.py
         ```
 
-        This should produces `.whl` files in the directory `wheelhouse`
+        This should produce `.whl` files in the directory `wheelhouse`
 
       - If you are in China, you might need to add these flags:
 
@@ -155,6 +127,11 @@
       - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
     - #### Option 2: Build on bare metal
+      - Install dependencies. For instance, on Ubuntu 20.04, run:
+        ```
+        sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
+        ```
+        If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
       - In the root directory of OneFlow source code, run:
 
         ```

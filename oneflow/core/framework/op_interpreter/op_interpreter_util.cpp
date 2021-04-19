@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
@@ -27,23 +27,53 @@ namespace one {
 
 namespace {
 
-std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
+std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (eager_mode) {
-    internal = std::make_shared<EagerInterpreter>();
+  if (is_mirrored) {
+    internal = std::make_shared<EagerMirroredInterpreter>();
   } else {
-    internal = std::make_shared<LazyInterpreter>();
+    internal = std::make_shared<EagerConsistentInterpreter>();
   }
+  return std::make_shared<AutogradInterpreter>(internal);
+}
+
+std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
+  auto internal = std::make_shared<LazyInterpreter>();
   return std::make_shared<AutogradInterpreter>(internal);
 }
 
 }  // namespace
 
 /*static*/ Maybe<AutogradInterpreter> OpInterpUtil::GetInterpreter() {
-  static const auto& g_lazy_interpreter = BuildInterpreter(false);
-  static const auto& g_eager_interpreter = BuildInterpreter(true);
-  if (EagerExecutionEnabled()) { return g_eager_interpreter; }
+  static const auto& g_lazy_interpreter = BuildLazyInterpreter();
+  static const auto& g_eager_consistent_interpreter = BuildEagerInterpreter(/*is_mirrored=*/false);
+  static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
+  if (EagerExecutionEnabled()) {
+    const auto& session = JUST(GetDefaultSession());
+    bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());
+    if (is_mirrored_strategy_enabled) {
+      return g_eager_mirrored_interpreter;
+    } else {
+      return g_eager_consistent_interpreter;
+    }
+  }
   return g_lazy_interpreter;
+}
+
+template<>
+/*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
+  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  return outputs;
+}
+
+template<>
+/*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
+                                                        const TensorTuple& inputs,
+                                                        const AttrValueMap& attrs) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
@@ -60,9 +90,10 @@ std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                                  const TensorTuple& inputs) {
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
   const auto& scope = JUST(GetCurrentScope());
-  auto op_conf = JUST(GenBuiltinOpConf(op_expr));
+  auto op_conf = JUST(GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
   if (!op_conf->has_device_tag()) {
@@ -79,6 +110,7 @@ std::shared_ptr<AutogradInterpreter> BuildInterpreter(const bool& eager_mode) {
     cfg_upstream_signature->ToProto(&upstream_signature);
   }
   const auto& op = JUST(ConstructAndInferOp(*op_conf, upstream_signature, *scope));
+  JUST(op->InferParallelSignatureIf());
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
@@ -97,9 +129,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return bn2blob_object;
 }
 
-/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
+                                                              const AttrValueMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
-  op_expr.BuildOpConf(op_conf.get());
+  op_expr.BuildOpConf(op_conf.get(), attrs);
   return op_conf;
 }
 

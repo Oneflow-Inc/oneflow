@@ -190,6 +190,8 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     } else {
       UNIMPLEMENTED();
     }
+    CHECK(user_op_conf.op_conf().has_scope_symbol_id());
+    fused_op_builder.ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id());
     OperatorConf new_op_conf = user_op_conf.op_conf();
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
     job_builder->MutOpsOnlyOnce({new_op_conf});

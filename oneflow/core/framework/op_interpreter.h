@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_H_
 
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -25,6 +26,9 @@ namespace one {
 
 class OpExprInterpState {
  public:
+  OpExprInterpState() = default;
+  virtual ~OpExprInterpState() = default;
+
   const TensorTuple& SavedTensors() const { return saved_tensors_; }
 
   void SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
@@ -40,31 +44,41 @@ class OpExprInterpreter {
   OpExprInterpreter() = default;
   virtual ~OpExprInterpreter() = default;
 
-  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs,
-                            TensorTuple* outputs) const = 0;
+  virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
+                            const AttrValueMap& attrs) const = 0;
+
+  Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
+    return Apply(op, inputs, outputs, AttrValueMap{});
+  }
 };
 
-#define FOR_EACH_OPS(_macro)  \
-  _macro(UserOp);             \
-  _macro(VariableOp);         \
-  _macro(CastToMirroredOp);   \
-  _macro(CastFromMirroredOp); \
-  _macro(DistributeSplitOp);  \
-  _macro(DistributeCloneOp);  \
-  _macro(DistributeConcatOp); \
-  _macro(DistributeAddOp);    \
-  _macro(FunctionOp);
+#define FOR_EACH_BUILTIN_OPS(_macro) \
+  _macro(UserOp);                    \
+  _macro(VariableOp);                \
+  _macro(CastToMirroredOp);          \
+  _macro(CastFromMirroredOp);        \
+  _macro(DistributeSplitOp);         \
+  _macro(DistributeCloneOp);         \
+  _macro(DistributeConcatOp);        \
+  _macro(DistributeAddOp);
 
 #define DECLARE_NORMAL_APPLY_FUNC(op_type)                                               \
   virtual Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
-                                TensorTuple* outputs) const;
+                                TensorTuple* outputs, const AttrValueMap& attrs) const
+
+#define DECLARE_PURE_VIRTUAL_APPLY_FUNC(op_type) DECLARE_NORMAL_APPLY_FUNC(op_type) = 0;
+
+#define DECLARE_OVERRIDE_APPLY_FUNC(op_type)                                     \
+  Maybe<void> ApplyImpl(const op_type##Expr& op_expr, const TensorTuple& inputs, \
+                        TensorTuple* outputs, const AttrValueMap& attrs) const override;
 
 class LazyInterpreter : public OpExprInterpreter {
  public:
   LazyInterpreter() : OpExprInterpreter() {}
+  virtual ~LazyInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) const override;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const override;
 
  private:
   DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
@@ -74,16 +88,38 @@ class LazyInterpreter : public OpExprInterpreter {
 class EagerInterpreter : public OpExprInterpreter {
  public:
   EagerInterpreter() : OpExprInterpreter() {}
+  virtual ~EagerInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                    TensorTuple* outputs) const override;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const override;
 
  private:
-  FOR_EACH_OPS(DECLARE_NORMAL_APPLY_FUNC);
+  FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
+  DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
 };
 
+class EagerConsistentInterpreter : public EagerInterpreter {
+ public:
+  EagerConsistentInterpreter() : EagerInterpreter() {}
+  virtual ~EagerConsistentInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
+class EagerMirroredInterpreter : public EagerInterpreter {
+ public:
+  EagerMirroredInterpreter() : EagerInterpreter() {}
+  virtual ~EagerMirroredInterpreter() = default;
+
+ private:
+  FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
+};
+
+#undef DECLARE_OVERRIDE_APPLY_FUNC
+#undef DECLARE_PURE_VIRTUAL_APPLY_FUNC
 #undef DECLARE_NORMAL_APPLY_FUNC
-#undef FOR_EACH_OPS
+#undef FOR_EACH_BUILTIN_OPS
 
 class AutogradInterpreter {
  public:
@@ -92,7 +128,12 @@ class AutogradInterpreter {
 
   virtual ~AutogradInterpreter() = default;
 
-  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const;
+  Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
+                    const AttrValueMap& attrs) const;
+
+  Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
+    return Apply(op, inputs, outputs, AttrValueMap{});
+  }
 
  private:
   std::shared_ptr<OpExprInterpreter> internal_;

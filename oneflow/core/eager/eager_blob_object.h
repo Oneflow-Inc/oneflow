@@ -24,28 +24,48 @@ namespace oneflow {
 
 namespace eager {
 
-class EagerBlobObject : public BlobObject {
+class TensorBuffer {
+ public:
+  char* blob_dptr() { return blob_dptr_.get(); }
+  void set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>&& blob_dptr) {
+    blob_dptr_ = std::move(blob_dptr);
+  }
+
+  void reset() { blob_dptr_.reset(); }
+
+ private:
+  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+};
+
+class EagerBlobObject final : public BlobObject {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : BlobObject(mem_case, data_type), blob_body_bytes_(0) {}
-  virtual ~EagerBlobObject() override = default;
+  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+                  DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer)
+      : BlobObject(mem_case, shape, data_type), tensor_buffer_(tensor_buffer), blob_body_bytes_(0) {
+    CHECK(static_cast<bool>(shape));
+    CHECK(static_cast<bool>(tensor_buffer));
+  }
+  ~EagerBlobObject() override = default;
 
-  virtual BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
-  virtual const Blob& blob() const override { return *blob_; }
-  virtual Blob* mut_blob() override { return blob_.get(); }
-  virtual Maybe<void> TryInitBlob() override;
-
-  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
-
- private:
+  const Blob& blob() const override { return *blob_; }
+  Blob* mut_blob() override { return blob_.get(); }
+  Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
 
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> DeallocateBlobDataPtr() override {
+    tensor_buffer_->reset();
+    return Maybe<void>::Ok();
+  }
+
+ private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
-  std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
+  std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
 

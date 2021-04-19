@@ -16,11 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_DESC_H_
 
+#include <memory>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/blob_desc.pb.h"
-#include "oneflow/core/register/pod_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
@@ -29,24 +30,33 @@ class BlobDesc final {
  public:
   BlobDesc() = delete;
   ~BlobDesc() = default;
-  BlobDesc(const Shape&, DataType);
-  explicit BlobDesc(DataType dtype) : BlobDesc(Shape(), dtype) {}
+
+  // NOTE(chengcheng): Cannot using std::make_shared in header file, because it will cause
+  //  Segmentation fault with unknown reason.
+  BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
+  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic);
+
+  BlobDesc(const Shape& shape, DataType dtype);
+  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype);
+  explicit BlobDesc(DataType dtype);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
-  BlobDesc(const TensorPodDesc& body, bool is_dynamic) : body_(body), is_dynamic_(is_dynamic) {}
 
   static const int32_t kAlignSize = 512;
 
   BlobDesc& operator=(const BlobDesc&);
 
-  const Shape& shape() const { return body_.shape(); }
-  Shape& mut_shape() { return *body_.mut_shape(); }
+  const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
+  Shape& mut_shape() { return *CHECK_NOTNULL(shape_.get()); }
+  void set_shape(const Shape& shape) { *CHECK_NOTNULL(shape_.get()) = shape; }
 
-  DataType data_type() const { return body_.data_type(); }
-  void set_data_type(DataType val) { body_.set_data_type(val); }
+  DataType data_type() const { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
+  void set_data_type(DataType val) { data_type_ = val; }
 
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool);
+  bool* mut_is_dynamic() { return &is_dynamic_; }
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
@@ -54,9 +64,8 @@ class BlobDesc final {
   void CopyFrom(const BlobDesc&);
 
  private:
-  void InitFromProto(const BlobDescProto& proto);
-
-  TensorPodDesc body_;
+  std::shared_ptr<Shape> shape_;
+  DataType data_type_;
   bool is_dynamic_;
 };
 

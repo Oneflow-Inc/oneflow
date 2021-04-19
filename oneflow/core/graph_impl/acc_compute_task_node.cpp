@@ -30,7 +30,8 @@ class AccCompTaskNode final : public CompTaskNode {
 };
 
 void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  SoleOutDataEdge()->AddRegst("out", ProduceRegst("out", false));
+  std::shared_ptr<RegstDesc> regst = ProduceRegst("out", false);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("out", regst); });
 }
 
 void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
