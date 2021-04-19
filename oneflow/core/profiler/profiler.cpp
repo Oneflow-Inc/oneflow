@@ -94,7 +94,7 @@ RangeGuard::~RangeGuard() {
 #endif  // OF_ENABLE_PROFILER
 }
 
-void DumpHostMemoryUsage(const std::string& name) {
+void LogHostMemoryUsage(const std::string& name) {
 #ifdef OF_ENABLE_PROFILER
   int64_t vm_pages;
   int64_t rss_pages;
