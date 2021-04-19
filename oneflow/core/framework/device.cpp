@@ -23,6 +23,10 @@ namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
+Device::Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {
+  parallel_desc_ = CHECK_JUST(Device::MakeParallelDescByDevice(*this));
+}
+
 std::string Device::of_type() const {
   if (type_ == "cuda") {
     return "gpu";
