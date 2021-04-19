@@ -35,10 +35,10 @@ Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& a
 
 Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
+    if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     } else {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>("default"));
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("default"));
     }
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     op_grad_func_->Init(*this);
