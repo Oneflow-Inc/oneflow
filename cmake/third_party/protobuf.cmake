@@ -90,4 +90,5 @@ add_custom_target(protobuf_copy_binary_to_destination
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${PROTOBUF_BUILD_PROTOC_EXECUTABLE} ${PROTOBUF_BINARY_DIR}
   DEPENDS protobuf_create_binary_dir)
 
+set(PROTOBUF_COPY_TARGETS protobuf_copy_binary_to_destination protobuf_copy_headers_to_destination)
 endif(THIRD_PARTY)
