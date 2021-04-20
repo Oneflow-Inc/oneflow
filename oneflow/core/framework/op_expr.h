@@ -85,7 +85,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   const std::string type_name() const override;
 
-  Maybe<bool> IsGradDisabled() const override;
+  Maybe<bool> IsGradDisabled() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 

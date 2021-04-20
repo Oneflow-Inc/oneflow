@@ -37,6 +37,8 @@ DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
 DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
+#undef DEFINE_OPEXPR_TYPE_NAME
+
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                        const AttrValueMap& attrs) const {
@@ -103,11 +105,6 @@ Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* o
 }
 
 template<>
-Maybe<bool> BuiltinOpExprImpl<CastToMirroredOpConf>::IsGradDisabled() const {
-  return false;
-}
-
-template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
@@ -119,11 +116,6 @@ Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<bool> BuiltinOpExprImpl<CastFromMirroredOpConf>::IsGradDisabled() const {
-  return false;
 }
 
 template<>
@@ -142,11 +134,6 @@ Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* 
 }
 
 template<>
-Maybe<bool> BuiltinOpExprImpl<DistributeSplitOpConf>::IsGradDisabled() const {
-  return false;
-}
-
-template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeSplitOpConf>::GetOrCreateOpGradClosure()
     const {
   UNIMPLEMENTED_THEN_RETURN();
@@ -159,11 +146,6 @@ Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* 
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
   return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<bool> BuiltinOpExprImpl<DistributeCloneOpConf>::IsGradDisabled() const {
-  return false;
 }
 
 template<>
@@ -182,11 +164,6 @@ Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(
 }
 
 template<>
-Maybe<bool> BuiltinOpExprImpl<DistributeConcatOpConf>::IsGradDisabled() const {
-  return false;
-}
-
-template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeConcatOpConf>::GetOrCreateOpGradClosure()
     const {
   UNIMPLEMENTED_THEN_RETURN();
@@ -199,11 +176,6 @@ Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;
   return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<bool> BuiltinOpExprImpl<DistributeAddOpConf>::IsGradDisabled() const {
-  return false;
 }
 
 template<>
