@@ -128,7 +128,7 @@ class FunctionOpExpr : public OpExpr {
   std::shared_ptr<const OpExprInterpState> state() const { return state_; }
   std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
 
-  Maybe<bool> IsGradDisabled() const { return false; }
+  Maybe<bool> IsGradDisabled() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
 
  private:
