@@ -60,6 +60,9 @@ void ExecNode::UnbindBnWithEmptyRegst() {
 
 void ExecNode::ToProto(const ParallelContext* parallel_ctx, ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), parallel_ctx, ret->mutable_kernel_conf());
+
+  //1
+  return;
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
