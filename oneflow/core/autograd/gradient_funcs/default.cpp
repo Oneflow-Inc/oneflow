@@ -300,7 +300,7 @@ Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const Ten
 Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
-  in_grads->resize(input_size_);
+  CHECK_EQ_OR_RETURN(in_grads->size(), input_size_);
   const auto& saved_tensors = ctx->SavedTensors();
   int offset = 0;
   for (const auto& entry : backward_entries_) {

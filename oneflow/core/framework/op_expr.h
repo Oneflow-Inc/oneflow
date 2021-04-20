@@ -36,7 +36,7 @@ class OpExpr {
   virtual int input_size() const = 0;
   virtual int output_size() const = 0;
 
-  virtual Maybe<bool> IsGradDisabled() const { return false; }
+  virtual Maybe<bool> IsGradDisabled() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
@@ -128,6 +128,7 @@ class FunctionOpExpr : public OpExpr {
   std::shared_ptr<const OpExprInterpState> state() const { return state_; }
   std::shared_ptr<OpExprInterpState> mutable_state() { return state_; }
 
+  Maybe<bool> IsGradDisabled() const { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override { UNIMPLEMENTED(); }
 
  private:
