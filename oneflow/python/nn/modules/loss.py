@@ -116,3 +116,41 @@ class CrossEntropyLoss(Module):
             return self._sum(out)
         else:
             return out
+
+
+# TODO(Liang Depeng): just for resnet50, will be removed after refactoring the CrossEntropyLoss
+@oneflow_export("nn.CrossEntropyLossV2")
+class CrossEntropyLossV2(Module):
+    def __init__(self, reduction: str = "mean",) -> None:
+        super().__init__()
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+
+        self._op = (
+            flow.builtin_op("sparse_softmax_cross_entropy")
+            .Input("prediction")
+            .Input("label")
+            .Attr("depth", 1000)
+            .Output("prob")
+            .Output("out")
+            .Build()
+        )
+
+        self._sum_op = (
+            flow.builtin_op("reduce_sum")
+            .Input("input_tensor")
+            .Output("output_tensor")
+            .Attr("keepdims", False)
+            .Attr("axis", [0,])
+            .Build()
+        )
+
+    def forward(self, input, target):
+        prob, out = self._op(input, target)
+        return out
