@@ -774,7 +774,7 @@ def is_unary_module(module):
 
 
 def is_binary_module(module):
-    return True if len(inspect.signature(module.forward).parameters) == 3 else False
+    return True if len(inspect.signature(module.forward).parameters) >= 3 else False
 
 
 def _convert_to_placement_scope(placement_or_device):

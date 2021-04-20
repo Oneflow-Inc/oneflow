@@ -172,6 +172,7 @@ class BroadcastMul(Module):
         return self._op(x, y)[0]
 
 
+@oneflow_export("Mul")
 @register_tensor_op_by_module("mul")
 @register_op_by_module("mul")
 class Mul(Module):
