@@ -31,11 +31,11 @@ class ParamGroup(object):
         default_options: Dict,
     ):
         if isinstance(parameters, GeneratorType):
-            self._parameters = parameters
+            self._parameters = list(parameters)
             self._options = default_options
         else:  # Dict
             assert "param" in parameters
-            self._parameters = parameters["param"]
+            self._parameters = list(parameters["param"])
             self._options = default_options
             for key, value in default_options.items():
                 if key in parameters:
@@ -47,8 +47,7 @@ class ParamGroup(object):
 
     @property
     def parameters(self):
-        for param in self._parameters:
-            yield param
+        return self._parameters
 
 
 class Optimizer(object):
