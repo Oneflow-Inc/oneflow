@@ -20,6 +20,9 @@ limitations under the License.
 
 namespace oneflow {
 
+// 工厂模式+单例模式
+// 注册工厂类
+// 模板参数Key为派生类关键字，Base为基类
 template<typename Key, typename Base, typename... Args>
 struct AutoRegistrationFactory {
  public:
@@ -27,6 +30,7 @@ struct AutoRegistrationFactory {
   template<typename Derived>
   struct RawRegisterType {
     RawRegisterType(Key k) {
+      // 注册Derived类，即保存实例化Derived的函数
       CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
                  .mutable_creators()
                  ->emplace(k, [](Args&&...) { return new Derived; })
@@ -37,6 +41,7 @@ struct AutoRegistrationFactory {
 
   struct CreatorRegisterType {
     CreatorRegisterType(Key k, Creator v) {
+      // 注册Derived类，用户自定义实例化Derived的函数
       CHECK((AutoRegistrationFactory<Key, Base, Args...>::Get()
                  .mutable_creators()
                  ->emplace(k, v)
@@ -45,6 +50,7 @@ struct AutoRegistrationFactory {
     }
   };
 
+  // 若Derive已注册，创建实例
   Base* New(Key k, Args&&... args) const {
     auto creators_it = creators().find(k);
     CHECK(creators_it != creators().end()) << "Unregistered: " << k;
@@ -61,6 +67,7 @@ struct AutoRegistrationFactory {
   }
 
  private:
+  // 保存<Derived Key，实例化对应Derived的函数>的HashMap
   std::unique_ptr<HashMap<Key, Creator>> creators_;
 
   bool has_creators() const { return creators_.get() != nullptr; }
@@ -78,6 +85,11 @@ struct AutoRegistrationFactory {
 
 #define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __COUNTER__)
 
+// REGISTER_CLASS，用于注册Derived类
+// 使用全局变量（RawRegisterType）的构造函数，从而在main之前运行
+// 示例：oneflow/core/common/actor/acc_compute_actor.cpp.i，宏展开前后：
+// REGISTER_ACTOR(TaskType::kAcc, AccCompActor);
+// static AutoRegistrationFactory<int32_t, Actor>::RawRegisterType<AccCompActor> g_registry_var1(TaskType::kAcc);
 #define REGISTER_CLASS(Key, k, Base, Derived) \
   static AutoRegistrationFactory<Key, Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)
 #define REGISTER_CLASS_WITH_ARGS(Key, k, Base, Derived, ...)                       \
@@ -87,6 +99,7 @@ struct AutoRegistrationFactory {
   static AutoRegistrationFactory<Key, Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME( \
       k, f)
 
+// 实例化已注册的类
 template<typename Key, typename Base, typename... Args>
 inline Base* NewObj(Key k, Args&&... args) {
   return AutoRegistrationFactory<Key, Base, Args...>::Get().New(k, std::forward<Args>(args)...);

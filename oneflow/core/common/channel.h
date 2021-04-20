@@ -22,6 +22,7 @@ namespace oneflow {
 
 enum ChannelStatus { kChannelStatusSuccess = 0, kChannelStatusErrorClosed };
 
+// 多线程同步队列
 template<typename T>
 class Channel final {
  public:
@@ -35,9 +36,13 @@ class Channel final {
   void Close();
 
  private:
+  // 保存数据的队列
   std::queue<T> queue_;
+  // 互斥量，通过lock阻塞线程直到获取，限定mutable是因为const函数也需改变mutex_
   mutable std::mutex mutex_;
+  // 是否结束
   bool is_closed_;
+  // 条件变量，通过lock阻塞线程直到被唤醒
   std::condition_variable cond_;
 };
 
