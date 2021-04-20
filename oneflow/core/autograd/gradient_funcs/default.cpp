@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DefaultOpExprGradFunction : public OpExprGradFunction {
+class DefaultOpExprGradFunction : public OpExprGradFunction<OpExprInterpState> {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
   // by each backward operator.
