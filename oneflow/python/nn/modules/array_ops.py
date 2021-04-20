@@ -29,8 +29,12 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
 from oneflow.python.framework.tensor import register_tensor_op_by_module
+from oneflow.python.framework.tensor import register_op_by_module
 
 
+@oneflow_export("Transpose")
+@register_tensor_op_by_module("tmp.transpose")
+@register_op_by_module("tmp.transpose")
 class Transpose(Module):
     r"""
     """
@@ -61,17 +65,9 @@ class Transpose(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.transpose")
-def transpose(
-    a,
-    perm: Sequence[int] = None,
-    conjugate: bool = False,
-    batch_axis_non_change: bool = False,
-    name: Optional[str] = None,
-):
-    return Transpose(perm, conjugate, batch_axis_non_change, name)(a)
-
-
+@oneflow_export("ExpandDims")
+@register_tensor_op_by_module("tmp.expand_dims")
+@register_op_by_module("tmp.expand_dims")
 class ExpandDims(Module):
     r"""
     """
@@ -91,13 +87,9 @@ class ExpandDims(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.expand_dims")
-def expand_dims(
-    a, axis: int, name: Optional[str] = None,
-):
-    return ExpandDims(axis, name)(a)
-
-
+@oneflow_export("Squeeze")
+@register_tensor_op_by_module("tmp.squeeze")
+@register_op_by_module("tmp.squeeze")
 class Squeeze(Module):
     r"""
     """
@@ -117,10 +109,3 @@ class Squeeze(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-@oneflow_export("tmp.squeeze")
-def squeeze(
-    a, axis: Optional[Sequence[int]] = None, name: Optional[str] = None,
-):
-    return Squeeze(axis, name)(a)

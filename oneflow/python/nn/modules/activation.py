@@ -19,7 +19,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 from typing import Optional, Sequence, Sized, Union, List, Tuple
-from oneflow.python.nn.modules.array_ops import transpose
 
 
 def _softmax_need_transpose(x, axis):
