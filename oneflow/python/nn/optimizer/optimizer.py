@@ -25,9 +25,7 @@ from oneflow.python.framework.tensor import Tensor
 
 class ParamGroup(object):
     def __init__(
-        self,
-        parameters: Union[List[Parameter], Dict[str, Any]],
-        default_options: Dict,
+        self, parameters: Union[List[Parameter], Dict[str, Any]], default_options: Dict,
     ):
         if isinstance(parameters, list):
             self._parameters = parameters
