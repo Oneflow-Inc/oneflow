@@ -17,6 +17,7 @@ limitations under the License.
 from collections import OrderedDict
 from typing import List, Dict, Callable, Union, Any, Iterator
 from types import GeneratorType
+import numpy as np
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
@@ -115,6 +116,9 @@ class SGD(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
+                if "momentum" in self._default_options:
+                    # TODO: Use flow.zeros_like instead of numpy
+                    self._state[param]["momentum_buf"] = flow.Tensor(np.zeros(param.shape))
 
         if "momentum" in self._default_options.keys():
             self._op = (
@@ -154,7 +158,8 @@ class SGD(Optimizer):
                 if param.grad is None:
                     continue
                 if "momentum" in self._default_options:
-                    raise NotImplementedError()
+                    momentum_buf = self._state[param]["momentum_buf"]
+                    self._op(param, param.grad, lr_tensor, momentum_buf)
                 else:
                     self._op(param, param.grad, lr_tensor)
 

@@ -37,7 +37,7 @@ def compare_with_numpy_sgd(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        sgd = flow.optim.SGD(param_list, lr=learning_rate, momentum=momentum)
+        sgd = flow.optim.SGD([{"param": param_list}], lr=learning_rate, momentum=momentum, scale=scale)
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
@@ -55,7 +55,7 @@ def compare_with_numpy_sgd(
         vt = np.zeros_like(x)
 
         def train_one_iter(grad):
-            v = momentum * vt + learning_rate * grad
+            v = momentum * vt + learning_rate * scale * grad
             param = x - v
             return param, v
 
@@ -79,13 +79,12 @@ class TestOptimizers(flow.unittest.TestCase):
     def test_sgd(test_case):
         arg_dict = OrderedDict()
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0]
-        arg_dict["momentum"] = [0.0]
+        arg_dict["scale"] = [1.0, 0.9]
+        arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_sgd(test_case, *arg)
-            break
 
 
 if __name__ == "__main__":
