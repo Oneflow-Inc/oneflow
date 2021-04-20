@@ -59,7 +59,6 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(const OpGraph& op_graph,
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     const LogicalBlobId& in_lbi = GenLogicalBlobId(user_op_conf.input("in", 0));
     const LogicalBlobId& out_lbi = GenLogicalBlobId(user_op_conf.output("out", 0));
-    const OpNode* producer = op_graph.OpNode4OpName(in_lbi.op_name());
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       const std::string& consumer_op_name = consumer->op().op_name();
