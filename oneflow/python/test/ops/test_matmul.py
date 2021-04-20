@@ -483,6 +483,7 @@ def compare_with_np(
 
     if test_add_to_output:
         add_to_diff = test_global_storage.Get("add_to_diff")
+        test_case.assertTrue(np.allclose(add_to_diff, c_diff))
 
 
 @flow.unittest.skip_unless_1n1d()
