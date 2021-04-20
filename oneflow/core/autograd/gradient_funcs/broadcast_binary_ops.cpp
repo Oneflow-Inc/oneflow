@@ -27,9 +27,10 @@ namespace {
 class ReduceSumLikeModule {
  public:
   ReduceSumLikeModule(const std::string& op_name) {
-    identity_op_ = op_expr_helper::IdentityOp(op_name).GetPtrOrThrow();
-    reshape_like_op_ = op_expr_helper::ReshapeLikeOp(op_name).GetPtrOrThrow();
-    reduce_sum_like_op_ = op_expr_helper::ReduceSumLikeOp({-1}, op_name).GetPtrOrThrow();
+    identity_op_ = op_expr_helper::IdentityOp(op_name + "_identity").GetPtrOrThrow();
+    reshape_like_op_ = op_expr_helper::ReshapeLikeOp(op_name + "_reshape_like").GetPtrOrThrow();
+    reduce_sum_like_op_ =
+        op_expr_helper::ReduceSumLikeOp({-1}, op_name + "reduce_sum_like").GetPtrOrThrow();
   }
 
   Maybe<Tensor> forward(const std::shared_ptr<Tensor>& input,
@@ -63,10 +64,10 @@ class ReduceSumLikeModule {
 
 }  // namespace
 
-class BroadcastBinary : public OpExprGradFunction<OpExprInterpState> {
+class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
  public:
-  BroadcastBinary() = default;
-  virtual ~BroadcastBinary() = default;
+  BroadcastBinaryGrad() = default;
+  virtual ~BroadcastBinaryGrad() = default;
 
   virtual Maybe<void> Init(const OpExpr& op) {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -89,10 +90,10 @@ class BroadcastBinary : public OpExprGradFunction<OpExprInterpState> {
   std::string op_name_;
 };
 
-class BroadcastAdd : public BroadcastBinary {
+class BroadcastAdd : public BroadcastBinaryGrad {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinary::Init(op));
+    JUST(BroadcastBinaryGrad::Init(op));
     x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
     y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
     return Maybe<void>::Ok();
@@ -115,10 +116,10 @@ class BroadcastAdd : public BroadcastBinary {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_add", BroadcastAdd);
 
-class BroadcastSub : public BroadcastBinary {
+class BroadcastSub : public BroadcastBinaryGrad {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinary::Init(op));
+    JUST(BroadcastBinaryGrad::Init(op));
     x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
     y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
     y_grad_mul_op_ =
@@ -148,10 +149,10 @@ class BroadcastSub : public BroadcastBinary {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_sub", BroadcastSub);
 
-class BroadcastMul : public BroadcastBinary {
+class BroadcastMul : public BroadcastBinaryGrad {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinary::Init(op));
+    JUST(BroadcastBinaryGrad::Init(op));
     x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
     y_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_y");
     x_grad_mul_op_ =
@@ -188,10 +189,10 @@ class BroadcastMul : public BroadcastBinary {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_mul", BroadcastMul);
 
-class BroadcastDiv : public BroadcastBinary {
+class BroadcastDiv : public BroadcastBinaryGrad {
  public:
   Maybe<void> Init(const OpExpr& op) override {
-    JUST(BroadcastBinary::Init(op));
+    JUST(BroadcastBinaryGrad::Init(op));
     x_grad_op_ = std::make_shared<ReduceSumLikeModule>(op_name_ + "_x");
     x_grad_div_op_ =
         JUST(op_expr_helper::BroadcastDivOp(GradientOpName(op_name_ + "_x_broadcast_div")));
