@@ -99,21 +99,17 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  // TODO(chengcheng)
-  // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
-  // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
 #ifdef __linux__
-    // NOTE(chengcheng): Global<EpollCommNet> will new in any case.
+    // NOTE(chengcheng): Global<EpollCommNet> will new in any case, and will new in env start.
     // if use RDMA,
     //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
     // else,
     //   The Global<CommNet> is set allocated by Global<EpollCommNet>
-    Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
-      // DEPRECATED
-      IBVerbsCommNet::Init(plan);
+      Global<IBVerbsCommNet>::New();
+      Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif
@@ -161,7 +157,6 @@ void Runtime::DeleteAllGlobal() {
       // so the Global<CommNet> and Global<EpollCommNet> are same global object
       // then only need delete once.
     }
-    Global<EpollCommNet>::Delete();
 #endif
   }
 

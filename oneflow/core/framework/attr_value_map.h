@@ -13,24 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
+#define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
 
-#include "oneflow/core/framework/op_dispatch.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
-namespace one {
 
-template<>
-Maybe<TensorTuple> Dispatch<TensorTuple>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get());
-  return outputs;
-}
+class AttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
+ public:
+  using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
 
-template<>
-Maybe<Tensor> Dispatch<Tensor>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  return JUST(Dispatch<TensorTuple>(op_expr, inputs))->at(0);
-}
+  template<typename T>
+  Maybe<T> GetAttr(const std::string& attr_name) const;
 
-}  // namespace one
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+};
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_

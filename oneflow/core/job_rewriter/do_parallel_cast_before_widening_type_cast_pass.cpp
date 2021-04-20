@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/pass_util.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 

@@ -38,9 +38,16 @@ DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
 DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
 template<>
-Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                       const AttrValueMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
+  auto* user_op_conf = op_conf->mutable_user_conf();
+  for (const auto& it : attrs) {
+    AttrValue attr_val;
+    it.second->ToProto(&attr_val);
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
   return Maybe<void>::Ok();
 }
 
@@ -50,16 +57,16 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
   const user_op::OpGradRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(op_type_name);
   if (val) { return false; }
-  return !IsClassRegistered<std::string, OpExprGradFunction>(op_type_name);
+  return !IsClassRegistered<std::string, OpExprGradFunctionIf>(op_type_name);
 }
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    if (IsClassRegistered<std::string, OpExprGradFunction>(proto().op_type_name())) {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>(proto().op_type_name()));
+    if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     } else {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunction>("default"));
+      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("default"));
     }
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
     JUST(op_grad_func_->Init(*this));
@@ -68,7 +75,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                           const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -85,7 +94,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClo
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                 const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -102,7 +113,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpG
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -120,7 +133,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateO
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                  const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_split_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -138,7 +153,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeSplitOpConf>::GetOrCreateOp
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                  const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -156,7 +173,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeCloneOpConf>::GetOrCreateOp
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
   return Maybe<void>::Ok();
@@ -174,7 +193,9 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeConcatOpConf>::GetOrCreateO
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op_conf) const {
+Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                const AttrValueMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;
   return Maybe<void>::Ok();

@@ -17,14 +17,15 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 namespace one {
 
-class OpExprGradFunction;
+class OpExprGradFunctionIf;
 class OpExprGradClosure;
 
 class OpExpr {
@@ -59,7 +60,7 @@ class BuiltinOpExpr : public OpExpr {
   const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
   const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
 
-  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf) const = 0;
+  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const = 0;
 
  protected:
   std::string op_name_;
@@ -88,11 +89,11 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
-  Maybe<void> BuildOpConf(OperatorConf* op_conf) const override;
+  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const override;
 
  protected:
   ProtoType op_proto_;
-  mutable std::shared_ptr<OpExprGradFunction> op_grad_func_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 using UserOpExpr = BuiltinOpExprImpl<UserOpConf>;
