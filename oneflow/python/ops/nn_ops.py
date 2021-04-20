@@ -1584,6 +1584,11 @@ def fused_bias_add_dropout(
         # out.shape (1, 64, 128, 128)
 
     """
+
+    assert rate is not None and rate >= 0.0 and rate < 1.0
+    if not flow.current_global_function_desc().IsTrainable() or rate == 0.0:
+        return flow.nn.bias_add(value, bias, data_format, name)
+
     if name is None:
         name = id_util.UniqueStr("BiasAddDropout_")
     mask = flow.nn.random_mask_like(
