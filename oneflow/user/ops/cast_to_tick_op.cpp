@@ -32,11 +32,24 @@ REGISTER_USER_OP("cast_to_tick")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
-      SbpSignature* signature = ctx->mutable_sbp_signature();
-      auto* bn2sbp = signature->mutable_bn_in_op2sbp_parallel();
-      (*bn2sbp)[GenRepeatedBn("in", 0)] = ctx->SbpParallelHint4InputArgNameAndIndex("in", 0);
-      (*bn2sbp)[GenRepeatedBn("out", 0)].mutable_broadcast_parallel();
+    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+                                        -> Maybe<void> {
+      const ParallelDistribution& in_dis_hint =
+          ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
+      const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+      CHECK_EQ(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
+
+      ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
+      ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+      in_distribution->clear_sbp_parallel();
+      out_distribution->clear_sbp_parallel();
+      // in use hint
+      in_distribution->CopyFrom(in_dis_hint);
+
+      for (int32_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+        // out dim1 = broadcast
+        out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
+      }
       return Maybe<void>::Ok();
     });
 

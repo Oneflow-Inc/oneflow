@@ -87,21 +87,6 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
   }
 }
 
-CommNet::CommNet(const Plan& plan) {
-  int64_t this_machine_id = GlobalProcessCtx::Rank();
-  HashMap<int64_t, MachineIds> net_topo;
-  net_topo = PbMap2HashMap(plan.net_topo().peer_machine_ids());
-  auto machine_ids_it = net_topo.find(this_machine_id);
-  CHECK(machine_ids_it != net_topo.end());
-  std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
-  peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
-
-  ready_cb_poller_ = std::thread([this]() {
-    std::function<void()> cb;
-    while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
-  });
-}
-
 CommNet::CommNet() {
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
