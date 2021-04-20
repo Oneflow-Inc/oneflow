@@ -36,7 +36,7 @@ namespace {
 
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
-  blob->blob_desc().body_shape().ToProto(proto.mutable_shape());
+  blob->blob_desc().shape().ToProto(proto.mutable_shape());
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
