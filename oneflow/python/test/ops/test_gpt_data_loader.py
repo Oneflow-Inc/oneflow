@@ -180,9 +180,6 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         "2-D SBP doesn't work in eager mode",
     )
     def test_2n4d(self):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
             seq_length=self.SEQ_LENGTH,

@@ -92,7 +92,7 @@ register_class_method_util.RegisterMethod4Class()
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow_api.SetShuttingDown)
+atexit.register(oneflow_api.SetIsPythonShuttingDown)
 del atexit
 
 import sys
