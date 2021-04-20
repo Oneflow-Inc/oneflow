@@ -148,7 +148,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   bool requires_grad = false;
   {
     autograd::AutoGradMode mode(false);
-    JUST(internal_->Apply(op_expr, inputs, outputs));
+    JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
     if (!JUST(op_expr.IsGradDisabled())) {
       requires_grad = std::any_of(
           inputs.begin(), inputs.end(),
