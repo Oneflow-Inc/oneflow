@@ -41,29 +41,19 @@ class Argmax(Module):
         self._op_softmax_last_dim = (
             flow.builtin_op("argmax").Input("in").Output("out").Build()
         )
-        self._op_transpose_1 = (
-            flow.builtin_op("transpose").Input("input").Output("output").Build()
-        )
-        self._op_transpose_2 = (
-            flow.builtin_op("transpose").Input("input").Output("output").Build()
-        )
-        self._op_expand = (
-            flow.builtin_op("expand_dims").Input("in").Output("out").Build()
-        )
-        self._op_squeeze = flow.builtin_op("squeeze").Input("in").Output("out").Build()
         self.axis = axis
 
     def forward(self, input):
         num_axes = len(input.shape)
-        self.axis = self.axis if self.axis >= 0 else self.axis + num_axes
-        assert 0 <= self.axis < num_axes, "axis out of range"
-        if self.axis == num_axes - 1:
+        axis = self.axis if self.axis >= 0 else self.axis + num_axes
+        assert 0 <= axis < num_axes, "axis out of range"
+        if axis == num_axes - 1:
             return self._op_softmax_last_dim(input)[0]
         else:
-            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, self.axis)
-            x = self._op_transpose_1(input, perm=perm)[0]
+            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+            x = flow.tmp.transpose(input, perm=perm)
             x = self._op_softmax_last_dim(x)[0]
-            x = self._op_expand(x, axis=-1)[0]
-            x = self._op_transpose_2(x, perm=get_inversed_perm(perm))[0]
-            x = self._op_squeeze(x, axes=[self.axis])[0]
+            x = flow.tmp.expand_dims(x, axis=-1)
+            x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
+            x = flow.tmp.squeeze(x, axis=[axis])
             return x

@@ -72,10 +72,55 @@ def transpose(
     return Transpose(perm, conjugate, batch_axis_non_change, name)(a)
 
 
-if __name__ == "__main__":
-    import numpy as np
+class ExpandDims(Module):
+    r"""
+    """
 
-    flow.enable_eager_execution(True)
-    x = flow.Tensor(np.random.randn(1, 2, 3))
-    y = flow.tmp.transpose(x, perm=[2, 0, 1])
-    print(y.shape)
+    def __init__(self, axis: int, name: Optional[str] = None,) -> None:
+        super().__init__()
+
+        self._op = (
+            flow.builtin_op("expand_dims", name)
+            .Input("in")
+            .Output("out")
+            .Attr("axis", axis)
+            .Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("tmp.expand_dims")
+def expand_dims(
+    a, axis: int, name: Optional[str] = None,
+):
+    return ExpandDims(axis, name)(a)
+
+
+class Squeeze(Module):
+    r"""
+    """
+
+    def __init__(
+        self, axis: Optional[Sequence[int]] = None, name: Optional[str] = None,
+    ) -> None:
+        super().__init__()
+
+        self._op = (
+            flow.builtin_op("squeeze", name)
+            .Input("in")
+            .Output("out")
+            .Attr("axes", axis)
+            .Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("tmp.squeeze")
+def squeeze(
+    a, axis: Optional[Sequence[int]] = None, name: Optional[str] = None,
+):
+    return Squeeze(axis, name)(a)
