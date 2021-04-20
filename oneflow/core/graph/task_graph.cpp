@@ -49,6 +49,17 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_scope_symbol_id());
+  int64_t scope_symbol_id = op_conf.scope_symbol_id();
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+      << " Error! op : \n " << op_conf.DebugString()
+      << " has error scope_symbol_id = " << scope_symbol_id
+      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
+  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return scope.scope_proto().calculation_pass_name();
+}
+
 bool IsOptimizerPassOp(const Operator* op) {
   // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
   // ops with fw/bw ops
@@ -57,13 +68,7 @@ bool IsOptimizerPassOp(const Operator* op) {
     // optimizer subgraph ops.
     return false;
   }
-  int64_t scope_symbol_id = op->op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op->op_conf().DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
+  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
 }
 
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
@@ -95,6 +100,28 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
     return true;
   }
   return false;
+}
+
+bool IsInSameCalculationPass(const TaskNode* lhs, const TaskNode* rhs) {
+  const auto* lhs_node = dynamic_cast<const NormalForwardCompTaskNode*>(lhs);
+  const auto* rhs_node = dynamic_cast<const NormalForwardCompTaskNode*>(rhs);
+  if (lhs_node && rhs_node) {
+    const OperatorConf& lhs_conf = lhs_node->op()->op_conf();
+    const OperatorConf& rhs_conf = rhs_node->op()->op_conf();
+    if (lhs_conf.has_scope_symbol_id() && rhs_conf.has_scope_symbol_id()) {
+      std::string lhs_pass = GetOpConfCalculationPassName(lhs_conf);
+      std::string rhs_pass = GetOpConfCalculationPassName(rhs_conf);
+      // LOG(INFO) << " lhs_op: " << lhs_conf.name() << " pass_name = " << lhs_pass;
+      // LOG(INFO) << " rhs_op: " << rhs_conf.name() << " pass_name = " << rhs_pass;
+      if (lhs_pass == rhs_pass) { return true; }
+    }
+  }
+  return false;
+  /*
+  if (!(lhs_node && rhs_node)) { return false; }
+  if (!(lhs_conf.has_scope_symbol_id() && rhs_conf.has_scope_symbol_id())) { return false; }
+  return GetOpConfCalculationPassName(lhs_conf) == GetOpConfCalculationPassName(rhs_conf);
+  */
 }
 
 bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
@@ -140,7 +167,8 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
           && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
-          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
+          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)
+          && IsInSameCalculationPass(this_node, next_node)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);

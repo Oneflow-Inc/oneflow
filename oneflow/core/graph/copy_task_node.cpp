@@ -26,6 +26,8 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
   std::shared_ptr<RegstDesc> out_regst(nullptr);
   CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
+  int64_t repeat_num = GlobalJobDesc().job_conf().num_gradient_accumulation_steps();
+  if (repeat_num < 1) { repeat_num = 1; }
   if (copy_hd != nullptr) {
     TaskNode* first_dst_node = nullptr;
     ForEachNodeOnOutDataEdge([&](TaskNode* node) {
@@ -33,7 +35,7 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
     });
     if (out_regst == nullptr) {
       // normal copy hd task can reuse mem
-      out_regst = ProduceRegst(name, true);
+      out_regst = ProduceRegst(name, false, repeat_num, repeat_num);
     }
   }
   if (out_regst == nullptr) {
