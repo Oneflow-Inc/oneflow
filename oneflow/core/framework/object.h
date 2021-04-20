@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/framework/op_arg_util.h"
-#include "oneflow/core/framework/python_interpreter_util.h"
 
 namespace oneflow {
 
