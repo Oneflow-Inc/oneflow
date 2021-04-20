@@ -100,7 +100,7 @@ class ModelBuilder(object):
                     check_name_conflict(output_name, output_def)
 
     @session_ctx.try_init_default_session
-    def Save(self, save_model_before_pass: bool = False):
+    def Save(self, save_model_before_pass: bool = True):
         self._check_input_output_name_conflict()
         for _, graph_builder in self.graph_builders_.items():
             if not graph_builder.finished:
