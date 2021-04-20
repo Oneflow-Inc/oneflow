@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from __future__ import absolute_import
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
@@ -50,13 +49,15 @@ def diag(
 
 
         @flow.global_function()
-        def Diag_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float32),) -> tp.Numpy:
+        def Diag_Job(input: tp.Numpy.Placeholder((3, 3), dtype=flow.float32),) -> tp.Numpy:
             return flow.diag(input)
 
 
-        input = np.array([[1.0, 2.0], [3.0, 4.0],], dtype=np.float32)
+        input = np.array([[1.0, 2.0, 3.0],
+                          [4.0, 5.0, 6.0],
+                          [7.0, 8.0, 9.0],], dtype=np.float32)
         out = Diag_Job(input)
-        # out [1. 4.]
+        # out [1. 5. 9.]
 
     """
     return (

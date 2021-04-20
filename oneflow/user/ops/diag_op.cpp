@@ -70,7 +70,6 @@ REGISTER_USER_OP("diag_grad")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const Shape& in_shape = in->shape();
       user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
