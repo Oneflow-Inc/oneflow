@@ -82,6 +82,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  thread_id_ = std::this_thread::get_id();
   is_default_physical_env_ = env_proto.is_default_physical_env();
   InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
@@ -164,4 +165,26 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   google::ShutdownGoogleLogging();
 }
 
+const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::ParallelDesc4Device(
+    const Device& device) {
+  CHECK(thread_id_ == std::this_thread::get_id());
+  {
+    const auto& iter = device2parallel_desc_.find(device);
+    if (iter != device2parallel_desc_.end()) { return iter->second; }
+  }
+  int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
+  int64_t device_id = device.device_id();
+  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device.of_type());
+  parallel_conf.add_device_name(machine_device_id);
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      std::make_shared<const ParallelDesc>(parallel_conf);
+  device2parallel_desc_.emplace(device, parallel_desc);
+  return device2parallel_desc_.at(device);
+}
+
+const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device) {
+  return Global<EnvGlobalObjectsScope>::Get()->ParallelDesc4Device(device);
+}
 }  // namespace oneflow

@@ -18,9 +18,12 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/error.h"
 
 namespace oneflow {
+
+class ParallelDesc;
 
 class EnvGlobalObjectsScope final {
  public:
@@ -31,9 +34,15 @@ class EnvGlobalObjectsScope final {
   Maybe<void> Init(const EnvProto& env_proto);
   const Maybe<bool>& is_default_physical_env() const { return is_default_physical_env_; }
 
+  const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device);
+
  private:
   Maybe<bool> is_default_physical_env_;
+  HashMap<Device, std::shared_ptr<const ParallelDesc>> device2parallel_desc_;
+  std::thread::id thread_id_;
 };
+
+const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device);
 
 }  // namespace oneflow
 

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 namespace one {
@@ -71,7 +72,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Sha
                                                  const std::shared_ptr<const Device>& device,
                                                  bool requires_grad, bool is_leaf, bool retain_grad)
     : EagerMirroredTensorImpl(shape, dtype, device,
-                              std::make_shared<TensorStorage>(device->parallel_desc_ptr()),
+                              std::make_shared<TensorStorage>(ParallelDesc4Device(*device)),
                               requires_grad, is_leaf, retain_grad) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
@@ -83,7 +84,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       shape_(shape),
       dtype_(dtype),
       tensor_storage_(tensor_storage),
-      infer_local_dep_object_(new VmLocalDepObject(device->parallel_desc_ptr())) {}
+      infer_local_dep_object_(new VmLocalDepObject(ParallelDesc4Device(*device))) {}
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
     const std::shared_ptr<MemoryCase>& mem_case) {

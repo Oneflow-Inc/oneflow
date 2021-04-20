@@ -23,19 +23,6 @@ namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
-Device::Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {
-  int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
-  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  ParallelConf parallel_conf;
-  if (type_ == "cuda") {
-    parallel_conf.set_device_tag("gpu");
-  } else {
-    parallel_conf.set_device_tag(type);
-  }
-  parallel_conf.add_device_name(machine_device_id);
-  parallel_desc_ = std::make_shared<const ParallelDesc>(parallel_conf);
-}
-
 std::string Device::of_type() const {
   if (type_ == "cuda") {
     return "gpu";
