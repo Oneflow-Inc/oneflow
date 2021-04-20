@@ -49,7 +49,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     // TODO: set device according to inputs
     return Error::Unimplemented();
   }
-  auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
+  const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
   std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
@@ -58,14 +58,14 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
-    auto mem_case = user_op_expr.mut_kernel()->mem_case();
+    const auto mem_case = user_op_expr.mut_kernel()->mem_case();
 
     auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
         mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
         std::make_shared<eager::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+  const auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(user_op_expr.mut_kernel(), input_eager_blob_objects,
                                     output_eager_blob_objects, parallel_desc));
     return Maybe<void>::Ok();

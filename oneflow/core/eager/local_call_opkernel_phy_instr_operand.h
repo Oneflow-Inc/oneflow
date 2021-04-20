@@ -58,7 +58,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   using OutputFn = std::function<Maybe<void>(eager::EagerBlobObject* tensor)>;
 
   Maybe<void> ForEachOutputTensor(OutputFn func) {
-    for (auto& output : *outputs()) { JUST(func(output.get())); }
+    for (const auto& output : *outputs()) { JUST(func(output.get())); }
     return Maybe<void>::Ok();
   }
 
