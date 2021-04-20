@@ -400,11 +400,11 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       std::string a_grad_op_name = ctx->FwOp().op_name() + "_a_grad";
       ctx->DefineOp(a_grad_op_name,
                     [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                      return builder.OpTypeName("batch_matmul")
+                      return builder.OpTypeName("broadcast_matmul")
                           .InputBind("a", ctx->FwOp().output_grad("out", 0))
-                          .InputBind("b", ctx->FwOp().input("out", 0))
+                          .InputBind("b", ctx->FwOp().input("b", 0))
                           .Attr<bool>("transpose_a", transpose_a)
-                          .Attr<bool>("transpose_a", !transpose_b)
+                          .Attr<bool>("transpose_b", !transpose_b)
                           .Attr<double>("alpha", alpha)
                           .Output("out")
                           .Build();
@@ -415,7 +415,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       });
 
       std::string b_grad_op_name = ctx->FwOp().op_name() + "_b_grad";
-      ctx->DefineOp(a_grad_op_name,
+      ctx->DefineOp(b_grad_op_name,
                     [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
                       if (!transpose_b) {
                         return builder.OpTypeName("broadcast_matmul_grad_b")
