@@ -18,16 +18,21 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/env_desc.h"
+#include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
 class EnvGlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvGlobalObjectsScope);
-  EnvGlobalObjectsScope() = default;
+  EnvGlobalObjectsScope() : is_default_physical_env_(Error::ValueError("Not initialized")) {}
   ~EnvGlobalObjectsScope();
 
   Maybe<void> Init(const EnvProto& env_proto);
+  const Maybe<bool>& is_default_physical_env() const { return is_default_physical_env_; }
+
+ private:
+  Maybe<bool> is_default_physical_env_;
 };
 
 }  // namespace oneflow

@@ -46,6 +46,11 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
 
+inline Maybe<bool> IsDefaultPhysicalEnv() {
+  CHECK_NOTNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
+  return Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env();
+}
+
 inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))

@@ -189,6 +189,8 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
+        if oneflow_api.IsEnvInited() and oneflow_api.IsDefaultPhysicalEnv():
+            oneflow_api.DestroyEnv()
         if not oneflow_api.IsEnvInited():
             oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto)

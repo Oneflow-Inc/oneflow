@@ -38,7 +38,7 @@ def in_device_mode(ctx):
 @bool_functor("Environment initialized")
 def env_initialized(ctx):
     assert in_normal_mode(ctx)
-    return oneflow_api.IsEnvInited()
+    return oneflow_api.IsEnvInited() and not oneflow_api.IsDefaultPhysicalEnv()
 
 
 @bool_functor("Any global function defined")

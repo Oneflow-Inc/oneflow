@@ -82,6 +82,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  is_default_physical_env_ = env_proto.is_default_physical_env();
   InitLogging(env_proto.cpp_logging_conf());
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
