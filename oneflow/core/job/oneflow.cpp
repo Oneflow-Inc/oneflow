@@ -354,7 +354,9 @@ Maybe<void> CompileCurJobOnMaster(Job* job, Plan* plan, bool need_job_complete) 
   const JobDesc& job_desc = GlobalJobDesc();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     double start = GetCurTime();
+    OF_PROFILER_LOG_HOST_MEMORY_USAGE("Before Compile::Compile");
     Compiler().Compile(job, plan, need_job_complete);
+    OF_PROFILER_LOG_HOST_MEMORY_USAGE("After Compile::Compile");
 
     LOG(INFO) << "\njob_id: " << job_desc.job_id() << " , job_name: " << job_desc.job_name()
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
@@ -1142,12 +1144,17 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       jobs.emplace_back(pull_job);
     }
   }
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE("After process push and pull");
+
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
+    OF_PROFILER_LOG_HOST_MEMORY_USAGE("After get single sub_plan");
   }
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE("After get all sub_plans");
+
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     MergeSubPlanWithoutGenNetTopo(plan, std::move(sub_plans));
     InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
@@ -1197,7 +1204,9 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_GUARD("Oneflow::Init");
   // Runtime
   OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE("Before CompileAndMergePlanOnMaster");
   JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE("After CompileAndMergePlanOnMaster");
   OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -65,6 +66,7 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
+/*
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
   auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
@@ -77,9 +79,10 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
     op_name2op_attribute->insert(
         {op_name, task_proto->exec_sequence().exec_node(0).kernel_conf().op_attribute()});
   }
+*/
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-  kernel_conf->set_op_attribute_ref(op_name);
+//  kernel_conf->set_op_attribute_ref(op_name);
   kernel_conf->clear_op_attribute();
 }
 
@@ -109,14 +112,20 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
 
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE("Before ToProto");
+  static size_t ToProtoCnt = 0;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
+    // if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
     plan->mutable_task()->Add(std::move(task_proto));
+    ToProtoCnt++;
   });
+  OF_PROFILER_LOG_HOST_MEMORY_USAGE(
+    "After call ToProto: " + std::to_string(ToProtoCnt) + " times");
+
   {
     auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
     (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
