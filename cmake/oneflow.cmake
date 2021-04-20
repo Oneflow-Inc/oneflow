@@ -302,6 +302,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 
+# source this file to add oneflow in PYTHONPATH
+file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=$PYTHONPATH:${of_pyscript_dir}")
+
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
