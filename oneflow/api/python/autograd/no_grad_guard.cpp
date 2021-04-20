@@ -14,31 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+
+namespace py = pybind11;
+
 namespace oneflow {
 
 namespace autograd {
 
-struct GradMode {
-  static bool is_enabled();
-  static void set_enabled(bool enabled);
-};
-
-class AutoGradMode {
- public:
-  AutoGradMode(bool enabled) : prev_mode_(GradMode::is_enabled()) {
-    GradMode::set_enabled(enabled);
-  }
-  ~AutoGradMode() { GradMode::set_enabled(prev_mode_); }
-  bool prev_mode() const { return prev_mode_; }
-
- private:
-  bool prev_mode_;
-};
-
-class NoGradGuard : public AutoGradMode {
- public:
-  NoGradGuard() : AutoGradMode(false){};
-};
+ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
+  py::class_<NoGradGuard, std::shared_ptr<NoGradGuard>>(m, "no_grad")
+      .def(py::init([]() { return std::make_shared<NoGradGuard>(); }))
+      .def("__enter__", [](const NoGradGuard& no_grad_obj) {})
+      .def("__exit__", [](const NoGradGuard& no_grad_obj, const py::object& type,
+                          const py::object& value, const py::object& traceback) {});
+}
 
 }  // namespace autograd
 
