@@ -68,9 +68,6 @@ class EagerBlobObject final : public BlobObject {
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
-
- protected:
-  std::unique_ptr<RtBlobDesc> rt_blob_desc_;
 };
 
 }  // namespace eager
