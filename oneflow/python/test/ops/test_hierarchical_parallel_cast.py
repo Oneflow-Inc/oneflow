@@ -69,6 +69,9 @@ def _test(test_case, device_num):
 
 
 @flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(
+    flow.unittest.env.eager_execution_enabled(), "2-D SBP doesn't work in eager mode",
+)
 class TestParallelCast(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_on_gpu(test_case):
