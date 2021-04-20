@@ -31,8 +31,7 @@ def fake_flow_ones(shape):
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
+        False, "numpy doesn't work in lazy/eager mode",
     )
     def test_numpy(test_case):
         shape = (2, 3)
@@ -43,8 +42,7 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
+        False, "numpy doesn't work in lazy/eager mode",
     )
     def test_init(test_case):
         shape = (2, 3)
@@ -63,8 +61,7 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.xavier_uniform_(z)
 
     @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
+        False, "numpy doesn't work in lazy/eager mode",
     )
     def test_creating_consistent_tensor(test_case):
         shape = (2, 3)
@@ -75,8 +72,7 @@ class TestTensor(flow.unittest.TestCase):
         x.determine()
 
     @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
+        False, "numpy doesn't work in lazy/eager mode",
     )
     def test_user_defined_data(test_case):
         list_data = [5, 5]
