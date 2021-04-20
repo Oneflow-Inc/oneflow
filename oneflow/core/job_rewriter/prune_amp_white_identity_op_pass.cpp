@@ -25,21 +25,13 @@ class PruneAmpWhiteIdentityOpPass final : public JobPass {
   PruneAmpWhiteIdentityOpPass() = default;
   ~PruneAmpWhiteIdentityOpPass() override = default;
 
-  bool IsEnabled(const JobPassCtx& ctx) const {
-    return ctx.job_desc().prune_amp_white_identity_ops();
-  }
-  Maybe<void> Apply(const OpGraph& op_graph, JobBuilder* job_builder) const;
-
-  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override {
-    if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
-    const OpGraph op_graph(*job);
-    JobBuilder job_builder(job);
-    return Apply(op_graph, &job_builder);
-  }
+  Maybe<void> Apply(Job* job, JobPassCtx* ctx) const override;
 };
 
-Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(const OpGraph& op_graph,
-                                               JobBuilder* job_builder) const {
+Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
+  if (!ctx.job_desc().prune_amp_white_identity_ops()) { return Maybe<void>::Ok(); }
+  const OpGraph op_graph(*job);
+  JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashSet<std::string> ctrl_in_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
