@@ -28,8 +28,6 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
 
-inline bool IsDefaultPhysicalEnv() { return oneflow::IsDefaultPhysicalEnv().GetOrThrow(); }
-
 inline void InitEnv(const std::string& env_proto_str) {
   return oneflow::InitEnv(env_proto_str).GetOrThrow();
 }

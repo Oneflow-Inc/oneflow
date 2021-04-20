@@ -161,6 +161,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  google::ShutdownGoogleLogging();
 }
 
 }  // namespace oneflow
