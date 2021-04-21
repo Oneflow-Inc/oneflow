@@ -36,20 +36,39 @@ class Repeat(Module):
         self.repeat_size = repeat_size
 
     def forward(self, input):
-        repeat_size = self.repeat_size
+        repeat = self.repeat_size
         input_shape = input.shape
-        new_input_shape = []
-        for i in range(max(len(input_shape), len(repeat_size))):
-            if i >= len(input_shape):
-                x = 1
-            else:
-                x = input_shape[i]
-            if i >= len(repeat_size):
-                y = 1
-            else:
-                y = repeat_size[i]
-            new_input_shape.append(x * y)
-
-        # print(input_shape)
-        # print(new_input_shape)
-        # return flow.tmp.expand(input, expand_size=new_input_shape)
+        assert len(repeat) >= len(input_shape)
+        in_reshape = []
+        out_reshape = []
+        expand_dim = []
+        diff = len(repeat) - len(input_shape)
+        for i in range(len(repeat) - 1, -1, -1):
+            if i >= diff:
+                if repeat[i] > 1:
+                    if input_shape[i - diff] > 1:
+                        in_reshape.insert(0, input_shape[i - diff])
+                        in_reshape.insert(0, 1)
+                        expand_dim.insert(0, input_shape[i - diff])
+                        expand_dim.insert(0, repeat[i])
+                        out_reshape.insert(0, input_shape[i - diff] * repeat[i])
+                    else:
+                        in_reshape.insert(0, input_shape[i - diff])
+                        expand_dim.insert(0, repeat[i])
+                        out_reshape.insert(0, repeat[i])
+                else:  # repeat[i] == 1
+                    in_reshape.insert(0, input_shape[i - diff])
+                    expand_dim.insert(0, input_shape[i - diff])
+                    out_reshape.insert(0, input_shape[i - diff])
+            else:  # i < diff
+                expand_dim.insert(0, repeat[i])
+                out_reshape.insert(0, repeat[i])
+        print(input_shape)
+        print(repeat)
+        print(in_reshape)
+        print(expand_dim)
+        print(out_reshape)
+        new_tensor = flow.tmp.reshape(input_tensor, input_shape)
+        tmp_tensor = flow.tmp.expand(new_tensor, expand_dim)
+        out = flow.tmp.reshape(tmp_tensorm, out_reshape)
+        return out

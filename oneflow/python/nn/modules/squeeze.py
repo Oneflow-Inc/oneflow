@@ -18,6 +18,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
+import oneflow.python.framework.id_util as id_util
 from typing import Optional, Sequence
 
 
@@ -32,6 +33,9 @@ class Squeeze(Module):
         self, axis: Optional[Sequence[int]] = None, name: Optional[str] = None,
     ) -> None:
         super().__init__()
+
+        if name is None:
+            name = id_util.UniqueStr("Squeeze_")
 
         self._op = (
             flow.builtin_op("squeeze", name)
