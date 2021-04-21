@@ -17,7 +17,6 @@ import collections.abc
 from itertools import repeat
 import unittest
 from typing import Tuple, Union
-import time
 
 import numpy as np
 

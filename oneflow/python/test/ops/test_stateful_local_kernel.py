@@ -48,9 +48,8 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
                 .Output("out")
                 .Build()
             )
-            for _ in range(1000):
-                x = op1()[0]
-                x = op2(x, x)[0]
+            x = op1()[0]
+            x = op2(x, x)[0]
 
         job()
 
