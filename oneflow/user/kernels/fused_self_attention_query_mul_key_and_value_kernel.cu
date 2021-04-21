@@ -125,9 +125,9 @@ void CublasBatchGemm<float16>(cublasHandle_t handle, char transa, char transb, i
 #endif  // CUDA_VERSION >= 9010
 
 template<typename T>
-void bgemm(DeviceCtx* ctx, char opa, char opb, int64_t m, int64_t n, int64_t k, float alpha,
-           const T* a, int64_t lda, int64_t stridea, const T* b, int64_t ldb, int64_t strideb,
-           float beta, T* c, int64_t ldc, int64_t stridec, int64_t batch_size) {
+void BatchedGemm(DeviceCtx* ctx, char opa, char opb, int64_t m, int64_t n, int64_t k, float alpha,
+                 const T* a, int64_t lda, int64_t stridea, const T* b, int64_t ldb, int64_t strideb,
+                 float beta, T* c, int64_t ldc, int64_t stridec, int64_t batch_size) {
   // swap m and n, a and b to convert from row-major to col-major
   CublasBatchGemm<T>(ctx->cublas_pmh_handle(), opb, opa, n, m, k, static_cast<T>(alpha), b, ldb,
                      strideb, a, lda, stridea, static_cast<T>(beta), c, ldc, stridec, batch_size);
@@ -209,9 +209,9 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
     user_op::Tensor* qmk_tensor = ctx->Tensor4ArgNameAndIndex("query_mul_key", 0);
     const T* q_dptr = h_tensor->dptr<T>();
     const T* k_dptr = h_tensor->dptr<T>() + k_offset;
-    bgemm<T>(ctx->device_ctx(), 'N', 'T', seq_len, seq_len, head_size, alpha, q_dptr, ld, stride,
-             k_dptr, ld, stride, 0.0f, qmk_tensor->mut_dptr<T>(), seq_len, seq_len * seq_len,
-             batch_size * num_heads);
+    BatchedGemm<T>(ctx->device_ctx(), 'N', 'T', seq_len, seq_len, head_size, alpha, q_dptr, ld,
+                   stride, k_dptr, ld, stride, 0.0f, qmk_tensor->mut_dptr<T>(), seq_len,
+                   seq_len * seq_len, batch_size * num_heads);
 
     // slice v
     user_op::Tensor* tmp_v_tensor = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -265,16 +265,16 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
     const T* qmk_grad_dptr = qmk_grad_tensor->dptr<T>();
     const T* k_dptr = h_tensor->dptr<T>() + head_size;
     T* grad_q_dptr = h_grad_tensor->mut_dptr<T>();
-    bgemm<T>(ctx->device_ctx(), 'N', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
-             seq_len, seq_len * seq_len, k_dptr, ld, stride, 0.0f, grad_q_dptr, ld, stride,
-             batch_size * num_heads);
+    BatchedGemm<T>(ctx->device_ctx(), 'N', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
+                   seq_len, seq_len * seq_len, k_dptr, ld, stride, 0.0f, grad_q_dptr, ld, stride,
+                   batch_size * num_heads);
     // grad_k = grad_qmk * q
     // (b, n, sk, sq) x (b, n, sq, h) -> (b, n, sk, h) <= (s, b, n, h) <= (s, b, n, 3, h)
     const T* q_dptr = h_tensor->dptr<T>();
     T* grad_k_dptr = h_grad_tensor->mut_dptr<T>() + head_size;
-    bgemm<T>(ctx->device_ctx(), 'T', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
-             seq_len, seq_len * seq_len, q_dptr, ld, stride, 0.0f, grad_k_dptr, ld, stride,
-             batch_size * num_heads);
+    BatchedGemm<T>(ctx->device_ctx(), 'T', 'N', seq_len, head_size, seq_len, alpha, qmk_grad_dptr,
+                   seq_len, seq_len * seq_len, q_dptr, ld, stride, 0.0f, grad_k_dptr, ld, stride,
+                   batch_size * num_heads);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
