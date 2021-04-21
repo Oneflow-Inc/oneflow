@@ -288,9 +288,11 @@ class BroadcastMatmulKernel final : public user_op::OpKernel {
     int64_t k = a->shape().At(a->shape().NumAxes() - 1);
     int64_t n = -1;
     if (!transpose_b) {
-      n = b->shape().At(b->shape().NumAxes() - 1);
+      n = b->shape().At(1);
+      CHECK_EQ(k, b->shape().At(0));
     } else {
-      n = b->shape().At(b->shape().NumAxes() - 2);
+      n = b->shape().At(0);
+      CHECK_EQ(k, b->shape().At(1));
     }
 
     CBLAS_TRANSPOSE trans_a = transpose_a ? CblasTrans : CblasNoTrans;

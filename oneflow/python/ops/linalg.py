@@ -111,7 +111,7 @@ def matmul(
             )
     else:
         # NOTE: support broadcast b to a only for now
-        if len(a.shape) < len(b.shape):
+        if len(b.shape) != 2:
             raise ValueError(
                 "don't support number of dimensions of a being less than number of dimensions of b"
             )

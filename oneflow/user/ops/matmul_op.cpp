@@ -257,13 +257,14 @@ REGISTER_USER_OP("broadcast_matmul")
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
       // NOTE: support broadcast b to a for now
-      // TODO: support broadcast a to b
+      // TODO(zwx): support broadcast a to b
       CHECK_GT_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
       CHECK_EQ_OR_RETURN(b->shape().NumAxes(), 2);
-
-      *out->mut_shape() = a->shape();
       // NOTE: don't support transpose_a for now
       CHECK_OR_RETURN(!transpose_a);
+
+      DimVector out_dim_vec(a->shape().NumAxes() - 1);
+      FOR_RANGE(int64_t, i, 0, out_dim_vec.size()) { out_dim_vec[i] = a->shape().At(i); }
       int64_t k = a->shape().At(a->shape().NumAxes() - 1);
       int64_t n = -1;
       if (!transpose_b) {
@@ -273,7 +274,8 @@ REGISTER_USER_OP("broadcast_matmul")
         CHECK_EQ_OR_RETURN(k, b->shape().At(b->shape().NumAxes() - 1));
         n = b->shape().At(b->shape().NumAxes() - 2);
       }
-      out->mut_shape()->Set(out->shape().NumAxes() - 1, n);
+      out_dim_vec.push_back(n);
+      *out->mut_shape() = Shape(out_dim_vec);
 
       return Maybe<void>::Ok();
     })
@@ -344,13 +346,12 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
     .Attr<double>("alpha", 1.0)
     .SetInferDataTypeFn(InferDataType4Matmul)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // NOTE: this transpose_a and transpose_a indicate origin fw op transpose_a and transpose_a
       const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
       CHECK_EQ_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
-      for (int i = 0; i < a->shape().NumAxes() - 2; ++i) {
+      for (int i = 0; i < a->shape().NumAxes() - 1; ++i) {
         CHECK_EQ_OR_RETURN(a->shape().At(i), b->shape().At(i));
       }
 
