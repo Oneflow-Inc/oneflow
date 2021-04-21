@@ -137,79 +137,16 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
 class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
  public:
-  explicit LocalUserKernelCreateContext(const OperatorConf& op_conf) {
-    CHECK(op_conf.has_user_conf());
-
-    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                           HashMap<std::string, std::vector<std::string>>* arg2names) {
-      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
-        for (int32_t i = 0; i < it->second.s_size(); ++i) {
-          (*arg2names)[it->first].emplace_back(it->second.s(i));
-        }
-      }
-    };
-    InitInOrOut(op_conf.user_conf().input(), &input2arg_name_);
-    InitInOrOut(op_conf.user_conf().output(), &output2arg_name_);
-    op_name_ = op_conf.name();
-    op_type_name_ = op_conf.user_conf().op_type_name();
-    for (const auto& kv : op_conf.user_conf().attr()) {
-      AttrValue::ValueCase value_case = kv.second.value_case();
-      switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
-    CHECK(attrs_                                                                             \
-              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
-                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                                      \
-    break;
-        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-      };
-    }
-  }
-
-  const std::string& input(const std::string& arg_name, int32_t index) const override {
-    const auto& it = input2arg_name_.find(arg_name);
-    CHECK(it != input2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
-    CHECK(index >= 0 && index < it->second.size());
-    return it->second.at(index);
-  }
-  const std::string& output(const std::string& arg_name, int32_t index) const override {
-    const auto& it = output2arg_name_.find(arg_name);
-    CHECK(it != output2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
-    CHECK(index >= 0 && index < it->second.size());
-    return it->second.at(index);
-  }
-  bool has_input(const std::string& arg_name, int32_t index) const override {
-    return input_size(arg_name) > index;
-  }
-  bool has_output(const std::string& arg_name, int32_t index) const override {
-    return output_size(arg_name) > index;
-  }
-  int32_t input_size(const std::string& arg_name) const override {
-    auto it = input2arg_name_.find(arg_name);
-    if (it == input2arg_name_.end()) { return 0; }
-    return it->second.size();
-  }
-  int32_t output_size(const std::string& arg_name) const override {
-    auto it = output2arg_name_.find(arg_name);
-    if (it == output2arg_name_.end()) { return 0; }
-    return it->second.size();
-  }
-
-  const std::string& op_name() const override { return op_name_; }
-  const std::string& op_type_name() const override { return op_type_name_; }
+  explicit LocalUserKernelCreateContext(const OperatorConf& op_conf) : user_op_conf_(op_conf) {}
 
  private:
-  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
 
-  std::string op_name_;
-  std::string op_type_name_;
-  HashMap<std::string, std::vector<std::string>> input2arg_name_;
-  HashMap<std::string, std::vector<std::string>> output2arg_name_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
+  user_op::UserOpConfWrapper user_op_conf_;
 };
 
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
@@ -218,7 +155,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                       const ArgVec* index_input_pairs,
                                       const ArgVec* indexed_output_pairs,
                                       EagerBlobObjectList inputs, EagerBlobObjectList outputs)
-      : device_ctx_(device_ctx),
+      : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
+        device_ctx_(device_ctx),
         base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
     base_ctx_.Update(inputs, outputs);
     CHECK(op_conf.has_user_conf());
@@ -268,7 +206,10 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
  private:
-  const HashMap<std::string, std::shared_ptr<user_op::AttrVal>>& attrs() const { return attrs_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
 
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
@@ -278,38 +219,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
                                                  const ArgVec* index_input_pairs,
                                                  const ArgVec* indexed_output_pairs)
-    : zero_copy_base_ctx_(index_input_pairs, indexed_output_pairs) {
-  CHECK(op_conf.has_user_conf());
-  auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                         HashMap<std::string, std::vector<std::string>>* arg2names) {
-    for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        (*arg2names)[it->first].emplace_back(it->second.s(i));
-      }
-    }
-  };
-  InitInOrOut(op_conf.user_conf().input(), &input2arg_name_);
-  InitInOrOut(op_conf.user_conf().output(), &output2arg_name_);
-  device_tag_ = op_conf.device_tag();
-  op_name_ = op_conf.name();
-  op_type_name_ = op_conf.user_conf().op_type_name();
-  for (const auto& kv : op_conf.user_conf().attr()) {
-    AttrValue::ValueCase value_case = kv.second.value_case();
-    switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
-    CHECK(attrs_                                                                             \
-              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
-                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                                      \
-    break;
-      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-    };
-  }
-}
+    : user_op_conf_(op_conf), zero_copy_base_ctx_(index_input_pairs, indexed_output_pairs) {}
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) {
@@ -324,7 +234,8 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_c
                                                              const OperatorConf& op_conf,
                                                              const ArgVec* index_input_pairs,
                                                              const ArgVec* indexed_output_pairs)
-    : device_ctx_(device_ctx),
+    : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
+      device_ctx_(device_ctx),
       base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
   auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                          HashMap<std::string, std::vector<std::string>>* arg2names) {

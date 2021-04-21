@@ -84,6 +84,8 @@ class UserOpConfWrapper final {
   template<typename T>
   const T& attr(const std::string& attr_name) const;
 
+  const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const;
+
  private:
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
