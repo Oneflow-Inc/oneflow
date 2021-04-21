@@ -754,11 +754,7 @@ class Std(Module):
             .Input("input_tensor")
             .Output("output_tensor")
         )
-        self.reduce_sum_op2 = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
-        )
+   
         self.reduce_count = 1 # Tensor.nelemenet()
 
     def forward(self, x, dim=None, unbiased=True, keepdim=False):
