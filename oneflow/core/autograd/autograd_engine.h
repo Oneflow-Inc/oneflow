@@ -77,7 +77,7 @@ class AutogradEngine {
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
-      const TensorTuple& inputs, TensorTuple* outputs) = 0;
+      const TensorTuple& inputs, const TensorTuple& outputs) = 0;
 
  protected:
   AutogradEngine() = default;
@@ -101,6 +101,8 @@ class StackFunctionNode final : public FunctionNode {
   void ReleaseOutTensorArgs() override;
   void ReleaseData() override;
   Maybe<bool> Apply(bool create_graph) override;
+  bool is_in_stack() const { return is_in_stack_; }
+  void set_is_in_stack(bool in_stack) { is_in_stack_ = in_stack; }
 
  private:
   // FunctionNode shares Tensor with `inputs_`, and only shares TensorImpl with `outputs_`.
@@ -112,6 +114,7 @@ class StackFunctionNode final : public FunctionNode {
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>
       backward_fn_;
+  bool is_in_stack_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {
@@ -132,15 +135,18 @@ class StackAutogradEngine final : public AutogradEngine {
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
-      const TensorTuple& inputs, TensorTuple* outputs) override;
+      const TensorTuple& inputs, const TensorTuple& outputs) override;
 
- protected:
+ private:
   // StackFunctionNode must be saved in engine, because any node in list may be released at any
   // moment.
   std::list<std::weak_ptr<FunctionNode>> node_list_;
+  void ClearReleasedFunctionNodes();
 };
 
 AutogradEngine* GetThreadLocalAutogradEngine();
+
+Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor);
 
 }  // namespace one
 

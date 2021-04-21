@@ -87,7 +87,7 @@ class Tensor {
   virtual bool requires_grad() const = 0;
   virtual bool is_leaf() const = 0;
   virtual bool retain_grad() const = 0;
-  virtual const std::shared_ptr<const FunctionNode>& grad_fn_node() const = 0;
+  virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
   virtual std::shared_ptr<Tensor> detach() const = 0;
@@ -95,7 +95,8 @@ class Tensor {
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
   virtual void set_retain_grad(bool retain_grad) = 0;
-  virtual void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) = 0;
+  virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
+  virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
 
@@ -120,7 +121,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   // Getters for autograd
   // acc_grad is tensor's accumulated grad in more than once backward operation,
   // and now_grad_arg is temporary grad to shared data with different FunctionNode
-  const std::shared_ptr<const FunctionNode>& grad_fn_node() const override { return grad_fn_node_; }
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
     const std::shared_ptr<Tensor>& tensor = acc_grad();
@@ -128,9 +129,10 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
 
   // Setters for autograd
-  void set_grad_fn_node(const std::shared_ptr<const FunctionNode>& grad_fn_node) override {
+  void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
+  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
 
   // Operators for tensor
   // used by pybind11 only
@@ -148,7 +150,7 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
 
  protected:
   TensorIf() = default;
-  std::shared_ptr<const FunctionNode> grad_fn_node_;
+  std::shared_ptr<FunctionNode> grad_fn_node_;
 
  private:
   Maybe<DerivedT> cast_for_api(const std::shared_ptr<Tensor>& tensor) const {

@@ -169,7 +169,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
-    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, outputs);
+    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, *outputs);
   }
   return Maybe<void>::Ok();
 }
