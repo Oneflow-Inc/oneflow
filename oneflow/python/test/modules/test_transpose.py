@@ -19,34 +19,16 @@ import numpy as np
 import oneflow as flow
 
 
-def np_expand(x, repeat_size):
-    new_repeat_size = []
-    for i in range(max(len(repeat_size), len(x.shape))):
-        if i >= len(repeat_size):
-            new_repeat_size.append(1)
-        else:
-            new_repeat_size.append(repeat_size[i])
-    return np.tile(x, new_repeat_size)
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_repeat_v1(test_case):
-        input = flow.Tensor(np.random.randn(1, 1, 5, 3), dtype=flow.float32)
-        repeat_size = (4, 2)
-        of_out = flow.tmp.repeat(input, repeat_size=repeat_size)
-        np_out = np_expand(input.numpy(), repeat_size)
+    def test_transpose(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+        np_out = input.numpy().transpose((0, 2, 3, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-
-    # def test_repeat_v2(test_case):
-    #     input = flow.Tensor(np.random.randn(1, 2, 5, 3), dtype=flow.float32)
-    #     repeat_size = (4, 2, 3)
-    #     of_out = flow.tmp.repeat(input, repeat_size=repeat_size)
-    #     np_out = np_expand(input.numpy(), repeat_size)
-    #     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
 if __name__ == "__main__":

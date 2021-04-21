@@ -49,5 +49,7 @@ class Repeat(Module):
             else:
                 y = repeat_size[i]
             new_input_shape.append(x * y)
-        print(new_input_shape)
-        return flow.tmp.expand(input, expand_size=new_input_shape)
+
+        # print(input_shape)
+        # print(new_input_shape)
+        # return flow.tmp.expand(input, expand_size=new_input_shape)
