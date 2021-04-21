@@ -78,26 +78,50 @@ def matmul(
         #         [ 9. 10. 11.]]
 
     """
-    assert len(a.shape) == len(b.shape)
-    assert len(a.shape) >= 2
     if name is None:
         name = id_util.UniqueStr("Matmul_")
-    if len(a.shape) == 2:
-        op = (
-            flow.user_op_builder(name)
-            .Op("matmul")
-            .Input("a", [a])
-            .Input("b", [b])
-            .Output("out")
-            .Attr("transpose_a", transpose_a)
-            .Attr("transpose_b", transpose_b)
-            .Attr("alpha", float(alpha))
-            .Build()
-        )
+
+    assert len(a.shape) >= 2
+    assert len(b.shape) >= 2
+
+    if len(a.shape) == len(b.shape):
+        if len(a.shape) == 2:
+            op = (
+                flow.user_op_builder(name)
+                .Op("matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
+        else:
+            op = (
+                flow.user_op_builder(name)
+                .Op("batch_matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
     else:
+        # NOTE: support broadcast b to a only for now
+        if len(b.shape) != 2:
+            raise ValueError(
+                "don't support number of dimensions of a being less than number of dimensions of b"
+            )
+
+        if transpose_a:
+            raise ValueError("don't support tensor a to be tranpose")
+
         op = (
             flow.user_op_builder(name)
-            .Op("batch_matmul")
+            .Op("broadcast_matmul")
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
@@ -106,4 +130,5 @@ def matmul(
             .Attr("alpha", float(alpha))
             .Build()
         )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+
+    return op.InferAndTryRun().SoleOutputBlob()
