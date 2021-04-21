@@ -42,5 +42,22 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.log(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, equal_nan=True))
 
+    def test_std(test_case):
+        np_arr = np.array(
+            [[-0.39283446,  0.44999730,  0.25533655],
+            [ 0.76964611,  0.17798263,  1.46315704]]
+        )
+        input = flow.Tensor(np_arr)
+        of_out = flow.npstd(input, 1)
+        np_out = np.std(np_arr, axis=1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        np_arr2 = np.random.randn(2, 3, 4, 5)
+        input2 = flow.Tensor(np_arr2)
+        of_out2 = flow.npstd(input2, 2)
+        np_out2 = np.std(np_arr2, axis=2)
+        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2, 1e-5, 1e-5))
+
+
 if __name__ == "__main__":
     unittest.main()
