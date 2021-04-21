@@ -43,7 +43,7 @@ struct DeviceExportUtil final {
         throw std::runtime_error("CPU device index must be 0");
       }
     }
-    return std::make_shared<Device>(type, device_id);
+    return Device::New(type, device_id).GetPtrOrThrow();
   }
 };
 
