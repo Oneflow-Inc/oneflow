@@ -32,10 +32,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
-    : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {
-  origin_env_global_object_scope_ = Global<EnvGlobalObjectsScope>::Get();
-  origin_parallel_desc_ = Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
-}
+    : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
   return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);

@@ -49,7 +49,6 @@ class Device final {
   const std::string type_;
   const int64_t device_id_;
   const size_t hash_value_;
-  std::shared_ptr<const ParallelDesc> origin_parallel_desc_;
 };
 
 }  // namespace oneflow
