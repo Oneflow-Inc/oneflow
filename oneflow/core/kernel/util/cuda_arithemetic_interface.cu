@@ -55,9 +55,9 @@ __global__ void TransposeGpu(const Int32Array<NDIMS> y_shape, const Int32Array<N
 }
 
 template<int32_t NDIMS, typename T>
-void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
-                   const std::vector<int32_t>& permutation, const int64_t elem_cnt, const T* x,
-                   T* y) {
+void LaunchTransposeGpu(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
+                        const std::vector<int32_t>& permutation, const int64_t elem_cnt, const T* x,
+                        T* y) {
   CHECK_LE(y_shape.elem_cnt(), GetMaxVal<int32_t>());
   Int32Array<NDIMS> y_shape_struct;
   FOR_RANGE(int32_t, i, 0, NDIMS) { y_shape_struct.val[i] = y_shape.At(i); }
@@ -72,6 +72,37 @@ void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_
   TransposeGpu<NDIMS, T>
       <<<SMBlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           y_shape_struct, x_strides, elem_cnt, x, y);
+}
+
+template<int32_t NDIMS, typename T>
+void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_shape,
+                   const std::vector<int32_t>& permutation, const int64_t elem_cnt, const T* x,
+                   T* y) {
+  CHECK_EQ(x_shape.NumAxes(), NDIMS);
+  CHECK_EQ(y_shape.NumAxes(), NDIMS);
+
+  using PackType = int64_t;
+  const size_t pack_size = sizeof(PackType) / sizeof(T);
+  int64_t in_last_dim = x_shape.At(x_shape.NumAxes() - 1);
+  int64_t out_last_dim = y_shape.At(y_shape.NumAxes() - 1);
+  if (pack_size != 1 && permutation.back() == permutation.size() - 1
+      && in_last_dim % pack_size == 0) {
+    CHECK_EQ(in_last_dim, out_last_dim);
+    DimVector packed_in_dim_vec;
+    x_shape.ToDimVector(&packed_in_dim_vec);
+    packed_in_dim_vec.back() /= pack_size;
+    Shape packed_in_shape(packed_in_dim_vec);
+    DimVector packed_out_dim_vec;
+    y_shape.ToDimVector(&packed_out_dim_vec);
+    packed_out_dim_vec.back() /= pack_size;
+    Shape packed_out_shape(packed_out_dim_vec);
+
+    LaunchTransposeGpu<NDIMS, PackType>(
+        ctx, ShapeView(packed_in_shape), ShapeView(packed_out_shape), permutation, elem_cnt,
+        reinterpret_cast<const PackType*>(x), reinterpret_cast<PackType*>(y));
+  } else {
+    LaunchTransposeGpu<NDIMS, T>(ctx, x_shape, y_shape, permutation, elem_cnt, x, y);
+  }
 }
 
 template<typename T>
