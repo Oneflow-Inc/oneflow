@@ -50,7 +50,6 @@ class Device final {
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<const ParallelDesc> origin_parallel_desc_;
-  EnvGlobalObjectsScope* origin_env_global_object_scope_;
 };
 
 }  // namespace oneflow
