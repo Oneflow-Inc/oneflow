@@ -25,7 +25,6 @@ limitations under the License.
 #include "oneflow/core/kernel/eager_kernel.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_helper.h"
-#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -54,23 +53,17 @@ class UserKernelBaseContext {
     CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
 
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                           ArgVec* arg_vec,
-                           HashMap<std::string, std::vector<std::string>>* arg2names) {
+                           ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           arg_vec->emplace_back(std::make_pair(it->first, i));
-          (*arg2names)[it->first].emplace_back(it->second.s(i));
         }
       }
     };
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_,
-                &input2arg_name_);
-    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_,
-                &output2arg_name_);
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
+    InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
     device_tag_ = kernel_conf.op_attribute().op_conf().device_tag();
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
-    op_name_ = kernel_conf.op_attribute().op_conf().name();
-    op_type_name_ = kernel_conf.op_attribute().op_conf().user_conf().op_type_name();
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
       arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
@@ -80,8 +73,6 @@ class UserKernelBaseContext {
 
   DeviceType device_type() const { return device_type_; }
   const std::string& device_tag() const { return device_tag_; }
-  const std::string& op_name() const { return op_name_; }
-  const std::string& op_type_name() const { return op_type_name_; }
   const ParallelContext& parallel_ctx() const { return parallel_ctx_; }
   const JobDesc& job_desc() const { return job_desc_; }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -93,44 +84,12 @@ class UserKernelBaseContext {
 
   const ArgVec& inputs() const { return inputs_; }
   const ArgVec& outputs() const { return outputs_; }
-  const std::string& input(const std::string& arg_name, int32_t index) const {
-    const auto& it = input2arg_name_.find(arg_name);
-    CHECK(it != input2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
-    CHECK(index >= 0 && index < it->second.size());
-    return it->second.at(index);
-  }
-  const std::string& output(const std::string& arg_name, int32_t index) const {
-    const auto& it = output2arg_name_.find(arg_name);
-    CHECK(it != output2arg_name_.end()) << "arg_name: " << arg_name << ", index: " << index;
-    CHECK(index >= 0 && index < it->second.size());
-    return it->second.at(index);
-  }
-  bool has_input(const std::string& arg_name, int32_t index) const {
-    return input_size(arg_name) > index;
-  }
-  bool has_output(const std::string& arg_name, int32_t index) const {
-    return output_size(arg_name) > index;
-  }
-  int32_t input_size(const std::string& arg_name) const {
-    auto it = input2arg_name_.find(arg_name);
-    if (it == input2arg_name_.end()) { return 0; }
-    return it->second.size();
-  }
-  int32_t output_size(const std::string& arg_name) const {
-    auto it = output2arg_name_.find(arg_name);
-    if (it == output2arg_name_.end()) { return 0; }
-    return it->second.size();
-  }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
-  HashMap<std::string, std::vector<std::string>> input2arg_name_;
-  HashMap<std::string, std::vector<std::string>> output2arg_name_;
   DeviceType device_type_;
   std::string device_tag_;
-  std::string op_name_;
-  std::string op_type_name_;
   ParallelContext parallel_ctx_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
@@ -240,17 +199,19 @@ class UserKernelOpInferContext : public user_op::InferContext {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
     }
-    auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
+    auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                              ArgVec* arg_vec) {
       for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
         const std::string& arg_name = it->first;
         for (int32_t i = 0; i < it->second.s_size(); ++i) {
           std::pair<std::string, int32_t> arg_pair = std::make_pair(arg_name, i);
+          arg_vec->emplace_back(arg_pair);
           arg2tensor_desc_.emplace(arg_pair, nullptr);
         }
       }
     };
-    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input());
-    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output());
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().input(), &inputs_);
+    InitTensorDesc(kernel_conf.op_attribute().op_conf().user_conf().output(), &outputs_);
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
@@ -343,7 +304,6 @@ class UserKernelOpInferContext : public user_op::InferContext {
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
@@ -435,7 +395,6 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   UserKernelOpInferContext op_infer_ctx_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::BlobTensorView>> arg2tensor_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 namespace {
@@ -482,25 +441,6 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
     InitInOrOut(kernel_conf.op_attribute().op_conf().user_conf().output());
     arg2bn_tensor_pair_.emplace(std::make_pair("tmp_buffer", 0),
                                 MakeBnTensorPair(GenRepeatedBn("tmp_buffer", 0)));
-    CHECK(kernel_conf.has_user_conf());
-    CHECK(kernel_conf.op_attribute().op_conf().has_user_conf());
-    const auto& op_conf = kernel_conf.op_attribute().op_conf();
-    for (const auto& kv : op_conf.user_conf().attr()) {
-      AttrValue::ValueCase value_case = kv.second.value_case();
-      switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
-    CHECK(attrs_                                                                             \
-              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
-                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                                      \
-    break;
-        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-      };
-    }
   }
   ~UserKernelComputeContext() = default;
 
@@ -545,7 +485,6 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class UserKernelRegContext final : public user_op::KernelRegContext {

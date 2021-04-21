@@ -131,7 +131,7 @@ class KernelInitContext {
   const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
   KernelInitContext(const KernelInitContext&) = delete;
 
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
