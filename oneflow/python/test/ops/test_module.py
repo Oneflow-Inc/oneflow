@@ -29,7 +29,7 @@ def np_relu(np_arr):
 
 
 @unittest.skipIf(
-    False, ".numpy() doesn't work in lazy/eager mode",
+    True, ".numpy() doesn't work in lazy/eager mode",
 )
 class TestModule(flow.unittest.TestCase):
     def test_nested_module(test_case):
