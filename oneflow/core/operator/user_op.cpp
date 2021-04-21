@@ -259,7 +259,10 @@ class UserOpSbpContext : public user_op::SbpContext {
 
   const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const override {
-    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+    auto it = arg2tensor_desc_.find(std::make_pair(input_arg_name, index));
+    CHECK(it != arg2tensor_desc_.end())
+        << "Cannot find input_arg_name : " << input_arg_name << " input_arg_index : " << index;
+    return it->second;
   }
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
@@ -307,7 +310,10 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 
   const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
       const std::string& input_arg_name, int32_t index) const override {
-    return arg2tensor_desc_.at(std::make_pair(input_arg_name, index));
+    auto it = arg2tensor_desc_.find(std::make_pair(input_arg_name, index));
+    CHECK(it != arg2tensor_desc_.end())
+        << "Cannot find input_arg_name : " << input_arg_name << " input_arg_index : " << index;
+    return it->second;
   }
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
@@ -316,7 +322,10 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
 
   const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
                                                           int32_t index) const override {
-    return arg2sbp_parallel_hint_.at(std::make_pair(input_arg_name, index));
+    auto it = arg2sbp_parallel_hint_.find(std::make_pair(input_arg_name, index));
+    CHECK(it != arg2sbp_parallel_hint_.end())
+        << "Cannot find input_arg_name : " << input_arg_name << " input_arg_index : " << index;
+    return it->second;
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
