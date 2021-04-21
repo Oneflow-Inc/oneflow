@@ -16,7 +16,6 @@ limitations under the License.
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
-import oneflow
 import oneflow._oneflow_internal
 
 Size = oneflow._oneflow_internal.Size
