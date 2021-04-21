@@ -611,23 +611,39 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable() const {
 
 // 1KB
 const int64_t BITSET_SIZE = 8 * 1024;
+
 using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
-inline void SetBitset(bitset_vec* bitset_vec, int64_t pos) {
-  int64_t index = pos / BITSET_SIZE;
-  int64_t remain = pos % BITSET_SIZE;
-  bitset_vec->at(index).set(remain, true);
-}
+class BitSetVec {
+ public:
+  BitSetVec() = default;
+  ~BitSetVec() = default;
 
-inline void MergeBitset(bitset_vec* vec, const bitset_vec* extra) {
-  CHECK_EQ(vec->size(), extra->size());
-  for (int64_t i = 0; i < vec->size(); ++i) { vec->at(i) &= extra->at(i); }
-}
+  const std::bitset<BITSET_SIZE>& GetBitSetAt(int64_t index) const { return bitset_vec_.at(index); }
 
-inline bool TestBitset(bitset_vec* bitset_vec, int64_t pos) {
-  int64_t index = pos / BITSET_SIZE;
-  int64_t remain = pos % BITSET_SIZE;
-  return bitset_vec->at(index).test(remain);
-}
+  void SetTrue(int64_t pos) {
+    int64_t index = pos / BITSET_SIZE;
+    int64_t remain = pos % BITSET_SIZE;
+    bitset_vec_.at(index).set(remain, true);
+  }
+
+  bool Test(int64_t pos) {
+    int64_t index = pos / BITSET_SIZE;
+    int64_t remain = pos % BITSET_SIZE;
+    bitset_vec_.at(index).set(remain, true);
+    return bitset_vec_.at(index).test(remain);
+  }
+
+  void Merge(const BitSetVec& extra) {
+    CHECK_EQ(bitset_vec_.size(), extra.VecSize());
+    for (int64_t i = 0; i < bitset_vec_.size(); ++i) { bitset_vec_.at(i) &= extra.GetBitSetAt(i); }
+  }
+
+  int64_t VecSize() const { return bitset_vec_.size(); }
+  void VecResize(size_t size) { bitset_vec_.resize(size); }
+
+ private:
+  bitset_vec bitset_vec_;
+};
 
 template<typename NodeType, typename EdgeType>
 std::function<bool(const NodeType* src, const NodeType* dst)>
@@ -636,25 +652,31 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
-  auto node2ancestor = std::make_shared<HashMap<const NodeType*, bitset_vec>>();
-  auto node2id = std::make_shared<HashMap<const NodeType*, int64_t>>();
+  using NodePtr2Id = HashMap<const NodeType*, int64_t>;
+  using Id2Ancestor = std::vector<BitSetVec>;
+  std::shared_ptr<NodePtr2Id> node2id(new NodePtr2Id);
+  std::shared_ptr<Id2Ancestor> id2ancestor(new Id2Ancestor);
   int64_t id = 0;
   const int64_t bitset_num = RoundUp(node_num(), BITSET_SIZE) / BITSET_SIZE;
+  node2id->reserve(node_num());
+  id2ancestor->resize(node_num());
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
     (*node2id)[node] = id;
-    (*node2ancestor)[node].resize(bitset_num);
+    id2ancestor->at(id).VecResize(bitset_num);
     id += 1;
   });
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+    const int64_t node_id = (*node2id).at(node);
     ForEachInNode(node, [&](NodeType* in_node) {
       const int64_t in_node_id = (*node2id).at(in_node);
-      auto& bitset_vec = node2ancestor->at(node);
-      SetBitset(&bitset_vec, in_node_id);
-      MergeBitset(&bitset_vec, &node2ancestor->at(in_node));
+      auto& bitset_vec = id2ancestor->at(node_id);
+      bitset_vec.SetTrue(in_node_id);
+      bitset_vec.Merge(id2ancestor->at(in_node_id));
     });
   });
-  return [node2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
-    return TestBitset(&node2ancestor->at(dst), node2id->at(src));
+  return [id2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
+    const int64_t dst_id = (*node2id).at(dst);
+    return id2ancestor->at(dst_id).Test(node2id->at(src));
   };
 }
 
