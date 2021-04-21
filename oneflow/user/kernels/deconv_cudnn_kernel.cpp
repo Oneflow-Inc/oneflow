@@ -38,7 +38,7 @@ struct CudnnDeConvArgsAndAlgo final {
                          const user_op::KernelComputeContext* ctx, DeviceCtx* device_ctx,
                          bool has_forced_algo, int32_t forced_algo)
       : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), ctx->attr<std::string>("data_format"), buf->shape().elem_cnt(),
+             y->shape(), ctx->Attr<std::string>("data_format"), buf->shape().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -83,7 +83,7 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
   if (!x->is_dynamic()) {
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
-                       ctx.attr<std::string>("data_format"), workspace_size,
+                       ctx.Attr<std::string>("data_format"), workspace_size,
                        cudnn_conf.cudnn_conv_heuristic_search_algo(),
                        cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
                        cudnn_conf.cudnn_conv_enable_pseudo_half());

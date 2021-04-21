@@ -38,7 +38,7 @@ struct CudnnConvArgsAndAlgo final {
                        user_op::Tensor* buf, const user_op::KernelComputeContext* ctx,
                        DeviceCtx* device_ctx, bool has_forced_algo, int32_t forced_algo)
       : args(*ctx, x->data_type(), x->shape(), w->data_type(), w->shape(), y->data_type(),
-             y->shape(), ctx->attr<std::string>("data_format"), buf->shape().elem_cnt(),
+             y->shape(), ctx->Attr<std::string>("data_format"), buf->shape().elem_cnt(),
              Global<ResourceDesc, ForSession>::Get()
                  ->resource()
                  .cudnn_conf()
@@ -51,7 +51,7 @@ struct CudnnConvArgsAndAlgo final {
                      ->resource()
                      .cudnn_conf()
                      .cudnn_conv_enable_pseudo_half()
-                 || (ctx->attr<std::string>("data_format") == "channels_last"
+                 || (ctx->Attr<std::string>("data_format") == "channels_last"
                      && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value)) {
     size_t byte_size_of_buf = buf->shape().elem_cnt();
     AllocatedCudnnConvResource res(device_ctx->cudnn_handle(), const_cast<void*>(x->dptr()),
@@ -86,11 +86,11 @@ size_t InferTmpSizeWithCudnn(const user_op::TensorDesc* x, const user_op::Tensor
   if (!x->is_dynamic()) {
     CudnnConvArgs args(ctx, x->data_type(), ShapeView(x->shape()), w->data_type(),
                        ShapeView(w->shape()), y->data_type(), ShapeView(y->shape()),
-                       ctx.attr<std::string>("data_format"), workspace_size,
+                       ctx.Attr<std::string>("data_format"), workspace_size,
                        cudnn_conf.cudnn_conv_heuristic_search_algo(),
                        cudnn_conf.cudnn_conv_use_deterministic_algo_only(),
                        cudnn_conf.cudnn_conv_enable_pseudo_half()
-                           || (ctx.attr<std::string>("data_format") == "channels_last"
+                           || (ctx.Attr<std::string>("data_format") == "channels_last"
                                && std::is_same<PerfT, cudnnConvolutionBwdFilterAlgoPerf_t>::value));
     PerfT algo_perf;
     if (has_forced_algo) {

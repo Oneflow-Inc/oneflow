@@ -190,9 +190,9 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
                              const ShapeView& in_blob_shape, const user_op::InferContext& ctx) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
-  const auto& padding_before = ctx.attr<std::vector<int32_t>>("padding_before");
-  const auto& strides = ctx.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = ctx.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
   if (opkernel_dim == 2) {
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(
         val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
@@ -207,7 +207,7 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
         val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   }
-  const int32_t groups = ctx.attr<int32_t>("groups");
+  const int32_t groups = ctx.Attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
   if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
@@ -219,9 +219,9 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
                              const user_op::KernelComputeContext& ctx) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
-  const auto& padding_before = ctx.attr<std::vector<int32_t>>("padding_before");
-  const auto& strides = ctx.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = ctx.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
   if (opkernel_dim == 2) {
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(
         val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
@@ -236,7 +236,7 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
         val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   }
-  const int32_t groups = ctx.attr<int32_t>("groups");
+  const int32_t groups = ctx.Attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
   if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
