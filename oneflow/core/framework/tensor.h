@@ -98,6 +98,7 @@ class Tensor {
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
+  virtual std::shared_ptr<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
 
  protected:
@@ -215,6 +216,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
+  std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
 
   // Operators for tensor
@@ -296,6 +298,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
+  std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
