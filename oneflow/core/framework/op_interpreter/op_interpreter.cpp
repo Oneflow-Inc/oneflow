@@ -44,13 +44,13 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(BuiltinOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
                      << " has not been supported in LazyInterpreter::Apply.";
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrValueMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_num());
+  CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
   const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());
@@ -75,8 +75,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const Tenso
       JUST(GetSymbol<cfg::ParallelConf, ParallelDesc>(parallel_desc_sym_id));
 
   // Check outputs num and setup output tensor properties.
-  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_num());
-  for (int i = 0; i < op_expr.output_num(); ++i) {
+  CHECK_EQ_OR_RETURN(outputs->size(), op_expr.output_size());
+  for (int i = 0; i < op_expr.output_size(); ++i) {
     const std::string& obn = op_expr.indexed_obns().at(i);
     const auto& parallel_attr = JUST(
         compatible_py::GetOpArgParallelAttribute(blob_parallel_desc_sym, proto_op_attribute, obn));
@@ -117,7 +117,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(FunctionOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
                      << " has not been supported in EagerInterpreter::Apply.";
 }
 
@@ -149,17 +149,15 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
-    requires_grad =
-        std::any_of(inputs.begin(), inputs.end(),
-                    [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+    if (!JUST(op_expr.IsGradDisabled())) {
+      requires_grad = std::any_of(
+          inputs.begin(), inputs.end(),
+          [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+    }
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
-  // Although current op `requires_grad` is false, we still need to add a
-  // function node for this op since it maybe reset to true by the user later,
-  // such as Variable op etc.
-  // if (autograd::GradMode::is_enabled() && requires_grad) {
-  if (autograd::GradMode::is_enabled()) {
+  if (autograd::GradMode::is_enabled() && requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs, attrs);
 
