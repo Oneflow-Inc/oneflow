@@ -66,7 +66,6 @@ void Compiler::GenNetTopo(Plan* plan) const {
 }
 
 void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
-/*
   auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
   CHECK(task_proto->exec_sequence().exec_node_size() == 1);
   auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
@@ -79,11 +78,13 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
     op_name2op_attribute->insert(
         {op_name, task_proto->exec_sequence().exec_node(0).kernel_conf().op_attribute()});
   }
-*/
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
-//  kernel_conf->set_op_attribute_ref(op_name);
-  kernel_conf->clear_op_attribute();
+  kernel_conf->set_op_attribute_ref(op_name);
+  kernel_conf->set_allocated_op_attribute(nullptr);
+  // kernel_conf->clear_op_attribute();
+  // auto* pOpAttribute = kernel_conf->release_op_attribute();
+  // delete pOpAttribute;
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
@@ -119,7 +120,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    // if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
+    if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
     plan->mutable_task()->Add(std::move(task_proto));
     ToProtoCnt++;
   });
