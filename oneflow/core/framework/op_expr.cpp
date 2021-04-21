@@ -40,14 +40,21 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& type, const std::string& op_name
 UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {
+    : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {}
+
+Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
+  auto it = device2kernel_.find(device);
+  if (it != device2kernel_.end()) { return it->second; }
+
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
-  // TODO: align with pytorch: set device tag in Interpret according to inputs
-  op_conf.set_device_tag("gpu");
-  auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
-  kernel_ = std::make_shared<StatefulOpKernel>(op_conf, mem_case, &indexed_input_pairs(),
-                                               &indexed_output_pairs());
+  op_conf.set_device_tag(device.of_type());
+  DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
+  auto mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
+  auto opkernel = JUST(
+      StatefulOpKernel::New(op_conf, mem_case, &indexed_input_pairs(), &indexed_output_pairs()));
+  device2kernel_.emplace(device, opkernel);
+  return opkernel;
 }
 
 Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {

@@ -241,7 +241,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
                                 one::EagerBlobObjectList input_eager_blob_objects,
                                 one::EagerBlobObjectList output_eager_blob_objects,
-                                std::shared_ptr<const ParallelDesc> parallel_desc_sym);
+                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,

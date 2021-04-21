@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/operator/op_conf.pb.h"
@@ -95,13 +96,11 @@ class UserOpExpr : public BuiltinOpExpr {
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const override;
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
-  std::shared_ptr<const StatefulOpKernel> kernel() const { return kernel_; }
-
-  std::shared_ptr<StatefulOpKernel> mut_kernel() const { return kernel_; }
+  Maybe<StatefulOpKernel> MutKernel4Device(const Device& device) const;
 
  private:
   UserOpConf proto_;
-  std::shared_ptr<StatefulOpKernel> kernel_;
+  mutable HashMap<Device, std::shared_ptr<StatefulOpKernel>> device2kernel_;
 };
 
 #define DEFINE_BUILTIN_OPEXPR_CLASS(_op_name)                                                 \

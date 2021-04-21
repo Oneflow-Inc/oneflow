@@ -37,7 +37,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
   std::shared_ptr<const Device> device;
   if (inputs.empty()) {
-    // TODO: align with pytorch: default cpu
+    // TODO: align with pytorch (default cpu) when tensor.to() is ready
     device = std::make_shared<Device>("cuda", 0);
   } else {
     device = inputs.at(0)->device();
@@ -45,10 +45,6 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   }
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(*device));
-  if (parallel_desc->device_tag() != "gpu") {
-    // TODO: set device according to inputs
-    return Error::Unimplemented();
-  }
   const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
   std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
@@ -57,17 +53,18 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   }
   std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
+  const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  const auto mem_case = kernel->mem_case();
   for (int i = 0; i < outputs->size(); i++) {
-    const auto mem_case = user_op_expr.mut_kernel()->mem_case();
-
     auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
         mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
         std::make_shared<eager::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
-  const auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->LocalCallOpKernel(user_op_expr.mut_kernel(), input_eager_blob_objects,
-                                    output_eager_blob_objects, parallel_desc));
+  const auto build_instruction =
+      [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+    JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                    parallel_desc));
     return Maybe<void>::Ok();
   };
   JUST(PhysicalRun(build_instruction));
