@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 
@@ -45,6 +46,13 @@ Device::Device(const std::string& type, int64_t device_id) : type_(type), device
 Maybe<void> Device::Init() {
   mem_case_ = JUST(MakeMemoryCase(of_type(), device_id()));
   return Maybe<void>::Ok();
+inline size_t HashDevice(const std::string& type, int64_t device_id) {
+  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+}
+}  // namespace
+
+const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
+  return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
 }
 
 std::string Device::of_type() const {

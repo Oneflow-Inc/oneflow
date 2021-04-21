@@ -70,6 +70,13 @@ def env_init():
     return True
 
 
+def init_default_physical_env():
+    default_physical_env_proto = _DefaultEnvProto()
+    default_physical_env_proto.is_default_physical_env = True
+    CompleteEnvProto(default_physical_env_proto)
+    c_api_util.InitEnv(default_physical_env_proto)
+
+
 @oneflow_export("env.current_resource", "current_resource")
 def api_get_current_resource() -> resource_util.Resource:
     r"""Get current resources, such as:machine nums, cpu/gpu device nums,

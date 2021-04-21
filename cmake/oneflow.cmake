@@ -215,7 +215,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir)
+add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
 
 # cfg obj lib
 include(cfg)
@@ -301,6 +301,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
+
+# source this file to add oneflow in PYTHONPATH
+file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH")
 
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL

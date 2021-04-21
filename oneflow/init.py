@@ -46,6 +46,7 @@ oneflow_api = import_oneflow_internal2()
 Size = oneflow_api.Size
 device = oneflow_api.device
 placement = oneflow_api.PlacementSymbol
+no_grad = oneflow_api.autograd.no_grad
 
 # define dtype at the begining of oneflow init
 
@@ -89,6 +90,11 @@ import oneflow_api
 INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
+
+import oneflow.python.framework.env_util as env_util
+
+env_util.init_default_physical_env()
+del env_util
 
 atexit.register(oneflow_api.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
