@@ -216,7 +216,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
-    const TensorTuple& inputs, const TensorTuple& outputs) {
+    const TensorTuple& inputs, TensorTuple* outputs) {
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
@@ -231,8 +231,8 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   }
 
   std::shared_ptr<StackFunctionNode> func_node =
-      std::make_shared<StackFunctionNode>(backward_fn, inputs, outputs);
-  for (const std::shared_ptr<Tensor>& out_tensor : outputs) {
+      std::make_shared<StackFunctionNode>(backward_fn, inputs, *outputs);
+  for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
   func_node->set_is_in_stack(true);
