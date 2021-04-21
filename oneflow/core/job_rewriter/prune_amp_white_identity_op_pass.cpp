@@ -29,7 +29,7 @@ class PruneAmpWhiteIdentityOpPass final : public JobPass {
 };
 
 Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const {
-  if (!ctx.job_desc().prune_amp_white_identity_ops()) { return Maybe<void>::Ok(); }
+  if (!ctx->job_desc().prune_amp_white_identity_ops()) { return Maybe<void>::Ok(); }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> op_name2op_conf;
@@ -68,8 +68,8 @@ Maybe<void> PruneAmpWhiteIdentityOpPass::Apply(Job* job, JobPassCtx* ctx) const 
     }
     del_op_names.push_back(op_conf.name());
   });
-  for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
-  job_builder->DelOps(del_op_names);
+  for (const auto& pair : op_name2op_conf) { job_builder.MutOpsOnlyOnce({pair.second}); }
+  job_builder.DelOps(del_op_names);
   return Maybe<void>::Ok();
 }
 
