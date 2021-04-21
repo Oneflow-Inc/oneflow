@@ -232,6 +232,7 @@ message JobConfigProto {
 
   optional bool prune_parallel_cast_ops = 509 [default = true];
   optional bool prune_cast_to_static_shape_ops = 510 [default = true];
+  optional bool prune_amp_white_identity_ops = 511 [default = true];
 
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
