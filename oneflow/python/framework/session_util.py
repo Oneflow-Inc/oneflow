@@ -257,7 +257,7 @@ class Session(object):
             job_name += "_original"
         self.job_name2job_[job_name] = job
 
-    def Job(self, job_name, load_model_before_pass: bool = False):
+    def Job(self, job_name, load_model_before_pass: bool = True):
         assert self.status_ is SessionStatus.RUNNING
         if load_model_before_pass:
             job_name += "_original"

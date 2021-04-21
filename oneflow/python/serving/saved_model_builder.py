@@ -100,7 +100,7 @@ class ModelBuilder(object):
                     check_name_conflict(output_name, output_def)
 
     @session_ctx.try_init_default_session
-    def Save(self, save_model_before_pass: bool = True):
+    def Save(self, save_model_before_graph_complete: bool = True):
         self._check_input_output_name_conflict()
         for _, graph_builder in self.graph_builders_.items():
             if not graph_builder.finished:
@@ -108,7 +108,7 @@ class ModelBuilder(object):
 
         sess = session_ctx.GetDefaultSession()
         for graph_name, graph_def in self.proto.graphs.items():
-            job = sess.Job(graph_name, save_model_before_pass)
+            job = sess.Job(graph_name, save_model_before_graph_complete)
             graph_def.op_list.extend(list(job.net.op))
 
         if not os.path.exists(self.saved_model_dir_):
