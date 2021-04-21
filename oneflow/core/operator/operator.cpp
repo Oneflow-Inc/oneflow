@@ -902,10 +902,10 @@ void Operator::GenKernelConf(
 
   // 1
   // return;
-  if (parallel_ctx == nullptr
-      || parallel_ctx->parallel_id() == 0) {
+  // if (parallel_ctx == nullptr ||
+  //     parallel_ctx->parallel_id() == 0) {
     CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
-  }
+  // }
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                            [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
     kernel_conf->set_need_do_shape(true);
