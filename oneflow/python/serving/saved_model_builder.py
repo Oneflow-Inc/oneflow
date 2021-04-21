@@ -108,7 +108,11 @@ class ModelBuilder(object):
 
         sess = session_ctx.GetDefaultSession()
         for graph_name, graph_def in self.proto.graphs.items():
-            job = sess.Job(graph_name, save_model_before_graph_complete)
+            job = sess.Job(
+                graph_name
+                if save_model_before_graph_complete
+                else graph_name + "_after_complete"
+            )
             graph_def.op_list.extend(list(job.net.op))
 
         if not os.path.exists(self.saved_model_dir_):

@@ -45,7 +45,7 @@ def Compile(session, function_desc, config_proto):
         _CompileJob(session, function_desc)
         session.StashJob(function_desc.job_func.__name__)
         oneflow_api.CurJobBuildAndInferCtx_Complete()
-        session.StashJob(function_desc.job_func.__name__, True)
+        session.StashJob(function_desc.job_func.__name__ + "_after_complete")
 
 
 def EagerRun(session, function_desc, config_proto, args):
