@@ -253,9 +253,9 @@ class Session(object):
             ), "{} is not current job name".format(job_name)
         else:
             job_name = job.job_conf.job_name
-        if key is not None:
-            job_name = key
-        self.job_name2job_[job_name] = job
+        if key is None:
+            key = job_name
+        self.job_name2job_[key] = job
 
     def Job(self, job_name):
         assert self.status_ is SessionStatus.RUNNING
