@@ -620,7 +620,7 @@ class BitSetVec {
 
   const std::bitset<BITSET_SIZE>& GetBitSetAt(int64_t index) const { return bitset_vec_.at(index); }
 
-  void SetTrue(int64_t pos) {
+  void Set(int64_t pos) {
     int64_t index = pos / BITSET_SIZE;
     int64_t remain = pos % BITSET_SIZE;
     bitset_vec_.at(index).set(remain, true);
@@ -670,7 +670,7 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     ForEachInNode(node, [&](NodeType* in_node) {
       const int64_t in_node_id = node2id->at(in_node);
       auto& ancestor_bitset_vec = id2ancestor->at(node_id);
-      ancestor_bitset_vec.SetTrue(in_node_id);
+      ancestor_bitset_vec.Set(in_node_id);
       ancestor_bitset_vec.Merge(id2ancestor->at(in_node_id));
     });
   });
