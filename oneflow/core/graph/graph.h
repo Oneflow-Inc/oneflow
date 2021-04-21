@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
 #include <stack>
+#include <bitset>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -608,6 +609,26 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable() const {
                                    &NodeType::ForEachNodeOnOutEdge);
 }
 
+// 1KB
+const int64_t BITSET_SIZE = 8 * 1024;
+using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
+inline void SetBitset(bitset_vec* bitset_vec, int64_t pos) {
+  int64_t index = pos / BITSET_SIZE;
+  int64_t remain = pos % BITSET_SIZE;
+  bitset_vec->at(index).set(remain, true);
+}
+
+inline void MergeBitset(bitset_vec* vec, const bitset_vec* extra) {
+  CHECK_EQ(vec->size(), extra->size());
+  for (int64_t i = 0; i < vec->size(); ++i) { vec->at(i) &= extra->at(i); }
+}
+
+inline bool TestBitset(bitset_vec* bitset_vec, int64_t pos) {
+  int64_t index = pos / BITSET_SIZE;
+  int64_t remain = pos % BITSET_SIZE;
+  return bitset_vec->at(index).test(remain);
+}
+
 template<typename NodeType, typename EdgeType>
 std::function<bool(const NodeType* src, const NodeType* dst)>
 Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
@@ -615,19 +636,25 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
-  auto node2ancestor = std::make_shared<HashMap<const NodeType*, HashSet<const NodeType*>>>();
+  auto node2ancestor = std::make_shared<HashMap<const NodeType*, bitset_vec>>();
+  auto node2id = std::make_shared<HashMap<const NodeType*, int64_t>>();
+  int64_t id = 0;
+  const int64_t bitset_num = RoundUp(node_num(), BITSET_SIZE) / BITSET_SIZE;
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
-    node2ancestor->emplace(node, HashSet<const NodeType*>());
+    (*node2id)[node] = id;
+    (*node2ancestor)[node].resize(bitset_num);
+    id += 1;
+  });
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
     ForEachInNode(node, [&](NodeType* in_node) {
-      node2ancestor->at(node).insert(in_node);
-      node2ancestor->at(node).insert(node2ancestor->at(in_node).begin(),
-                                     node2ancestor->at(in_node).end());
+      const int64_t in_node_id = (*node2id).at(in_node);
+      auto& bitset_vec = node2ancestor->at(node);
+      SetBitset(&bitset_vec, in_node_id);
+      MergeBitset(&bitset_vec, &node2ancestor->at(in_node));
     });
   });
-  return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
-    const auto it = node2ancestor->find(dst);
-    if (it == node2ancestor->end()) { return false; }
-    return it->second.find(src) != it->second.end();
+  return [node2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
+    return TestBitset(&node2ancestor->at(dst), node2id->at(src));
   };
 }
 
