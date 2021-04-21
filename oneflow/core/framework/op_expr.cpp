@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -29,18 +30,44 @@ std::pair<std::string, int> GetPair(const std::string& bn) {
 };
 }  // namespace
 
-BuiltinOpExpr::BuiltinOpExpr(const std::string& type, const std::string& op_name,
+BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
-    : OpExpr(type), op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
+    : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
   for (const auto& ibn : indexed_ibns) { indexed_input_pairs_.push_back(GetPair(ibn)); }
   for (const auto& obn : indexed_obns) { indexed_output_pairs_.push_back(GetPair(obn)); }
 }
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
-                       const std::vector<std::string>& indexed_ibns,
-                       const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExpr("user", op_name, indexed_ibns, indexed_obns), proto_(std::move(proto)) {}
+#define DEFINE_OPEXPR_TYPE_NAME(_T, _type_name)                \
+  template<>                                                   \
+  const std::string BuiltinOpExprImpl<_T>::type_name() const { \
+    return _type_name;                                         \
+  }
+
+DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
+DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
+DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
+DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
+DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
+DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
+DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
+
+#undef DEFINE_OPEXPR_TYPE_NAME
+
+template<>
+Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                       const AttrValueMap& attrs) const {
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_user_conf()) = op_proto_;
+  auto* user_op_conf = op_conf->mutable_user_conf();
+  for (const auto& it : attrs) {
+    AttrValue attr_val;
+    it.second->ToProto(&attr_val);
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
   auto it = device2kernel_.find(device);
@@ -57,19 +84,17 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const
   return opkernel;
 }
 
-Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
-  *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_user_conf()) = proto_;
-  auto* user_op_conf = op_conf->mutable_user_conf();
-  for (const auto& it : attrs) {
-    AttrValue attr_val;
-    it.second->ToProto(&attr_val);
-    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
-  }
-  return Maybe<void>::Ok();
+template<>
+Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
+  const std::string& op_type_name = op_proto_.op_type_name();
+  const user_op::OpGradRegistryResult* val =
+      user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(op_type_name);
+  if (val) { return false; }
+  return !IsClassRegistered<std::string, OpExprGradFunctionIf>(op_type_name);
 }
 
-Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
       op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
@@ -77,91 +102,115 @@ Maybe<OpExprGradClosure> UserOpExpr::GetOrCreateOpGradClosure() const {
       op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("default"));
     }
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
-    op_grad_func_->Init(*this);
+    JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-Maybe<void> VariableOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                           const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_variable_conf()) = proto_;
+  *(op_conf->mutable_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> VariableOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<bool> BuiltinOpExprImpl<VariableOpConf>::IsGradDisabled() const {
+  return true;
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> CastToMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                              const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                 const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_to_mirrored_conf()) = proto_;
+  *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> CastToMirroredOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> CastFromMirroredOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                                const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_from_mirrored_conf()) = proto_;
+  *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> CastFromMirroredOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateOpGradClosure()
+    const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> DistributeSplitOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                               const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                  const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_distribute_split_conf()) = proto_;
+  *(op_conf->mutable_distribute_split_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeSplitOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeSplitOpConf>::GetOrCreateOpGradClosure()
+    const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> DistributeCloneOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                               const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                  const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_distribute_clone_conf()) = proto_;
+  *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeCloneOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeCloneOpConf>::GetOrCreateOpGradClosure()
+    const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> DistributeConcatOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                                const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(
+    OperatorConf* op_conf, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_distribute_concat_conf()) = proto_;
+  *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeConcatOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeConcatOpConf>::GetOrCreateOpGradClosure()
+    const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-Maybe<void> DistributeAddOpExpr::BuildOpConf(OperatorConf* op_conf,
-                                             const AttrValueMap& attrs) const {
+template<>
+Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_distribute_add_conf()) = proto_;
+  *(op_conf->mutable_distribute_add_conf()) = op_proto_;
   return Maybe<void>::Ok();
 }
 
-Maybe<OpExprGradClosure> DistributeAddOpExpr::GetOrCreateOpGradClosure() const {
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeAddOpConf>::GetOrCreateOpGradClosure() const {
   UNIMPLEMENTED_THEN_RETURN();
 }
 

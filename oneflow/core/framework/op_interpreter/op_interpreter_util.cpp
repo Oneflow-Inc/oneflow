@@ -66,7 +66,7 @@ template<>
 /*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
                                                                   const TensorTuple& inputs,
                                                                   const AttrValueMap& attrs) {
-  auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
   return outputs;
 }
