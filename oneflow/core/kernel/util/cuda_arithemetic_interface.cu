@@ -98,8 +98,9 @@ void TransposeImpl(DeviceCtx* ctx, const ShapeView& x_shape, const ShapeView& y_
     Shape packed_out_shape(packed_out_dim_vec);
 
     LaunchTransposeGpu<NDIMS, PackType>(
-        ctx, ShapeView(packed_in_shape), ShapeView(packed_out_shape), permutation, elem_cnt,
-        reinterpret_cast<const PackType*>(x), reinterpret_cast<PackType*>(y));
+        ctx, ShapeView(packed_in_shape), ShapeView(packed_out_shape), permutation,
+        packed_in_shape.elem_cnt(), reinterpret_cast<const PackType*>(x),
+        reinterpret_cast<PackType*>(y));
   } else {
     LaunchTransposeGpu<NDIMS, T>(ctx, x_shape, y_shape, permutation, elem_cnt, x, y);
   }
