@@ -85,7 +85,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "hierarchical_parallel_cast_like",
                                "repeat",
                                "unpack",
-                               "pack"};
+                               "pack",
+                               "nvtx_start",
+                               "nvtx_end"};
 
   return clear_list;
 }
