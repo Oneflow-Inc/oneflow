@@ -66,6 +66,19 @@ class ReLU(Module):
         return res
 
 
+@oneflow_export("nn.Tanh")
+@register_tensor_op_by_module("tanh")
+@register_op_by_module("tanh")
+class Tanh(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
 @oneflow_export("nn.Softmax")
 @register_tensor_op_by_module("softmax")
 class Softmax(Module):

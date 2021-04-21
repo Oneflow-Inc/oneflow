@@ -39,22 +39,24 @@ class MatMul(Module):
         super().__init__()
 
         self._op_matmul = (
-            flow.builtin_op("matmul", name)
+            flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(1.0))
             .Build()
         )
 
         self._op_batch_matmul = (
-            flow.builtin_op("batch_matmul", name)
+            flow.builtin_op("batch_matmul")
             .Input("a")
             .Input("b")
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(1.0))
             .Build()
         )
 
@@ -90,3 +92,5 @@ if __name__ == "__main__":
     b = flow.Tensor(np.random.randn(5, 3, 2))
     c = matmul(a, b)
     print(c.shape)
+
+

@@ -28,7 +28,7 @@ from oneflow.python.nn.modules.utils import (
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 import oneflow.python.framework.id_util as id_util
-from oneflow.python.framework.tensor import register_tensor_op_by_module
+from oneflow.python.framework.tensor import register_op_by_module, register_tensor_op_by_module
 
 
 class Transpose(Module):
@@ -59,7 +59,6 @@ class Transpose(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
 
 @oneflow_export("tmp.transpose")
 def transpose(

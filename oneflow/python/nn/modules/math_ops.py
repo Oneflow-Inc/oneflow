@@ -222,6 +222,7 @@ class Mul(Module):
 
 
 @oneflow_export("Mean")
+@register_tensor_op_by_module("mean")
 @register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
@@ -245,16 +246,16 @@ class Mean(Module):
     def __init__(
         self,
         axis: Optional[Union[collections.Sized, int]] = None,
-        keepdims: bool = False,
+        keepdim: bool = False,
         name: Optional[str] = None,
     ) -> None:
         super().__init__()
         self.axis = axis
-        self.keepdims = keepdims
+        self.keepdim = keepdim
         self.name = name
 
     def forward(self, input_tensor):
-        reduce_sum = flow.Sum(axis=self.axis, keepdims=self.keepdims, name=self.name)(
+        reduce_sum = flow.Sum(axis=self.axis, keepdims=self.keepdim, name=self.name)(
             input_tensor
         )
 
@@ -334,7 +335,7 @@ class ScalarAdd(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
+    
 
 @register_tensor_op_by_module("sub")
 @register_op_by_module("sub")
@@ -609,3 +610,109 @@ class Add(Module):
             return ScalarAddByTensor()(x, y)
         else:
             return BroadcastAdd()(x, y)
+
+
+
+@register_tensor_op_by_module("subtract")
+@register_op_by_module("subtract")
+class Subtract(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        pass
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarAdd(x)(-1 * y)
+        elif isinstance(y, (int, float)):
+            return ScalarAdd(-1 * y)(x)
+        elif x.shape == y.shape:
+            # TODO: add element-wise op
+            return BroadcastSub()(x, y)
+        elif x.shape == (1,):
+            return ScalarSubByTensor()(y, x)
+        elif y.shape == (1,):
+            return ScalarSubByTensor()(x, y)
+        else:
+            return BroadcastSub()(x, y)
+
+
+@register_tensor_op_by_module("npstd")
+@register_op_by_module("npstd")
+class Std(Module):
+    r"""
+    Returns the standard-deviation of each row of the :attr:`input` tensor in the
+    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
+    reduce over all of them.
+
+    {keepdim_details}
+
+    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
+    via the biased estimator. Otherwise, Bessel's correction will be used.
+
+    Args:
+        {input}
+        {dim}
+        unbiased (bool): whether to use the unbiased estimation or not
+        {keepdim}
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = flow.npstd(input, 2)
+
+        # equal to numpy output >>  np.std(arr, axis=2)
+
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.zero_module = flow.Zeros()
+        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
+        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
+        self.reduce_sum_op = (
+            flow.builtin_op("reduce_sum")
+            .Input("input_tensor")
+            .Output("output_tensor")
+        )
+        self.reduce_sum_op2 = (
+            flow.builtin_op("reduce_sum")
+            .Input("input_tensor")
+            .Output("output_tensor")
+        )
+        self.reduce_count = 1 # Tensor.nelemenet()
+
+    def forward(self, x, dim=None, unbiased=True, keepdim=False):
+        assert unbiased==True, "Only support 'unbiased=True' for now!"
+
+        axis = _check_axis(dim, x.shape)
+        self.reduce_sum_op = self.reduce_sum_op.Attr("axis", axis).Attr("keepdims", keepdim).Build()
+
+        if isinstance(axis, list) and len(axis) == 0:
+            return self.zero_module(x)
+        else:
+            if len(axis) == 0:
+                self.reduce_count = x.nelemenet()
+            else:
+                for i in axis:
+                    self.reduce_count *= x.shape[i]
+
+            res = self.sqrt_op(
+                Subtract()(
+                    # reduce_mean = reduce_sum / reduce_count
+                    self.reduce_sum_op(self.square_op(x)[0])[0] / self.reduce_count,
+                    self.square_op(
+                        self.reduce_sum_op(x)[0] / self.reduce_count,
+                    )[0]
+                )
+            )[0]
+            return res
+
+
+
+
+

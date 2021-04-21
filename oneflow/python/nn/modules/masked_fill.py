@@ -20,7 +20,7 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 @oneflow_export("MaskedFill")
 # @register_op_by_module("masked_fill")
-# @register_tensor_op_by_module("masked_fill")
+@register_tensor_op_by_module("masked_fill")
 class MaskedFill(Module):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True. 
