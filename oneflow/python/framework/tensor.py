@@ -220,6 +220,33 @@ class Tensor:
         return self.dtype.bytes
 
     @_auto_determine
+    def to(self, device=None, dtype=None):
+        tensor_after_cast = self
+        if dtype is not None and dtype != self.dtype:
+            cast_op = (
+                flow.builtin_op("cast", name)
+                .Input("in")
+                .Output("out")
+                .Attr("dtype", dtype)
+                .Build()
+            )
+            tensor_after_cast = cast_op(self)[0]
+        if device is None:
+            return tensor_after_cast
+        assert isinstance(
+            tensor_after_cast._local_or_consistent_tensor, oneflow_api.LocalTensor
+        )
+
+        def BuildCopyBlobToOtherDeviceInstruction(builder):
+            builder.CopyBlobToOtherDevice(
+                tensor_after_cast._local_or_consistent_tensor, device
+            )
+
+        return Tensor(
+            oneflow_api.deprecated.PhysicalRun(BuildCopyBlobToOtherDeviceInstruction)
+        )
+
+    @_auto_determine
     def numpy(self):
         return remote_blob_util.BlobObjectNumpy(
             self._local_or_consistent_tensor._blob_object

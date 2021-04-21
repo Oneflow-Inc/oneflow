@@ -15,13 +15,37 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
+
+namespace {
+
+inline Maybe<MemoryCase> MakeMemoryCase(const std::string& type, int64_t device_id) {
+  DeviceType device_type = JUST(DeviceType4DeviceTag(type));
+  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
+}
+
+}  // namespace
+
+Device::Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+
+/*static*/ Maybe<Device> Device::New(const std::string& type, int64_t device_id) {
+  std::shared_ptr<Device> device(new Device(type, device_id));
+  JUST(device->Init());
+  return device;
+}
+
+Maybe<void> Device::Init() {
+  mem_case_ = JUST(MakeMemoryCase(of_type(), device_id()));
+  return Maybe<void>::Ok();
+}
 
 std::string Device::of_type() const {
   if (type_ == "cuda") {
@@ -65,7 +89,8 @@ Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& paralle
   std::string device_id = machine_device_id.substr(pos + 1);
   CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
   CHECK_OR_RETURN(IsStrInt(device_id));
-  return std::make_shared<const Device>(type, std::stoi(device_id));
+  std::shared_ptr<const Device> device = JUST(Device::New(type, std::stoi(device_id)));
+  return device;
 }
 
 }  // namespace oneflow

@@ -105,6 +105,7 @@ void CopyBlobToOtherDeviceInstructionType::Compute(vm::Instruction* instruction)
       dynamic_cast<const vm::CopyBlobToOtherDevicePhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  ptr->dst_eager_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   Blob* src_blob = ptr->src_eager_blob_object()->mut_blob();
   Blob* dst_blob = ptr->dst_eager_blob_object()->mut_blob();
   bool is_src_on_cuda = src_blob->mem_case().has_device_cuda_mem();

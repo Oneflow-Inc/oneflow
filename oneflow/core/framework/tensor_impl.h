@@ -242,7 +242,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
   // other methods
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  Maybe<void> InitEagerBlobObject();
 
  private:
   std::shared_ptr<const Shape> shape_;

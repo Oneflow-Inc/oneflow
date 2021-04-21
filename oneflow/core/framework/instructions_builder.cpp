@@ -891,7 +891,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
       JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
-  instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
+  *instruction->mut_parallel_desc() = tensor->parallel_desc();
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }
@@ -927,9 +927,9 @@ Maybe<one::MirroredTensor> InstructionsBuilder::CopyBlobToOtherDevice(
           src_eager_blob_object, dst_eager_blob_object, src_infer_local_dep_object,
           dst_infer_local_dep_object, src_compute_local_dep_object, dst_compute_local_dep_object);
   if (dst_tensor->is_cuda()) {
-    instruction->set_parallel_desc_symbol_id(JUST(dst_tensor->parallel_desc()->symbol_id()));
+    *instruction->mut_parallel_desc() = dst_tensor->parallel_desc();
   } else {
-    instruction->set_parallel_desc_symbol_id(JUST(src_tensor->parallel_desc()->symbol_id()));
+    *instruction->mut_parallel_desc() = src_tensor->parallel_desc();
   }
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return dst_tensor;

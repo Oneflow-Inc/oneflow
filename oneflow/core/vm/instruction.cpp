@@ -314,7 +314,7 @@ const MirroredObject* Instruction::GetMirroredObject(const Operand& operand,
 int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
 void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
-                           const std::shared_ptr<ParallelDesc>& parallel_desc) {
+                           const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   mutable_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);

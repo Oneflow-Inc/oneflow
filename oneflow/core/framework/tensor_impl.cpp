@@ -70,9 +70,10 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Sha
                                                  const std::shared_ptr<const DType>& dtype,
                                                  const std::shared_ptr<const Device>& device,
                                                  bool requires_grad, bool is_leaf, bool retain_grad)
-    : EagerMirroredTensorImpl(shape, dtype, device,
-                              std::make_shared<TensorStorage>(parallel_desc()), requires_grad,
-                              is_leaf, retain_grad) {}
+    : EagerMirroredTensorImpl(
+        shape, dtype, device,
+        std::make_shared<TensorStorage>(CHECK_JUST(Device::MakeParallelDescByDevice(*device))),
+        requires_grad, is_leaf, retain_grad) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
@@ -83,11 +84,13 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       shape_(shape),
       dtype_(dtype),
       tensor_storage_(tensor_storage),
-      infer_local_dep_object_(new VmLocalDepObject(parallel_desc())) {}
+      infer_local_dep_object_(new VmLocalDepObject(parallel_desc())) {
+  InitEagerBlobObject();
+}
 
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
-    const std::shared_ptr<MemoryCase>& mem_case) {
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject() {
   CHECK_OR_RETURN(!static_cast<bool>(eager_blob_object_));
+  const std::shared_ptr<MemoryCase>& mem_case = device()->mem_case_ptr();
   eager_blob_object_.reset(
       new eager::EagerBlobObject(mem_case, std::const_pointer_cast<Shape>(shape_),
                                  dtype_->data_type(), tensor_storage_->buffer()));
