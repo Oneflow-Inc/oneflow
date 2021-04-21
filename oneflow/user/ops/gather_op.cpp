@@ -92,15 +92,21 @@ REGISTER_USER_OP_GRAD("gather").SetGenBackwardOpConfFn([](const user_op::UserOpW
                                                           user_op::AddOpFn AddOp) {
   bool need_grad_in = op.NeedGenGradTensor4OpInput("in", 0);
   if (need_grad_in) {
+    const user_op::TensorDesc& out_tensor_desc = op.TensorDesc4ArgNameAndIndex("out", 0);
     user_op::UserOpConfWrapperBuilder in_grad_builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper in_grad_op =
-        in_grad_builder.Op("unsorted_segment_sum_like")
-            .Input("data", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("segment_ids", op.input("indices", 0))
-            .Input("like", op.input("in", 0))
-            .Output("out")
-            .Attr("axis", op.attr<int64_t>("axis"))
-            .Build();
+    const auto axis = op.attr<int64_t>("axis");
+    in_grad_builder.Input("data", op.GetGradTensorWithOpOutput("out", 0))
+        .Input("segment_ids", op.input("indices", 0))
+        .Output("out")
+        .Attr("axis", axis);
+    if (out_tensor_desc.is_dynamic()) {
+      in_grad_builder.Op("unsorted_segment_sum_like").Input("like", op.input("in", 0));
+    } else {
+      const user_op::TensorDesc& in_tensor_desc = op.TensorDesc4ArgNameAndIndex("in", 0);
+      in_grad_builder.Op("unsorted_segment_sum")
+          .Attr<int64_t>("num_segments", in_tensor_desc.shape().At(axis));
+    }
+    const user_op::UserOpConfWrapper in_grad_op = in_grad_builder.Build();
     op.BindGradTensorWithOpInput(in_grad_op.output("out", 0), "in", 0);
     AddOp(in_grad_op);
   }
