@@ -17,15 +17,9 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
-
-namespace one {
-
-class UserOpExpr;
-
-}  // namespace one
-
 namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
@@ -156,5 +150,4 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
                                           const std::string& name);
 
 }  // namespace op_expr_helper
-
 }  // namespace oneflow
