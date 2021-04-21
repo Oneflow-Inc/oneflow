@@ -666,9 +666,9 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     id += 1;
   });
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
-    const int64_t node_id = (*node2id).at(node);
+    const int64_t node_id = node2id->at(node);
     ForEachInNode(node, [&](NodeType* in_node) {
-      const int64_t in_node_id = (*node2id).at(in_node);
+      const int64_t in_node_id = node2id->at(in_node);
       auto& bitset_vec = id2ancestor->at(node_id);
       bitset_vec.SetTrue(in_node_id);
       bitset_vec.Merge(id2ancestor->at(in_node_id));
