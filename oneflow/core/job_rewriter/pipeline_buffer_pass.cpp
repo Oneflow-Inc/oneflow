@@ -64,13 +64,15 @@ bool IsForwardPassScope(const Scope& scope) {
 
 bool IsBackwardPassScope(const Scope& scope) {
   const std::string& calculation_pass_name = scope.scope_proto().calculation_pass_name();
-  return calculation_pass_name == kBackwardPass || calculation_pass_name == kOptimizerPass;
+  return calculation_pass_name == kBackwardPass;
 }
 
 bool IsIdentityBufferOpNode(const OpNode* node) {
   const OperatorConf& op_conf = node->op().op_conf();
   if (op_conf.has_user_conf()) {
-    if (op_conf.user_conf().op_type_name() == "identity_buffer") { return true; }
+    const std::string& op_type_name = op_conf.user_conf().op_type_name();
+    if (op_type_name == "identity_buffer" || op_type_name == "repeat") { return true; }
+    if (op_conf.name().find("loss-") != std::string::npos) { return true; }
   }
   return false;
 }

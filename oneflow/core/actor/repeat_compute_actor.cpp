@@ -53,7 +53,7 @@ void RepeatCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
   const RegstDescProto& out_regst_desc = proto.produced_regst_desc().at("out");
   CHECK(!out_regst_desc.enable_reuse_mem());
-  CHECK_EQ(out_regst_desc.register_num(), 1);
+  // CHECK_EQ(out_regst_desc.register_num(), 1);
   OF_SET_MSG_HANDLER(&RepeatCompActor::HandlerNormal);
 }
 
