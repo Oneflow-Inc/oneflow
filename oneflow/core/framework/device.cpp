@@ -23,6 +23,11 @@ namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
+Device::Device(const std::string& type, int64_t device_id)
+    : type_(type),
+      device_id_(device_id),
+      hash_value_(std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id_)) {}
+
 std::string Device::of_type() const {
   if (type_ == "cuda") {
     return "gpu";
