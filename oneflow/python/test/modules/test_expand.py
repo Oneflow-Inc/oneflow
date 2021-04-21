@@ -99,6 +99,16 @@ class TestModule(flow.unittest.TestCase):
         of_out = flow.tmp.expand(of_input, expand_size=expand_dim)
 
         test_case.assertTrue(np.allclose(of_out.numpy(), out_np))
+    
+    def test_expand_v3(test_case):
+        input_shape = (1, 6, 5, 3)
+        expand_dim = [4, 6, 5, 3]
+        input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+        of_input = flow.Tensor(input, dtype=flow.float32)
+        of_out = flow.tmp.expand(of_input, expand_size=expand_dim)
+
+        test_case.assertTrue(np.allclose(of_out.numpy(), out_np))
+
 
 if __name__ == "__main__":
     unittest.main()
