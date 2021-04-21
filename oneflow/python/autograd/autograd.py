@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from oneflow_api import TensorTuple
+from typing import Union, Sequence, Tuple
+
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow_api import TensorTuple
 from oneflow_api.autograd import grad as grad_api
 from oneflow_api.autograd import backward as backward_api
-from typing import Union, Sequence, Tuple
 
 
 def _convert2tensor_tuple(args: Union[Tensor, Sequence[Tensor], None]):
