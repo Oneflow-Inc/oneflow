@@ -16,59 +16,32 @@ limitations under the License.
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
+import oneflow
+import oneflow._oneflow_internal
 
-def import_secondary_module(name, path):
-    import importlib.machinery
-    import importlib.util
-
-    loader = importlib.machinery.ExtensionFileLoader(name, path)
-    spec = importlib.util.spec_from_loader(name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
-
-
-def import_oneflow_internal2():
-    import oneflow
-    import os
-    from os.path import dirname
-    import imp
-
-    fp, pathname, description = imp.find_module(
-        "_oneflow_internal", [dirname(__file__)]
-    )
-    assert os.path.isfile(pathname)
-    return import_secondary_module("oneflow_api", pathname)
-
-
-oneflow_api = import_oneflow_internal2()
-
-Size = oneflow_api.Size
-device = oneflow_api.device
-placement = oneflow_api.PlacementSymbol
-no_grad = oneflow_api.autograd.no_grad
+Size = oneflow._oneflow_internal.Size
+device = oneflow._oneflow_internal.device
+placement = oneflow._oneflow_internal.PlacementSymbol
+no_grad = oneflow._oneflow_internal.autograd.no_grad
 
 # define dtype at the begining of oneflow init
 
-locals()["dtype"] = oneflow_api.dtype
-locals()["char"] = oneflow_api.char
-locals()["float16"] = oneflow_api.float16
-locals()["half"] = oneflow_api.float16
-locals()["float32"] = oneflow_api.float32
-locals()["float"] = oneflow_api.float
-locals()["double"] = oneflow_api.double
-locals()["float64"] = oneflow_api.float64
-locals()["int8"] = oneflow_api.int8
-locals()["int"] = oneflow_api.int32
-locals()["int32"] = oneflow_api.int32
-locals()["int64"] = oneflow_api.int64
-locals()["long"] = oneflow_api.int64
-locals()["uint8"] = oneflow_api.uint8
-locals()["record"] = oneflow_api.record
-locals()["tensor_buffer"] = oneflow_api.tensor_buffer
-
-del import_secondary_module
-del import_oneflow_internal2
+locals()["dtype"] = oneflow._oneflow_internal.dtype
+locals()["char"] = oneflow._oneflow_internal.char
+locals()["float16"] = oneflow._oneflow_internal.float16
+locals()["half"] = oneflow._oneflow_internal.float16
+locals()["float32"] = oneflow._oneflow_internal.float32
+locals()["float"] = oneflow._oneflow_internal.float
+locals()["double"] = oneflow._oneflow_internal.double
+locals()["float64"] = oneflow._oneflow_internal.float64
+locals()["int8"] = oneflow._oneflow_internal.int8
+locals()["int"] = oneflow._oneflow_internal.int32
+locals()["int32"] = oneflow._oneflow_internal.int32
+locals()["int64"] = oneflow._oneflow_internal.int64
+locals()["long"] = oneflow._oneflow_internal.int64
+locals()["uint8"] = oneflow._oneflow_internal.uint8
+locals()["record"] = oneflow._oneflow_internal.record
+locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
 from oneflow.python.version import __version__
 
@@ -85,15 +58,14 @@ import oneflow.python_gen.__export_symbols__
 import atexit
 import oneflow.python.framework.c_api_util
 import oneflow.python.framework.register_class_method_util as register_class_method_util
-import oneflow_api
 
-INVALID_SPLIT_AXIS = oneflow_api.INVALID_SPLIT_AXIS
+INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
 
-atexit.register(oneflow_api.DestroyEnv)
+atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
-atexit.register(oneflow_api.SetShuttingDown)
+atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 del atexit
 
 import sys
@@ -103,7 +75,7 @@ __original_exit__ = sys.exit
 
 def custom_exit(returncode):
     if returncode != 0:
-        oneflow_api.MasterSendAbort()
+        oneflow._oneflow_internal.MasterSendAbort()
     __original_exit__(returncode)
 
 

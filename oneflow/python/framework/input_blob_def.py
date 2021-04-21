@@ -32,15 +32,19 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow._oneflow_internal
 from functools import reduce
 import traceback
 
 
 class ArgBlobDef(object):
     def __init__(
-        self, shape, dtype, name=None, distribute=oneflow_api.distribute.auto(),
+        self,
+        shape,
+        dtype,
+        name=None,
+        distribute=oneflow._oneflow_internal.distribute.auto(),
     ):
         lbi = lbi_util.LogicalBlobId()
         if name is None:
@@ -109,7 +113,7 @@ class ArgBlobDef(object):
     def ToInterfaceBlobConf(self):
         interface_blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
         interface_blob_conf.shape.dim.extend(self.shape_)
-        interface_blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        interface_blob_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
             self.dtype_
         )
         interface_blob_conf.is_dynamic = self.is_dynamic
@@ -121,11 +125,20 @@ class ArgBlobDef(object):
         return interface_blob_conf
 
     def _Distribute2Str(self):
-        if type(self.distribute_) is oneflow_api.distribute.AutoDistribute:
+        if (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.AutoDistribute
+        ):
             return ""
-        elif type(self.distribute_) is oneflow_api.distribute.SplitDistribute:
+        elif (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.SplitDistribute
+        ):
             return ":S" + str(self.distribute_.axis)
-        elif type(self.distribute_) is oneflow_api.distribute.BroadcastDistribute:
+        elif (
+            type(self.distribute_)
+            is oneflow._oneflow_internal.distribute.BroadcastDistribute
+        ):
             return ":B"
         else:
             raise NotImplementedError
@@ -219,7 +232,7 @@ class MirroredTensorDef(ArgBlobDef):
 
 def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
     compile_context.CurJobAddMirroredOp(op_conf)
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     num_sub_lbi = c_api_util.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
         job_name, mirrored_lbn
     )
@@ -231,7 +244,9 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
         lbi.set_op_name(sub_lbi.op_name)
         lbi.set_blob_name(sub_lbi.blob_name)
         sub_consistent_blob_list.append(
-            oneflow_api.ConsistentBlob(lbi, "", oneflow_api.distribute.auto())
+            oneflow._oneflow_internal.ConsistentBlob(
+                lbi, "", oneflow._oneflow_internal.distribute.auto()
+            )
         )
 
 
