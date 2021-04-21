@@ -28,7 +28,7 @@ args = parser.parse_args()
 
 
 def StartWorker(env_proto):
-    import oneflow
+    import oneflow._oneflow_internal
 
     oneflow._oneflow_internal.InitEnv(env_proto)
 
