@@ -159,30 +159,15 @@ SliceParams ConstructSliceParams4Value(int64_t seq_len, int64_t batch_size, int6
 }
 
 template<typename T>
-void transpose(DeviceCtx* ctx, const ShapeView& in_shape, const ShapeView& out_shape,
-               const std::vector<int32_t>& perm, const T* in, T* out) {
-  using PackType = int64_t;
-  const size_t pack_size = sizeof(PackType) / sizeof(T);
-  int64_t in_last_dim = in_shape.At(in_shape.NumAxes() - 1);
-  int64_t out_last_dim = out_shape.At(out_shape.NumAxes() - 1);
-  if (pack_size != 1 && perm.back() == perm.size() - 1 && in_last_dim % pack_size == 0) {
-    CHECK_EQ(in_last_dim, out_last_dim);
-    DimVector packed_in_dim_vec;
-    in_shape.ToDimVector(&packed_in_dim_vec);
-    packed_in_dim_vec.back() /= pack_size;
-    const Shape packed_in_shape(packed_in_dim_vec);
-    DimVector packed_out_dim_vec;
-    out_shape.ToDimVector(&packed_out_dim_vec);
-    packed_out_dim_vec.back() /= pack_size;
-    const Shape packed_out_shape(packed_out_dim_vec);
-    NewKernelUtil<DeviceType::kGPU>::Transpose(ctx, packed_in_shape.NumAxes(), packed_in_shape,
-                                               packed_out_shape, perm, packed_in_shape.elem_cnt(),
-                                               reinterpret_cast<const PackType*>(in),
-                                               reinterpret_cast<PackType*>(out));
-  } else {
-    NewKernelUtil<DeviceType::kGPU>::Transpose(ctx, in_shape.NumAxes(), in_shape, out_shape, perm,
-                                               in_shape.elem_cnt(), in, out);
-  }
+void TransposeGpu(DeviceCtx* ctx, const ShapeView& in_shape, const ShapeView& out_shape,
+                  const std::vector<int32_t>& perm, const T* in, T* out) {
+  CHECK_EQ(in_shape.NumAxes(), out_shape.NumAxes());
+  int32_t num_axes = in_shape.NumAxes();
+  CHECK_EQ(num_axes, perm.size());
+  for (int i = 0; i < perm.size(); ++i) { CHECK_EQ(in_shape.At(perm[i]), out_shape.At(i)); }
+  int64_t elem_cnt = in_shape.elem_cnt();
+  NewKernelUtil<DeviceType::kGPU>::Transpose(ctx, num_axes, in_shape, out_shape, perm, elem_cnt, in,
+                                             out);
 }
 
 template<typename T>
@@ -221,8 +206,8 @@ class FusedSelfAttentionQueryMulKeyAndValueGpuKernel final : public user_op::OpK
                                                   tmp_v_tensor->mut_dptr<T>());
     // v from (s, b, n, h) transpose to (b, n, s, h)
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
-    transpose<T>(ctx->device_ctx(), value_shape, v_tensor->shape(), {1, 2, 0, 3},
-                 tmp_v_tensor->dptr<T>(), v_tensor->mut_dptr<T>());
+    TransposeGpu<T>(ctx->device_ctx(), value_shape, v_tensor->shape(), {1, 2, 0, 3},
+                    tmp_v_tensor->dptr<T>(), v_tensor->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -253,8 +238,8 @@ class FusedSelfAttentionQueryMulKeyAndValueGradGpuKernel final : public user_op:
 
     // transpose from (b, n, s, h) to (s, b, n, h)
     Shape value_shape({seq_len, batch_size, num_heads, head_size});
-    transpose<T>(ctx->device_ctx(), v_grad_tensor->shape(), value_shape, {2, 0, 1, 3},
-                 v_grad_tensor->dptr<T>(), tmp_v_tensor->mut_dptr<T>());
+    TransposeGpu<T>(ctx->device_ctx(), v_grad_tensor->shape(), value_shape, {2, 0, 1, 3},
+                    v_grad_tensor->dptr<T>(), tmp_v_tensor->mut_dptr<T>());
     // slice v grad
     SliceParams params = ConstructSliceParams4Value(seq_len, batch_size, num_heads, head_size);
     SliceKernelUtil<DeviceType::kGPU, T>::Backward(
