@@ -376,7 +376,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
 
 def _EagerRunModelSave(var_blobs, snapshot_path):
     path_input_op_conf, path_lbi = _GenModelIOPathInputOpConfAndRetLbi()
-    path_input_blob_objects = {}
+    path_input_blob_objects = oneflow_api.deprecated.BnInOp2BlobObject()
     (
         BuildModelIOPathInputInstruction,
         BuildFeedPathInstruction,
