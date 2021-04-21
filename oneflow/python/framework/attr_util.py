@@ -46,7 +46,7 @@ def SetAttrValue(attr_value, py_value, default_attr_value):
 def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
     attribute = user_op_attr_cfg.AttrValue()
     assert isinstance(attr_name, str)
-    attr_type = oneflow_api.GetUserOpAttrType(op_type_name, attr_name)
+    attr_type = oneflow._oneflow_internal.GetUserOpAttrType(op_type_name, attr_name)
     if attr_type == user_op_attr_cfg.kAtInt32:
         assert isinstance(attr_value, int)
         attribute.set_at_int32(attr_value)
@@ -73,7 +73,9 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
             attribute_mutable_at_shape.add_dim(x)
     elif attr_type == user_op_attr_cfg.kAtDataType:
         assert attr_value in oneflow.dtypes()
-        attr_value = oneflow_api.deprecated.GetProtoDtype4OfDtype(attr_value)
+        attr_value = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+            attr_value
+        )
         assert isinstance(attr_value, int)
         attribute.set_at_data_type(data_type_cfg.DataType(attr_value))
     elif attr_type == user_op_attr_cfg.kAtListInt32:
@@ -99,7 +101,7 @@ def convert_to_user_attr_value(op_type_name, attr_name, attr_value):
         attribute_mutable_at_list_data_type = attribute.mutable_at_list_data_type()
         for x in attr_value:
             assert x in oneflow.dtypes()
-            x = oneflow_api.deprecated.GetProtoDtype4OfDtype(x)
+            x = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(x)
             assert isinstance(x, int)
             attribute_mutable_at_list_data_type.add_val(data_type_cfg.DataType(x))
     elif attr_type == user_op_attr_cfg.kAtListShape:
