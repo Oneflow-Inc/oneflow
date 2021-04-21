@@ -17,7 +17,7 @@ import oneflow as flow
 
 from typing import Optional, Sequence, Sized, Union, List, Tuple
 import collections
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -61,7 +61,8 @@ class Transpose(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.transpose")
+@oneflow_export("transpose")
+@experimental_api
 def transpose(
     a,
     perm: Sequence[int] = None,

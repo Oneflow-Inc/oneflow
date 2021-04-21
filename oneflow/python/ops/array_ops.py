@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from functools import reduce
 from typing import Iterable, List, Optional, Sequence, Union, Tuple
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 
 import numpy as np
 import operator
@@ -417,6 +417,7 @@ def dynamic_reshape(
 
 
 @oneflow_export("transpose")
+@stable_api
 def transpose(
     a: oneflow_api.BlobDesc,
     perm: Sequence[int] = None,

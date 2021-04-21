@@ -17,13 +17,14 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
 from typing import Optional, List, Tuple
 
 
 @oneflow_export("nn.Gather")
+@experimental_api
 class Gather(Module):
     def __init__(
         self, axis: int = 0, sparse_grad: bool = False,
@@ -44,6 +45,7 @@ class Gather(Module):
 
 
 @oneflow_export("nn.Embedding")
+@experimental_api
 class Embedding(Module):
     def __init__(
         self,

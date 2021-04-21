@@ -27,7 +27,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -176,6 +176,7 @@ class _BatchNorm(_NormBase):
 
 
 @oneflow_export("nn.BatchNorm1d")
+@experimental_api
 class BatchNorm1d(_BatchNorm):
     r"""Applies Batch Normalization over a 2D or 3D input (a mini-batch of 1D
     inputs with optional additional channel dimension) as described in the paper
@@ -251,6 +252,7 @@ class BatchNorm1d(_BatchNorm):
 
 
 @oneflow_export("nn.BatchNorm2d")
+@experimental_api
 class BatchNorm2d(_BatchNorm):
     r"""Applies Batch Normalization over a 4D input (a mini-batch of 2D inputs
     with additional channel dimension) as described in the paper

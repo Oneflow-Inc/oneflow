@@ -17,7 +17,7 @@ import oneflow as flow
 
 from typing import Optional, Sequence, Sized, Union
 import collections
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -55,6 +55,7 @@ def _check_axis(axis, shape):
 
 @oneflow_export("Sum")
 @register_op_by_module("sum")
+@experimental_api
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
@@ -174,6 +175,7 @@ class BroadcastMul(Module):
 
 @register_tensor_op_by_module("mul")
 @register_op_by_module("mul")
+@experimental_api
 class Mul(Module):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -222,6 +224,7 @@ class Mul(Module):
 
 @oneflow_export("Mean")
 @register_op_by_module("mean")
+@experimental_api
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     For example:
@@ -337,6 +340,7 @@ class ScalarAdd(Module):
 
 @register_tensor_op_by_module("sub")
 @register_op_by_module("sub")
+@experimental_api
 class Sub(Module):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:

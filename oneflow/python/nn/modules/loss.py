@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -30,6 +30,7 @@ import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.CrossEntropyLoss")
+@experimental_api
 class CrossEntropyLoss(Module):
     r"""
     Args:
@@ -120,6 +121,7 @@ class CrossEntropyLoss(Module):
 
 # TODO(Liang Depeng): just for resnet50, will be removed after refactoring the CrossEntropyLoss
 @oneflow_export("nn.CrossEntropyLossV2")
+@experimental_api
 class CrossEntropyLossV2(Module):
     def __init__(self, reduction: str = "mean",) -> None:
         super().__init__()

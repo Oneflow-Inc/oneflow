@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
@@ -22,6 +22,7 @@ from typing import Optional, List, Tuple
 
 
 @oneflow_export("nn.Identity")
+@experimental_api
 class Identity(Module):
     r"""A placeholder identity operator that is argument-insensitive.
 
@@ -45,6 +46,7 @@ class Identity(Module):
 
 
 @oneflow_export("nn.Linear")
+@experimental_api
 class Linear(Module):
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()

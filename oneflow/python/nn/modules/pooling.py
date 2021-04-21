@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -29,6 +29,7 @@ from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
 
 @oneflow_export("nn.AvgPool2d")
+@experimental_api
 class AvgPool2d(Module):
     r"""Applies a 2D average pooling over an input.
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
@@ -124,6 +125,7 @@ class AvgPool2d(Module):
 
 
 @oneflow_export("nn.MaxPool2d")
+@experimental_api
 class MaxPool2d(Module):
     r"""Applies a 2D max pooling over an input signal composed of several input
     planes.

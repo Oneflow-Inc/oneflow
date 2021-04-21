@@ -24,10 +24,34 @@ from oneflow.python.lib.core.high_order_bool import always_true
 
 def oneflow_export(*api_names, **kwargs):
     def Decorator(func_or_class):
-        func_or_class._ONEFLOW_API = api_names
+        new_api_names = list(api_names)
+        if hasattr(func_or_class, "_ONEFLOW_API_TAG"):
+            if func_or_class._ONEFLOW_API_TAG == "experimental_api":
+                new_api_names = ["experimental." + n for n in new_api_names]
+        else:
+            new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
+        func_or_class._ONEFLOW_API = new_api_names
         return func_or_class
 
     return Decorator
+
+
+def stable_api(func_or_class):
+    func_or_class._ONEFLOW_API_TAG = "stable_api"
+    return func_or_class
+
+
+def experimental_api(func_or_class):
+    func_or_class._ONEFLOW_API_TAG = "experimental_api"
+    return func_or_class
+
+
+# def oneflow_export(*api_names, **kwargs):
+#     def Decorator(func_or_class):
+#         func_or_class._ONEFLOW_API = api_names
+#         return func_or_class
+
+#     return Decorator
 
 
 _DEPRECATED = set()

@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 from typing import Optional, Sequence, Sized, Union, List, Tuple
@@ -43,6 +43,7 @@ def _softmax_need_transpose(x, axis):
 @oneflow_export("nn.Sigmoid")
 @register_tensor_op_by_module("sigmoid")
 @register_op_by_module("sigmoid")
+@experimental_api
 class Sigmoid(Module):
     def __init__(self):
         super().__init__()
@@ -56,6 +57,7 @@ class Sigmoid(Module):
 @oneflow_export("nn.ReLU")
 @register_tensor_op_by_module("relu")
 @register_op_by_module("relu")
+@experimental_api
 class ReLU(Module):
     def __init__(self):
         super().__init__()
@@ -68,6 +70,7 @@ class ReLU(Module):
 
 @oneflow_export("nn.Softmax")
 @register_tensor_op_by_module("softmax")
+@experimental_api
 class Softmax(Module):
     r"""Applies the element-wise function:
     .. math::
@@ -118,6 +121,7 @@ class Softmax(Module):
 
 
 @oneflow_export("nn.LogSoftmax")
+@experimental_api
 class LogSoftmax(Module):
     r"""Thresholds each element of the input Tensor.
     Threshold is defined as:
