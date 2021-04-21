@@ -34,15 +34,13 @@ class EnvGlobalObjectsScope final {
   Maybe<void> Init(const EnvProto& env_proto);
   const Maybe<bool>& is_default_physical_env() const { return is_default_physical_env_; }
 
-  const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device);
+  const std::shared_ptr<const ParallelDesc>& MutParallelDesc4Device(const Device& device);
 
  private:
   Maybe<bool> is_default_physical_env_;
   HashMap<Device, std::shared_ptr<const ParallelDesc>> device2parallel_desc_;
   std::thread::id thread_id_;
 };
-
-const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device);
 
 }  // namespace oneflow
 

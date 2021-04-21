@@ -165,7 +165,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   google::ShutdownGoogleLogging();
 }
 
-const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::ParallelDesc4Device(
+const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
     const Device& device) {
   CHECK(thread_id_ == std::this_thread::get_id());
   {
@@ -184,7 +184,4 @@ const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::ParallelDesc4D
   return device2parallel_desc_.at(device);
 }
 
-const std::shared_ptr<const ParallelDesc>& ParallelDesc4Device(const Device& device) {
-  return Global<EnvGlobalObjectsScope>::Get()->ParallelDesc4Device(device);
-}
 }  // namespace oneflow

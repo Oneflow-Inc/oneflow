@@ -23,6 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 class ParallelDesc;
+class EnvGlobalObjectsScope;
 
 class Device final {
  public:
@@ -38,6 +39,7 @@ class Device final {
   bool operator==(const Device& device) const {
     return type_ == device.type() && device_id_ == device.device_id();
   }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
@@ -47,6 +49,8 @@ class Device final {
   const std::string type_;
   const int64_t device_id_;
   const size_t hash_value_;
+  std::shared_ptr<const ParallelDesc> origin_parallel_desc_;
+  EnvGlobalObjectsScope* origin_env_global_object_scope_;
 };
 
 }  // namespace oneflow

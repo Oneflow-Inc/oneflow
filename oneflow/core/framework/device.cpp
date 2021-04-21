@@ -18,15 +18,34 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
+namespace {
+
+inline size_t HashDevice(const std::string& type, int64_t device_id) {
+  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+}
+}  // namespace
+
 Device::Device(const std::string& type, int64_t device_id)
-    : type_(type),
-      device_id_(device_id),
-      hash_value_(std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id_)) {}
+    : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {
+  origin_env_global_object_scope_ = Global<EnvGlobalObjectsScope>::Get();
+  if (origin_env_global_object_scope_ != nullptr) {
+    origin_parallel_desc_ = origin_env_global_object_scope_->MutParallelDesc4Device(*this);
+  }
+}
+
+const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
+  if (Global<EnvGlobalObjectsScope>::Get() == origin_env_global_object_scope_) {
+    return origin_parallel_desc_;
+  } else {
+    return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
+  }
+}
 
 std::string Device::of_type() const {
   if (type_ == "cuda") {
