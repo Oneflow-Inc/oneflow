@@ -33,22 +33,22 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
 
 #define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                          \
   template<>                                                                                 \
-  const cpp_type& KernelCreateContext::attr<cpp_type>(const std::string& attr_name) const {  \
+  const cpp_type& KernelCreateContext::Attr<cpp_type>(const std::string& attr_name) const {  \
     const auto& attr = Attr4AttrName(attr_name);                                             \
     return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();                   \
   }                                                                                          \
   template<>                                                                                 \
-  const cpp_type& KernelInitContext::attr<cpp_type>(const std::string& attr_name) const {    \
+  const cpp_type& KernelInitContext::Attr<cpp_type>(const std::string& attr_name) const {    \
     const auto& attr = Attr4AttrName(attr_name);                                             \
     return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();                   \
   }                                                                                          \
   template<>                                                                                 \
-  const cpp_type& KernelInferContext::attr<cpp_type>(const std::string& attr_name) const {   \
+  const cpp_type& KernelInferContext::Attr<cpp_type>(const std::string& attr_name) const {   \
     const auto& attr = Attr4AttrName(attr_name);                                             \
     return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();                   \
   }                                                                                          \
   template<>                                                                                 \
-  const cpp_type& KernelComputeContext::attr<cpp_type>(const std::string& attr_name) const { \
+  const cpp_type& KernelComputeContext::Attr<cpp_type>(const std::string& attr_name) const { \
     const auto& attr = Attr4AttrName(attr_name);                                             \
     return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();                   \
   }

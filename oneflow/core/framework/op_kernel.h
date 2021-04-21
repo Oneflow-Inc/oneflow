@@ -65,12 +65,7 @@ class KernelCreateContext {
     return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return attr<T>(attr_name);
-  }
-
-  template<typename T>
-  const T& attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const;
 
  protected:
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
@@ -123,9 +118,7 @@ class KernelInitContext {
     return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return attr<T>(attr_name);
-  }
+  const T& Attr(const std::string& attr_name) const;
 
   template<typename T>
   const T& attr(const std::string& attr_name) const;
@@ -185,12 +178,7 @@ class KernelInferContext {
     return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return attr<T>(attr_name);
-  }
-
-  template<typename T>
-  const T& attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const;
 
   virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
@@ -253,12 +241,7 @@ class KernelComputeContext {
     return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return attr<T>(attr_name);
-  }
-
-  template<typename T>
-  const T& attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const;
 
  protected:
   KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}

@@ -70,12 +70,7 @@ class InferContext {
     return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
   }
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return attr<T>(attr_name);
-  }
-
-  template<typename T>
-  const T& attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const;
 
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
