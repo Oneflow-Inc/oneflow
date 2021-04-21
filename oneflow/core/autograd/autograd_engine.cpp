@@ -178,8 +178,8 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
     bool retain_graph, bool create_graph) {
   ClearReleasedFunctionNodes();
-  std::vector<bool> ori_retain_grad(inputs.size(), false);
   std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
+  std::vector<bool> ori_retain_grad(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
     inputs.at(i)->set_retain_grad(true);
