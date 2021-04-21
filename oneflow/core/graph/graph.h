@@ -675,7 +675,7 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     });
   });
   return [id2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
-    const int64_t dst_id = (*node2id).at(dst);
+    const int64_t dst_id = node2id->at(dst);
     return id2ancestor->at(dst_id).Test(node2id->at(src));
   };
 }
