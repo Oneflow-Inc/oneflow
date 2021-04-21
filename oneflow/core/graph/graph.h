@@ -669,9 +669,9 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const int64_t node_id = node2id->at(node);
     ForEachInNode(node, [&](NodeType* in_node) {
       const int64_t in_node_id = node2id->at(in_node);
-      auto& bitset_vec = id2ancestor->at(node_id);
-      bitset_vec.SetTrue(in_node_id);
-      bitset_vec.Merge(id2ancestor->at(in_node_id));
+      auto& ancestor_bitset_vec = id2ancestor->at(node_id);
+      ancestor_bitset_vec.SetTrue(in_node_id);
+      ancestor_bitset_vec.Merge(id2ancestor->at(in_node_id));
     });
   });
   return [id2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
