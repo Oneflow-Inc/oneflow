@@ -20,7 +20,6 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as tp
-import test_global_storage
 from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
@@ -60,6 +59,7 @@ def diag_grad_np(input, diagonal, output, grad):
 
 def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diagonal):
     assert device_type in ["gpu", "cpu"]
+    np_data_type = type_name_to_np_type[data_type]
     flow_data_type = type_name_to_flow_type[data_type]
     flow.clear_default_session()
     if device_type == "cpu":
@@ -73,6 +73,14 @@ def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diago
     )
     func_config.default_logical_view(flow.scope.consistent_view())
 
+    input_1 = (np.random.random(input_shape) * 100).astype(np_data_type)
+    np_out = np.diag(input_1, diagonal)
+    _grad = np.ones_like(np_out)
+    np_grad = diag_grad_np(input_1, diagonal, np_out, _grad)
+
+    def assert_diag_grad(blob: tp.Numpy):
+        assert np.allclose(blob, np_grad)
+
     @flow.global_function(type="train", function_config=func_config)
     def diag_job(
         input: tp.Numpy.Placeholder(shape=input_shape, dtype=flow.float),
@@ -85,16 +93,11 @@ def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diago
                 initializer=flow.zeros_initializer(),
                 trainable=True,
             )
-        input = input + input_var
-        input = flow.cast_to_current_logical_view(input)
-        input = flow.cast(input, flow_data_type)
-
+            input = input + input_var
+            
+        flow.watch_diff(input, assert_diag_grad)
         output = flow.diag(input, diagonal)
-        if (
-            output.dtype == flow.int64
-            or output.dtype == flow.int8
-            or output.dtype == flow.int32
-        ):
+        if output.dtype in (flow.int8, flow.int32, flow.int64):
             output = flow.cast(output, flow.float)
 
         with flow.scope.placement(device_type, "0:0"):
@@ -102,24 +105,10 @@ def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diago
                 flow.optimizer.PiecewiseConstantScheduler([], [1e-4])
             ).minimize(output)
 
-        flow.watch(input, test_global_storage.Setter("x"))
-        flow.watch_diff(input, test_global_storage.Setter("x_diff"))
-        flow.watch(output, test_global_storage.Setter("output"))
-        flow.watch_diff(output, test_global_storage.Setter("output_diff"))
-
         return output
 
-    # OneFlow
-    input = (np.random.random(input_shape) * 100).astype(data_type)
-    output_of = diag_job(input)
-    output_diff = test_global_storage.Get("output_diff").astype(data_type)
-    x_diff_of = test_global_storage.Get("x_diff").astype(data_type)
-    # np
-    output_np = np.diag(input, diagonal)
-    x_diff_np = diag_grad_np(input, diagonal, output_np, output_diff)
-
-    assert np.allclose(output_of, output_np)
-    assert np.allclose(x_diff_of, x_diff_np)
+    of_out = diag_job(input_1)
+    assert np.allclose(of_out, np_out)
 
 
 @flow.unittest.skip_unless_1n1d()

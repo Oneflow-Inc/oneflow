@@ -23,13 +23,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void copy_to_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t stride) {
+__global__ void vector_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t stride) {
   CUDA_1D_KERNEL_LOOP(i, size) { out_buf[i * stride] = in_buf[i]; }
 }
 
 template<typename T>
-__global__ void copy_from_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size,
-                                          int32_t stride) {
+__global__ void matrix_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t stride) {
   CUDA_1D_KERNEL_LOOP(i, size) { out_buf[i] = in_buf[i * stride]; }
 }
 
@@ -38,11 +37,11 @@ struct DiagFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, T* out_buf, const T* in_buf, int32_t size, int32_t stride,
                   int32_t in_dim) {
     if (in_dim == 1) {
-      copy_to_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
+      vector_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
+                               ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
     } else {
-      copy_from_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
-                                  ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
+      matrix_diagonal_kernel<<<BlocksNum4ThreadsNum(size * size), kCudaThreadsNumPerBlock, 0,
+                               ctx->cuda_stream()>>>(out_buf, in_buf, size, stride);
     }
   }
 };
@@ -52,11 +51,11 @@ struct DiagGradFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, T* dx_buf, const T* dy_buf, int32_t dx_cnt, int32_t dy_cnt,
                   int32_t stride, int32_t in_dim) {
     if (in_dim == 1) {
-      copy_from_diagonal_kernel<<<BlocksNum4ThreadsNum(dx_cnt), kCudaThreadsNumPerBlock, 0,
-                                  ctx->cuda_stream()>>>(dx_buf, dy_buf, dx_cnt, stride);
+      matrix_diagonal_kernel<<<BlocksNum4ThreadsNum(dx_cnt), kCudaThreadsNumPerBlock, 0,
+                               ctx->cuda_stream()>>>(dx_buf, dy_buf, dx_cnt, stride);
     } else {
-      copy_to_diagonal_kernel<<<BlocksNum4ThreadsNum(dy_cnt), kCudaThreadsNumPerBlock, 0,
-                                ctx->cuda_stream()>>>(dx_buf, dy_buf, dy_cnt, stride);
+      vector_diagonal_kernel<<<BlocksNum4ThreadsNum(dy_cnt), kCudaThreadsNumPerBlock, 0,
+                               ctx->cuda_stream()>>>(dx_buf, dy_buf, dy_cnt, stride);
     }
   }
 };
