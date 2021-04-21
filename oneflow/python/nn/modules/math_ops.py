@@ -754,14 +754,10 @@ class Std(Module):
             .Input("input_tensor")
             .Output("output_tensor")
         )
-        self.reduce_sum_op2 = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
-        )
+
         self.reduce_count = 1 # Tensor.nelemenet()
 
-    def forward(self, x, dim=None, unbiased=True, keepdim=False):
+    def forward(self, x, dim=None, unbiased=True, keepdim=True):
         assert unbiased==True, "Only support 'unbiased=True' for now!"
 
         axis = _check_axis(dim, x.shape)
@@ -788,6 +784,30 @@ class Std(Module):
             return res
 
 
+
+@oneflow_export("Pow")
+@register_tensor_op_by_module("pow")
+@register_op_by_module("pow")
+class Pow(Module):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+    .. code-block:: python
+        # Example
+        pow = flow.Pow()
+        x = flow.Tensor(np.array([1,2,3,4,5,6]))
+        out = pow(x,2).numpy()
+        print(out) # [1,4,9,16,25,36]
+    """
+
+    def __init__(self, name: Optional[str] = None) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out")
+
+    def forward(self, x, exponent: Union[int, float]):
+        self._op = self._op.Attr("exponent", float(exponent)).Build()
+        return self._op(x)[0]
 
 
 

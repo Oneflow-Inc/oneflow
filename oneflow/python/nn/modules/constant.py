@@ -16,11 +16,12 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op_by_module, register_op_by_module
 from typing import Optional, Tuple
 
 
 @oneflow_export("Ones")
+@register_tensor_op_by_module("tmp.ones")
 @register_op_by_module("tmp.ones")
 class Ones(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
@@ -57,12 +58,13 @@ class Ones(Module):
 
 
 @oneflow_export("Zeros")
+@register_tensor_op_by_module("tmp.zeros")
 @register_op_by_module("tmp.zeros")
 class Zeros(Module):
     def __init__(self, dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
         if dtype == None or dtype == flow.float:
-            dtype = flow.float
+            dtype = flow.float32
             floating_value = float(0.0)
             integer_value = int(0)
             is_floating_value = True
