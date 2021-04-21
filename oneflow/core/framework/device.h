@@ -23,7 +23,6 @@ limitations under the License.
 namespace oneflow {
 
 class ParallelDesc;
-class EnvGlobalObjectsScope;
 
 class Device final {
  public:
