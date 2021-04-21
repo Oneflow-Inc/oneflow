@@ -21,9 +21,7 @@ limitations under the License.
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace py = pybind11;
 
@@ -43,9 +41,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad, bool is_leaf,
                                                     bool retain_grad) {
-    std::shared_ptr<MirroredTensor> tensor = MirroredTensor::MakeTensor(
-        shape, dtype, device, is_lazy, requires_grad, is_leaf, retain_grad);
-    return tensor;
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
+                                      retain_grad);
   }
 };
 
@@ -56,9 +53,8 @@ struct TensorExportUtil<ConsistentTensor> final {
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad) {
-    std::shared_ptr<ConsistentTensor> tensor = ConsistentTensor::MakeTensor(
-        shape, dtype, distribute, parallel_desc, is_lazy, requires_grad, is_leaf, retain_grad);
-    return tensor;
+    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
+                                        requires_grad, is_leaf, retain_grad);
   }
 };
 
