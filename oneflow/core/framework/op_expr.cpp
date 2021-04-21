@@ -70,14 +70,14 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
 }
 
 Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
-  auto it = device2kernel_.find(device);
+  const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
   op_conf.set_device_tag(device.of_type());
   DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
-  auto mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
+  std::shared_ptr<MemoryCase> mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
   auto opkernel = JUST(
       StatefulOpKernel::New(op_conf, mem_case, &indexed_input_pairs(), &indexed_output_pairs()));
   device2kernel_.emplace(device, opkernel);

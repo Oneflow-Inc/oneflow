@@ -55,10 +55,9 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
-  using OutputFn = std::function<Maybe<void>(eager::EagerBlobObject* tensor)>;
-
-  Maybe<void> ForEachOutputTensor(OutputFn func) {
-    for (const auto& output : *outputs()) { JUST(func(output.get())); }
+  template<typename DoEachT>
+  Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
+    for (const auto& output : *outputs()) { JUST(DoEach(output.get())); }
     return Maybe<void>::Ok();
   }
 
