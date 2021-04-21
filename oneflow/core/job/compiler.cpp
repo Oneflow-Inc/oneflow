@@ -80,7 +80,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
   kernel_conf->set_op_attribute_ref(op_name);
-  kernel_conf->clear_op_attribute();
+  // NOTE(levi): memory of op_attribute_ is released here.
+  kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
