@@ -25,12 +25,12 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.eager.boxing_util as boxing_util
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow._oneflow_internal
 import numpy
 from functools import reduce
 
-blob_register = oneflow_api.GetDefaultBlobRegister()
+blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def AsyncPush(session, job_func, *arg):
@@ -116,12 +116,14 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
     if isinstance(arg_blob_def, input_blob_def.FixedTensorDef):
 
         def get_blob(lbi, blob_object, blob_register):
-            blob = oneflow_api.EagerConsistentBlob(lbi, blob_object, blob_register)
+            blob = oneflow._oneflow_internal.EagerConsistentBlob(
+                lbi, blob_object, blob_register
+            )
             with oneflow.scope.consistent_view():
                 return oneflow.identity(blob)
 
     elif isinstance(arg_blob_def, input_blob_def.MirroredTensorDef):
-        get_blob = oneflow_api.EagerMirroredBlob
+        get_blob = oneflow._oneflow_internal.EagerMirroredBlob
     else:
         raise NotImplementedError
     return get_blob(lbi, blob_object=arg_blob_object, blob_register=blob_register)
@@ -129,25 +131,25 @@ def _CreateEagerInputBlobAndFeedValue(arg_blob_def, arg_ndarray):
 
 def _MakeInputBlobObject(arg_blob_def):
     input_op_conf, lbi = _MakeInputOpConfAndRetLbi(arg_blob_def)
-    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
 
     def BuildInputInstruction(builder):
         op_attribute = arg_blob_def.EagerAddAndInferOp(input_op_conf)
         scope = oneflow.current_scope()
         parallel_conf = scope.device_parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
         builder.StatelessCall(
             cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
         )
 
-    oneflow_api.deprecated.LogicalRun(BuildInputInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInputInstruction)
     return bn_in_op2blob_object["out"], lbi
 
 
 def _GetPhysicalBlobObjects(logical_blob_object, lbi):
-    blob_register = oneflow_api.GetDefaultBlobRegister()
+    blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
     physical_blob_objects = None
 
     def BuildLogical2PhysicalInstruction(builder):
@@ -156,7 +158,7 @@ def _GetPhysicalBlobObjects(logical_blob_object, lbi):
             logical_blob_object
         )
 
-    oneflow_api.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildLogical2PhysicalInstruction)
     return physical_blob_objects
 
 
@@ -235,7 +237,7 @@ class FeedContext(object):
 
 def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
     assert isinstance(blob_def, input_blob_def.ArgBlobDef)
-    assert isinstance(blob_object, oneflow_api.BlobObject)
+    assert isinstance(blob_object, oneflow._oneflow_internal.BlobObject)
 
     FeedBlob = _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object)
     assert callable(FeedBlob)
@@ -248,7 +250,7 @@ def _FeedValueToInputPhysicalBlob(feed_ctx, blob_def, blob_object):
             blob_object.object_id, python_callback.GetIdForRegisteredCallback(FeedBlob)
         )
 
-    oneflow_api.deprecated.PhysicalRun(BuildFeedInstruction)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildFeedInstruction)
 
 
 def _MakeFeedBlobCallback(feed_ctx, blob_def, blob_object):
