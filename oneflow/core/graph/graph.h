@@ -630,7 +630,6 @@ class BitSetVec {
   bool Test(int64_t pos) {
     int64_t index = pos / BITSET_SIZE;
     int64_t remain = pos % BITSET_SIZE;
-    bitset_vec_.at(index).set(remain, true);
     return bitset_vec_.at(index).test(remain);
   }
 
