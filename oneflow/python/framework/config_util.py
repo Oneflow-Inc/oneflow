@@ -447,6 +447,23 @@ def enable_tensor_float_32_compute(val=True):
     sess.config_proto.resource.enable_tensor_float_32_compute = val
 
 
+@oneflow_export("config.enable_mem_chain_merge")
+def api_enable_mem_chain_merge(val: bool = True) -> None:
+    r"""Whether or not to enable MemChain merge.
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_mem_chain_merge, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_mem_chain_merge(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_mem_chain_merge = val
+
+
 @oneflow_export("config.nccl_use_compute_stream")
 def api_nccl_use_compute_stream(val: bool = False) -> None:
     r"""Whether or not nccl use compute stream to reuse nccl memory and speedup
