@@ -16,9 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-
 import oneflow as flow
-import oneflow.typing as tp
 
 
 @unittest.skipIf(
@@ -26,11 +24,12 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_identity(test_case):
-        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        x = flow.Tensor(np.random.rand(2, 3, 4, 5))
-        y = m(x)
-        test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
+    def test_less(test_case):
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = flow.lt(input1, input2)
+        np_out = np.less(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
 if __name__ == "__main__":

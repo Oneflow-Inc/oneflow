@@ -18,6 +18,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 
+
 def np_repeat(x, sizes):
     return np.tile(x, sizes)
 
