@@ -282,20 +282,20 @@ void InitTensorTupleIndexes4Bns(const OperatorConf& op_conf, const ArgVec* index
 
 StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
                                    const std::shared_ptr<MemoryCase>& mem_case,
-                                   const ArgVec* indexed_input_pairs,
-                                   const ArgVec* indexed_output_pairs)
+                                   const ArgVec indexed_input_pairs,
+                                   const ArgVec indexed_output_pairs)
     : op_conf_(op_conf),
       mem_case_(mem_case),
       indexed_input_pairs_(indexed_input_pairs),
       indexed_output_pairs_(indexed_output_pairs),
       need_check_mem_case_(true) {
   op_infer_ctx_.reset(
-      new LocalUserOpInferContext(op_conf, indexed_input_pairs, indexed_output_pairs));
-  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, indexed_input_pairs,
-                                                       indexed_output_pairs));
+      new LocalUserOpInferContext(op_conf, &indexed_input_pairs_, &indexed_output_pairs_));
+  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, &indexed_input_pairs_,
+                                                       &indexed_output_pairs_));
   create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
   reg_ctx_.reset(
-      new LocalUserKernelRegContext(op_conf, indexed_input_pairs_, indexed_output_pairs_));
+      new LocalUserKernelRegContext(op_conf, &indexed_input_pairs_, &indexed_output_pairs_));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
   CHECK_NOTNULL(op_reg_val);
@@ -306,7 +306,7 @@ StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
   }
   data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 
-  InitTensorTupleIndexes4Bns(op_conf, indexed_input_pairs, indexed_output_pairs,
+  InitTensorTupleIndexes4Bns(op_conf, &indexed_input_pairs_, &indexed_output_pairs_,
                              &input_tuple_indexes4const_ibns_, &input_tuple_indexes4mut_ibns_,
                              &output_tuple_indexes4mut_obns_, &output_tuple_indexes4mut2_obns_);
 
@@ -347,7 +347,7 @@ void StatefulOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_kernel,
   }
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      device_ctx, op_conf_, indexed_input_pairs_, indexed_output_pairs_, inputs, outputs);
+      device_ctx, op_conf_, &indexed_input_pairs_, &indexed_output_pairs_, inputs, outputs);
   auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(op_kernel, created_state);
   *state = created_state.get();

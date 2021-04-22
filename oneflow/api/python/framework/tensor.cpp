@@ -63,10 +63,16 @@ void ExportTensor(py::module& m, const char* name) {
   py::class_<T, Tensor, std::shared_ptr<T>>(m, name)
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
-      .def_property_readonly("shape", &T::shape)
+      // The following code doesn't actually release the gil:
+      // .def_property_readonly("shape", &T::shape, py::call_guard<py::gil_scoped_release>())
+      // reference:
+      // https://github.com/pybind/pybind11/issues/2618
+      .def_property_readonly("shape",
+                             py::cpp_function(&T::shape, py::call_guard<py::gil_scoped_release>()))
       .def_property_readonly("device", &T::device)
       .def_property_readonly("is_cuda", &T::is_cuda)
-      .def_property_readonly("dtype", &T::dtype)
+      .def_property_readonly("dtype",
+                             py::cpp_function(&T::dtype, py::call_guard<py::gil_scoped_release>()))
       .def_property_readonly("data", &T::data)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)

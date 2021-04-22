@@ -27,6 +27,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape.pb.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/operator/op_attribute.cfg.h"
@@ -49,6 +51,27 @@ Maybe<one::UserOpExpr> OnesLikeOp() {
   AttrValue conf;
   conf.set_at_float(1.0);
   return one::OpBuilder("constant_like").Input("like").Output("out").Attr("value", conf).Build();
+}
+
+Maybe<one::UserOpExpr> ZerosOp(DataType data_type, const Shape& shape) {
+  AttrValue floating_value;
+  floating_value.set_at_double(0.0);
+  AttrValue integer_value;
+  integer_value.set_at_int64(0);
+  AttrValue is_floating_value;
+  is_floating_value.set_at_bool(true);
+  AttrValue dtype;
+  dtype.set_at_data_type(data_type);
+  AttrValue shape_attr;
+  shape.ToProto(shape_attr.mutable_at_shape());
+  return one::OpBuilder("constant")
+      .Output("out")
+      .Attr("floating_value", floating_value)
+      .Attr("integer_value", integer_value)
+      .Attr("is_floating_value", is_floating_value)
+      .Attr("dtype", dtype)
+      .Attr("shape", shape_attr)
+      .Build();
 }
 
 }  // namespace op_expr_helper

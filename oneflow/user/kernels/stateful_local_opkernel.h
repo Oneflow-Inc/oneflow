@@ -221,7 +221,7 @@ class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
   StatefulOpKernel(const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
-                   const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+                   const ArgVec indexed_input_pairs, const ArgVec indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
@@ -272,8 +272,8 @@ class StatefulOpKernel final {
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
+  const ArgVec indexed_input_pairs_;
+  const ArgVec indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;

@@ -15,10 +15,16 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow_api
+import time
 from oneflow.python.framework.attr_util import convert_to_user_attr_value
+
+i = 0
+t = 0
 
 
 def user_op_expr_call(self, *args, **kwargs):
+    global i, t
+    start = time.time()
     args = list(args)
     for i in range(len(args)):
         arg = args[i]
@@ -34,7 +40,12 @@ def user_op_expr_call(self, *args, **kwargs):
             self.op_type_name, attr_name, attr_value
         )
 
+    end = time.time()
     results = list(self.apply(args, attrs))
+    t += end - start
+    i += 1
+    if i == 1000:
+        print(t)
     for i, out in enumerate(results):
         tensor = flow.Tensor(*out.shape)
         tensor._local_or_consistent_tensor = out

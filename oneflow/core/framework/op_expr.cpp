@@ -46,8 +46,8 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
   // TODO: align with pytorch: set device tag in Interpret according to inputs
   op_conf.set_device_tag("gpu");
   auto mem_case = MemoryCaseUtil::MakeMemCase(DeviceType::kGPU, 0);
-  kernel_ = std::make_shared<StatefulOpKernel>(op_conf, mem_case, &indexed_input_pairs(),
-                                               &indexed_output_pairs());
+  kernel_ = std::make_shared<StatefulOpKernel>(op_conf, mem_case, indexed_input_pairs(),
+                                               indexed_output_pairs());
 }
 
 Maybe<void> UserOpExpr::BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const {

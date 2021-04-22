@@ -26,9 +26,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class Shape;
 
 namespace one {
 
@@ -45,6 +48,8 @@ Maybe<one::UserOpExpr> AddOp();
 Maybe<one::UserOpExpr> ZeroLikeOp();
 
 Maybe<one::UserOpExpr> OnesLikeOp();
+
+Maybe<one::UserOpExpr> ZerosOp(DataType data_type, const Shape& shape);
 
 }  // namespace op_expr_helper
 

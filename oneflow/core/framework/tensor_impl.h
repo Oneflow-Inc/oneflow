@@ -209,15 +209,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                          const std::shared_ptr<const DType>& dtype,
-                          const std::shared_ptr<const Device>& device, bool requires_grad,
-                          bool is_leaf, bool retain_grad);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                          const std::shared_ptr<const DType>& dtype,
-                          const std::shared_ptr<const Device>& device,
-                          const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
-                          bool is_leaf, bool retain_grad);
   EagerMirroredTensorImpl(const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
                           const std::shared_ptr<const Device>& device, bool requires_grad,
                           bool is_leaf, bool retain_grad);

@@ -76,15 +76,21 @@ class TestModule(flow.unittest.TestCase):
                 .Output("out")
                 .Build()
             )
-            x = op1()[0]
-            start = time.time()
-            for _ in range(100):
-                x = op1()[0]
-                for _ in range(10):
-                    x = op2(x, x)[0]
+            x = flow.Tensor([[1, 2]])
+            y = flow.Tensor([[1], [2]])
+            print(x.shape)
+            print(y.shape)
+            print(op2(x, y)[0].numpy())
+            # x = op1()[0]
+            # start = time.time()
+            # for _ in range(1000):
+            #     x = flow.Tensor(1000, 1000)
+            #     for _ in range(10):
+            #         x = op2(x, x)[0]
 
-            end = time.time()
-            print(end - start)
+        #
+        # end = time.time()
+        # print(end - start)
 
         job()
 

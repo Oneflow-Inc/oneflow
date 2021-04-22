@@ -70,28 +70,12 @@ Maybe<void> EagerConsistentTensorImpl::set_blob_object(
   return SyncBlobObject2Attributes(blob_object);
 }
 
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                                                 const std::shared_ptr<const DType>& dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool requires_grad, bool is_leaf, bool retain_grad)
-    : EagerMirroredTensorImpl(shape, dtype, device, nullptr, requires_grad, is_leaf, retain_grad) {
-  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
-}
-
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const Device>& device,
-    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf,
-    bool retain_grad)
-    : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
-      tensor_storage_(tensor_storage) {}
-
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf, bool retain_grad)
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
       eager_blob_object_(eager_blob_object) {
-  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
+  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {

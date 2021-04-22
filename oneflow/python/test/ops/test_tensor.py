@@ -34,6 +34,72 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_mirrored_numpy4(test_case):
+        np_arr = np.random.random((1000, 1000))
+        while True:
+            x = flow.Tensor(np_arr)
+            y = x.numpy()
+
+        func_config = flow.FunctionConfig()
+        # func_config.default_logical_view(flow.scope.mirrored_view())
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            x = flow.Tensor(np.random.random((1000, 1000)))
+            while True:
+                y = x.numpy()
+
+        job()
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_mirrored_numpy3(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            tensor = flow.Tensor(
+                2, 3, data_initializer=flow.ones_initializer(flow.float32)
+            )
+            print(tensor.numpy())
+
+        job()
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_mirrored_numpy2(test_case):
+        func_config = flow.FunctionConfig()
+        func_config.default_logical_view(flow.scope.mirrored_view())
+
+        @flow.global_function(function_config=func_config)
+        def job():
+            x1 = flow.Tensor([[1, 2]])
+            x2 = flow.Tensor([[1], [2]])
+            print(x1.numpy())
+            op = (
+                flow.builtin_op("matmul")
+                .Input("a")
+                .Input("b")
+                .Attr("transpose_a", False)
+                .Attr("transpose_b", False)
+                .Attr("alpha", float(1.0))
+                .Output("out")
+                .Build()
+            )
+            y = op(x1, x2)[0]
+            print(y.numpy())
+
+        job()
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_mirrored_numpy(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
@@ -52,7 +118,11 @@ class TestTensor(flow.unittest.TestCase):
                 .Build()
             )
             tensor = op()[0]
-            test_case.assertTrue(np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32)))
+            test_case.assertTrue(
+                np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
+            )
+            tensor.copy_(np.array([[4, 5, 6], [7, 8, 9]]))
+            print(tensor.numpy())
 
         job()
 
