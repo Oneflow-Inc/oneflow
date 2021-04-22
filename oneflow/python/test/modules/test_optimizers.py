@@ -37,7 +37,9 @@ def compare_with_numpy_sgd(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        sgd = flow.optim.SGD([{"param": param_list}], lr=learning_rate, momentum=momentum, scale=scale)
+        sgd = flow.optim.SGD(
+            [{"param": param_list}], lr=learning_rate, momentum=momentum, scale=scale
+        )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
