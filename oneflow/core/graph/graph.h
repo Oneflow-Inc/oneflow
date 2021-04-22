@@ -629,7 +629,7 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     void Merge(const BitSet& other) {
       CHECK_EQ(bitset_vec_.size(), other.bitset_vec_.size());
       for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
-        bitset_vec_.at(i) &= other.bitset_vec_.at(i);
+        bitset_vec_.at(i) |= other.bitset_vec_.at(i);
       }
     }
 
