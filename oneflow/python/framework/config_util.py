@@ -19,7 +19,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -53,7 +53,7 @@ def api_load_library_now(val: str) -> None:
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def load_library_now(val):
     assert type(val) is str
-    oneflow_api.LoadLibraryNow(val)
+    oneflow._oneflow_internal.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")
@@ -81,7 +81,7 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    if oneflow_api.flags.with_cuda():
+    if oneflow._oneflow_internal.flags.with_cuda():
         return enable_if.unique([gpu_device_num, do_nothing])(val)
     else:
         print(
