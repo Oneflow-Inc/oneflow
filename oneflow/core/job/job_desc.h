@@ -61,6 +61,7 @@ class JobDesc final {
   };
   bool prune_parallel_cast_ops() const { return job_conf_.prune_parallel_cast_ops(); }
   bool prune_cast_to_static_shape_ops() const { return job_conf_.prune_cast_to_static_shape_ops(); }
+  bool prune_amp_white_identity_ops() const { return job_conf_.prune_amp_white_identity_ops(); }
   int64_t cudnn_buf_limit_mbyte() const { return job_conf_.cudnn_buf_limit_mbyte(); }
 
   bool has_xrt_config() const { return job_conf_.has_xrt_config(); }

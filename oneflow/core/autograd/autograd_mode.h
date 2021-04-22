@@ -35,6 +35,11 @@ class AutoGradMode {
   bool prev_mode_;
 };
 
+class NoGradGuard : public AutoGradMode {
+ public:
+  NoGradGuard() : AutoGradMode(false){};
+};
+
 }  // namespace autograd
 
 }  // namespace oneflow
