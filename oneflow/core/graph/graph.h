@@ -609,33 +609,6 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable() const {
                                    &NodeType::ForEachNodeOnOutEdge);
 }
 
-static const int64_t BITSET_SIZE = 8 * 512;
-
-class BitSetVec {
-  using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
-
- public:
-  BitSetVec() = default;
-  ~BitSetVec() = default;
-
-  void Insert(int64_t pos) { bitset_vec_.at(pos / BITSET_SIZE).set(pos % BITSET_SIZE, true); }
-
-  bool Contains(int64_t pos) { return bitset_vec_.at(pos / BITSET_SIZE).test(pos % BITSET_SIZE); }
-
-  void Merge(const BitSetVec& other) {
-    CHECK_EQ(bitset_vec_.size(), other.VecSize());
-    for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
-      bitset_vec_.at(i) &= other.bitset_vec_.at(i);
-    }
-  }
-
-  int64_t VecSize() const { return bitset_vec_.size(); }
-  void VecResize(size_t size) { bitset_vec_.resize(size); }
-
- private:
-  bitset_vec bitset_vec_;
-};
-
 template<typename NodeType, typename EdgeType>
 std::function<bool(const NodeType* src, const NodeType* dst)>
 Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
@@ -643,16 +616,42 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
+  static constexpr int64_t BITSET_SIZE = 512;  // size of cache line
+  class BitSet {
+   public:
+    BitSet() = default;
+    ~BitSet() = default;
+
+    void Insert(int64_t k) { bitset_vec_.at(k / BITSET_SIZE).set(k % BITSET_SIZE, true); }
+
+    bool Contains(int64_t k) { return bitset_vec_.at(k / BITSET_SIZE).test(k % BITSET_SIZE); }
+
+    void Merge(const BitSet& other) {
+      CHECK_EQ(bitset_vec_.size(), other.bitset_vec_.size());
+      for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
+        bitset_vec_.at(i) &= other.bitset_vec_.at(i);
+      }
+    }
+
+    void Resize(size_t size) {
+      const int64_t bitset_vec_size = RoundUp(size, BITSET_SIZE) / BITSET_SIZE;
+      bitset_vec_.resize(bitset_vec_size);
+    }
+
+   private:
+    using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
+    bitset_vec bitset_vec_;
+  };
+
   using NodePtr2Id = HashMap<const NodeType*, int64_t>;
-  using Id2Ancestor = std::vector<BitSetVec>;
+  using Id2Ancestor = std::vector<BitSet>;
   std::shared_ptr<NodePtr2Id> node2id(new NodePtr2Id);
   std::shared_ptr<Id2Ancestor> id2ancestor(new Id2Ancestor(node_num()));
   int64_t id = 0;
-  const int64_t bitset_num = RoundUp(node_num(), BITSET_SIZE) / BITSET_SIZE;
   node2id->reserve(node_num());
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
     node2id->emplace(node, id);
-    id2ancestor->at(id).VecResize(bitset_num);
+    id2ancestor->at(id).Resize(node_num());
     id += 1;
   });
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
