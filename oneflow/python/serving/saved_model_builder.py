@@ -19,7 +19,7 @@ import typing
 from google.protobuf import text_format
 
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
@@ -199,13 +199,13 @@ class GraphBuilder(object):
         for _, signature_def in self.proto.signatures.items():
             for _, input_def in signature_def.inputs.items():
                 input_lbn = Lbi2Lbn(input_def.lbi)
-                oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
+                oneflow._oneflow_internal.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, input_lbn
                 )
                 GetInterfaceBlobConf(self.name, input_lbn, input_def.blob_conf)
 
             for _, output_def in signature_def.outputs.items():
-                oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
+                oneflow._oneflow_internal.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, Lbi2Lbn(output_def.lbi)
                 )
 

@@ -35,8 +35,8 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api.oneflow.core.common.data_type as data_type_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow._oneflow_internal
 import traceback
 import sys
 
@@ -240,7 +240,9 @@ def set_default_data_type(func_desc, value):
         value ([type]): data type. e.g. flow.float
     """
     func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(value))
+        data_type_cfg.DataType(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(value)
+        )
     )
 
 
