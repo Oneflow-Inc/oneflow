@@ -87,7 +87,7 @@ void Transport::HandlerAchievedTransportSendMsgFromSrcMachine(const TransportMsg
   // store callback.
   TransportStatus* stat = nullptr;
 
-  // if recv_before_send is ture, it means the Receive() method has been called before this handler
+  // if recv_before_send is true, it means the Receive() method has been called before this handler
   bool recv_before_send = false;
   {
     std::unique_lock<std::mutex> lock(status_mutex_);
