@@ -269,7 +269,6 @@ def set_exp_run_conf(value):
     pb_util.PythonDict2CFG(value, func_desc.job_config_proto.mutable_exp_run_conf())
 
 
-
 @oneflow_function_config("static_mem_alloc_policy_white_list.has")
 def static_mem_alloc_policy_white_list_has_policy(func_desc, policy):
     r"""Get items from white list related to static memory allocation policy
