@@ -95,6 +95,20 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
+const HashMap<std::string, std::shared_ptr<AttrVal>>& UserOpConfWrapper::attrs() const {
+  return attrs_;
+}
+
+const std::shared_ptr<AttrVal>& UserOpConfWrapper::Attr4AttrName(
+    const std::string& attr_name) const {
+  const auto& it = attrs_.find(attr_name);
+  if (it != attrs_.end()) {
+    return it->second;
+  } else {
+    LOG(FATAL) << "Cannot find the attr: " << attr_name;
+  }
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
   template<>                                                                                       \
   const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
