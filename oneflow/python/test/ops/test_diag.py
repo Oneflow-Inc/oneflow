@@ -94,7 +94,7 @@ def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diago
                 trainable=True,
             )
             input = input + input_var
-            
+
         flow.watch_diff(input, assert_diag_grad)
         output = flow.diag(input, diagonal)
         if output.dtype in (flow.int8, flow.int32, flow.int64):
@@ -107,7 +107,7 @@ def _compare_diag_with_np(device_type, device_num, data_type, input_shape, diago
 
         return output
 
-    of_out = diag_job(input_1)
+    of_out = diag_job(input_1.astype(np.float32))
     assert np.allclose(of_out, np_out)
 
 
