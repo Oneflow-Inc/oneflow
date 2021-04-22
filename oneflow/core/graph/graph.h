@@ -618,14 +618,14 @@ class BitSetVec {
   BitSetVec() = default;
   ~BitSetVec() = default;
 
-  void Set(int64_t pos) { bitset_vec_.at(pos / BITSET_SIZE).set(pos % BITSET_SIZE, true); }
+  void Insert(int64_t pos) { bitset_vec_.at(pos / BITSET_SIZE).set(pos % BITSET_SIZE, true); }
 
-  bool Test(int64_t pos) { return bitset_vec_.at(pos / BITSET_SIZE).test(pos % BITSET_SIZE); }
+  bool Contains(int64_t pos) { return bitset_vec_.at(pos / BITSET_SIZE).test(pos % BITSET_SIZE); }
 
-  void Merge(const BitSetVec& extra) {
-    CHECK_EQ(bitset_vec_.size(), extra.VecSize());
+  void Merge(const BitSetVec& other) {
+    CHECK_EQ(bitset_vec_.size(), other.VecSize());
     for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
-      bitset_vec_.at(i) &= extra.bitset_vec_.at(i);
+      bitset_vec_.at(i) &= other.bitset_vec_.at(i);
     }
   }
 
@@ -660,13 +660,13 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     ForEachInNode(node, [&](NodeType* in_node) {
       const int64_t in_node_id = node2id->at(in_node);
       auto& ancestor_bitset_vec = id2ancestor->at(node_id);
-      ancestor_bitset_vec.Set(in_node_id);
+      ancestor_bitset_vec.Insert(in_node_id);
       ancestor_bitset_vec.Merge(id2ancestor->at(in_node_id));
     });
   });
   return [id2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
     const int64_t dst_id = node2id->at(dst);
-    return id2ancestor->at(dst_id).Test(node2id->at(src));
+    return id2ancestor->at(dst_id).Contains(node2id->at(src));
   };
 }
 
