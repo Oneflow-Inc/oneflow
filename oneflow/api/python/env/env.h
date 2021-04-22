@@ -52,7 +52,11 @@ inline Maybe<bool> IsEnvInited() {
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  bool is_default_physical_env =
+      JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env());
   Global<EnvGlobalObjectsScope>::Delete();
+  // Delete default logging file in eager mirrored mode
+  if (is_default_physical_env) { LocalFS()->RecursivelyDeleteDir(FLAGS_log_dir); }
   return Maybe<void>::Ok();
 }
 
