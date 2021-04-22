@@ -284,7 +284,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
 
 /* static */ Maybe<StatefulOpKernel> StatefulOpKernel::New(
     const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
-    const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs) {
+    const std::shared_ptr<const ParallelDesc>& parallel_desc, const ArgVec* indexed_input_pairs,
+    const ArgVec* indexed_output_pairs) {
   auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel(op_conf));
   opkernel->mem_case_ = mem_case;
   opkernel->indexed_input_pairs_ = indexed_input_pairs;
@@ -315,6 +316,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
   opkernel->tmp_blob_object_.reset(
       new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
                                  std::make_shared<eager::TensorBuffer>()));
+  opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
+  opkernel->compute_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
 }
 

@@ -222,6 +222,7 @@ class StatefulOpKernel final {
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
   static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
                                      const std::shared_ptr<MemoryCase>& mem_case,
+                                     const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                      const ArgVec* indexed_input_pairs,
                                      const ArgVec* indexed_output_pairs);
   ~StatefulOpKernel();
@@ -237,6 +238,13 @@ class StatefulOpKernel final {
   }
   const std::vector<int64_t>& output_tuple_indexes4mut2_obns() const {
     return output_tuple_indexes4mut2_obns_;
+  }
+
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
+    return infer_local_dep_object_;
+  }
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
+    return compute_local_dep_object_;
   }
 
  private:
@@ -289,6 +297,8 @@ class StatefulOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
