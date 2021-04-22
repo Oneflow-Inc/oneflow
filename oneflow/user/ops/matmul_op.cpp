@@ -63,13 +63,14 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
+
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+  DataType dtype = *ctx->Dtype4ArgNameAndIndex("a", 0);
+  CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("b", 0), dtype);
   if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
-    const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
-    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-    CHECK_EQ_OR_RETURN(add_to_output->data_type(), out->data_type());
+    CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("_add_to_output", 0), dtype);
   }
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
 
@@ -236,6 +237,207 @@ REGISTER_USER_OP("batch_matmul")
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
       return GenBackwardOpConf4Matmul("batch_matmul", op, AddOp);
+    });
+
+REGISTER_USER_OP("broadcast_matmul")
+    .Input("a")
+    .Input("b")
+    .OptionalInput("_add_to_output")
+    .Output("out")
+    .Attr<bool>("transpose_a", false)
+    .Attr<bool>("transpose_b", false)
+    .Attr<double>("alpha", 1.0)
+    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      bool transpose_a = ctx->Attr<bool>("transpose_a");
+      bool transpose_b = ctx->Attr<bool>("transpose_b");
+
+      const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
+      const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+
+      // NOTE: support broadcast b to a for now
+      // TODO(zwx): support broadcast a to b
+      CHECK_GT_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
+      CHECK_EQ_OR_RETURN(b->shape().NumAxes(), 2);
+      // NOTE: don't support transpose_a for now
+      CHECK_OR_RETURN(!transpose_a);
+
+      DimVector out_dim_vec(a->shape().NumAxes() - 1);
+      FOR_RANGE(int64_t, i, 0, out_dim_vec.size()) { out_dim_vec[i] = a->shape().At(i); }
+      int64_t k = a->shape().At(a->shape().NumAxes() - 1);
+      int64_t n = -1;
+      if (!transpose_b) {
+        CHECK_EQ_OR_RETURN(k, b->shape().At(b->shape().NumAxes() - 2));
+        n = b->shape().At(b->shape().NumAxes() - 1);
+      } else {
+        CHECK_EQ_OR_RETURN(k, b->shape().At(b->shape().NumAxes() - 1));
+        n = b->shape().At(b->shape().NumAxes() - 2);
+      }
+      out_dim_vec.push_back(n);
+      *out->mut_shape() = Shape(out_dim_vec);
+
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      // (b, m, k) * (k, n) when transpose_b is false
+      // (b, m, k) * (n, k) when transpose_b is true
+      bool transpose_a = ctx->Attr<bool>("transpose_a");
+      bool transpose_b = ctx->Attr<bool>("transpose_b");
+      CHECK_OR_RETURN(!transpose_a);
+
+      const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
+      int32_t k_a_axis = a_shape.NumAxes() - 1;
+      int32_t k_b_axis = -1;
+      int32_t n_axis = -1;
+      if (transpose_b) {
+        k_b_axis = 1;
+        n_axis = 0;
+      } else {
+        k_b_axis = 0;
+        n_axis = 1;
+      }
+
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
+      }
+
+      // S(b or m axis) x B -> S(b or m axis)
+      for (int64_t i = 0; i < a_shape.NumAxes() - 1; ++i) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("a", 0), i)
+            .Broadcast(user_op::OpArg("b", 0))
+            .Split(out_and_add_to_output_args, i)
+            .Build();
+      }
+      // B x S(n_axis) -> S(n_axis)
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("a", 0))
+          .Split(user_op::OpArg("b", 0), n_axis)
+          .Split(out_and_add_to_output_args, a_shape.NumAxes() - 1)
+          .Build();
+      // S(a_k_axis) x S(b_k_axis) -> P
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("a", 0), k_a_axis)
+          .Split(user_op::OpArg("b", 0), k_b_axis)
+          .PartialSum(out_and_add_to_output_args)
+          .Build();
+      // P x B -> P
+      ctx->NewBuilder()
+          .PartialSum(user_op::OpArg("a", 0))
+          .Broadcast(user_op::OpArg("b", 0))
+          .PartialSum(out_and_add_to_output_args)
+          .Build();
+      // B x P -> P
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("a", 0))
+          .PartialSum(user_op::OpArg("b", 0))
+          .PartialSum(out_and_add_to_output_args)
+          .Build();
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP("broadcast_matmul_grad_b")
+    .Input("a")
+    .Input("b")
+    .Output("out")
+    .Attr<double>("alpha", 1.0)
+    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
+      const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+
+      CHECK_EQ_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
+      for (int i = 0; i < a->shape().NumAxes() - 1; ++i) {
+        CHECK_EQ_OR_RETURN(a->shape().At(i), b->shape().At(i));
+      }
+
+      *out->mut_shape() =
+          Shape({a->shape().At(a->shape().NumAxes() - 1), b->shape().At(b->shape().NumAxes() - 1)});
+
+      return Maybe<void>::Ok();
+    })
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
+      const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
+      int64_t last_axis = a_shape.NumAxes() - 1;
+
+      // S(b or m axis) x S(b or m axis) -> P
+      for (int64_t i = 0; i < last_axis; ++i) {
+        ctx->NewBuilder()
+            .Split(user_op::OpArg("a", 0), i)
+            .Split(user_op::OpArg("b", 0), i)
+            .PartialSum(user_op::OpArg("out", 0))
+            .Build();
+      }
+
+      // (b, m, k) * (b, m, n) -> (k, n) [transpose a]
+      // S(k) x B -> S(0) or B x S(n) -> S(1)
+      // (b, m, n) * (b, m, k) -> (n, k) [transpose a]
+      // S(n) x B -> S(0) or B x S(k) -> S(1)
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("a", 0), last_axis)
+          .Broadcast(user_op::OpArg("b", 0))
+          .Split(user_op::OpArg("out", 0), 0)
+          .Build();
+      ctx->NewBuilder()
+          .Broadcast(user_op::OpArg("a", 0))
+          .Split(user_op::OpArg("b", 0), last_axis)
+          .Split(user_op::OpArg("out", 0), 1)
+          .Build();
+
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("broadcast_matmul")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> void {
+      bool transpose_a = ctx->FwOp().attr<bool>("transpose_a");
+      bool transpose_b = ctx->FwOp().attr<bool>("transpose_b");
+      double alpha = ctx->FwOp().attr<double>("alpha");
+      CHECK(!transpose_a);
+
+      std::string a_grad_op_name = ctx->FwOp().op_name() + "_a_grad";
+      ctx->DefineOp(a_grad_op_name,
+                    [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+                      return builder.OpTypeName("broadcast_matmul")
+                          .InputBind("a", ctx->FwOp().output_grad("out", 0))
+                          .InputBind("b", ctx->FwOp().input("b", 0))
+                          .Attr<bool>("transpose_a", transpose_a)
+                          .Attr<bool>("transpose_b", !transpose_b)
+                          .Attr<double>("alpha", alpha)
+                          .Output("out")
+                          .Build();
+                    });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
+        return ctx->GetOp(a_grad_op_name).output("out", 0);
+      });
+
+      std::string b_grad_op_name = ctx->FwOp().op_name() + "_b_grad";
+      ctx->DefineOp(b_grad_op_name,
+                    [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
+                      if (!transpose_b) {
+                        return builder.OpTypeName("broadcast_matmul_grad_b")
+                            .InputBind("a", ctx->FwOp().input("a", 0))
+                            .InputBind("b", ctx->FwOp().output_grad("out", 0))
+                            .Attr<double>("alpha", alpha)
+                            .Output("out")
+                            .Build();
+                      } else {
+                        return builder.OpTypeName("broadcast_matmul_grad_b")
+                            .InputBind("a", ctx->FwOp().output_grad("out", 0))
+                            .InputBind("b", ctx->FwOp().input("a", 0))
+                            .Attr<double>("alpha", alpha)
+                            .Output("out")
+                            .Build();
+                      }
+                    });
+
+      ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
+        return ctx->GetOp(b_grad_op_name).output("out", 0);
+      });
     });
 
 }  // namespace oneflow

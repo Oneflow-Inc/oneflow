@@ -23,14 +23,14 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.python.ops.transpose_util import get_inversed_perm
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def _sort_at_last_dim(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Sort_"))
@@ -46,21 +46,21 @@ def _sort_at_last_dim(
 
 @oneflow_export("sort")
 def sort(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator sorts the input Blob at specified axis.
 
     Args:
-        input (oneflow_api.BlobDesc): A Blob
+        input (oneflow._oneflow_internal.BlobDesc): A Blob
         axis (int, optional): dimension to be sorted. Defaults to the last dim (-1)
         direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The sorted Blob
+        oneflow._oneflow_internal.BlobDesc: The sorted Blob
 
     For example:
 
@@ -99,10 +99,10 @@ def sort(
 
 
 def _argsort_at_last_dim(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     assert direction in ["ASCENDING", "DESCENDING"]
     return (
         flow.user_op_builder(
@@ -120,25 +120,25 @@ def _argsort_at_last_dim(
 
 @oneflow_export("argsort")
 def argsort(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
     direction: str = "ASCENDING",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """This operator sorts the input Blob at specified axis and return the indices of the sorted Blob. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator sorts the input Blob at specified axis and return the indices of the sorted Blob.
 
     Args:
-        input (oneflow_api.BlobDesc): A Blob
+        input (oneflow._oneflow_internal.BlobDesc): A Blob
         axis (int, optional): dimension to be sorted. Defaults to the last dim (-1)
         direction (str, optional): The direction in which to sort the Blob values. If the direction is "ASCENDING", The order of input will be sorted as ascending, else, the order of input will be sorted as descending. Defaults to "ASCENDING".
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The indices of the sorted Blob
+        oneflow._oneflow_internal.BlobDesc: The indices of the sorted Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
