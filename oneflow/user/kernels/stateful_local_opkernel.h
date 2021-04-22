@@ -220,8 +220,10 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  StatefulOpKernel(const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
-                   const ArgVec indexed_input_pairs, const ArgVec indexed_output_pairs);
+  static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
+                                     const std::shared_ptr<MemoryCase>& mem_case,
+                                     const ArgVec indexed_input_pairs,
+                                     const ArgVec indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
@@ -239,6 +241,7 @@ class StatefulOpKernel final {
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
+  StatefulOpKernel(const OperatorConf& op_conf);
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,

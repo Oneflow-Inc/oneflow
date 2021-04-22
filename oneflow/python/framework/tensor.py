@@ -195,6 +195,18 @@ class Tensor:
         else:
             return True
 
+    @requires_grad.setter
+    def requires_grad(self, requires_grad):
+        if self._local_or_consistent_tensor is not None:
+            if self.is_leaf:
+                self._local_or_consistent_tensor._set_requires_grad(requires_grad)
+            else:
+                raise RuntimeError(
+                    "You can only change requires_grad flags of leaf tensors."
+                )
+        else:
+            self._undetermined_tensor.requires_grad = requires_grad
+
     def size(self):
         return self.shape
 
@@ -210,6 +222,9 @@ class Tensor:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
         else:
             return None
+
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = requires_grad
 
     def get_device(self):
         if self._local_or_consistent_tensor is not None:
@@ -665,21 +680,11 @@ def _input_args_is_shape(*args):
 
 def register_tensor_op_by_module(op_name):
     def set_method(module):
-        if is_unary_module(module):
-            setattr(
-                Tensor,
-                op_name,
-                lambda self, *args, **kwargs: module(*args, **kwargs).forward(self),
-            )
-        else:
-            assert is_binary_module(module)
-            setattr(
-                Tensor,
-                op_name,
-                lambda self, x, *args, **kwargs: module(*args, **kwargs).forward(
-                    self, x
-                ),
-            )
+        setattr(
+            Tensor,
+            op_name,
+            lambda self, *args, **kwargs: module(**kwargs).forward(self, *args),
+        )
         return module
 
     return set_method
@@ -687,43 +692,20 @@ def register_tensor_op_by_module(op_name):
 
 def register_op_by_module(op_name):
     def set_method(module):
-        if is_unary_module(module):
-            oneflow_export(op_name)(_get_unary_module_impl(module))
-        else:
-            assert is_binary_module(module)
-            oneflow_export(op_name)(_get_binary_module_impl(module))
-
+        oneflow_export(op_name)(_get_module_impl(module))
         return module
 
-    def _get_unary_module_impl(module):
-        def unary_module_impl(x, *args, **kwargs):
-            return module(*args, **kwargs).forward(x)
+    def _get_module_impl(module):
+        def module_impl(x, *args, **kwargs):
+            return module(**kwargs).forward(x, *args)
 
         name = module.__name__ + "_op"
-        unary_module_impl.__name__ = name
-        globals()[name] = unary_module_impl
+        module_impl.__name__ = name
+        globals()[name] = module_impl
 
-        return unary_module_impl
-
-    def _get_binary_module_impl(module):
-        def binary_module_impl(x, y, *args, **kwargs):
-            return module(*args, **kwargs).forward(x, y)
-
-        name = module.__name__ + "_op"
-        binary_module_impl.__name__ = name
-        globals()[name] = binary_module_impl
-
-        return binary_module_impl
+        return module_impl
 
     return set_method
-
-
-def is_unary_module(module):
-    return True if len(inspect.signature(module.forward).parameters) == 2 else False
-
-
-def is_binary_module(module):
-    return True if len(inspect.signature(module.forward).parameters) == 3 else False
 
 
 def _convert_to_placement_scope(placement_or_device):

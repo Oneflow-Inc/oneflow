@@ -216,15 +216,16 @@ void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlob
   base_ctx_.Update(inputs, outputs);
 }
 
-void InitTensorTupleIndexes4Bns(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
-                                const ArgVec* indexed_output_pairs,
-                                std::vector<int64_t>* input_tuple_indexes4const_ibns,
-                                std::vector<int64_t>* input_tuple_indexes4mut_ibns,
-                                std::vector<int64_t>* output_tuple_indexes4mut_obns,
-                                std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
+Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
+                                       const ArgVec* indexed_input_pairs,
+                                       const ArgVec* indexed_output_pairs,
+                                       std::vector<int64_t>* input_tuple_indexes4const_ibns,
+                                       std::vector<int64_t>* input_tuple_indexes4mut_ibns,
+                                       std::vector<int64_t>* output_tuple_indexes4mut_obns,
+                                       std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
-  CHECK_NOTNULL(op_reg_val);
+  CHECK_NOTNULL_OR_RETURN(op_reg_val);
 
   ArgModifierSignature arg_modifier_signature;
   for (const auto& pair : *indexed_input_pairs) {
@@ -278,42 +279,47 @@ void InitTensorTupleIndexes4Bns(const OperatorConf& op_conf, const ArgVec* index
       output_tuple_indexes4mut2_obns->push_back(i);
     }
   }
+  return Maybe<void>::Ok();
 }
 
-StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf,
-                                   const std::shared_ptr<MemoryCase>& mem_case,
-                                   const ArgVec indexed_input_pairs,
-                                   const ArgVec indexed_output_pairs)
-    : op_conf_(op_conf),
-      mem_case_(mem_case),
-      indexed_input_pairs_(indexed_input_pairs),
-      indexed_output_pairs_(indexed_output_pairs),
-      need_check_mem_case_(true) {
-  op_infer_ctx_.reset(
-      new LocalUserOpInferContext(op_conf, &indexed_input_pairs_, &indexed_output_pairs_));
-  compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, op_conf, &indexed_input_pairs_,
-                                                       &indexed_output_pairs_));
-  create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
-  reg_ctx_.reset(
-      new LocalUserKernelRegContext(op_conf, &indexed_input_pairs_, &indexed_output_pairs_));
+/* static */ Maybe<StatefulOpKernel> StatefulOpKernel::New(
+    const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
+    const ArgVec indexed_input_pairs, const ArgVec indexed_output_pairs) {
+  auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel(op_conf));
+  opkernel->mem_case_ = mem_case;
+  // TODO:
+  // opkernel->indexed_input_pairs_ = indexed_input_pairs;
+  // opkernel->indexed_output_pairs_ = indexed_output_pairs;
+  opkernel->need_check_mem_case_ = true;
+  opkernel->op_infer_ctx_.reset(
+      new LocalUserOpInferContext(op_conf, &indexed_input_pairs, &indexed_output_pairs));
+  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
+      nullptr, op_conf, &indexed_input_pairs, &indexed_output_pairs));
+  opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
+  opkernel->reg_ctx_.reset(
+      new LocalUserKernelRegContext(op_conf, &indexed_input_pairs, &indexed_output_pairs));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
-  CHECK_NOTNULL(op_reg_val);
+  CHECK_NOTNULL_OR_RETURN(op_reg_val);
   if (op_reg_val->physical_tensor_desc_infer_fn) {
-    tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+    opkernel->tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
   } else {
-    UNIMPLEMENTED();
+    return Error::Unimplemented();
   }
-  data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
+  opkernel->data_type_infer_fn_ = op_reg_val->data_type_infer_fn;
 
-  InitTensorTupleIndexes4Bns(op_conf, &indexed_input_pairs_, &indexed_output_pairs_,
-                             &input_tuple_indexes4const_ibns_, &input_tuple_indexes4mut_ibns_,
-                             &output_tuple_indexes4mut_obns_, &output_tuple_indexes4mut2_obns_);
+  JUST(InitTensorTupleIndexes4Bns(
+      op_conf, &indexed_input_pairs, &indexed_output_pairs,
+      &opkernel->input_tuple_indexes4const_ibns_, &opkernel->input_tuple_indexes4mut_ibns_,
+      &opkernel->output_tuple_indexes4mut_obns_, &opkernel->output_tuple_indexes4mut2_obns_));
 
-  tmp_blob_object_.reset(new eager::EagerBlobObject(mem_case_, std::make_shared<Shape>(),
-                                                    DataType::kChar,
-                                                    std::make_shared<eager::TensorBuffer>()));
+  opkernel->tmp_blob_object_.reset(
+      new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
+                                 std::make_shared<eager::TensorBuffer>()));
+  return opkernel;
 }
+
+StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf) : op_conf_(op_conf) {}
 
 StatefulOpKernel::~StatefulOpKernel() = default;
 

@@ -77,9 +77,6 @@ class EagerBlobObject final : public BlobObject {
   MemoryAllocator non_pod_initer_;
   Maybe<VmLocalDepObject> infer_local_dep_object_;
   Maybe<VmLocalDepObject> compute_local_dep_object_;
-
- protected:
-  std::unique_ptr<RtBlobDesc> rt_blob_desc_;
 };
 
 }  // namespace eager

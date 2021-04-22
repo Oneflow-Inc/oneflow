@@ -91,8 +91,7 @@ const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
   std::shared_ptr<const Shape> result;
   auto callback = [&bc, &result](int64_t ofblob_ptr) -> void {
     OfBlob* ofblob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-    // TODO: use shared_ptr after rt_blob_desc is removed
-    result = std::make_shared<const Shape>(ofblob->mut_blob()->blob_desc().body_shape());
+    result = ofblob->mut_blob()->blob_desc().shape_ptr();
     bc.Decrease();
   };
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {

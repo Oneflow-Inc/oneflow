@@ -62,6 +62,22 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   return g_lazy_interpreter;
 }
 
+template<>
+/*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
+  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  return outputs;
+}
+
+template<>
+/*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
+                                                        const TensorTuple& inputs,
+                                                        const AttrValueMap& attrs) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
+}
+
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
@@ -96,6 +112,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
     cfg_upstream_signature->ToProto(&upstream_signature);
   }
   const auto& op = JUST(ConstructAndInferOp(*op_conf, upstream_signature, *scope));
+  JUST(op->InferParallelSignatureIf());
   const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
