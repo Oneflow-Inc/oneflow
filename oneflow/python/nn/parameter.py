@@ -23,8 +23,8 @@ class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
         data.requires_grad = True
         data.set_is_consistent(True)
-        # TODO: set a proper placement
-        data.set_placement(flow.placement("cpu", ["0:0"], None))
+        # TODO(Zhang Jianhao): set a proper placement
+        data.set_placement(flow.placement("gpu", ["0:0"], None))
         self._data = data
 
     def __getattr__(self, name):
