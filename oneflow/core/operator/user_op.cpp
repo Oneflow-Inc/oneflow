@@ -200,9 +200,13 @@ class UserOpInferContext : public user_op::InferContext {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
   }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
-
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   const UserOp* op_;
   const ParallelContext* parallel_ctx_;
   const JobDesc* job_desc_;

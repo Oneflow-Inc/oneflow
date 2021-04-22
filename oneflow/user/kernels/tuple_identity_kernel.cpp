@@ -28,8 +28,8 @@ class TupleIdentityKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const int64_t in_size = ctx->user_op_conf().input_size("in");
-    CHECK_EQ(ctx->user_op_conf().output_size("out"), in_size);
+    const int64_t in_size = ctx->input_size("in");
+    CHECK_EQ(ctx->output_size("out"), in_size);
     for (int64_t i = 0; i < in_size; ++i) {
       const user_op::Tensor* in_i = ctx->Tensor4ArgNameAndIndex("in", i);
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
