@@ -68,7 +68,7 @@ class NvtxStartKernel final : public user_op::OpKernel {
     Memcpy<DeviceType::kGPU>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
                              in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
 #ifdef OF_ENABLE_PROFILER
-    const std::string mark_prefix = ctx->user_op_conf().attr<std::string>("mark_prefix");
+    const std::string mark_prefix = ctx->Attr<std::string>("mark_prefix");
     const std::string mark = mark_prefix + "-" + std::to_string(kernel_state->counter());
     nvtxRangeId_t range_id = nvtxRangeStartA(mark.c_str());
     CHECK(mark2range_id.emplace(mark, range_id).second);
@@ -107,7 +107,7 @@ class NvtxEndKernel final : public user_op::OpKernel {
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 #ifdef OF_ENABLE_PROFILER
-    const std::string mark_prefix = ctx->user_op_conf().attr<std::string>("mark_prefix");
+    const std::string mark_prefix = ctx->Attr<std::string>("mark_prefix");
     const std::string mark = mark_prefix + "-" + std::to_string(kernel_state->counter());
     auto it = mark2range_id.find(mark.c_str());
     CHECK(it != mark2range_id.end());
