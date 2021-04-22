@@ -177,11 +177,15 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return 1; }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   const user_op::UserOpConfWrapper user_op_conf_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
@@ -213,6 +217,11 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx);
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
