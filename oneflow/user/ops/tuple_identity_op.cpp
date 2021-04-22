@@ -22,8 +22,8 @@ REGISTER_USER_OP("tuple_identity")
     .InputWithMinimum("in", 1)
     .OutputWithMinimum("out", 1)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const int64_t in_size = ctx->user_op_conf().input_size("in");
-      CHECK_EQ_OR_RETURN(ctx->user_op_conf().output_size("out"), in_size);
+      const int64_t in_size = ctx->input_size("in");
+      CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
       for (int64_t i = 0; i < in_size; ++i) {
         *ctx->Shape4ArgNameAndIndex("out", i) = *ctx->Shape4ArgNameAndIndex("in", i);
         *ctx->IsDynamic4ArgNameAndIndex("out", i) = *ctx->IsDynamic4ArgNameAndIndex("in", i);
@@ -31,8 +31,8 @@ REGISTER_USER_OP("tuple_identity")
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const int64_t in_size = ctx->user_op_conf().input_size("in");
-      CHECK_EQ_OR_RETURN(ctx->user_op_conf().output_size("out"), in_size);
+      const int64_t in_size = ctx->input_size("in");
+      CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
       for (int64_t i = 0; i < in_size; ++i) {
         *ctx->Dtype4ArgNameAndIndex("out", i) = *ctx->Dtype4ArgNameAndIndex("in", i);
       }
