@@ -223,12 +223,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
-  std::string op_name_;
-  std::string op_type_name_;
-  std::string device_tag_;
-  HashMap<std::string, std::vector<std::string>> input2arg_name_;
-  HashMap<std::string, std::vector<std::string>> output2arg_name_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 class StatefulOpKernel final {

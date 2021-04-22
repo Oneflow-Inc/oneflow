@@ -159,23 +159,6 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
         device_ctx_(device_ctx),
         base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
     base_ctx_.Update(inputs, outputs);
-    CHECK(op_conf.has_user_conf());
-    for (const auto& kv : op_conf.user_conf().attr()) {
-      AttrValue::ValueCase value_case = kv.second.value_case();
-      switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
-    CHECK(attrs_                                                                             \
-              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
-                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                                      \
-    break;
-        OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-        default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-      };
-    }
   }
   ~LocalUserKernelInitContext() override = default;
 
@@ -213,7 +196,6 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
-  HashMap<std::string, std::shared_ptr<user_op::AttrVal>> attrs_;
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
@@ -236,38 +218,7 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_c
                                                              const ArgVec* indexed_output_pairs)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
-      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
-  auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
-                         HashMap<std::string, std::vector<std::string>>* arg2names) {
-    for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
-      for (int32_t i = 0; i < it->second.s_size(); ++i) {
-        (*arg2names)[it->first].emplace_back(it->second.s(i));
-      }
-    }
-  };
-  InitInOrOut(op_conf.user_conf().input(), &input2arg_name_);
-  InitInOrOut(op_conf.user_conf().output(), &output2arg_name_);
-  device_tag_ = op_conf.device_tag();
-  op_name_ = op_conf.name();
-  op_type_name_ = op_conf.user_conf().op_type_name();
-  CHECK(op_conf.has_user_conf());
-  for (const auto& kv : op_conf.user_conf().attr()) {
-    AttrValue::ValueCase value_case = kv.second.value_case();
-    switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                               \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */            \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                                       \
-    CHECK(attrs_                                                                             \
-              .emplace(kv.first, std::make_shared<user_op::TypedAttrVal<cpp_type>>(          \
-                                     user_op::AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                                      \
-    break;
-      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-    };
-  }
-}
+      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
 
 void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                                            DeviceCtx* device_ctx) {

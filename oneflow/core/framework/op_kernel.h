@@ -244,7 +244,7 @@ class KernelComputeContext {
   const T& Attr(const std::string& attr_name) const;
 
  protected:
-  KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
+  KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
   KernelComputeContext(const KernelComputeContext&) = delete;
 
   const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
