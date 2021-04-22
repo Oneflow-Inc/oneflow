@@ -619,23 +619,15 @@ class BitSetVec {
   BitSetVec() = default;
   ~BitSetVec() = default;
 
-  const std::bitset<BITSET_SIZE>& GetBitSetAt(int64_t index) const { return bitset_vec_.at(index); }
+  void Set(int64_t pos) { bitset_vec_.at(pos / BITSET_SIZE).set(pos % BITSET_SIZE, true); }
 
-  void Set(int64_t pos) {
-    int64_t index = pos / BITSET_SIZE;
-    int64_t remain = pos % BITSET_SIZE;
-    bitset_vec_.at(index).set(remain, true);
-  }
-
-  bool Test(int64_t pos) {
-    int64_t index = pos / BITSET_SIZE;
-    int64_t remain = pos % BITSET_SIZE;
-    return bitset_vec_.at(index).test(remain);
-  }
+  bool Test(int64_t pos) { return bitset_vec_.at(pos / BITSET_SIZE).test(pos % BITSET_SIZE); }
 
   void Merge(const BitSetVec& extra) {
     CHECK_EQ(bitset_vec_.size(), extra.VecSize());
-    for (int64_t i = 0; i < bitset_vec_.size(); ++i) { bitset_vec_.at(i) &= extra.GetBitSetAt(i); }
+    for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
+      bitset_vec_.at(i) &= extra.bitset_vec_.at(i);
+    }
   }
 
   int64_t VecSize() const { return bitset_vec_.size(); }
