@@ -610,10 +610,11 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable() const {
 }
 
 // 1KB
-const int64_t BITSET_SIZE = 8 * 1024;
+static const int64_t BITSET_SIZE = 8 * 1024;
 
-using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
 class BitSetVec {
+  using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
+
  public:
   BitSetVec() = default;
   ~BitSetVec() = default;
