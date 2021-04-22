@@ -39,11 +39,37 @@ class KernelCreateContext {
  public:
   virtual ~KernelCreateContext() = default;
 
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf().attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+  bool has_attr(const std::string& attr_name) const {
+    const auto& attr_name2attr_val = user_op_conf().attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
+  }
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const;
+
+ protected:
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
 };
 
 class KernelInitContext {
@@ -65,15 +91,44 @@ class KernelInitContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+
+  bool has_attr(const std::string& attr_name) const {
+    const auto& attr_name2attr_val = user_op_conf().attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
+  }
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const;
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
 
  protected:
   KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
   KernelInitContext(const KernelInitContext&) = delete;
+
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
 
  private:
   UserOpConfWrapper user_op_conf_;
@@ -96,11 +151,34 @@ class KernelInferContext {
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
 
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+
+  bool has_attr(const std::string& attr_name) const {
+    const auto& attr_name2attr_val = user_op_conf().attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
+  }
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const;
 
   virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
@@ -111,6 +189,9 @@ class KernelInferContext {
  protected:
   KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
   KernelInferContext(const KernelInferContext&) = delete;
+
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
 
  private:
   UserOpConfWrapper user_op_conf_;
@@ -133,18 +214,43 @@ class KernelComputeContext {
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
-
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+
+  bool has_attr(const std::string& attr_name) const {
+    const auto& attr_name2attr_val = user_op_conf().attrs();
+    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
+  }
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const;
 
  protected:
   KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
   KernelComputeContext(const KernelComputeContext&) = delete;
 
- private:
+  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+
+  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+
   UserOpConfWrapper user_op_conf_;
 };
 
