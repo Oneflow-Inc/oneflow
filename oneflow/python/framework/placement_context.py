@@ -23,8 +23,8 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.op_util as op_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal
 
 
 class PlacementScope(object):
@@ -80,7 +80,7 @@ def MakeParallelConf4Resource(device_tag, resource):
         machine_device_ids = GetCpuMachineDeviceIds(resource)
     else:
         raise NotImplementedError
-    return oneflow_api.MakeParallelConf(device_tag, machine_device_ids)
+    return oneflow._oneflow_internal.MakeParallelConf(device_tag, machine_device_ids)
 
 
 def MakeMachineId2DeviceIdList(parallel_conf):
