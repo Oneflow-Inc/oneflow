@@ -19,9 +19,9 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.framework.session_context as session_ctx
-import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 class FunctionAttribute(object):
@@ -90,7 +90,7 @@ def GetCurrentEagerGlobalFunctionDesc():
 @enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
 def GetCurrentLazyGlobalFunctionDesc():
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     ret = sess.GetLazyFunctionDesc(job_name)
     assert ret is not None
     return ret
