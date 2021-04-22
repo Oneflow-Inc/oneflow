@@ -80,7 +80,6 @@ class TestTensor(flow.unittest.TestCase):
         def job():
             x1 = flow.Tensor([[1, 2]])
             x2 = flow.Tensor([[1], [2]])
-            print(x1.numpy())
             op = (
                 flow.builtin_op("matmul")
                 .Input("a")
