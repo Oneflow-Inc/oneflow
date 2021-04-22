@@ -1095,7 +1095,8 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
-Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan) {
+Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs) {
+  Plan plan;
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
@@ -1149,11 +1150,11 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    MergeSubPlanWithoutGenNetTopo(plan, std::move(sub_plans));
-    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, plan);
-    InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, plan);
-    PlanUtil::SetForceInplaceMemBlock(plan);
-    FinishGlobalCriticalSectionDesc(*plan, jobs.size());
+    MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
+    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
+    InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
+    PlanUtil::SetForceInplaceMemBlock(&plan);
+    FinishGlobalCriticalSectionDesc(plan, jobs.size());
     Plan main_plan;
     std::vector<std::map<int64_t, std::string>> identity_tick_op_names;
     {
@@ -1163,29 +1164,22 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
       AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
       JUST(CompileMainJob(&main_job, lock_back_edges, jobs.size(), &main_plan));
     }
-    LinkMainPlan(plan, std::move(main_plan), identity_tick_op_names);
-    PlanUtil::CleanUselessMemBlockAndCheckValid(plan);
-    DumpCtrlRegstInfoToPlan(plan);
+    LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
+    PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
+    DumpCtrlRegstInfoToPlan(&plan);
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
-      PlanUtil::ToDotFile(*plan, "/dot/merged_plan.dot");
+      TeePersistentLogStream::Create("merged_plan")->Write(plan);
+      PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");
     }
     double start = GetCurTime();
     // push op_attribute_info
     OpAttributeInfo op_attribute_info;
     *op_attribute_info.mutable_job_id2op_attribute_ref_table() =
-        plan->job_id2op_attribute_ref_table();
+        plan.job_id2op_attribute_ref_table();
     Global<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
     // push plan
-    PushPlan("merged_plan", *plan);
+    PushPlan("merged_plan", std::move(plan));
     LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
-  } else {
-    double start = GetCurTime();
-    PullPlan("merged_plan", plan);
-    LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("merged_plan")->Write(*plan);
-    }
   }
   OF_SESSION_BARRIER();
   return Maybe<void>::Ok();
@@ -1197,12 +1191,16 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_GUARD("Oneflow::Init");
   // Runtime
   OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
-  JUST(CompileAndMergePlanOnMaster(job_set.job(), &plan_));
+  JUST(CompileAndMergePlanOnMaster(job_set.job()));
   OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
-    plan_ = Plan();
-    PullPlan("merged_plan", &plan_);
+    runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
+  }
+  double start = GetCurTime();
+  PullPlan("merged_plan", &plan_);
+  LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("merged_plan")->Write(plan_);
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
