@@ -76,14 +76,14 @@ Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inp
   ctx->has_gamma_diff = scale_ && inputs.at(gamma_index)->requires_grad();
   ctx->has_normalized_diff = scale_ && inputs.at(0)->requires_grad();
   if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
-    ctx->SaveTensorForBackward(inputs.at(gamma_index));
+    ctx->SaveTensorForBackward(inputs.at(gamma_index)->detach());
   }
-  if (ctx->has_gamma_diff) { ctx->SaveTensorForBackward(outputs.at(3)); }
+  if (ctx->has_gamma_diff) { ctx->SaveTensorForBackward(outputs.at(3)->detach()); }
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   if (ctx->x_requires_grad) {
-    ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->SaveTensorForBackward(outputs.at(0));
-    ctx->SaveTensorForBackward(outputs.at(1));
+    ctx->SaveTensorForBackward(inputs.at(0)->detach());
+    ctx->SaveTensorForBackward(outputs.at(0)->detach());
+    ctx->SaveTensorForBackward(outputs.at(1)->detach());
   }
   return Maybe<void>::Ok();
 }

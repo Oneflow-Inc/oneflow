@@ -55,7 +55,7 @@ Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple&
   const auto& in_shape = inputs.at(0)->shape();
   const auto& indices_shape = inputs.at(1)->shape();
   ctx->num_segments = in_shape->At(indices_shape->NumAxes() - 1);
-  ctx->SaveTensorForBackward(inputs.at(1));
+  ctx->SaveTensorForBackward(inputs.at(1)->detach());
   return Maybe<void>::Ok();
 }
 
