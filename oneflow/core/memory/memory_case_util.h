@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 判断MemoryCase是否描述同一区域（host/同一个device/主机与同一个device的交换区）
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
     const HostMemory& lhs_host_mem = lhs.host_mem();

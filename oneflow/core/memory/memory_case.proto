@@ -6,7 +6,9 @@ message CudaPinnedMemory {
 }
 
 message HostMemory {
+  // 用于CopyHD
   optional CudaPinnedMemory cuda_pinned_mem = 1;
+  // 用于CommNet
   optional bool used_by_network = 2 [default = false];
 }
 
@@ -14,6 +16,7 @@ message DeviceCudaMemory {
   required int64 device_id = 1;
 }
 
+// 描述内存块信息
 message MemoryCase {
   oneof case {
     HostMemory host_mem = 1;

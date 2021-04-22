@@ -24,6 +24,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 根据mem_case的信息和size申请内存
 void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   void* ptr = nullptr;
   if (mem_case.has_host_mem()) {
@@ -54,6 +55,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
   return ptr;
 }
 
+// 根据mem_case的信息释放内存
 void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().has_cuda_pinned_mem()) {
@@ -85,10 +87,12 @@ void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
 
 void MemoryAllocatorImpl::DeallocateUnPinnedHostMem(void* ptr) { free(ptr); }
 
+// 释放所有非UnPinned内存
 MemoryAllocator::~MemoryAllocator() {
   for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
+// 调用MemoryAllocatorImpl::Allocate()申请内存
 char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = static_cast<char*>(MemoryAllocatorImpl::Allocate(mem_case, size));
@@ -104,6 +108,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   } else {
     UNIMPLEMENTED();
   }
+  // 未加锁，因为lazy模式只有RegstMgr单线程调用
   deleters_.push_front(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
   return dptr;
 }
@@ -112,6 +117,7 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
 }
 
+// 调用MemoryAllocator::PlacementNew()初始化Blob
 void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
   const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
   if (blob_desc.data_type() == kOFRecord) {
