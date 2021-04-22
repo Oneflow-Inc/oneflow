@@ -21,30 +21,30 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("random.bernoulli")
 def Bernoulli(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     seed: Optional[int] = None,
     dtype: Optional[flow.dtype] = None,
     name: str = "Bernoulli",
-) -> oneflow_api.BlobDesc:
-    """This operator returns a Blob with binaray random numbers (0 / 1) from a Bernoulli distribution. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator returns a Blob with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
-        x (oneflow_api.BlobDesc): The input Blob. 
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
         seed (Optional[int], optional): The random seed. Defaults to None.
         dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (str, optional): The name for the operation. Defaults to "Bernoulli".
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -58,12 +58,12 @@ def Bernoulli(
             return out
 
 
-        x = np.array([[0.25, 0.45, 0.3], 
-                    [0.55, 0.32, 0.13], 
+        x = np.array([[0.25, 0.45, 0.3],
+                    [0.55, 0.32, 0.13],
                     [0.75, 0.15, 0.1]]).astype(np.float32)
         out = bernoulli_Job(x)
 
-        # Because our random seed is not fixed, so the return value is different each time. 
+        # Because our random seed is not fixed, so the return value is different each time.
         # out [[1. 0. 0.]
         #      [0. 0. 1.]
         #      [0. 0. 0.]]
@@ -97,7 +97,7 @@ class BernoulliModule(module_util.Module):
         )
         self.op_module_builder.user_op_module.InitOpKernel()
 
-    def forward(self, x: oneflow_api.BlobDesc):
+    def forward(self, x: oneflow._oneflow_internal.BlobDesc):
         if self.call_seq_no == 0:
             name = self.module_name
         else:
