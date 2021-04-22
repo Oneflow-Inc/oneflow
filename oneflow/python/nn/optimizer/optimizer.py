@@ -26,6 +26,7 @@ from oneflow.python.framework.tensor import Tensor
 
 import oneflow_api
 
+
 class ParamGroup(object):
     def __init__(
         self,
@@ -156,8 +157,10 @@ class SGD(Optimizer):
             loss = closure()
 
         for param_group in self._param_groups:
-            # TODO(Liang Depeng): remove device setting 
-            lr_tensor = flow.Tensor([param_group.options["lr"]], device=oneflow_api.device("cuda"))
+            # TODO(Liang Depeng): remove device setting
+            lr_tensor = flow.Tensor(
+                [param_group.options["lr"]], device=oneflow_api.device("cuda")
+            )
             for param in param_group.parameters:
                 if param.grad is None:
                     continue
