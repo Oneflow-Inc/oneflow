@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 namespace one {
@@ -138,10 +139,14 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
  public:
   explicit LocalUserKernelCreateContext(const OperatorConf& op_conf) : user_op_conf_(op_conf) {}
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
  private:
-  const user_op::UserOpConfWrapper user_op_conf_;
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
+  user_op::UserOpConfWrapper user_op_conf_;
 };
 
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
@@ -184,6 +189,11 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -284,6 +294,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
 
 /* static */ Maybe<StatefulOpKernel> StatefulOpKernel::New(
     const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<ArgVec> indexed_input_pairs,
     const std::shared_ptr<ArgVec> indexed_output_pairs) {
   auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel(op_conf));
@@ -316,6 +327,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
   opkernel->tmp_blob_object_.reset(
       new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
                                  std::make_shared<eager::TensorBuffer>()));
+  opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
+  opkernel->compute_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
 }
 

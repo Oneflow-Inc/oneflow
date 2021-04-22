@@ -81,6 +81,7 @@ Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple&
   CHECK_EQ_OR_RETURN(out_grads.size(), zero_like_ops_.size());
   const auto& saved_tensors = ctx->SavedTensors();
   TensorTuple inputs;
+  inputs.reserve(out_grads.size());
   for (int i = 0; i < out_grads.size(); ++i) {
     const auto& out_grad_i = out_grads.at(i);
     if (out_grad_i.get()) {

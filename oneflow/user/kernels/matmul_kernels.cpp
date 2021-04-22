@@ -53,7 +53,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -76,7 +76,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -108,7 +108,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -134,7 +134,7 @@ REGISTER_USER_KERNEL("matmul")
                      & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
@@ -163,7 +163,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -188,7 +188,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -221,7 +221,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -245,7 +245,7 @@ REGISTER_USER_KERNEL("batch_matmul")
                      & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
@@ -273,7 +273,7 @@ class BroadcastMatmulKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     double beta = 0.0;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->shape(), out->shape());
       Memcpy<device_type>(
@@ -335,7 +335,7 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \

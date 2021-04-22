@@ -36,6 +36,9 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+  DoEach(opkernel().infer_local_dep_object()->mut_local_dep_object()->mut_mirrored_object(),
+         opkernel().compute_local_dep_object()->mut_local_dep_object()->mut_mirrored_object());
+
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
     const auto& input = input_list->at(index);

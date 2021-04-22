@@ -27,32 +27,10 @@ parser.add_argument("--env_proto", type=str, required=True)
 args = parser.parse_args()
 
 
-def import_secondary_module(name, path):
-    import importlib.machinery
-    import importlib.util
-
-    loader = importlib.machinery.ExtensionFileLoader(name, path)
-    spec = importlib.util.spec_from_loader(name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
-
-
-def import_oneflow_internal2():
-    import oneflow
-    from os.path import dirname
-    import imp
-
-    fp, pathname, description = imp.find_module(
-        "_oneflow_internal", [dirname(__file__)]
-    )
-    assert os.path.isfile(pathname)
-    return import_secondary_module("oneflow_api", pathname)
-
-
 def StartWorker(env_proto):
-    oneflow_api = import_oneflow_internal2()
-    oneflow_api.InitEnv(env_proto)
+    import oneflow._oneflow_internal
+
+    oneflow._oneflow_internal.InitEnv(env_proto)
 
 
 def main():
