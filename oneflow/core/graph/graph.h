@@ -656,11 +656,10 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
   using NodePtr2Id = HashMap<const NodeType*, int64_t>;
   using Id2Ancestor = std::vector<BitSetVec>;
   std::shared_ptr<NodePtr2Id> node2id(new NodePtr2Id);
-  std::shared_ptr<Id2Ancestor> id2ancestor(new Id2Ancestor);
+  std::shared_ptr<Id2Ancestor> id2ancestor(new Id2Ancestor(node_num()));
   int64_t id = 0;
   const int64_t bitset_num = RoundUp(node_num(), BITSET_SIZE) / BITSET_SIZE;
   node2id->reserve(node_num());
-  id2ancestor->resize(node_num());
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
     (*node2id)[node] = id;
     id2ancestor->at(id).VecResize(bitset_num);
