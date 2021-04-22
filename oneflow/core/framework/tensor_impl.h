@@ -192,7 +192,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
     UNIMPLEMENTED();
-    return nullptr;
   }
 
   // Setters to be deprecated
@@ -237,7 +236,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
     UNIMPLEMENTED();
-    return nullptr;
   }
 
   // Setters to be deprecated
@@ -286,7 +284,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
     UNIMPLEMENTED();
-    return nullptr;
   }
 
   // Setters to be deprecated

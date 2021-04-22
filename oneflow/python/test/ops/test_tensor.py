@@ -34,31 +34,14 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-    def test_mirrored_numpy3(test_case):
+    def test_mirrored_tensor_and_op(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())
 
         @flow.global_function(function_config=func_config)
         def job():
-            tensor = flow.Tensor(
-                2, 3, data_initializer=flow.ones_initializer(flow.float32)
-            )
-            print(tensor.numpy())
-
-        job()
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_mirrored_numpy2(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-
-        @flow.global_function(function_config=func_config)
-        def job():
-            x1 = flow.Tensor([[1, 2]])
-            x2 = flow.Tensor([[1], [2]])
+            x1 = flow.Tensor([[1.0, 2.0]])
+            x2 = flow.Tensor([[1.0], [2.0]])
             op = (
                 flow.builtin_op("matmul")
                 .Input("a")
@@ -70,37 +53,7 @@ class TestTensor(flow.unittest.TestCase):
                 .Build()
             )
             y = op(x1, x2)[0]
-            print(y.numpy())
-
-        job()
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
-    def test_mirrored_numpy(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-
-        @flow.global_function(function_config=func_config)
-        def job():
-            shape = (2, 3)
-            op = (
-                flow.builtin_op("constant")
-                .Output("out")
-                .Attr("floating_value", 1.0)
-                .Attr("integer_value", 0)
-                .Attr("is_floating_value", True)
-                .Attr("dtype", flow.float32)
-                .Attr("shape", shape)
-                .Build()
-            )
-            tensor = op()[0]
-            test_case.assertTrue(
-                np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
-            )
-            tensor.copy_(np.array([[4, 5, 6], [7, 8, 9]]))
-            print(tensor.numpy())
+            assert np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
 
         job()
 

@@ -57,7 +57,9 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     )
 
 
-def _init_eager_local_tensor_by_initializer_conf(eager_local_tensor, initializer_conf, random_seed=0):
+def _init_eager_local_tensor_by_initializer_conf(
+    eager_local_tensor, initializer_conf, random_seed=0
+):
     shape = tuple(eager_local_tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
     # initializer is None if and only if the initializer_conf is empty_initializer

@@ -35,7 +35,10 @@ namespace oneflow {
 namespace one {
 
 namespace {
-std::shared_ptr<Device> GetDefaultDevice() { return std::make_shared<Device>("cuda", 0); }
+std::shared_ptr<Device> GetDefaultDevice() {
+  // TODO: align with pytorch (default cpu) when tensor.to() is ready
+  return std::make_shared<Device>("cuda", 0);
+}
 }  // namespace
 
 Maybe<void> NaiveInterpret(
@@ -84,7 +87,6 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
   std::shared_ptr<const Device> device;
   if (inputs.empty()) {
-    // TODO: align with pytorch (default cpu) when tensor.to() is ready
     device = GetDefaultDevice();
   } else {
     device = inputs.at(0)->device();

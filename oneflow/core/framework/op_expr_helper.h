@@ -14,21 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
-
-class Shape;
-
-namespace one {
-
-class UserOpExpr;
-
-}  // namespace one
-
 namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
