@@ -661,7 +661,7 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
   const int64_t bitset_num = RoundUp(node_num(), BITSET_SIZE) / BITSET_SIZE;
   node2id->reserve(node_num());
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
-    (*node2id)[node] = id;
+    node2id->at(node) = id;
     id2ancestor->at(id).VecResize(bitset_num);
     id += 1;
   });
