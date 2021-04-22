@@ -1193,14 +1193,14 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
   JUST(CompileAndMergePlanOnMaster(job_set.job()));
   OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
-  }
   double start = GetCurTime();
   PullPlan("merged_plan", &plan_);
   LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     TeePersistentLogStream::Create("merged_plan")->Write(plan_);
+  }
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
