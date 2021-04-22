@@ -36,20 +36,20 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 import inspect
 
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(session, function_desc)
-        oneflow_api.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
 
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
         ret = _InterpretGlobalFunction(function_desc, args)
-        oneflow_api.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
         session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
     return ret
 
@@ -78,7 +78,7 @@ def InterpretScope(session, function_desc, config_proto):
     )
     assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
     if hierarchy is not None:
-        hierarchy = oneflow_api.Size(tuple(hierarchy))
+        hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
     scope = scope_util.MakeInitialScope(
         job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
     )
@@ -144,7 +144,7 @@ def _JobBuildAndInferCtx(job_name):
     try:
         yield
     finally:
-        oneflow_api.JobBuildAndInferCtx_Close()
+        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 def _GetArgDefault(func):
@@ -202,7 +202,7 @@ def _RecusiveMakeInputBlobDef(cls):
 def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     if remote_blobs is None:
         return None
-    if isinstance(remote_blobs, oneflow_api.BlobDesc):
+    if isinstance(remote_blobs, oneflow._oneflow_internal.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(

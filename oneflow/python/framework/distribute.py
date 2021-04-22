@@ -19,7 +19,7 @@ from contextlib import contextmanager
 
 import oneflow.python.framework.distribute_context as distribute_ctx
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -93,7 +93,7 @@ def deprecated_consistent_strategy():
 @oneflow_export("scope.consistent_view")
 class DistributeConsistentStrategy(distribute_ctx.DistributeStrategy):
     r"""Create a scope in consistent view. All operators within the scope will be automatically parallelized among diffierent accelerators for best performance and least data transfer.
-    
+
     Usage::
 
         with oneflow.scope.consistent_view():
@@ -131,51 +131,53 @@ def ConsistentStrategyEnabled() -> bool:
 
 
 @oneflow_export("distribute.split")
-def split(axis: int) -> oneflow_api.distribute.SplitDistribute:
+def split(axis: int) -> oneflow._oneflow_internal.distribute.SplitDistribute:
     r"""Generate a split scheme in which op will be splitted at `axis`.
-    
+
     Args:
-        axis (int): At `axis` the op will be splitted. 
-    
+        axis (int): At `axis` the op will be splitted.
+
     Returns:
         SplitDistribute: Split scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     Example::
         weight = weight.with_distribute(distribute.split(1))
 
     """
     assert type(axis) is int
-    return oneflow_api.distribute.split(axis)
+    return oneflow._oneflow_internal.distribute.split(axis)
 
 
 @oneflow_export("distribute.broadcast")
-def broadcast() -> oneflow_api.distribute.BroadcastDistribute:
+def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
         BroadcastDistribute: Broadcast scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     Example::
         segment_ids = segment_ids.with_distribute(flow.distribute.broadcast())
-    
+
     """
-    return oneflow_api.distribute.broadcast()
+    return oneflow._oneflow_internal.distribute.broadcast()
 
 
 @oneflow_export("distribute.auto")
-def auto() -> oneflow_api.distribute.AutoDistribute:
+def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     r"""Generate a broadcast scheme.
 
     Returns:
         AutoDistribute: Auto distribute scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-    
+
     """
-    return oneflow_api.distribute.auto()
+    return oneflow._oneflow_internal.distribute.auto()
 
 
 @oneflow_export("distribute.assert_is_valid_distribute")
-def assert_is_valid_distribute(distribute: oneflow_api.distribute.Distribute) -> None:
+def assert_is_valid_distribute(
+    distribute: oneflow._oneflow_internal.distribute.Distribute,
+) -> None:
     assert isinstance(
-        distribute, oneflow_api.distribute.Distribute
+        distribute, oneflow._oneflow_internal.distribute.Distribute
     ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
