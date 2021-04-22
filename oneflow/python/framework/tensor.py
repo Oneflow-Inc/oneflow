@@ -16,10 +16,10 @@ limitations under the License.
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 import numpy as np
 import inspect
-import oneflow_api.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
@@ -45,9 +45,13 @@ class Tensor:
         determining_initializer=None,
     ):
         assert len(args) > 0
-        dtype = dtype if dtype is not None else oneflow_api.float32
+        dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
         if placement is None:
-            device = device if device is not None else oneflow_api.device("cpu")
+            device = (
+                device
+                if device is not None
+                else oneflow._oneflow_internal.device("cpu")
+            )
         if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
         elif _input_args_is_consistent_or_local(*args):
@@ -277,7 +281,7 @@ class Tensor:
         self._undetermined_tensor.device = None
 
     def set_sbp(self, sbp):
-        assert isinstance(sbp, oneflow_api.Distribute)
+        assert isinstance(sbp, oneflow._oneflow_internal.Distribute)
         assert self._local_or_consistent_tensor is None
         assert self._undetermined_tensor is not None
         self._undetermined_tensor.sbp = sbp
@@ -420,7 +424,7 @@ class Tensor:
             numpy_data = args[0].astype(
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
             )
-        shape = oneflow_api.Size(tuple(numpy_data.shape))
+        shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(
             shape,
@@ -451,16 +455,18 @@ class UndeterminedTensor:
         data_initializer=None,
         numpy_data=None,
     ):
-        if not isinstance(shape, oneflow_api.Size):
+        if not isinstance(shape, oneflow._oneflow_internal.Size):
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
-            shape = oneflow_api.Size(shape)
+            shape = oneflow._oneflow_internal.Size(shape)
         data_initializer = (
             data_initializer
             if data_initializer is not None
             else flow.empty_initializer(dtype=dtype)
         )
-        device = device if device is not None else oneflow_api.device("cpu")
+        device = (
+            device if device is not None else oneflow._oneflow_internal.device("cpu")
+        )
         self.shape = shape
         self.dtype = dtype
         self.device = device
@@ -505,7 +511,7 @@ def _default_initializer_for_determining(tensor):
 
     job()
     if undetermined_tensor.is_consistent:
-        determined_tensor = oneflow_api.ConsistentTensor(
+        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.sbp,
@@ -516,7 +522,7 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.retain_grad,
         )
     else:
-        determined_tensor = oneflow_api.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.LocalTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -549,7 +555,7 @@ def _numpy_initializer_for_determining(tensor):
     flow.load_variables({variable_name: undetermined_tensor.numpy_data})
     blob = flow.get_all_variables()[variable_name]
     if undetermined_tensor.is_consistent:
-        determined_tensor = oneflow_api.ConsistentTensor(
+        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.sbp,
@@ -560,7 +566,7 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.retain_grad,
         )
     else:
-        determined_tensor = oneflow_api.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.LocalTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -583,7 +589,11 @@ def _input_args_is_numpy(*args):
 
 def _input_args_is_consistent_or_local(*args):
     return len(args) == 1 and isinstance(
-        args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
+        args[0],
+        (
+            oneflow._oneflow_internal.ConsistentTensor,
+            oneflow._oneflow_internal.LocalTensor,
+        ),
     )
 
 
