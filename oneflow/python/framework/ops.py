@@ -26,14 +26,16 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
 
 @oneflow_export("repeat")
 def api_repeat(
-    input: oneflow_api.BlobDesc, repeat_num: int, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    input: oneflow._oneflow_internal.BlobDesc,
+    repeat_num: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([repeat])
     return func(input, repeat_num, name=name)
 
@@ -57,8 +59,10 @@ def repeat(input, repeat_num, name=None):
 
 @oneflow_export("acc")
 def api_acc(
-    one: oneflow_api.BlobDesc, max_acc_num: int, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    one: oneflow._oneflow_internal.BlobDesc,
+    max_acc_num: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([acc])
     return func(one, max_acc_num, name=name)
 
@@ -80,8 +84,10 @@ def acc(one, max_acc_num, name=None):
 
 @oneflow_export("unpack")
 def api_unpack(
-    input: oneflow_api.BlobDesc, unpack_num: int, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    input: oneflow._oneflow_internal.BlobDesc,
+    unpack_num: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([unpack])
     return func(input, unpack_num, name=name)
 
@@ -105,8 +111,8 @@ def unpack(input, unpack_num, name=None):
 
 @oneflow_export("pack")
 def api_pack(
-    input: oneflow_api.BlobDesc, pack_num: int, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    input: oneflow._oneflow_internal.BlobDesc, pack_num: int, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([pack])
     return func(input, pack_num, name=name)
 
@@ -130,11 +136,13 @@ def pack(input, pack_num, name=None):
 
 @oneflow_export("parallel_cast")
 def api_parallel_cast(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-    distribute: Optional[oneflow_api.distribute.Distribute] = None,
-    gradient_distribute: Optional[oneflow_api.distribute.Distribute] = None,
-) -> oneflow_api.BlobDesc:
+    distribute: Optional[oneflow._oneflow_internal.distribute.Distribute] = None,
+    gradient_distribute: Optional[
+        oneflow._oneflow_internal.distribute.Distribute
+    ] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([parallel_cast])
     return func(
         input, name=name, distribute=distribute, gradient_distribute=gradient_distribute
@@ -150,9 +158,9 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
         dist_str = ""
         if dist is None:
             pass
-        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
             dist_str = "S({})".format(dist.axis)
-        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
             dist_str = "B"
         else:
             raise ValueError("unsupported distribute")
@@ -174,12 +182,12 @@ def parallel_cast(input, name=None, distribute=None, gradient_distribute=None):
 
 @oneflow_export("hierarchical_parallel_cast")
 def api_hierarchical_parallel_cast(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     parallel_distribution: Sequence[str],
     grad_mode: Optional[str] = None,
     grad_parallel_distribution: Sequence[str] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([hierarchical_parallel_cast])
     return func(
         input,
@@ -202,9 +210,9 @@ def hierarchical_parallel_cast(
             return ""
         elif type(dist) is str:
             return dist
-        elif type(dist) is oneflow_api.distribute.SplitDistribute:
+        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
             return "S({})".format(dist.axis)
-        elif type(dist) is oneflow_api.distribute.BroadcastDistribute:
+        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
             return "B"
         else:
             raise ValueError("unsupported distribute")

@@ -28,7 +28,7 @@ import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -44,7 +44,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
-    return oneflow_api.EnableEagerEnvironment(val)
+    return oneflow._oneflow_internal.EnableEagerEnvironment(val)
 
 
 @oneflow_export("env.init")
@@ -63,7 +63,7 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    if oneflow_api.CurrentMachineId() == 0:
+    if oneflow._oneflow_internal.CurrentMachineId() == 0:
         scope_util.InitScopeStack()
     else:
         exit(0)
@@ -98,7 +98,7 @@ def api_get_current_machine_id():
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def get_current_machine_id() -> int:
-    return oneflow_api.CurrentMachineId()
+    return oneflow._oneflow_internal.CurrentMachineId()
 
 
 @oneflow_export("env.machine")
