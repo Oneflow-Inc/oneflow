@@ -146,8 +146,7 @@ size_t InferGradTmpSize(user_op::InferContext* ctx) {
   const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   const auto axis = ctx->Attr<int32_t>("axis");
   size_t tmp_size = 0;
-  if (ctx->user_op_conf().op_type_name() == "normalization_add_relu_grad"
-      && !ctx->user_op_conf().has_output("addend_diff", 0)) {
+  if (ctx->op_type_name() == "normalization_add_relu_grad" && !ctx->has_output("addend_diff", 0)) {
     tmp_size += GetCudaAlignedSize(dy->shape().elem_cnt() * GetSizeOfDataType(dy->data_type()));
   }
   tmp_size += GetCudaAlignedSize(InferGradWorkspaceSize(dy->shape(), dy->data_type(), axis));
@@ -187,7 +186,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
 
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
@@ -217,7 +216,7 @@ class NormalizationInferenceKernel final : public user_op::OpKernel {
                        & (user_op::HobAttr<bool>("training") == false))                         \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -339,9 +338,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    if (ctx->user_op_conf().op_type_name() == "normalization") {
-      CHECK(ctx->Attr<bool>("training"));
-    }
+    if (ctx->op_type_name() == "normalization") { CHECK(ctx->Attr<bool>("training")); }
     const auto* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     auto* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const auto* gamma = ctx->Tensor4ArgNameAndIndex("gamma", 0);
@@ -371,7 +368,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
 
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), y->data_type());
       CHECK_EQ(add_to_output->shape(), y->shape());
@@ -419,11 +416,11 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
         inv_variance->mut_dptr()));
 #endif
 
-    if (ctx->user_op_conf().op_type_name() == "normalization_add_relu") {
-      CHECK(!ctx->user_op_conf().has_input("_add_to_output", 0));
+    if (ctx->op_type_name() == "normalization_add_relu") {
+      CHECK(!ctx->has_input("_add_to_output", 0));
       const int64_t elem_cnt = x->shape().elem_cnt();
       auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
-      if (ctx->user_op_conf().has_input("addend", 0)) {
+      if (ctx->has_input("addend", 0)) {
         const auto* addend = ctx->Tensor4ArgNameAndIndex("addend", 0);
         AddRelu(ctx->device_ctx(), elem_cnt, y->dptr<T>(), addend->dptr<T>(), y->mut_dptr<T>(),
                 mask->mut_dptr<int32_t>());
@@ -446,7 +443,7 @@ class NormalizationTrainKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn(InferTrainTmpSize)                                                     \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "_add_to_output", 0, true));           \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -507,15 +504,15 @@ class NormalizationGradUserKernel final : public user_op::OpKernel {
     size_t bn_workspace_size;
     const void* bn_dy_ptr;
 
-    if (ctx->user_op_conf().op_type_name() == "normalization_grad") {
+    if (ctx->op_type_name() == "normalization_grad") {
       bn_workspace_ptr = tmp_buffer->mut_dptr();
       bn_workspace_size = tmp_buffer->shape().elem_cnt();
       bn_dy_ptr = dy->dptr();
-    } else if (ctx->user_op_conf().op_type_name() == "normalization_add_relu_grad") {
+    } else if (ctx->op_type_name() == "normalization_add_relu_grad") {
       const int64_t elem_cnt = dy->shape().elem_cnt();
       const auto* mask = ctx->Tensor4ArgNameAndIndex("reserve_space", 0);
       user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-      if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+      if (ctx->has_output("addend_diff", 0)) {
         user_op::Tensor* addend_diff = ctx->Tensor4ArgNameAndIndex("addend_diff", 0);
         ReluBackward(ctx->device_ctx(), elem_cnt, mask->dptr<int32_t>(), dy->dptr<T>(),
                      addend_diff->mut_dptr<T>());
@@ -612,7 +609,7 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
-  if (ctx->user_op_conf().has_input("addend", 0)) {
+  if (ctx->has_input("addend", 0)) {
     ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
     z_desc = desc_helper.xy_desc();
   } else {
@@ -637,7 +634,7 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
-  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+  if (ctx->has_output("addend_diff", 0)) {
     ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
     z_desc = desc_helper.xy_desc();
   } else {
@@ -693,7 +690,7 @@ class FusedNormalizationAddReluKernel final : public user_op::OpKernel {
     cudnnTensorDescriptor_t z_desc;
     const void* z_ptr;
     cudnnBatchNormOps_t ops;
-    if (ctx->user_op_conf().has_input("addend", 0)) {
+    if (ctx->has_input("addend", 0)) {
       z_desc = desc_helper.xy_desc();
       z_ptr = ctx->Tensor4ArgNameAndIndex("addend", 0)->dptr();
       ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
@@ -782,7 +779,7 @@ class FusedNormalizationAddReluGradUserKernel final : public user_op::OpKernel {
     cudnnTensorDescriptor_t dz_desc;
     void* dz_ptr;
     cudnnBatchNormOps_t ops;
-    if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+    if (ctx->has_output("addend_diff", 0)) {
       dz_desc = desc_helper.xy_desc();
       dz_ptr = ctx->Tensor4ArgNameAndIndex("addend_diff", 0)->mut_dptr();
       ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
