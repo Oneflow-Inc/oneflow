@@ -33,9 +33,14 @@ inline Maybe<MemoryCase> MakeMemoryCase(const std::string& type, int64_t device_
   return MemoryCaseUtil::MakeMemCase(device_type, device_id);
 }
 
+inline size_t HashDevice(const std::string& type, int64_t device_id) {
+  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+}
+
 }  // namespace
 
-Device::Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+Device::Device(const std::string& type, int64_t device_id)
+    : type_(type), device_id_(device_id), hash_value_() {}
 
 /*static*/ Maybe<Device> Device::New(const std::string& type, int64_t device_id) {
   std::shared_ptr<Device> device(new Device(type, device_id));
@@ -46,10 +51,7 @@ Device::Device(const std::string& type, int64_t device_id) : type_(type), device
 Maybe<void> Device::Init() {
   mem_case_ = JUST(MakeMemoryCase(of_type(), device_id()));
   return Maybe<void>::Ok();
-inline size_t HashDevice(const std::string& type, int64_t device_id) {
-  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
-}  // namespace
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
   return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
