@@ -31,12 +31,12 @@ class Repeat(Module):
     r"""
     """
 
-    def __init__(self, repeat_size) -> None:
+    def __init__(self, sizes) -> None:
         super().__init__()
-        self.repeat_size = repeat_size
+        self.sizes = sizes
 
     def forward(self, input):
-        repeat = self.repeat_size
+        repeat = self.sizes
         input_shape = input.shape
         assert len(repeat) >= len(input_shape)
         in_reshape = []
