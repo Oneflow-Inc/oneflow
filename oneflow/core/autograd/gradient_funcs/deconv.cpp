@@ -76,10 +76,10 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdInterpState* ctx, const Tens
   ctx->activation_requires_grad = inputs.at(0)->requires_grad();
   ctx->weight_requires_grad = inputs.at(1)->requires_grad();
   if (ctx->activation_requires_grad) {
-    ctx->SaveTensorForBackward(inputs.at(1));  // weight
+    ctx->SaveTensorForBackward(inputs.at(1)->detach());  // weight
   }
   if (ctx->weight_requires_grad) {
-    ctx->SaveTensorForBackward(inputs.at(0));  // x
+    ctx->SaveTensorForBackward(inputs.at(0)->detach());  // x
   }
   return Maybe<void>::Ok();
 }
