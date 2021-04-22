@@ -17,7 +17,7 @@ limitations under the License.
 from typing import Union, Sequence, Tuple
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow_api import TensorTuple
+from oneflow._oneflow_internal import TensorTuple
 
 
 def convert2tensor_tuple(args: Union[Tensor, Sequence[Tensor], None]):

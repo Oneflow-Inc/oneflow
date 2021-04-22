@@ -19,9 +19,9 @@ from typing import Union, Sequence, Tuple
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor_tuple_util import convert2tensor_tuple
-from oneflow_api import TensorTuple
-from oneflow_api.autograd import grad as grad_api
-from oneflow_api.autograd import backward as backward_api
+from oneflow._oneflow_internal import TensorTuple
+from oneflow._oneflow_internal.autograd import grad as grad_api
+from oneflow._oneflow_internal.autograd import backward as backward_api
 
 
 @oneflow_export("autograd.grad")
