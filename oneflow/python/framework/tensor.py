@@ -51,9 +51,24 @@ def _access_blob_by_callback(local_tensor, callback, modifier):
     return async_util.Await(1, AsyncAcess)[0]
 
 
-def _copy_from_numpy(eager_local_tensor, np_arr):
+def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     _access_blob_by_callback(
         eager_local_tensor, lambda ofblob: ofblob.CopyFromNdarray(np_arr), "mut"
+    )
+
+
+def _init_eager_local_tensor_by_initializer_conf(eager_local_tensor, initializer_conf, random_seed=0):
+    shape = tuple(eager_local_tensor.shape)
+    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
+    # initializer is None if and only if the initializer_conf is empty_initializer
+    if initializer is None:
+        return
+
+    _copy_from_numpy_to_eager_local_tensor(
+        eager_local_tensor,
+        check_point_v2.generate_values_by_initializer(
+            initializer, shape, eager_local_tensor.dtype
+        ),
     )
 
 
@@ -425,13 +440,18 @@ class Tensor:
             assert isinstance(other, np.ndarray)
             src_np = other
 
-        _copy_from_numpy(internal_tensor, src_np)
+        _copy_from_numpy_to_eager_local_tensor(internal_tensor, src_np)
 
     def _init_by_initializer_conf(self, initializer_conf):
         if self.is_determined:
-            with self._placement_scope():
-                check_point_v2.init_by_initializer_conf(
-                    self, initializer_conf, True, None
+            if self.is_consistent:
+                with self._placement_scope():
+                    check_point_v2.init_by_initializer_conf(
+                        self, initializer_conf, True, None
+                    )
+            else:
+                _init_eager_local_tensor_by_initializer_conf(
+                    self._local_or_consistent_tensor, initializer_conf
                 )
         else:
             self.set_data_initializer(initializer_conf)
@@ -582,24 +602,9 @@ def _default_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-        # TODO: move it to check_point_v2
-        random_seed = 0
-        initializer = initializer_util.GetInitializer(
-            undetermined_tensor.data_initializer, random_seed, tuple(shape)
+        _init_eager_local_tensor_by_initializer_conf(
+            determined_tensor, undetermined_tensor.data_initializer
         )
-        # initializer is None if and only if the initializer_conf is empty_initializer
-        if initializer is None:
-            return determined_tensor
-
-        def _ElemCnt(shape):
-            return np.prod(shape).astype(np.int).item()
-
-        vals = (
-            np.array(initializer(_ElemCnt(tuple(shape))))
-            .astype(np.float32)
-            .reshape(tuple(shape))
-        )
-        _copy_from_numpy(determined_tensor, vals)
     return determined_tensor
 
 
@@ -647,7 +652,7 @@ def _numpy_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-        _copy_from_numpy(determined_tensor, numpy_data)
+        _copy_from_numpy_to_eager_local_tensor(determined_tensor, numpy_data)
 
     return determined_tensor
 

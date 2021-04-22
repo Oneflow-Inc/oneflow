@@ -550,6 +550,12 @@ def _ForEachSlice(
             start_idx = stop_idx
 
 
+def generate_values_by_initializer(initializer, shape, dtype):
+    np_dtype = np.dtype(dtype_util.convert_oneflow_dtype_to_numpy_dtype(dtype))
+    length = _ElemCnt(shape)
+    return np.array(initializer(length)).astype(np_dtype).reshape(shape)
+
+
 def init_by_initializer_conf(
     var_blob: Union[EagerBlobTrait, "oneflow.Tensor"],
     initializer_conf: initializer_conf_util.InitializerConf,
@@ -565,15 +571,8 @@ def init_by_initializer_conf(
         return
 
     def GenerateValueAndAssign(var_blob, start_nd_idx, stop_nd_idx):
-        np_dtype = np.dtype(
-            dtype_util.convert_oneflow_dtype_to_numpy_dtype(var_blob.dtype)
-        )
-        length = _ElemCnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
-        vals = (
-            np.array(initializer(length))
-            .astype(np_dtype)
-            .reshape(np.array(stop_nd_idx) - np.array(start_nd_idx))
-        )
+        shape = np.array(stop_nd_idx) - np.array(start_nd_idx)
+        vals = generate_values_by_initializer(initializer, shape, var_blob.dtype)
 
         if isinstance(var_blob, oneflow.Tensor):
             var_blob_object = var_blob._blob_object
