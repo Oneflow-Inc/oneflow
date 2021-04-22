@@ -79,9 +79,9 @@ class BroadcastBinary : public OpExprGradFunction<OpExprInterpState> {
                       const AttrValueMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->SaveTensorForBackward(inputs.at(1));
-    ctx->SaveTensorForBackward(outputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(0)->detach());
+    ctx->SaveTensorForBackward(inputs.at(1)->detach());
+    ctx->SaveTensorForBackward(outputs.at(0)->detach());
     return Maybe<void>::Ok();
   }
 
