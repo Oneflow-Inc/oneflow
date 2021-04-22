@@ -23,25 +23,25 @@ from typing import Optional, Sequence
 
 
 @oneflow_export("MatMul")
-@register_tensor_op_by_module("tmp.matmul")
 @register_op_by_module("tmp.matmul")
 class MatMul(Module):
     r"""
     """
 
-    def __init__(name: Optional[str] = None,) -> None:
+    def __init__(self) -> None:
         super().__init__()
-
         self._op = (
             flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
             .Output("out")
             .Attr("transpose_a", False)
-            .Attr("transpose_b", True)
+            .Attr("transpose_b", False)
             .Attr("alpha", 1.0)
             .Build()
         )
 
     def forward(self, a, b):
+        assert len(a.shape) == 2
+        assert len(b.shape) == 2
         return self._op(a, b)[0]

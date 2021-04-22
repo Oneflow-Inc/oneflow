@@ -31,7 +31,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.Tensor(np.random.rand(2, 3, 4, 5))
         y = m(x)
         test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
-    
+
     def test_linear_v1(test_case):
         linear = flow.nn.Linear(3, 8)
         flow.nn.init.constant_(linear.weight, 2.3)
