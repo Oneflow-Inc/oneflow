@@ -204,7 +204,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
         const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
         if (var_op == nullptr
             || cur_model_lbi2model_diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn()))
-                   == lbi2diff_lbi.end()) {
+                   == cur_model_lbi2model_diff_lbi.end()) {
           return;
         }
         const std::string& model_diff_lbn = GenLogicalBlobName(

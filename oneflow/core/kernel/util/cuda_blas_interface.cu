@@ -199,6 +199,18 @@ __global__ void AxpyHalfGpu(const int n, const half alpha, const half* x, const 
 #endif  // __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
 }
 
+__global__ void AxpyHalf2Gpu(const int n, const half alpha, const half* x, half* y) {
+  const int h2_n = n / 2;
+  const auto* x_h2 = reinterpret_cast<const half2*>(x);
+  auto* y_h2 = reinterpret_cast<half2*>(y);
+  half2 alpha_h2 = __half2half2(alpha);
+  CUDA_1D_KERNEL_LOOP(i, h2_n) { y_h2[i] = __hfma2(alpha_h2, x_h2[i], y_h2[i]); }
+  if (n % 2 != 0 && blockIdx.x == 0 && threadIdx.x == 0) {
+    const int last_idx = n - 1;
+    y[last_idx] = __hfma(alpha, x[last_idx], y[last_idx]);
+  }
+}
+
 }  // namespace
 
 void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
@@ -259,9 +271,14 @@ void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const double al
 
 void BlasIf<DeviceType::kGPU>::Axpy(DeviceCtx* ctx, const int n, const float16 alpha,
                                     const float16* x, const int incx, float16* y, const int incy) {
-  AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
-      incy);
+  if (incx == 1 && incy == 1) {
+    AxpyHalf2Gpu<<<BlocksNum4ThreadsNum(n / 2), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, float16_2half(alpha), reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  } else {
+    AxpyHalfGpu<<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, float16_2half(alpha), reinterpret_cast<const half*>(x), incx, reinterpret_cast<half*>(y),
+        incy);
+  }
 }
 
 }  // namespace oneflow

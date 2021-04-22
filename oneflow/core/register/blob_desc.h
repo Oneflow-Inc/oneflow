@@ -51,15 +51,22 @@ class BlobDesc final {
   void set_shape(const Shape& shape) { *CHECK_NOTNULL(shape_.get()) = shape; }
 
   DataType data_type() const { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
   void set_data_type(DataType val) { data_type_ = val; }
 
   bool is_dynamic() const { return is_dynamic_; }
   void set_is_dynamic(bool);
+  bool* mut_is_dynamic() { return &is_dynamic_; }
 
   bool operator==(const BlobDesc&) const;
   void ToProto(BlobDescProto*) const;
 
   void CopyFrom(const BlobDesc&);
+
+  size_t ByteSizeOfBlobHeader() const;
+  size_t ByteSizeOfBlobBody() const;
+  size_t AlignedByteSizeOfBlobBody() const;
+  size_t AlignedTotalByteSize() const;
 
  private:
   std::shared_ptr<Shape> shape_;

@@ -28,31 +28,30 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
 
 Maybe<void> EagerBlobObject::InitBlob() {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  rt_blob_desc_.reset(new RtBlobDesc(blob_desc_));
   {
     header_buffer_.reset();
-    int64_t header_byte_size = rt_blob_desc_->ByteSizeOfBlobHeader();
+    int64_t header_byte_size = blob_desc_.ByteSizeOfBlobHeader();
     const auto& FreeHeader = [header_byte_size](char* dptr) { std::free(dptr); };
     char* ptr = reinterpret_cast<char*>(std::malloc(header_byte_size));
     header_buffer_ = std::unique_ptr<char, std::function<void(char*)>>(ptr, FreeHeader);
   }
-  blob_.reset(new Blob(*mem_case_, rt_blob_desc_.get(), header_buffer_.get(), nullptr));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
   return Maybe<void>::Ok();
 }
 
-void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
+Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
-  CHECK_NOTNULL(allocator);
+  CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
-  CHECK_NOTNULL(blob);
+  CHECK_NOTNULL_OR_RETURN(blob);
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    CHECK_ISNULL(blob->dptr());
-    return;
+    CHECK_ISNULL_OR_RETURN(blob->dptr());
+    return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
-    CHECK_EQ(blob_body_bytes_, required_body_bytes);
-    return;
+    CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+    return Maybe<void>::Ok();
   }
   {
     // reset tensor_buffer_;
@@ -66,6 +65,7 @@ void EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
   }
   blob_body_bytes_ = required_body_bytes;
+  return Maybe<void>::Ok();
 }
 
 }  // namespace eager

@@ -35,8 +35,8 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api.oneflow.core.common.data_type as data_type_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow._oneflow_internal
 import traceback
 import sys
 
@@ -240,7 +240,9 @@ def set_default_data_type(func_desc, value):
         value ([type]): data type. e.g. flow.float
     """
     func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(value))
+        data_type_cfg.DataType(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(value)
+        )
     )
 
 
@@ -654,6 +656,17 @@ def set_prune_cast_to_static_shape_ops(func_desc, value=True):
         value (bool, optional): [description]. Defaults to True.
     """
     func_desc.job_config_proto.set_prune_cast_to_static_shape_ops(value)
+
+
+@oneflow_function_config("prune_amp_white_identity_ops")
+def set_prune_amp_white_identity_ops(func_desc, value=True):
+    r"""Whether prune amp_white_identity operations or not.
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.set_prune_amp_white_identity_ops(value)
 
 
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")

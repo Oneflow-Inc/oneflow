@@ -26,6 +26,9 @@ namespace one {
 
 class OpExprInterpState {
  public:
+  OpExprInterpState() = default;
+  virtual ~OpExprInterpState() = default;
+
   const TensorTuple& SavedTensors() const { return saved_tensors_; }
 
   void SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
