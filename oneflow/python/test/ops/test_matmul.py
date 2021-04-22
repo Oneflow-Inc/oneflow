@@ -245,7 +245,7 @@ def filter_args_v2(arg_dict_list):
             continue
 
         # lower accuracy tolerance
-        arg_dict["atol"] = 1e5
+        arg_dict["atol"] = 1e-5
 
         ret.append(arg_dict)
 
