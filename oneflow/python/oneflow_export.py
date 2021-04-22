@@ -20,6 +20,7 @@ import collections
 import oneflow.python.lib.core.enable_if as enable_if_util
 import oneflow.python.lib.core.traceinfo as traceinfo
 from oneflow.python.lib.core.high_order_bool import always_true
+import oneflow_api
 
 
 def oneflow_export(*api_names, **kwargs):
@@ -46,14 +47,6 @@ def experimental_api(func_or_class):
     return func_or_class
 
 
-# def oneflow_export(*api_names, **kwargs):
-#     def Decorator(func_or_class):
-#         func_or_class._ONEFLOW_API = api_names
-#         return func_or_class
-
-#     return Decorator
-
-
 _DEPRECATED = set()
 
 
@@ -70,3 +63,39 @@ def is_deprecated(func_or_class):
     return (
         isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
     )
+
+
+def export_oneflow_api(oneflow_api, internal_name, api_name):
+    names = internal_name.split(".")
+    api = oneflow_api
+    for n in names:
+        api = getattr(api, n)
+    globals()[api_name] = api
+    oneflow_export(api_name)(api)
+
+
+internal_names_2_api_names = {
+    "PlacementSymbol": "placement",
+    "Size": "Size",
+    "device": "device",
+    "autograd.no_grad": "no_grad",
+    "dtype": "dtype",
+    "char": "char",
+    "float16": "float16",
+    "float16": "half",
+    "float32": "float32",
+    "float": "float",
+    "double": "double",
+    "float64": "float64",
+    "int8": "int8",
+    "int32": "int32",
+    "int32": "int",
+    "int64": "int64",
+    "int64": "long",
+    "uint8": "uint8",
+    "record": "record",
+    "tensor_buffer": "tensor_buffer",
+}
+
+for internal_name, api_name in internal_names_2_api_names.items():
+    export_oneflow_api(oneflow_api, internal_name, api_name)
