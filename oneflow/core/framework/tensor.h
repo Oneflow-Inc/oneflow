@@ -238,7 +238,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
                                                     bool is_lazy, bool requires_grad, bool is_leaf,
                                                     bool retain_grad);
 
-  static std::shared_ptr<MirroredTensor> MakeTensor(
+  static std::shared_ptr<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
       const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
       bool retain_grad);

@@ -581,7 +581,6 @@ def _create_blob_object(shape, dtype, initializer, placement_scope_getter):
 def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
-    print(undetermined_tensor.is_consistent)
     if undetermined_tensor.is_consistent:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
