@@ -199,7 +199,6 @@ message JobConfigProto {
     string default_initialize_with_snapshot_path = 11;
   }
 
-  optional bool use_memory_allocation_algorithm_v2 = 101 [default = true];
   optional MemoryAllocationAlgorithmConf memory_allocation_algorithm_conf = 102;
 
   optional XrtConfig xrt_config = 103;
