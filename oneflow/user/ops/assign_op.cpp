@@ -24,7 +24,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   CHECK_OR_RETURN(!ref_desc->is_dynamic());
   CHECK_OR_RETURN(ref_desc->shape() == value_desc->shape());
-  if (ctx->user_op_conf().has_input("condition", 0)) {
+  if (ctx->has_input("condition", 0)) {
     const user_op::TensorDesc* condition = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
     CHECK_OR_RETURN(condition->shape().NumAxes() == 1);
     CHECK_OR_RETURN(condition->shape().At(0) == 1);
@@ -67,7 +67,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   user_op::TensorDesc* ref_desc = ctx->TensorDesc4ArgNameAndIndex("ref", 0);
   const user_op::TensorDesc* value_desc = ctx->TensorDesc4ArgNameAndIndex("value", 0);
   CHECK_OR_RETURN(ref_desc->data_type() == value_desc->data_type());
-  if (ctx->user_op_conf().has_input("condition", 0)) {
+  if (ctx->has_input("condition", 0)) {
     const user_op::TensorDesc* condition = ctx->TensorDesc4ArgNameAndIndex("condition", 0);
     CHECK_OR_RETURN(IsIndexDataType(condition->data_type()));
   }
