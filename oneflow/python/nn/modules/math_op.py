@@ -711,8 +711,9 @@ class Subtract(Module):
             return BroadcastSub()(x, y)
 
 
-@register_tensor_op_by_module("npstd")
+@oneflow_export("Std")
 @register_op_by_module("npstd")
+@register_tensor_op_by_module("npstd")
 class Std(Module):
     r"""
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
@@ -782,3 +783,42 @@ class Std(Module):
                 )
             )[0]
             return res
+
+
+@register_tensor_op_by_module("eq")
+@register_op_by_module("eq")
+class Std(Module):
+    r"""
+    Computes element-wise equality.
+    The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
+
+    Args:
+    input (Tensor): the tensor to compare
+    other (Tensor or float): the tensor or value to compare
+
+    Returns:
+    A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+    """
+    def __init__(self) -> None:
+        super().__init__()
+        self.eq_op = (
+            flow.builtin_op("broadcast_equal")
+            .Input("x")
+            .Input("y")
+            .Output("z")
+            .Build()
+        )
+
+    def forward(self, input, other):
+        for i in range(len(input.size())):
+            assert (input.shape[i] >= other.shape[i]), "The second argument can be a number or a tensor whose shape is broadcastable with the first argument."
+        return self.eq_op(input, other)[0]
+

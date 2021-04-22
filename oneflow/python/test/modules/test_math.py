@@ -42,6 +42,19 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.log(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, equal_nan=True))
 
+    
+    def test_eq(test_case):
+        arr1 = np.array([2, 3, 4, 5]).astype(np.float32)
+        arr2 = np.array([2, 3, 4, 1]).astype(np.float32)
+
+        input = flow.Tensor(arr1, dtype=flow.float32)
+        other = flow.Tensor(arr2, dtype=flow.float32)
+        
+        of_out = flow.eq(input, other)
+        np_out = np.equal(arr1, arr2)
+        test_case.assertTrue(np.allclose(of_out.numpy().astype(bool), np_out))
+        
+
     def test_std(test_case):
         np_arr = np.array(
             [[-0.39283446,  0.44999730,  0.25533655],
