@@ -199,18 +199,18 @@ def _compare_triplet_margin_loss_with_np(
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss"],
         np_out_tripletloss_dict["np_triplet_margin_loss"],
-        atol=1e-3
+        atol=1e-3,
     )
 
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss_mean"],
         np_out_tripletloss_dict["np_triplet_margin_loss_mean"],
-        atol=1e-3
+        atol=1e-3,
     )
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss_sum"],
         np_out_tripletloss_dict["np_triplet_margin_loss_sum"],
-        atol=1e-3
+        atol=1e-3,
     )
 
 
