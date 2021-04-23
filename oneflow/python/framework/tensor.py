@@ -32,7 +32,7 @@ import oneflow as flow
 from oneflow.python.nn.modules import *
 
 
-def _compute_access_blob_by_callback(local_tensor, callback, modifier):
+def _access_blob_by_callback(local_tensor, callback, modifier):
     def AsyncAcess(Yield):
         def Access(Yield):
             def AccessOfBlobPtr(ofblob_ptr):
@@ -52,7 +52,7 @@ def _compute_access_blob_by_callback(local_tensor, callback, modifier):
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    _compute_access_blob_by_callback(
+    _access_blob_by_callback(
         eager_local_tensor, lambda ofblob: ofblob.CopyFromNdarray(np_arr), "mut"
     )
 
@@ -273,7 +273,7 @@ class Tensor:
     def numpy(self):
         internal_tensor = self._local_or_consistent_tensor
         if not internal_tensor.is_lazy and not internal_tensor.is_consistent:
-            return _compute_access_blob_by_callback(
+            return _access_blob_by_callback(
                 internal_tensor, lambda ofblob: ofblob.CopyToNdarray(), "const"
             )
 
