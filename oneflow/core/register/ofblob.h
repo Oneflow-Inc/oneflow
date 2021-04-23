@@ -44,8 +44,6 @@ class OfBlob final {
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
 
-  Blob* mut_blob() { return blob_; }
-
  private:
   DeviceCtx* device_ctx_;
   Blob* blob_;
