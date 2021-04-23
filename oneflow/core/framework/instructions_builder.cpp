@@ -907,14 +907,12 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 }
 
 Maybe<void> InstructionsBuilder::AccessTensorShapeByCallback(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::function<void(std::shared_ptr<const Shape>)>& callback) {
-  std::string instr_name = parallel_desc->device_tag() + ".AccessTensorShapeByCallback";
+  std::string instr_name = "AccessTensorShapeByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::AccessTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
-  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc->symbol_id()));
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }

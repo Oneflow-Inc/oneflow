@@ -44,7 +44,7 @@ def _access_blob_by_callback(local_tensor, callback, modifier):
         fetcher = Access(Yield)
 
         def BuildInstruction(builder):
-            builder.ComputeAccessBlobByCallback(local_tensor, fetcher, modifier)
+            builder.AccessBlobByCallback(local_tensor, fetcher, modifier)
 
         flow._oneflow_internal.deprecated.PhysicalRun(BuildInstruction)
 
