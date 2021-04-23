@@ -61,7 +61,7 @@ REGISTER_USER_OP("transpose")
         if (axis < 0) { axis += perm.size(); }
         CHECK_GE(axis, 0);
         CHECK_LT(axis, perm.size());
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
+        ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
