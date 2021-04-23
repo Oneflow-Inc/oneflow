@@ -40,7 +40,41 @@ def infer_shape(x, shape):
 @register_tensor_op_by_module("tmp.reshape")
 @register_op_by_module("tmp.reshape")
 class Reshape(Module):
-    r"""
+    r"""This operator reshapes a Tensor.
+
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
+
+    Args:
+        x: A `Tensor`.
+        shape: Shape of the output tensor.
+    Returns:
+        A `Tensor`, has the same type as `x`.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def reshape_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
+        ) -> tp.Numpy:
+            reshape_blob = flow.reshape(x,
+                                        shape=[2, 2, 2, -1])
+            return reshape_blob
+
+
+        x = np.array([[1, 2, 3, 4],
+                    [5, 6, 7, 8],
+                    [9, 10, 11, 12],
+                    [13, 14, 15, 16]]).astype(np.float32)
+        out = reshape_Job(x)
+
+        # out.shape (2, 2, 2, 2)
+
     """
 
     def __init__(self, shape: Sequence[int], name: Optional[str] = None,) -> None:

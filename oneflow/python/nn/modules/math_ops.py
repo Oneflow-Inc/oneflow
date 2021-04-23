@@ -614,22 +614,31 @@ class Add(Module):
 @register_tensor_op_by_module("exp")
 @register_op_by_module("exp")
 class Exp(Module):
-    r"""
-    Returns a new tensor with the exp of the elements of :attr:`x`.
-    .. math::
-        \text{y}_{i} = \exp(\text{x}_{i})
+    """This operator computes the exponential of Tensor.
+
+    The equation is: 
+
+    .. math:: 
+
+        out = e^x
+
     Args:
-        x (flow.Tensor): X.
-    
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
     For example: 
+
     .. code-block:: python 
+
         import numpy as np
         import oneflow as flow
 
         x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         y = x.exp()
 
-        y [ 2.7182817  7.389056  20.085537 ]
+        # y [ 2.7182817  7.389056  20.085537 ]
 
     """
 
