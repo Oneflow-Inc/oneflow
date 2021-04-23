@@ -25,8 +25,10 @@ import numpy as np
 class TestModule(flow.unittest.TestCase):
     def test_std(test_case):
         np_arr = np.array(
-            [[-0.39283446,  0.44999730,  0.25533655],
-            [ 0.76964611,  0.17798263,  1.46315704]]
+            [
+                [-0.39283446, 0.44999730, 0.25533655],
+                [0.76964611, 0.17798263, 1.46315704],
+            ]
         )
         input = flow.Tensor(np_arr)
         of_out = flow.npstd(input, 1)

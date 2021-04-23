@@ -22,7 +22,7 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
-class TestModule(flow.unittest.TestCase):    
+class TestModule(flow.unittest.TestCase):
     def test_matmul(test_case):
         x = flow.Tensor(np.random.randn(2, 4))
         y = flow.Tensor(np.random.randn(4, 2))
@@ -31,7 +31,6 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.matmul(x.numpy(), y.numpy())
         of_out = m(x, y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
 
 
 if __name__ == "__main__":

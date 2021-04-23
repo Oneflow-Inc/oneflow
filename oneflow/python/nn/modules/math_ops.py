@@ -335,7 +335,7 @@ class ScalarAdd(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-    
+
 
 @register_tensor_op_by_module("sub")
 @register_op_by_module("sub")
@@ -612,7 +612,6 @@ class Add(Module):
             return BroadcastAdd()(x, y)
 
 
-
 @oneflow_export("Sin")
 @register_op_by_module("sin")
 class Sin(Module):
@@ -687,7 +686,7 @@ class Log(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-        
+
 @register_tensor_op_by_module("subtract")
 @register_op_by_module("subtract")
 class Subtract(Module):
@@ -744,24 +743,25 @@ class Std(Module):
         # equal to numpy output >>  np.std(arr, axis=2)
 
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.zero_module = flow.Zeros()
         self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
         self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
         self.reduce_sum_op = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
+            flow.builtin_op("reduce_sum").Input("input_tensor").Output("output_tensor")
         )
 
-        self.reduce_count = 1 # Tensor.nelemenet()
+        self.reduce_count = 1  # Tensor.nelemenet()
 
     def forward(self, x, dim=None, unbiased=True, keepdim=True):
-        assert unbiased==True, "Only support 'unbiased=True' for now!"
+        assert unbiased == True, "Only support 'unbiased=True' for now!"
 
         axis = _check_axis(dim, x.shape)
-        self.reduce_sum_op = self.reduce_sum_op.Attr("axis", axis).Attr("keepdims", keepdim).Build()
+        self.reduce_sum_op = (
+            self.reduce_sum_op.Attr("axis", axis).Attr("keepdims", keepdim).Build()
+        )
 
         if isinstance(axis, list) and len(axis) == 0:
             return self.zero_module(x)
@@ -776,13 +776,10 @@ class Std(Module):
                 Subtract()(
                     # reduce_mean = reduce_sum / reduce_count
                     self.reduce_sum_op(self.square_op(x)[0])[0] / self.reduce_count,
-                    self.square_op(
-                        self.reduce_sum_op(x)[0] / self.reduce_count,
-                    )[0]
+                    self.square_op(self.reduce_sum_op(x)[0] / self.reduce_count,)[0],
                 )
             )[0]
             return res
-
 
 
 @oneflow_export("Pow")
@@ -837,20 +834,16 @@ class Std(Module):
         y = flow.eq(input, other)
 
     """
+
     def __init__(self) -> None:
         super().__init__()
         self.eq_op = (
-            flow.builtin_op("broadcast_equal")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
+            flow.builtin_op("broadcast_equal").Input("x").Input("y").Output("z").Build()
         )
 
     def forward(self, input, other):
         for i in range(len(input.size())):
-            assert (input.shape[i] >= other.shape[i]), "The second argument can be a number or a tensor whose shape is broadcastable with the first argument."
+            assert (
+                input.shape[i] >= other.shape[i]
+            ), "The second argument can be a number or a tensor whose shape is broadcastable with the first argument."
         return self.eq_op(input, other)[0]
-
-
-

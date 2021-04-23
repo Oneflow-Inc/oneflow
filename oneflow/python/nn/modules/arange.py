@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,8 +36,6 @@ from oneflow.python.ops.transpose_util import (
 )
 
 
-@oneflow_export("Arange")
-@register_tensor_op_by_module("arange")
 @register_op_by_module("arange")
 class Arange(Module):
     r"""
@@ -54,12 +67,10 @@ class Arange(Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self._op_arange = (
-            flow.builtin_op("range").Output("out")
-        )
+        self._op_arange = flow.builtin_op("range").Output("out")
 
     def forward(self, start, end, step=1):
-        dtype = flow.int64 # "Only support dtype: `flow.int64` for now!"
+        dtype = flow.int64  # "Only support dtype: `flow.int64` for now!"
         if start is None:
             start = 0
         if end is None:
@@ -71,7 +82,16 @@ class Arange(Module):
         assert type(end) == int, "Params `end`'s type should be int"
         assert type(step) == int, "Params `step`'s type should be int"
 
-        self._op_arange = self._op_arange.Attr("start", start).Attr("delta", step).Attr("limit", end).Attr("dtype", dtype).Build()
+        self._op_arange = (
+            self._op_arange.Attr("start", start)
+            .Attr("delta", step)
+            .Attr("limit", end)
+            .Attr("dtype", dtype)
+            .Build()
+        )
         return self._op_arange()[0]
 
 
+@oneflow_export("Arange")
+def arange_op(tensor, start, end, step=1):
+    return Arange()(tensor, start, end, step)
