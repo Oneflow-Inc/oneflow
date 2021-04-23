@@ -41,9 +41,6 @@ def constant(
         shape (Optional[Sequence[int]], optional): The shape of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
-    Raises:
-        NotImplementedError: The data type of value should be int or float.
-
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result blob.
 
@@ -58,26 +55,18 @@ def constant(
 
         @flow.global_function()
         def empty_Job() -> tp.Numpy:
-            empty_blob = flow.empty(value=1.5,
-                                        shape=(1, 3, 3),
-                                        dtype=flow.float)
+            empty_blob = flow.empty(shape=(1, 3, 3),
+                                    dtype=flow.float)
             return empty_blob
 
 
-        out = empty_Job()
-
-        # out [[[1.5 1.5 1.5]
-        #       [1.5 1.5 1.5]
-        #       [1.5 1.5 1.5]]]
+        out = empty_Job() # out tensor with shape (1, 3, 3) and data uninitialized
 
     """
     if name is None:
         name = id_util.UniqueStr("Empty_")
 
     assert dtype is not None
-
-    if not isinstance(value, (int, float)):
-        raise NotImplementedError
 
     if shape is not None:
         assert isinstance(shape, (list, tuple))

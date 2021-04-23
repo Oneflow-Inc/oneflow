@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 REGISTER_USER_OP("empty")
     .Output("out")
-    .SetOutputBufferNum(1) 
+    .SetOutputBufferNum(1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

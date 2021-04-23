@@ -22,28 +22,26 @@ import oneflow as flow
 from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
-import math
+import oneflow.typing as tp
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def _test(test_case, device_type, type_name_value):
-    type_name, value = type_name_value
+def _test(test_case, device_type, type_name, shape):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow_type = type_name_to_flow_type[type_name]
     np_type = type_name_to_np_type[type_name]
-    shape = (1024, 1024)
 
     @flow.global_function(function_config=func_config)
-    def empty_job():
+    def empty_job() -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0"):
             return flow.empty(dtype=flow_type, shape=shape)
 
-    of_out = empty_job().get().numpy()
-    print(of_out.shpae, of_out.dtype)
-    #test_case.assertTrue(np.array_equal(of_out, np.full(shape, value).astype(np_type)))
+    of_out = empty_job()
+    test_case.assertTrue(of_out.shape == shape)
+    test_case.assertTrue(of_out.dtype == np_type)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -52,25 +50,13 @@ class TestConstant(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["type_name_value"] = [
-            ("float32", 0),
-            ("float32", 0.0),
-            ("float32", 1),
-            ("float32", 1.0),
-            ("float32", -1),
-            ("float32", -1.0),
-            ("float32", math.pi),
-            ("float32", -math.pi),
-            ("float32", float("inf")),
-            ("float32", float("-inf")),
-            ("int32", 0),
-            ("int32", 0.0),
-            ("int32", 1),
-            ("int32", 1.0),
-            ("int32", -1),
-            ("int32", -1.0),
-            ("int32", 2 ** 31 - 1),
-            ("int32", -(2 ** 31)),
+            "float32",
+            "double",
+            "int8",
+            "int32",
+            "int64",
         ]
+        arg_dict["shape"] = [(2, 3, 4, 5), (2, 3), (100, 100), (512, 512)]
         for arg in GenArgList(arg_dict):
             _test(test_case, *arg)
 
