@@ -48,11 +48,20 @@ class TestModule(flow.unittest.TestCase):
 
     def test_arange(test_case):
         np_out = np.arange(5)
-        of_out = flow.arange(0, 5)
+        of_out = flow.arange(0, end=5)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
         np_out2 = np.arange(0, 20, 2)
-        of_out2 = flow.arange(0, 20, 2)
+        of_out2 = flow.arange(0, 20, step=2)
+        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2))
+    
+    def test_arange2(test_case):
+        np_out = np.arange(20)
+        of_out = flow.arange(start=0, end=20)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+        np_out2 = np.arange(0, 100, 3)
+        of_out2 = flow.arange(start=0, end=100, step=3)
         test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2))
 
 
