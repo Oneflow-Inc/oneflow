@@ -29,12 +29,12 @@ class Unsqueeze(Module):
 
     The returned tensor shares the same underlying data with this tensor.
 
-    A :attr:`dim` value within the range ``[-input.dim() - 1, input.dim() + 1)``
+    A :attr:`dim` value within the range ``[0, input.dim() + 1)``
     can be used. Negative :attr:`dim` will correspond to :meth:`unsqueeze`
     applied at :attr:`dim` = ``dim + input.dim() + 1``.
 
     Args:
-        {input}
+        input (Tensor) – the input tensor.
         dim (int): the index at which to insert the singleton dimension
     
     For example: 
@@ -46,16 +46,14 @@ class Unsqueeze(Module):
 
         x = flow.Tensor(np.random.rand(2, 3, 4))
         y = x.unsqueeze(2)
-        print(y.shape)
-        # (2, 3, 1, 4)
+        # y.shape >> (2, 3, 1, 4)
     
     """
-
-    def __init__(self) -> None:
+    def __init__(self, dim: int = 0,) -> None:
         super().__init__()
-        self._op = flow.builtin_op("expand_dims").Input("in").Output("out")
+        self.dim = dim
+        self._op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
 
-    def forward(self, input, axis=0):
-        assert axis <= len(input.size()), "axis should <= length of input tensor!"
-        self._op = self._op.Attr("axis", axis).Build()
-        return self._op(input)[0]
+    def forward(self, input):
+        assert 0 <= self.dim <= len(input.size()), "dim should large than 0 and less than the size of input tensor!"
+        return self._op(input, axis=self.dim)[0]
