@@ -45,7 +45,8 @@ class TestModule(flow.unittest.TestCase):
 
         input = flow.Tensor(in_arr, dtype=flow.float32)
         mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
-        of_out = input.masked_fill(mask, fill_value)   
+        of_out = input.masked_fill(mask, fill_value)  
+        print("of_out >>>>>>> \n", of_out.numpy()) 
         test_case.assertTrue(np.allclose(of_out.numpy(), torch_out))
 
         input2 = flow.Tensor(in_arr, dtype=flow.float32)

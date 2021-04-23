@@ -18,6 +18,7 @@ from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
 
+@oneflow_export("MaskedFill")
 @register_op_by_module("tmp.masked_fill")
 @register_tensor_op_by_module("masked_fill")
 class MaskedFill(Module):
@@ -35,6 +36,29 @@ class MaskedFill(Module):
 
         import oneflow as flow
         import numpy as np
+
+        in_arr = np.array(
+            [[[-0.13169311,  0.97277078,  1.23305363,  1.56752789],
+            [-1.51954275,  1.87629473, -0.53301206,  0.53006478],
+            [-1.38244183, -2.63448052,  1.30845795, -0.67144869]],
+
+            [[ 0.41502161,  0.14452418,  0.38968   , -1.76905653],
+            [ 0.34675095, -0.7050969 , -0.7647731 , -0.73233418],
+            [-1.90089858,  0.01262963,  0.74693893,  0.57132389]]]
+        )
+
+        fill_value = 8.7654321 # random value e.g. -1e9 3.1415
+        input = flow.Tensor(in_arr, dtype=flow.float32)
+        mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
+
+        output = input.masked_fill(mask, fill_value) 
+        #  [[[-0.13169311  8.765432    8.765432    8.765432  ]
+        #   [-1.5195427   8.765432   -0.53301203  8.765432  ]
+        #   [-1.3824419  -2.6344805   8.765432   -0.6714487 ]]
+
+        #  [[ 8.765432    8.765432    8.765432   -1.7690566 ]
+        #   [ 8.765432   -0.7050969  -0.7647731  -0.7323342 ]
+        #   [-1.9008986   8.765432    8.765432    8.765432  ]]]
 
     """
 
