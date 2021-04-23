@@ -288,10 +288,10 @@ Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const Ten
   for (const auto& entry : backward_entries_) {
     if (!entry.requires_backward) { continue; }
     for (const int& idx : entry.snapshot.input_indices) {
-      ctx->SaveTensorForBackward(inputs.at(idx)->detach());
+      ctx->SaveTensorForBackward(inputs.at(idx));
     }
     for (const int& idx : entry.snapshot.output_indices) {
-      ctx->SaveTensorForBackward(outputs.at(idx)->detach());
+      ctx->SaveTensorForBackward(outputs.at(idx));
     }
   }
   return Maybe<void>::Ok();

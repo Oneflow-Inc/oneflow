@@ -139,8 +139,8 @@ Maybe<void> TensorScalarMul::Capture(TensorScalarInterpState* ctx, const TensorT
                                      const TensorTuple& outputs, const AttrValueMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
-  if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)->detach()); }
-  if (ctx->scalar_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)->detach()); }
+  if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
+  if (ctx->scalar_requires_grad) { ctx->SaveTensorForBackward(inputs.at(0)); }
   return Maybe<void>::Ok();
 }
 
@@ -194,9 +194,9 @@ Maybe<void> TensorScalarDiv::Capture(TensorScalarInterpState* ctx, const TensorT
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
   if (ctx->x_requires_grad || ctx->scalar_requires_grad) {
-    ctx->SaveTensorForBackward(inputs.at(1)->detach());
+    ctx->SaveTensorForBackward(inputs.at(1));
   }
-  if (ctx->scalar_requires_grad) { ctx->SaveTensorForBackward(outputs.at(0)->detach()); }
+  if (ctx->scalar_requires_grad) { ctx->SaveTensorForBackward(outputs.at(0)); }
   return Maybe<void>::Ok();
 }
 
