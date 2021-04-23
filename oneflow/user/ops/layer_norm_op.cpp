@@ -87,12 +87,19 @@ REGISTER_USER_OP("layer_norm")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Broadcast(user_op::OpArg("gamma", 0))
-          .Broadcast(user_op::OpArg("beta", 0))
-          .Build();
+      const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+      int64_t begin_norm_axis =
+          ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_norm_axis"));
+      int64_t begin_params_axis =
+          ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_params_axis"));
+      for (int i = 0; i < std::min(begin_norm_axis, begin_params_axis); ++i) {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Broadcast(user_op::OpArg("gamma", 0))
+            .Broadcast(user_op::OpArg("beta", 0))
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -144,7 +151,10 @@ REGISTER_USER_OP("layer_norm_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+      for (int i = 0; i < begin_norm_axis; ++i) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -227,13 +237,16 @@ REGISTER_USER_OP("layer_norm_param_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Broadcast(user_op::OpArg("gamma", 0))
-          .PartialSum(user_op::OpArg("gamma_diff", 0))
-          .PartialSum(user_op::OpArg("beta_diff", 0))
-          .Build();
+      int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+      for (int i = 0; i < begin_params_axis; ++i) {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Broadcast(user_op::OpArg("gamma", 0))
+            .PartialSum(user_op::OpArg("gamma_diff", 0))
+            .PartialSum(user_op::OpArg("beta_diff", 0))
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
