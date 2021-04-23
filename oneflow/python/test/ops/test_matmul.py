@@ -244,9 +244,8 @@ def filter_args_v2(arg_dict_list):
         ):
             continue
 
-        # cpu precision is lower
-        if arg_dict["device_type"] == "cpu":
-            arg_dict["atol"] = 1e5
+        # lower accuracy tolerance
+        arg_dict["atol"] = 1e-5
 
         ret.append(arg_dict)
 
