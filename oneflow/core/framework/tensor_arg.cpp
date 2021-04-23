@@ -28,9 +28,7 @@ TensorArg::TensorArg() : add2_op_(op_expr_helper::AddNOp(2).GetPtrOrThrow()) {}
 
 bool TensorArg::Empty() const { return !acc_tensor_; }
 
-void TensorArg::Release() {
-  acc_tensor_.reset();
-}
+void TensorArg::Release() { acc_tensor_.reset(); }
 
 Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor) {
   if (!acc_tensor_) {
