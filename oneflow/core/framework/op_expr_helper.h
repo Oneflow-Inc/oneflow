@@ -149,5 +149,10 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
                                           const int& groups, const std::string& data_format,
                                           const std::string& name);
 
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha);
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
