@@ -18,8 +18,7 @@ from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
 
-@oneflow_export("MaskedFill")
-# @register_op_by_module("masked_fill")
+@register_op_by_module("tmp.masked_fill")
 @register_tensor_op_by_module("masked_fill")
 class MaskedFill(Module):
     r"""
