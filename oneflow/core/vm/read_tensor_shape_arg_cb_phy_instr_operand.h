@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ACCESS_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_VM_ACCESS_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_READ_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_
+#define ONEFLOW_CORE_VM_READ_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_
 
 #include <functional>
 #include "oneflow/core/vm/phy_instr_operand.h"
@@ -30,14 +30,14 @@ class EagerBlobObject;
 
 namespace vm {
 
-// access tensor shape arg callback physical instruction operand
-class AccessTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
+// read tensor shape arg callback physical instruction operand
+class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
-  AccessTensorShapeArgCbPhyInstrOperand(
+  ReadTensorShapeArgCbPhyInstrOperand(
       const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
       const std::function<void(std::shared_ptr<const Shape>)>& callback)
       : eager_blob_object_(eager_blob_object), callback_(callback) {}
-  ~AccessTensorShapeArgCbPhyInstrOperand() = default;
+  ~ReadTensorShapeArgCbPhyInstrOperand() = default;
 
   const std::function<void(std::shared_ptr<const Shape>)>& callback() const { return callback_; }
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
@@ -65,4 +65,4 @@ class AccessTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ACCESS_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_READ_TENSOR_SHAPE_ARG_CB_PHY_INSTR_OPERAND_H_

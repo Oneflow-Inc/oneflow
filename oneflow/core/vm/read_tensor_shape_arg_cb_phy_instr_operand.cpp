@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/access_tensor_shape_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 
 #include "oneflow/core/eager/eager_blob_object.h"
 
@@ -21,14 +21,11 @@ namespace oneflow {
 
 namespace vm {
 
-void AccessTensorShapeArgCbPhyInstrOperand::ForEachConstMirroredObject(
+void ReadTensorShapeArgCbPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
   vm::LocalDepObject* infer_local_dep_object =
       CHECK_JUST(eager_blob_object()->infer_local_dep_object())->mut_local_dep_object();
-  vm::LocalDepObject* compute_local_dep_object =
-      CHECK_JUST(eager_blob_object()->compute_local_dep_object())->mut_local_dep_object();
-  DoEach(infer_local_dep_object->mut_mirrored_object(),
-         compute_local_dep_object->mut_mirrored_object());
+  DoEach(infer_local_dep_object->mut_mirrored_object(), nullptr);
 }
 
 }  // namespace vm

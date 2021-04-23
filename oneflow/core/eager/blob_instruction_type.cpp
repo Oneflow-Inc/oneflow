@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/vm/access_tensor_shape_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/blob_object.h"
-#include "oneflow/core/vm/host_stream_type.h"
+#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"
@@ -131,12 +131,12 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
-class AccessTensorShapeByCallbackInstructionType : public vm::InstructionType {
+class ReadTensorShapeByCallbackInstructionType : public vm::InstructionType {
  public:
-  AccessTensorShapeByCallbackInstructionType() = default;
-  ~AccessTensorShapeByCallbackInstructionType() override = default;
+  ReadTensorShapeByCallbackInstructionType() = default;
+  ~ReadTensorShapeByCallbackInstructionType() override = default;
 
-  using stream_type = vm::HostStreamType;
+  using stream_type = vm::ControlStreamType;
 
   void Compute(vm::Instruction* instruction) const override {
     // do nothing
@@ -147,14 +147,14 @@ class AccessTensorShapeByCallbackInstructionType : public vm::InstructionType {
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr =
-        dynamic_cast<const vm::AccessTensorShapeArgCbPhyInstrOperand*>(phy_instr_operand.get());
+        dynamic_cast<const vm::ReadTensorShapeArgCbPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
     ptr->callback()(ptr->eager_blob_object()->blob_desc().shape_ptr());
   }
 };
 
-COMMAND(vm::RegisterInstructionType<AccessTensorShapeByCallbackInstructionType>(
-    "AccessTensorShapeByCallback"));
+COMMAND(vm::RegisterInstructionType<ReadTensorShapeByCallbackInstructionType>(
+    "ReadTensorShapeByCallback"));
 
 }  // namespace eager
 }  // namespace oneflow

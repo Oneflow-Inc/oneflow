@@ -94,8 +94,7 @@ const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
     bc.Decrease();
   };
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(
-        builder->AccessTensorShapeByCallback(JUST(eager_blob_object()), callback));
+    JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
     return Maybe<void>::Ok();
   };
   CHECK_JUST(PhysicalRun(build_instruction));

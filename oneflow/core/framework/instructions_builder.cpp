@@ -31,7 +31,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/vm/access_tensor_shape_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
@@ -906,13 +906,13 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::AccessTensorShapeByCallback(
+Maybe<void> InstructionsBuilder::ReadTensorShapeByCallback(
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::function<void(std::shared_ptr<const Shape>)>& callback) {
-  std::string instr_name = "AccessTensorShapeByCallback";
+  std::string instr_name = "ReadTensorShapeByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::AccessTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
+      std::make_shared<vm::ReadTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }

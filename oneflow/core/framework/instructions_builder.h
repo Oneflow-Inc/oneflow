@@ -119,7 +119,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                    const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
-  Maybe<void> AccessTensorShapeByCallback(
+  Maybe<void> ReadTensorShapeByCallback(
       const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
       const std::function<void(std::shared_ptr<const Shape>)>& callback);
 
