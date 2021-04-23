@@ -242,7 +242,7 @@ class Session(object):
         assert isinstance(function_desc, FunctionDesc)
         self.job_name2function_desc_[function_desc.job_func.__name__] = function_desc
 
-    def StashJob(self, job_name=None):
+    def StashJob(self, job_name=None, key=None):
         assert self.status_ is SessionStatus.RUNNING, "current status {}".format(
             self.status_
         )
@@ -253,7 +253,9 @@ class Session(object):
             ), "{} is not current job name".format(job_name)
         else:
             job_name = job.job_conf.job_name
-        self.job_name2job_[job_name] = job
+        if key is None:
+            key = job_name
+        self.job_name2job_[key] = job
 
     def Job(self, job_name):
         assert self.status_ is SessionStatus.RUNNING
