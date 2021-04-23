@@ -36,7 +36,6 @@ from oneflow.python.ops.transpose_util import (
 )
 
 
-@register_op_by_module("arange")
 class Arange(Module):
     r"""
     Returns a 1-D tensor of size :math:`\left\lfloor \frac{\text{end} - \text{start}}{\text{step}} \right\rfloor + 1`
@@ -92,6 +91,6 @@ class Arange(Module):
         return self._op_arange()[0]
 
 
-@oneflow_export("Arange")
-def arange_op(tensor, start, end, step=1):
-    return Arange()(tensor, start, end, step)
+@oneflow_export("arange")
+def arange_op(start=1, end=1, step=1):
+    return Arange()(start, end, step)

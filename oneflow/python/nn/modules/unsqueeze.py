@@ -49,11 +49,14 @@ class Unsqueeze(Module):
         # y.shape >> (2, 3, 1, 4)
     
     """
+
     def __init__(self, dim: int = 0,) -> None:
         super().__init__()
         self.dim = dim
         self._op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
 
     def forward(self, input):
-        assert 0 <= self.dim <= len(input.size()), "dim should large than 0 and less than the size of input tensor!"
+        assert (
+            0 <= self.dim <= len(input.size())
+        ), "dim should large than 0 and less than the size of input tensor!"
         return self._op(input, axis=self.dim)[0]
