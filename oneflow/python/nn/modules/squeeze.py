@@ -26,7 +26,33 @@ from typing import Optional, Sequence
 @register_tensor_op_by_module("tmp.squeeze")
 @register_op_by_module("tmp.squeeze")
 class Squeeze(Module):
-    r"""
+    """This operator removes the specified dimention which size is 1 of the input Tensor.
+    If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
+
+    The amount of element in return value is the same as Tensor `input`.
+
+    Args:
+        input (oneflow.Tensor): The input Tensor.
+        axis (Optional[Sequence[int]], optional): The axis. Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: The result Tensor.
+
+    For example:
+
+    Example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        out = flow.tmp.squeeze(input, axis=[1, 2]).numpy().shape
+
+        # out.shape (1, 3)
+
     """
 
     def __init__(
