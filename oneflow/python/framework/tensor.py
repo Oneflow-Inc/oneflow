@@ -715,13 +715,13 @@ def _input_args_is_shape(*args):
 
 
 def register_tensor_op_by_module(op_name):
-    def set_method(module):
+    def set_method(module_method):
         setattr(
             Tensor,
             op_name,
-            lambda self, *args, **kwargs: module(**kwargs).forward(self, *args),
+            lambda self, *args, **kwargs: module_method(self, *args, **kwargs),
         )
-        return module
+        return module_method
 
     return set_method
 

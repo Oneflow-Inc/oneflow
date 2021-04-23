@@ -65,7 +65,6 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.multiply(3, x.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    
     def test_matmul(test_case):
         x = flow.Tensor(np.random.randn(2, 4))
         y = flow.Tensor(np.random.randn(4, 2))
@@ -78,7 +77,6 @@ class TestModule(flow.unittest.TestCase):
         print("of_out >>>>>>>>>>>>>>> \n", of_out.numpy())
 
         # test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
 
 
 if __name__ == "__main__":

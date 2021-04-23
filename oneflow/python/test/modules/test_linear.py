@@ -24,7 +24,6 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-
     def test_tanh(test_case):
         m = flow.nn.Tanh()
         np_arr = np.random.rand(2, 3, 4, 5)
@@ -34,13 +33,12 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.tanh(np_arr)
         test_case.assertTrue(np.allclose(np_out, y.numpy()))
 
-
     def test_identity(test_case):
         m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
         x = flow.Tensor(np.random.rand(2, 3, 4, 5))
         y = m(x)
         test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
-    
+
     def test_linear(test_case):
         linear = flow.nn.Linear(3, 8)
         input_arr = np.array(

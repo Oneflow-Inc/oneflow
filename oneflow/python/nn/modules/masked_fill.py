@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -19,8 +34,6 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("MaskedFill")
-@register_op_by_module("tmp.masked_fill")
-@register_tensor_op_by_module("masked_fill")
 class MaskedFill(Module):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True. 
@@ -64,7 +77,14 @@ class MaskedFill(Module):
 
     def __init__(self) -> None:
         super().__init__()
-        self._where_op = flow.builtin_op("where").Input("condition").Input("x").Input("y").Output("out").Build()
+        self._where_op = (
+            flow.builtin_op("where")
+            .Input("condition")
+            .Input("x")
+            .Input("y")
+            .Output("out")
+            .Build()
+        )
 
     def forward(self, input, mask, value):
         in_shape = tuple(input.shape)
@@ -73,3 +93,7 @@ class MaskedFill(Module):
         return self._where_op(mask, value_like_x, input)[0]
 
 
+@oneflow_export("Masked_fill")
+@register_tensor_op_by_module("masked_fill")
+def masked_fill_op(tensor1, tensor2, mask, value):
+    return MaskedFill()(tensor1, tensor2, mask, value)
