@@ -978,6 +978,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
+    JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
 #endif
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     JUST(DoPass("DynamicLossScaleSchedulePass"));
@@ -989,6 +990,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
+    JUST(DoPass("FuseAddToOutputPass"));
+    // run this pass again to fuse ops created in the first run.
+    // TODO(guoran): loop multiple times inside the pass
     JUST(DoPass("FuseAddToOutputPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));

@@ -22,7 +22,7 @@ import importlib.util
 import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 from typing import List
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("sysconfig.get_include")
@@ -40,9 +40,9 @@ def get_compile_flags() -> List[str]:
     flags = []
     flags.append("-I{}".format(get_include()))
     flags.append("-DHALF_ENABLE_CPP11_USER_LITERALS=0")
-    if oneflow_api.flags.with_cuda():
+    if oneflow._oneflow_internal.flags.with_cuda():
         flags.append("-DWITH_CUDA")
-    if oneflow_api.flags.use_cxx11_abi():
+    if oneflow._oneflow_internal.flags.use_cxx11_abi():
         flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
     else:
         flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
@@ -64,12 +64,12 @@ def get_link_flags() -> List[str]:
 
 @oneflow_export("sysconfig.with_cuda")
 def with_cuda() -> bool:
-    return oneflow_api.flags.with_cuda()
+    return oneflow._oneflow_internal.flags.with_cuda()
 
 
 @oneflow_export("sysconfig.with_xla")
 def with_xla() -> bool:
-    return oneflow_api.flags.with_xla()
+    return oneflow._oneflow_internal.flags.with_xla()
 
 
 @oneflow_export("sysconfig.with_mlir")
@@ -79,9 +79,9 @@ def with_cuda() -> bool:
 
 @oneflow_export("sysconfig.has_rpc_backend_grpc")
 def has_rpc_backend_grpc() -> bool:
-    return oneflow_api.flags.has_rpc_backend_grpc()
+    return oneflow._oneflow_internal.flags.has_rpc_backend_grpc()
 
 
 @oneflow_export("sysconfig.has_rpc_backend_local")
 def has_rpc_backend_local() -> bool:
-    return oneflow_api.flags.has_rpc_backend_local()
+    return oneflow._oneflow_internal.flags.has_rpc_backend_local()

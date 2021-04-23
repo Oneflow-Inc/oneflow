@@ -36,7 +36,7 @@ namespace {
 
 void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
-  blob->blob_desc().body_shape().ToProto(proto.mutable_shape());
+  blob->blob_desc().shape().ToProto(proto.mutable_shape());
   proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
@@ -100,9 +100,13 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
   explicit KernelCreateContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   user_op::UserOpConfWrapper user_op_conf_;
 };
 
@@ -170,6 +174,11 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
@@ -277,9 +286,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   user_op::UserOpConfWrapper user_op_conf_;
   const JobDesc* job_desc_;
   ArgVec inputs_;
@@ -372,6 +385,11 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   }
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
@@ -459,6 +477,11 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
