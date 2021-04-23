@@ -93,7 +93,7 @@ class MaskedFill(Module):
         return self._where_op(mask, value_like_x, input)[0]
 
 
-@oneflow_export("Masked_fill")
+@oneflow_export("tmp.masked_fill")
 @register_tensor_op_by_module("masked_fill")
-def masked_fill_op(tensor1, tensor2, mask, value):
-    return MaskedFill()(tensor1, tensor2, mask, value)
+def masked_fill_op(tensor, mask, /, value):
+    return MaskedFill()(tensor, mask, value)
