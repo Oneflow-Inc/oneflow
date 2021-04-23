@@ -273,6 +273,82 @@ def _test_train(test_case):
     test_case.assertTrue(np.allclose(y_arr.flatten(), gather_out.flatten()))
 
 
+def _test_reshape(test_case):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+    flow.config.enable_legacy_model_io(True)
+    flow.config.enable_model_io_v2(True)
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def FlowJob(x: flow.typing.Numpy.Placeholder((4, 2), dtype=flow.float)):
+        with flow.scope.placement("gpu", "0:0-3", (2, 2)):
+            v = flow.get_variable(
+                "x",
+                shape=(4, 2),
+                dtype=flow.float,
+                initializer=flow.constant_initializer(0),
+                trainable=True,
+                parallel_distribution=["S(0)", "S(1)"],
+            )
+            x = flow.hierarchical_parallel_cast(
+                x, parallel_distribution=["S(0)", "S(1)"]
+            )
+            x += v
+            x = flow.reshape(x, (2, 2, 2))
+            loss = flow.reshape(x, (4, -1))
+        loss = flow.hierarchical_parallel_cast(loss, parallel_distribution=["S(0)"])
+
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(loss)
+        return loss
+
+    x = np.random.randn(4, 2).astype(np.float32)
+    my_loss = FlowJob(x).get()
+    test_case.assertTrue(np.allclose(x.flatten(), my_loss.numpy().flatten()))
+
+
+def _test_reshape_like(test_case):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+    flow.config.enable_legacy_model_io(True)
+    flow.config.enable_model_io_v2(True)
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def FlowJob(x: flow.typing.Numpy.Placeholder((4, 2, 2, 4), dtype=flow.float)):
+        with flow.scope.placement("gpu", "0:0-3", (2, 2)):
+            v = flow.get_variable(
+                "x",
+                shape=(4, 2, 2, 4),
+                dtype=flow.float,
+                initializer=flow.constant_initializer(0),
+                trainable=True,
+                parallel_distribution=["S(0)", "S(2)"],
+            )
+            x = flow.hierarchical_parallel_cast(
+                x, parallel_distribution=["S(0)", "S(2)"]
+            )
+            x += v
+            loss = flow.flatten(x, 2, 3)
+            loss = flow.identity(loss)
+            loss = flow.reshape_like(loss, x)
+            # loss = flow.flatten(x, 1, 2)
+        loss = flow.hierarchical_parallel_cast(loss, parallel_distribution=["S(0)"])
+
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(loss)
+        return loss
+
+    x = np.random.randn(4, 2, 2, 4).astype(np.float32)
+    my_loss = FlowJob(x).get()
+    test_case.assertTrue(np.allclose(x.flatten(), my_loss.numpy().flatten()))
+
+
 @flow.unittest.skip_unless_1n4d()
 class TestHierarchicalParallelCast(flow.unittest.TestCase):
     def test_change_axis1(test_case):
@@ -306,6 +382,12 @@ class TestHierarchicalParallelCast(flow.unittest.TestCase):
 
     def test_train(test_case):
         _test_train(test_case)
+
+    def test_reshape(test_case):
+        _test_reshape(test_case)
+
+    def test_reshape_like(test_case):
+        _test_reshape_like(test_case)
 
 
 if __name__ == "__main__":

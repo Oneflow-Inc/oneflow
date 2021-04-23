@@ -13,20 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
-                                                       const ShapeProto& reshape_proto) {
+                                                       const Shape& reshape) {
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
   DimVector dim_vec;
-  FOR_RANGE(int, axis, 0, reshape_proto.dim_size()) {
-    int64_t dim = reshape_proto.dim(axis);
+  FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
+    int64_t dim = reshape.At(axis);
     dim_vec.push_back(dim);
     if (dim == -1) {
       CHECK_OR_RETURN(has_minus_1 == false) << "only one `-1' supported";
@@ -122,6 +121,8 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   return Maybe<void>::Ok();
 }
 
+namespace {
+
 Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
                                          const user_op::OpArg& in_arg,
                                          ParallelDistribution* distribution) {
@@ -135,7 +136,7 @@ Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnCon
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitShape(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
+Maybe<void> ApplySbpParallel(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
   if (sbp.has_split_parallel()) {
     const int64_t axis = sbp.split_parallel().axis();
     CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0);
@@ -144,18 +145,25 @@ Maybe<void> SplitShape(const SbpParallel& sbp, const int64_t parallel_num, Shape
   return Maybe<void>::Ok();
 }
 
+}  // namespace
+
 Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
     user_op::InferParallelDistributionFnContext* ctx, const Shape& logical_in_shape,
     const Shape& logical_out_shape) {
-  const bool is_reshape_like = (ctx->user_op_conf().op_type_name() == "reshape_like");
+  const std::string& op_type_name = ctx->user_op_conf().op_type_name();
+  CHECK_OR_RETURN(op_type_name == "reshape" || op_type_name == "reshape_like");
+  const bool is_reshape_like = (op_type_name == "reshape_like");
   std::vector<user_op::OpArg> in_args({{"in", 0}});
   if (is_reshape_like) { in_args.push_back(user_op::OpArg("like", 0)); }
   HashMap<std::string, ParallelDistribution> ibn2parallel_distribution;
+  ibn2parallel_distribution.reserve(in_args.size());
   for (const auto& arg : in_args) {
     ParallelDistribution* in_distribution =
         ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
     JUST(GetInputParallelDistribution(ctx, arg, in_distribution));
-    ibn2parallel_distribution.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution);
+    CHECK_OR_RETURN(
+        ibn2parallel_distribution.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution)
+            .second);
   }
   ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
 
@@ -200,9 +208,9 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
     }
     CHECK_OR_RETURN(matched_sbp_signature != nullptr);
     SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
-    JUST(SplitShape(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"),
-                    parallel_hierarchy.At(i), &in_shape));
-    JUST(SplitShape(out_sbp, parallel_hierarchy.At(i), &out_shape));
+    JUST(ApplySbpParallel(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"),
+                          parallel_hierarchy.At(i), &in_shape));
+    JUST(ApplySbpParallel(out_sbp, parallel_hierarchy.At(i), &out_shape));
     *(out_distribution->add_sbp_parallel()) = out_sbp;
   }
   return Maybe<void>::Ok();

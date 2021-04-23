@@ -370,8 +370,10 @@ class UserOpInferParallelDistributionFnContext
       for (int32_t i = 0; i < it.second.s_size(); ++i) {
         auto hint =
             CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
-        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
-                                 GenTensorDescFromBlobDesc(&hint->logical_blob_desc()));
+        CHECK(arg2tensor_desc_
+                  .emplace(std::make_pair(arg_name, i),
+                           GenTensorDescFromBlobDesc(&hint->logical_blob_desc()))
+                  .second);
       }
     }
   }
@@ -682,6 +684,7 @@ Maybe<void> UserOp::InferOpTimeShape(
     return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
   }
 }
+
 namespace {
 
 bool IgnoreInferParallelDistributionFnWhenFlatHierarchy(const std::string& op_type_name) {

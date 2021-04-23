@@ -39,10 +39,6 @@ class InferParallelDistributionFnContext {
   virtual const Shape& parallel_hierarchy() = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf().attr<T>(attr_name);
-  }
 };
 
 }  // namespace user_op

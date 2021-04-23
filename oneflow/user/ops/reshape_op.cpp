@@ -25,9 +25,7 @@ namespace {
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->Attr<Shape>("shape");
-  ShapeProto shape_proto;
-  shape.ToProto(&shape_proto);
-  const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
+  const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
   user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
   return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
@@ -35,10 +33,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-  const Shape& shape = ctx->Attr<Shape>("shape");
-  ShapeProto shape_proto;
-  shape.ToProto(&shape_proto);
-  const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
+  const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
+  const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
   return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, *out_shape);
 }
 
