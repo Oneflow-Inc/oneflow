@@ -309,7 +309,7 @@ def static_mem_alloc_policy_white_list_add_policy(func_desc, policy):
     getattr(
         func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(),
         "set_" + policy,
-    )(Ture)
+    )(True)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.remove")
