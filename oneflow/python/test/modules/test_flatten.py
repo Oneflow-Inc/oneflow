@@ -32,7 +32,7 @@ class TestModule(flow.unittest.TestCase):
         print(y.shape[1] == 50)
         print(np.allclose(y.numpy().flatten(), x.numpy().flatten()))
 
-        y2 = x.flatten(2)
+        y2 = x.flatten(start_dim=2)
         print(y2.shape[2] == 25)
         print(np.allclose(y2.numpy().flatten(), x.numpy().flatten()))
 
@@ -40,7 +40,7 @@ class TestModule(flow.unittest.TestCase):
         print(y3.shape[1] == 50)
         print(np.allclose(y3.numpy().flatten(), x.numpy().flatten()))
 
-        y4 = x.flatten(1, end_dim=2)
+        y4 = x.flatten(start_dim=1, end_dim=2)
         print(y4.shape[1] == 10)
         print(np.allclose(y4.numpy().flatten(), x.numpy().flatten()))
 

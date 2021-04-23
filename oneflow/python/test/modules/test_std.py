@@ -39,6 +39,12 @@ class TestModule(flow.unittest.TestCase):
         np_out2 = np.std(np_arr2, axis=2)
         test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2, 1e-5, 1e-5))
 
+        np_arr3 = np.random.randn(8, 6, 2, 3)
+        input3 = flow.Tensor(np_arr3)
+        of_out3 = input3.tmpstd(3)
+        np_out3 = np.std(np_arr2, axis=3)
+        test_case.assertTrue(np.allclose(of_out3.numpy(), np_out3, 1e-5, 1e-5))
+
 
 if __name__ == "__main__":
     unittest.main()
