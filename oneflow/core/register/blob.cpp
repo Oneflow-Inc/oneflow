@@ -14,22 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/register/register.h"
 
 namespace oneflow {
 
-Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr) {
   Init(mem_case, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+Blob::Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
            char* body_ptr) {
   Init(mem_case, blob_desc, header_ptr, body_ptr);
 }
 
-void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
                 char* body_ptr) {
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
