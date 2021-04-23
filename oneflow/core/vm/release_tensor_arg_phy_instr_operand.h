@@ -39,7 +39,7 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
         compute_local_dep_object_(compute_local_dep_object) {}
   ~ReleaseTensorArgPhyInstrOperand() override = default;
 
-  const std::shared_ptr<eager::EagerBlobObject> eager_blob_object() const {
+  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
 
