@@ -132,24 +132,24 @@ class Softmax(Module):
 
 @oneflow_export("nn.LogSoftmax")
 class LogSoftmax(Module):
-    r"""Thresholds each element of the input Tensor.
-    Threshold is defined as:
+    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
+    input Tensor. 
+    The LogSoftmax formulation can be simplified as:
+
     .. math::
-        y =
-        \begin{cases}
-        x, &\text{ if } x > \text{threshold} \\
-        \text{value}, &\text{ otherwise }
-        \end{cases}
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+
     Args:
-        threshold: The value to threshold at
-        value: The value to replace with
-        inplace: can optionally do the operation in-place. Default: ``False``
+        dim (int): A dimension along which LogSoftmax will be computed.
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
+
     For example: 
     .. code-block:: python 
+
         import oneflow as flow
         import numpy as np
     
@@ -172,10 +172,10 @@ class LogSoftmax(Module):
         super().__init__()
 
         self.dim = dim
-        self._softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
-        self._log_op = flow.builtin_op("log").Input("x").Output("y").Build()
-        self._transpose_op = (
-            flow.builtin_op("transpose").Input("input").Output("output")
+        self.softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+        self.log_op = flow.builtin_op("log").Input("x").Output("y").Build()
+        self.transpose_op = (
+            flow.builtin_op("transpose").Input("input").Output("output").Build()
         )
 
     def __setstate__(self, state):
@@ -187,12 +187,11 @@ class LogSoftmax(Module):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
 
         if need_transpose:
-            self._transpose_op = self._transpose_op.Attr("perm", permute).Build()
-            x = self._transpose_op(x)[0]
-        res = self._softmax_op(x)[0]
-        res = self._log_op(res)[0]
+            x = self.transpose_op(x, perm=permute)[0]
+        res = self.softmax_op(x)[0]
+        res = self.log_op(res)[0]
         if need_transpose:
-            res = transpose(res, perm=permute)
+            res = self.transpose_op(res, perm=permute)[0]
 
         return res
 
