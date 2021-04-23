@@ -23,7 +23,6 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/register/ofblob.h"
 
 namespace oneflow {
 namespace one {

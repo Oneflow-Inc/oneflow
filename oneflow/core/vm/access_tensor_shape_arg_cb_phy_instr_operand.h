@@ -28,11 +28,6 @@ namespace eager {
 class EagerBlobObject;
 }
 
-namespace one {
-
-class TensorStorage;
-}
-
 namespace vm {
 
 // access tensor shape arg callback physical instruction operand
