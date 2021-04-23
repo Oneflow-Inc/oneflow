@@ -57,6 +57,8 @@ Maybe<void> NaiveInterpret(
         std::make_shared<eager::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
+  kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
+
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                     parallel_desc));

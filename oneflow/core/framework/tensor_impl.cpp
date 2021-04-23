@@ -75,6 +75,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf, bool retain_grad)
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
       eager_blob_object_(eager_blob_object) {
+  dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
 }
 
@@ -86,26 +87,21 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
   return eager_blob_object_->compute_local_dep_object();
 }
 
-Maybe<void> SyncTensorDesc(const EagerMirroredTensorImpl* eager_mirrored_tensor_impl) {
+const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
+  std::shared_ptr<const Shape> result;
   BlockingCounter bc(1);
-  auto callback = [&bc](int64_t) -> void { bc.Decrease(); };
+  auto callback = [&bc, &result](std::shared_ptr<const Shape> shape) -> void {
+    result = shape;
+    bc.Decrease();
+  };
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->InferAccessBlobByCallback(eager_mirrored_tensor_impl, callback));
+    JUST(
+        builder->AccessTensorShapeByCallback(parallel_desc(), JUST(eager_blob_object()), callback));
     return Maybe<void>::Ok();
   };
-  JUST(PhysicalRun(build_instruction));
+  CHECK_JUST(PhysicalRun(build_instruction));
   bc.WaitUntilCntEqualZero();
-  return Maybe<void>::Ok();
-}
-
-const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
-  CHECK_JUST(SyncTensorDesc(this));
-  return eager_blob_object_->blob_desc().shape_ptr();
-}
-
-const std::shared_ptr<const DType> EagerMirroredTensorImpl::dtype() const {
-  CHECK_JUST(SyncTensorDesc(this));
-  return CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object_->blob_desc().data_type()));
+  return result;
 }
 
 }  // namespace one

@@ -256,6 +256,11 @@ class StatefulOpKernel final {
     return compute_local_dep_object_;
   }
 
+  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    data_type_infer_fn_(UpdateInferContext(inputs, outputs));
+    UpdateInferContext(nullptr, nullptr);
+  }
+
  private:
   friend struct eager::LocalCallOpKernelUtil;
   StatefulOpKernel(const OperatorConf& op_conf);

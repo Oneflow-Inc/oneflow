@@ -41,6 +41,8 @@ class TestTensor(flow.unittest.TestCase):
         @flow.global_function(function_config=func_config)
         def job():
             x1 = flow.Tensor([[1.0, 2.0]])
+            test_case.assertEqual(x1.dtype, flow.float32)
+            test_case.assertEqual(x1.shape, flow.Size((1, 2)))
             x2 = flow.Tensor([[1.0], [2.0]])
             op = (
                 flow.builtin_op("matmul")
@@ -53,7 +55,9 @@ class TestTensor(flow.unittest.TestCase):
                 .Build()
             )
             y = op(x1, x2)[0]
-            assert np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
+            test_case.assertTrue(
+                np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
+            )
 
         job()
 

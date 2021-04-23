@@ -41,13 +41,10 @@ limitations under the License.
 
 namespace oneflow {
 
-class BlockingCounter;
-
 namespace one {
 class StatefulOpKernel;
 class TensorTuple;
 class MirroredTensor;
-class EagerMirroredTensorImpl;
 }  // namespace one
 
 namespace detail {
@@ -118,17 +115,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
-  Maybe<void> AccessBlobByCallback(const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                                   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-                                   const std::function<void(uint64_t)>& callback,
-                                   const std::string& modifier);
-
-  Maybe<void> InferAccessBlobByCallback(
-      const one::EagerMirroredTensorImpl* eager_mirrored_tensor_impl,
-      const std::function<void(uint64_t)>& callback);
   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
                                    const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
+
+  Maybe<void> AccessTensorShapeByCallback(
+      const std::shared_ptr<const ParallelDesc>& parallel_desc,
+      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::function<void(std::shared_ptr<const Shape>)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);

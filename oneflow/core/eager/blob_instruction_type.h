@@ -41,18 +41,6 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
-class InferAccessBlobByCallbackInstructionType : public vm::InstructionType {
- public:
-  InferAccessBlobByCallbackInstructionType() = default;
-  ~InferAccessBlobByCallbackInstructionType() override = default;
-
-  void Compute(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-
-  void Infer(vm::Instruction* instruction) const override;
-};
-
 class AccessBlobByCallbackInstructionType : public vm::InstructionType {
  public:
   AccessBlobByCallbackInstructionType() = default;
