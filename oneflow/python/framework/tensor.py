@@ -46,7 +46,7 @@ def _access_blob_by_callback(local_tensor, callback, modifier):
         def BuildInstruction(builder):
             builder.AccessBlobByCallback(local_tensor, fetcher, modifier)
 
-        oneflow_api.deprecated.PhysicalRun(BuildInstruction)
+        flow._oneflow_internal.deprecated.PhysicalRun(BuildInstruction)
 
     return async_util.Await(1, AsyncAcess)[0]
 

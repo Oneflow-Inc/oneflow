@@ -37,6 +37,16 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
+class GpuInferAccessBlobByCallbackInstructionType final
+    : public InferAccessBlobByCallbackInstructionType {
+ public:
+  GpuInferAccessBlobByCallbackInstructionType() = default;
+  ~GpuInferAccessBlobByCallbackInstructionType() override = default;
+  using stream_type = vm::CudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<GpuInferAccessBlobByCallbackInstructionType>(
+    "gpu.InferAccessBlobByCallback"));
+
 }  // namespace eager
 }  // namespace oneflow
 #endif

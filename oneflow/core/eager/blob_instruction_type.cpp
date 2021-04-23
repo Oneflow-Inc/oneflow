@@ -129,5 +129,17 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
+void InferAccessBlobByCallbackInstructionType::Infer(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+  ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
+}
+
 }  // namespace eager
 }  // namespace oneflow

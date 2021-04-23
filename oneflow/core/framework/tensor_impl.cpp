@@ -86,38 +86,26 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
   return eager_blob_object_->compute_local_dep_object();
 }
 
-const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
+Maybe<void> SyncTensorDesc(const EagerMirroredTensorImpl* eager_mirrored_tensor_impl) {
   BlockingCounter bc(1);
-  std::shared_ptr<const Shape> result;
-  auto callback = [&bc, &result](int64_t ofblob_ptr) -> void {
-    OfBlob* ofblob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-    result = ofblob->mut_blob()->blob_desc().shape_ptr();
-    bc.Decrease();
-  };
+  auto callback = [&bc](int64_t) -> void { bc.Decrease(); };
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(parallel_desc(), eager_blob_object_, callback, "const"));
+    JUST(builder->InferAccessBlobByCallback(eager_mirrored_tensor_impl, callback));
     return Maybe<void>::Ok();
   };
-  CHECK_JUST(PhysicalRun(build_instruction));
+  JUST(PhysicalRun(build_instruction));
   bc.WaitUntilCntEqualZero();
-  return result;
+  return Maybe<void>::Ok();
+}
+
+const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
+  CHECK_JUST(SyncTensorDesc(this));
+  return eager_blob_object_->blob_desc().shape_ptr();
 }
 
 const std::shared_ptr<const DType> EagerMirroredTensorImpl::dtype() const {
-  BlockingCounter bc(1);
-  std::shared_ptr<const DType> result;
-  auto callback = [&bc, &result](int64_t ofblob_ptr) -> void {
-    OfBlob* ofblob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-    result = CHECK_JUST(DType::GetDTypeByDataType(ofblob->mut_blob()->data_type()));
-    bc.Decrease();
-  };
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->AccessBlobByCallback(parallel_desc(), eager_blob_object_, callback, "const"));
-    return Maybe<void>::Ok();
-  };
-  CHECK_JUST(PhysicalRun(build_instruction));
-  bc.WaitUntilCntEqualZero();
-  return result;
+  CHECK_JUST(SyncTensorDesc(this));
+  return CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object_->blob_desc().data_type()));
 }
 
 }  // namespace one

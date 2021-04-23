@@ -38,5 +38,16 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
 
+class CpuInferAccessBlobByCallbackInstructionType final
+    : public InferAccessBlobByCallbackInstructionType {
+ public:
+  CpuInferAccessBlobByCallbackInstructionType() = default;
+  ~CpuInferAccessBlobByCallbackInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuInferAccessBlobByCallbackInstructionType>(
+    "cpu.InferAccessBlobByCallback"));
+
 }  // namespace eager
 }  // namespace oneflow

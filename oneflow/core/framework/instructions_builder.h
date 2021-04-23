@@ -41,10 +41,13 @@ limitations under the License.
 
 namespace oneflow {
 
+class BlockingCounter;
+
 namespace one {
 class StatefulOpKernel;
 class TensorTuple;
 class MirroredTensor;
+class EagerMirroredTensorImpl;
 }  // namespace one
 
 namespace detail {
@@ -120,6 +123,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                    const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
+  Maybe<void> InferAccessBlobByCallback(
+      const one::EagerMirroredTensorImpl* eager_mirrored_tensor_impl,
+      const std::function<void(uint64_t)>& callback);
   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
                                    const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
