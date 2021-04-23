@@ -23,11 +23,13 @@ limitations under the License.
 
 namespace oneflow {
 
+// 只在_InIter可隐式转换为LegacyInputIterator时有效
 template<typename _InIter>
 using RequireInputIter = typename std::enable_if<
     std::is_convertible<typename std::iterator_traits<_InIter>::iterator_category,
                         std::input_iterator_tag>::value>::type;
 
+// 使用std::array替代std::vector，提高性能
 template<typename T, int kMaxSize>
 class fixed_vector final {
  public:
@@ -247,6 +249,7 @@ class fixed_vector final {
   void CheckSize() const { CheckSize(size_); }
   void CheckSize(size_t size) const { CHECK_LE(size, kMaxSize); }
   void CheckPos(size_t pos) const { CHECK_LT(pos, size_); }
+  // first后的元素向end方向移动N，用于在first位置新插入N个元素
   void MoveNToEnd(iterator first, size_t N) {
     CheckSize(size_ + N);
     iterator old_end = end();
@@ -254,6 +257,7 @@ class fixed_vector final {
     iterator new_end = end();
     std::copy_backward(first, old_end, new_end);
   }
+  // last后的元素向begin方向移动N，即删除[last-N, last)元素
   void MoveNToBegin(iterator last, size_t N) {
     CheckPos(last - N - begin());
     iterator old_end = end();

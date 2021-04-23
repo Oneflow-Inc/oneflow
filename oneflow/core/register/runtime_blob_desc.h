@@ -22,6 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 运行时的Blob描述类，提供Header和Body的Size
 class RtBlobDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RtBlobDesc);

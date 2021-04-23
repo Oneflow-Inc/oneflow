@@ -19,6 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 把输入shape中axis_vec指定的维度置1，然后创建Shape
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   CHECK_EQ(axis_vec.empty(), false);
   DimVector dim_vec;
@@ -27,6 +28,7 @@ Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
   return Shape(std::move(dim_vec));
 }
 
+// 根据输入shape创建ndims_left_extend_to维度的Shape，shape维度较小，在前面补1
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) {
   CHECK_GE(ndims_left_extend_to, shape.NumAxes());
   DimVector dim_vec(ndims_left_extend_to);
@@ -42,6 +44,7 @@ Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& ax
   return CreateReducedShape(shape, axis_vec);
 }
 
+// 把axis负值转换为[0, num_axes)范围的值
 int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes) {
   if (axis < 0) { axis += num_axes; }
   CHECK_GE(axis, 0);
@@ -64,6 +67,7 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
+// 保存shape_view参数的shape信息，shape_view维度需与dim_vec_一致
 Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   CHECK_EQ(NumAxes(), shape_view.NumAxes());
   std::copy(shape_view.ptr(), shape_view.ptr() + shape_view.NumAxes(), dim_vec_.data());
@@ -71,6 +75,7 @@ Shape& Shape::CheckNumAxesIdenticalAndAssign(const ShapeView& shape_view) {
   return *this;
 }
 
+// 保存shape_view参数的shape信息，shape_view维度较小，在前面补1
 Shape& Shape::LeftOnesExtendedAssign(const ShapeView& shape_view) {
   CHECK_GE(NumAxes(), shape_view.NumAxes());
   size_t left_ones_size = NumAxes() - shape_view.NumAxes();
@@ -106,6 +111,7 @@ void Shape::Set(int64_t index, int64_t val) {
   UpdateElemCnt();
 }
 
+// 计算[begin_axis, end_axis)维度范围的元素个数
 int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
       << begin_axis << " " << end_axis;
@@ -136,6 +142,7 @@ AxisVector Shape::ShiftNegativeAxisVec(const AxisVector& axis_vec) const {
   return ret;
 }
 
+// 返回当前Shape删除axis_vec指定的维度后的Shape，被删除的维度值必须为1
 Shape Shape::RemoveOnes(const AxisVector& axis_vec) const {
   DimVector dim_vec;
   const AxisVector& axis_vec_shifted = ShiftNegativeAxisVec(axis_vec);
@@ -156,6 +163,7 @@ Shape Shape::Ones(const int64_t num_axes) {
   return Shape(dim_vec);
 }
 
+// 对比当前Shape与输入broadcast_shape，找到被broadcast的维度，当前Shape被broadcast的维度值必须为1
 AxisVector Shape::Axes4BroadcastTo(const Shape& broadcast_shape) const {
   AxisVector broadcast_axis_vec;
   CHECK_EQ(broadcast_shape.NumAxes(), NumAxes());
