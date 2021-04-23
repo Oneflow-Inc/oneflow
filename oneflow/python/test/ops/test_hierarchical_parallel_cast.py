@@ -282,11 +282,11 @@ def _test_reshape(test_case):
     func_config.default_data_type(flow.float32)
 
     @flow.global_function(type="train", function_config=func_config)
-    def FlowJob(x: flow.typing.Numpy.Placeholder((4, 2), dtype=flow.float)):
+    def FlowJob(x: flow.typing.Numpy.Placeholder((4, 6), dtype=flow.float)):
         with flow.scope.placement("gpu", "0:0-3", (2, 2)):
             v = flow.get_variable(
                 "x",
-                shape=(4, 2),
+                shape=(4, 6),
                 dtype=flow.float,
                 initializer=flow.constant_initializer(0),
                 trainable=True,
@@ -296,8 +296,7 @@ def _test_reshape(test_case):
                 x, parallel_distribution=["S(0)", "S(1)"]
             )
             x += v
-            x = flow.reshape(x, (2, 2, 2))
-            loss = flow.reshape(x, (4, -1))
+            loss = flow.reshape(x, (4, 2, 3))
         loss = flow.hierarchical_parallel_cast(loss, parallel_distribution=["S(0)"])
 
         flow.optimizer.SGD(
@@ -305,7 +304,7 @@ def _test_reshape(test_case):
         ).minimize(loss)
         return loss
 
-    x = np.random.randn(4, 2).astype(np.float32)
+    x = np.random.randn(4, 6).astype(np.float32)
     my_loss = FlowJob(x).get()
     test_case.assertTrue(np.allclose(x.flatten(), my_loss.numpy().flatten()))
 
