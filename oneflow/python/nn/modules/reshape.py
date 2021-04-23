@@ -54,26 +54,17 @@ class Reshape(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
         import numpy as np
-        import oneflow.typing as tp
+        import oneflow as flow
 
+        x = np.array(
+            [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ).astype(np.float32)
+        input = flow.Tensor(x)
 
-        @flow.global_function()
-        def reshape_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
-        ) -> tp.Numpy:
-            reshape_blob = flow.reshape(x,
-                                        shape=[2, 2, 2, -1])
-            return reshape_blob
+        y = flow.tmp.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
 
-
-        x = np.array([[1, 2, 3, 4],
-                    [5, 6, 7, 8],
-                    [9, 10, 11, 12],
-                    [13, 14, 15, 16]]).astype(np.float32)
-        out = reshape_Job(x)
-
-        # out.shape (2, 2, 2, 2)
+        # y (2, 2, 2, 2)
 
     """
 
