@@ -27,13 +27,13 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.boxing_util as boxing_util
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow._oneflow_internal
 import traceback
 import sys
 
-blob_register = oneflow_api.GetDefaultBlobRegister()
+blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def RemoteBlob(lbi, **kw):
@@ -43,23 +43,23 @@ def RemoteBlob(lbi, **kw):
 
 @enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
 def EagerLogicalBlob(lbi, **kw):
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
     if not isinstance(lbi, lbi_util.LogicalBlobId):
         cfg_lbi = lbi_util.LogicalBlobId()
         cfg_lbi.set_op_name(lbi.op_name)
         cfg_lbi.set_blob_name(lbi.blob_name)
         lbi = cfg_lbi
-    blob_type = oneflow_api.EagerConsistentBlob
+    blob_type = oneflow._oneflow_internal.EagerConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = oneflow_api.EagerMirroredBlob
+        blob_type = oneflow._oneflow_internal.EagerMirroredBlob
     job_name = ""
     if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
     blob_object = None
     if "blob_object" in kw:
         blob_object = kw["blob_object"]
-    distribute = oneflow_api.distribute.auto()
+    distribute = oneflow._oneflow_internal.distribute.auto()
     if "distribute" in kw:
         distribute = kw["distribute"]
     return blob_type(lbi, blob_object, blob_register, job_name, distribute)
@@ -67,11 +67,11 @@ def EagerLogicalBlob(lbi, **kw):
 
 @enable_if.condition(~hob.eager_execution_enabled)
 def LazyRemoteBlob(lbi, **kw):
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     lbn = lbi.op_name + "/" + lbi.blob_name
-    blob_type = oneflow_api.LazyConsistentBlob
+    blob_type = oneflow._oneflow_internal.LazyConsistentBlob
     if c_api_util.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
-        blob_type = oneflow_api.LazyMirroredBlob
+        blob_type = oneflow._oneflow_internal.LazyMirroredBlob
     if not isinstance(lbi, lbi_util.LogicalBlobId):
         cfg_lbi = lbi_util.LogicalBlobId()
         cfg_lbi.set_op_name(lbi.op_name)
@@ -80,7 +80,7 @@ def LazyRemoteBlob(lbi, **kw):
     job_name = ""
     if ("job_name" in kw) and (kw["job_name"] is not None):
         job_name = kw["job_name"]
-    distribute = oneflow_api.distribute.auto()
+    distribute = oneflow._oneflow_internal.distribute.auto()
     if "distribute" in kw:
         distribute = kw["distribute"]
     return blob_type(lbi, job_name, distribute)
@@ -94,7 +94,9 @@ def dtype(self):
 
 
 def with_distribute(self, distribute):
-    new = type(self)(self.lbi, self.job_name, oneflow_api.distribute.auto())
+    new = type(self)(
+        self.lbi, self.job_name, oneflow._oneflow_internal.distribute.auto()
+    )
     new.set_distribute(distribute)
     return new
 
@@ -132,15 +134,15 @@ def RegisterMethod4BlobDef(blob_class):
 
 
 def RegisterMethod4LazyConsistentBlob():
-    RegisterMethod4BlobDef(oneflow_api.LazyConsistentBlob)
-    oneflow_api.LazyConsistentBlob.get_lazy_shape_log_warning = (
+    RegisterMethod4BlobDef(oneflow._oneflow_internal.LazyConsistentBlob)
+    oneflow._oneflow_internal.LazyConsistentBlob.get_lazy_shape_log_warning = (
         get_lazy_shape_log_warning
     )
 
 
 def RegisterMethod4LazyMirroredBlob():
-    RegisterMethod4BlobDef(oneflow_api.LazyMirroredBlob)
-    oneflow_api.LazyMirroredBlob.get_mirror_shape_log_warning = (
+    RegisterMethod4BlobDef(oneflow._oneflow_internal.LazyMirroredBlob)
+    oneflow._oneflow_internal.LazyMirroredBlob.get_mirror_shape_log_warning = (
         get_mirror_shape_log_warning
     )
 
@@ -172,7 +174,7 @@ def BlobObjectNumpy(blob_object, tmp_name=None):
             parallel_conf.set_device_tag(blob_object.parallel_desc_symbol.device_tag)
             parallel_conf.add_device_name("{}:{}".format(0, 0))
             tmp_parallel_desc_symbol = builder.GetParallelDescSymbol(parallel_conf)
-            tmp_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
+            tmp_op_arg_parallel_attr = oneflow._oneflow_internal.OpArgParallelAttribute(
                 tmp_parallel_desc_symbol,
                 str(blob_object.op_arg_parallel_attr.sbp_parallel),
                 str(blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
@@ -188,8 +190,8 @@ def BlobObjectNumpy(blob_object, tmp_name=None):
             if not blob_register.HasObject4BlobName(consistent_blob_name):
                 blob_register.SetObject4BlobName(consistent_blob_name, tmp_blob_object)
 
-        oneflow_api.deprecated.LogicalRun(BoxingToSingleDevice)
-        return oneflow_api.EagerPhysicalBlob(
+        oneflow._oneflow_internal.deprecated.LogicalRun(BoxingToSingleDevice)
+        return oneflow._oneflow_internal.EagerPhysicalBlob(
             consistent_blob_name,
             blob_register,
             eager_blob_util._GetPhysicalBlobHeaderCache,
@@ -204,11 +206,13 @@ def _Numpy(self):
 
 
 def RegisterMethod4EagerBlobTrait():
-    oneflow_api.EagerBlobTrait.sub_consistent_blob_list = sub_consistent_blob_list
-    oneflow_api.EagerBlobTrait.dtype = dtype
-    oneflow_api.EagerBlobTrait._Numpy = _Numpy
-    oneflow_api.EagerBlobTrait.numpy = numpy
-    oneflow_api.EagerBlobTrait.numpy_list = numpy_list
+    oneflow._oneflow_internal.EagerBlobTrait.sub_consistent_blob_list = (
+        sub_consistent_blob_list
+    )
+    oneflow._oneflow_internal.EagerBlobTrait.dtype = dtype
+    oneflow._oneflow_internal.EagerBlobTrait._Numpy = _Numpy
+    oneflow._oneflow_internal.EagerBlobTrait.numpy = numpy
+    oneflow._oneflow_internal.EagerBlobTrait.numpy_list = numpy_list
 
 
 def eager_with_distribute(self, distribute):
@@ -224,6 +228,10 @@ def eager_with_distribute(self, distribute):
 
 
 def RegisterMethod4EagerConsistentBlob():
-    oneflow_api.EagerConsistentBlob.dtype = dtype
-    oneflow_api.EagerConsistentBlob.with_distribute = eager_with_distribute
-    oneflow_api.EagerConsistentBlob.with_gradient_distribute = with_gradient_distribute
+    oneflow._oneflow_internal.EagerConsistentBlob.dtype = dtype
+    oneflow._oneflow_internal.EagerConsistentBlob.with_distribute = (
+        eager_with_distribute
+    )
+    oneflow._oneflow_internal.EagerConsistentBlob.with_gradient_distribute = (
+        with_gradient_distribute
+    )
