@@ -53,9 +53,6 @@ class JobDesc final {
   bool EnableCudnn() const { return job_conf_.enable_cudnn(); }
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  bool use_memory_allocation_algorithm_v2() const {
-    return job_conf_.use_memory_allocation_algorithm_v2();
-  }
   bool enable_reuse_mem() const { return job_conf_.enable_reuse_mem(); }
   bool enable_inplace() const { return job_conf_.enable_inplace(); }
   bool enable_auto_mixed_precision() const { return job_conf_.enable_auto_mixed_precision(); }
