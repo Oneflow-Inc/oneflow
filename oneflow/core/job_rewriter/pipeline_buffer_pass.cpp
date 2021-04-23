@@ -67,50 +67,55 @@ bool IsBackwardPassScope(const Scope& scope) {
   return calculation_pass_name == kBackwardPass;
 }
 
-bool IsIdentityBufferOpNode(const OpNode* node) {
+bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
+
+bool IsIdentityBufferOrRepeatOpNode(const OpNode* node) {
   const OperatorConf& op_conf = node->op().op_conf();
   if (op_conf.has_user_conf()) {
     const std::string& op_type_name = op_conf.user_conf().op_type_name();
     if (op_type_name == "identity_buffer" || op_type_name == "repeat") { return true; }
-    if (op_conf.name().find("loss-") != std::string::npos) { return true; }
   }
   return false;
+}
+
+int64_t GetStageIdHint(const OpNode* node) {
+  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
 Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   int64_t repeat_num = GlobalJobDesc().job_conf().num_gradient_accumulation_steps();
   if (repeat_num <= 1) { return Maybe<void>::Ok(); }
 
-  HashSet<const OpNode*> no_scope_op_node;
+  int64_t max_stage_id = 0;
   op_graph.ForEachNode([&](const OpNode* this_node) {
-    if (!this_node->op().op_conf().has_scope_symbol_id()) {
-      no_scope_op_node.insert(this_node);
+    if (!OpNodeHasScope(this_node)) {
       LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
     }
+    max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
+
+  if (max_stage_id == 0) { return Maybe<void>::Ok(); }
+  const int64_t total_stage_num = max_stage_id + 1;
+  LOG(INFO) << "total stage num = " << total_stage_num;
 
   HashMap<std::string, OperatorConf> buffer_op_name2conf;
   HashMap<std::string, OperatorConf> mut_op_name2conf;
   HashMap<std::string, const OpNode*> buffer_op_name2src_op_node;
 
   op_graph.ForEachNode([&](const OpNode* this_node) {
-    if (no_scope_op_node.find(this_node) != no_scope_op_node.end()) {
-      return;  // ignore op without scope
-    }
-    if (!IsBackwardPassScope(Scope4OpNode(this_node))) {
-      return;  // ignore fw dst op
-    }
+    if (!OpNodeHasScope(this_node)) { return; /* ignore op without scope */ }
+    if (!IsBackwardPassScope(Scope4OpNode(this_node))) { return; /* ignore fw dst op */ }
     const std::string& this_op_name = this_node->op().op_name();
     for (const OpEdge* in_edge : this_node->in_edges()) {
       const OpNode* src_node = in_edge->src_node();
-      if (no_scope_op_node.find(src_node) != no_scope_op_node.end()) {
-        continue;  // ignore op without scope
-      }
-      if (IsForwardPassScope(Scope4OpNode(src_node)) && (!IsIdentityBufferOpNode(src_node))) {
-        LOG(WARNING) << "DataEdge: src_op[FwPass]: " << src_node->op().op_conf().DebugString()
-                     << " dst_op[BwPass]: " << this_node->op().op_conf().DebugString()
-                     << " connected without buffer op.";
+      if (!OpNodeHasScope(src_node)) { return; /* ignore op without scope */ }
+      const int64_t buffer_size = total_stage_num - 1 - GetStageIdHint(src_node);
+      CHECK_GE(buffer_size, 0);
+      CHECK_LT(buffer_size, total_stage_num);
+      if (buffer_size == 0) { return; /* last stage(loss) does NOT need to insert buffer */ }
 
+      if (IsForwardPassScope(Scope4OpNode(src_node))
+          && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
         for (const LogicalBlobId& lbi : in_edge->lbis()) {
           std::string lbn = GenLogicalBlobName(lbi);
           std::string buffer_op_name =
@@ -122,7 +127,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                                     .Op("identity_buffer")
                                     .Input("in", lbn)
                                     .Output("out")
-                                    .Attr<int64_t>("buffer_size", repeat_num)
+                                    .Attr<int64_t>("buffer_size", buffer_size)
                                     .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
                                     .Build()
                                     .op_conf());
@@ -145,14 +150,16 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                 ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, buffer_out);
             CHECK_EQ(old_lbn, lbn);
           }
+
+          LOG(INFO) << " Insert buffer op: [" << buffer_op_name << "](buffer_size:" << buffer_size
+                    << ") from [" << src_node->op().op_name() << "](FwPass) -> ["
+                    << this_node->op().op_name() << "](BwPass) \n";
         }
       }
     }
     for (const std::string& ctrl_in_op_name : this_node->op().op_conf().ctrl_in_op_name()) {
       const OpNode* src_node = op_graph.OpNode4OpName(ctrl_in_op_name);
-      if (no_scope_op_node.find(src_node) != no_scope_op_node.end()) {
-        continue;  // ignore op without scope
-      }
+      if (!OpNodeHasScope(src_node)) { return; /* ignore op without scope */ }
       if (IsForwardPassScope(Scope4OpNode(src_node))) {
         LOG(WARNING) << "CtrlEdge: src_op[FwPass]: " << src_node->op().op_conf().DebugString()
                      << " dst_op[BwPass]: " << this_node->op().op_conf().DebugString()
@@ -165,12 +172,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     const OperatorConf& conf = pair.second;
     const OpNode* src_node = buffer_op_name2src_op_node.at(pair.first);
     JUST(job_builder->AddOp(src_node->parallel_desc().parallel_conf(), conf));
-    LOG(WARNING) << " Add buffer Op: " << conf.DebugString();
   }
-  for (auto& pair : mut_op_name2conf) {
-    JUST(job_builder->MutOpOnlyOnce(pair.second));
-    LOG(WARNING) << " mut op: " << pair.second.DebugString();
-  }
+  for (auto& pair : mut_op_name2conf) { JUST(job_builder->MutOpOnlyOnce(pair.second)); }
   return Maybe<void>::Ok();
 }
 

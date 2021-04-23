@@ -90,7 +90,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack") {
+        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
   }
@@ -100,28 +100,6 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
     return true;
   }
   return false;
-}
-
-bool IsInSameCalculationPass(const TaskNode* lhs, const TaskNode* rhs) {
-  const auto* lhs_node = dynamic_cast<const NormalForwardCompTaskNode*>(lhs);
-  const auto* rhs_node = dynamic_cast<const NormalForwardCompTaskNode*>(rhs);
-  if (lhs_node && rhs_node) {
-    const OperatorConf& lhs_conf = lhs_node->op()->op_conf();
-    const OperatorConf& rhs_conf = rhs_node->op()->op_conf();
-    if (lhs_conf.has_scope_symbol_id() && rhs_conf.has_scope_symbol_id()) {
-      std::string lhs_pass = GetOpConfCalculationPassName(lhs_conf);
-      std::string rhs_pass = GetOpConfCalculationPassName(rhs_conf);
-      // LOG(INFO) << " lhs_op: " << lhs_conf.name() << " pass_name = " << lhs_pass;
-      // LOG(INFO) << " rhs_op: " << rhs_conf.name() << " pass_name = " << rhs_pass;
-      if (lhs_pass == rhs_pass) { return true; }
-    }
-  }
-  return false;
-  /*
-  if (!(lhs_node && rhs_node)) { return false; }
-  if (!(lhs_conf.has_scope_symbol_id() && rhs_conf.has_scope_symbol_id())) { return false; }
-  return GetOpConfCalculationPassName(lhs_conf) == GetOpConfCalculationPassName(rhs_conf);
-  */
 }
 
 bool IsTaskNodeProducedResgtHasMultiRegstNum(const TaskNode* node) {
@@ -167,8 +145,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
           && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
-          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)
-          && IsInSameCalculationPass(this_node, next_node)) {
+          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
