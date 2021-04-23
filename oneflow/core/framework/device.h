@@ -26,7 +26,7 @@ class ParallelDesc;
 
 class Device final {
  public:
-  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+  Device(const std::string& type, int64_t device_id);
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
@@ -39,11 +39,24 @@ class Device final {
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
+  size_t hash_value() const { return hash_value_; }
+  bool operator==(const Device& rhs) const {
+    return type_ == rhs.type_ && device_id_ == rhs.device_id_;
+  }
+
  private:
   const std::string type_;
   const int64_t device_id_;
+  const size_t hash_value_;
 };
 
 }  // namespace oneflow
+
+namespace std {
+template<>
+struct hash<oneflow::Device> final {
+  size_t operator()(const oneflow::Device& device) const { return device.hash_value(); }
+};
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DEVICE_H_

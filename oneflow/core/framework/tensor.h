@@ -204,6 +204,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
     return impl_->set_parallel_desc(parallel_desc);
   }
+  Maybe<void> set_eager_blob_object(std::shared_ptr<eager::EagerBlobObject> eager_blob_object) {
+    return impl_->set_eager_blob_object(eager_blob_object);
+  }
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
