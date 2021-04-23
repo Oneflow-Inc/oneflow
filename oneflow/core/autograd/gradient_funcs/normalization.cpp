@@ -69,14 +69,14 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
   Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrValueMap& attrs) const override {
     ctx->is_training = JUST(op_trait_->GetAttr<bool>("training", attrs));
-    ctx->SaveTensorForBackward(inputs.at(0)->detach());  // x
-    ctx->SaveTensorForBackward(inputs.at(3)->detach());  // gamma
+    ctx->SaveTensorForBackward(inputs.at(0));  // x
+    ctx->SaveTensorForBackward(inputs.at(3));  // gamma
     if (ctx->is_training) {
-      ctx->SaveTensorForBackward(outputs.at(1)->detach());  // mean
-      ctx->SaveTensorForBackward(outputs.at(2)->detach());  // inv_variance
+      ctx->SaveTensorForBackward(outputs.at(1));  // mean
+      ctx->SaveTensorForBackward(outputs.at(2));  // inv_variance
     } else {
-      ctx->SaveTensorForBackward(inputs.at(1)->detach());  // moving_mean
-      ctx->SaveTensorForBackward(inputs.at(2)->detach());  // moving_variance
+      ctx->SaveTensorForBackward(inputs.at(1));  // moving_mean
+      ctx->SaveTensorForBackward(inputs.at(2));  // moving_variance
     }
     return Maybe<void>::Ok();
   }

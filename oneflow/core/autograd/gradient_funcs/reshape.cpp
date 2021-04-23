@@ -35,7 +35,7 @@ class ReshapeOpExprGrad : public OpExprGradFunction<OpExprInterpState> {
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrValueMap& attrs) const override {
-    ctx->SaveTensorForBackward(inputs.at(0)->detach());
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 

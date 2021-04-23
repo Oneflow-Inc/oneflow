@@ -68,7 +68,7 @@ Maybe<void> SplitLike::Capture(SplitLikeInterpState* ctx, const TensorTuple& inp
   ctx->max_dim_size = 0;
   for (int i = 0; i < outputs.size(); ++i) {
     ctx->max_dim_size += inputs.at(i + 1)->shape()->At(axis_);
-    ctx->SaveTensorForBackward(outputs.at(i)->detach());
+    ctx->SaveTensorForBackward(outputs.at(i));
   }
   return Maybe<void>::Ok();
 }
