@@ -77,6 +77,7 @@ class TensorImpl {
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
+  std::shared_ptr<Tensor> mut_acc_grad() { return acc_grad_; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
