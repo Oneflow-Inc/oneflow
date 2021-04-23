@@ -48,7 +48,33 @@ from oneflow.python.framework.tensor import register_op_by_module
 @register_tensor_op_by_module("tmp.transpose")
 @register_op_by_module("tmp.transpose")
 class Transpose(Module):
-    r"""
+    r"""This operator transposes the specified axis of input Tensor.
+
+    Args:
+        a (oneflow.Tensor): The input tensor.
+        perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
+        conjugate (bool, optional): Still Unavailable. Defaults to False.
+        batch_axis_non_change (bool, optional): deprecated. Defaults to False.
+
+    Raises:
+        NotImplementedError: The attribute `conjugate` still unavailable.
+
+    Returns:
+        oneflow.Tensor: A transposed tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+
+        # out.shape (2, 5, 3, 6)
+
     """
 
     def __init__(
