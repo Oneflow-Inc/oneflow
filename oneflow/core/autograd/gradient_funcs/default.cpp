@@ -268,16 +268,16 @@ Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(DefaultOpExprInter
                                                               const TensorTuple& inputs) const {
   ctx->requires_grads.resize(backward_entries_.size());
   for (int i = 0; i < backward_entries_.size(); ++i) {
-    ctx->requires_grads[i] = false;
     const auto& entry = backward_entries_.at(i);
-    for (const auto& indices : entry.in_grad_indices_for_each_output) {
-      for (const int& j : indices) {
-        if (inputs.at(j)->requires_grad()) {
-          ctx->requires_grads[i] = true;
-          break;
-        }
-      }
-    }
+    const auto& in_grad_indices = entry.in_grad_indices_for_each_output;
+    ctx->requires_grads.at(i) =  // NOLINT
+        std::any_of(in_grad_indices.begin(), in_grad_indices.end(),
+                    [&](const std::vector<int>& indices) {
+                      for (const int& j : indices) {
+                        if (inputs.at(j)->requires_grad()) { return true; }
+                      }
+                      return false;
+                    });
   }
   return Maybe<void>::Ok();
 }
@@ -293,10 +293,10 @@ Maybe<void> DefaultOpExprGradFunction::Capture(DefaultOpExprInterpState* ctx,
     if (!ctx->requires_grads.at(i)) { continue; }
     const auto& entry = backward_entries_.at(i);
     for (const int& idx : entry.snapshot.input_indices) {
-      ctx->SaveTensorForBackward(inputs.at(idx)->detach());
+      ctx->SaveTensorForBackward(inputs.at(idx));
     }
     for (const int& idx : entry.snapshot.output_indices) {
-      ctx->SaveTensorForBackward(outputs.at(idx)->detach());
+      ctx->SaveTensorForBackward(outputs.at(idx));
     }
   }
   return Maybe<void>::Ok();
