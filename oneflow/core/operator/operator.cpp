@@ -900,19 +900,12 @@ void Operator::GenKernelConf(
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
 
-  // 1
-  // return;
-  // if (parallel_ctx == nullptr ||
-  //     parallel_ctx->parallel_id() == 0) {
-    CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
-  // }
+  CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                            [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
     kernel_conf->set_need_do_shape(true);
   }
 
-  // 2
-  return;
   {
     DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
     if (data_type == DataType::kInvalidDataType) {
@@ -921,12 +914,8 @@ void Operator::GenKernelConf(
     kernel_conf->set_data_type(data_type);
   }
 
-  // 3
-  return;
   if (parallel_ctx != nullptr) { *(kernel_conf->mutable_parallel_ctx()) = *parallel_ctx; }
 
-  // 4
-  return;
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
