@@ -19,6 +19,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
+import math
 
 
 @oneflow_export("nn.Identity")
@@ -75,9 +76,14 @@ class Linear(Module):
             .Attr("alpha", 1.0)
             .Build()
         )
+        self.reset_parameters()
 
     def reset_parameters(self) -> None:
-        raise NotImplementedError()
+        flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = flow.nn.init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         if self.use_bias:
