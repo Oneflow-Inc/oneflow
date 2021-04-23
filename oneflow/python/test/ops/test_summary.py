@@ -35,7 +35,7 @@ def summary_demo():
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
     func_config.default_logical_view(flow.scope.mirrored_view())
-    logdir = "/oneflow/log"
+    logdir = "/home/zjhushengjian/visual_of/log"
 
     @flow.global_function(function_config=func_config)
     def CreateWriter():
@@ -153,8 +153,8 @@ def summary_demo():
         x=x,
     )
 
-    image1_path = "~/oneflow/image1"
-    image2_path = "~/oneflow/image2"
+    image1_path = "/home/zjhushengjian/oneflow/image1.png"
+    image2_path = "/home/zjhushengjian/oneflow/image2.png"
 
     image_files = [
         image1_path,
