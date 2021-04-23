@@ -42,7 +42,7 @@ Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
     if (out_grads.at(i)->Empty()) {
       TensorTuple output(1);
       JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*zero_like, {outputs.at(i)}, &output));
-      out_grads.at(i)->PushPartialTensor(output.at(0));
+      JUST(out_grads.at(i)->PushPartialTensor(output.at(0)));
     }
   }
   return Maybe<void>::Ok();
@@ -142,7 +142,7 @@ Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
   }
   JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
   for (int i = 0; i < in_grads_.size(); ++i) {
-    in_grads_.at(i)->PushPartialTensor(input_grads.at(i));
+    JUST(in_grads_.at(i)->PushPartialTensor(input_grads.at(i)));
   }
   return true;
 }
@@ -169,7 +169,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
                                                                     bool create_graph) {
   ClearReleasedFunctionNodes();
   for (int i = 0; i < outputs.size(); ++i) {
-    outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
+    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
@@ -196,7 +196,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     tensor_arg2idx.emplace(inputs.at(i)->now_grad_arg().get(), i);
   }
   for (int i = 0; i < outputs.size(); ++i) {
-    outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i));
+    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
