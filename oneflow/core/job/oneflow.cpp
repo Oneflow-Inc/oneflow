@@ -130,7 +130,7 @@ void PopulateOpAttibute(
 
 void PushPlan(const std::string& plan_name, Plan&& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
-  HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
+  HashMap<std::pair<int64_t, int64_t>, std::list<TaskProto>> mchn_thrd_id2task_protos;
   HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
 
   for (TaskProto& task : *plan.mutable_task()) {
@@ -150,11 +150,14 @@ void PushPlan(const std::string& plan_name, Plan&& plan) {
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
   Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
-  for (std::pair<const std::pair<int64_t, int64_t>, std::vector<oneflow::TaskProto>>& pair :
+  for (std::pair<const std::pair<int64_t, int64_t>, std::list<oneflow::TaskProto>>& pair :
        mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
     sub_plan.mutable_task()->Reserve(pair.second.size());
-    for (TaskProto& tp : (pair.second)) { *(sub_plan.mutable_task()->Add()) = std::move(tp); }
+    while (!pair.second.empty()) {
+      sub_plan.mutable_task()->Add(std::move(pair.second.front()));
+      pair.second.pop_front();
+    }
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
   }
