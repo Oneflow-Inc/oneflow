@@ -19,7 +19,7 @@ import oneflow
 # -- Project information -----------------------------------------------------
 
 project = u"OneFlow"
-copyright = u"2020, OneFlow"
+copyright = u"2021, OneFlow"
 author = u"OneFlow"
 
 # The short X.Y version
@@ -195,9 +195,10 @@ epub_exclude_files = ["search.html"]
 # -- Extension configuration -------------------------------------------------
 
 autodoc_default_options = {
-    "special-members": "__init__",
     "undoc-members": True,
     "exclude-members": "__weakref__",
+    "exclude-members": "__init__",
+    "exclude-members": "forward",
 }
 
 
