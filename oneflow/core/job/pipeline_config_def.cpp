@@ -19,9 +19,11 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_SCOPE_CONFIG_DEF().Bool(
-    "checkpointing", false,
-    "enable checkpointing op/tensor for backward recomputation to sublinear memory cost");
+REGISTER_SCOPE_CONFIG_DEF().Int64(
+    "pipeline_stage_id_hint", 0,
+    "Manually marking different stages of pipelining parallelism. \n Generally speaking, different "
+    "stages are on different devices, and these stages are connected sequentially, so that the "
+    "whole network can be pipeline parallel.");
 
 }  // namespace
 

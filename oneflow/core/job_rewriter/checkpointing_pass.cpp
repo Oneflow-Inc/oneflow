@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
@@ -49,15 +48,10 @@ class CheckpointingPass final : public JobPass {
 const std::string kCheckpointingFakeOpNamePrefix = "OneFlow-System-Checkpointing-Fake-Fw-Op_";
 const std::string kCheckpointingBadOpName = "OneFlow-System-CheckpointPassBadEndOpName";
 
-const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
+const Scope& Scope4OpNode(const OpNode* op_node) {
+  int64_t scope_symbol_id = op_node->op().op_conf().scope_symbol_id();
   CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
   return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-}
-
-const Scope& Scope4OpNode(const OpNode* op_node) {
-  const OperatorConf& op_conf = op_node->op().op_conf();
-  CHECK(op_conf.has_scope_symbol_id());
-  return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
 }
 
 bool IsForwardPassScope(const Scope& scope) {
@@ -127,8 +121,6 @@ void GenConnectedCheckpointingSubgraphs(
   }
 }
 
-void TryInsertIdentityBufferOp() {}
-
 Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   // step 1. collect all checkpointing ops in forwardpass.
   HashMap<std::string, const OpNode*> checkpointing_op_name2op_node;
@@ -152,7 +144,6 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
   //   maybe a bw consumer will consume multi subgraph for recompute.
   //   so we need collect bw consumer between subgraphs, and update them in job builder only once.
   HashMap<std::string, OperatorConf> total_bw_consumers_op_name2conf;
-  HashMap<std::string, OperatorConf> lbn2identity_buffer_op_conf;
 
   for (auto& subgraph : checkpointing_subgraphs) {
     // step 3.1 ignore this subgraph if there is no direct edge to backward pass op.
@@ -168,23 +159,20 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (bw_consumers.empty()) { continue; }
 
     HashMap<std::string, const OpNode*> subgraph_op_name2op_node;
-    const ParallelConf& src_parallel_conf = (*subgraph.begin())->parallel_desc().parallel_conf();
+    ParallelConf parallel_conf;
     for (const OpNode* node : subgraph) {
       subgraph_op_name2op_node.emplace(node->op().op_name(), node);
+      parallel_conf = node->parallel_desc().parallel_conf();
     }
 
     // step 3.2 generate fake subgraph for recomputation
     HashMap<std::string, OperatorConf> fake_op_name2conf;
     HashSet<std::string> source_node_in_fake_subgraph;
     for (const OpNode* node : subgraph) {
-      const ParallelConf& node_parallel_conf = node->parallel_desc().parallel_conf();
       OperatorConf fake_op_conf = node->op().op_conf();
       std::string fake_op_name = kCheckpointingFakeOpNamePrefix + fake_op_conf.name();
       fake_op_conf.set_name(fake_op_name);
       const int64_t old_scope_symbol_id = fake_op_conf.scope_symbol_id();
-      const int64_t identity_buffer_size =
-          Scope4ScopeSymbolId(old_scope_symbol_id).Int64("checkpointing_op_buffer_size");
-
       // update fake op conf scope from fw to bw
       const int64_t new_scope_symbol_id = JUST(
           NewScopeSymbolId(old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
@@ -225,24 +213,6 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
             list_s.set_s(i, kCheckpointingFakeOpNamePrefix + old_lbn);
           } else {
             source_node_in_fake_subgraph.insert(fake_op_name);
-            if (identity_buffer_size > 1) {
-              if (lbn2identity_buffer_op_conf.find(old_lbn) == lbn2identity_buffer_op_conf.end()) {
-                lbn2identity_buffer_op_conf.emplace(
-                    old_lbn, user_op::UserOpConfWrapperBuilder("BufferIdentity-" + old_lbi.op_name()
-                                                               + "-" + old_lbi.blob_name())
-                                 .Op("identity_buffer")
-                                 .Input("in", old_lbn)
-                                 .Output("out")
-                                 .Attr<int64_t>("buffer_size", identity_buffer_size)
-                                 .ScopeSymbolId(old_scope_symbol_id)
-                                 .Build()
-                                 .op_conf());
-                JUST(job_builder->AddOp(node_parallel_conf,
-                                        lbn2identity_buffer_op_conf.at(old_lbn)));
-              }
-              const OperatorConf& identity_buffer_op = lbn2identity_buffer_op_conf.at(old_lbn);
-              list_s.set_s(i, user_op::UserOpConfWrapper(identity_buffer_op).output("out", 0));
-            }
           }
         }
       }
@@ -316,7 +286,7 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     // step 3.5 add fake subgraph ops to job builder
     std::vector<OperatorConf> fake_op_confs;
     for (auto& pair : fake_op_name2conf) { fake_op_confs.push_back(pair.second); }
-    job_builder->AddOps(src_parallel_conf, fake_op_confs);
+    job_builder->AddOps(parallel_conf, fake_op_confs);
   }
 
   // step 4. update bw consumers in job builder only once
