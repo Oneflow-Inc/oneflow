@@ -81,6 +81,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
   kernel_conf->set_op_attribute_ref(op_name);
+  // NOTE(levi): memory of op_attribute_ is released here.
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
@@ -110,8 +111,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 7");
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 8");
+  auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
   OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 9");
@@ -144,8 +145,6 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 13");
   {
     // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
-    OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 14");
     IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
     OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 15");
     PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);

@@ -19,7 +19,7 @@ import numpy as np
 import oneflow.core.common.data_type_pb2 as data_type_pb2
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 _dtypes = [
@@ -44,7 +44,7 @@ def dtypes():
 
 
 def convert_proto_dtype_to_oneflow_dtype(proto_dtype):
-    return oneflow_api.deprecated.GetDTypeByDataType(proto_dtype)
+    return oneflow._oneflow_internal.deprecated.GetDTypeByDataType(proto_dtype)
 
 
 _ONEFLOW_DTYPE_TO_NUMPY_DTYPE = {
