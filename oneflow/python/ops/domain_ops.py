@@ -16,7 +16,7 @@ limitations under the License.
 
 import typing
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -24,11 +24,11 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("nn.fused_self_attention_query_mul_key_and_value")
 def api_fused_self_attention_query_mul_key_and_value(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     head_size: int,
     alpha: float = 1.0,
     name: typing.Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
 
     if name is None:
         name = id_util.UniqueStr("FusedSelfAttentionQueryMulKeyAndValue_")
