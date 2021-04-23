@@ -38,7 +38,7 @@ void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
 }
 
-class CpuReleaseTensorInstructionType : public ReleaseTensorInstructionType {
+class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
   CpuReleaseTensorInstructionType() = default;
   ~CpuReleaseTensorInstructionType() override = default;
@@ -46,7 +46,7 @@ class CpuReleaseTensorInstructionType : public ReleaseTensorInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
 
-class GpuReleaseTensorInstructionType : public ReleaseTensorInstructionType {
+class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
   GpuReleaseTensorInstructionType() = default;
   ~GpuReleaseTensorInstructionType() override = default;
