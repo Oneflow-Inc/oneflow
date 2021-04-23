@@ -22,7 +22,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--start_worker", default=False, action="store_true", required=False
 )
-parser.add_argument("--env_proto", type=str, required=True)
+parser.add_argument("--env_proto", type=str, required=False)
+parser.add_argument("--doctor", default=False, action="store_true", required=False)
 
 args = parser.parse_args()
 
@@ -42,6 +43,11 @@ def main():
         ), "env_proto not found, please check your env_proto path: {}".format(env_proto)
         with open(env_proto, "rb") as f:
             StartWorker(f.read())
+    if args.doctor:
+        import oneflow
+
+        print("path:", oneflow.__path__)
+        print("version:", oneflow.__version__)
 
 
 if __name__ == "__main__":
