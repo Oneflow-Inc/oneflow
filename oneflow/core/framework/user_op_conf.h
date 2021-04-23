@@ -79,9 +79,12 @@ class UserOpConfWrapper final {
   bool has_output(const std::string& arg_name, int32_t index) const;
   int32_t input_size(const std::string& arg_name) const;
   int32_t output_size(const std::string& arg_name) const;
+  const HashMap<std::string, std::shared_ptr<AttrVal>>& attrs() const;
 
   template<typename T>
   const T& attr(const std::string& attr_name) const;
+
+  const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;

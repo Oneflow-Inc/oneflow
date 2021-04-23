@@ -57,6 +57,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
     this_tokens_msg.mutable_token2mem_desc()->insert(
         {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
   }
+  // TODO(chengcheng): Use Global<Transport> to sync session tokens.
   Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsTokensMsg peer_tokens_msg;
@@ -76,8 +77,8 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
-    : CommNetIf(plan),
+IBVerbsCommNet::IBVerbsCommNet()
+    : CommNetIf(),
       token2mem_desc_(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv_get_device_list(nullptr);
