@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 
@@ -47,8 +48,7 @@ class OpExpr {
 class BuiltinOpExpr : public OpExpr {
  public:
   explicit BuiltinOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
-                         const std::vector<std::string>& indexed_obns)
-      : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {}
+                         const std::vector<std::string>& indexed_obns);
 
   virtual ~BuiltinOpExpr() = default;
 
@@ -59,6 +59,12 @@ class BuiltinOpExpr : public OpExpr {
 
   const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
   const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
+  const std::vector<std::pair<std::string, int32_t>>& indexed_input_pairs() const {
+    return indexed_input_pairs_;
+  }
+  const std::vector<std::pair<std::string, int32_t>>& indexed_output_pairs() const {
+    return indexed_output_pairs_;
+  }
 
   virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const = 0;
 
@@ -68,6 +74,8 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
+  std::vector<std::pair<std::string, int32_t>> indexed_input_pairs_;
+  std::vector<std::pair<std::string, int32_t>> indexed_output_pairs_;
 };
 
 template<typename ProtoType>
@@ -96,7 +104,23 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-using UserOpExpr = BuiltinOpExprImpl<UserOpConf>;
+class StatefulOpKernel;
+
+class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
+ public:
+  UserOpExpr() = default;
+  virtual ~UserOpExpr() = default;
+  explicit UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+                      const std::vector<std::string>& indexed_ibns,
+                      const std::vector<std::string>& indexed_obns)
+      : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){};
+
+  Maybe<StatefulOpKernel> MutKernel4Device(const Device& device) const;
+
+ private:
+  mutable HashMap<Device, std::shared_ptr<StatefulOpKernel>> device2kernel_;
+};
+
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
 using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
