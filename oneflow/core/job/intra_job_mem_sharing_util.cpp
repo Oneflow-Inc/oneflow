@@ -234,12 +234,9 @@ void GenMemChainTasksAndRegsts(
       return lhs_order_in_graph < rhs_order_in_graph;
     });
     for (MemoryChain* mem_chain : mem_chains) {
-      /*
       if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
         merged_chains.push_back(mem_chain);
       }
-      */
-      merged_chains.push_back(mem_chain);
     }
     for (MemoryChain* merged_chain : merged_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);
