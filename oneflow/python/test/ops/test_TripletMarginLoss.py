@@ -131,7 +131,7 @@ def _compare_triplet_margin_loss_with_np(
 
     def assert_prediction_grad(blob: tp.Numpy):
         # Evaluate the gradient
-        assert np.allclose(blob, np_grad_dict["np_triplet_loss_grad_mean"], rtol=1e-3)
+        assert np.allclose(blob, np_grad_dict["np_triplet_loss_grad_mean"], atol=2e-3)
 
     @flow.global_function(
         type="train", function_config=func_config,
@@ -199,15 +199,18 @@ def _compare_triplet_margin_loss_with_np(
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss"],
         np_out_tripletloss_dict["np_triplet_margin_loss"],
+        atol=1e-3
     )
 
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss_mean"],
         np_out_tripletloss_dict["np_triplet_margin_loss_mean"],
+        atol=1e-3
     )
     assert np.allclose(
         of_out_tripletloss_dict["of_triplet_margin_loss_sum"],
         np_out_tripletloss_dict["np_triplet_margin_loss_sum"],
+        atol=1e-3
     )
 
 
