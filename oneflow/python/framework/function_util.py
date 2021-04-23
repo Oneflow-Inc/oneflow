@@ -271,17 +271,6 @@ def set_exp_run_conf(value):
     pb_util.PythonDict2CFG(value, func_desc.job_config_proto.mutable_exp_run_conf())
 
 
-@oneflow_function_config("use_memory_allocation_algorithm_v2")
-def set_use_memory_allocation_algorithm_v2(func_desc, value):
-    r"""Set to use memory allocation algorithm(v2)
-
-    Args:
-        func_desc ([type]): [description]
-        value ([type]): [description]
-    """
-    func_desc.job_config_proto.set_use_memory_allocation_algorithm_v2(value)
-
-
 @oneflow_function_config("static_mem_alloc_policy_white_list.has")
 def static_mem_alloc_policy_white_list_has_policy(func_desc, policy):
     r"""Get items from white list related to static memory allocation policy
@@ -309,7 +298,7 @@ def static_mem_alloc_policy_white_list_add_policy(func_desc, policy):
     getattr(
         func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(),
         "set_" + policy,
-    )(Ture)
+    )(True)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.remove")
