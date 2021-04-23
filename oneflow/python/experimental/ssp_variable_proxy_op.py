@@ -18,13 +18,13 @@ from typing import Tuple
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.id_util as id_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("experimental.ssp_variable_proxy")
 def ssp_variable_proxy(
-    var: oneflow_api.BlobDesc, buffer_size: int = 1, name=None
-) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
+    var: oneflow._oneflow_internal.BlobDesc, buffer_size: int = 1, name=None
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     r""" return ref_blob, value_blob """
     if name is None:
         name = id_util.UniqueStr("SspVariableProxy_")

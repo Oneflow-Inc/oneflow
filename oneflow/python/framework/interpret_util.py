@@ -21,9 +21,9 @@ import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 
-blob_register = oneflow_api.GetDefaultBlobRegister()
+blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def Forward(op_conf, scope_symbol=None):
