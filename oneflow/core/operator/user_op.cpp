@@ -363,8 +363,27 @@ class UserOpInferParallelDistributionFnContext
       : op_(op),
         parallel_distribution_signature_(parallel_distribution_signature),
         parallel_distribution_constraints_(parallel_distribution_constraints),
-        parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {}
+        parallel_distribution_infer_hint4ibn_fn_(std::move(ParallelDistributionInferHint4Ibn)) {
+    const auto& user_op_conf = op->op_conf().user_conf();
+    for (const auto& it : user_op_conf.input()) {
+      const std::string& arg_name = it.first;
+      for (int32_t i = 0; i < it.second.s_size(); ++i) {
+        auto hint =
+            CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, i)));
+        arg2tensor_desc_.emplace(std::make_pair(arg_name, i),
+                                 GenTensorDescFromBlobDesc(&hint->logical_blob_desc()));
+      }
+    }
+  }
   ~UserOpInferParallelDistributionFnContext() override = default;
+
+  const user_op::TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const override {
+    auto it = arg2tensor_desc_.find(std::make_pair(input_arg_name, index));
+    CHECK(it != arg2tensor_desc_.end())
+        << "Cannot find input_arg_name : " << input_arg_name << " input_arg_index : " << index;
+    return it->second;
+  }
 
   const ParallelDistributionSignature& parallel_distribution_constraints() const override {
     return parallel_distribution_constraints_;
@@ -398,6 +417,7 @@ class UserOpInferParallelDistributionFnContext
 
  private:
   const UserOp* op_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   ParallelDistributionSignature* parallel_distribution_signature_;
   ParallelDistributionSignature parallel_distribution_constraints_;
   std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
@@ -662,6 +682,13 @@ Maybe<void> UserOp::InferOpTimeShape(
     return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
   }
 }
+namespace {
+
+bool IgnoreInferParallelDistributionFnWhenFlatHierarchy(const std::string& op_type_name) {
+  return (op_type_name == "reshape" || op_type_name == "reshape_like");
+}
+
+}  // namespace
 
 Maybe<void> UserOp::InferParallelDistributionSignature(
     ParallelDistributionSignature* parallel_distribution_signature,
@@ -669,7 +696,10 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
-  if (val_->infer_parallel_distribution_fn) {
+  if (val_->infer_parallel_distribution_fn
+      && (parallel_desc.hierarchy()->NumAxes() > 1
+          || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
+              this->user_op_conf().op_type_name()))) {
     UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
                                                  ParallelDistributionInferHint4Ibn);

@@ -27,7 +27,8 @@ class InferParallelDistributionFnContext {
   InferParallelDistributionFnContext() = default;
   virtual ~InferParallelDistributionFnContext() = default;
   InferParallelDistributionFnContext(const InferParallelDistributionFnContext&) = delete;
-
+  virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const = 0;
   virtual ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
                                                                      int32_t index) = 0;
   virtual const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
@@ -38,6 +39,10 @@ class InferParallelDistributionFnContext {
   virtual const Shape& parallel_hierarchy() = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+  template<typename T>
+  T Attr(const std::string& attr_name) const {
+    return user_op_conf().attr<T>(attr_name);
+  }
 };
 
 }  // namespace user_op

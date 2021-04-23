@@ -13,7 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/reshape_user_op_util.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -95,11 +97,10 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_shape,
-                                                             const Shape& out_shape,
-                                                             std::vector<user_op::OpArg> in_args,
-                                                             std::vector<user_op::OpArg> out_args,
-                                                             user_op::SbpContext* ctx) {
+Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
+    const Shape& in_shape, const Shape& out_shape, std::vector<user_op::OpArg> in_args,
+    std::vector<user_op::OpArg> out_args, const int64_t parallel_num,
+    user_op::UserOpSbpSignatureBuilder* builder) {
   HashMap<int, int> squeezed_group_start_in_axis2out_axis;
   HashMap<int, int> in_squeezed_axis2original_axis;
   HashMap<int, int> out_squeezed_axis2original_axis;
@@ -109,15 +110,86 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(const Shape& in_sha
     ReshapeUserOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
     ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
     ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
-                                                   ctx->parallel_num(),
+                                                   parallel_num,
                                                    &squeezed_group_start_in_axis2out_axis);
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
     int64_t start_out_axis = out_squeezed_axis2original_axis.at(pair.second);
-    ctx->NewBuilder().Split(in_args, start_in_axis).Split(out_args, start_out_axis).Build();
+    builder->Split(in_args, start_in_axis).Split(out_args, start_out_axis).Build();
   }
-  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  builder->PartialSum(in_args).PartialSum(out_args).Build();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
+                                         user_op::OpArg in_arg,
+                                         ParallelDistribution* distribution) {
+  *distribution = ctx->ParallelDistributionHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
+  const auto& constraints = ctx->parallel_distribution_constraints();
+  if (constraints.bn_in_op2parallel_distribution_size() != 0) {
+    const auto it = constraints.bn_in_op2parallel_distribution().find(
+        GenRepeatedBn(in_arg.name(), in_arg.index()));
+    if (it != constraints.bn_in_op2parallel_distribution().end()) { *distribution = it->second; }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SplitShape(const SbpParallel sbp, const int64_t parallel_num, Shape* shape) {
+  if (sbp.has_split_parallel()) {
+    const int64_t axis = sbp.split_parallel().axis();
+    CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0);
+    shape->Set(axis, shape->At(axis) / parallel_num);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
+    user_op::InferParallelDistributionFnContext* ctx, const std::vector<user_op::OpArg>& in_args,
+    const std::vector<user_op::OpArg>& out_args, const std::vector<user_op::OpArg>& in_shape_args,
+    const Shape& logical_in_shape, const std::vector<user_op::OpArg>& out_shape_args,
+    const Shape& logical_out_shape) {
+  HashMap<std::string, ParallelDistribution> ibn2parallel_distribution;
+  for (const auto arg : in_args) {
+    ParallelDistribution* in_distribution =
+        ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
+    GetInputParallelDistribution(ctx, arg, in_distribution);
+    ibn2parallel_distribution.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution);
+  }
+  ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+
+  Shape in_shape = logical_in_shape;
+  Shape out_shape = logical_out_shape;
+  const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
+  for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+    SbpSignatureList sbp_sig_list;
+    user_op::UserOpSbpSignatureBuilder builder(&sbp_sig_list);
+    builder.Broadcast(in_args).Broadcast(out_args).Build();
+    GetReshapeUserOpSbpSignatures(in_shape, out_shape, in_shape_args, out_shape_args,
+                                  parallel_hierarchy.At(i), &builder);
+    const SbpSignature* matched_sbp_signature = nullptr;
+    for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
+      bool all_match = true;
+      for (const auto& in_arg : in_args) {
+        std::string ibn = GenRepeatedBn(in_arg.name(), in_arg.index());
+        if (sbp_signature.bn_in_op2sbp_parallel().at(ibn)
+            != ibn2parallel_distribution.at(ibn).sbp_parallel(i)) {
+          all_match = false;
+          break;
+        }
+      }
+      if (all_match) {
+        matched_sbp_signature = &sbp_signature;
+        break;
+      }
+    }
+    CHECK_OR_RETURN(matched_sbp_signature != nullptr);
+    SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
+    SplitShape(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"), parallel_hierarchy.At(i),
+               &in_shape);
+    SplitShape(out_sbp, parallel_hierarchy.At(i), &out_shape);
+    *(out_distribution->add_sbp_parallel()) = out_sbp;
+  }
   return Maybe<void>::Ok();
 }
 
