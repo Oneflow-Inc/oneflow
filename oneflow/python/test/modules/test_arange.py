@@ -36,9 +36,9 @@ class TestModule(flow.unittest.TestCase):
         of_out = flow.arange(0, 5)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-        # np_out2 = np.arange(0, 20, 2)
-        # of_out2 = flow.arange(0, 20, 2)
-        # test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2))
+        np_out2 = np.arange(0, 20, 2)
+        of_out2 = flow.arange(0, 20, 2)
+        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out2))
 
 
 
