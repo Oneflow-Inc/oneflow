@@ -148,6 +148,7 @@ class LogSoftmax(Module):
         - Output: :math:`(N, *)`, same shape as the input
 
     For example: 
+    
     .. code-block:: python 
 
         import oneflow as flow
