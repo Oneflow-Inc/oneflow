@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
 from oneflow.python.framework.attr_util import convert_to_user_attr_value
 from oneflow.python.oneflow_export import oneflow_export
@@ -28,7 +28,7 @@ class BuiltinOp(object):
     def __init__(self, op_type_name, op_name=None):
         if op_name is None:
             op_name = id_util.UniqueStr(op_type_name)
-        self._builder = oneflow_api.one.OpBuilder(op_type_name, op_name)
+        self._builder = oneflow._oneflow_internal.one.OpBuilder(op_type_name, op_name)
         self._op = None
         self._op_type_name = op_type_name
 
@@ -105,7 +105,7 @@ class BuiltinOp(object):
 
     def Build(self):
         r"""Explicitly complete the construction of the builtin op
-        
+
         Returns:
             the completed builtin op
         """

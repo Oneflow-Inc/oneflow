@@ -87,12 +87,19 @@ REGISTER_USER_OP("layer_norm")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Broadcast(user_op::OpArg("gamma", 0))
-          .Broadcast(user_op::OpArg("beta", 0))
-          .Build();
+      const Shape& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+      int64_t begin_norm_axis =
+          ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_norm_axis"));
+      int64_t begin_params_axis =
+          ShiftNegativeAxisIfNeed(x_shape, ctx->Attr<int64_t>("begin_params_axis"));
+      for (int i = 0; i < std::min(begin_norm_axis, begin_params_axis); ++i) {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Broadcast(user_op::OpArg("gamma", 0))
+            .Broadcast(user_op::OpArg("beta", 0))
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -137,14 +144,17 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
       *dx->mut_shape() = dy->shape();
       *dx->mut_is_dynamic() = dy->is_dynamic();
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->shape(), dx->shape());
       }
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+      int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
+      for (int i = 0; i < begin_norm_axis; ++i) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -158,7 +168,7 @@ REGISTER_USER_OP("layer_norm_grad")
       CHECK_EQ_OR_RETURN(inv_variance->data_type(), bn_param_data_type);
       user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx->mut_data_type() = dy->data_type();
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), dx->data_type());
       }
@@ -227,13 +237,16 @@ REGISTER_USER_OP("layer_norm_param_grad")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(ctx->inputs(), 0)
-          .Split(ctx->outputs(), 0)
-          .Broadcast(user_op::OpArg("gamma", 0))
-          .PartialSum(user_op::OpArg("gamma_diff", 0))
-          .PartialSum(user_op::OpArg("beta_diff", 0))
-          .Build();
+      int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
+      for (int i = 0; i < begin_params_axis; ++i) {
+        ctx->NewBuilder()
+            .Split(ctx->inputs(), i)
+            .Split(ctx->outputs(), i)
+            .Broadcast(user_op::OpArg("gamma", 0))
+            .PartialSum(user_op::OpArg("gamma_diff", 0))
+            .PartialSum(user_op::OpArg("beta_diff", 0))
+            .Build();
+      }
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
