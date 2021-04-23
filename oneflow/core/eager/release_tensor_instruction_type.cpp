@@ -46,13 +46,15 @@ class CpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
 };
 COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("cpu.ReleaseTensor"));
 
+#ifdef WITH_CUDA
 class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionType {
  public:
   GpuReleaseTensorInstructionType() = default;
   ~GpuReleaseTensorInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<CpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
+COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
+#endif
 
 }  // namespace eager
 }  // namespace oneflow
