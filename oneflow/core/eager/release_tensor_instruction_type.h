@@ -30,6 +30,7 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
 };
+
 }  // namespace eager
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
