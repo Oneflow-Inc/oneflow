@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
+#include <memory>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
 #include "oneflow/core/eager/eager_symbol.cfg.h"
@@ -140,25 +141,6 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
   builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
                             bn_in_op2blob_object);
   return JUST(MapAt(*bn_in_op2blob_object, "out"));
-}
-
-TODO(): remove _Run after inlining the logical of _Run into the caller function directly
-Maybe<void> _Run(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build,
-    const std::shared_ptr<vm::IdGenerator>& id_generator,
-    const std::function<Maybe<void>(const std::shared_ptr<vm::InstructionMsgList>&,
-                                    const std::shared_ptr<eager::cfg::EagerSymbolList>&)>&
-        RunInstruction,
-    const std::function<Maybe<void>(compatible_py::Object*)>& ReleaseObject) {
-  std::shared_ptr<Session> sess = JUST(GetDefaultSession());
-  std::shared_ptr<vm::InstructionMsgList> instruction_list = sess->instruction_list();
-  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
-  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
-                                              ReleaseObject));
-  JUST(RunInstruction(instruction_list, eager_symbol_list));
-  instruction_list->Clear();
-  eager_symbol_list->clear_eager_symbol();
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
@@ -1541,8 +1523,15 @@ Maybe<void> LogicalRun(
                                                                    eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  JUST(_Run(Build, std::make_shared<vm::LogicalIdGenerator>(), RunInstruction,
-            _ReleaseLogicalObject));
+  const std::shared_ptr<vm::LogicalIdGenerator> id_generator = std::make_shared<vm::LogicalIdGenerator>();
+  std::shared_ptr<Session> sess = JUST(GetDefaultSession());
+  std::shared_ptr<vm::InstructionMsgList> instruction_list = sess->instruction_list();
+  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
+  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
+                                              _ReleaseLogicalObject));
+  JUST(RunInstruction(instruction_list, eager_symbol_list));
+  instruction_list->Clear();
+  eager_symbol_list->clear_eager_symbol();
   return Maybe<void>::Ok();
 }
 
@@ -1555,8 +1544,15 @@ Maybe<void> PhysicalRun(
                                                                     eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  JUST(_Run(Build, std::make_shared<vm::PhysicalIdGenerator>(), RunInstruction,
-            _ReleasePhysicalObject));
+  const std::shared_ptr<vm::PhysicalIdGenerator> id_generator = std::make_shared<vm::PhysicalIdGenerator>();
+  std::shared_ptr<Session> sess = JUST(GetDefaultSession());
+  std::shared_ptr<vm::InstructionMsgList> instruction_list = sess->instruction_list();
+  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
+  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
+                                              _ReleaseLogicalObject));
+  JUST(RunInstruction(instruction_list, eager_symbol_list));
+  instruction_list->Clear();
+  eager_symbol_list->clear_eager_symbol();
   return Maybe<void>::Ok();
 }
 
