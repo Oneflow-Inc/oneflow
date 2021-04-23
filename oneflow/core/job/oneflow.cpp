@@ -128,7 +128,7 @@ void PopulateOpAttibute(
   }
 }
 
-void PushPlan(const std::string& plan_name, Plan& plan) {
+void PushPlan(const std::string& plan_name, Plan&& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
   HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
