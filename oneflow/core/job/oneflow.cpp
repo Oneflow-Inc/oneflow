@@ -133,7 +133,7 @@ void PushPlan(const std::string& plan_name, Plan& plan) {
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
   HashMap<int64_t, MemBlockAndChunkList> machine_id2block7chunk;
 
-  for (auto& task : plan.task()) {
+  for (TaskProto& task : *plan.mutable_task()) {
     machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
     mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(
         std::move(task));
@@ -150,7 +150,8 @@ void PushPlan(const std::string& plan_name, Plan& plan) {
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
   Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
-  for (auto& pair : mchn_thrd_id2task_protos) {
+  for (std::pair<const std::pair<int64_t, int64_t>, std::vector<oneflow::TaskProto>>& pair :
+       mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
     sub_plan.mutable_task()->Reserve(pair.second.size());
     for (TaskProto& tp : (pair.second)) { *(sub_plan.mutable_task()->Add()) = std::move(tp); }
