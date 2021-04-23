@@ -21,15 +21,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
-  std::vector<user_op::OpArg> in_args({{"in", 0}, {"like", 0}});
-  std::vector<user_op::OpArg> out_args({{"out", 0}});
-  std::vector<user_op::OpArg> in_shape_args({{"in", 0}});
-  std::vector<user_op::OpArg> out_shape_args({{"out", 0}, {"like", 0}});
-
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
-  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_args, out_args, in_shape_args,
-                                                      in_shape, out_shape_args, out_shape);
+  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, out_shape);
 }
 
 }  // namespace

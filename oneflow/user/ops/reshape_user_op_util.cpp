@@ -123,7 +123,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 }
 
 Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
-                                         user_op::OpArg in_arg,
+                                         const user_op::OpArg& in_arg,
                                          ParallelDistribution* distribution) {
   *distribution = ctx->ParallelDistributionHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
   const auto& constraints = ctx->parallel_distribution_constraints();
@@ -135,7 +135,7 @@ Maybe<void> GetInputParallelDistribution(user_op::InferParallelDistributionFnCon
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SplitShape(const SbpParallel sbp, const int64_t parallel_num, Shape* shape) {
+Maybe<void> SplitShape(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
   if (sbp.has_split_parallel()) {
     const int64_t axis = sbp.split_parallel().axis();
     CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0);
@@ -145,15 +145,16 @@ Maybe<void> SplitShape(const SbpParallel sbp, const int64_t parallel_num, Shape*
 }
 
 Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
-    user_op::InferParallelDistributionFnContext* ctx, const std::vector<user_op::OpArg>& in_args,
-    const std::vector<user_op::OpArg>& out_args, const std::vector<user_op::OpArg>& in_shape_args,
-    const Shape& logical_in_shape, const std::vector<user_op::OpArg>& out_shape_args,
+    user_op::InferParallelDistributionFnContext* ctx, const Shape& logical_in_shape,
     const Shape& logical_out_shape) {
+  const bool is_reshape_like = (ctx->user_op_conf().op_type_name() == "reshape_like");
+  std::vector<user_op::OpArg> in_args({{"in", 0}});
+  if (is_reshape_like) { in_args.push_back(user_op::OpArg("like", 0)); }
   HashMap<std::string, ParallelDistribution> ibn2parallel_distribution;
-  for (const auto arg : in_args) {
+  for (const auto& arg : in_args) {
     ParallelDistribution* in_distribution =
         ctx->ParallelDistribution4ArgNameAndIndex(arg.name(), arg.index());
-    GetInputParallelDistribution(ctx, arg, in_distribution);
+    JUST(GetInputParallelDistribution(ctx, arg, in_distribution));
     ibn2parallel_distribution.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution);
   }
   ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
@@ -164,9 +165,23 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
   for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
     SbpSignatureList sbp_sig_list;
     user_op::UserOpSbpSignatureBuilder builder(&sbp_sig_list);
-    builder.Broadcast(in_args).Broadcast(out_args).Build();
-    GetReshapeUserOpSbpSignatures(in_shape, out_shape, in_shape_args, out_shape_args,
-                                  parallel_hierarchy.At(i), &builder);
+    builder.Broadcast(in_args).Broadcast(user_op::OpArg("out", 0)).Build();
+    if (is_reshape_like) {
+      builder.PartialSum(user_op::OpArg("like", 0))
+          .Broadcast(user_op::OpArg("in", 0))
+          .Broadcast(user_op::OpArg("out", 0))
+          .Build();
+      builder.Broadcast(user_op::OpArg("like", 0))
+          .PartialSum(user_op::OpArg("in", 0))
+          .PartialSum(user_op::OpArg("out", 0))
+          .Build();
+      GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"like", 0}, {"out", 0}},
+                                    parallel_hierarchy.At(i), &builder);
+    } else {
+      GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"out", 0}},
+                                    parallel_hierarchy.At(i), &builder);
+    }
+
     const SbpSignature* matched_sbp_signature = nullptr;
     for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
       bool all_match = true;
@@ -185,9 +200,9 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
     }
     CHECK_OR_RETURN(matched_sbp_signature != nullptr);
     SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
-    SplitShape(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"), parallel_hierarchy.At(i),
-               &in_shape);
-    SplitShape(out_sbp, parallel_hierarchy.At(i), &out_shape);
+    JUST(SplitShape(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"),
+                    parallel_hierarchy.At(i), &in_shape));
+    JUST(SplitShape(out_sbp, parallel_hierarchy.At(i), &out_shape));
     *(out_distribution->add_sbp_parallel()) = out_sbp;
   }
   return Maybe<void>::Ok();

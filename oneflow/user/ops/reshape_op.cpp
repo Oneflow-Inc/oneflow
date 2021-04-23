@@ -34,18 +34,12 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
-  std::vector<user_op::OpArg> in_args({{"in", 0}});
-  std::vector<user_op::OpArg> out_args({{"out", 0}});
-  std::vector<user_op::OpArg> in_shape_args({{"in", 0}});
-  std::vector<user_op::OpArg> out_shape_args({{"out", 0}});
-
   const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->Attr<Shape>("shape");
   ShapeProto shape_proto;
   shape.ToProto(&shape_proto);
   const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
-  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_args, out_args, in_shape_args,
-                                                      in_shape, out_shape_args, *out_shape);
+  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, *out_shape);
 }
 
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
