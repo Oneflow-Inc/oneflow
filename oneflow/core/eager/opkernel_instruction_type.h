@@ -16,12 +16,28 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 #define ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 
+#include "oneflow/core/eager/opkernel_instruction.msg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
 namespace eager {
+
+class LocalCallOpKernelInstructionType : public vm::InstructionType {
+ public:
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+
+ protected:
+  LocalCallOpKernelInstructionType() = default;
+  virtual ~LocalCallOpKernelInstructionType() = default;
+
+ private:
+  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
+  Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
+  virtual const char* device_tag() const = 0;
+};
 
 class CallOpKernelInstructionType : public vm::InstructionType {
  public:
