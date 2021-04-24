@@ -29,7 +29,7 @@ import oneflow._oneflow_internal
 
 
 @oneflow_export("empty")
-def constant(
+def empty(
     dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,

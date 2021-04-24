@@ -30,6 +30,8 @@ class EmptyKernel final : public OpKernel {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
     CHECK_GT(elem_cnt, 0);
+
+    // Do nothing
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -43,6 +45,10 @@ class EmptyKernel final : public OpKernel {
   REGISTER_EMPTY_XPU_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_EMPTY_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+
+#ifdef WITH_CUDA
+REGISTER_EMPTY_XPU_KERNEL(DeviceType::kGPU, float16);
+#endif  // WITH_CUDA
 
 }  // namespace user_op
 }  // namespace oneflow

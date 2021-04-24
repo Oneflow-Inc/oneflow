@@ -33,11 +33,19 @@ REGISTER_USER_OP("empty")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+      // const Shape& shape = ctx->Attr<Shape>("shape");
+      // if (shape.NumAxes() > 0) {
+      //   FOR_RANGE(int64_t, i, 0, shape.NumAxes()) {
+      //     ctx->NewBuilder().Split(ctx->outputs(), i).Build();
+      //   }
+      // }
+      ctx->NewBuilder().Broadcast(ctx->outputs()).Build();
+      ctx->NewBuilder().PartialSum(ctx->outputs()).Build();
+
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      auto dtype = ctx->Attr<DataType>("dtype");
+      const DataType dtype = ctx->Attr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       return Maybe<void>::Ok();
     });
