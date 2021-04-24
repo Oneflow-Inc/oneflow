@@ -37,11 +37,16 @@ class Greater(Module):
     For example:
 
     .. code-block:: python
+        
+        import oneflow as flow
+        import numpy as np
 
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        
         out = flow.gt(input1, input2).numpy
-
+        # out [1 0 1]
+    
     """
 
     def __init__(self) -> None:

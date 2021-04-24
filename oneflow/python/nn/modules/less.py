@@ -24,7 +24,30 @@ from oneflow.python.framework.tensor import register_op_by_module
 @register_tensor_op_by_module("lt")
 @register_op_by_module("lt")
 class Less(Module):
-    r"""
+    r"""Returns the truth value of :math:`x < y` element-wise.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        y (oneflow.Tensor): A Tensor
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: A Tensor with int8 type.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        
+        input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+        
+        out = flow.gt(input1, input2).numpy
+
+        # out [0 0 1]
+
     """
 
     def __init__(self) -> None:
