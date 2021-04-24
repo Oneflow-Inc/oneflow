@@ -28,7 +28,39 @@ from oneflow.python.ops.transpose_util import (
 @register_tensor_op_by_module("tmp.repeat")
 @register_op_by_module("tmp.repeat")
 class Repeat(Module):
-    r"""
+    """This operator repeat the input tensor to a larger size along the specified dimensions.
+
+    Args:
+        x (oneflow.Tensor): The input Tensor. 
+        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+
+    Returns:
+        oneflow.Tensor: The result Tensor. 
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([[[[0, 1]],
+                       [[2, 3]],
+                       [[4, 5]]]]).astype(np.int32)
+
+        input = flow.Tensor(x)
+
+        out = flow.tmp.repeat(input, sizes=[1, 1, 2, 2]).numpy()
+
+        # out shape: [1, 3, 2, 4]
+        # [[[[0. 1. 0. 1.]
+        # [0. 1. 0. 1.]]
+
+        # [[2. 3. 2. 3.]
+        # [2. 3. 2. 3.]]
+
+        # [[4. 5. 4. 5.]
+        # [4. 5. 4. 5.]]]]
     """
 
     def __init__(self, sizes) -> None:

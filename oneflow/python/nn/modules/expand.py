@@ -36,7 +36,6 @@ class Expand(Module):
     Args:
         x (oneflow.Tensor): The input Tensor. 
         expand_size (Sequence[int]): The desired expanded size.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: The result Tensor. 
