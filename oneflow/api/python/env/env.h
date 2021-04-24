@@ -49,6 +49,12 @@ inline Maybe<bool> IsEnvInited() {
          && !JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env());
 }
 
+inline Maybe<void> DestroyDefaultEnv() {
+  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
+  Global<EnvGlobalObjectsScope>::Delete();
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
@@ -62,7 +68,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
       << "failed to parse env_proto" << env_proto_str;
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr
       && JUST(Global<EnvGlobalObjectsScope>::Get()->is_default_physical_env())) {
-    JUST(DestroyEnv());
+    JUST(DestroyDefaultEnv());
   }
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
