@@ -119,6 +119,8 @@ class MirroredTensorImpl : public TensorImpl {
   // Setters
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
   Maybe<void> set_device(const std::shared_ptr<const Device>& device);
+  virtual Maybe<void> set_eager_blob_object(
+      std::shared_ptr<eager::EagerBlobObject> eager_blob_object) = 0;
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
@@ -183,6 +185,10 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  Maybe<void> set_eager_blob_object(
+      std::shared_ptr<eager::EagerBlobObject> eager_blob_object) override {
+    return Error::Unimplemented();
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -221,17 +227,18 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<eager::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
-    return infer_local_dep_object_;
-  }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
-    return tensor_storage_->compute_local_dep_object();
-  }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override;
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override;
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
+  Maybe<void> set_eager_blob_object(
+      std::shared_ptr<eager::EagerBlobObject> eager_blob_object) override {
+    eager_blob_object_ = eager_blob_object;
+    return Maybe<void>::Ok();
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -242,16 +249,12 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<void> set_blob_object(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
-  // other methods
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
-
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
