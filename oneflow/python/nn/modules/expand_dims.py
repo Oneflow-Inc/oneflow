@@ -49,7 +49,6 @@ class Expand_Dims(Module):
         # out (2, 6, 5, 1)
 
     """
-    
 
     def __init__(self, axis: int, name: Optional[str] = None,) -> None:
         super().__init__()

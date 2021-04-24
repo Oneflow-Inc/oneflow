@@ -636,7 +636,7 @@ class Exp(Module):
         import oneflow as flow
 
         x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        y = x.exp()
+        y = x.exp().numpy()
 
         # y [ 2.7182817  7.389056  20.085537 ]
 

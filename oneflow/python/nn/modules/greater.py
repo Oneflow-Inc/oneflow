@@ -24,7 +24,24 @@ from oneflow.python.framework.tensor import register_op_by_module
 @register_tensor_op_by_module("gt")
 @register_op_by_module("gt")
 class Greater(Module):
-    r"""
+    r"""Returns the truth value of :math:`x > y` element-wise.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        y (oneflow.Tensor): A Tensor
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: A Tensor with int8 type.
+
+    For example:
+
+    .. code-block:: python
+
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        out = flow.gt(input1, input2).numpy
+
     """
 
     def __init__(self) -> None:
