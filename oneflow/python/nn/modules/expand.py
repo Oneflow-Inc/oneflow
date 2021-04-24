@@ -25,7 +25,44 @@ from typing import Optional
 @register_tensor_op_by_module("tmp.expand")
 @register_op_by_module("tmp.expand")
 class Expand(Module):
-    r"""
+    """This operator expand the input tensor to a larger size.
+    
+    Passing -1 as the size for a dimension means not changing the size of that dimension.
+
+    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front. 
+    
+    For the new dimensions, the size cannot be set to -1. 
+
+    Args:
+        x (oneflow.Tensor): The input Tensor. 
+        expand_size (Sequence[int]): The desired expanded size.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: The result Tensor. 
+
+    For example: 
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([[[[0, 1]],
+                       [[2, 3]],
+                       [[4, 5]]]]).astype(np.int32)
+
+        input = flow.Tensor(x)
+
+        out = flow.tmp.expand(input, expand_size=[1, 3, 2, 2])
+
+        # out shape: [1, 3, 2, 2]
+        # [[[[0, 1],
+        #    [0, 1]],
+        #   [[2, 3],
+        #    [2, 3]],
+        #   [[4, 5],
+        #    [4, 5]]]]
     """
 
     def __init__(self, expand_size, name: Optional[str] = None,) -> None:
