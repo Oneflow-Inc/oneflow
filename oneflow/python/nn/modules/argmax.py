@@ -47,7 +47,7 @@ class Argmax(Module):
         x = np.array([[1, 3, 8, 7, 2],
                     [1, 9, 4, 3, 2]], dtype=np.float32)
 
-        out = flow.argmax(x)
+        out = flow.argmax(flow.Tensor(x))
 
         # out [2 1]
 
