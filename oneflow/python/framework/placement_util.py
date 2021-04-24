@@ -23,7 +23,7 @@ from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow
 import traceback
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("device_prior_placement", "fixed_placement")
@@ -76,9 +76,12 @@ def api_placement(
 
     """
 
-    if oneflow_api.flags.with_cuda() == False and device_tag == "gpu":
+    if oneflow._oneflow_internal.flags.with_cuda() == False and device_tag == "gpu":
         device_tag = "cpu"
-    assert isinstance(hierarchy, (list, tuple, oneflow_api.Size)) or hierarchy is None
+    assert (
+        isinstance(hierarchy, (list, tuple, oneflow._oneflow_internal.Size))
+        or hierarchy is None
+    )
     func = enable_if.unique(
         [
             GetEmptyPlacementScope,
@@ -104,7 +107,7 @@ def GetNormalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     if hierarchy is not None:
-        hierarchy = oneflow_api.Size(tuple(hierarchy))
+        hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
     scope = scope_util.MakeScope(
         lambda old_scope, builder: builder.BuildScopeWithNewParallelDesc(
             old_scope, device_tag, machine_device_ids, hierarchy
@@ -119,7 +122,7 @@ def GetGlobalModePlacementScope(device_tag, machine_device_ids, hierarchy=None):
         machine_device_ids = [machine_device_ids]
     sess = session_ctx.GetDefaultSession()
     if hierarchy is not None:
-        hierarchy = oneflow_api.Size(tuple(hierarchy))
+        hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
 
     def BuildScope(old_scope, builder):
         return builder.BuildScopeWithNewParallelDesc(

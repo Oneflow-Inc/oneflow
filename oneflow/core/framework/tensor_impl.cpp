@@ -82,16 +82,14 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
       shape_(shape),
       dtype_(dtype),
-      tensor_storage_(tensor_storage),
-      infer_local_dep_object_(new VmLocalDepObject(device->parallel_desc_ptr())) {}
+      tensor_storage_(tensor_storage) {}
 
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
-    const std::shared_ptr<MemoryCase>& mem_case) {
-  CHECK_OR_RETURN(!static_cast<bool>(eager_blob_object_));
-  eager_blob_object_.reset(
-      new eager::EagerBlobObject(mem_case, std::const_pointer_cast<Shape>(shape_),
-                                 dtype_->data_type(), tensor_storage_->buffer()));
-  return Maybe<void>::Ok();
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
+  return eager_blob_object_->infer_local_dep_object();
+}
+
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
+  return eager_blob_object_->compute_local_dep_object();
 }
 
 }  // namespace one

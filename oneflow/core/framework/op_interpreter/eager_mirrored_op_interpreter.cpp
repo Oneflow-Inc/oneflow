@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
@@ -24,15 +25,56 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
+#include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 namespace one {
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
-  // TODO()
-  OF_UNIMPLEMENTED();
+  std::shared_ptr<const Device> device;
+  if (inputs.empty()) {
+    // TODO: align with pytorch (default cpu) when tensor.to() is ready
+    device = std::make_shared<Device>("cuda", 0);
+  } else {
+    device = inputs.at(0)->device();
+    for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs.at(i)->device()); }
+  }
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(Device::MakeParallelDescByDevice(*device));
+  const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
+  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
+  for (int i = 0; i < inputs.size(); i++) {
+    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+  }
+  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
+  const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  const auto mem_case = kernel->mem_case();
+  for (int i = 0; i < outputs->size(); i++) {
+    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+        mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
+        std::make_shared<eager::TensorBuffer>(), parallel_desc);
+    output_eager_blob_objects->at(i) = eager_blob_object;
+  }
+  const auto build_instruction =
+      [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+    JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                    parallel_desc));
+    return Maybe<void>::Ok();
+  };
+  JUST(PhysicalRun(build_instruction));
+  // TODO: remove sync when tensor is ready
+  JUST(vm::SingleClientSync());
+  for (int i = 0; i < outputs->size(); ++i) {
+    outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
+        output_eager_blob_objects->at(i), device));
+  }
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,

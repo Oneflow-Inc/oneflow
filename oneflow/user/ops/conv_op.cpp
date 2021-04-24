@@ -313,7 +313,7 @@ REGISTER_USER_OP("conv_data_grad")
       CHECK_LE_OR_RETURN(num_spatial_dims, 3);
       CHECK_EQ_OR_RETURN(dy->shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like->shape().NumAxes(), num_spatial_dims + 2);
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const user_op::TensorDesc* add_to_output =
             ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
@@ -337,7 +337,7 @@ REGISTER_USER_OP("conv_data_grad")
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
       CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
-      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx->has_input("_add_to_output", 0)) {
         const user_op::TensorDesc* add_to_output =
             ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());

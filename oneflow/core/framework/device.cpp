@@ -60,10 +60,8 @@ Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device)
   int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(device.of_type());
-  parallel_conf.add_device_name(machine_device_id);
-  return std::make_shared<const ParallelDesc>(parallel_conf);
+  return std::const_pointer_cast<const ParallelDesc>(
+      JUST(ParallelDesc::New(device.of_type(), {machine_device_id}, nullptr)));
 }
 
 Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {

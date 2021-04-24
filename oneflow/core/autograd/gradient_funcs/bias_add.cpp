@@ -56,6 +56,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
     in_grads->resize(2);
     if (ctx->bias_requires_grad) {
       std::vector<int32_t> reduce_axes_vec;
+      reduce_axes_vec.reserve(num_axes);
       for (int i = 0; i < num_axes; ++i) {
         if (i != axis_) { reduce_axes_vec.push_back(i); }
       }
