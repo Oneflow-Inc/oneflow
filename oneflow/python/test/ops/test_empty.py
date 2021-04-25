@@ -28,13 +28,18 @@ func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
 
 
-def _test_fp16(test_case, device_type, shape):
+def _test_fp16(test_case, device_type, shape, machine_ids, device_count):
     assert device_type in ["gpu"]
     flow.clear_default_session()
 
+    if device_type == "cpu":
+        flow.config.cpu_device_num(device_count)
+    elif device_type == "gpu":
+        flow.config.gpu_device_num(device_count)
+
     @flow.global_function(function_config=func_config)
     def empty_fp16_job() -> tp.Numpy:
-        with flow.scope.placement(device_type, "0:0"):
+        with flow.scope.placement(device_type, machine_ids):
             out16 = flow.empty(dtype=flow.float16, shape=shape)
             test_case.assertTrue(out16.dtype == flow.float16)
             out32 = flow.cast(out16, flow.float32)
@@ -97,15 +102,26 @@ class TestEmpty1n1d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["shape"] = [(2, 3, 4, 5), (2, 3), (100, 100), (512, 512), ()]
+        arg_dict["machine_ids"] = ["0:0-0"]
+        arg_dict["device_count"] = [1]
         for arg in GenArgList(arg_dict):
             _test_fp16(test_case, *arg)
 
 
 @flow.unittest.skip_unless_1n2d()
 class TestEmpty1n2d(flow.unittest.TestCase):
-    def test_empty(test_case):
+    def test_empty_fp16(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
+        arg_dict["shape"] = [(2, 3, 4, 5), (2, 3), (100, 100), (512, 512), ()]
+        arg_dict["machine_ids"] = ["0:0-1"]
+        arg_dict["device_count"] = [2]
+        for arg in GenArgList(arg_dict):
+            _test_fp16(test_case, *arg)
+
+    def test_empty(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["type_name_value"] = [
             "float32",
             "double",
