@@ -51,9 +51,7 @@ class TestModule(flow.unittest.TestCase):
                 ],
             ]
         )
-        fill_value = 8.7654321  # random value e.g. -1e9 3.14
-        m = flow.MaskedFill()
-
+        
         torch_out = np.array(
             [
                 [
@@ -69,6 +67,8 @@ class TestModule(flow.unittest.TestCase):
             ]
         )
 
+        fill_value = 8.7654321  # random value e.g. -1e9 3.14
+
         input = flow.Tensor(in_arr, dtype=flow.float32)
         mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
         of_out = input.masked_fill(mask, fill_value)
@@ -76,7 +76,7 @@ class TestModule(flow.unittest.TestCase):
 
         input2 = flow.Tensor(in_arr, dtype=flow.float32)
         mask2 = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
-        of_out2 = flow.tmp.masked_fill(input2, mask2, value=fill_value)
+        of_out2 = flow.tmp.masked_fill(input2, mask, value=fill_value)
         test_case.assertTrue(np.allclose(of_out2.numpy(), torch_out))
 
 

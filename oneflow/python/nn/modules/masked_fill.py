@@ -33,7 +33,6 @@ from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
 
-@oneflow_export("MaskedFill")
 class MaskedFill(Module):
     r"""
     Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True. 
@@ -75,8 +74,9 @@ class MaskedFill(Module):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, value) -> None:
         super().__init__()
+        self.value = value
         self._where_op = (
             flow.builtin_op("where")
             .Input("condition")
@@ -86,14 +86,14 @@ class MaskedFill(Module):
             .Build()
         )
 
-    def forward(self, input, mask, value):
+    def forward(self, input, mask):
         in_shape = tuple(input.shape)
         value_like_x = flow.Tensor(*in_shape)
-        value_like_x.fill_(value)
+        value_like_x.fill_(self.value)
         return self._where_op(mask, value_like_x, input)[0]
 
 
 @oneflow_export("tmp.masked_fill")
 @register_tensor_op_by_module("masked_fill")
 def masked_fill_op(tensor, mask, /, value):
-    return MaskedFill()(tensor, mask, value)
+    return MaskedFill(value)(tensor, mask)
