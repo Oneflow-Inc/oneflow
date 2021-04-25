@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
-#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
@@ -96,8 +95,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   const JobDesc& job_desc = GlobalJobDesc();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    TeePersistentLogStream::Create(
-      StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Get()->ToDotWithFilePath(
       "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
