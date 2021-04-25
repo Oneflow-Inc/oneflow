@@ -210,6 +210,28 @@ void VirtualMachine::ForEachConstMirroredObject(
   }
 }
 
+namespace {
+
+template<typename CallbackT>
+void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_type,
+                                                     const PhyInstrOperand& phy_instr_operand,
+                                                     const CallbackT& Callback) {
+  if (interpret_type == InterpretType::kCompute) {
+    phy_instr_operand.ForEachConstMirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) {
+          Callback(infer);
+          Callback(compute);
+        });
+  } else if (interpret_type == InterpretType::kInfer) {
+    phy_instr_operand.ForEachConstMirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachConstMirroredObject(
     const InterpretType interpret_type, Id2LogicalObject* id2logical_object,
@@ -219,11 +241,29 @@ void VirtualMachine::ForEachConstMirroredObject(
   if (interpret_type == InterpretType::kCompute) {
     ForEachMirroredObject<&IdUtil::GetTypeId>(id2logical_object, operand, global_device_id, DoEach);
   } else if (interpret_type == InterpretType::kInfer) {
-    // do nothing
+    // Do nothing
   } else {
     UNIMPLEMENTED();
   }
 }
+
+namespace {
+
+template<typename CallbackT>
+void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
+                                                   const PhyInstrOperand& phy_instr_operand,
+                                                   const CallbackT& Callback) {
+  if (interpret_type == InterpretType::kCompute) {
+    phy_instr_operand.ForEachMutMirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+  } else if (interpret_type == InterpretType::kInfer) {
+    // Do nothing
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
@@ -240,6 +280,25 @@ void VirtualMachine::ForEachMutMirroredObject(
     UNIMPLEMENTED();
   }
 }
+
+namespace {
+
+template<typename CallbackT>
+void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
+                                                 const PhyInstrOperand& phy_instr_operand,
+                                                 const CallbackT& Callback) {
+  if (interpret_type == InterpretType::kCompute) {
+    phy_instr_operand.ForEachMutMirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
+  } else if (interpret_type == InterpretType::kInfer) {
+    phy_instr_operand.ForEachMut2MirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
@@ -257,6 +316,28 @@ void VirtualMachine::ForEachMutMirroredObject(
     UNIMPLEMENTED();
   }
 }
+
+namespace {
+
+template<typename CallbackT>
+void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
+                                                  const PhyInstrOperand& phy_instr_operand,
+                                                  const CallbackT& Callback) {
+  if (interpret_type == InterpretType::kCompute) {
+    phy_instr_operand.ForEachMut2MirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) {
+          Callback(infer);
+          Callback(compute);
+        });
+  } else if (interpret_type == InterpretType::kInfer) {
+    phy_instr_operand.ForEachMut2MirroredObject(
+        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
 
 template<OperandMemZoneModifier mem_zone_modifier, typename DoEachT>
 void VirtualMachine::ForEachMutMirroredObject(
@@ -314,13 +395,10 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
     };
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
     if (phy_instr_operand) {
-      if (interpret_type == kInfer) {
-        phy_instr_operand->ForEachInferMutMirroredObject(ConsumeMutMirroredObject);
-      } else if (interpret_type == kCompute) {
-        phy_instr_operand->ForEachComputeMutMirroredObject(ConsumeMutMirroredObject);
-      } else {
-        UNIMPLEMENTED();
-      }
+      ForEachMutMirroredObject4Mut2PhyInstrOperand(interpret_type, *phy_instr_operand,
+                                                   ConsumeMutMirroredObject);
+      ForEachMutMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
+                                                  ConsumeMutMirroredObject);
     }
     const auto& operands = instruction->instr_msg().operand();
     for (const auto& operand : operands) {
@@ -347,13 +425,10 @@ void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
       }
     }
     if (phy_instr_operand) {
-      if (interpret_type == kInfer) {
-        phy_instr_operand->ForEachInferConstMirroredObject(ConsumeConstMirroredObject);
-      } else if (interpret_type == kCompute) {
-        phy_instr_operand->ForEachComputeConstMirroredObject(ConsumeConstMirroredObject);
-      } else {
-        UNIMPLEMENTED();
-      }
+      ForEachConstMirroredObject4MutPhyInstrOperand(interpret_type, *phy_instr_operand,
+                                                    ConsumeConstMirroredObject);
+      ForEachConstMirroredObject4ConstPhyInstrOperand(interpret_type, *phy_instr_operand,
+                                                      ConsumeConstMirroredObject);
     }
     for (const auto& operand : operands) {
       if (operand->has_const_operand()) {

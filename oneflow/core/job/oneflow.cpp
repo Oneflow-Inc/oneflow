@@ -204,6 +204,11 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   MemBlockAndChunkList block7chunk;
   Global<CtrlClient>::Get()->PullKV(block7chunk_key(plan_name, machine_id), &block7chunk);
   plan->mutable_block_chunk_list()->CopyFrom(block7chunk);
+  // pull op_attribute_info
+  OpAttributeInfo op_attribute_info;
+  Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
+  // populate op_attribute_info
+  PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
 bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
@@ -1173,19 +1178,10 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs, Plan* plan)
     Global<CtrlClient>::Get()->PushKV("op_attribute_info", op_attribute_info);
     // push plan
     PushPlan("merged_plan", *plan);
-    // populate op_attribute_info
-    PopulateOpAttibute(plan, plan->job_id2op_attribute_ref_table());
     LOG(INFO) << " PushPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
-
   } else {
     double start = GetCurTime();
-    // pull plan
     PullPlan("merged_plan", plan);
-    // pull op_attribute_info
-    OpAttributeInfo op_attribute_info;
-    Global<CtrlClient>::Get()->PullKV("op_attribute_info", &op_attribute_info);
-    // populate op_attribute_info
-    PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
     LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("merged_plan")->Write(*plan);
@@ -1205,6 +1201,8 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_));
+    plan_ = Plan();
+    PullPlan("merged_plan", &plan_);
   }
   OF_PROFILER_RANGE_PUSH("new Runtime");
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {

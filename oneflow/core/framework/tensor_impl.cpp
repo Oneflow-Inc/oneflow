@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 namespace one {
@@ -57,19 +58,38 @@ Maybe<void> EagerMirroredTensorImpl::set_blob_object(
   return SyncBlobObject2Attributes(blob_object);
 }
 
+EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
+
 Maybe<void> EagerConsistentTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   blob_object_ = blob_object;
   return SyncBlobObject2Attributes(blob_object);
 }
 
-Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
-    const std::shared_ptr<MemoryCase>& mem_case) {
-  CHECK_OR_RETURN(!static_cast<bool>(eager_blob_object_));
-  eager_blob_object_.reset(
-      new eager::EagerBlobObject(mem_case, std::const_pointer_cast<Shape>(shape_),
-                                 dtype_->data_type(), tensor_storage_->buffer()));
-  return Maybe<void>::Ok();
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+                                                 const std::shared_ptr<const DType>& dtype,
+                                                 const std::shared_ptr<const Device>& device,
+                                                 bool requires_grad, bool is_leaf, bool retain_grad)
+    : EagerMirroredTensorImpl(shape, dtype, device, nullptr, requires_grad, is_leaf, retain_grad) {
+  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
+}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+    const std::shared_ptr<const Device>& device,
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf,
+    bool retain_grad)
+    : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
+      shape_(shape),
+      dtype_(dtype),
+      tensor_storage_(tensor_storage) {}
+
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
+  return eager_blob_object_->infer_local_dep_object();
+}
+
+Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
+  return eager_blob_object_->compute_local_dep_object();
 }
 
 }  // namespace one

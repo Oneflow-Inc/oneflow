@@ -18,7 +18,9 @@ limitations under the License.
 namespace oneflow {
 
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
-  static AMPList white_list = {"matmul", "batch_matmul", "conv2d", "amp_white_identity"};
+  static AMPList white_list = {"matmul",           "batch_matmul",
+                               "conv2d",           "amp_white_identity",
+                               "broadcast_matmul", "fused_self_attention_query_mul_key_and_value"};
   return white_list;
 }
 
@@ -84,7 +86,9 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "hierarchical_parallel_cast_like",
                                "repeat",
                                "unpack",
-                               "pack"};
+                               "pack",
+                               "nvtx_start",
+                               "nvtx_end"};
 
   return clear_list;
 }

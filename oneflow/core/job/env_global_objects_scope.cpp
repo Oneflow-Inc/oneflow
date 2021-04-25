@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
+#include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
 
@@ -69,7 +70,7 @@ int32_t GetDefaultGpuDeviceNum() {
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   if (env_proto.has_ctrl_bootstrap_conf()) {
-    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size());
+    resource.set_machine_num(GlobalProcessCtx::NodeSize());
   } else {
     resource.set_machine_num(env_proto.machine_size());
   }
@@ -128,10 +129,18 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    Global<EpollCommNet>::New();
+    Global<Transport>::New();
+  }
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    Global<Transport>::Delete();
+    Global<EpollCommNet>::Delete();
+  }
 #ifdef WITH_CUDA
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();

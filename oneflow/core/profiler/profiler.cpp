@@ -18,6 +18,7 @@ limitations under the License.
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
+#include <iostream>
 #endif  // OF_ENABLE_PROFILER
 
 namespace oneflow {
@@ -90,6 +91,19 @@ RangeGuard::RangeGuard(const std::string& name) {
 RangeGuard::~RangeGuard() {
 #ifdef OF_ENABLE_PROFILER
   nvtxRangeEnd(ctx_->range_id());
+#endif  // OF_ENABLE_PROFILER
+}
+
+void LogHostMemoryUsage(const std::string& name) {
+#ifdef OF_ENABLE_PROFILER
+  int64_t vm_pages;
+  int64_t rss_pages;
+  std::ifstream ifs("/proc/self/statm");
+  ifs >> vm_pages >> rss_pages;
+  ifs.close();
+  const int64_t page_size = sysconf(_SC_PAGE_SIZE);
+  LOG(INFO) << "HostMemoryUsage: " << name << " VM " << vm_pages * page_size << " RSS "
+            << rss_pages * page_size;
 #endif  // OF_ENABLE_PROFILER
 }
 
