@@ -33,7 +33,6 @@ limitations under the License.
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
@@ -1549,7 +1548,7 @@ Maybe<void> PhysicalRun(
   };
   const std::shared_ptr<vm::InstructionMsgList> instruction_list = std::make_shared<vm::InstructionMsgList>();
   const std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = std::make_shared<eager::cfg::EagerSymbolList>();
-  Build(std::make_shared<InstructionsBuilder>(std::shared_ptr<vm::PhysicalIdGenerator>(), instruction_list, eager_symbol_list,
+  Build(std::make_shared<InstructionsBuilder>(std::shared_ptr<vm::PhysicalIdGenerator>(), instruction_list, std::shared_ptr<eager::cfg::EagerSymbolList>(),
                                               _ReleasePhysicalObject));
   JUST(RunInstruction(instruction_list, eager_symbol_list));
   instruction_list->Clear();
