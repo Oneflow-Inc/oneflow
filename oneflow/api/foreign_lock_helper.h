@@ -13,25 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/api/foreign_lock.h"
-
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/global.h"
-
-namespace py = pybind11;
+#ifndef ONEFLOW_API_FOREIGN_LOCK_HELPER_H
+#define ONEFLOW_API_FOREIGN_LOCK_HELPER_H
+#include <functional>
 
 namespace oneflow {
-class PythonForeignCallback final : public ForeignLock {
-  void WithScopedRelease(const std::function<void()>& callback) const override {
-    py::gil_scoped_release release;
-    callback();
-  }
+class ForeignLockHelper {
+ public:
+  virtual void WithScopedRelease(const std::function<void()>&) const = 0;
 };
-
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("InitForeignCallback",
-        []() { Global<ForeignLock>::SetAllocated(new PythonForeignCallback()); });
-}
-
 }  // namespace oneflow
+
+#endif  // ONEFLOW_API_FOREIGN_LOCK_HELPER_H

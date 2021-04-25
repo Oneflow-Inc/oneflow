@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
-#include "oneflow/api/foreign_lock.h"
+#include "oneflow/api/foreign_lock_helper.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
@@ -89,7 +89,7 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   const std::shared_ptr<const Shape>* result = nullptr;
-  Global<ForeignLock>::Get()->WithScopedRelease([this, &result]() {
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([this, &result]() {
     BlockingCounter bc(1);
     auto callback = [&bc, &result](const std::shared_ptr<const Shape>& shape) -> void {
       result = &shape;
