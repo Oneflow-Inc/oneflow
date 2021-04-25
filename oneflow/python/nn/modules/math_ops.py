@@ -53,9 +53,6 @@ def _check_axis(axis, shape):
     return axis
 
 
-@oneflow_export("Sum")
-@register_tensor_op_by_module("sum")
-@register_op_by_module("sum")
 class Sum(Module):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
@@ -84,6 +81,12 @@ class Sum(Module):
         self.axis = axis
         self.keepdims = keepdims
         self.name = name
+        self._op = (
+            flow.builtin_op("reduce_sum", self.name)
+            .Input("input_tensor")
+            .Output("output_tensor")
+            .Build()
+        )
 
     def forward(self, input):
         axis = _check_axis(self.axis, input.shape)
@@ -91,44 +94,40 @@ class Sum(Module):
         if len(axis) == 0:
             return input
 
-        self._op = self._op = (
-            flow.builtin_op("reduce_sum", self.name)
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", self.keepdims)
-            .Attr("axis", axis)
-            .Build()
-        )
+        return self._op(input, axis=axis, keepdims=self.keepdims)[0]
 
-        return self._op(input)[0]
+
+@register_tensor_op_by_module("sum")
+@register_op_by_module("sum")
+def sum(input, dim, keepdim=False):
+    return Sum(axis=dim, keepdims=keepdim)(input)
 
 
 class ScalarMul(Module):
     def __init__(self, operand, name=None) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out")
-
-        if isinstance(operand, int):
-            self._op = (
-                self._op.Attr("has_int_operand", True)
-                .Attr("has_float_operand", False)
-                .Attr("int_operand", operand)
-                .Attr("float_operand", 0.0)
-            )
-        elif isinstance(operand, float):
-            self._op = (
-                self._op.Attr("has_int_operand", False)
-                .Attr("has_float_operand", True)
-                .Attr("int_operand", 0)
-                .Attr("float_operand", operand)
-            )
-        else:
-            raise ValueError("operand type can only be int or float")
-
-        self._op = self._op.Build()
+        self.operand = operand
+        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        if isinstance(self.operand, int):
+            return self._op(
+                x,
+                has_int_operand=True,
+                has_float_operand=False,
+                int_operand=self.operand,
+                float_operand=0.0,
+            )[0]
+        elif isinstance(self.operand, float):
+            return self._op(
+                x,
+                has_int_operand=False,
+                has_float_operand=True,
+                int_operand=0,
+                float_operand=self.operand,
+            )[0]
+        else:
+            raise ValueError("operand type can only be int or float")
 
 
 class ScalarMulByTensor(Module):
