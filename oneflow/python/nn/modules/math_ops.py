@@ -751,24 +751,26 @@ class Subtract(Module):
             return BroadcastSub()(x, y)
 
 
-@register_tensor_op_by_module("npstd")
-@register_op_by_module("npstd")
+@register_tensor_op_by_module("std")
+@register_op_by_module("tmp.std")
 class Std(Module):
     r"""
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
     reduce over all of them.
 
-    {keepdim_details}
+    If keepdim is True, the output tensor is of the same size as input except in 
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
 
     If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
     via the biased estimator. Otherwise, Bessel's correction will be used.
 
     Args:
-        {input}
-        {dim}
-        unbiased (bool): whether to use the unbiased estimation or not
-        {keepdim}
+        input (Tensor) – the input tensor.
+        dim (int or tuple of python:ints) – the dimension or dimensions to reduce.
+        unbiased (bool) – whether to use the unbiased estimation or not
+        keepdim (bool) – whether the output tensor has `dim` retained or not.
 
     For example:
 
@@ -779,38 +781,38 @@ class Std(Module):
 
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr)
-        output = flow.npstd(input, 2)
+        output = flow.std(input, dim=2)
 
-        # equal to numpy output >>  np.std(arr, axis=2)
+        # equal to numpy np.std(arr, axis=2)
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, dim=None, unbiased=True, keepdim=True) -> None:
         super().__init__()
-        self.zero_module = flow.Zeros()
+        assert unbiased == True, "Only support 'unbiased=True' for now!"
+        self.axis = _check_axis(dim, x.shape)
+        self.unbiased = unbiased
+        self.keepdim = keepdim
+        self.reduce_count = 1  # Tensor.nelemenet()
+
+        self.zero_op = flow.tmp.zeros()
         self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
         self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
         self.reduce_sum_op = (
-            flow.builtin_op("reduce_sum").Input("input_tensor").Output("output_tensor")
+            flow.builtin_op("reduce_sum").Input("input_tensor")
+            .Attr("axis", axis)
+            .Attr("keepdims", keepdim)
+            .Output("output_tensor").Build()
         )
 
-        self.reduce_count = 1  # Tensor.nelemenet()
-
-    def forward(self, x, dim=None, unbiased=True, keepdim=True):
-        assert unbiased == True, "Only support 'unbiased=True' for now!"
-
-        axis = _check_axis(dim, x.shape)
-        self.reduce_sum_op = (
-            self.reduce_sum_op.Attr("axis", axis).Attr("keepdims", keepdim).Build()
-        )
-
-        if isinstance(axis, list) and len(axis) == 0:
-            return self.zero_module(x)
+    def forward(self, x):
+        if isinstance(self.axis, list) and len(self.axis) == 0:
+            return self.zero_op(x)
         else:
-            if len(axis) == 0:
+            if len(self.axis) == 0:
                 self.reduce_count = x.nelemenet()
             else:
-                for i in axis:
+                for i in self.axis:
                     self.reduce_count *= x.shape[i]
 
             res = self.sqrt_op(
