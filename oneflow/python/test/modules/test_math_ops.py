@@ -24,18 +24,28 @@ class TestModule(flow.unittest.TestCase):
     def test_sin(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.sin(input)
-        of_out2 = input.sin()
         np_out = np.sin(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out))
+        test_case.assertTrue(np.allclose(input.sin().numpy(), np_out))
+
+        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
+        input2 = flow.Tensor(arr, dtype=flow.float32)
+        torch_out = np.array([-0.51935846, 0.13429303, -0.40318328, -0.27116194])
+        of_out2 = flow.sin(input2)
+        test_case.assertTrue(np.allclose(of_out2.numpy(), torch_out))
 
     def test_cos(test_case):
         input = flow.Tensor(np.random.randn(1, 3, 6), dtype=flow.float32)
         of_out = flow.cos(input)
-        of_out2 = input.cos()
         np_out = np.cos(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out))
+        test_case.assertTrue(np.allclose(input.cos().numpy(), np_out))
+
+        arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
+        input2 = flow.Tensor(arr, dtype=flow.float32)
+        torch_out = np.array([0.13944048, 0.29570782, 0.6553126, 0.5573547])
+        of_out2 = flow.cos(input2)
+        test_case.assertTrue(np.allclose(of_out2.numpy(), torch_out))
 
 
 if __name__ == "__main__":

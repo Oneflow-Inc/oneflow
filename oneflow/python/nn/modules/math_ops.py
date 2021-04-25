@@ -620,10 +620,21 @@ class Sin(Module):
         \text{out}_{i} = \sin(\text{input}_{i})
 
     Args:
-        {input}
+        input (Tensor) – the input tensor.
 
-    Keyword args:
-        {out}
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.sin(input)
+
+        # output
+        # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
 
     """
 
@@ -649,10 +660,21 @@ class Cos(Module):
         \text{out}_{i} = \cos(\text{input}_{i})
 
     Args:
-        {input}
+        input (Tensor) – the input tensor.
 
-    Keyword args:
-        {out}
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cos(input)
+
+        # output
+        # [0.13944048 0.29570782 0.6553126  0.5573547 ]
         
     """
 
