@@ -66,17 +66,18 @@ class Arange(Module):
 
     def __init__(self, start, end, step=1) -> None:
         super().__init__()
-        self.start = start
-        self.end = end
+
+        if start is None:
+            self.start = 0
+        else:
+            self.start = start
+        if end is None:
+            self.end = 1
+        else:
+            self.end = end
+        
         self.step = step
         self.dtype = flow.int64  # "Only support dtype: `flow.int64` for now!"
-        self._op_arange = flow.builtin_op("range").Output("out").Build()
-
-    def forward(self):
-        if self.start is None:
-            self.start = 0
-        if self.end is None:
-            self.end = 1
 
         assert self.end > self.start, "end should be larger than start"
         assert self.step <= self.end - self.start, "step is ilegal"
@@ -84,9 +85,16 @@ class Arange(Module):
         assert type(self.end) == int, "Params `end`'s type should be int"
         assert type(self.step) == int, "Params `step`'s type should be int"
 
+        self._op_arange = flow.builtin_op("range").Output("out").Build()
+
+
+
+    def forward(self):
         return self._op_arange(start=self.start, delta=self.step, limit=self.end, dtype=self.dtype)[0]
 
 
 @oneflow_export("arange")
 def arange_op(start=1, end=1, step=1):
     return Arange(start, end, step)()
+
+
