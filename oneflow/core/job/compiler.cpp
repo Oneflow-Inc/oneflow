@@ -86,9 +86,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   // Step1: ensure job is completed.
-  if (need_job_complete) {
-    JobCompleter().Complete(job);
-  }
+  if (need_job_complete) { JobCompleter().Complete(job); }
 
   // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
@@ -96,12 +94,12 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Global<OpGraph>::Get()->ToDotWithFilePath(
-      "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
+    Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
+                                              + "_op_graph.dot");
   }
 
   // Step3: build task_gph.
-  // TODO(levi): we can rewrite this part of coder in visitor mode.
+  // TODO(levi): we can rewrite this part of code in visitor mode.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -111,9 +109,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->RemoveEmptyRegsts();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
   auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
-  if (job_desc.enable_inplace()) {
-    task_gph->EnableInplaceMemSharing(IsReachable);
-  }
+  if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
