@@ -47,6 +47,7 @@ class BlobDesc final {
   BlobDesc& operator=(const BlobDesc&);
 
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
+  const std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   Shape& mut_shape() { return *CHECK_NOTNULL(shape_.get()); }
   void set_shape(const Shape& shape) { *CHECK_NOTNULL(shape_.get()) = shape; }
 
