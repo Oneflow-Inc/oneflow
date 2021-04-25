@@ -807,8 +807,6 @@ class Pow(Module):
         return self._op(x)[0]
 
 
-@register_tensor_op_by_module("eq")
-@register_op_by_module("eq")
 class Std(Module):
     r"""
     Computes element-wise equality.
@@ -832,6 +830,7 @@ class Std(Module):
         other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
         
         y = flow.eq(input, other)
+        # [1 1 1 0]
 
     """
 
@@ -847,3 +846,9 @@ class Std(Module):
                 input.shape[i] >= other.shape[i]
             ), "The second argument can be a number or a tensor whose shape is broadcastable with the first argument."
         return self.eq_op(input, other)[0]
+
+
+@oneflow_export("eq")
+@register_tensor_op_by_module("eq")
+def std_op(input, other):
+    return Std()(input, other) 
