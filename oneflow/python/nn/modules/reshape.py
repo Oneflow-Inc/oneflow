@@ -37,7 +37,6 @@ def infer_shape(x, shape):
 
 
 @oneflow_export("Reshape")
-@register_tensor_op_by_module("tmp.reshape")
 @register_op_by_module("tmp.reshape")
 class Reshape(Module):
     r"""This operator reshapes a Tensor.
@@ -68,7 +67,7 @@ class Reshape(Module):
 
     """
 
-    def __init__(self, shape: Sequence[int], name: Optional[str] = None,) -> None:
+    def __init__(self, shape: Sequence[int]) -> None:
         super().__init__()
 
         assert isinstance(shape, tuple) or isinstance(shape, list)
@@ -76,12 +75,14 @@ class Reshape(Module):
         assert all(dim == -1 or dim > 0 for dim in shape)
         assert shape.count(-1) <= 1
 
-        if name is None:
-            name = id_util.UniqueStr("Reshape_")
-
         self._op = flow.builtin_op("reshape").Input("in").Output("out").Build()
         self.shape = shape
 
     def forward(self, x):
         new_shape = infer_shape(x, self.shape)
         return self._op(x, shape=new_shape)[0]
+
+
+@register_tensor_op_by_module("tmp.reshape")
+def reshape_op(input, /, shape):
+    return Reshape(shape)(input)
