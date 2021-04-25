@@ -159,14 +159,13 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
-        /*retain_grad=*/false));
+        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
   } else {
     const auto& distribute =
         compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
     return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
         blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
+        /*requires_grad=*/false, /*is_leaf=*/false));
   }
 }
 
@@ -177,8 +176,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   const auto dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));
   const auto& shape = eager_blob_object->blob_desc().shape_ptr();
   auto tensor = MirroredTensor::MakeTensor(shape, dtype, device, /* is_lazy */ false,
-                                           /* requires_grad */ false, /* is_leaf */ false,
-                                           /* retain_grad */ false);
+                                           /* requires_grad */ false, /* is_leaf */ false);
   tensor->set_eager_blob_object(eager_blob_object);
   return std::static_pointer_cast<Tensor>(tensor);
 }

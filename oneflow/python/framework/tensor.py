@@ -36,7 +36,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -64,7 +63,6 @@ class Tensor:
                 dtype=dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -78,7 +76,6 @@ class Tensor:
                 dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -407,7 +404,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -429,7 +425,6 @@ class Tensor:
             dtype,
             device=device,
             requires_grad=requires_grad,
-            retain_grad=retain_grad,
             placement=placement,
             sbp=sbp,
             is_consistent=is_consistent,
@@ -445,7 +440,6 @@ class UndeterminedTensor:
         dtype,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -469,7 +463,6 @@ class UndeterminedTensor:
         self.dtype = dtype
         self.device = device
         self.requires_grad = requires_grad
-        self.retain_grad = retain_grad
         self.placement = placement
         self.sbp = sbp
         self.is_consistent = is_consistent
@@ -517,7 +510,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
     else:
         determined_tensor = oneflow._oneflow_internal.LocalTensor(
@@ -527,7 +519,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor
@@ -561,7 +552,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
     else:
         determined_tensor = oneflow._oneflow_internal.LocalTensor(
@@ -571,7 +561,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
     determined_tensor._set_blob_object(blob.blob_object)
     return determined_tensor

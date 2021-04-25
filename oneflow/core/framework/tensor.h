@@ -239,8 +239,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                     const std::shared_ptr<const DType>& dtype,
                                                     const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad, bool is_leaf,
-                                                    bool retain_grad);
+                                                    bool is_lazy, bool requires_grad, bool is_leaf);
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -324,7 +323,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-      bool is_leaf, bool retain_grad);
+      bool is_leaf);
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;
