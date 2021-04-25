@@ -1100,7 +1100,7 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
-Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs) {
+Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& conf_jobs) {
   Plan plan;
   std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
@@ -1195,9 +1195,11 @@ Maybe<void> CompileAndMergePlanOnMaster(const PbRpf<Job>& conf_jobs) {
 Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_GUARD("Oneflow::Init");
   // Runtime
-  OF_PROFILER_RANGE_PUSH("CompileAndMergePlanOnMaster");
-  JUST(CompileAndMergePlanOnMaster(job_set.job()));
-  OF_PROFILER_RANGE_POP();  // CompileAndMergePlanOnMaster
+  OF_PROFILER_RANGE_PUSH("CompileJobsAndPushMergedPlan");
+  if (GlobalProcessCtx::IsThisProcessMaster()) {
+    JUST(CompileJobsAndPushMergedPlan(job_set.job()));
+  }
+  OF_PROFILER_RANGE_POP();  // CompileJobsAndPushMergedPlan
   double start = GetCurTime();
   PullPlan("merged_plan", &plan_);
   LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
