@@ -33,22 +33,22 @@ from oneflow.python.nn.modules import *
 
 
 def _access_blob_by_callback(local_tensor, callback, modifier):
-    def AsyncAcess(Yield):
-        def Access(Yield):
+    def AsyncAccess(Yield):
+        def MakeAccessor(Yield):
             def AccessOfBlobPtr(ofblob_ptr):
                 ofblob = ofblob_util.OfBlob(ofblob_ptr)
                 Yield(callback(ofblob))
 
             return AccessOfBlobPtr
 
-        fetcher = Access(Yield)
+        accessor = MakeAccessor(Yield)
 
         def BuildInstruction(builder):
-            builder.AccessBlobByCallback(local_tensor, fetcher, modifier)
+            builder.AccessBlobByCallback(local_tensor, accessor, modifier)
 
         flow._oneflow_internal.deprecated.PhysicalRun(BuildInstruction)
 
-    return async_util.Await(1, AsyncAcess)[0]
+    return async_util.Await(1, AsyncAccess)[0]
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
@@ -593,7 +593,7 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(
-            _create_blob_object(shape, dtype, undetermined_tensor.data_initializer)
+            _create_blob_object(tuple(shape), dtype, undetermined_tensor.data_initializer, tensor._placement_scope)
         )
     else:
         shape = undetermined_tensor.shape

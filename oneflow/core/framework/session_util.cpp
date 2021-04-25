@@ -70,8 +70,9 @@ Maybe<void> Session::PopMirroredStrategyEnabled() {
 }
 
 Maybe<bool> Session::IsMirroredStrategyEnabled() const {
-  return is_mirrored_strategy_enabled_stack_->size() > 0
-         && is_mirrored_strategy_enabled_stack_->back();
+  return is_mirrored_strategy_enabled_stack_->empty()
+         || (is_mirrored_strategy_enabled_stack_->size() > 0
+             && is_mirrored_strategy_enabled_stack_->back());
 }
 Maybe<bool> Session::IsConsistentStrategyEnabled() const {
   return is_mirrored_strategy_enabled_stack_->size() > 0

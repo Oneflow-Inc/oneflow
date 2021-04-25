@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
+#include "oneflow/api/foreign_lock.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
@@ -88,17 +89,20 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
 
 const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
   std::shared_ptr<const Shape> result;
-  BlockingCounter bc(1);
-  auto callback = [&bc, &result](std::shared_ptr<const Shape> shape) -> void {
-    result = shape;
-    bc.Decrease();
-  };
-  auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
-    return Maybe<void>::Ok();
-  };
-  CHECK_JUST(PhysicalRun(build_instruction));
-  bc.WaitUntilCntEqualZero();
+  Global<ForeignLock>::Get()->WithScopedRelease([this, &result]() {
+    BlockingCounter bc(1);
+    auto callback = [&bc, &result](std::shared_ptr<const Shape> shape) -> void {
+      result = shape;
+      bc.Decrease();
+    };
+    auto build_instruction =
+        [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+      JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
+      return Maybe<void>::Ok();
+    };
+    CHECK_JUST(PhysicalRun(build_instruction));
+    bc.WaitUntilCntEqualZero();
+  });
   return result;
 }
 

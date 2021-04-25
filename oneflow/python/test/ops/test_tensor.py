@@ -35,31 +35,24 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_mirrored_tensor_and_op(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-
-        @flow.global_function(function_config=func_config)
-        def job():
-            x1 = flow.Tensor([[1.0, 2.0]])
-            test_case.assertEqual(x1.dtype, flow.float32)
-            test_case.assertEqual(x1.shape, flow.Size((1, 2)))
-            x2 = flow.Tensor([[1.0], [2.0]])
-            op = (
-                flow.builtin_op("matmul")
-                .Input("a")
-                .Input("b")
-                .Attr("transpose_a", False)
-                .Attr("transpose_b", False)
-                .Attr("alpha", float(1.0))
-                .Output("out")
-                .Build()
-            )
-            y = op(x1, x2)[0]
-            test_case.assertTrue(
-                np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
-            )
-
-        job()
+        x1 = flow.Tensor([[1.0, 2.0]])
+        test_case.assertEqual(x1.dtype, flow.float32)
+        test_case.assertEqual(x1.shape, flow.Size((1, 2)))
+        x2 = flow.Tensor([[1.0], [2.0]])
+        op = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", float(1.0))
+            .Output("out")
+            .Build()
+        )
+        y = op(x1, x2)[0]
+        test_case.assertTrue(
+            np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
+        )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
