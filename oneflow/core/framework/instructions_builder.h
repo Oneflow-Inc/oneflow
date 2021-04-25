@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
+#include <memory>
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -62,11 +63,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator)
       : id_generator_(id_generator),
-        instruction_list_(std::make_shared<vm::InstructionMsgList>()),
+        instruction_list_(new vm::InstructionMsgList()),
         eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()),
         release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
+                      vm::InstructionMsgList* instruction_list,
                       const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
@@ -76,7 +77,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   ~InstructionsBuilder() = default;
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
-  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const {
+  vm::InstructionMsgList* instruction_list() const {
     return instruction_list_;
   }
   const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list() const {
@@ -418,13 +419,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                                  mut_eager_symbol_list(), conf);
   }
 
-  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_.get(); }
+  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
   eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_.get(); }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
-  std::shared_ptr<vm::InstructionMsgList> instruction_list_;
+  vm::InstructionMsgList* instruction_list_;
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
