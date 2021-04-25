@@ -612,8 +612,6 @@ class Add(Module):
             return BroadcastAdd()(x, y)
 
 
-@oneflow_export("Sin")
-@register_op_by_module("sin")
 class Sin(Module):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
@@ -637,8 +635,12 @@ class Sin(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("Cos")
-@register_op_by_module("cos")
+@oneflow_export("sin")
+@register_tensor_op_by_module("sin")
+def sin_op(tensor):
+    return Sin()(tensor)
+
+
 class Cos(Module):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
@@ -660,6 +662,12 @@ class Cos(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("cos")
+@register_tensor_op_by_module("cos")
+def cos_op(tensor):
+    return Cos()(tensor)
 
 
 @oneflow_export("Log")
