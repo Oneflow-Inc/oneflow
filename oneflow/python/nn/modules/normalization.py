@@ -42,6 +42,7 @@ _shape_t = Union[int, Tuple[int], flow.Size]
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
     the paper `Layer Normalization <https://arxiv.org/abs/1607.06450>`__
+    
     .. math::
         y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
     The mean and standard-deviation are calculated separately over the last
@@ -51,6 +52,7 @@ class LayerNorm(Module):
     :attr:`normalized_shape` if :attr:`elementwise_affine` is ``True``.
     The standard-deviation is calculated via the biased estimator, equivalent to
     `torch.var(input, unbiased=False)`.
+    
     .. note::
         Unlike Batch Normalization and Instance Normalization, which applies
         scalar scale and bias for each entire channel/plane with the
@@ -58,6 +60,7 @@ class LayerNorm(Module):
         bias with :attr:`elementwise_affine`.
     This layer uses statistics computed from input data in both training and
     evaluation modes.
+    
     Args:
         normalized_shape (int or list or torch.Size): input shape from an expected input
             of size
@@ -81,9 +84,36 @@ class LayerNorm(Module):
         import numpy as np
         import oneflow as flow
 
-        x = flow.Tensor(20, 5, 10, 10)
-        m = flow.nn.LayerNorm(x.size()[1:])
+        input_arr = np.array(
+            [
+                [
+                    [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
+                    [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
+                ],
+                [
+                    [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
+                    [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
+                ],
+            ],
+            dtype=np.float32,
+        )
+
+        x = flow.Tensor(input_arr)
+        m = flow.nn.LayerNorm(2)
         y = m(x)
+
+        # output
+        # [[[[ 0.99997395 -0.99997395]
+        # [-0.999947    0.999947  ]]
+
+        # [[-0.99995947  0.9999595 ]
+        # [ 0.99998796 -0.99998796]]]
+
+        # [[[-0.9998348   0.99983454]
+        # [ 0.9999913  -0.9999913 ]]
+
+        # [[ 0.99997866 -0.99997854]
+        # [ 0.9999645  -0.9999645 ]]]]
 
     """
     __constants__ = ["normalized_shape", "eps", "elementwise_affine"]
@@ -127,6 +157,7 @@ class LayerNorm(Module):
             .Attr("scale", False)
             .Attr("begin_params_axis", self.begin_params_axis)
             .Attr("epsilon", self.epsilon)
+            .Build()
         )
 
     def reset_parameters(self) -> None:
@@ -139,8 +170,7 @@ class LayerNorm(Module):
             self.normalized_shape
         ), "Input tensor dim must greater than normalized dim!"
         self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
-        self._op = self._op.Attr("begin_norm_axis", self.begin_norm_axis).Build()
-        return self._op(x)[0]
+        return self._op(x, begin_norm_axis=self.begin_norm_axis)[0]
 
     def extra_repr(self) -> str:
         return (
