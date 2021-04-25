@@ -29,36 +29,25 @@ namespace one {
 
 namespace {
 
-bool IsReadyToRun(const std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  return std::any_of(
-      out_grads.begin(), out_grads.end(),
-      [](const std::shared_ptr<TensorArg>& tensor_arg) { return !tensor_arg->Empty(); });
+bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_datas) {
+  return std::any_of(out_meta_datas.begin(), out_meta_datas.end(),
+                     [](const std::shared_ptr<AutogradMeta>& meta_data) {
+                       return !meta_data->now_grad_arg()->Empty();
+                     });
 }
 
-Maybe<void> InitEmptyTensorArgs2ZerosTensor(const TensorTuple& outputs,
-                                            std::vector<std::shared_ptr<TensorArg>>& out_grads) {
-  const auto& zero_like = JUST(op_expr_helper::ZeroLikeOp());
-  for (int i = 0; i < out_grads.size(); ++i) {
-    if (out_grads.at(i)->Empty()) {
-      TensorTuple output(1);
-      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*zero_like, {outputs.at(i)}, &output));
-      JUST(out_grads.at(i)->PushPartialTensor(output.at(0)));
-    }
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CopyOrAccGrad(Tensor* tensor, bool autograd_mode) {
+Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
-  const auto& now_grad = JUST(tensor->now_grad_arg()->GetAccTensor());
-  if (tensor->acc_grad()) {
-    TensorTuple input = {tensor->acc_grad(), now_grad};
+  const auto& now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
+  if (!now_grad) { return Maybe<void>::Ok(); }
+  if (autograd_meta->acc_grad()) {
+    TensorTuple input = {autograd_meta->acc_grad(), now_grad};
     TensorTuple output(1);
     const auto& add = JUST(op_expr_helper::AddOp());
     JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
-    tensor->set_acc_grad(output.at(0));
+    autograd_meta->set_acc_grad(output.at(0));
   } else {
-    tensor->set_acc_grad(now_grad);
+    autograd_meta->set_acc_grad(now_grad);
   }
   return Maybe<void>::Ok();
 }
@@ -69,16 +58,16 @@ StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
-  inputs_ = std::make_shared<TensorTuple>(inputs.size());
+  input_meta_datas_.resize(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
-    inputs_->at(i) = inputs.at(i);
-    in_grads_.emplace_back(inputs.at(i)->now_grad_arg());
+    input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
   }
 
-  outputs_ = std::make_shared<TensorTuple>(outputs.size());
+  output_meta_datas_.resize(outputs.size());
+  output_tensor_infos_.reserve(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    outputs_->at(i) = outputs.at(i)->detach();
-    out_grads_.emplace_back(outputs.at(i)->now_grad_arg());
+    output_meta_datas_.at(i) = outputs.at(i)->mut_autograd_meta();
+    output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
   }
 
   backward_fn_ = backward_fn;
@@ -86,33 +75,31 @@ StackFunctionNode::StackFunctionNode(
 }
 
 Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
-  for (int i = 0; i < outputs_->size(); ++i) {
-    if (outputs_->at(i)->retain_grad() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_->at(i).get(), /*autograd_mode=*/false));
-    }
+  for (const std::shared_ptr<AutogradMeta>& out : output_meta_datas_) {
+    if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false)); }
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
-  for (int i = 0; i < outputs_->size(); ++i) {
-    if (outputs_->at(i)->is_leaf() && outputs_->at(i)->requires_grad()) {
-      JUST(CopyOrAccGrad(outputs_->at(i).get(), /*autograd_mode=*/create_graph));
+  for (const std::shared_ptr<AutogradMeta>& out : output_meta_datas_) {
+    if (out->is_leaf() && out->requires_grad()) {
+      JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
     }
   }
   return Maybe<void>::Ok();
 }
 
 void StackFunctionNode::ReleaseOutTensorArgs() {
-  for (const std::shared_ptr<TensorArg>& tensor_arg : out_grads_) { tensor_arg->Release(); }
+  for (const std::shared_ptr<AutogradMeta>& meta_data : output_meta_datas_) {
+    meta_data->now_grad_arg()->Release();
+  }
 }
 
 void StackFunctionNode::ReleaseData() {
-  if (!inputs_->empty()) {
-    inputs_.reset();
-    outputs_.reset();
-    in_grads_.clear();
-    out_grads_.clear();
+  if (!input_meta_datas_.empty()) {
+    input_meta_datas_.clear();
+    output_meta_datas_.clear();
     backward_fn_.reset();
   }
   is_in_stack_ = false;
@@ -121,16 +108,21 @@ void StackFunctionNode::ReleaseData() {
 Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
       << "This FunctionNode with name `" << GetOpName() << "` has been released.";
-  if (!IsReadyToRun(out_grads_)) { return false; }
-  JUST(InitEmptyTensorArgs2ZerosTensor(*outputs_, out_grads_));
-  TensorTuple input_grads(in_grads_.size());
-  TensorTuple output_grads(out_grads_.size());
-  for (int i = 0; i < out_grads_.size(); ++i) {
-    output_grads.at(i) = JUST(out_grads_.at(i)->GetAccTensor());
+  if (!IsReadyToRun(output_meta_datas_)) { return false; }
+  TensorTuple input_grads(input_meta_datas_.size());
+  TensorTuple output_grads(output_meta_datas_.size());
+  for (int i = 0; i < output_meta_datas_.size(); ++i) {
+    if (output_meta_datas_.at(i)->now_grad_arg()->Empty()) {
+      output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
+    } else {
+      output_grads.at(i) = JUST(output_meta_datas_.at(i)->now_grad_arg()->GetAccTensor());
+    }
   }
   JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
-  for (int i = 0; i < in_grads_.size(); ++i) {
-    JUST(in_grads_.at(i)->PushPartialTensor(input_grads.at(i)));
+  for (int i = 0; i < input_meta_datas_.size(); ++i) {
+    if (input_grads.at(i)) {
+      JUST(input_meta_datas_.at(i)->now_grad_arg()->PushPartialTensor(input_grads.at(i)));
+    }
   }
   return true;
 }

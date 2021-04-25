@@ -19,8 +19,13 @@ limitations under the License.
 
 #include <memory>
 #include "oneflow/core/framework/tensor_arg.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class Shape;
+class DType;
+
 namespace one {
 
 class Tensor;
@@ -28,6 +33,7 @@ class TensorArg;
 
 class AutogradMeta final {
  public:
+  AutogradMeta() = delete;
   AutogradMeta(bool requires_grad, bool is_leaf)
       : is_leaf_(is_leaf),
         requires_grad_(requires_grad),
@@ -59,6 +65,19 @@ class AutogradMeta final {
 
   std::shared_ptr<Tensor> acc_grad_;
   std::shared_ptr<TensorArg> now_grad_arg_;
+};
+
+class TensorInfo final {
+ public:
+  TensorInfo() = delete;
+  TensorInfo(const Tensor& tensor);
+
+  Maybe<Tensor> zeros() const;
+
+ private:
+  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const DType> dtype_;
+  // TODO: Add device info
 };
 
 }  // namespace one

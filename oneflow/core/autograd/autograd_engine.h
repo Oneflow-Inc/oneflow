@@ -27,9 +27,10 @@ namespace oneflow {
 
 namespace one {
 
-class TensorArg;
 class Tensor;
 class TensorTuple;
+class AutogradMeta;
+class TensorInfo;
 
 // Calculates one backward op
 class FunctionNode {
@@ -101,12 +102,9 @@ class StackFunctionNode final : public FunctionNode {
   void set_is_in_stack(bool in_stack) { is_in_stack_ = in_stack; }
 
  private:
-  // FunctionNode shares Tensor with `inputs_`, and only shares TensorImpl with `outputs_`.
-  // The reference link is `output tensors -> node -> inputs_/input tensors`.
-  std::shared_ptr<TensorTuple> inputs_;
-  std::shared_ptr<TensorTuple> outputs_;
-  std::vector<std::shared_ptr<TensorArg>> in_grads_;
-  std::vector<std::shared_ptr<TensorArg>> out_grads_;
+  std::vector<std::shared_ptr<AutogradMeta>> input_meta_datas_;
+  std::vector<std::shared_ptr<AutogradMeta>> output_meta_datas_;
+  std::vector<TensorInfo> output_tensor_infos_;
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
   std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>
       backward_fn_;

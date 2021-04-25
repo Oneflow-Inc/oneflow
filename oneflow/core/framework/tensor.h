@@ -100,6 +100,7 @@ class Tensor {
   virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual std::shared_ptr<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
+  virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
 
  protected:
   Tensor() = default;
@@ -221,6 +222,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
   std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;

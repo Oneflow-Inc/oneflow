@@ -19,7 +19,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
@@ -35,6 +34,7 @@ namespace compatible_py {
 class Distribute;
 }
 
+class Shape;
 class Device;
 class DType;
 
@@ -81,6 +81,7 @@ class TensorImpl {
   void set_requires_grad(bool requires_grad) { autograd_meta_->set_requires_grad(requires_grad); }
   void set_retain_grad(bool retain_grad) { autograd_meta_->set_retain_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) { autograd_meta_->set_is_leaf(is_leaf); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -158,9 +159,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
                          const std::shared_ptr<const DType>& dtype,
                          const std::shared_ptr<const Device>& device, bool requires_grad,
                          bool is_leaf)
-      : MirroredTensorImpl(device, requires_grad, is_leaf),
-        shape_(shape),
-        dtype_(dtype) {}
+      : MirroredTensorImpl(device, requires_grad, is_leaf), shape_(shape), dtype_(dtype) {}
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
