@@ -1100,10 +1100,10 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
-Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& conf_jobs) {
+Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
   Plan plan;
-  std::vector<std::shared_ptr<Job>> jobs(conf_jobs.size());
-  FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(conf_jobs.Get(i))); }
+  std::vector<std::shared_ptr<Job>> jobs(job_confs.size());
+  FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(job_confs.Get(i))); }
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
