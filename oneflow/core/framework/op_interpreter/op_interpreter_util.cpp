@@ -152,18 +152,21 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
     const bool is_lazy) {
+  const auto& scope = JUST(GetCurrentScope());
   const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
-        /*retain_grad=*/false));
+    return static_cast<std::shared_ptr<Tensor>>(
+        MirroredTensor::MakeTensor(scope, blob_attr->shape(), dtype, device, is_lazy,
+                                   /*requires_grad=*/false, /*is_leaf=*/false,
+                                   /*retain_grad=*/false));
   } else {
     const auto& distribute =
         compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
     return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
-        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
+        scope, blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(),
+        is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
   }
 }

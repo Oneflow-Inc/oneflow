@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <list>
 #include "oneflow/core/framework/scope_util.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
 
@@ -50,6 +51,16 @@ Maybe<void> ThreadLocalScopeStackPop() {
   auto* scope_stack = ThreadLocalScopeStack();
   scope_stack->pop_back();
   return Maybe<void>::Ok();
+}
+
+Maybe<Scope> ExtractDispatchScope(const one::TensorTuple& inputs) {
+  if (inputs.empty()) { return GetCurrentScope(); }
+  for (const auto& t : inputs) {
+    if (t->scope()->device_parallel_desc_symbol()->device_tag() != "cpu") {
+      return std::const_pointer_cast<Scope>(t->scope());
+    }
+  }
+  return std::const_pointer_cast<Scope>(inputs.at(0)->scope());
 }
 
 }  // namespace oneflow

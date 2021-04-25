@@ -31,6 +31,9 @@ Maybe<one::UserOpExpr> AddOp(const std::string& name);
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
+Maybe<one::UserOpExpr> OnesLikeOp();
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+
 template<typename T>
 Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value);
 template<typename T>

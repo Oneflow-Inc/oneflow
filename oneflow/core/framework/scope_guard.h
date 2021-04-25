@@ -26,7 +26,7 @@ class ScopeGuard final {
     ThreadLocalScopeStackPush(scope_).GetOrThrow();
   }
   ~ScopeGuard() {
-    const auto& scope = JUST(GetCurrentScope());
+    const auto& scope = GetCurrentScope().GetPtrOrThrow();
     CHECK(scope == scope_);
     ThreadLocalScopeStackPop().GetOrThrow();
   }

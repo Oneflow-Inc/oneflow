@@ -36,6 +36,9 @@ namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const AttrValueMap& attrs) const {
+  const auto& scope = JUST(ExtractDispatchScope(inputs));
+  ScopeGuard scope_guard(scope);
+
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, attrs);                     \
@@ -102,6 +105,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const Tens
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                     TensorTuple* outputs, const AttrValueMap& attrs) const {
+  const auto& scope = JUST(ExtractDispatchScope(inputs));
+  ScopeGuard scope_guard(scope);
+
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, attrs);                     \
@@ -162,13 +168,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs, attrs);
 
-    const auto& scope = JUST(GetCurrentScope());
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              ScopeGuard scope_guard(scope);
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });

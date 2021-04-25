@@ -55,6 +55,7 @@ class Distribute;
 
 class Device;
 class DType;
+class Scope;
 
 namespace one {
 
@@ -76,6 +77,9 @@ class Tensor {
   virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+
+  virtual const std::shared_ptr<const Scope>& scope() const = 0;
+  virtual void set_scope(const std::shared_ptr<const Scope>& scope) = 0;
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
@@ -231,7 +235,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->set_blob_object(blob_object);
   }
 
-  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+  const std::shared_ptr<const Scope>& scope() const override { return impl_->scope(); }
+  void set_scope(const std::shared_ptr<const Scope>& scope) override {
+    return impl_->set_scope(scope);
+  }
+
+  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Scope>& scope,
+                                                    const std::shared_ptr<const Shape>& shape,
                                                     const std::shared_ptr<const DType>& dtype,
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad, bool is_leaf,
@@ -314,8 +324,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->set_blob_object(blob_object);
   }
 
+  const std::shared_ptr<const Scope>& scope() const override { return impl_->scope(); }
+  void set_scope(const std::shared_ptr<const Scope>& scope) override {
+    return impl_->set_scope(scope);
+  }
+
   static std::shared_ptr<ConsistentTensor> MakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const Scope>& scope, const std::shared_ptr<const Shape>& shape,
+      const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad);

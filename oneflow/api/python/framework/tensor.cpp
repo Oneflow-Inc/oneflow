@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
@@ -41,7 +42,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad, bool is_leaf,
                                                     bool retain_grad) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
+    const auto& scope = GetCurrentScope().GetPtrOrThrow();
+    return MirroredTensor::MakeTensor(scope, shape, dtype, device, is_lazy, requires_grad, is_leaf,
                                       retain_grad);
   }
 };
@@ -53,7 +55,8 @@ struct TensorExportUtil<ConsistentTensor> final {
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf, bool retain_grad) {
-    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
+    const auto& scope = GetCurrentScope().GetPtrOrThrow();
+    return ConsistentTensor::MakeTensor(scope, shape, dtype, distribute, parallel_desc, is_lazy,
                                         requires_grad, is_leaf, retain_grad);
   }
 };

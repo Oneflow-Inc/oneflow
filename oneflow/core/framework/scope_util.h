@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <vector>
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace oneflow {
 
@@ -28,6 +29,8 @@ Maybe<void> InitThreadLocalScopeStack(const std::shared_ptr<Scope>& scope);
 Maybe<void> ThreadLocalScopeStackPush(const std::shared_ptr<Scope>& scope);
 
 Maybe<void> ThreadLocalScopeStackPop();
+
+Maybe<Scope> ExtractDispatchScope(const one::TensorTuple& inputs);
 
 }  // namespace oneflow
 

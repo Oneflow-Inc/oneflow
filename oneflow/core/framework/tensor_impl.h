@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_storage.h"
+#include "oneflow/core/framework/scope_util.h"
 
 namespace oneflow {
 
@@ -88,15 +89,21 @@ class TensorImpl {
   virtual Maybe<void> set_blob_object(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
+  const std::shared_ptr<const Scope>& scope() const { return scope_; }
+  void set_scope(const std::shared_ptr<const Scope>& scope) { scope_ = scope; }
+
  protected:
-  TensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
-      : requires_grad_(requires_grad),
+  TensorImpl(const std::shared_ptr<const Scope>& scope, bool requires_grad, bool is_leaf,
+             bool retain_grad)
+      : scope_(scope),
+        requires_grad_(requires_grad),
         is_leaf_(is_leaf),
         retain_grad_(retain_grad),
         now_grad_arg_(new TensorArg) {}
   Maybe<void> SyncBlobObject2Attributes(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
+  std::shared_ptr<const Scope> scope_;
   // For autograd
   bool requires_grad_;
   bool is_leaf_;
@@ -120,9 +127,10 @@ class MirroredTensorImpl : public TensorImpl {
   Maybe<void> set_device(const std::shared_ptr<const Device>& device);
 
  protected:
-  MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
+  MirroredTensorImpl(const std::shared_ptr<const Scope>& scope,
+                     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
                      bool retain_grad)
-      : TensorImpl(requires_grad, is_leaf, retain_grad) {
+      : TensorImpl(scope, requires_grad, is_leaf, retain_grad) {
     set_device(device);
   }
 
@@ -148,9 +156,10 @@ class ConsistentTensorImpl : public TensorImpl {
       const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
 
  protected:
-  ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
+  ConsistentTensorImpl(const std::shared_ptr<const Scope>& scope,
+                       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
                        bool is_leaf, bool retain_grad)
-      : TensorImpl(requires_grad, is_leaf, retain_grad), parallel_desc_(parallel_desc) {}
+      : TensorImpl(scope, requires_grad, is_leaf, retain_grad), parallel_desc_(parallel_desc) {}
 
   const std::shared_ptr<const Device> device_;  // always nullptr
   std::shared_ptr<const ParallelDesc> parallel_desc_;
@@ -159,11 +168,12 @@ class ConsistentTensorImpl : public TensorImpl {
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyMirroredTensorImpl);
-  LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+  LazyMirroredTensorImpl(const std::shared_ptr<const Scope>& scope,
+                         const std::shared_ptr<const Shape>& shape,
                          const std::shared_ptr<const DType>& dtype,
                          const std::shared_ptr<const Device>& device, bool requires_grad,
                          bool is_leaf, bool retain_grad)
-      : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
+      : MirroredTensorImpl(scope, device, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype) {}
   ~LazyMirroredTensorImpl() override = default;
@@ -202,11 +212,13 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+  EagerMirroredTensorImpl(const std::shared_ptr<const Scope>& scope,
+                          const std::shared_ptr<const Shape>& shape,
                           const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device, bool requires_grad,
                           bool is_leaf, bool retain_grad);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
+  EagerMirroredTensorImpl(const std::shared_ptr<const Scope>& scope,
+                          const std::shared_ptr<const Shape>& shape,
                           const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device,
                           const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
@@ -256,12 +268,13 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
-  LazyConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
+  LazyConsistentTensorImpl(const std::shared_ptr<const Scope>& scope,
+                           const std::shared_ptr<const Shape>& shape,
                            const std::shared_ptr<const DType>& dtype,
                            const std::shared_ptr<const compatible_py::Distribute>& distribute,
                            const std::shared_ptr<const ParallelDesc>& parallel_desc,
                            bool requires_grad, bool is_leaf, bool retain_grad)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
+      : ConsistentTensorImpl(scope, parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
         distribute_(distribute) {}
@@ -307,12 +320,13 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
-  EagerConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
+  EagerConsistentTensorImpl(const std::shared_ptr<const Scope>& scope,
+                            const std::shared_ptr<const Shape>& shape,
                             const std::shared_ptr<const DType>& dtype,
                             const std::shared_ptr<const compatible_py::Distribute>& distribute,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc,
                             bool requires_grad, bool is_leaf, bool retain_grad)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
+      : ConsistentTensorImpl(scope, parallel_desc, requires_grad, is_leaf, retain_grad),
         shape_(shape),
         dtype_(dtype),
         distribute_(distribute) {}
