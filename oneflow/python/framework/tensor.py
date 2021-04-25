@@ -593,7 +593,12 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(
-            _create_blob_object(tuple(shape), dtype, undetermined_tensor.data_initializer, tensor._placement_scope)
+            _create_blob_object(
+                tuple(shape),
+                dtype,
+                undetermined_tensor.data_initializer,
+                tensor._placement_scope,
+            )
         )
     else:
         shape = undetermined_tensor.shape

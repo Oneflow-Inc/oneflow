@@ -45,7 +45,7 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 }  // namespace
 
 Session::Session(int64_t id)
-    : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
+    : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>{true}) {
   instruction_list_.reset(new vm::InstructionMsgList());
   eager_symbol_list_.reset(new eager::cfg::EagerSymbolList());
 }
@@ -70,13 +70,10 @@ Maybe<void> Session::PopMirroredStrategyEnabled() {
 }
 
 Maybe<bool> Session::IsMirroredStrategyEnabled() const {
-  return is_mirrored_strategy_enabled_stack_->empty()
-         || (is_mirrored_strategy_enabled_stack_->size() > 0
-             && is_mirrored_strategy_enabled_stack_->back());
+  return static_cast<bool>(is_mirrored_strategy_enabled_stack_->back());
 }
 Maybe<bool> Session::IsConsistentStrategyEnabled() const {
-  return is_mirrored_strategy_enabled_stack_->size() > 0
-         && !is_mirrored_strategy_enabled_stack_->back();
+  return !is_mirrored_strategy_enabled_stack_->back();
 }
 
 Maybe<int64_t> GetDefaultSessionId() { return *(DefaultSessionId()); }
