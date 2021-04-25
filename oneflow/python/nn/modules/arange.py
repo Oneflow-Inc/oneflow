@@ -64,33 +64,29 @@ class Arange(Module):
 
     """
 
-    def __init__(self) -> None:
+    def __init__(self, start, end, step=1) -> None:
         super().__init__()
-        self._op_arange = flow.builtin_op("range").Output("out")
+        self.start = start
+        self.end = end
+        self.step = step
+        self.dtype = flow.int64  # "Only support dtype: `flow.int64` for now!"
+        self._op_arange = flow.builtin_op("range").Output("out").Build()
 
-    def forward(self, start, end, step=1):
-        dtype = flow.int64  # "Only support dtype: `flow.int64` for now!"
-        if start is None:
-            start = 0
-        if end is None:
-            end = 1
+    def forward(self):
+        if self.start is None:
+            self.start = 0
+        if self.end is None:
+            self.end = 1
 
-        assert end > start, "end should be larger than start"
-        assert step <= end - start, "step is ilegal"
-        assert type(start) == int, "Params `start`'s type should be int"
-        assert type(end) == int, "Params `end`'s type should be int"
-        assert type(step) == int, "Params `step`'s type should be int"
+        assert self.end > self.start, "end should be larger than start"
+        assert self.step <= self.end - self.start, "step is ilegal"
+        assert type(self.start) == int, "Params `start`'s type should be int"
+        assert type(self.end) == int, "Params `end`'s type should be int"
+        assert type(self.step) == int, "Params `step`'s type should be int"
 
-        self._op_arange = (
-            self._op_arange.Attr("start", start)
-            .Attr("delta", step)
-            .Attr("limit", end)
-            .Attr("dtype", dtype)
-            .Build()
-        )
-        return self._op_arange()[0]
+        return self._op_arange(start=self.start, delta=self.step, limit=self.end, dtype=self.dtype)[0]
 
 
 @oneflow_export("arange")
 def arange_op(start=1, end=1, step=1):
-    return Arange()(start, end, step)
+    return Arange(start, end, step)()
