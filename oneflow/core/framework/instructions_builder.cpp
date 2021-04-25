@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <atomic>
+#include <cstddef>
 #include <memory>
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
@@ -32,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
+#include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
@@ -1544,10 +1546,9 @@ Maybe<void> PhysicalRun(
                                                                     eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  const std::shared_ptr<vm::PhysicalIdGenerator> id_generator = std::make_shared<vm::PhysicalIdGenerator>();
-  std::shared_ptr<Session> sess = JUST(GetDefaultSession());
-  std::shared_ptr<vm::InstructionMsgList> instruction_list = sess->instruction_list();
-  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
+  const std::shared_ptr<vm::PhysicalIdGenerator> id_generator = nullptr;
+  const std::shared_ptr<vm::InstructionMsgList> instruction_list = std::make_shared<vm::InstructionMsgList>();
+  const std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = std::make_shared<eager::cfg::EagerSymbolList>();
   Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
                                               _ReleaseLogicalObject));
   JUST(RunInstruction(instruction_list, eager_symbol_list));
