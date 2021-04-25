@@ -59,10 +59,15 @@ class TestModule(flow.unittest.TestCase):
             )
         )
         y = m(x)
+        y2 = flow.sigmoid(x)
+        y3 = x.sigmoid()
         torch_out = np.array(
-            [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
+            [[0.69366997, 0.60735673, 0.52585548], 
+            [0.23947647, 0.33676055, 0.56800622]]
         )
         test_case.assertTrue(np.allclose(y.numpy(), torch_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y2.numpy(), torch_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y3.numpy(), torch_out, rtol=1e-05))
 
     def test_logsoftmax(test_case):
         m1 = flow.nn.LogSoftmax(1)

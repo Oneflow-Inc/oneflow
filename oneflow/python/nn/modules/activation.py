@@ -41,16 +41,54 @@ def _softmax_need_transpose(x, axis):
 
 
 @oneflow_export("nn.Sigmoid")
-@register_tensor_op_by_module("sigmoid")
 @register_op_by_module("sigmoid")
 class Sigmoid(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Sigmoid}(x) = \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = flow.Tensor(
+            np.array(
+                [
+                    [0.81733328, 0.43621480, 0.10351428],
+                    [-1.15555191, -0.67776406, 0.27372134],
+                ]
+            )
+        )
+        m = flow.nn.Sigmoid()
+        y = m(x)
+
+        # or : y = flow.sigmoid(x)
+        
+        # y
+        # [[0.69366997, 0.60735673, 0.52585548], 
+        # [0.23947647, 0.33676055, 0.56800622]]
+
+    """
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return self._op(x)[0]
+
+
+@register_tensor_op_by_module("sigmoid")
+def sigmoid_op(tensor):
+    return Sigmoid()(tensor)
 
 
 @oneflow_export("nn.ReLU")
