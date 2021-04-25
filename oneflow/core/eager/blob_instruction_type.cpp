@@ -138,19 +138,21 @@ class ReadTensorShapeByCallbackInstructionType : public vm::InstructionType {
 
   using stream_type = vm::ControlStreamType;
 
-  void Compute(vm::Instruction* instruction) const override {
+  void Compute(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
     // do nothing
   }
 
-  void Infer(vm::Instruction* instruction) const override {
-    const vm::InstructionMsg& instr_msg = instruction->instr_msg();
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  void Infer(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
+    const auto& phy_instr_operand = instr_msg->phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr =
         dynamic_cast<const vm::ReadTensorShapeArgCbPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
     ptr->callback()(ptr->eager_blob_object()->blob_desc().shape_ptr());
   }
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
 COMMAND(vm::RegisterInstructionType<ReadTensorShapeByCallbackInstructionType>(
