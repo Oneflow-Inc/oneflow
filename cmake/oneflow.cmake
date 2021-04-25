@@ -215,8 +215,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir)
-add_dependencies(of_protoobj prepare_oneflow_third_party)
+add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
 # cfg obj lib
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
