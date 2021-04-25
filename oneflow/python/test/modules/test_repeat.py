@@ -43,15 +43,14 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     def test_repeat_v3(test_case):
-        x = np.array([[[[0, 1]],
-                       [[2, 3]],
-                       [[4, 5]]]]).astype(np.int32)
+        x = np.array([[[[0, 1]], [[2, 3]], [[4, 5]]]]).astype(np.int32)
 
         input = flow.Tensor(x)
 
         out = flow.tmp.repeat(input, sizes=[1, 1, 2, 2]).numpy()
 
         print(out.shape)
+
 
 if __name__ == "__main__":
     unittest.main()
