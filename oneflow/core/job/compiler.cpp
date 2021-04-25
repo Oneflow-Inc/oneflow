@@ -86,44 +86,40 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-  const JobDesc& job_desc = GlobalJobDesc();
-  if (need_job_complete) { JobCompleter().Complete(job); }
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 1");
+  // Step1: ensure job is completed.
+  if (need_job_complete) {
+    JobCompleter().Complete(job);
+  }
+
+  // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
+  const JobDesc& job_desc = GlobalJobDesc();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
-    TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
-    Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
-                                              + "_op_graph.dot");
+    TeePersistentLogStream::Create(
+      StrCat("optimized_job", job_desc.job_id()))->Write(*job);
+    Global<OpGraph>::Get()->ToDotWithFilePath(
+      "optimized_dlnet_" + std::to_string(job_desc.job_id()) + "_op_graph.dot");
   }
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 2");
+
+  // Step3: build task_gph.
+  // TODO(levi): we can rewrite this part of coder in visitor mode.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 3");
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 4");
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 5");
   task_gph->TopoForEachNode(&TaskNode::Build);
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 6");
   task_gph->RemoveEmptyRegsts();
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 7");
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 8");
   auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
   if (job_desc.enable_inplace()) {
     task_gph->EnableInplaceMemSharing(IsReachable);
   }
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 9");
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 10");
-
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 11");
 
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("Before ToProto");
-  static size_t ToProtoCnt = 0;
+  // Step4: put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     TaskProto task_proto;
@@ -132,30 +128,18 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
       CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
     }
     plan->mutable_task()->Add(std::move(task_proto));
-    ToProtoCnt++;
   });
+  // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE(
-    "After call ToProto: " + std::to_string(ToProtoCnt) + " times");
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 12");
 
-  {
-    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
-    (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
-  }
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 13");
-  {
-    // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
-    IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
-    OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 15");
-    PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-    OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 16");
-    PlanUtil::GenMemBlockAndChunk4Plan(plan);
-    OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 17");
-  }
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 18");
+  // Step5: post-process for plan and delete Global<OpGraph>.
+  auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+  (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
+  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  PlanUtil::GenMemBlockAndChunk4Plan(plan);
   Global<OpGraph>::Delete();
-  OF_PROFILER_LOG_HOST_MEMORY_USAGE("In Compile::Compile 19");
 }
 
 }  // namespace oneflow
