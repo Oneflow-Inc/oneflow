@@ -173,7 +173,18 @@ class MaxPool2d(Module):
           .. math::
               W_{out} = \left\lfloor\frac{W_{in} + 2 * \text{padding[1]} - \text{dilation[1]}
                     \times (\text{kernel\_size[1]} - 1) - 1}{\text{stride[1]}} + 1\right\rfloor
+                
+    For example:
 
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
+        m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        x = flow.Tensor(np.random.rand(6, 4, 7, 9))
+        y = m(x)
 
     """
 
@@ -230,5 +241,5 @@ class MaxPool2d(Module):
         )
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return self._op(x)[0]
+
