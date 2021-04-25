@@ -21,7 +21,6 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("Greater")
-@register_tensor_op_by_module("gt")
 @register_op_by_module("gt")
 class Greater(Module):
     r"""Returns the truth value of :math:`x > y` element-wise.
@@ -52,7 +51,7 @@ class Greater(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_greater_equal")
+            flow.builtin_op("broadcast_greater")
             .Input("x")
             .Input("y")
             .Output("z")
@@ -61,3 +60,8 @@ class Greater(Module):
 
     def forward(self, x, y):
         return self._op(x, y)[0]
+
+
+@register_tensor_op_by_module("gt")
+def greater_op(tensor1, tensor2):
+    return Greater()(tensor1, tensor2)

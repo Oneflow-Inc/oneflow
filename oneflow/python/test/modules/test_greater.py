@@ -28,6 +28,7 @@ class TestModule(flow.unittest.TestCase):
         input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
         input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         of_out = flow.gt(input1, input2)
+        print(of_out.numpy())
         np_out = np.greater(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
