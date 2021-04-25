@@ -22,7 +22,6 @@ from typing import Optional
 
 
 @oneflow_export("Expand")
-@register_tensor_op_by_module("tmp.expand")
 @register_op_by_module("tmp.expand")
 class Expand(Module):
     """This operator expand the input tensor to a larger size.
@@ -64,7 +63,7 @@ class Expand(Module):
         #    [4, 5]]]]
     """
 
-    def __init__(self, expand_size, name: Optional[str] = None,) -> None:
+    def __init__(self, expand_size) -> None:
         super().__init__()
         self._op = flow.builtin_op("expand").Input("in").Output("out").Build()
         self.expand_size = expand_size
@@ -103,3 +102,8 @@ class Expand(Module):
         return self._op(
             x, in_shape=list(x.shape), out_shape=new_size, stride=new_stride
         )[0]
+
+
+@register_tensor_op_by_module("tmp.expand")
+def expand_op(input, /, expand_size):
+    return Expand(expand_size)(input)
