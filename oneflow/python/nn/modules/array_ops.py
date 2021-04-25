@@ -45,7 +45,6 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("Transpose")
-@register_tensor_op_by_module("tmp.transpose")
 @register_op_by_module("tmp.transpose")
 class Transpose(Module):
     r"""This operator transposes the specified axis of input Tensor.
@@ -82,7 +81,6 @@ class Transpose(Module):
         perm: Sequence[int] = None,
         conjugate: bool = False,
         batch_axis_non_change: bool = False,
-        name: Optional[str] = None,
     ) -> None:
         super().__init__()
 
@@ -92,7 +90,7 @@ class Transpose(Module):
             raise NotImplementedError
 
         self._op = (
-            flow.builtin_op("transpose", name)
+            flow.builtin_op("transpose")
             .Input("input")
             .Output("output")
             .Attr("perm", perm)
@@ -101,3 +99,8 @@ class Transpose(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@register_tensor_op_by_module("tmp.transpose")
+def transpose_op(tensor, /, perm=None, conjugate=False, batch_axis_non_change=False):
+    return Transpose(perm, conjugate, batch_axis_non_change)(tensor)
