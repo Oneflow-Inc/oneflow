@@ -69,22 +69,29 @@ REGISTER_USER_OP("empty")
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
       const std::string& obn = GenRepeatedBn("out", 0);
       const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
-      const Shape& shape = ctx->Attr<Shape>("shape");
-
+      const std::string& ibn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
       SbpParallel sbp_parallel;
+      sbp_parallel.mutable_broadcast_parallel();
+      (*bn2sbp)[ibn] = sbp_parallel;
       if (sbp_parallel_str.empty()) {
-        sbp_parallel.mutable_broadcast_parallel();
+        (*bn2sbp)[obn] = sbp_parallel;
       } else {
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
             << "invalid sbp_parallel: " << sbp_parallel_str;
         if (sbp_parallel.has_split_parallel()) {
           int64_t split_axis = sbp_parallel.split_parallel().axis();
+          const Shape& shape = ctx->Attr<Shape>("shape");
+          CHECK_OR_RETURN(shape.NumAxes() > 0)
+              << "Split parallel is not supported for shape whose value is None";
           CHECK_GE_OR_RETURN(split_axis, 0);
           CHECK_LT_OR_RETURN(split_axis, shape.NumAxes());
+          (*bn2sbp)[obn] = sbp_parallel;
+        } else if (sbp_parallel.has_broadcast_parallel()) {
+          (*bn2sbp)[obn] = sbp_parallel;
+        } else {
+          UNIMPLEMENTED() << "sbp parallel not supported";
         }
       }
-      (*bn2sbp)[obn] = sbp_parallel;
-
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {

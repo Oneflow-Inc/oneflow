@@ -23,6 +23,7 @@ from test_util import GenArgList
 from test_util import type_name_to_flow_type
 from test_util import type_name_to_np_type
 import oneflow.typing as tp
+from oneflow._oneflow_internal.distribute import SplitDistribute, BroadcastDistribute
 
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -54,7 +55,9 @@ def _test_empty_fp16(test_case, device_type, shape, device_count):
     test_case.assertTrue(of_out.dtype == np.float32)
 
 
-def _test_empty(test_case, device_type, type_name, shape, device_count):
+def _test_empty(
+    test_case, device_type, type_name, shape, device_count, sbp_parallel=None
+):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
 
@@ -69,7 +72,7 @@ def _test_empty(test_case, device_type, type_name, shape, device_count):
     @flow.global_function(function_config=func_config)
     def empty_job() -> tp.Numpy:
         with flow.scope.placement(device_type, "0:0-%d" % (device_count - 1)):
-            return flow.empty(dtype=flow_type, shape=shape)
+            return flow.empty(dtype=flow_type, shape=shape, distribute=sbp_parallel)
 
     if shape == ():
         np_shape = (1,)
@@ -128,6 +131,24 @@ class TestEmpty1n2d(flow.unittest.TestCase):
         ]
         arg_dict["shape"] = [(2, 3, 4, 5), (2, 3), (100, 100), (512, 512), ()]
         arg_dict["device_count"] = [2]
+        arg_dict["sbp_parallel"] = [flow.distribute.broadcast()]
+        for arg in GenArgList(arg_dict):
+            _test_empty(test_case, *arg)
+
+    def test_empty_sbp(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["type_name_value"] = [
+            "float32",
+        ]
+        arg_dict["shape"] = [(10, 3, 4, 5)]
+        arg_dict["device_count"] = [2]
+        arg_dict["sbp_parallel"] = [
+            flow.distribute.split(0),
+            flow.distribute.broadcast(),
+            "S(0)",
+            "B",
+        ]
         for arg in GenArgList(arg_dict):
             _test_empty(test_case, *arg)
 

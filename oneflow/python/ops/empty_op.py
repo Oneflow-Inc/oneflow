@@ -34,7 +34,7 @@ def empty(
     dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-    distribute: Optional[Union[SplitDistribute, BroadcastDistribute]] = None,
+    distribute: Optional[Union[SplitDistribute, BroadcastDistribute, str]] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a uninitialized Blob with specified shape.
 
@@ -42,7 +42,7 @@ def empty(
         dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         shape (Optional[Sequence[int]], optional): The shape of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-        distribute: The distribute attribute which can be one of SplitDistribute, BroadcastDistribute or PartialSumParallel.
+        distribute: The distribute attribute which can be one of SplitDistribute, BroadcastDistribute or in str format "S(N)", "B".
 
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result blob.
@@ -55,6 +55,7 @@ def empty(
         import numpy as np
         import oneflow.typing as tp
 
+        Example 1:
 
         @flow.global_function()
         def empty_Job() -> tp.Numpy:
@@ -64,6 +65,26 @@ def empty(
 
 
         out = empty_Job() # out tensor with shape (1, 3, 3) and data uninitialized
+
+        Example 2:
+
+        flow.config.gpu_device_num(2) #set gpu num to 2
+        @flow.global_function()
+        def empty_Job() -> tp.Numpy:
+            empty_blob = flow.empty(shape=(10, 3, 3),
+                                    dtype=flow.float,
+                                    distribute="S(0)") #split at axis 0
+            return empty_blob
+
+        Example 3:
+
+        flow.config.gpu_device_num(2) #set gpu num to 2
+        @flow.global_function()
+        def empty_Job() -> tp.Numpy:
+            empty_blob = flow.empty(shape=(10, 3, 3),
+                                    dtype=flow.float,
+                                    distribute=flow.distribute.split(0)) # same as "S(0)",
+            return empty_blob
 
     """
 
@@ -88,7 +109,17 @@ def empty(
         assert isinstance(shape, (list, tuple))
     else:
         shape = []
-    sbp_parallel = _distribute_to_str(distribute)
+    if distribute is None:
+        sbp_parallel = ""
+    elif isinstance(distribute, str):
+        sbp_parallel = distribute
+    elif isinstance(distribute, BroadcastDistribute) or isinstance(
+        distribute, SplitDistribute
+    ):
+        sbp_parallel = _distribute_to_str(distribute)
+    else:
+        raise ValueError("Wrong distribute value")
+
     return (
         flow.user_op_builder(name)
         .Op("empty")
