@@ -692,8 +692,6 @@ def cos_op(tensor):
     return Cos()(tensor)
 
 
-@oneflow_export("Log")
-@register_op_by_module("log")
 class Log(Module):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
@@ -702,19 +700,32 @@ class Log(Module):
         y_{i} = \log_{e} (x_{i})
 
     Args:
-        {input}
+        input (Tensor) – the input tensor.
 
-    Keyword args:
-        {out}
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.log(input)
         
     """
-
     def __init__(self) -> None:
         super().__init__()
         self._op = flow.builtin_op("log").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("log")
+@register_tensor_op_by_module("log")
+def log_op(tensor):
+    return Log()(tensor)
 
 
 @register_tensor_op_by_module("subtract")
