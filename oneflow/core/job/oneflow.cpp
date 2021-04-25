@@ -1196,9 +1196,7 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   OF_PROFILER_RANGE_GUARD("Oneflow::Init");
   // Runtime
   OF_PROFILER_RANGE_PUSH("CompileJobsAndPushMergedPlan");
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    JUST(CompileJobsAndPushMergedPlan(job_set.job()));
-  }
+  JUST(CompileJobsAndPushMergedPlan(job_set.job()));
   OF_PROFILER_RANGE_POP();  // CompileJobsAndPushMergedPlan
   double start = GetCurTime();
   PullPlan("merged_plan", &plan_);
