@@ -1100,26 +1100,23 @@ void MakePushJob(const std::string& job_name, const std::string& op_name,
 
 REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defined function");
 
-Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
-  Plan plan;
+Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   std::vector<std::shared_ptr<Job>> jobs(job_confs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(job_confs.Get(i))); }
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
-                                  &var_op_name2parallel_blob_conf);
-    auto AppendJob = [&](Job* job) {
-      JobDesc job_desc(job->job_conf(), jobs.size());
-      CHECK(!job_desc.Bool("__is_user_function__"));
-      jobs.emplace_back(new Job(*job));
-    };
-    if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
-      if (Global<const IOConf>::Get()->enable_model_io_v2()) {
-        MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
-      } else {
-        MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
-      }
+  HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
+                                &var_op_name2parallel_blob_conf);
+  auto AppendJob = [&](Job* job) {
+    JobDesc job_desc(job->job_conf(), jobs.size());
+    CHECK(!job_desc.Bool("__is_user_function__"));
+    jobs.emplace_back(new Job(*job));
+  };
+  if (Global<const IOConf>::Get()->enable_legacy_model_io()) {
+    if (Global<const IOConf>::Get()->enable_model_io_v2()) {
+      MakeModelIoV2Jobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
+    } else {
+      MakeModelIoJobs(jobs, var_op_name2parallel_blob_conf, AppendJob);
     }
   }
   std::vector<std::shared_ptr<Job>> function_jobs;
@@ -1128,25 +1125,21 @@ Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
     JobDesc job_desc(jobs.at(i)->job_conf(), i);
     if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
   }
-  if (GlobalProcessCtx::IsThisProcessMaster()) {
-    HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
-                                  &push_op_name2parallel_blob_conf);
-    HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
-    FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
-                                  &pull_op_name2parallel_blob_conf);
-    for (const auto& pair : push_op_name2parallel_blob_conf) {
-      auto push_job = std::make_shared<Job>();
-      MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second,
-                  push_job.get());
-      jobs.emplace_back(push_job);
-    }
-    for (const auto& pair : pull_op_name2parallel_blob_conf) {
-      auto pull_job = std::make_shared<Job>();
-      MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second,
-                  pull_job.get());
-      jobs.emplace_back(pull_job);
-    }
+  HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,
+                                &push_op_name2parallel_blob_conf);
+  HashMap<std::string, ParallelBlobConf> pull_op_name2parallel_blob_conf;
+  FilterOpName2ParallelBlobConf({OperatorConf::kReturnConf}, function_jobs,
+                                &pull_op_name2parallel_blob_conf);
+  for (const auto& pair : push_op_name2parallel_blob_conf) {
+    auto push_job = std::make_shared<Job>();
+    MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, push_job.get());
+    jobs.emplace_back(push_job);
+  }
+  for (const auto& pair : pull_op_name2parallel_blob_conf) {
+    auto pull_job = std::make_shared<Job>();
+    MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, pull_job.get());
+    jobs.emplace_back(pull_job);
   }
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
@@ -1154,28 +1147,35 @@ Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
+  MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
+  InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
+  InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
+  PlanUtil::SetForceInplaceMemBlock(&plan);
+  FinishGlobalCriticalSectionDesc(plan, jobs.size());
+  Plan main_plan;
+  std::vector<std::map<int64_t, std::string>> identity_tick_op_names;
+  {
+    Job main_job;
+    std::vector<ReentrantLockBackEdge> lock_back_edges;
+    JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_back_edges));
+    AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
+    JUST(CompileMainJob(&main_job, lock_back_edges, jobs.size(), &main_plan));
+  }
+  LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
+  PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
+  DumpCtrlRegstInfoToPlan(&plan);
+  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
+    TeePersistentLogStream::Create("merged_plan")->Write(plan);
+    PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");
+    TeePersistentLogStream::Create("merged_plan")->Write(plan);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> CompileJobsAndPushMergedPlan(const PbRpf<Job>& job_confs) {
   if (GlobalProcessCtx::IsThisProcessMaster()) {
-    MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
-    InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
-    InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
-    PlanUtil::SetForceInplaceMemBlock(&plan);
-    FinishGlobalCriticalSectionDesc(plan, jobs.size());
-    Plan main_plan;
-    std::vector<std::map<int64_t, std::string>> identity_tick_op_names;
-    {
-      Job main_job;
-      std::vector<ReentrantLockBackEdge> lock_back_edges;
-      JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_back_edges));
-      AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
-      JUST(CompileMainJob(&main_job, lock_back_edges, jobs.size(), &main_plan));
-    }
-    LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
-    PlanUtil::CleanUselessMemBlockAndCheckValid(&plan);
-    DumpCtrlRegstInfoToPlan(&plan);
-    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-      TeePersistentLogStream::Create("merged_plan")->Write(plan);
-      PlanUtil::ToDotFile(plan, "/dot/merged_plan.dot");
-    }
+    Plan plan;
+    JUST(CompileJobsAndMergePlans(job_confs, plan));
     double start = GetCurTime();
     // push op_attribute_info
     OpAttributeInfo op_attribute_info;
@@ -1201,9 +1201,6 @@ Maybe<void> Oneflow::Init(const oneflow::JobSet& job_set) {
   double start = GetCurTime();
   PullPlan("merged_plan", &plan_);
   LOG(INFO) << " PullPlan merged_plan time: " << (GetCurTime() - start) / 1e9 << " seconds.\n";
-  if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    TeePersistentLogStream::Create("merged_plan")->Write(plan_);
-  }
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     runtime_buffers_scope_.reset(new RuntimeBuffersScope(plan_.job_confs()));
   }
