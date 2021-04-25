@@ -52,7 +52,7 @@ class TensorImpl {
   virtual ~TensorImpl() = default;
 
   // Getters
-  virtual const std::shared_ptr<const Shape> shape() const = 0;
+  virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual bool is_lazy() const = 0;
@@ -172,7 +172,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override { return shape_; }
+  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   const std::shared_ptr<const Device>& device() const { return device_; }
   bool is_lazy() const override { return true; }
@@ -215,7 +215,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   ~EagerMirroredTensorImpl() override;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override;
+  const std::shared_ptr<const Shape>& shape() const override;
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
 
@@ -244,6 +244,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
  private:
+  std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
@@ -264,7 +265,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override { return shape_; }
+  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
     return distribute_;
@@ -315,7 +316,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override { return shape_; }
+  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
     return distribute_;

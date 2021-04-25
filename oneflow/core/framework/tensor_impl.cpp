@@ -87,12 +87,12 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
   return eager_blob_object_->compute_local_dep_object();
 }
 
-const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
-  std::shared_ptr<const Shape> result;
+const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+  const std::shared_ptr<const Shape>* result = nullptr;
   Global<ForeignLock>::Get()->WithScopedRelease([this, &result]() {
     BlockingCounter bc(1);
-    auto callback = [&bc, &result](std::shared_ptr<const Shape> shape) -> void {
-      result = shape;
+    auto callback = [&bc, &result](const std::shared_ptr<const Shape>& shape) -> void {
+      result = &shape;
       bc.Decrease();
     };
     auto build_instruction =
@@ -103,7 +103,7 @@ const std::shared_ptr<const Shape> EagerMirroredTensorImpl::shape() const {
     CHECK_JUST(PhysicalRun(build_instruction));
     bc.WaitUntilCntEqualZero();
   });
-  return result;
+  return *result;
 }
 
 }  // namespace one

@@ -35,11 +35,13 @@ class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   ReadTensorShapeArgCbPhyInstrOperand(
       const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-      const std::function<void(std::shared_ptr<const Shape>)>& callback)
+      const std::function<void(const std::shared_ptr<const Shape>&)>& callback)
       : eager_blob_object_(eager_blob_object), callback_(callback) {}
   ~ReadTensorShapeArgCbPhyInstrOperand() = default;
 
-  const std::function<void(std::shared_ptr<const Shape>)>& callback() const { return callback_; }
+  const std::function<void(const std::shared_ptr<const Shape>&)>& callback() const {
+    return callback_;
+  }
   const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
@@ -59,7 +61,7 @@ class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
 
  private:
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  std::function<void(std::shared_ptr<const Shape>)> callback_;
+  std::function<void(const std::shared_ptr<const Shape>&)> callback_;
 };
 
 }  // namespace vm

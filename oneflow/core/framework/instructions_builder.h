@@ -121,7 +121,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<void> ReadTensorShapeByCallback(
       const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-      const std::function<void(std::shared_ptr<const Shape>)>& callback);
+      const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);

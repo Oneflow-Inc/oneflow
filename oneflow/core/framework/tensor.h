@@ -65,7 +65,7 @@ class Tensor {
   virtual ~Tensor() = default;
 
   // Getters
-  virtual const std::shared_ptr<const Shape> shape() const = 0;
+  virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
   virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
   virtual const std::shared_ptr<const Device>& device() const = 0;
@@ -170,7 +170,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   ~MirroredTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
+  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
     return impl_->parallel_desc();
@@ -259,7 +259,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   ~ConsistentTensor() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape> shape() const override { return impl_->shape(); }
+  const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
   const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
     return impl_->parallel_desc();

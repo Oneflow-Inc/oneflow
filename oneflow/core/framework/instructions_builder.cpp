@@ -908,7 +908,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 
 Maybe<void> InstructionsBuilder::ReadTensorShapeByCallback(
     const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
-    const std::function<void(std::shared_ptr<const Shape>)>& callback) {
+    const std::function<void(const std::shared_ptr<const Shape>&)>& callback) {
   std::string instr_name = "ReadTensorShapeByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   *instruction->mutable_phy_instr_operand() =
