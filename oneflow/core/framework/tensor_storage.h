@@ -29,8 +29,6 @@ class TensorBuffer;
 
 }
 
-class VmLocalDepObject;
-
 namespace one {
 
 class TensorStorage final {
@@ -46,11 +44,8 @@ class TensorStorage final {
     releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
   }
 
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() { return compute_local_dep_object_; }
-
  private:
   std::shared_ptr<eager::TensorBuffer> buffer_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
   std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
 
