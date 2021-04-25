@@ -26,6 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
+from oneflow._oneflow_internal.distribute import SplitDistribute, BroadcastDistribute
 
 
 @oneflow_export("empty")
@@ -33,6 +34,7 @@ def empty(
     dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
+    distribute: Optional[Union[SplitDistribute, BroadcastDistribute]] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a uninitialized Blob with specified shape.
 
@@ -40,6 +42,7 @@ def empty(
         dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         shape (Optional[Sequence[int]], optional): The shape of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
+        distribute: The distribute attribute which can be one of SplitDistribute, BroadcastDistribute or PartialSumParallel.
 
     Returns:
         oneflow._oneflow_internal.BlobDesc: The result blob.
@@ -63,6 +66,19 @@ def empty(
         out = empty_Job() # out tensor with shape (1, 3, 3) and data uninitialized
 
     """
+
+    def _distribute_to_str(dist):
+        dist_str = ""
+        if dist is None:
+            pass
+        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
+            dist_str = "S({})".format(dist.axis)
+        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
+            dist_str = "B"
+        else:
+            raise ValueError("unsupported distribute")
+        return dist_str
+
     if name is None:
         name = id_util.UniqueStr("Empty_")
 
@@ -72,12 +88,14 @@ def empty(
         assert isinstance(shape, (list, tuple))
     else:
         shape = []
+    sbp_parallel = _distribute_to_str(distribute)
     return (
         flow.user_op_builder(name)
         .Op("empty")
         .Output("out")
         .Attr("dtype", dtype)
         .Attr("shape", shape)
+        .Attr("sbp_parallel", sbp_parallel)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
