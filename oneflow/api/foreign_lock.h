@@ -18,6 +18,6 @@ limitations under the License.
 namespace oneflow {
 class ForeignLock {
  public:
-  virtual void WithScopedRelease(const std::function<void()>&) = 0;
+  virtual void WithScopedRelease(const std::function<void()>&) const = 0;
 };
 }  // namespace oneflow

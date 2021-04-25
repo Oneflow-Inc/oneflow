@@ -23,7 +23,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 class PythonForeignCallback final : public ForeignLock {
-  void WithScopedRelease(const std::function<void()>& callback) override {
+  void WithScopedRelease(const std::function<void()>& callback) const override {
     py::gil_scoped_release release;
     callback();
   }
