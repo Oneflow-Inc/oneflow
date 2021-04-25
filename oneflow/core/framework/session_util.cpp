@@ -65,6 +65,8 @@ Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {
   return Maybe<void>::Ok();
 }
 Maybe<void> Session::PopMirroredStrategyEnabled() {
+  // is_mirrored_strategy_enabled_stack_ should at least have a element "true"
+  CHECK_GT_OR_RETURN(is_mirrored_strategy_enabled_stack_->size(), 1);
   is_mirrored_strategy_enabled_stack_->pop_back();
   return Maybe<void>::Ok();
 }
