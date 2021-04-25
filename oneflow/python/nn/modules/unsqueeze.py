@@ -21,8 +21,6 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("nn.Unsqueeze")
-@register_tensor_op_by_module("unsqueeze")
-@register_op_by_module("unsqueeze")
 class Unsqueeze(Module):
     r"""Returns a new tensor with a dimension of size one inserted at the
     specified position.
@@ -60,3 +58,9 @@ class Unsqueeze(Module):
             0 <= self.dim <= len(input.size())
         ), "dim should large than 0 and less than the size of input tensor!"
         return self._op(input, axis=self.dim)[0]
+
+
+@oneflow_export("unsqueeze")
+@register_tensor_op_by_module("unsqueeze")
+def unsqueeze_op(tensor, /, dim):
+    return Unsqueeze(dim)(tensor)
