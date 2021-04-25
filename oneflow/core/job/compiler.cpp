@@ -126,10 +126,11 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   static size_t ToProtoCnt = 0;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
+    if (task_node->GetTaskType() == kNormalForward) {
+      CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+    }
     plan->mutable_task()->Add(std::move(task_proto));
     ToProtoCnt++;
   });

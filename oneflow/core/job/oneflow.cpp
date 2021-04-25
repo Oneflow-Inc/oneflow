@@ -383,11 +383,9 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
         plan->mutable_collective_boxing_plan()->mutable_job_id2request_set()->insert(pair).second);
   }
   for (auto& pair : *(other.mutable_job_id2op_attribute_ref_table())) {
-    // bool success = plan->mutable_job_id2op_attribute_ref_table()->
-    //    insert({pair.first, std::move(pair.second)}).second;
-    // CHECK(success) << "fail to merge op attribute info, job id: " << pair.first;
     CHECK(plan->job_id2op_attribute_ref_table().find(pair.first) ==
-        plan->job_id2op_attribute_ref_table().end()) << "fail to merge op attribute info for job: " << pair.first ;
+        plan->job_id2op_attribute_ref_table().end()) <<
+        "fail to merge op attribute info for job: " << pair.first ;
     (*plan->mutable_job_id2op_attribute_ref_table())[pair.first] = std::move(pair.second);
   }
 }
