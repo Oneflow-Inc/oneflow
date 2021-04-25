@@ -57,58 +57,90 @@ class Ones(flow.nn.Module):
 class TestModule(flow.unittest.TestCase):
     def test_add_case1(test_case):
         flow.clear_default_session()
-        def fn():
-            x_ones = Ones(flow.float32)
-            x = x_ones((2, 3))
-            x.requires_grad = True
+        init_val = np.random.randn(2, 3)
+
+        def fn1():
+            x = Parameter(flow.Tensor(init_val))
 
             y_ones = Ones(flow.float32)
             y = y_ones((2, 3))
-            y.requires_grad = True
 
-            add = flow.Add()
-            of_out = add(x, y)
+            of_out = flow.add(x, y)
 
-            of_out2 = add(x, 4)
+            of_out2 = flow.add(x, 4)
             return (of_out, of_out2)
 
-        graph_fn = flow.compiler.trace(fn, type="predict")
+        graph_fn = flow.compiler.trace(fn1, type="predict")
 
         of_out = graph_fn().get()
-        print(of_out[0].numpy())
-        print(of_out[1].numpy())
+        test_case.assertTrue(
+            np.allclose(of_out[0].numpy(), np.full((2, 3), init_val + 1), 1e-4, 1e-4)
+        )
+        test_case.assertTrue(
+            np.allclose(of_out[1].numpy(), np.full((2, 3), init_val + 4), 1e-4, 1e-4)
+        )
 
     def test_add_case2(test_case):
         flow.clear_default_session()
-        def fn():
-            x_ones = Ones(flow.float32)
-            x = x_ones((2, 3))
-            x.requires_grad = True
+        init_val = np.random.randn(2, 3)
+
+        def fn2():
+            x = Parameter(flow.Tensor(init_val))
 
             y_ones = Ones(flow.float32)
             y = y_ones((2, 3))
-            y.requires_grad = True
 
-            add = flow.Add()
-            of_out = add(x, y)
+            of_out = flow.add(x * 2.2, y)
 
             g_ones = Ones(flow.float32)
             grad = g_ones((2, 3))
             of_out.backward(grad)
-            
-            opt = optimizer
 
             return x.grad
 
-        graph_fn = flow.compiler.trace(fn, type="predict")
+        graph_fn = flow.compiler.trace(fn2, type="predict")
 
         x_grad = graph_fn().get()
-        print(x_grad.numpy())
+        test_case.assertTrue(
+            np.allclose(x_grad.numpy(), np.full((2, 3), 2.2), 1e-4, 1e-4)
+        )
 
-        # grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
-        # of_out.backward(grad)
-        # test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
-        # test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
+    # def test_add_case3(test_case):
+    #     flow.clear_default_session()
+    #     flow.config.enable_debug_mode(True)
+    #     def fn3():
+    #         x_ones = Ones(flow.float32)
+    #         x = x_ones((2, 3))
+    #         x.requires_grad = True
+
+    #         y_ones = Ones(flow.float32)
+    #         y = y_ones((2, 3))
+
+    #         of_out = flow.add(x*2, y)
+
+    #         g_ones = Ones(flow.float32)
+    #         grad = g_ones((2, 3))
+    #         of_out.backward(grad)
+
+    #         param_list = list()
+    #         param_list.append(x)
+    #         sgd = flow.optim.SGD(param_list, lr=1.0, momentum=1.0)
+    #         sgd.step()
+    #         #sgd.zero_grad()
+    #
+    #         return (of_out, x.grad, x)
+
+    #     graph_fn = flow.compiler.trace(fn3, type="predict")
+
+    #     out = graph_fn().get()
+    #     print("out", out[0].numpy())
+    #     print("x.grad", out[1].numpy())
+    #     print("x", out[2].numpy())
+
+    # grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
+    # of_out.backward(grad)
+    # test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
+    # test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
 
 
 if __name__ == "__main__":

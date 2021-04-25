@@ -207,6 +207,12 @@ class Session(object):
             self.UpdateInfo4InterfaceOp()
             if not config_util.api_legacy_model_io_enabled():
                 check_point_v2.Init()
+            for job_name, func_desc in self.job_name2function_desc_.items():
+                if hasattr(func_desc.job_func, "__oneflow_var_initializer_list__"):
+                    for (
+                        initializer
+                    ) in func_desc.job_func.__oneflow_var_initializer_list__:
+                        initializer()
         else:
             self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
                 str(self.config_proto)

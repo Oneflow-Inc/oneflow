@@ -109,6 +109,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
   m.def("GetTensorLbi",
         [](const std::shared_ptr<Tensor>& t) { return GetTensorLbi(t).GetOrThrow(); });
+  m.def("RecordTensorName", [](const std::shared_ptr<Tensor>& t, const std::string& name) {
+    return RecordTensorName(t, name).GetOrThrow();
+  });
 }
 
 }  // namespace one

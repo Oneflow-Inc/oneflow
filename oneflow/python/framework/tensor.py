@@ -650,19 +650,21 @@ def _numpy_initializer_for_determining(tensor):
     assert undetermined_tensor.numpy_data is not None
     variable_name = id_util.UniqueStr("tensor_")
 
+    var_blob_lbi = None
+
     @global_function_or_identity()
     def set_numpy_data():
         with tensor._placement_scope():
-            flow.get_variable(
+            nonlocal var_blob_lbi
+            var_blob_lbi = flow.get_variable(
                 name=variable_name,
                 shape=tuple(undetermined_tensor.shape),
                 dtype=undetermined_tensor.dtype,
                 initializer=undetermined_tensor.data_initializer,
-            )
+            ).lbi
 
     set_numpy_data()
-    flow.load_variables({variable_name: undetermined_tensor.numpy_data})
-    blob = flow.get_all_variables()[variable_name]
+
     if undetermined_tensor.is_consistent:
         determined_tensor = oneflow_api.ConsistentTensor(
             undetermined_tensor.shape,
@@ -684,7 +686,22 @@ def _numpy_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-    determined_tensor._set_blob_object(blob.blob_object)
+
+    def variable_numpy_initializer():
+        flow.load_variables({variable_name: undetermined_tensor.numpy_data})
+        blob = flow.get_all_variables()[variable_name]
+        determined_tensor._set_blob_object(blob.blob_object)
+
+    if oneflow_api.EagerExecutionEnabled():
+        variable_numpy_initializer()
+    else:
+        cur_job_func = flow.current_global_function_desc().job_func
+        if not hasattr(cur_job_func, "__oneflow_var_initializer_list__"):
+            cur_job_func.__oneflow_var_initializer_list__ = []
+        cur_job_func.__oneflow_var_initializer_list__.append(variable_numpy_initializer)
+
+    var_lbn = "{}/{}".format(var_blob_lbi.op_name(), var_blob_lbi.blob_name())
+    oneflow_api.RecordTensorName(determined_tensor, var_lbn)
     return determined_tensor
 
 

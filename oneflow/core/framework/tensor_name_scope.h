@@ -46,6 +46,8 @@ class TensorNameScope {
 
 Maybe<cfg::LogicalBlobId> GetTensorLbi(const std::shared_ptr<Tensor>& tensor);
 
+Maybe<void> RecordTensorName(const std::shared_ptr<Tensor>& tensor, const std::string& name);
+
 }  // namespace one
 }  // namespace oneflow
 

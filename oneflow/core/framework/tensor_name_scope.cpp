@@ -50,5 +50,10 @@ Maybe<cfg::LogicalBlobId> GetTensorLbi(const std::shared_ptr<Tensor>& tensor) {
   return std::make_shared<cfg::LogicalBlobId>(lbi);
 }
 
+Maybe<void> RecordTensorName(const std::shared_ptr<Tensor>& tensor, const std::string& name) {
+  TensorNameScope::Global()->Record(tensor, name);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 }  // namespace oneflow
