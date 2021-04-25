@@ -95,6 +95,7 @@ def empty(
         .Output("out")
         .Attr("dtype", dtype)
         .Attr("shape", shape)
+        .Attr("sbp_parallel", sbp_parallel)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]

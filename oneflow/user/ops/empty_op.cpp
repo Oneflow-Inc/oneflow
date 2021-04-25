@@ -22,6 +22,7 @@ REGISTER_USER_OP("empty")
     .SetOutputBufferNum(1)
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
+    .Attr<std::string>("sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
@@ -62,6 +63,28 @@ REGISTER_USER_OP("empty")
         }
       }
       ctx->NewBuilder().PartialSum(ctx->outputs()).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+      auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
+      const std::string& obn = GenRepeatedBn("out", 0);
+      const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
+      const Shape& shape = ctx->Attr<Shape>("shape");
+
+      SbpParallel sbp_parallel;
+      if (sbp_parallel_str.empty()) {
+        sbp_parallel.mutable_broadcast_parallel();
+      } else {
+        CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
+            << "invalid sbp_parallel: " << sbp_parallel_str;
+        if (sbp_parallel.has_split_parallel()) {
+          int64_t split_axis = sbp_parallel.split_parallel().axis();
+          CHECK_GE_OR_RETURN(split_axis, 0);
+          CHECK_LT_OR_RETURN(split_axis, shape.NumAxes());
+        }
+      }
+      (*bn2sbp)[obn] = sbp_parallel;
+
       return Maybe<void>::Ok();
     })
     .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
