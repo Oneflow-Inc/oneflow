@@ -199,6 +199,11 @@ OpRegistry& OpRegistry::SetInferDataTypeFn(DataTypeInferFn data_type_infer_fn) {
   return *this;
 }
 
+OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
+  result_.device_infer_fn = std::move(device_infer_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;

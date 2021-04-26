@@ -84,13 +84,9 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
   op_conf.set_device_tag(device.of_type());
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
-  // TODO(jianhao): replace them with device.mem_case_ptr() and device.parallel_desc_ptr() after
-  // #4670 is merged
-  std::shared_ptr<MemoryCase> mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(device));
-  const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, mem_case, parallel_desc,
+  const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, device.mem_case(), parallel_desc,
                                                     indexed_input_pairs(), indexed_output_pairs()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
@@ -117,6 +113,28 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+            const std::vector<std::string>& indexed_ibns,
+            const std::vector<std::string>& indexed_obns)
+      : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+  if (registry && registry->device_infer_fn) {
+    device_infer_fn_ = registry->device_infer_fn;
+    device_infer_ctx_.reset(new UserOpExprDeviceInferContext(this));
+  }
+}
+
+Maybe<const Device> UserOpExpr::InferDevices(
+      const TensorTuple& input_tensors,const AttrValueMap& attrs, std::vector<std::shared_ptr<const Device>>* output_devices) const {
+  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
+  CHECK_OR_RETURN(static_cast<bool>(device_infer_ctx_));
+  device_infer_ctx_->UpdateContext(&input_tensors, &attrs);
+  const auto& op_device = TRY(device_infer_fn_(device_infer_ctx_.get()));
+  device_infer_ctx_->UpdateContext(nullptr, nullptr);
+  return op_device;
 }
 
 template<>

@@ -37,31 +37,62 @@ namespace one {
 namespace {
 std::shared_ptr<Device> GetDefaultDevice() {
   // TODO: align with pytorch (default cpu) when tensor.to() is ready
-  return std::make_shared<Device>("cuda", 0);
+  return Device::New("cuda", 0);
 }
 }  // namespace
 
+using EagerBlobObjectList = std::vector<std::shared_ptr<eager::EagerBlobObject>>;
+
 Maybe<void> NaiveInterpret(
-    const UserOpExpr& user_op_expr,
-    const std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>&
-        input_eager_blob_objects,
-    const std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>&
-        output_eager_blob_objects,
-    const AttrValueMap& attrs, const std::shared_ptr<const Device> device,
-    std::shared_ptr<const ParallelDesc> parallel_desc) {
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
-  const auto mem_case = kernel->mem_case();
-  for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
-        mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
-        std::make_shared<eager::TensorBuffer>(), parallel_desc);
-    output_eager_blob_objects->at(i) = eager_blob_object;
+    const UserOpExpr& user_op_expr, const TensorTuple& inputs,
+    const std::shared_ptr<EagerBlobObjectList>& output_eager_blob_objects,
+    const AttrValueMap& attrs) {
+  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(inputs.size());
+  std::shared_ptr<const Device> default_device;
+  if (inputs.empty()) {
+    default_device = GetDefaultDevice();
+  } else {
+    default_device = inputs.at(0)->device();
   }
+  for (int i = 0; i < inputs.size(); i++) {
+    if (i > 0) { CHECK_OR_RETURN(*default_device == *inputs.at(i)->device()); }
+    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
+  }
+  std::shared_ptr<const Device> op_device;
+  std::shared_ptr<const ParallelDesc> op_parallel_desc;
+  if (user_op_expr.has_device_infer_fn()) {
+    op_device = default_device;
+    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    const auto& mem_case = JUST(op_device->mem_case());
+    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+      const auto& eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+          mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
+          std::make_shared<eager::TensorBuffer>(), op_parallel_desc);
+      output_eager_blob_objects->at(i) = eager_blob_object;
+    }
+  } else {
+    std::vector<std::shared_ptr<const Device>> out_devices(output_eager_blob_objects->size());
+    op_device = JUST(user_op_expr.InferDevices(inputs, attrs, &out_devices));
+    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+      const auto& tensor_device = out_devices.at(i);
+      CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+      const auto& mem_case = tensor_device.mem_case();
+      const auto& tensor_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+      const auto& eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+          mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
+          std::make_shared<eager::TensorBuffer>(), tensor_parallel_desc);
+      output_eager_blob_objects->at(i) = eager_blob_object;
+    }
+  }
+
+  const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
 
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                    parallel_desc));
+                                    op_parallel_desc));
     return Maybe<void>::Ok();
   };
   JUST(PhysicalRun(build_instruction));
@@ -71,41 +102,18 @@ Maybe<void> NaiveInterpret(
 Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
                                                                const Shape& shape) {
   const auto zeros_expr = JUST(op_expr_helper::ZerosOp(shape, data_type));
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(0);
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(1);
-
-  const auto device = GetDefaultDevice();
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(Device::MakeParallelDescByDevice(*device));
-
-  JUST(NaiveInterpret(*zeros_expr, input_eager_blob_objects, output_eager_blob_objects,
-                      AttrValueMap{}, device, parallel_desc));
+  std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(1);
+  JUST(NaiveInterpret(*zeros_expr, inputs, output_eager_blob_objects, AttrValueMap{}));
   return output_eager_blob_objects->at(0);
 }
 
-static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
+static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
-  std::shared_ptr<const Device> device;
-  if (inputs.empty()) {
-    device = GetDefaultDevice();
-  } else {
-    device = inputs.at(0)->device();
-    for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs.at(i)->device()); }
-  }
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(Device::MakeParallelDescByDevice(*device));
-  const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
-  for (int i = 0; i < inputs.size(); i++) {
-    input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
-  }
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
-  NaiveInterpret(user_op_expr, input_eager_blob_objects, output_eager_blob_objects, attrs, device,
-                 parallel_desc);
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
+  NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs);
   for (int i = 0; i < outputs->size(); ++i) {
     outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         output_eager_blob_objects->at(i), device));
@@ -122,9 +130,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const AttrValueMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 0);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  return NaiveInterpret(op_expr, inputs, outputs, attrs);
+  OF_UNIMPLEMENTED();
 }
 
 static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
