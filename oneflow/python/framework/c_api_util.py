@@ -244,8 +244,8 @@ def GetScopeConfigDef():
     return text_format.Parse(scope_config_def, ConfigDef())
 
 
-def GetOpAttributes():
-    op_attributes = oneflow._oneflow_internal.GetSerializedOpAttributes()
+def GetInterfaceOpAttributes():
+    op_attributes = oneflow._oneflow_internal.GetSerializedInterfaceOpAttributes()
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
