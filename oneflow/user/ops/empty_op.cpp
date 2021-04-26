@@ -23,7 +23,7 @@ REGISTER_USER_OP("empty")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .Attr<std::string>("sbp_parallel", "")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec;
@@ -43,14 +43,19 @@ REGISTER_USER_OP("empty")
       }
       if (dim_vec.empty()) { dim_vec.push_back(1); }
 
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      int32_t size_at_axis = -1;
-      if (sbp.has_split_parallel() && parallel_num > 1) {
-        size_at_axis = shape.At(sbp.split_parallel().axis());
-        CHECK_EQ_OR_RETURN(size_at_axis % parallel_num, 0);
-        size_at_axis /= parallel_num;
-        dim_vec[sbp.split_parallel().axis()] = size_at_axis;
+      const SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+
+      if (out_sbp_para.has_split_parallel()) {
+        const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
+        if (parallel_num > 1) {
+          const int64_t& split_axis = out_sbp_para.split_parallel().axis();
+          CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
+          int64_t size_at_axis = shape.At(split_axis);
+
+          CHECK_EQ_OR_RETURN(size_at_axis % parallel_num, 0);
+          size_at_axis /= parallel_num;
+          dim_vec[split_axis] = size_at_axis;
+        }
       }
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
