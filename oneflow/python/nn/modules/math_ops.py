@@ -54,13 +54,6 @@ def _check_axis(axis, shape):
 
 
 class Sum(Module):
-    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
-    For example:
-
-    .. code-block:: python
-
-    """
-
     def __init__(
         self,
         axis: Optional[Union[int, Sequence[int]]] = None,
@@ -87,9 +80,17 @@ class Sum(Module):
 
         return self._op(input, axis=calc_axis, keepdims=self.keepdims)[0]
 
+
 @oneflow_export("sum")
 @register_tensor_op_by_module("sum")
 def sum(input, /, dim, keepdim=False):
+    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    For example:
+
+    .. code-block:: python
+
+    """
+
     return Sum(dim, keepdim)(input)
 
 
