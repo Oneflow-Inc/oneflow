@@ -70,7 +70,7 @@ class AutogradMeta final {
 class TensorInfo final {
  public:
   TensorInfo() = delete;
-  TensorInfo(const Tensor& tensor);
+  explicit TensorInfo(const Tensor& tensor);
 
   Maybe<Tensor> zeros() const;
 
