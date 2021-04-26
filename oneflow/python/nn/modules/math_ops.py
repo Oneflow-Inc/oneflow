@@ -228,11 +228,12 @@ def mul_op(x, y):
 
 
 @oneflow_export("Mean")
-@register_tensor_op_by_module("mean")
 @register_op_by_module("mean")
 class Mean(Module):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    
     For example:
+
     .. code-block:: python
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
@@ -283,6 +284,10 @@ class Mean(Module):
             for i in axes:
                 reduce_count *= input_tensor.shape[i]
         return flow.mul(reduce_sum, 1.0 / reduce_count)
+
+@register_tensor_op_by_module("mean")
+def mean_op(tensor, /, axis=None, keepdim=None):
+    return Mean(axis, keepdim)(tensor)
 
 
 class ScalarSubByTensor(Module):
@@ -343,13 +348,14 @@ class ScalarAdd(Module):
         return self._op(x)[0]
 
 
-@register_tensor_op_by_module("sub")
 @register_op_by_module("sub")
 class Sub(Module):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
+    
     .. math::
         out = x - y
+
     For example:
 
     .. code-block:: python
@@ -391,6 +397,10 @@ class Sub(Module):
         else:
             return BroadcastSub()(x, y)
 
+@register_tensor_op_by_module("sub")
+def sub_op(x, y):
+    return Sub()(x, y)
+
 
 class BroadcastDiv(Module):
     def __init__(self, name=None) -> None:
@@ -422,18 +432,21 @@ class ScalarDivByTensor(Module):
         return self._op(x, scalar)[0]
 
 
-@register_tensor_op_by_module("div")
 @register_op_by_module("div")
 class Div(Module):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
+    
     The formula is:
     .. math::
         out = \frac{X}{Y}
+
     Args:
         x (Union[int, float, flow.Tensor]): X.
         y (Union[int, float, flow.Tensor]): Y.
         name (Optional[str], optional): The name for the operation. Defaults to None.
+    
     For example:
+
     .. code-block:: python
 
         # element-wise divide
@@ -475,6 +488,10 @@ class Div(Module):
             return ScalarDivByTensor(x, y)
         else:
             return BroadcastDiv()(x, y)
+
+@register_tensor_op_by_module("div")
+def div_op(x, y):
+    return Div()(x, y)
 
 
 @register_op_by_module("reciprocal")
@@ -570,13 +587,15 @@ class BroadcastAdd(Module):
         return self._op(x, y)[0]
 
 
-@register_tensor_op_by_module("add")
 @register_op_by_module("add")
 class Add(Module):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
+    
     The formula is:
+
     .. math::
         out = x + y
+        
     For example:
 
     .. code-block:: python
@@ -616,6 +635,11 @@ class Add(Module):
             return ScalarAddByTensor()(x, y)
         else:
             return BroadcastAdd()(x, y)
+
+
+@register_tensor_op_by_module("add")
+def add_op(x, y):
+    return Add()(x, y)
 
 
 class Sin(Module):
