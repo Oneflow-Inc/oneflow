@@ -112,6 +112,21 @@ def empty(
     if distribute is None:
         sbp_parallel = ""
     elif isinstance(distribute, str):
+        if distribute[0] != "S" and distribute[0] != "B":
+            raise ValueError(
+                "Arg distribute can only be 'S(N)' or 'B' when its type is str"
+            )
+
+        if distribute[0] == "S":
+            if not (
+                distribute[1] == "("
+                and distribute[-1] == ")"
+                and distribute[2:-1].isdecimal()
+            ):
+                raise ValueError(
+                    "Arg distribute can only be 'S(N)' which N is a number when Split parallel is pick."
+                )
+
         sbp_parallel = distribute
     elif isinstance(distribute, BroadcastDistribute) or isinstance(
         distribute, SplitDistribute

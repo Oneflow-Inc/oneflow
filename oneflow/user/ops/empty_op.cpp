@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 REGISTER_USER_OP("empty")
@@ -44,19 +45,17 @@ REGISTER_USER_OP("empty")
       if (dim_vec.empty()) { dim_vec.push_back(1); }
 
       const SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-
       if (out_sbp_para.has_split_parallel()) {
         const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
         if (parallel_num > 1) {
           const int64_t& split_axis = out_sbp_para.split_parallel().axis();
           CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
-          int64_t size_at_axis = shape.At(split_axis);
 
-          CHECK_EQ_OR_RETURN(size_at_axis % parallel_num, 0);
-          size_at_axis /= parallel_num;
-          dim_vec[split_axis] = size_at_axis;
+          BalancedSplitter bs(shape.At(split_axis), parallel_num);
+          dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
         }
       }
+
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
