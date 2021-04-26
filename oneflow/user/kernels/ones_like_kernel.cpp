@@ -32,6 +32,7 @@ struct FillOnesUtil {
 #define MAKE_FILL_ONES_SWITCH_ENTRY(func_name, T) func_name<device_type, T>
   DEFINE_STATIC_SWITCH_FUNC(void, FillOnes, MAKE_FILL_ONES_SWITCH_ENTRY,
                             MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ));
+#undef MAKE_FILL_ONES_SWITCH_ENTRY
 };
 
 }  // namespace
