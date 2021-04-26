@@ -59,16 +59,6 @@ class Sum(Module):
 
     .. code-block:: python
 
-        sum = flow.Sum() # axis default to None
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = sum(input) # out: [21.]
-        sum = flow.Sum(axis=0)
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = sum(input) # out: [5. 7. 9.]
-        sum = flow.Sum(axis=1)
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = sum(input) # out: [ 6. 15.]
-
     """
 
     def __init__(
@@ -78,29 +68,29 @@ class Sum(Module):
         name: Optional[str] = None,
     ) -> None:
         super().__init__()
+        assert isinstance(axis, int)
+
         self.axis = axis
         self.keepdims = keepdims
-        self.name = name
         self._op = (
-            flow.builtin_op("reduce_sum", self.name)
+            flow.builtin_op("reduce_sum", name)
             .Input("input_tensor")
             .Output("output_tensor")
             .Build()
         )
 
     def forward(self, input):
-        axis = _check_axis(self.axis, input.shape)
+        calc_axis = _check_axis(self.axis, input.shape)
 
-        if len(axis) == 0:
+        if len(calc_axis) == 0:
             return input
 
-        return self._op(input, axis=axis, keepdims=self.keepdims)[0]
+        return self._op(input, axis=calc_axis, keepdims=self.keepdims)[0]
 
-
+@oneflow_export("sum")
 @register_tensor_op_by_module("sum")
-@register_op_by_module("sum")
-def sum(input, dim, keepdim=False):
-    return Sum(axis=dim, keepdims=keepdim)(input)
+def sum(input, /, dim, keepdim=False):
+    return Sum(dim, keepdim)(input)
 
 
 class ScalarMul(Module):
