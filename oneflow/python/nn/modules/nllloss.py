@@ -18,32 +18,46 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
+import numpy as np
 
 
-# @oneflow_export("nn.NLLLoss")
-# class NLLLoss(Module):
+@oneflow_export("nn.NLLLoss")
+class NLLLoss(Module):
+    def __init__(
+        self, weight=None, ignore_index: int = None, reduction: str = "mean",
+    ) -> None:
+        super().__init__()
+        if weight != None:
+            raise ValueError("Argument weight is not supported yet")
+        if ignore_index != None:
+            raise ValueError("Argument ignore_index is not supported yet")
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
 
+        self.reduction = reduction
 
-#     def __init__(
-#         self,
-#         weight=None,
-#         ignore_index: int = None,
-#         reduction: str = "mean",
-#     ) -> None:
-#         super().__init__()
-#                 if weight != None:
-#             raise ValueError("Argument weight is not supported yet")
-#         if ignore_index != None:
-#             raise ValueError("Argument ignore_index is not supported yet")
-#         assert reduction in [
-#             "sum",
-#             "none",
-#             "mean",
-#             None,
-#         ], "only 'sum', 'mean' and None supported by now"
+    def forward(self, input, target):
+        n = input.shape[0]
+        c = input.shape[1]
+        input = flow.negative(input)
+        mask = np.array(target[0:n].numpy())
 
-#         self.reduction = reduction
+        input = [input[i, int(mask[i]),].numpy() for i in range(n)]
+        # print(input[0].numpy())
 
-#         self._op =
-
-#     def forward(self, input, target):
+        if self.reduction == "sum":
+            loss = 0
+            for x in input:
+                loss += x
+            return loss
+        elif self.reduction == "mean":
+            loss = 0
+            for x in input:
+                loss += x
+            return loss / n
+        else:
+            return flow.cat(input)
