@@ -26,7 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.python.ops.transpose_util import get_inversed_perm
 import oneflow_api
@@ -2071,6 +2071,7 @@ def in_top_k(
 
 
 @oneflow_export("range")
+@stable_api
 def range(start, limit=None, delta=1, dtype=None, name="range") -> oneflow_api.BlobDesc:
     r"""This operator is similar to python `range`, the difference is that `oneflow.range` generates
     a Blob.

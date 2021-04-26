@@ -65,7 +65,7 @@ def is_deprecated(func_or_class):
     )
 
 
-def export_oneflow_api(oneflow_api, internal_name, api_name):
+def export_oneflow_api_internal_symbols(oneflow_api, internal_name, api_name):
     names = internal_name.split(".")
     api = oneflow_api
     for n in names:
@@ -79,23 +79,7 @@ internal_names_2_api_names = {
     "Size": "Size",
     "device": "device",
     "autograd.no_grad": "no_grad",
-    "dtype": "dtype",
-    "char": "char",
-    "float16": "float16",
-    "float16": "half",
-    "float32": "float32",
-    "float": "float",
-    "double": "double",
-    "float64": "float64",
-    "int8": "int8",
-    "int32": "int32",
-    "int32": "int",
-    "int64": "int64",
-    "int64": "long",
-    "uint8": "uint8",
-    "record": "record",
-    "tensor_buffer": "tensor_buffer",
 }
 
 for internal_name, api_name in internal_names_2_api_names.items():
-    export_oneflow_api(oneflow_api, internal_name, api_name)
+    export_oneflow_api_internal_symbols(oneflow_api, internal_name, api_name)

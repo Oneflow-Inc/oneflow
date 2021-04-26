@@ -12,6 +12,29 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+#                     will be removed in the future
+def dtype_related_symbols():
+    return [
+        "import oneflow_api",
+        """locals()["dtype"] = oneflow_api.dtype""",
+        """locals()["char"] = oneflow_api.char""",
+        """locals()["float16"] = oneflow_api.float16""",
+        """locals()["half"] = oneflow_api.float16""",
+        """locals()["float32"] = oneflow_api.float32""",
+        """locals()["float"] = oneflow_api.float""",
+        """locals()["double"] = oneflow_api.double""",
+        """locals()["float64"] = oneflow_api.float64""",
+        """locals()["int8"] = oneflow_api.int8""",
+        """locals()["int"] = oneflow_api.int32""",
+        """locals()["int32"] = oneflow_api.int32""",
+        """locals()["int64"] = oneflow_api.int64""",
+        """locals()["long"] = oneflow_api.int64""",
+        """locals()["uint8"] = oneflow_api.uint8""",
+        """locals()["record"] = oneflow_api.record""",
+        """locals()["tensor_buffer"] = oneflow_api.tensor_buffer""",
+    ]
+
 
 class VirtualModule(object):
     def __init__(self):
@@ -55,6 +78,10 @@ class VirtualModule(object):
                 mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
+            # TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+            #                     will be removed in the future
+            if "experimental/__init__.py" in init_file_path:
+                lines += dtype_related_symbols()
             lines = list(mod_set) + lines
             f.write("\n" + "\n".join(lines) + "\n")
 

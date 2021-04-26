@@ -118,7 +118,9 @@ class SGD(Optimizer):
                 self._state[param] = dict()
                 if "momentum" in self._default_options:
                     # TODO: Use flow.zeros_like instead of numpy
-                    self._state[param]["momentum_buf"] = flow.Tensor(np.zeros(param.shape))
+                    self._state[param]["momentum_buf"] = flow.Tensor(
+                        np.zeros(param.shape)
+                    )
 
         if "momentum" in self._default_options.keys():
             self._op = (

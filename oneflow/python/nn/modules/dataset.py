@@ -317,7 +317,7 @@ class ImageResize(Module):
         return res
 
 
-@oneflow_export("tmp.RawDecoder")
+@oneflow_export("RawDecoder")
 @experimental_api
 def raw_decoder(
     input_record,
@@ -333,7 +333,7 @@ def raw_decoder(
     ).forward(input_record)
 
 
-@oneflow_export("tmp.OfrecordReader")
+@oneflow_export("OfrecordReader")
 @experimental_api
 def get_ofrecord_handle(
     ofrecord_dir: str,

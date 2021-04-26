@@ -30,6 +30,7 @@ import oneflow_api
 
 
 @oneflow_export("gather")
+@stable_api
 def gather(
     params: oneflow_api.BlobDesc,
     indices: oneflow_api.BlobDesc,
@@ -1418,6 +1419,7 @@ def argwhere(
 
 
 @oneflow_export("nonzero")
+@stable_api
 def nonzero(
     a: oneflow_api.BlobDesc, name: Optional[str] = None
 ) -> oneflow_api.BlobDesc:
@@ -1986,6 +1988,7 @@ def cast_to_static_shape(
 
 
 @oneflow_export("squeeze")
+@stable_api
 def squeeze(
     input: oneflow_api.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -2227,6 +2230,7 @@ def broadcast_like(
 
 
 @oneflow_export("masked_fill")
+@stable_api
 def masked_fill(
     x: oneflow_api.BlobDesc,
     mask: oneflow_api.BlobDesc,
@@ -2381,6 +2385,7 @@ def amp_white_identity(
 
 
 @oneflow_export("zeros")
+@stable_api
 def zeros(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
@@ -2425,6 +2430,7 @@ def zeros(
 
 
 @oneflow_export("ones")
+@stable_api
 def ones(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,

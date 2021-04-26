@@ -24,7 +24,7 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow_api
 
 
@@ -224,6 +224,7 @@ def constant_like(
 
 
 @oneflow_export("ones_like")
+@stable_api
 def ones_like(
     like: oneflow_api.BlobDesc,
     dtype: Optional[flow.dtype] = None,
@@ -269,6 +270,7 @@ def ones_like(
 
 
 @oneflow_export("zeros_like")
+@stable_api
 def zeros_like(
     like: oneflow_api.BlobDesc,
     dtype: Optional[flow.dtype] = None,
