@@ -66,10 +66,6 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (!IsSafeToDelete(op_node)) { return; }
     if (op_node->out_edges().size() != 1) { return; }
     OpNode* sole_dst_node = op_node->SoleOutEdge()->dst_node();
-    if (!(IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")
-          || IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul"))) {
-      return;
-    }
     if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
       if (!IsSafeToDelete(sole_dst_node)) { return; }
       if (!IsUserOpWithTypeName(sole_dst_node->SoleOutEdge()->dst_node()->op().op_conf(),
