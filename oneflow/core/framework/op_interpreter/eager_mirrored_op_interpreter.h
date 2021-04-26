@@ -13,22 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
 
 namespace oneflow {
 namespace one {
-
-TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : buffer_(std::make_shared<eager::TensorBuffer>()) {}
-
-TensorStorage::TensorStorage(const std::shared_ptr<eager::TensorBuffer>& tensor_buffer)
-    : buffer_(tensor_buffer) {}
-
-TensorStorage::~TensorStorage() {
-  if (releaser_hook_) { (*releaser_hook_)(buffer_); }
+Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
+                                                               const Shape& shape);
 }
-
-}  // namespace one
 }  // namespace oneflow
