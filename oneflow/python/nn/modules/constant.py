@@ -79,8 +79,8 @@ class Ones(Module):
 
 
 @oneflow_export("tmp.ones")
-def ones_op(size):
-    return Ones(size)()
+def ones_op(size, dtype=None):
+    return Ones(size, dtype)()
 
 
 class Zeros(Module):
@@ -142,5 +142,5 @@ class Zeros(Module):
 
 
 @oneflow_export("tmp.zeros")
-def zeros_op(size):
-    return Zeros(size)()
+def zeros_op(size, dtype=None):
+    return Zeros(size, dtype)()
