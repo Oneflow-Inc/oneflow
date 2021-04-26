@@ -53,7 +53,7 @@ template<typename T>
 struct CreateSymbolIdHelper {
   static Maybe<int64_t> Call(vm::IdGenerator* id_generator,
                              vm::InstructionMsgList* instruction_list,
-                             eager::cfg::EagerSymbolList* eager_symbol_list, const T& conf);
+                             vm::cfg::EagerSymbolList* eager_symbol_list, const T& conf);
 };
 
 }  // namespace detail
@@ -65,11 +65,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator)
       : id_generator_(id_generator),
         instruction_list_(std::make_shared<vm::InstructionMsgList>()),
-        eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()),
+        eager_symbol_list_(std::make_shared<vm::cfg::EagerSymbolList>()),
         release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
                       const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
-                      const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
+                      const std::shared_ptr<vm::cfg::EagerSymbolList>& symbol_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
@@ -81,7 +81,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const {
     return instruction_list_;
   }
-  const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list() const {
+  const std::shared_ptr<vm::cfg::EagerSymbolList>& eager_symbol_list() const {
     return eager_symbol_list_;
   }
 
@@ -426,13 +426,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_.get(); }
-  eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_.get(); }
+  vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_.get(); }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   std::shared_ptr<vm::InstructionMsgList> instruction_list_;
-  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  std::shared_ptr<vm::cfg::EagerSymbolList> eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
 

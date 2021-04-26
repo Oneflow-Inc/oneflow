@@ -73,7 +73,7 @@ class Tensor {
   virtual bool is_lazy() const = 0;
 
   // Getters valid only for EagerMirroredTensor
-  virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
+  virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
 
@@ -185,7 +185,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   std::shared_ptr<MirroredTensor> data() const;
 
   // Getters valid only for EagerMirroredTensor
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
   Maybe<VmLocalDepObject> infer_local_dep_object() const override {
@@ -204,7 +204,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
     return impl_->set_parallel_desc(parallel_desc);
   }
-  Maybe<void> set_eager_blob_object(std::shared_ptr<eager::EagerBlobObject> eager_blob_object) {
+  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
     return impl_->set_eager_blob_object(eager_blob_object);
   }
 
@@ -272,7 +272,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<ConsistentTensor> data() const;
 
   // Getters valid only for EagerMirroredTensor
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override {
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
   Maybe<VmLocalDepObject> infer_local_dep_object() const override {

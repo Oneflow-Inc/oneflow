@@ -29,7 +29,7 @@ Maybe<void> LogicalInterpreter::Run(const std::function<Maybe<void>(Instructions
     CHECK(instructions_builder.eager_symbol_list()->eager_symbol().empty());
     return Maybe<void>::Ok();
   }
-  return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
+  return Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.instruction_list(), instructions_builder.eager_symbol_list());
 }
 
@@ -44,7 +44,7 @@ Maybe<void> PhysicalInterpreter::Run(
     CHECK(instructions_builder.eager_symbol_list()->eager_symbol().empty());
     return Maybe<void>::Ok();
   }
-  return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
+  return Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.instruction_list(), instructions_builder.eager_symbol_list());
 }
 

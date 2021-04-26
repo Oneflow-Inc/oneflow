@@ -171,7 +171,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 }
 
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-    const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const Device>& device) {
   // TODO: fill dtype and shape async
   const auto dtype = JUST(DType::GetDTypeByDataType(eager_blob_object->blob().data_type()));

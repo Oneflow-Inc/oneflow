@@ -23,10 +23,10 @@ namespace oneflow {
 
 class VmLocalDepObject;
 
-namespace eager {
+namespace vm {
 
 class EagerBlobObject;
-}
+}  // namespace vm
 
 namespace one {
 
@@ -38,7 +38,7 @@ namespace vm {
 // access blob arg callback physical instruction operand
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
-  AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+  AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                                  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
                                  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object,
                                  const std::function<void(uint64_t)>& callback,
@@ -51,7 +51,7 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
   ~AccessBlobArgCbPhyInstrOperand() = default;
 
   const std::function<void(uint64_t)>& callback() const { return callback_; }
-  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
 
@@ -65,7 +65,7 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
-  std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
+  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;

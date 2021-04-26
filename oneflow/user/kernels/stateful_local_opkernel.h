@@ -23,9 +23,9 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 struct LocalCallOpKernelUtil;
-}  // namespace eager
+}  // namespace vm
 
 namespace one {
 
@@ -38,11 +38,11 @@ class LocalUserOpInferContext;
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 using EagerBlobObjectList =
-    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
-  EagerBlobObjectTensorView(const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+  EagerBlobObjectTensorView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
       : mut_eager_blob_object_(mut_eager_blob_object) {}
 
   const ShapeView& shape() const override { return mut_eager_blob_object_()->blob().shape(); }
@@ -62,13 +62,12 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
   void* mut_raw_dptr() override { return mut_eager_blob_object_()->mut_blob()->mut_dptr(); }
 
  private:
-  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
  public:
-  EagerBlobObjectTensorDescView(
-      const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+  EagerBlobObjectTensorDescView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
       : mut_eager_blob_object_(mut_eager_blob_object) {}
 
   const Shape& shape() const override { return mut_eager_blob_object_()->blob_desc().shape(); }
@@ -92,7 +91,7 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   }
 
  private:
-  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class ZeroCopyBaseContext {
@@ -257,7 +256,7 @@ class StatefulOpKernel final {
   }
 
  private:
-  friend struct eager::LocalCallOpKernelUtil;
+  friend struct vm::LocalCallOpKernelUtil;
   StatefulOpKernel(const OperatorConf& op_conf);
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
@@ -272,7 +271,7 @@ class StatefulOpKernel final {
                             EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                             user_op::OpKernelState** state);
 
-  eager::EagerBlobObject* mut_temp_blob_object();
+  vm::EagerBlobObject* mut_temp_blob_object();
 
   user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
     return op_kernel_state_map_.at(opkernel).get();
@@ -301,7 +300,7 @@ class StatefulOpKernel final {
       op_kernel_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
-  std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
+  std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;

@@ -30,7 +30,7 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
@@ -155,7 +155,7 @@ class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif

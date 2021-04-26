@@ -46,19 +46,19 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(*device));
   const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> input_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> output_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(outputs->size());
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
   const auto mem_case = kernel->mem_case();
   for (int i = 0; i < outputs->size(); i++) {
-    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+    auto eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
-        std::make_shared<eager::TensorBuffer>(), parallel_desc);
+        std::make_shared<vm::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
   const auto build_instruction =
