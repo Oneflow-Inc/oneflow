@@ -72,7 +72,7 @@ def empty(
         def empty_Job() -> tp.Numpy:
             empty_blob = flow.empty(shape=(10, 3, 3),
                                     dtype=flow.float,
-                                    distribute="S(0)") #split at axis 0
+                                    distribute="S(0)") #split at axis 0, "S(0)" can be replaced with "P" or "B"
             return empty_blob
 
         Example 3:
@@ -112,8 +112,10 @@ def empty(
         sbp_parallel = ""
     elif isinstance(distribute, str):
         assert (
-            re.match("^S\(\d+\)$", distribute) is not None or distribute == "B"
-        ), "The distribute argument can only be 'S(N)'(N is a integer number) or 'B' when its type is str"
+            re.match("^S\(\d+\)$", distribute) is not None
+            or distribute == "B"
+            or distribute == "P"
+        ), "The distribute argument can only be 'S(N)'(N is a integer number), 'P' or 'B' when its type is str"
         sbp_parallel = distribute
     elif isinstance(distribute, BroadcastDistribute) or isinstance(
         distribute, SplitDistribute

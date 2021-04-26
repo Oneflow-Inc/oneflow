@@ -91,6 +91,8 @@ REGISTER_USER_OP("empty")
           (*bn2sbp)[obn] = sbp_parallel;
         } else if (sbp_parallel.has_broadcast_parallel()) {
           (*bn2sbp)[obn] = sbp_parallel;
+        } else if (sbp_parallel.has_partial_sum_parallel()) {
+          (*bn2sbp)[obn] = sbp_parallel;
         } else {
           UNIMPLEMENTED() << "sbp parallel not supported";
         }

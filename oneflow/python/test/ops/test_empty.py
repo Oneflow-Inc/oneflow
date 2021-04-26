@@ -148,6 +148,7 @@ class TestEmpty1n2d(flow.unittest.TestCase):
             flow.distribute.broadcast(),
             "S(0)",
             "B",
+            "P",
         ]
         for arg in GenArgList(arg_dict):
             _test_empty(test_case, *arg)
