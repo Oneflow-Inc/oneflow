@@ -99,7 +99,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   }
 
   // Step3: build task_gph.
-  // TODO(levi): we can rewrite this part of code in visitor mode.
+  // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
