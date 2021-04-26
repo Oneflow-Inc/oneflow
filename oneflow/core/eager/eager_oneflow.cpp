@@ -72,33 +72,33 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
   for (const auto& instr_proto : eage_instructions.instruction_list().instruction()) {
     instruction_list.EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
   }
-  return RunPhysicalInstruction(instruction_list, eage_instructions.eager_symbol_list());
+  return RunPhysicalInstruction(&instruction_list, eage_instructions.eager_symbol_list());
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
-    const vm::InstructionMsgList& instruction_list,
+    vm::InstructionMsgList* instruction_list,
     const eager::cfg::EagerSymbolList& cfg_eager_symbol_list) {
   eager::EagerSymbolList eager_symbol_list;
   cfg_eager_symbol_list.ToProto(&eager_symbol_list);
   return RunPhysicalInstruction(instruction_list, eager_symbol_list);
 }
 
-Maybe<void> EagerOneflow::RunPhysicalInstruction(const vm::InstructionMsgList& instruction_list,
+Maybe<void> EagerOneflow::RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
                                                  const eager::EagerSymbolList& eager_symbol_list) {
   for (const auto& eager_symbol : eager_symbol_list.eager_symbol()) {
     JUST(StorageAdd(eager_symbol));
   }
-  return vm::Run(const_cast<vm::InstructionMsgList*>(&instruction_list));
+  return vm::Run(instruction_list);
 }
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
-    const vm::InstructionMsgList& instruction_list,
+    vm::InstructionMsgList* instruction_list,
     const eager::cfg::EagerSymbolList& eager_symbol_list) {
   ClusterInstructionProto cluster_instruction;
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()
                                          ->mutable_instruction();
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&instruction_list, instruction_msg) {
+  OBJECT_MSG_LIST_FOR_EACH_PTR(instruction_list, instruction_msg) {
     instruction_msg->ToProto(repeated_instruction_proto->Add());
   }
   eager_symbol_list.ToProto(

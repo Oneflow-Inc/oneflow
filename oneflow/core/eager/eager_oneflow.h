@@ -44,16 +44,16 @@ namespace eager {
 
 class EagerOneflow final {
  public:
-  Maybe<void> RunLogicalInstruction(const vm::InstructionMsgList& instruction_list,
+  Maybe<void> RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
                                     const eager::cfg::EagerSymbolList& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 
-  Maybe<void> RunPhysicalInstruction(const vm::InstructionMsgList& instruction_list,
+  Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
                                      const eager::cfg::EagerSymbolList& eager_symbol_list);
 
-  Maybe<void> RunPhysicalInstruction(const vm::InstructionMsgList& instruction_list,
+  Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
                                      const eager::EagerSymbolList& eager_symbol_list);
 };
 

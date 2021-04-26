@@ -203,8 +203,7 @@ void StatefulCall(
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<InstructionsBuilder>&,
-        const std::shared_ptr<compatible_py::BlobObject>&,
+        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
   return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo)
       .GetOrThrow();
@@ -217,8 +216,7 @@ void StatelessCall(
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
     const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        const std::shared_ptr<InstructionsBuilder>&,
-        const std::shared_ptr<compatible_py::BlobObject>&,
+        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
         const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
   return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo).GetOrThrow();
 }
@@ -238,7 +236,7 @@ void NoBoxingCudaD2HStatelessCall(
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
-    const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
+    const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
                                                       const std::shared_ptr<ParallelDesc>&,
                                                       const std::string&)>& TryReplaceDeviceTag) {
   return x
@@ -366,14 +364,14 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def(
       "LogicalRun",
-      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+      [](const std::function<void(InstructionsBuilder*)>& Build) {
         return LogicalRun(Build).GetOrThrow();
       },
       py::call_guard<py::gil_scoped_release>());
 
   m.def(
       "PhysicalRun",
-      [](const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
+      [](const std::function<void(InstructionsBuilder*)>& Build) {
         return PhysicalRun(Build).GetOrThrow();
       },
       py::call_guard<py::gil_scoped_release>());

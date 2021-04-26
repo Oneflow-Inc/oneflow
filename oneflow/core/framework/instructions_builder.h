@@ -81,6 +81,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     return release_object_;
   }
 
+  vm::InstructionMsgList* mut_instruction_list() { return &instruction_list_; }
+
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
@@ -179,8 +181,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
+          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> StatelessCall(
@@ -189,8 +190,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
+          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> NoBoxingStatelessCall(
@@ -204,7 +204,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
-      const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
+      const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
                                                         const std::shared_ptr<ParallelDesc>&,
                                                         const std::string&)>& TryReplaceDeviceTag);
 
@@ -417,7 +417,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                                  mut_eager_symbol_list(), conf);
   }
 
-  vm::InstructionMsgList* mut_instruction_list() { return &instruction_list_; }
   eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return &eager_symbol_list_; }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
@@ -428,11 +427,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
-Maybe<void> LogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
 
-Maybe<void> PhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow
 

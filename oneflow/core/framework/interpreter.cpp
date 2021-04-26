@@ -30,7 +30,7 @@ Maybe<void> LogicalInterpreter::Run(const std::function<Maybe<void>(Instructions
     return Maybe<void>::Ok();
   }
   return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
-      instructions_builder.instruction_list(), instructions_builder.eager_symbol_list());
+      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list());
 }
 
 PhysicalInterpreter::PhysicalInterpreter()
@@ -45,7 +45,7 @@ Maybe<void> PhysicalInterpreter::Run(
     return Maybe<void>::Ok();
   }
   return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
-      instructions_builder.instruction_list(), instructions_builder.eager_symbol_list());
+      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list());
 }
 
 }  // namespace oneflow
