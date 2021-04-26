@@ -31,7 +31,7 @@ namespace oneflow {
 namespace {
 
 std::shared_ptr<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
-    const std::shared_ptr<InstructionsBuilder>& x,
+    InstructionsBuilder* x,
     std::vector<std::shared_ptr<compatible_py::BlobObject>> physical_blob_objects,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr,
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& op_arg_blob_attr) {
@@ -41,48 +41,42 @@ std::shared_ptr<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       .GetPtrOrThrow();
 }
 
-std::shared_ptr<StringSymbol> GetSymbol4String(const std::shared_ptr<InstructionsBuilder>& x,
-                                               std::string str) {
+std::shared_ptr<StringSymbol> GetSymbol4String(InstructionsBuilder* x, std::string str) {
   return x->GetSymbol4String(str).GetPtrOrThrow();
 }
 
-std::shared_ptr<JobDesc> GetJobConfSymbol(const std::shared_ptr<InstructionsBuilder>& x,
+std::shared_ptr<JobDesc> GetJobConfSymbol(InstructionsBuilder* x,
                                           const std::shared_ptr<cfg::JobConfigProto>& job_conf) {
   return x->GetJobConfSymbol(job_conf).GetPtrOrThrow();
 }
 
 std::shared_ptr<ParallelDesc> GetParallelDescSymbol(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
+    InstructionsBuilder* x, const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   return x->GetParallelDescSymbol(parallel_conf).GetPtrOrThrow();
 }
 
-std::shared_ptr<Scope> GetScopeSymbol(const std::shared_ptr<InstructionsBuilder>& x,
+std::shared_ptr<Scope> GetScopeSymbol(InstructionsBuilder* x,
                                       const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
   return x->GetScopeSymbol(scope_proto).GetPtrOrThrow();
 }
 
 std::vector<std::shared_ptr<ParallelDesc>> GetPhysicalParallelDescSymbols(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
+    InstructionsBuilder* x, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
   return *(x->GetPhysicalParallelDescSymbols(parallel_desc_symbol).GetPtrOrThrow());
 }
 
 std::vector<std::shared_ptr<compatible_py::BlobObject>> UnpackLogicalBlobToPhysicalBlobs(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+    InstructionsBuilder* x, const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   return *(x->UnpackLogicalBlobToPhysicalBlobs(blob_object).GetPtrOrThrow());
 }
 
 std::shared_ptr<compatible_py::BlobObject> MakeReferenceBlobObject(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    InstructionsBuilder* x, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) {
   return x->MakeReferenceBlobObject(blob_object, op_arg_parallel_attr).GetPtrOrThrow();
 }
 
-std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuilder>& x,
-                                         int64_t session_id,
+std::shared_ptr<Scope> BuildInitialScope(InstructionsBuilder* x, int64_t session_id,
                                          const std::shared_ptr<cfg::JobConfigProto>& job_conf,
                                          const std::string& device_tag,
                                          const std::vector<std::string>& machine_device_ids,
@@ -95,110 +89,104 @@ std::shared_ptr<Scope> BuildInitialScope(const std::shared_ptr<InstructionsBuild
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelDesc(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
-    const std::string& device_tag, const std::vector<std::string>& machine_device_ids,
-    const std::shared_ptr<Shape>& hierarchy) {
+    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope, const std::string& device_tag,
+    const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
   return x->BuildScopeWithNewParallelDesc(scope, device_tag, machine_device_ids, hierarchy)
       .GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeWithNewParallelConf(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   return x->BuildScopeWithNewParallelConf(scope, parallel_conf).GetPtrOrThrow();
 }
 
-std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(const std::shared_ptr<InstructionsBuilder>& x,
+std::shared_ptr<Scope> BuildScopeWithNewIsMirrored(InstructionsBuilder* x,
                                                    const std::shared_ptr<Scope>& scope,
                                                    bool is_mirrored) {
   return x->BuildScopeWithNewIsMirrored(scope, is_mirrored).GetPtrOrThrow();
 }
 
-std::shared_ptr<Scope> BuildScopeWithNewScopeName(const std::shared_ptr<InstructionsBuilder>& x,
+std::shared_ptr<Scope> BuildScopeWithNewScopeName(InstructionsBuilder* x,
                                                   const std::shared_ptr<Scope>& scope,
                                                   std::string scope_name) {
   return x->BuildScopeWithNewScopeName(scope, scope_name).GetPtrOrThrow();
 }
 
 std::shared_ptr<Scope> BuildScopeByProtoSetter(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::shared_ptr<Scope>& scope,
+    InstructionsBuilder* x, const std::shared_ptr<Scope>& scope,
     const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
   return x->BuildScopeByProtoSetter(scope, Setter).GetPtrOrThrow();
 }
 
 std::shared_ptr<compatible_py::BlobObject> BroadcastBlobReference(
-    const std::shared_ptr<InstructionsBuilder>& x,
+    InstructionsBuilder* x,
     const std::shared_ptr<compatible_py::BlobObject>& sole_mirrored_blob_object,
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   return x->BroadcastBlobReference(sole_mirrored_blob_object, parallel_desc_sym).GetPtrOrThrow();
 }
 
 void Build121AssignInstruction(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
+    InstructionsBuilder* x, const std::shared_ptr<compatible_py::BlobObject>& ref_blob_object,
     const std::shared_ptr<compatible_py::BlobObject>& value_blob_object) {
   return x->Build121AssignInstruction(ref_blob_object, value_blob_object).GetOrThrow();
 }
 
-void CudaHostRegisterBlob(const std::shared_ptr<InstructionsBuilder>& x,
+void CudaHostRegisterBlob(InstructionsBuilder* x,
                           const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   return x->CudaHostRegisterBlob(blob_object).GetOrThrow();
 }
 
-void CudaHostUnregisterBlob(const std::shared_ptr<InstructionsBuilder>& x,
+void CudaHostUnregisterBlob(InstructionsBuilder* x,
                             const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   return x->CudaHostUnregisterBlob(blob_object).GetOrThrow();
 }
 
 std::shared_ptr<compatible_py::OpKernelObject> NewOpKernelObject(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OperatorConf>& op_conf) {
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OperatorConf>& op_conf) {
   return x->NewOpKernelObject(op_conf).GetPtrOrThrow();
 }
 
 std::shared_ptr<compatible_py::BlobObject> MakeLazyRefBlobObject(
-    const std::shared_ptr<InstructionsBuilder>& x, const std::string& interface_op_name,
+    InstructionsBuilder* x, const std::string& interface_op_name,
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf) {
   return x->MakeLazyRefBlobObject(interface_op_name, op_attribute, parallel_conf).GetPtrOrThrow();
 }
 
 std::shared_ptr<compatible_py::Object> GetSharedOpKernelObject4ParallelConfSymbol(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
+    InstructionsBuilder* x, const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
   return x->GetSharedOpKernelObject4ParallelConfSymbol(parallel_desc_sym).GetPtrOrThrow();
 }
 
-void DeleteObject(const std::shared_ptr<InstructionsBuilder>& x,
-                  compatible_py::Object* blob_object) {
+void DeleteObject(InstructionsBuilder* x, compatible_py::Object* blob_object) {
   return x->DeleteObject(blob_object).GetOrThrow();
 }
 
-void InsertRemoveForeignCallbackInstruction(const std::shared_ptr<InstructionsBuilder>& x,
-                                            int64_t object_id, int64_t callback_id) {
+void InsertRemoveForeignCallbackInstruction(InstructionsBuilder* x, int64_t object_id,
+                                            int64_t callback_id) {
   return x->InsertRemoveForeignCallbackInstruction(object_id, callback_id).GetOrThrow();
 }
 
-void FetchBlobHeader(const std::shared_ptr<InstructionsBuilder>& x,
+void FetchBlobHeader(InstructionsBuilder* x,
                      const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                      int64_t callback_id) {
   return x->FetchBlobHeader(blob_object, callback_id).GetOrThrow();
 }
 
-void FetchBlobBody(const std::shared_ptr<InstructionsBuilder>& x,
+void FetchBlobBody(InstructionsBuilder* x,
                    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
                    int64_t callback_id) {
   return x->FetchBlobBody(blob_object, callback_id).GetOrThrow();
 }
 
-void FeedBlob(const std::shared_ptr<InstructionsBuilder>& x,
-              const std::shared_ptr<compatible_py::BlobObject>& blob_object, int64_t callback_id) {
+void FeedBlob(InstructionsBuilder* x, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+              int64_t callback_id) {
   return x->FeedBlob(blob_object, callback_id).GetOrThrow();
 }
 
 void StatefulCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
@@ -210,8 +198,7 @@ void StatefulCall(
 }
 
 void StatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
@@ -222,8 +209,7 @@ void StatelessCall(
 }
 
 void NoBoxingStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
@@ -231,8 +217,7 @@ void NoBoxingStatelessCall(
 }
 
 void NoBoxingCudaD2HStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object,
@@ -246,8 +231,7 @@ void NoBoxingCudaD2HStatelessCall(
 }
 
 void NoBoxingCudaH2DStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& out_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
@@ -256,8 +240,7 @@ void NoBoxingCudaH2DStatelessCall(
 }
 
 void RawStatelessCall(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<cfg::OpAttribute>& op_attribute,
+    InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
         bn_in_op2blob_object) {
@@ -265,13 +248,12 @@ void RawStatelessCall(
 }
 
 std::shared_ptr<compatible_py::BlobObject> Build121To(
-    const std::shared_ptr<InstructionsBuilder>& x,
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    InstructionsBuilder* x, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
-void AccessBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
+void AccessBlobByCallback(InstructionsBuilder* x,
                           const std::shared_ptr<one::MirroredTensor>& tensor,
                           const std::function<void(uint64_t)>& callback,
                           const std::string& modifier) {
@@ -314,10 +296,6 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
           py::keep_alive<0, 1>());
 
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
-      .def(py::init([](const std::shared_ptr<vm::IdGenerator>& id_generator,
-                       const std::function<void(compatible_py::Object*)>& release_object) {
-        return std::make_shared<InstructionsBuilder>(id_generator, release_object);
-      }))
       .def("id_generator", &InstructionsBuilder::id_generator)
       .def("eager_symbol_list", &InstructionsBuilder::eager_symbol_list)
       .def("object_releaser", &InstructionsBuilder::object_releaser)

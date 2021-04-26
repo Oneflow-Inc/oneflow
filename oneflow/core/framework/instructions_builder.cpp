@@ -117,8 +117,7 @@ bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap
 }
 
 Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
-    const std::shared_ptr<InstructionsBuilder>& builder,
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+    InstructionsBuilder* builder, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<ParallelDesc>& new_parallel_desc_symbol) {
   OperatorConf op_conf;
   op_conf.set_name(*JUST(UniqueStr("Input")));
@@ -1391,7 +1390,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::Build121To(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object,
     const std::shared_ptr<ParallelDesc>& parallel_desc_symbol) {
   std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
-      JUST(MakeNewBlobObjectLike(shared_from_this(), blob_object, parallel_desc_symbol));
+      JUST(MakeNewBlobObjectLike(this, blob_object, parallel_desc_symbol));
   JUST(Build121AssignInstruction(ref_blob_object, blob_object));
   return ref_blob_object;
 }
