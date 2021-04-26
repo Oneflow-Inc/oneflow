@@ -24,7 +24,7 @@ namespace oneflow {
 class ShapeProto;
 class Shape;
 
-// 保存张量的shape信息，只保存指针，无数据所有权
+// 保存张量的shape信息
 template<typename DimT>
 class ShapeViewBase {
  public:

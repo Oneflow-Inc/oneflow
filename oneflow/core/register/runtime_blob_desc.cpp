@@ -29,6 +29,7 @@ RtBlobDesc::RtBlobDesc(const BlobDescProto& proto) {
   is_dynamic_ = proto.is_dynamic();
 }
 
+// 返回张量shape信息所占内存大小
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return shape_.NumAxes() * sizeof(int64_t); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return Capacity(); }

@@ -36,6 +36,7 @@ class RtBlobDesc final {
 
   DataType data_type() const { return data_type_; }
   int64_t NumAxes() const { return shape_.NumAxes(); }
+  // 返回张量数据所占内存大小
   int64_t Capacity() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type()); }
   const Shape& body_shape() const { return shape_; }
 
