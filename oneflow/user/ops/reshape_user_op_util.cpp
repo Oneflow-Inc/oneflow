@@ -79,14 +79,11 @@ Maybe<void> ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(
     } else if (in_shape.Count(in_axis) > out_shape.Count(out_axis)) {
       --out_axis;
     } else {
-      // TODO(levi): The modification here is to bypass a bug in gpt-3 train,
-      // and a complete fix is required.
-      // if (in_shape.At(in_axis) == out_shape.At(out_axis)
-      //     || (in_shape.Count(in_axis) % parallel_num == 0
-      //         && out_shape.Count(out_axis) % parallel_num == 0)) {
-      //   (*group_start_in_axis2out_axis)[in_axis] = out_axis;
-      // }
-      (*group_start_in_axis2out_axis)[in_axis] = out_axis;
+      if (in_shape.At(in_axis) == out_shape.At(out_axis)
+          || (in_shape.Count(in_axis) % parallel_num == 0
+              && out_shape.Count(out_axis) % parallel_num == 0)) {
+        (*group_start_in_axis2out_axis)[in_axis] = out_axis;
+      }
       --in_axis;
       --out_axis;
     }
