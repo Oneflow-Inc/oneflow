@@ -96,10 +96,6 @@ class TestGPTDataLoader(flow.unittest.TestCase):
     RANDOM_SEED = 12345
 
     @flow.unittest.skip_unless_1n1d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "2-D SBP doesn't work in eager mode",
-    )
     def test_simple(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
@@ -121,10 +117,6 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         )
         self.assertTrue(np.array_equal(tokens, cmp_tokens))
 
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "2-D SBP doesn't work in eager mode",
-    )
     def test_1n1d(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
@@ -145,10 +137,6 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         return np.stack(tokens_list, axis=0)
 
     @flow.unittest.skip_unless_1n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "2-D SBP doesn't work in eager mode",
-    )
     def test_1n4d(self):
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
@@ -175,14 +163,7 @@ class TestGPTDataLoader(flow.unittest.TestCase):
         return result_1n4d
 
     @flow.unittest.skip_unless_2n4d()
-    @unittest.skipIf(
-        flow.unittest.env.eager_execution_enabled(),
-        "2-D SBP doesn't work in eager mode",
-    )
     def test_2n4d(self):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         of_gpt_data_loader_fn = _make_gpt_data_loader_func(
             data_file_prefix=self.DATA_FILE_PREFIX,
             seq_length=self.SEQ_LENGTH,
