@@ -70,6 +70,15 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
           || IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul"))) {
       return;
     }
+    if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
+      if (!IsSafeToDelete(sole_dst_node)) { return; }
+      if (!IsUserOpWithTypeName(sole_dst_node->SoleOutEdge()->dst_node()->op().op_conf(),
+                                "scalar_mul_by_tensor")) {
+        return;
+      }
+    } else {
+      if (!IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")) { return; }
+    }
     const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
         != DataType::kFloat16) {
@@ -83,7 +92,6 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     double scale = 1.0;
     std::vector<OperatorConf> delete_ops;
     if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
-      if (!IsSafeToDelete(sole_dst_node)) { return; }
       const user_op::UserOpConfWrapper scalar_mul_op_conf(sole_dst_node->op().op_conf());
       if (scalar_mul_op_conf.attr<bool>("has_int_operand")) {
         scale = static_cast<double>(scalar_mul_op_conf.attr<int64_t>("int_operand"));
@@ -96,13 +104,12 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       sole_dst_node = sole_dst_node->SoleOutEdge()->dst_node();
     }
     delete_ops.push_back(op_node->op().op_conf());
-    if (!IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")) { return; }
     const user_op::UserOpConfWrapper scale_user_conf(sole_dst_node->op().op_conf());
 
     user_op::UserOpConfWrapperBuilder fused_op_builder(sole_dst_node->op().op_name());
     fused_op_builder.OpTypeName("fused_cast_scale")
         .Input("x", cast_user_conf.input("in", 0))
-        .Input("scalar", scale_user_conf.input("scalar", 0))
+        .Input("scale_by_tensor", scale_user_conf.input("scalar", 0))
         .Attr<double>("scale", scale)
         .Output("y");
 

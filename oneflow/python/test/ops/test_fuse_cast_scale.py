@@ -29,12 +29,12 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def fused_cast_scale(x, scalar, scale, name):
+def fused_cast_scale(x, scale_by_tensor, scale, name):
     return (
         flow.user_op_builder(name)
         .Op("fused_cast_scale")
         .Input("x", [x])
-        .Input("scalar", [scalar])
+        .Input("scale_by_tensor", [scale_by_tensor])
         .Output("y")
         .Attr("scale", float(scale))
         .Build()
@@ -124,7 +124,7 @@ class TestFusedCastScale(flow.unittest.TestCase):
         arg_dict["in_dtype"] = ["float16", "float32", "double"]
         arg_dict["out_dtype"] = ["float16", "float32", "double"]
         arg_dict["test_fuse_cast_scale_pass"] = [True, False]
-        arg_dict["has_scalar_mul"] = [False, False]
+        arg_dict["has_scalar_mul"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[2] == arg[3]:
                 continue
