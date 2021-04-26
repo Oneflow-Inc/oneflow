@@ -173,13 +173,14 @@ class BroadcastMul(Module):
 
 
 @oneflow_export("Mul")
-@register_tensor_op_by_module("mul")
 @register_op_by_module("mul")
 class Mul(Module):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
+    
     The formula is:
     .. math::
         out = x \times y
+
     For example:
     
     .. code-block:: python
@@ -219,6 +220,11 @@ class Mul(Module):
             return ScalarMulByTensor()(x, y)
         else:
             return BroadcastMul()(x, y)
+
+
+@register_tensor_op_by_module("mul")
+def mul_op(x, y):
+    return Mul()(x, y)
 
 
 @oneflow_export("Mean")
