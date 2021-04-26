@@ -563,6 +563,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
 }
 
 void TaskGraph::MoveContentsIntoPlan(Plan* plan, int64_t job_id) {
+  ClearEdges();
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     TaskProto task_proto;
