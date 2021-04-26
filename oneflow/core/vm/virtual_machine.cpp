@@ -93,9 +93,9 @@ void VirtualMachine::TryReleaseFinishedInstructions(
 void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
-    const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-    if (stream_type.IsControlStreamType() && !instr_type_id.instruction_type().IsSequential()
-        && IsSourceInstruction(*instr_msg)) {
+    if (instr_type_id.instruction_type().NeedsRunInAdvance()) {
+      const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+      CHECK(stream_type.IsControlStreamType() && IsSourceInstruction(*instr_msg));
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
