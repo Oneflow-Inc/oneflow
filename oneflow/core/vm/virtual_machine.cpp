@@ -27,7 +27,7 @@ namespace vm {
 
 namespace {
 
-bool IsImmediateOperandsOnly(const InstructionMsg& instr_msg) {
+bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
   for (const auto& instr_operand : instr_msg.operand()) {
     if (instr_operand->has_const_operand()) { return false; }
     if (instr_operand->has_mut_operand()) { return false; }
@@ -95,7 +95,7 @@ void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* i
     const auto& instr_type_id = instr_msg->instr_type_id();
     if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
       const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-      CHECK(stream_type.IsControlStreamType() && IsImmediateOperandsOnly(*instr_msg));
+      CHECK(stream_type.IsControlStreamType() && HasImmediateOperandsOnly(*instr_msg));
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
