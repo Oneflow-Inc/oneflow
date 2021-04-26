@@ -32,7 +32,7 @@ class NewSymbolInstructionType final : public InstructionType {
   NewSymbolInstructionType() = default;
   ~NewSymbolInstructionType() override = default;
 
-  bool NeedsRunInAdvance() const override { return true; }
+  bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
 

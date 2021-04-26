@@ -63,7 +63,7 @@ class NewObjectInstructionType final : public InstructionType {
   NewObjectInstructionType() = default;
   ~NewObjectInstructionType() override = default;
 
-  bool NeedsRunInAdvance() const override { return true; }
+  bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
 
@@ -113,7 +113,7 @@ class BroadcastObjectReferenceInstructionType final : public InstructionType {
   BroadcastObjectReferenceInstructionType() = default;
   ~BroadcastObjectReferenceInstructionType() override = default;
 
-  bool NeedsRunInAdvance() const override { return true; }
+  bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
 
@@ -172,7 +172,7 @@ class ReplaceMirroredInstructionType final : public InstructionType {
   ReplaceMirroredInstructionType() = default;
   ~ReplaceMirroredInstructionType() override = default;
 
-  bool NeedsRunInAdvance() const override { return true; }
+  bool ResettingIdToObjectMap() const override { return true; }
 
   using stream_type = ControlStreamType;
 
