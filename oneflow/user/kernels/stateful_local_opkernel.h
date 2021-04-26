@@ -37,7 +37,8 @@ class LocalUserOpInferContext;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+using EagerBlobObjectList =
+    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
@@ -228,13 +229,41 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  StatefulOpKernel(const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
-                   const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
+                                     const std::shared_ptr<MemoryCase>& mem_case,
+                                     const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                                     const std::shared_ptr<ArgVec> indexed_input_pairs,
+                                     const std::shared_ptr<ArgVec> indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
+  const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
+    return input_tuple_indexes4const_ibns_;
+  }
+  const std::vector<int64_t>& input_tuple_indexes4mut_ibns() const {
+    return input_tuple_indexes4mut_ibns_;
+  }
+  const std::vector<int64_t>& output_tuple_indexes4mut_obns() const {
+    return output_tuple_indexes4mut_obns_;
+  }
+  const std::vector<int64_t>& output_tuple_indexes4mut2_obns() const {
+    return output_tuple_indexes4mut2_obns_;
+  }
+
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
+    return infer_local_dep_object_;
+  }
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
+    return compute_local_dep_object_;
+  }
+
+  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    data_type_infer_fn_(UpdateInferContext(inputs, outputs));
+    UpdateInferContext(nullptr, nullptr);
+  }
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
+  StatefulOpKernel(const OperatorConf& op_conf);
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
@@ -268,8 +297,8 @@ class StatefulOpKernel final {
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
+  std::shared_ptr<ArgVec> indexed_input_pairs_;
+  std::shared_ptr<ArgVec> indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;
@@ -278,6 +307,12 @@ class StatefulOpKernel final {
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
+  std::vector<int64_t> input_tuple_indexes4const_ibns_;
+  std::vector<int64_t> input_tuple_indexes4mut_ibns_;
+  std::vector<int64_t> output_tuple_indexes4mut_obns_;
+  std::vector<int64_t> output_tuple_indexes4mut2_obns_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
