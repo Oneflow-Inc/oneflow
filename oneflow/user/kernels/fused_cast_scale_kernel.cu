@@ -21,15 +21,16 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename U>
-__global__ void FusedCastScaleGpu(const int64_t n, const U* in, const T* scalar, T* out) {
-  const T scalar_val = *scalar;
+__global__ void FusedCastScaleGpu(const int64_t n, const T scale, const U* in, const T* scalar,
+                                  T* out) {
+  const T scalar_val = *scalar * scale;
   CUDA_1D_KERNEL_LOOP(i, n) { out[i] = static_cast<T>(in[i]) * scalar_val; }
 }
 
 template<>
-__global__ void FusedCastScaleGpu<float, half>(const int64_t n, const half* in, const float* scalar,
-                                               float* out) {
-  const float scalar_val = *scalar;
+__global__ void FusedCastScaleGpu<float, half>(const int64_t n, const float scale, const half* in,
+                                               const float* scalar, float* out) {
+  const float scalar_val = *scalar * scale;
   const int64_t n_2 = n / 2;
   const auto* in_2 = reinterpret_cast<const half2*>(in);
   auto* out_2 = reinterpret_cast<float2*>(out);
@@ -45,9 +46,9 @@ __global__ void FusedCastScaleGpu<float, half>(const int64_t n, const half* in, 
 }
 
 template<>
-__global__ void FusedCastScaleGpu<half, float>(const int64_t n, const float* in, const half* scalar,
-                                               half* out) {
-  const half scalar_val = *scalar;
+__global__ void FusedCastScaleGpu<half, float>(const int64_t n, const half scale, const float* in,
+                                               const half* scalar, half* out) {
+  const half scalar_val = *scalar * scale;
   const half2 scalar_h2 = __half2half2(scalar_val);
   const int64_t n_2 = n / 2;
   const auto* in_2 = reinterpret_cast<const float2*>(in);
@@ -73,13 +74,14 @@ class FusedCastScaleGpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t n = x->shape().elem_cnt();
+    const double scale = ctx->Attr<double>("scale");
     const int64_t launch_n = ((std::is_same<T, half>::value && std::is_same<U, float>::value)
                               || (std::is_same<T, float>::value && std::is_same<U, half>::value))
                                  ? RoundUp(n, 2) / 2
                                  : n;
     FusedCastScaleGpu<T, U><<<BlocksNum4ThreadsNum(launch_n), kCudaThreadsNumPerBlock, 0,
                               ctx->device_ctx()->cuda_stream()>>>(
-        n, x->dptr<U>(), scalar->dptr<T>(), y->mut_dptr<T>());
+        n, static_cast<T>(scale), x->dptr<U>(), scalar->dptr<T>(), y->mut_dptr<T>());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

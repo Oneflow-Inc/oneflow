@@ -62,6 +62,7 @@ REGISTER_USER_OP("fused_cast_scale")
     .Input("x")
     .Input("scalar")
     .Output("y")
+    .Attr<double>("scale", 1.0)
     .SetTensorDescInferFn(TensorDescInfer)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInferDataTypeFn(DataTypeInfer);

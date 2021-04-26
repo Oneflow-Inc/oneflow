@@ -65,8 +65,11 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     if (!IsUserOpWithTypeName(op_node->op().op_conf(), "cast")) { return; }
     if (!IsSafeToDelete(op_node)) { return; }
     if (op_node->out_edges().size() != 1) { return; }
-    const OpNode* sole_dst_node = op_node->SoleOutEdge()->dst_node();
-    if (!IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")) { return; }
+    OpNode* sole_dst_node = op_node->SoleOutEdge()->dst_node();
+    if (!(IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")
+          || IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul"))) {
+      return;
+    }
     const user_op::UserOpConfWrapper cast_user_conf(op_node->op().op_conf());
     if (op_node->LogicalBlobDesc4Lbi(GenLogicalBlobId(cast_user_conf.input("in", 0))).data_type()
         != DataType::kFloat16) {
@@ -77,14 +80,35 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       return;
     }
     if (op_node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    double scale = 1.0;
+    std::vector<OperatorConf> delete_ops;
+    if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
+      if (!IsSafeToDelete(sole_dst_node)) { return; }
+      const user_op::UserOpConfWrapper scalar_mul_op_conf(sole_dst_node->op().op_conf());
+      if (scalar_mul_op_conf.attr<bool>("has_int_operand")) {
+        scale = static_cast<double>(scalar_mul_op_conf.attr<int64_t>("int_operand"));
+      } else if (scalar_mul_op_conf.attr<bool>("has_float_operand")) {
+        scale = scalar_mul_op_conf.attr<double>("float_operand");
+      } else {
+        UNIMPLEMENTED();
+      }
+      delete_ops.push_back(sole_dst_node->op().op_conf());
+      sole_dst_node = sole_dst_node->SoleOutEdge()->dst_node();
+    }
+    delete_ops.push_back(op_node->op().op_conf());
+    if (!IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul_by_tensor")) { return; }
     const user_op::UserOpConfWrapper scale_user_conf(sole_dst_node->op().op_conf());
+
+    user_op::UserOpConfWrapperBuilder fused_op_builder(sole_dst_node->op().op_name());
+    fused_op_builder.OpTypeName("fused_cast_scale")
+        .Input("x", cast_user_conf.input("in", 0))
+        .Input("scalar", scale_user_conf.input("scalar", 0))
+        .Attr<double>("scale", scale)
+        .Output("y");
+
     OperatorConf new_op_conf = sole_dst_node->op().op_conf();
-    new_op_conf.mutable_user_conf()->set_op_type_name("fused_cast_scale");
-    const auto new_val = cast_user_conf.input("in", 0);
-    const auto& old_val =
-        ReplaceInputLbnInOpCustomizedConf(&new_op_conf, GenRepeatedBn("x", 0), new_val);
-    CHECK_EQ(scale_user_conf.input("x", 0), old_val);
-    job_builder->DelOps({op_node->op().op_conf()});
+    *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
+    job_builder->DelOps(delete_ops);
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
   return Maybe<void>::Ok();
