@@ -71,7 +71,8 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Sha
                                                  const std::shared_ptr<const Device>& device,
                                                  bool requires_grad, bool is_leaf, bool retain_grad)
     : EagerMirroredTensorImpl(shape, dtype, device, nullptr, requires_grad, is_leaf, retain_grad) {
-  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
+  tensor_storage_ =
+      std::make_shared<TensorStorage>(CHECK_JUST(Device::MakeParallelDescByDevice(*device)));
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
