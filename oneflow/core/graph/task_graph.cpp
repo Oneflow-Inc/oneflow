@@ -558,7 +558,7 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
   kernel_conf->set_op_attribute_ref(op_name);
-  // NOTE(levi): op_attribute_ is released here to decrise memory peak.
+  // NOTE(levi): op_attribute_ is released here to decrease memory peak.
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
@@ -571,7 +571,7 @@ void TaskGraph::MoveContentsIntoPlan(Plan* plan, int64_t job_id) {
     if (task_node->GetTaskType() == kNormalForward) {
       CreateOpAttributeRef(plan, job_id, &task_proto);
     }
-    // NOTE(levi): contents of task_node is released here to decrise momory peak.
+    // NOTE(levi): contents of task_node is released here to decrease momory peak.
     task_node->ResetContents();
     plan->mutable_task()->Add(std::move(task_proto));
   });
