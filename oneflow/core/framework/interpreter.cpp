@@ -26,7 +26,7 @@ Maybe<void> LogicalInterpreter::Run(const std::function<Maybe<void>(Instructions
   InstructionsBuilder instructions_builder(mut_id_generator());
   JUST(Build(&instructions_builder));
   if (instructions_builder.instruction_list().empty()) {
-    CHECK(instructions_builder.eager_symbol_list()->eager_symbol().empty());
+    CHECK(instructions_builder.eager_symbol_list().eager_symbol().empty());
     return Maybe<void>::Ok();
   }
   return Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
@@ -41,7 +41,7 @@ Maybe<void> PhysicalInterpreter::Run(
   InstructionsBuilder instructions_builder(mut_id_generator());
   JUST(Build(&instructions_builder));
   if (instructions_builder.instruction_list().empty()) {
-    CHECK(instructions_builder.eager_symbol_list()->eager_symbol().empty());
+    CHECK(instructions_builder.eager_symbol_list().eager_symbol().empty());
     return Maybe<void>::Ok();
   }
   return Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(

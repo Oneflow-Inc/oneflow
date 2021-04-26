@@ -77,9 +77,9 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const vm::InstructionMsgList& instruction_list,
-    const std::shared_ptr<eager::cfg::EagerSymbolList>& cfg_eager_symbol_list) {
+    const eager::cfg::EagerSymbolList& cfg_eager_symbol_list) {
   eager::EagerSymbolList eager_symbol_list;
-  cfg_eager_symbol_list->ToProto(&eager_symbol_list);
+  cfg_eager_symbol_list.ToProto(&eager_symbol_list);
   return RunPhysicalInstruction(instruction_list, eager_symbol_list);
 }
 
@@ -93,7 +93,7 @@ Maybe<void> EagerOneflow::RunPhysicalInstruction(const vm::InstructionMsgList& i
 
 Maybe<void> EagerOneflow::RunLogicalInstruction(
     const vm::InstructionMsgList& instruction_list,
-    const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) {
+    const eager::cfg::EagerSymbolList& eager_symbol_list) {
   ClusterInstructionProto cluster_instruction;
   auto* repeated_instruction_proto = cluster_instruction.mutable_eager_instruction()
                                          ->mutable_instruction_list()
@@ -101,7 +101,7 @@ Maybe<void> EagerOneflow::RunLogicalInstruction(
   OBJECT_MSG_LIST_FOR_EACH_PTR(&instruction_list, instruction_msg) {
     instruction_msg->ToProto(repeated_instruction_proto->Add());
   }
-  eager_symbol_list->ToProto(
+  eager_symbol_list.ToProto(
       cluster_instruction.mutable_eager_instruction()->mutable_eager_symbol_list());
   CHECK(GlobalProcessCtx::IsThisProcessMaster());
   ClusterInstruction::MasterSendEagerInstruction(cluster_instruction);
