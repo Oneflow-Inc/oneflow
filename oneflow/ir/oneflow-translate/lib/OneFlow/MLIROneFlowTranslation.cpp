@@ -338,8 +338,9 @@ LogicalResult Importer::AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_
 
 LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
-  attr_vec.push_back(builder_.getNamedAttr("result_segment_sizes",
-                                           builder_.getI32VectorAttr({output_lbns_size, 1})));
+  attr_vec.push_back(builder_.getNamedAttr(
+      "result_segment_sizes",
+      builder_.getI32VectorAttr({output_lbns_size, 1} /* {data_out_size, ctrl_out_size} */)));
   return success();
 }
 

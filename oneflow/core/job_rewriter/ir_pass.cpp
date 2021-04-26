@@ -65,12 +65,12 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
   }
 
   std::vector<std::string> OutputLbns4OpName(const std::string& op_name) const {
-    std::vector<std::string> ret{};
+    std::unordered_set<std::string> ret{};
     auto node = op_graph_.OpNode4OpName(op_name);
     for (auto e : node->out_edges()) {
-      for (auto lbi : e->lbis()) { ret.push_back(GenLogicalBlobName(lbi)); }
+      for (auto lbi : e->lbis()) { ret.insert(GenLogicalBlobName(lbi)); }
     }
-    return ret;
+    return {ret.begin(), ret.end()};
   }
 
   std::string ReplaceInputLbnInOpCustomizedConf(::oneflow::OperatorConf* op_conf,
