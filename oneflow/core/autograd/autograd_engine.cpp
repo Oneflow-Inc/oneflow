@@ -97,11 +97,8 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
 }
 
 void StackFunctionNode::ReleaseData() {
-  if (!input_meta_datas_.empty()) {
-    input_meta_datas_.clear();
-    output_meta_datas_.clear();
-    backward_fn_.reset();
-  }
+  // Releases backward function and makes useless tensors release as early as possible
+  if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
   is_in_stack_ = false;
 }
 
