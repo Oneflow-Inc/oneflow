@@ -23,7 +23,8 @@ LogicalInterpreter::LogicalInterpreter()
     : Interpreter(std::make_shared<vm::LogicalIdGenerator>()) {}
 
 Maybe<void> LogicalInterpreter::Run(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  InstructionsBuilder instructions_builder(mut_id_generator());
+  vm::InstructionMsgList instruction_list;
+  InstructionsBuilder instructions_builder(mut_id_generator(), &instruction_list);
   JUST(Build(&instructions_builder));
   if (instructions_builder.instruction_list().empty()) {
     CHECK(instructions_builder.eager_symbol_list().eager_symbol().empty());
@@ -38,7 +39,8 @@ PhysicalInterpreter::PhysicalInterpreter()
 
 Maybe<void> PhysicalInterpreter::Run(
     const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
-  InstructionsBuilder instructions_builder(mut_id_generator());
+  vm::InstructionMsgList instruction_list;
+  InstructionsBuilder instructions_builder(mut_id_generator(), &instruction_list);
   JUST(Build(&instructions_builder));
   if (instructions_builder.instruction_list().empty()) {
     CHECK(instructions_builder.eager_symbol_list().eager_symbol().empty());

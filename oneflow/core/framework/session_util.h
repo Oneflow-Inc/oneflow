@@ -31,6 +31,7 @@ class Session {
   ~Session() = default;
 
   int64_t id() const;
+  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const;
 
   std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
     return is_mirrored_strategy_enabled_stack_;

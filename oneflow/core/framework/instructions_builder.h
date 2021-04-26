@@ -62,26 +62,31 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
-  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator)
-      : id_generator_(id_generator), release_object_([](compatible_py::Object*) {}) {}
+  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
+                               vm::InstructionMsgList* instruction_list)
+      : id_generator_(id_generator),
+        instruction_list_(instruction_list),
+        release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-
+                      vm::InstructionMsgList* instruction_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
-      : id_generator_(id_generator), release_object_(release_object) {}
+      : id_generator_(id_generator),
+        instruction_list_(instruction_list),
+        release_object_(release_object) {}
   ~InstructionsBuilder() {
-    instruction_list_.Clear();
+    instruction_list_->Clear();
     eager_symbol_list_.clear_eager_symbol();
   }
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
-  const vm::InstructionMsgList& instruction_list() const { return instruction_list_; }
+  const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
   const eager::cfg::EagerSymbolList& eager_symbol_list() const { return eager_symbol_list_; }
 
   const std::function<void(compatible_py::Object*)>& object_releaser() const {
     return release_object_;
   }
 
-  vm::InstructionMsgList* mut_instruction_list() { return &instruction_list_; }
+  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -426,7 +431,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
-  vm::InstructionMsgList instruction_list_;
+  vm::InstructionMsgList* instruction_list_;
   eager::cfg::EagerSymbolList eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
