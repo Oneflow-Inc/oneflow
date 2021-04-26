@@ -595,7 +595,7 @@ class Add(Module):
 
     .. math::
         out = x + y
-        
+
     For example:
 
     .. code-block:: python
@@ -781,8 +781,7 @@ class Subtract(Module):
             return BroadcastSub()(x, y)
 
 
-@register_tensor_op_by_module("std")
-@register_op_by_module("tmp.std")
+
 class Std(Module):
     r"""
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
@@ -816,28 +815,27 @@ class Std(Module):
         # equal to numpy np.std(arr, axis=2)
 
     """
-
-    def __init__(self, dim=None, unbiased=True, keepdim=True) -> None:
+    def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
         super().__init__()
         assert unbiased == True, "Only support 'unbiased=True' for now!"
-        self.axis = _check_axis(dim, x.shape)
         self.unbiased = unbiased
         self.keepdim = keepdim
+        self.dim = dim
         self.reduce_count = 1  # Tensor.nelemenet()
 
-        self.zero_op = flow.tmp.zeros()
         self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
         self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
         self.reduce_sum_op = (
             flow.builtin_op("reduce_sum").Input("input_tensor")
-            .Attr("axis", axis)
             .Attr("keepdims", keepdim)
-            .Output("output_tensor").Build()
+            .Output("output_tensor")
+            .Build()
         )
 
     def forward(self, x):
+        self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return self.zero_op(x)
+            return flow.tmp.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelemenet()
@@ -848,11 +846,17 @@ class Std(Module):
             res = self.sqrt_op(
                 Subtract()(
                     # reduce_mean = reduce_sum / reduce_count
-                    self.reduce_sum_op(self.square_op(x)[0])[0] / self.reduce_count,
-                    self.square_op(self.reduce_sum_op(x)[0] / self.reduce_count,)[0],
+                    self.reduce_sum_op(self.square_op(x)[0], axis = self.axis)[0] / self.reduce_count,
+                    self.square_op(self.reduce_sum_op(x, axis=self.axis)[0] / self.reduce_count,)[0],
                 )
             )[0]
             return res
+
+
+@oneflow_export("tmp.std")
+@register_tensor_op_by_module("tmpstd")
+def std_op(tensor, /, dim, unbiased=True, keepdim=False):
+    return Std(dim, unbiased, keepdim)(tensor)
 
 
 @oneflow_export("Pow")
@@ -880,7 +884,7 @@ class Pow(Module):
         return self._op(x)[0]
 
 
-class Std(Module):
+class Eq(Module):
     r"""
     Computes element-wise equality.
     The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
@@ -923,5 +927,5 @@ class Std(Module):
 
 @oneflow_export("eq")
 @register_tensor_op_by_module("eq")
-def std_op(input, other):
-    return Std()(input, other) 
+def eq_op(input, other):
+    return Eq()(input, other) 
