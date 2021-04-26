@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -28,6 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
+class Plan;
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
