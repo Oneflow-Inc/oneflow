@@ -1,20 +1,5 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -37,15 +22,22 @@ from oneflow.python.ops.transpose_util import (
 
 
 @oneflow_export("Argmax")
-@register_tensor_op_by_module("argmax")
 @register_op_by_module("argmax")
 class Argmax(Module):
-    r"""
-    Returns the largest value of the :attr:`input` at specified axis.
+    """The op computes the index with the largest value of a Tensor at specified axis.
     Args:
-        {input}
-    Keyword args:
-        {axis}
+        input (oneflow.Tensor): Input Tensor
+        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
+    Returns:
+        oneflow.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
+    For example:
+    .. code-block:: python 
+        import oneflow as flow
+        import numpy as np
+        x = np.array([[1, 3, 8, 7, 2],
+                    [1, 9, 4, 3, 2]], dtype=np.float32)
+        out = flow.argmax(flow.Tensor(x))
+        # out [2 1]
     """
 
     def __init__(self, axis=-1) -> None:
@@ -69,3 +61,8 @@ class Argmax(Module):
             x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
             x = flow.tmp.squeeze(x, axis=[axis])
             return x
+
+
+@register_tensor_op_by_module("argmax")
+def argmax_op(tensor, /, axis=-1):
+    return Argmax(axis)(tensor)
