@@ -11,7 +11,8 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
     OptionalAttr<BoolAttr>:$trainable,
     StrAttr:$device_tag,
     StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
-    OptionalAttr<I64Attr>:$scope_symbol_id
+    OptionalAttr<I64Attr>:$scope_symbol_id,
+    OptionalAttr<I64ArrayAttr>:$hierarchy
   );
   dag attrs = (ins);
   dag trait_attrs = (ins);

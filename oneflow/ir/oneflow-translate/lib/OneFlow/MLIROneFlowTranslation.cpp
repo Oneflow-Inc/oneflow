@@ -439,6 +439,11 @@ LogicalResult Importer::AddDeviceName(const ::oneflow::OperatorConf& op,
   const ::oneflow::ParallelConf& pc = job_wrapper_.ParallelConf4OpName(op.name());
   std::vector<llvm::StringRef> device_vec = {pc.device_name().begin(), pc.device_name().end()};
   attr_vec.push_back(builder_.getNamedAttr("device_name", builder_.getStrArrayAttr(device_vec)));
+  if (pc.has_hierarchy()) {
+    attr_vec.push_back(builder_.getNamedAttr(
+        "hierarchy",
+        builder_.getI64ArrayAttr({pc.hierarchy().dim().begin(), pc.hierarchy().dim().end()})));
+  }
   return success();
 }
 
@@ -720,7 +725,8 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
 
-    if (id.strref().equals("device_name") || id.strref().contains("input_lbn_segment_keys")
+    if (id.strref().equals("device_name") || id.strref().equals("hierarchy")
+        || id.strref().contains("input_lbn_segment_keys")
         || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
         || id.strref().contains("output_lbn_segment_keys")
         || id.strref().contains("output_lbn_segment_sizes")
@@ -841,8 +847,12 @@ LogicalResult Importer::TryToUpdateJob() {
       for (auto p : op->getAttrOfType<ArrayAttr>("device_name")) {
         pg->mutable_parallel_conf()->add_device_name(p.dyn_cast<StringAttr>().getValue().str());
       }
-      // TODO: add hierarchy in .td
-      pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(1);
+      if (op->hasAttrOfType<ArrayAttr>("hierarchy")) {
+        for (auto dim : op->getAttrOfType<ArrayAttr>("hierarchy")) {
+          pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
+              dim.dyn_cast<IntegerAttr>().getInt());
+        }
+      }
       pg->mutable_op_set()->add_op_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
       // TODO: also generate blob_placement_group
     }
