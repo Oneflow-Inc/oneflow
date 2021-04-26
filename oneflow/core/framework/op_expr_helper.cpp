@@ -40,7 +40,7 @@ Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
   return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
-Maybe<one::UserOpExpr> OnesLikeOp() { return ZeroLikeOp(UniqueOpName("ones_like")); }
+Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("ones_like")); }
 Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name) {
   return one::OpBuilder("ones_like", name).Input("like").Output("out").Build();
 }
