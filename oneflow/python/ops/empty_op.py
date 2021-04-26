@@ -30,7 +30,6 @@ from oneflow._oneflow_internal.distribute import SplitDistribute, BroadcastDistr
 import re
 
 
-@oneflow_export("empty")
 def empty(
     dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
