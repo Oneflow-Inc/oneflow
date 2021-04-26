@@ -13,21 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 
-namespace py = pybind11;
+#include "oneflow/core/eager/eager_blob_object.h"
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
+namespace oneflow {
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("InitDefaultEnv", &InitDefaultEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
+namespace vm {
 
-  m.def("CurrentMachineId", &CurrentMachineId);
+void ReadTensorShapeArgCbPhyInstrOperand::ForEachConstMirroredObject(
+    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
+  vm::LocalDepObject* infer_local_dep_object =
+      CHECK_JUST(eager_blob_object()->infer_local_dep_object())->mut_local_dep_object();
+  DoEach(infer_local_dep_object->mut_mirrored_object(), nullptr);
 }
+
+}  // namespace vm
+}  // namespace oneflow
