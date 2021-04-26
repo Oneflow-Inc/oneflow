@@ -50,7 +50,6 @@ REGISTER_USER_OP("empty")
         if (parallel_num > 1) {
           const int64_t& split_axis = out_sbp_para.split_parallel().axis();
           CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
-
           BalancedSplitter bs(shape.At(split_axis), parallel_num);
           dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
         }

@@ -27,6 +27,7 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow._oneflow_internal
 from oneflow._oneflow_internal.distribute import SplitDistribute, BroadcastDistribute
+import re
 
 
 @oneflow_export("empty")
@@ -62,8 +63,6 @@ def empty(
             empty_blob = flow.empty(shape=(1, 3, 3),
                                     dtype=flow.float)
             return empty_blob
-
-
         out = empty_Job() # out tensor with shape (1, 3, 3) and data uninitialized
 
         Example 2:
@@ -112,21 +111,9 @@ def empty(
     if distribute is None:
         sbp_parallel = ""
     elif isinstance(distribute, str):
-        if distribute[0] != "S" and distribute[0] != "B":
-            raise ValueError(
-                "Arg distribute can only be 'S(N)' or 'B' when its type is str"
-            )
-
-        if distribute[0] == "S":
-            if not (
-                distribute[1] == "("
-                and distribute[-1] == ")"
-                and distribute[2:-1].isdecimal()
-            ):
-                raise ValueError(
-                    "Arg distribute can only be 'S(N)' which N is a number when Split parallel is pick."
-                )
-
+        assert (
+            re.match("^S\(\d+\)$", distribute) is not None or distribute == "B"
+        ), "The distribute argument can only be 'S(N)'(N is a integer number) or 'B' when its type is str"
         sbp_parallel = distribute
     elif isinstance(distribute, BroadcastDistribute) or isinstance(
         distribute, SplitDistribute
