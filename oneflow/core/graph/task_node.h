@@ -89,6 +89,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void EraseZeroSizeConsumedRegst();
   void EraseZeroSizeProducedRegst();
   void UnbindBnWithEmptyRegst();
+  void ResetContents();
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }

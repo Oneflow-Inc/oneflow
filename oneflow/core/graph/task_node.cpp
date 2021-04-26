@@ -190,6 +190,17 @@ void TaskNode::UnbindBnWithEmptyRegst() {
   exec_gph_.ForEachNode([&](ExecNode* exec_node) { exec_node->UnbindBnWithEmptyRegst(); });
 }
 
+void TaskNode::ResetContents() {
+  machine_id_ = -1;
+  thrd_id_ = -1;
+  task_id_ = -1;
+  chain_id_ = -1;
+  order_in_graph_ = -1;
+  exec_gph_.DeleteNode(exec_gph_.SoleNode());
+  produced_regsts_.clear();
+  consumed_regsts_.clear();
+}
+
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n"
