@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/vm/id_generator.h"
+#include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
 
@@ -36,9 +37,11 @@ class Interpreter {
       : id_generator_(id_generator) {}
 
   const std::shared_ptr<vm::IdGenerator>& mut_id_generator() { return id_generator_; }
+  vm::InstructionMsgList* mut_instruction_list() { return &instruction_list_; }
 
  private:
   std::shared_ptr<vm::IdGenerator> id_generator_;
+  vm::InstructionMsgList instruction_list_;
 };
 
 class LogicalInterpreter : public Interpreter {
