@@ -99,6 +99,11 @@ class Sum(Module):
         return self._op(input)[0]
 
 
+@register_tensor_op_by_module("sum")
+def sum_op(tensor, /, axis=None, keepdims=False):
+    return Sum(axis, keepdims)(tensor)
+
+
 class ScalarMul(Module):
     def __init__(self, operand, name=None) -> None:
         super().__init__()
