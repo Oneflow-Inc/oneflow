@@ -15,14 +15,14 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/python_interpreter_util.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("SetShuttingDown", []() { return SetShuttingDown().GetOrThrow(); });
+  m.def("SetShuttingDown", []() { return SetShuttingDown(); });
 }
 
 }  // namespace oneflow
