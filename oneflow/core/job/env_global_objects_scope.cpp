@@ -46,8 +46,12 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf) {
-  FLAGS_log_dir = LogDir(logging_conf.log_dir());
+void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
+  if (!default_physical_env) {
+    FLAGS_log_dir = LogDir(logging_conf.log_dir());
+  } else {
+    FLAGS_log_dir = LogDir(logging_conf.default_physical_env_log_dir());
+  }
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
@@ -82,7 +86,9 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  InitLogging(env_proto.cpp_logging_conf());
+  thread_id_ = std::this_thread::get_id();
+  is_default_physical_env_ = env_proto.is_default_physical_env();
+  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
@@ -160,6 +166,24 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  google::ShutdownGoogleLogging();
+}
+
+const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
+    const Device& device) {
+  CHECK(thread_id_ == std::this_thread::get_id());
+  {
+    const auto& iter = device2parallel_desc_.find(device);
+    if (iter != device2parallel_desc_.end()) { return iter->second; }
+  }
+  std::string machine_device_id =
+      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device.of_type());
+  parallel_conf.add_device_name(machine_device_id);
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      std::make_shared<const ParallelDesc>(parallel_conf);
+  return device2parallel_desc_.emplace(device, parallel_desc).first->second;
 }
 
 }  // namespace oneflow
