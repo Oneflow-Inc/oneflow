@@ -95,7 +95,8 @@ void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* i
     const auto& instr_type_id = instr_msg->instr_type_id();
     if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
       const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-      CHECK(stream_type.IsControlStreamType() && HasImmediateOperandsOnly(*instr_msg));
+      CHECK(stream_type.IsControlStreamType());
+      CHECK(HasImmediateOperandsOnly(*instr_msg));
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
