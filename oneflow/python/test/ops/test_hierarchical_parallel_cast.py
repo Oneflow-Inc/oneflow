@@ -349,6 +349,39 @@ def _test_reshape_like(test_case):
     test_case.assertTrue(np.allclose(x.flatten(), my_loss.numpy().flatten()))
 
 
+def _test_fw_bw_oba_bind(test_case):
+    flow.clear_default_session()
+    flow.config.gpu_device_num(4)
+    flow.config.enable_legacy_model_io(True)
+    flow.config.enable_model_io_v2(True)
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float32)
+
+    @flow.global_function(type="train", function_config=func_config)
+    def FlowJob(x: flow.typing.Numpy.Placeholder((4, 4), dtype=flow.float)):
+        with flow.scope.placement("gpu", "0:0-3"):
+            v = flow.get_variable(
+                "x",
+                shape=(4, 4),
+                dtype=flow.float,
+                initializer=flow.constant_initializer(0),
+                trainable=True,
+            )
+            x += v
+            x = flow.hierarchical_parallel_cast(x, parallel_distribution=["S(1)"])
+            x1 = flow.nn.relu(x)
+            x2 = flow.layers.layer_norm(x)
+            y = x1 + x2
+
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [1e-4]), momentum=0
+        ).minimize(y)
+        return y
+
+    x = np.random.randn(4, 4).astype(np.float32)
+    my_loss = FlowJob(x).get()
+
+
 @flow.unittest.skip_unless_1n4d()
 class TestHierarchicalParallelCast(flow.unittest.TestCase):
     def test_change_axis1(test_case):
@@ -388,6 +421,9 @@ class TestHierarchicalParallelCast(flow.unittest.TestCase):
 
     def test_reshape_like(test_case):
         _test_reshape_like(test_case)
+
+    def test_fw_bw_oba_bind(test_case):
+        _test_fw_bw_oba_bind(test_case)
 
 
 if __name__ == "__main__":

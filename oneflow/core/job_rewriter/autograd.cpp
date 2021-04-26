@@ -402,24 +402,38 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
                       const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
                       const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
   HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
+  HashSet<LogicalBlobId> in_diff_lbi_of_multi_oba;
   op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
     const auto& op = op_node->op();
     for (const auto& ibn : op.input_bns()) {
       const auto& in_diff_lbi_it = in_oba2in_diff_lbi.find(GenOpBlobArg(op.op_name(), ibn));
       if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
-      if (in_diff_lbi2in_oba.find(in_diff_lbi_it->second) == in_diff_lbi2in_oba.end()) {
-        in_diff_lbi2in_oba[in_diff_lbi_it->second] = in_diff_lbi_it->first;
+      const LogicalBlobId& in_diff_lbi = in_diff_lbi_it->second;
+      if (in_diff_lbi_of_multi_oba.find(in_diff_lbi) == in_diff_lbi_of_multi_oba.end()) {
+        if (in_diff_lbi2in_oba.find(in_diff_lbi) == in_diff_lbi2in_oba.end()) {
+          in_diff_lbi2in_oba[in_diff_lbi] = in_diff_lbi_it->first;
+        } else {
+          CHECK(in_diff_lbi_of_multi_oba.emplace(in_diff_lbi).second);
+          in_diff_lbi2in_oba.erase(in_diff_lbi);
+        }
       }
     }
   });
   HashMap<LogicalBlobId, OpBlobArg> out_diff_lbi2out_oba;
+  HashSet<LogicalBlobId> out_diff_lbi_of_multi_oba;
   op_graph.TopoForEachNode([&](OpNode* op_node) {
     const auto& op = op_node->op();
     for (const auto& obn : op.output_bns()) {
       const auto& out_diff_lbi_it = out_oba2out_diff_lbi.find(GenOpBlobArg(op.op_name(), obn));
       if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { continue; }
-      if (out_diff_lbi2out_oba.find(out_diff_lbi_it->second) == out_diff_lbi2out_oba.end()) {
-        out_diff_lbi2out_oba[out_diff_lbi_it->second] = out_diff_lbi_it->first;
+      const LogicalBlobId& out_diff_lbi = out_diff_lbi_it->second;
+      if (out_diff_lbi_of_multi_oba.find(out_diff_lbi) == out_diff_lbi_of_multi_oba.end()) {
+        if (out_diff_lbi2out_oba.find(out_diff_lbi) == out_diff_lbi2out_oba.end()) {
+          out_diff_lbi2out_oba[out_diff_lbi] = out_diff_lbi_it->first;
+        } else {
+          CHECK(out_diff_lbi_of_multi_oba.emplace(out_diff_lbi).second);
+          out_diff_lbi2out_oba.erase(out_diff_lbi);
+        }
       }
     }
   });
