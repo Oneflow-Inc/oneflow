@@ -93,7 +93,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
-  // Step4: put infomation from task_gph into plan and release task_gph.
+  // Step4: move contents from task_gph into plan and release task_gph.
+  // NOTE(levi): the contents of task_gph is destroyed in MoveContentsIntoPlan method.
   task_gph->MoveContentsIntoPlan(plan, job_desc.job_id());
   task_gph.reset();
 
