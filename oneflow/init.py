@@ -61,6 +61,7 @@ import oneflow.python.framework.register_class_method_util as register_class_met
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
+oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
 
