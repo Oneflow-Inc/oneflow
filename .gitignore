@@ -7,7 +7,7 @@
 /examples/**/oneflow
 /benchmark/**/oneflow
 log/
-default_physical_env_log_dir/
+default_physical_env_log/
 *plan
 core.*
 *.pyc
