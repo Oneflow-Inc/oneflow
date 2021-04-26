@@ -59,10 +59,11 @@ class BuiltinOpExpr : public OpExpr {
 
   const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
   const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
-  const std::vector<std::pair<std::string, int32_t>>& indexed_input_pairs() const {
+  const std::shared_ptr<std::vector<std::pair<std::string, int32_t>>>& indexed_input_pairs() const {
     return indexed_input_pairs_;
   }
-  const std::vector<std::pair<std::string, int32_t>>& indexed_output_pairs() const {
+  const std::shared_ptr<std::vector<std::pair<std::string, int32_t>>>& indexed_output_pairs()
+      const {
     return indexed_output_pairs_;
   }
 
@@ -74,8 +75,8 @@ class BuiltinOpExpr : public OpExpr {
   std::vector<std::string> indexed_ibns_;
   // The indexed output blob names.
   std::vector<std::string> indexed_obns_;
-  std::vector<std::pair<std::string, int32_t>> indexed_input_pairs_;
-  std::vector<std::pair<std::string, int32_t>> indexed_output_pairs_;
+  std::shared_ptr<std::vector<std::pair<std::string, int32_t>>> indexed_input_pairs_;
+  std::shared_ptr<std::vector<std::pair<std::string, int32_t>>> indexed_output_pairs_;
 };
 
 template<typename ProtoType>

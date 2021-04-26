@@ -19,6 +19,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/core/object_msg/object_msg.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/stream_type.h"
 #include "oneflow/core/vm/stream_desc.msg.h"
 #include "oneflow/core/device/device_context.h"
@@ -76,6 +77,50 @@ class InferStreamType final : public StreamType {
     return stream_desc;
   }
   bool SharingVirtualMachineThread() const override { return true; }
+};
+
+template<>
+class InferStreamType<ControlStreamType> final : public StreamType {
+ public:
+  InferStreamType() = default;
+  ~InferStreamType() = default;
+
+  const char* device_tag() const override { return "cpu"; }
+
+  void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
+
+  void InitInstructionStatus(const Stream& stream,
+                             InstructionStatusBuffer* status_buffer) const override {
+    return ControlStreamType().InitInstructionStatus(stream, status_buffer);
+  }
+  void DeleteInstructionStatus(const Stream& stream,
+                               InstructionStatusBuffer* status_buffer) const override {
+    return ControlStreamType().DeleteInstructionStatus(stream, status_buffer);
+  }
+  bool QueryInstructionStatusDone(const Stream& stream,
+                                  const InstructionStatusBuffer& status_buffer) const override {
+    return ControlStreamType().QueryInstructionStatusDone(stream, status_buffer);
+  }
+  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Infer(VirtualMachine* vm, Instruction* instruction) const override {
+    ControlStreamType().Infer(vm, instruction);
+  }
+  void Infer(VirtualMachine* vm, InstructionMsg* instruction_msg) const override {
+    ControlStreamType().Infer(vm, instruction_msg);
+  }
+  void Compute(Instruction* instruction) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+  void Compute(VirtualMachine*, InstructionMsg*) const override { LOG(FATAL) << "UNIMPLEMENTED"; }
+
+  bool SharingVirtualMachineThread() const override { return true; }
+  bool IsControlStreamType() const override { return true; }
+
+  ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
+                                          int64_t this_machine_id) const override {
+    auto stream_desc = ControlStreamType().MakeStreamDesc(resource, this_machine_id);
+    stream_desc->mut_stream_type_id()->CopyFrom(
+        LookupInferStreamTypeId(stream_desc->stream_type_id()));
+    return stream_desc;
+  }
 };
 
 }  // namespace vm
