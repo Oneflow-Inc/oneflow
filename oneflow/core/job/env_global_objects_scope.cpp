@@ -47,7 +47,7 @@ std::string LogDir(const std::string& log_dir) {
 }
 
 void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
-  if (default_physical_env) {
+  if (!default_physical_env) {
     FLAGS_log_dir = LogDir(logging_conf.log_dir());
   } else {
     FLAGS_log_dir = LogDir(logging_conf.default_physical_env_log_dir());
@@ -88,11 +88,7 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   thread_id_ = std::this_thread::get_id();
   is_default_physical_env_ = env_proto.is_default_physical_env();
-  if (JUST(is_default_physical_env_)) {
-    InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
-  } else {
-    InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
-  }
+  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
