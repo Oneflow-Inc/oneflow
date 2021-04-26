@@ -291,7 +291,7 @@ void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
     phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
   } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMut2MirroredObject(
+    phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
   } else {
     UNIMPLEMENTED();
