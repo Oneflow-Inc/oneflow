@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 
@@ -32,6 +33,10 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
+
+const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
+  return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
+}
 
 std::string Device::of_type() const {
   if (type_ == "cuda") {
