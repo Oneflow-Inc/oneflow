@@ -34,8 +34,16 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
     : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
-  for (const auto& ibn : indexed_ibns) { indexed_input_pairs_.push_back(GetPair(ibn)); }
-  for (const auto& obn : indexed_obns) { indexed_output_pairs_.push_back(GetPair(obn)); }
+  indexed_input_pairs_ =
+      std::make_shared<std::vector<std::pair<std::string, int32_t>>>(indexed_ibns.size());
+  indexed_output_pairs_ =
+      std::make_shared<std::vector<std::pair<std::string, int32_t>>>(indexed_obns.size());
+  for (int i = 0; i < indexed_ibns.size(); i++) {
+    indexed_input_pairs_->at(i) = GetPair(indexed_ibns.at(i));
+  }
+  for (int i = 0; i < indexed_obns.size(); i++) {
+    indexed_output_pairs_->at(i) = GetPair(indexed_obns.at(i));
+  }
 }
 
 #define DEFINE_OPEXPR_TYPE_NAME(_T, _type_name)                \
@@ -82,8 +90,8 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const
   std::shared_ptr<MemoryCase> mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(device));
-  auto opkernel = JUST(StatefulOpKernel::New(op_conf, mem_case, parallel_desc,
-                                             &indexed_input_pairs(), &indexed_output_pairs()));
+  const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, mem_case, parallel_desc,
+                                                    indexed_input_pairs(), indexed_output_pairs()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
