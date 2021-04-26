@@ -893,7 +893,7 @@ Maybe<void> InstructionsBuilder::ReadTensorShapeByCallback(
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::ReadTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  instruction_list_.EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }
 
