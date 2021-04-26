@@ -191,7 +191,7 @@ void TaskNode::UnbindBnWithEmptyRegst() {
 }
 
 void TaskNode::ResetContents() {
-  exec_gph_.DeleteNode(exec_gph_.SoleNode());
+  exec_gph_.ClearNodes();
   produced_regsts_.clear();
   consumed_regsts_.clear();
 }
