@@ -23,17 +23,14 @@ namespace oneflow {
 
 class VmLocalDepObject;
 
-namespace vm {
-
-class EagerBlobObject;
-}  // namespace vm
-
 namespace one {
 
 class TensorStorage;
 }
 
 namespace vm {
+
+class EagerBlobObject;
 
 // access blob arg callback physical instruction operand
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {

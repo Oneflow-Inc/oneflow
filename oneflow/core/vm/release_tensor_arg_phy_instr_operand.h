@@ -21,13 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+class VmLocalDepObject;
 namespace vm {
 
 class EagerBlobObject;
-}  // namespace vm
-
-class VmLocalDepObject;
-namespace vm {
 
 class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
  public:

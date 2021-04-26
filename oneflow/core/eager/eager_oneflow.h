@@ -28,19 +28,9 @@ namespace vm {
 namespace cfg {
 
 class InstructionListProto;
-
-}  // namespace cfg
-}  // namespace vm
-
-namespace vm {
-namespace cfg {
-
 class EagerSymbolList;
 
 }  // namespace cfg
-}  // namespace vm
-
-namespace vm {
 
 class EagerOneflow final {
  public:
