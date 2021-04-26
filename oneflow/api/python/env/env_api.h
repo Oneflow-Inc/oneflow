@@ -32,6 +32,10 @@ inline void InitEnv(const std::string& env_proto_str) {
   return oneflow::InitEnv(env_proto_str).GetOrThrow();
 }
 
+inline void InitDefaultEnv(const std::string& env_proto_str) {
+  return oneflow::InitDefaultEnv(env_proto_str).GetOrThrow();
+}
+
 inline void DestroyEnv() { return oneflow::DestroyEnv().GetOrThrow(); }
 
 inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
