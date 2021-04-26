@@ -24,6 +24,8 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 
+import oneflow_api
+
 
 class ParamGroup(object):
     def __init__(
@@ -117,9 +119,9 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if "momentum" in self._default_options:
-                    # TODO: Use flow.zeros_like instead of numpy
+                    # TODO(Wang Yinggang): Use flow.zeros_like instead of numpy
                     self._state[param]["momentum_buf"] = flow.Tensor(
-                        np.zeros(param.shape)
+                        np.zeros(param.shape), device=oneflow_api.device("cuda")
                     )
 
         if "momentum" in self._default_options.keys():
@@ -155,7 +157,10 @@ class SGD(Optimizer):
             loss = closure()
 
         for param_group in self._param_groups:
-            lr_tensor = flow.Tensor([param_group.options["lr"]])
+            # TODO(Liang Depeng): remove device setting
+            lr_tensor = flow.Tensor(
+                [param_group.options["lr"]], device=oneflow_api.device("cuda")
+            )
             for param in param_group.parameters:
                 if param.grad is None:
                     continue

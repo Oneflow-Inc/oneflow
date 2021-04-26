@@ -155,4 +155,8 @@ class CrossEntropyLossV2(Module):
 
     def forward(self, input, target):
         prob, out = self._op(input, target)
-        return out
+        sums = self._sum_op(out)[0]
+        reduce_count = 1
+        for dim in out.shape:
+            reduce_count *= dim
+        return flow.mul(sums, 1.0 / reduce_count)
