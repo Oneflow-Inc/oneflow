@@ -78,9 +78,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   ~InstructionsBuilder() = default;
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
-  vm::InstructionMsgList* instruction_list() const {
-    return instruction_list_;
-  }
+  const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
   const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list() const {
     return eager_symbol_list_;
   }

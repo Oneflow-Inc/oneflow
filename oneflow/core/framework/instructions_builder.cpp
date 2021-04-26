@@ -1531,19 +1531,20 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
 Maybe<void> LogicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
   const auto& RunInstruction =
-      [](vm::InstructionMsgList* instruction_list,
+      [](const vm::InstructionMsgList& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(instruction_list,
                                                                    eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  const std::shared_ptr<vm::LogicalIdGenerator> id_generator = std::make_shared<vm::LogicalIdGenerator>();
+  const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
+      std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
-  vm::InstructionMsgList* instruction_list = &(*(sess->instruction_list()));
+  const auto& instruction_list = sess->instruction_list();
   std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = sess->eager_symbol_list();
-  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list, eager_symbol_list,
-                                              _ReleaseLogicalObject));
-  JUST(RunInstruction(instruction_list, eager_symbol_list));
+  Build(std::make_shared<InstructionsBuilder>(id_generator, instruction_list.get(),
+                                              eager_symbol_list, _ReleaseLogicalObject));
+  JUST(RunInstruction(*instruction_list, eager_symbol_list));
   instruction_list->Clear();
   eager_symbol_list->clear_eager_symbol();
   return Maybe<void>::Ok();
@@ -1552,18 +1553,19 @@ Maybe<void> LogicalRun(
 Maybe<void> PhysicalRun(
     const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build) {
   const auto& RunInstruction =
-      [](vm::InstructionMsgList* instruction_list,
+      [](const vm::InstructionMsgList& instruction_list,
          const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list) -> Maybe<void> {
     JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(instruction_list,
                                                                     eager_symbol_list));
     return Maybe<void>::Ok();
   };
-  vm::InstructionMsgList* instruction_list = new vm::InstructionMsgList();
-  const std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list = std::make_shared<eager::cfg::EagerSymbolList>();
-  Build(std::make_shared<InstructionsBuilder>(std::shared_ptr<vm::PhysicalIdGenerator>(), instruction_list, std::shared_ptr<eager::cfg::EagerSymbolList>(),
+  vm::InstructionMsgList instruction_list;
+  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list;
+  Build(std::make_shared<InstructionsBuilder>(std::shared_ptr<vm::PhysicalIdGenerator>(),
+                                              &instruction_list, eager_symbol_list,
                                               _ReleasePhysicalObject));
   JUST(RunInstruction(instruction_list, eager_symbol_list));
-  instruction_list->Clear();
+  instruction_list.Clear();
   eager_symbol_list->clear_eager_symbol();
   return Maybe<void>::Ok();
 }
