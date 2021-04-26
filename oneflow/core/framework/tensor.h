@@ -219,7 +219,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
+  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
   std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
@@ -245,8 +245,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   static std::shared_ptr<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
-      const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
-      bool retain_grad);
+      const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf);
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -309,7 +308,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
   std::shared_ptr<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_requires_grad(retain_grad); }
+  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
