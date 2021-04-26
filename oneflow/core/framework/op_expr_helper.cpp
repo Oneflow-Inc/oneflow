@@ -93,6 +93,19 @@ Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const s
   }
 }
 
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype) {
+  return ZerosOp(shape, dtype, UniqueOpName("constant"));
+}
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  switch (dtype) {
+#define CONSTANT_DATA_TYPE_CASE(cpp_type, data_type) \
+  case data_type: return ConstantOp(shape, (cpp_type)0, name);
+    OF_PP_FOR_EACH_TUPLE(CONSTANT_DATA_TYPE_CASE, FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ);
+#undef CONSTANT_DATA_TYPE_CASE
+    default: UNIMPLEMENTED_THEN_RETURN();
+  }
+}
+
 Maybe<one::UserOpExpr> IdentityOp() { return IdentityOp(UniqueOpName("identity")); }
 Maybe<one::UserOpExpr> IdentityOp(const std::string& name) {
   return one::OpBuilder("identity", name).Input("in").Output("out").Build();
