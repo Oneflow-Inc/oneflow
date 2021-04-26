@@ -13,21 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/api/foreign_lock_helper.h"
+
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/common/global.h"
 
 namespace py = pybind11;
 
+namespace oneflow {
+class GILForeignLockHelper final : public ForeignLockHelper {
+  void WithScopedRelease(const std::function<void()>& callback) const override {
+    py::gil_scoped_release release;
+    callback();
+  }
+};
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
-
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("InitDefaultEnv", &InitDefaultEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
-
-  m.def("CurrentMachineId", &CurrentMachineId);
+  m.def("RegisterGILForeignLockHelper",
+        []() { Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper()); });
 }
+
+}  // namespace oneflow

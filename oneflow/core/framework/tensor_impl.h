@@ -200,8 +200,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                          const std::shared_ptr<const DType>& dtype,
+  EagerMirroredTensorImpl(const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
                           const std::shared_ptr<const Device>& device, bool requires_grad,
                           bool is_leaf);
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
@@ -212,7 +211,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   ~EagerMirroredTensorImpl() override;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  const std::shared_ptr<const Shape>& shape() const override;
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
 
@@ -222,8 +221,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override;
 
   // Setters
-  void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) override { UNIMPLEMENTED(); }
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
   Maybe<void> set_eager_blob_object(
       std::shared_ptr<eager::EagerBlobObject> eager_blob_object) override {
@@ -233,7 +232,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    return blob_object_;
+    UNIMPLEMENTED();
   }
 
   // Setters to be deprecated
@@ -243,7 +242,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
 };
