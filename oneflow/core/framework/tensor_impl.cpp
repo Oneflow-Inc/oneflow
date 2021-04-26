@@ -77,10 +77,11 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       eager_blob_object_(eager_blob_object) {
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  const auto& parallel_desc = this->parallel_desc();
   tensor_storage_->set_releaser_hook(
-      [this](const std::shared_ptr<eager::TensorBuffer>& tensor_buffer) {
-        PhysicalRun([this](const std::shared_ptr<InstructionsBuilder>& builder) {
-          builder->ReleaseTensor(this->eager_blob_object_, this->parallel_desc());
+      [eager_blob_object, parallel_desc](const std::shared_ptr<eager::TensorBuffer>&) {
+        PhysicalRun([&](const std::shared_ptr<InstructionsBuilder>& builder) {
+          builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
       });
 }
