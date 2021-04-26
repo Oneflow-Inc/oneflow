@@ -67,16 +67,11 @@ class TestModule(flow.unittest.TestCase):
 
         m = CustomModule()
 
-        @flow.global_function()
-        def job() -> None:
-            x = flow.Tensor(2, 3)
-            global y
-            y = m(x).numpy()
-
-        job()
         ones = np.ones((2, 3), dtype=np.float32)
         m.load_state_dict({"w": ones})
-        job()
+        x = flow.Tensor(2, 3)
+        y = m(x).numpy()
+
         test_case.assertTrue(np.array_equal(y, ones))
 
     def test_state_dict(test_case):

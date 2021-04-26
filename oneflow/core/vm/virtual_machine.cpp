@@ -220,7 +220,7 @@ void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_typ
     phy_instr_operand.ForEachConstMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) {
           Callback(infer);
-          Callback(compute);
+          if (compute != nullptr) { Callback(compute); }
         });
   } else if (interpret_type == InterpretType::kInfer) {
     phy_instr_operand.ForEachConstMirroredObject(

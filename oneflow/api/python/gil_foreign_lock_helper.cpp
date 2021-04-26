@@ -13,22 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/tensor_storage.h"
-#include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/api/foreign_lock_helper.h"
+
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/global.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
-namespace one {
+class GILForeignLockHelper final : public ForeignLockHelper {
+  void WithScopedRelease(const std::function<void()>& callback) const override {
+    py::gil_scoped_release release;
+    callback();
+  }
+};
 
-TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : buffer_(std::make_shared<eager::TensorBuffer>()) {}
-
-TensorStorage::TensorStorage(const std::shared_ptr<eager::TensorBuffer>& tensor_buffer)
-    : buffer_(tensor_buffer) {}
-
-TensorStorage::~TensorStorage() {
-  if (releaser_hook_) { (*releaser_hook_)(buffer_); }
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("RegisterGILForeignLockHelper",
+        []() { Global<ForeignLockHelper>::SetAllocated(new GILForeignLockHelper()); });
 }
 
-}  // namespace one
 }  // namespace oneflow
