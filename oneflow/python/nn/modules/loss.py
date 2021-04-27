@@ -26,7 +26,6 @@ from oneflow.python.nn.modules.utils import (
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.CrossEntropyLoss")
@@ -40,20 +39,10 @@ class CrossEntropyLoss(Module):
             and :attr:`reduce` are in the process of being deprecated, and in
             the meantime, specifying either of those two args will override
             :attr:`reduction`. Default: ``'mean'``
-    Shape:
-        - Input: :math:`(N, C)` where `C = number of classes`, or
-          :math:`(N, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`
-          in the case of `K`-dimensional loss.
-        - Target: :math:`(N)` where each value is :math:`0 \leq \text{targets}[i] \leq C-1`, or
-          :math:`(N, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case of
-          K-dimensional loss.
-        - Output: scalar.
-          If :attr:`reduction` is ``'none'``, then the same size as the target:
-          :math:`(N)`, or
-          :math:`(N, d_1, d_2, ..., d_K)` with :math:`K \geq 1` in the case
-          of K-dimensional loss.
+
     For example:
     .. code-block:: python 
+    
         input = flow.Tensor(
             [[-0.1664078, -1.7256707, -0.14690138],
                 [-0.21474946, 0.53737473, 0.99684894],
@@ -65,6 +54,7 @@ class CrossEntropyLoss(Module):
         # out_sum: [2.2769074]
         out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         # out_mean: [0.7589692]
+
     """
 
     def __init__(
@@ -87,19 +77,17 @@ class CrossEntropyLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
-        self.name = name
-
-    def forward(self, input, target):
         self._op = (
-            flow.builtin_op("sparse_softmax_cross_entropy", self.name)
+            flow.builtin_op("sparse_softmax_cross_entropy", name)
             .Input("prediction")
             .Input("label")
             .Output("prob")
             .Output("out")
-            .Attr("depth", input.shape[len(input.shape) - 1])
             .Build()
         )
-        prob, out = self._op(input, target)
+
+    def forward(self, input, target):
+        prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
         if self.reduction == "mean":
             return flow.mean(out)
         elif self.reduction == "sum":
