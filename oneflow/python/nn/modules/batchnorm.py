@@ -228,12 +228,10 @@ class BatchNorm1d(_BatchNorm):
         import oneflow as flow
         import numpy as np
 
-        >>> # With Learnable Parameters
-        >>> m = nn.BatchNorm1d(100)
-        >>> # Without Learnable Parameters
-        >>> m = nn.BatchNorm1d(100, affine=False)
-        >>> input = torch.randn(20, 100)
-        >>> output = m(input)
+        x = flow.Tensor(np.random.randn(20, 100))
+        m = flow.nn.BatchNorm1d(100)
+        y = m(x)
+
     """
 
     def _check_input_dim(self, input):
@@ -308,12 +306,10 @@ class BatchNorm2d(_BatchNorm):
         import oneflow as flow
         import numpy as np
 
-        >>> # With Learnable Parameters
-        >>> m = nn.BatchNorm2d(100)
-        >>> # Without Learnable Parameters
-        >>> m = nn.BatchNorm2d(100, affine=False)
-        >>> input = torch.randn(20, 100, 35, 45)
-        >>> output = m(input)
+        x = flow.Tensor(np.random.randn(4, 2, 8, 3))
+        m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
+        y = m(x)
+
     """
 
     def _check_input_dim(self, input):
