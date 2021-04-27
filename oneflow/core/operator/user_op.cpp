@@ -618,9 +618,9 @@ Maybe<void> UserOp::InferSbpSignature(
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
-  if (val_->infer_sbp_signature_fn) {
+  if (val_->sbp_signature_infer_fn) {
     UserOpInferSbpSignatureFnContext ctx(this, sbp_signature, sbp_sig_conf, SbpInferHint4Ibn);
-    return val_->infer_sbp_signature_fn(&ctx);
+    return val_->sbp_signature_infer_fn(&ctx);
   } else {
     return Operator::InferSbpSignature(sbp_signature, sbp_sig_conf, CalcOrderValue4SbpSig,
                                        SbpInferHint4Ibn, parallel_desc);
@@ -674,12 +674,12 @@ Maybe<void> UserOp::GetSbpSignatures(
 Maybe<void> UserOp::InferOpTimeShape(
     const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
     std::shared_ptr<const Shape>* time_shape) const {
-  if (val_->infer_output_blob_time_shape_fn) {
+  if (val_->output_blob_time_shape_infer_fn) {
     std::shared_ptr<Shape> op_time_shape(new Shape());
     UserOpInferOutputBlobTimeShapeFnContext infer_output_blob_time_shape_fn_ctx(
         this, GetTimeShape4BnInOp, op_time_shape.get());
     *time_shape = op_time_shape;
-    return val_->infer_output_blob_time_shape_fn(&infer_output_blob_time_shape_fn_ctx);
+    return val_->output_blob_time_shape_infer_fn(&infer_output_blob_time_shape_fn_ctx);
   } else {
     return Operator::InferOpTimeShape(GetTimeShape4BnInOp, time_shape);
   }
@@ -699,14 +699,14 @@ Maybe<void> UserOp::InferParallelDistributionSignature(
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
-  if (val_->infer_parallel_distribution_fn
+  if (val_->parallel_distribution_infer_fn
       && (parallel_desc.hierarchy()->NumAxes() > 1
           || !IgnoreInferParallelDistributionFnWhenFlatHierarchy(
               this->user_op_conf().op_type_name()))) {
     UserOpInferParallelDistributionFnContext ctx(this, parallel_distribution_signature,
                                                  parallel_distribution_constraints,
                                                  ParallelDistributionInferHint4Ibn);
-    return val_->infer_parallel_distribution_fn(&ctx);
+    return val_->parallel_distribution_infer_fn(&ctx);
   } else {
     return Operator::InferParallelDistributionSignature(
         parallel_distribution_signature, parallel_distribution_constraints, parallel_desc,

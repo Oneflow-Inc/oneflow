@@ -204,7 +204,7 @@ REGISTER_USER_OP("matmul")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn(InferDataType4Matmul);
+    .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
@@ -232,7 +232,7 @@ REGISTER_USER_OP("batch_matmul")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn(InferDataType4Matmul);
+    .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
@@ -247,7 +247,7 @@ REGISTER_USER_OP("broadcast_matmul")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
     .Attr<double>("alpha", 1.0)
-    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetDataTypeInferFn(InferDataType4Matmul)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       bool transpose_a = ctx->Attr<bool>("transpose_a");
       bool transpose_b = ctx->Attr<bool>("transpose_b");
@@ -344,7 +344,7 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
     .Input("b")
     .Output("out")
     .Attr<double>("alpha", 1.0)
-    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetDataTypeInferFn(InferDataType4Matmul)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
