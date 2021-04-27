@@ -41,20 +41,19 @@ std::shared_ptr<Device> GetDefaultDevice() {
 }
 }  // namespace
 
-Maybe<void> NaiveInterpret(
-    const UserOpExpr& user_op_expr,
-    const std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>&
-        input_eager_blob_objects,
-    const std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>&
-        output_eager_blob_objects,
-    const AttrValueMap& attrs, const std::shared_ptr<const Device> device,
-    std::shared_ptr<const ParallelDesc> parallel_desc) {
+Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr,
+                           const std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>>&
+                               input_eager_blob_objects,
+                           const std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>>&
+                               output_eager_blob_objects,
+                           const AttrValueMap& attrs, const std::shared_ptr<const Device> device,
+                           std::shared_ptr<const ParallelDesc> parallel_desc) {
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
   const auto mem_case = kernel->mem_case();
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-    auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(
+    auto eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         mem_case, std::make_shared<Shape>(), DataType::kInvalidDataType,
-        std::make_shared<eager::TensorBuffer>(), parallel_desc);
+        std::make_shared<vm::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
   kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
@@ -68,13 +67,13 @@ Maybe<void> NaiveInterpret(
   return Maybe<void>::Ok();
 }
 
-Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
-                                                               const Shape& shape) {
+Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
+                                                            const Shape& shape) {
   const auto zeros_expr = JUST(op_expr_helper::ZerosOp(shape, data_type));
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(0);
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(1);
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> input_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(0);
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> output_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(1);
 
   const auto device = GetDefaultDevice();
   std::shared_ptr<const ParallelDesc> parallel_desc =
@@ -97,13 +96,13 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(*device));
   const auto& user_op_expr = dynamic_cast<const UserOpExpr&>(op_expr);
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> input_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(inputs.size());
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> input_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
-  std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
-      std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(outputs->size());
+  std::shared_ptr<std::vector<std::shared_ptr<vm::EagerBlobObject>>> output_eager_blob_objects =
+      std::make_shared<std::vector<std::shared_ptr<vm::EagerBlobObject>>>(outputs->size());
   NaiveInterpret(user_op_expr, input_eager_blob_objects, output_eager_blob_objects, attrs, device,
                  parallel_desc);
   for (int i = 0; i < outputs->size(); ++i) {
