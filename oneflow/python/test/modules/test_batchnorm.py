@@ -23,7 +23,7 @@ import oneflow.typing as tp
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
 class TestBatchNormModule(flow.unittest.TestCase):
     def test_batchnorm2d(test_case):
