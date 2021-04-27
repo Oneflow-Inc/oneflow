@@ -59,8 +59,10 @@ StackFunctionNode::StackFunctionNode(
         backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs) {
   input_meta_datas_.resize(inputs.size());
+  input_tensors_.resize(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
+    if (input_meta_datas_.at(i)->requires_grad()) { input_tensors_.at(i) = inputs.at(i); }
   }
 
   output_meta_datas_.resize(outputs.size());
@@ -99,6 +101,7 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
 void StackFunctionNode::ReleaseData() {
   // Releases backward function and makes useless tensors release as early as possible
   if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
+  input_tensors_.clear();
   is_in_stack_ = false;
 }
 
