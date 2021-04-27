@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import Tensor
-from oneflow.python.nn.module import Module
-from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 import math
 
@@ -39,7 +35,7 @@ class Identity(Module):
     """
 
     def __init__(self, *args, **kwargs):
-        super(Identity, self).__init__()
+        super(self).__init__()
 
     def forward(self, input: Tensor) -> Tensor:
         return input
@@ -86,8 +82,8 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
+        res = self._op(x, self.weight)[0]
         if self.use_bias:
-            res = self._bias_add_op(self._op(x, self.weight)[0], self.bias)[0]
-        else:
-            res = self._op(x, self.weight)[0]
+            res = self._bias_add_op(res, self.bias)[0]
+        
         return res
