@@ -5,7 +5,7 @@ export TF_CPP_MIN_LOG_LEVEL=3
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_dir=${ONEFLOW_TEST_DIR:-"$PWD/test/ops"}
+test_dir=${ONEFLOW_TEST_DIR:-"$PWD/oneflow/python/test/ops"}
 test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
 
 
