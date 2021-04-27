@@ -53,7 +53,7 @@ class Ones(Module):
             integer_value = int(0)
             is_floating_value = True
 
-        assert size is not None, "shape should not be None!"
+        assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, list, tuple)
         ), "shape should be int, list or tuple format!"
@@ -61,7 +61,6 @@ class Ones(Module):
             self.shape = [size]
         else:
             self.shape = size
-
 
         self._op = (
             flow.builtin_op("constant")
@@ -76,7 +75,6 @@ class Ones(Module):
 
     def forward(self):
         return self._op()[0]
-
 
 @oneflow_export("tmp.ones")
 def ones_op(size, dtype=None):
@@ -106,7 +104,7 @@ class Zeros(Module):
     """
     def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
-        assert size is not None, "size should not be None!"
+        assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, list, tuple)
         ), "size should be int, list or tuple format!"
@@ -139,7 +137,6 @@ class Zeros(Module):
 
     def forward(self):
         return self._op()[0]
-
 
 @oneflow_export("tmp.zeros")
 def zeros_op(size, dtype=None):
