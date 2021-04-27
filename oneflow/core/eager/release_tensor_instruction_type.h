@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 class ReleaseTensorInstructionType : public vm::InstructionType {
  public:
@@ -31,6 +31,6 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   void Compute(vm::Instruction* instruction) const override;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
