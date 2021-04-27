@@ -49,7 +49,7 @@ Maybe<void> NaiveInterpret(
         output_eager_blob_objects,
     const AttrValueMap& attrs, const std::shared_ptr<const Device> device,
     std::shared_ptr<const ParallelDesc> parallel_desc) {
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  const auto kernel = JUST(user_op_expr.MutKernel4Device(*device, attrs));
   const auto mem_case = kernel->mem_case();
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto eager_blob_object = std::make_shared<eager::EagerBlobObject>(

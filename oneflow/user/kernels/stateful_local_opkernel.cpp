@@ -111,10 +111,11 @@ LocalUserKernelBaseContext::LocalUserKernelBaseContext(const std::string& device
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
-  explicit LocalUserKernelRegContext(const OperatorConf& op_conf, const ArgVec* index_input_pairs,
+  explicit LocalUserKernelRegContext(const std::shared_ptr<const OperatorConf>& op_conf,
+                                     const ArgVec* index_input_pairs,
                                      const ArgVec* indexed_output_pairs)
       : user_op::KernelRegContext(user_op::UserOpConfWrapper(op_conf)),
-        base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
+        base_ctx_(op_conf->device_tag(), index_input_pairs, indexed_output_pairs) {}
   ~LocalUserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -137,7 +138,8 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
 
 class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
  public:
-  explicit LocalUserKernelCreateContext(const OperatorConf& op_conf) : user_op_conf_(op_conf) {}
+  explicit LocalUserKernelCreateContext(const std::shared_ptr<const OperatorConf>& op_conf)
+      : user_op_conf_(op_conf) {}
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
@@ -151,13 +153,14 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
 
 class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  public:
-  explicit LocalUserKernelInitContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
+  explicit LocalUserKernelInitContext(DeviceCtx* device_ctx,
+                                      const std::shared_ptr<const OperatorConf>& op_conf,
                                       const ArgVec* index_input_pairs,
                                       const ArgVec* indexed_output_pairs,
                                       EagerBlobObjectList inputs, EagerBlobObjectList outputs)
       : user_op::KernelInitContext(user_op::UserOpConfWrapper(op_conf)),
         device_ctx_(device_ctx),
-        base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {
+        base_ctx_(op_conf->device_tag(), index_input_pairs, indexed_output_pairs) {
     base_ctx_.Update(inputs, outputs);
   }
   ~LocalUserKernelInitContext() override = default;
@@ -198,7 +201,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   LocalUserKernelBaseContext base_ctx_;
 };
 
-LocalUserOpInferContext::LocalUserOpInferContext(const OperatorConf& op_conf,
+LocalUserOpInferContext::LocalUserOpInferContext(const std::shared_ptr<const OperatorConf>& op_conf,
                                                  const ArgVec* index_input_pairs,
                                                  const ArgVec* indexed_output_pairs)
     : user_op_conf_(op_conf), zero_copy_base_ctx_(index_input_pairs, indexed_output_pairs) {}
@@ -212,13 +215,12 @@ void LocalUserOpInferContext::Update(EagerBlobObjectList inputs, EagerBlobObject
   zero_copy_base_ctx_.Update(inputs, outputs);
 }
 
-LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_ctx,
-                                                             const OperatorConf& op_conf,
-                                                             const ArgVec* index_input_pairs,
-                                                             const ArgVec* indexed_output_pairs)
+LocalUserKernelComputeContext::LocalUserKernelComputeContext(
+    DeviceCtx* device_ctx, const std::shared_ptr<const OperatorConf>& op_conf,
+    const ArgVec* index_input_pairs, const ArgVec* indexed_output_pairs)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
-      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
+      base_ctx_(op_conf->device_tag(), index_input_pairs, indexed_output_pairs) {}
 
 void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                                            DeviceCtx* device_ctx) {
@@ -226,7 +228,7 @@ void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlob
   base_ctx_.Update(inputs, outputs);
 }
 
-Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
+Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
                                        const ArgVec* indexed_input_pairs,
                                        const ArgVec* indexed_output_pairs,
                                        std::vector<int64_t>* input_tuple_indexes4const_ibns,
@@ -234,7 +236,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
                                        std::vector<int64_t>* output_tuple_indexes4mut_obns,
                                        std::vector<int64_t>* output_tuple_indexes4mut2_obns) {
   const auto* op_reg_val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
 
   ArgModifierSignature arg_modifier_signature;
@@ -293,11 +295,12 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
 }
 
 /* static */ Maybe<StatefulOpKernel> StatefulOpKernel::New(
-    const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
+    const std::shared_ptr<OperatorConf>& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
     const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<ArgVec> indexed_input_pairs,
     const std::shared_ptr<ArgVec> indexed_output_pairs) {
-  auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel(op_conf));
+  auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel());
+  opkernel->op_conf_ = op_conf;
   opkernel->mem_case_ = mem_case;
   opkernel->indexed_input_pairs_ = indexed_input_pairs;
   opkernel->indexed_output_pairs_ = indexed_output_pairs;
@@ -310,7 +313,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
   opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(op_conf, indexed_input_pairs.get(),
                                                          indexed_output_pairs.get()));
   const auto* op_reg_val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
   if (op_reg_val->physical_tensor_desc_infer_fn) {
     opkernel->tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
@@ -332,14 +335,12 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
   return opkernel;
 }
 
-StatefulOpKernel::StatefulOpKernel(const OperatorConf& op_conf) : op_conf_(op_conf) {}
-
 StatefulOpKernel::~StatefulOpKernel() = default;
 
 Maybe<const user_op::OpKernel*> StatefulOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
                                                                  EagerBlobObjectList outputs) {
   InputAndOutputListScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
-  const auto& op_type_name = op_conf_.user_conf().op_type_name();
+  const auto& op_type_name = op_conf_->user_conf().op_type_name();
   const auto* kernel_reg_val =
       JUST(user_op::UserOpRegistryMgr::Get().GetOpKernelRegistryResult(op_type_name, *reg_ctx_));
   CHECK_NOTNULL(kernel_reg_val);

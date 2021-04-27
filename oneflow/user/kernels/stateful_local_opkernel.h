@@ -138,8 +138,8 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
-  LocalUserOpInferContext(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
-                          const ArgVec* indexed_output_pairs);
+  LocalUserOpInferContext(const std::shared_ptr<const OperatorConf>& op_conf,
+                          const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
   ~LocalUserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -192,7 +192,8 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
+  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx,
+                                         const std::shared_ptr<const OperatorConf>& op_conf,
                                          const ArgVec* indexed_input_pairs,
                                          const ArgVec* indexed_output_pairs);
   ~LocalUserKernelComputeContext() = default;
@@ -229,7 +230,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
+  static Maybe<StatefulOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
                                      const std::shared_ptr<MemoryCase>& mem_case,
                                      const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                      const std::shared_ptr<ArgVec> indexed_input_pairs,
@@ -261,9 +262,11 @@ class StatefulOpKernel final {
     UpdateInferContext(nullptr, nullptr);
   }
 
+  void UpdateOpConf(const OperatorConf& op_conf) { *op_conf_ = op_conf; }
+
  private:
   friend struct eager::LocalCallOpKernelUtil;
-  StatefulOpKernel(const OperatorConf& op_conf);
+  StatefulOpKernel() = default;
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
@@ -291,7 +294,7 @@ class StatefulOpKernel final {
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
-  const OperatorConf op_conf_;
+  std::shared_ptr<OperatorConf> op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
