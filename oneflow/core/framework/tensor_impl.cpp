@@ -77,6 +77,13 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       eager_blob_object_(eager_blob_object) {
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  const auto& parallel_desc = this->parallel_desc();
+  tensor_storage_->set_releaser_hook(
+      [eager_blob_object, parallel_desc](const std::shared_ptr<eager::TensorBuffer>&) {
+        PhysicalRun([&](const std::shared_ptr<InstructionsBuilder>& builder) {
+          builder->ReleaseTensor(eager_blob_object, parallel_desc);
+        });
+      });
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
