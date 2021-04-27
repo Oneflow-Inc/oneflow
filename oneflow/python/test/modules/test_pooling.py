@@ -122,9 +122,9 @@ class MaxPool2D:
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestPoolingModule(flow.unittest.TestCase):
     def test_maxpool2d(test_case):
         input_arr = np.random.rand(2, 2, 3, 4)
         kernel_size, stride, padding = (3, 3), (2, 2), (1, 2)

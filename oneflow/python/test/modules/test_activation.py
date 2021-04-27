@@ -23,7 +23,7 @@ import oneflow as flow
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestActivationModule(flow.unittest.TestCase):
     def test_relu(test_case):
         m = flow.nn.ReLU()
         arr = np.random.randn(2, 3, 4, 5)
