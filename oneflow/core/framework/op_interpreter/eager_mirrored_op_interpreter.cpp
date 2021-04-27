@@ -35,9 +35,9 @@ namespace oneflow {
 namespace one {
 
 namespace {
-std::shared_ptr<Device> GetDefaultDevice() {
+Maybe<Device> GetDefaultDevice() {
   // TODO: align with pytorch (default cpu) when tensor.to() is ready
-  return std::make_shared<Device>("cuda", 0);
+  return Device::New("cuda", 0);
 }
 }  // namespace
 
@@ -76,7 +76,7 @@ Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_typ
   std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>> output_eager_blob_objects =
       std::make_shared<std::vector<std::shared_ptr<eager::EagerBlobObject>>>(1);
 
-  const auto device = GetDefaultDevice();
+  const auto device = JUST(GetDefaultDevice());
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(*device));
 
@@ -89,7 +89,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
                                   TensorTuple* outputs, const AttrValueMap& attrs) {
   std::shared_ptr<const Device> device;
   if (inputs.empty()) {
-    device = GetDefaultDevice();
+    device = JUST(GetDefaultDevice());
   } else {
     device = inputs.at(0)->device();
     for (int i = 1; i < inputs.size(); i++) { CHECK(*device == *inputs.at(i)->device()); }
