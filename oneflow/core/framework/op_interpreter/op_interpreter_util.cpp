@@ -171,7 +171,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 }
 
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-    const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const Device>& device) {
   auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
                                                 /* requires_grad */ false, /* is_leaf */ false,
