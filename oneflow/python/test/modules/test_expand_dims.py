@@ -24,12 +24,17 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_expand_dims(test_case):
+    def test_expand_dims_v1(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5), dtype=flow.float32)
         of_out = flow.tmp.expand_dims(input, axis=-1).numpy().shape
         np_out = (2, 6, 5, 1)
         test_case.assertTrue(np.allclose(of_out, np_out))
 
+    def test_expand_dims_v2(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5), dtype=flow.float32)
+        of_out = input.tmp.expand_dims(axis=-1).numpy().shape
+        np_out = (2, 6, 5, 1)
+        test_case.assertTrue(np.allclose(of_out, np_out))
 
 if __name__ == "__main__":
     unittest.main()

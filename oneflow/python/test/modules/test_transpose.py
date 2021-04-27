@@ -24,9 +24,15 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_transpose(test_case):
+    def test_transpose_v1(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+        np_out = input.numpy().transpose((0, 2, 3, 1))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    
+    def test_transpose_v2(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = input.tmp.transpose(perm=(0, 2, 3, 1))
         np_out = input.numpy().transpose((0, 2, 3, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 

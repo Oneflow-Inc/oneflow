@@ -65,6 +65,21 @@ class TestTanhModule(flow.unittest.TestCase):
         self._test_random_body_tanh((2, 10, 2))
         self._test_random_body_tanh((2, 5, 2, 2))
 
+    def _test_body_tanh_v2(test_case, input_arr):
+        x = flow.Tensor(input_arr)
+
+        y = flow.tanh(x)
+        z = np.tanh(input_arr)
+
+        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+    
+    def _test_body_tanh_v3(test_case, input_arr):
+        x = flow.Tensor(input_arr)
+        
+        y = x.tanh()
+        z = np.tanh(input_arr)
+
+        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
 
 if __name__ == "__main__":
     unittest.main()
