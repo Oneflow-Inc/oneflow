@@ -26,7 +26,7 @@ namespace one {
 class StatefulOpKernel;
 
 using EagerBlobObjectList =
-    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 }  // namespace one
 
@@ -36,7 +36,7 @@ class OpKernel;
 
 }  // namespace user_op
 
-namespace eager {
+namespace vm {
 
 class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
@@ -84,7 +84,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   const user_op::OpKernel* user_opkernel_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
