@@ -83,7 +83,7 @@ class Sum(Module):
 
 @oneflow_export("sum")
 @register_tensor_op_by_module("sum")
-def sum(input, /, dim, keepdim=False):
+def _sum(input, /, dim, keepdim=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
 
@@ -166,9 +166,9 @@ class BroadcastMul(Module):
         return self._op(x, y)[0]
 
 
+@oneflow_export("mul")
 @register_tensor_op_by_module("mul")
-@register_op_by_module("mul")
-class Mul(Module):
+def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
     .. math::
@@ -196,45 +196,21 @@ class Mul(Module):
 
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if isinstance(x, (int, float)):
-            return ScalarMul(x)(y)
-        elif isinstance(y, (int, float)):
-            return ScalarMul(y)(x)
-        elif x.shape == y.shape:
-            return ElementwiseMul()(x, y)
-        elif x.shape == (1,):
-            return ScalarMulByTensor()(y, x)
-        elif y.shape == (1,):
-            return ScalarMulByTensor()(x, y)
-        else:
-            return BroadcastMul()(x, y)
+    if isinstance(x, (int, float)):
+        return ScalarMul(x)(y)
+    elif isinstance(y, (int, float)):
+        return ScalarMul(y)(x)
+    elif x.shape == y.shape:
+        return ElementwiseMul()(x, y)
+    elif x.shape == (1,):
+        return ScalarMulByTensor()(y, x)
+    elif y.shape == (1,):
+        return ScalarMulByTensor()(x, y)
+    else:
+        return BroadcastMul()(x, y)
 
 
-@register_tensor_op_by_module("mean")
-@register_op_by_module("mean")
 class Mean(Module):
-    r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
-    For example:
-    .. code-block:: python
-
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input) # out: [3.5]
-        print(out.numpy())
-        
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=0) # out: [2.5 3.5 4.5]
-        print(out.numpy())
-
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=1) # out: [ 2. 5.]
-        print(out.numpy())
-
-    """
-
     def __init__(
         self,
         axis: Optional[Union[collections.Sized, int]] = None,
@@ -247,9 +223,7 @@ class Mean(Module):
         self.name = name
 
     def forward(self, input_tensor):
-        reduce_sum = flow.sum(
-            input_tensor, axis=self.axis, keepdims=self.keepdims, name=self.name
-        )
+        reduce_sum = flow.sum(input_tensor, dim=self.axis, keepdims=self.keepdims)
 
         # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
 
@@ -269,6 +243,32 @@ class Mean(Module):
             for i in axes:
                 reduce_count *= input_tensor.shape[i]
         return flow.mul(reduce_sum, 1.0 / reduce_count)
+
+
+@oneflow_export("mean")
+@register_tensor_op_by_module("mean")
+def _mean(input_tensor, dim, keepdim):
+    r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    
+    For example:
+
+    .. code-block:: python
+
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = flow.mean(input) # out: [3.5]
+        print(out.numpy())
+        
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = flow.mean(input, axis=0) # out: [2.5 3.5 4.5]
+        print(out.numpy())
+
+        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        out = flow.mean(input, axis=1) # out: [ 2. 5.]
+        print(out.numpy())
+
+    """
+
+    return Mean(axis=dim, keepdims=keepdim)(input_tensor)
 
 
 class ScalarSubByTensor(Module):
@@ -312,6 +312,7 @@ class ScalarAdd(Module):
                 .Attr("has_float_operand", False)
                 .Attr("int_operand", operand)
                 .Attr("float_operand", 0.0)
+                .Build()
             )
         elif isinstance(operand, float):
             self._op = (
@@ -319,19 +320,18 @@ class ScalarAdd(Module):
                 .Attr("has_float_operand", True)
                 .Attr("int_operand", 0)
                 .Attr("float_operand", operand)
+                .Build()
             )
         else:
             raise ValueError("operand type can only be int or float")
-
-        self._op = self._op.Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
 
+@oneflow_export("sub")
 @register_tensor_op_by_module("sub")
-@register_op_by_module("sub")
-class Sub(Module):
+def _sub(x, y):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
     .. math::
@@ -358,24 +358,19 @@ class Sub(Module):
 
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-        pass
-
-    def forward(self, x, y):
-        if isinstance(x, (int, float)):
-            return ScalarAdd(x)(ScalarMul(-1)(y))
-        elif isinstance(y, (int, float)):
-            return ScalarAdd(-1 * y)(x)
-        elif x.shape == y.shape:
-            # TODO: add element-wise op
-            return BroadcastSub()(x, y)
-        elif x.shape == (1,):
-            return ScalarSubByTensor()(y, x)
-        elif y.shape == (1,):
-            return ScalarSubByTensor()(x, y)
-        else:
-            return BroadcastSub()(x, y)
+    if isinstance(x, (int, float)):
+        return ScalarAdd(x)(ScalarMul(-1)(y))
+    elif isinstance(y, (int, float)):
+        return ScalarAdd(-1 * y)(x)
+    elif x.shape == y.shape:
+        # TODO: add element-wise op
+        return BroadcastSub()(x, y)
+    elif x.shape == (1,):
+        return ScalarSubByTensor()(y, x)
+    elif y.shape == (1,):
+        return ScalarSubByTensor()(x, y)
+    else:
+        return BroadcastSub()(x, y)
 
 
 class BroadcastDiv(Module):
@@ -408,9 +403,9 @@ class ScalarDivByTensor(Module):
         return self._op(x, scalar)[0]
 
 
+@oneflow_export("div")
 @register_tensor_op_by_module("div")
-@register_op_by_module("div")
-class Div(Module):
+def _div(x, y):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
     .. math::
@@ -440,45 +435,25 @@ class Div(Module):
 
     """
 
-    def __init__(self, name: Optional[str] = None) -> None:
-        super().__init__()
-        self.name = name
-
-    def forward(self, x, y):
-        if isinstance(x, (int, float)):
-            return ScalarMul(x)(flow.reciprocal(y))
-        elif isinstance(y, (int, float)):
-            if y == 0 or y == 0.0:
-                y = 0.0
-            else:
-                y = 1.0 / (float(y))
-            return ScalarMul(y)(x)
-        elif x.shape == y.shape:
-            return BroadcastDiv()(x, y)
-        elif x.shape == (1,):
-            return ScalarDivByTensor(y, x)
-        elif y.shape == (1,):
-            return ScalarDivByTensor(x, y)
+    if isinstance(x, (int, float)):
+        return ScalarMul(x)(flow.reciprocal(y))
+    elif isinstance(y, (int, float)):
+        if y == 0 or y == 0.0:
+            y = 0.0
         else:
-            return BroadcastDiv()(x, y)
+            y = 1.0 / (float(y))
+        return ScalarMul(y)(x)
+    elif x.shape == y.shape:
+        return BroadcastDiv()(x, y)
+    elif x.shape == (1,):
+        return ScalarDivByTensor(y, x)
+    elif y.shape == (1,):
+        return ScalarDivByTensor(x, y)
+    else:
+        return BroadcastDiv()(x, y)
 
 
-@register_op_by_module("reciprocal")
 class Reciprocal(Module):
-    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
-    be also set to zero.
-    Args:
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-    For example: 
-    .. code-block:: python 
-    
-        reciprocal = flow.Reciprocal()
-        x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-        out = reciprocal(x)
-        # out [[1.         0.5        0.33333334]
-               [0.25       0.2        0.16666667]]
-    """
-
     def __init__(self, name: Optional[str] = None) -> None:
         super().__init__()
         self._op = (
@@ -487,6 +462,29 @@ class Reciprocal(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("reciprocal")
+@register_tensor_op_by_module("reciprocal")
+def _reciprocal(x):
+    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
+    be also set to zero.
+    
+    Args:
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+    
+    For example: 
+
+    .. code-block:: python 
+    
+        x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+        out = flow.reciprocal()(x)
+        # out [[1.         0.5        0.33333334]
+               [0.25       0.2        0.16666667]]
+
+    """
+
+    return Reciprocal()(x)
 
 
 class ScalarAdd(Module):
@@ -500,6 +498,7 @@ class ScalarAdd(Module):
                 .Attr("has_float_operand", False)
                 .Attr("int_operand", operand)
                 .Attr("float_operand", 0.0)
+                .Build()
             )
         elif isinstance(operand, float):
             self._op = (
@@ -507,11 +506,10 @@ class ScalarAdd(Module):
                 .Attr("has_float_operand", True)
                 .Attr("int_operand", 0)
                 .Attr("float_operand", operand)
+                .Build()
             )
         else:
             raise ValueError("operand type can only be int or float")
-
-        self._op = self._op.Build()
 
     def forward(self, x):
         return self._op(x)[0]
@@ -556,9 +554,9 @@ class BroadcastAdd(Module):
         return self._op(x, y)[0]
 
 
+@oneflow_export("add")
 @register_tensor_op_by_module("add")
-@register_op_by_module("add")
-class Add(Module):
+def _add(x, y):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
     .. math::
@@ -586,19 +584,15 @@ class Add(Module):
 
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, x, y):
-        if isinstance(x, (int, float)):
-            return ScalarAdd(x)(y)
-        elif isinstance(y, (int, float)):
-            return ScalarAdd(y)(x)
-        elif x.shape == y.shape:
-            return ElementwiseAdd()(x, y)
-        elif x.shape == (1,):
-            return ScalarAddByTensor()(y, x)
-        elif y.shape == (1,):
-            return ScalarAddByTensor()(x, y)
-        else:
-            return BroadcastAdd()(x, y)
+    if isinstance(x, (int, float)):
+        return ScalarAdd(x)(y)
+    elif isinstance(y, (int, float)):
+        return ScalarAdd(y)(x)
+    elif x.shape == y.shape:
+        return ElementwiseAdd()(x, y)
+    elif x.shape == (1,):
+        return ScalarAddByTensor()(y, x)
+    elif y.shape == (1,):
+        return ScalarAddByTensor()(x, y)
+    else:
+        return BroadcastAdd()(x, y)
