@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
+import math
 import oneflow as flow
 from test_util import Args, GenArgDict, GenArgList
 
@@ -67,10 +68,11 @@ class MaxPool2D:
         self.out_height = int((self.in_height - self.w_height) / self.stride[0]) + 1
         self.out_width = int((self.in_width - self.w_width) / self.stride[1]) + 1
         self.pad_out_height = np.uint16(
-            round((self.pad_shape[2] - self.w_height + 1) / self.stride[0])
+            math.ceil((self.pad_shape[2] - self.w_height + 1) / self.stride[0])
         )
+        asd = (self.pad_shape[3] - self.w_width + 1) / self.stride[1]
         self.pad_out_width = np.uint16(
-            round((self.pad_shape[3] - self.w_width + 1) / self.stride[1])
+            math.ceil((self.pad_shape[3] - self.w_width + 1) / self.stride[1])
         )
 
         out = np.zeros(
@@ -140,6 +142,19 @@ class TestPoolingModule(flow.unittest.TestCase):
     def test_maxpool2d_v2(test_case):
         input_arr = np.random.rand(6, 4, 7, 9)
         kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
+
+        m_numpy = MaxPool2D(kernel_size, stride, padding)
+        numpy_output = m_numpy(input_arr)
+
+        m = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+        x = flow.Tensor(input_arr)
+        output = m(x)
+        test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
+    
+    def test_maxpool2d_v3(test_case):
+        input_arr = np.random.rand(1, 1, 6, 6)
+        kernel_size, stride, padding = (1, 1), (5, 5), (0, 0)
 
         m_numpy = MaxPool2D(kernel_size, stride, padding)
         numpy_output = m_numpy(input_arr)
