@@ -101,10 +101,6 @@ class MaxPool2d(Module):
         super().__init__()
         _kernel_size = _pair(kernel_size)
         _strides = _pair(stride) if (stride is not None) else kernel_size
-        _padding = padding
-        _dilation = dilation
-        _return_indices = return_indices
-        _ceil_mode = ceil_mode
         _data_format = "NCHW"
         _channel_pos = "channels_last" if _data_format == "NHWC" else "channels_first"
 
@@ -112,17 +108,15 @@ class MaxPool2d(Module):
         assert dilation == 1, "Only support dilation==1 for now!"
 
         if isinstance(padding, int):
-            padding = [padding, padding]
+            _padding = _pair(padding)
         if len(padding) == 2:
             if _data_format == "NCHW":
-                padding = (0, 0, padding[0], padding[1])
-            elif _data_format == "NHWC":
-                padding = (0, padding[0], padding[1], 0)
+                _padding = (0, 0, padding[0], padding[1])
             else:
                 raise ValueError("error padding param!")
 
         _padding_type, _pads_list = calc_pool_padding(
-            padding, get_dhw_offset(_channel_pos), 2
+            _padding, get_dhw_offset(_channel_pos), 2
         )
         _padding_before = [pad[0] for pad in _pads_list]
         _padding_after = [pad[1] for pad in _pads_list]
@@ -132,7 +126,7 @@ class MaxPool2d(Module):
             .Attr("data_format", _channel_pos)
             .Attr("pool_size", _kernel_size)
             .Attr("strides", _strides)
-            .Attr("ceil_mode", _ceil_mode)
+            .Attr("ceil_mode", ceil_mode)
             .Attr("padding", _padding_type)
             .Attr("padding_before", _padding_before)
             .Attr("padding_after", _padding_after)
