@@ -60,7 +60,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr,
 
   auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                    parallel_desc));
+                                    attrs, parallel_desc));
     return Maybe<void>::Ok();
   };
   JUST(PhysicalRun(build_instruction));
