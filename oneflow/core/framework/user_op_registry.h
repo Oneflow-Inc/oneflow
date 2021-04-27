@@ -107,13 +107,13 @@ class OpRegistry final {
   OpRegistry& SetLogicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetPhysicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
-  OpRegistry& SetInferSbpSignatureFn(SbpSignatureInferFn fn);
+  OpRegistry& SetSbpSignatureInferFn(SbpSignatureInferFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
-  OpRegistry& SetInferOutputBlobTimeShapeFn(OutputBlobTimeShapeInferFn fn);
-  OpRegistry& SetInferParallelDistributionFn(ParallelDistributionInferFn fn);
+  OpRegistry& SetOutputBlobTimeShapeInferFn(OutputBlobTimeShapeInferFn fn);
+  OpRegistry& SetParallelDistributionInferFn(ParallelDistributionInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
-  OpRegistry& SetInferDataTypeFn(DataTypeInferFn fn);
+  OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
 
   OpRegistry& Finish();
   OpRegistryResult GetResult() { return result_; }

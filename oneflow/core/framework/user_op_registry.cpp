@@ -166,8 +166,7 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
-
-OpRegistry& OpRegistry::SetInferSbpSignatureFn(SbpSignatureInferFn infer_sbp_signature_fn) {
+OpRegistry& OpRegistry::SetSbpSignatureInferFn(SbpSignatureInferFn infer_sbp_signature_fn) {
   result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
   return *this;
 }
@@ -182,19 +181,19 @@ OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
+OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
     OutputBlobTimeShapeInferFn infer_output_blob_time_shape_fn) {
   result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferParallelDistributionFn(
+OpRegistry& OpRegistry::SetParallelDistributionInferFn(
     ParallelDistributionInferFn infer_parallel_distribution_fn) {
   result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferDataTypeFn(DataTypeInferFn data_type_infer_fn) {
+OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
   result_.data_type_infer_fn = std::move(data_type_infer_fn);
   return *this;
 }

@@ -38,7 +38,7 @@ REGISTER_USER_OP("in_top_k")
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
       CHECK_OR_RETURN(IsIndexDataType(targets->data_type()));
       const user_op::TensorDesc* predictions = ctx->TensorDesc4ArgNameAndIndex("predictions", 0);

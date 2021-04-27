@@ -164,7 +164,7 @@ REGISTER_USER_OP("split_like")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(SetLikeArgModifier)
     .SetGetSbpFn(GetSbpSignature)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 

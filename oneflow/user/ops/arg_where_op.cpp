@@ -37,7 +37,7 @@ REGISTER_USER_OP("argwhere")
     .Output("output_size")
     .Attr<DataType>("dtype", DataType::kInt32)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType dtype = ctx->Attr<DataType>("dtype");
       user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *output_desc->mut_data_type() = dtype;
