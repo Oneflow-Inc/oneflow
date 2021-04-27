@@ -77,7 +77,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack") {
+        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
   }
@@ -102,7 +102,8 @@ bool SharedPtrShapeEqual(const std::shared_ptr<const Shape>& lhs,
   return (*lhs) == (*rhs);
 }
 
-void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const OpGraph& op_graph,
+void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>* ret,
+                                             const OpGraph& op_graph,
                                              const std::vector<const OpNode*>& order) {
   HashSet<const OpNode*> visited;
 
@@ -137,8 +138,16 @@ void FindMaxConnectedSubgraphForGpuExecOrder(HashSet<const OpNode*>* ret, const 
       });
     }
 
-    if (this_subgraph.size() > ret->size()) { ret->swap(this_subgraph); }
+    if (this_subgraph.size() > 1) {
+      ret->push_back(HashSet<const OpNode*>());
+      ret->back().swap(this_subgraph);
+    }
   }
+
+  std::sort(ret->begin(), ret->end(),
+            [](const HashSet<const OpNode*>& lhs, const HashSet<const OpNode*>& rhs) {
+              return lhs.size() > rhs.size();
+            });
 }
 
 bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
@@ -601,6 +610,42 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
   }
 }
 
+std::string GenParallelConfKey(const ParallelConf& conf) {
+  std::string ret = conf.device_tag();
+  for (const auto& name : conf.device_name()) { ret += ("-" + name); }
+  return ret;
+}
+
+struct InsertNcclSubGraph {
+  std::vector<const OpNode*> ordered_op_nodes;
+  int64_t begin_op_global_order;
+  int64_t end_op_global_order;
+  const OpNode* begin_op;
+  const OpNode* end_op;
+};
+
+struct PlacementNcclSubGraghsInfo {
+  std::string parallel_conf_key;
+  std::vector<std::shared_ptr<InsertNcclSubGraph>> ordered_subgraph;
+  const OpNode* last_bw_node;
+  std::vector<const OpNode*> ordered_acc_nodes;
+  const ParallelDesc* seed_parallel_desc;
+  std::shared_ptr<const Shape> seed_time_shape;
+};
+
+void InitInsertNcclSubGraphInfoFromSet(
+    std::shared_ptr<InsertNcclSubGraph> nccl_subgraph_info, const HashSet<const OpNode*>& subgraph,
+    const HashMap<const OpNode*, int64_t>& op_node2global_order,
+    const std::function<bool(const OpNode*, const OpNode*)>& CmpOpNodeOrder) {
+  auto* subgraph_ordered_nodes = &nccl_subgraph_info->ordered_op_nodes;
+  subgraph_ordered_nodes->assign(subgraph.begin(), subgraph.end());
+  std::sort(subgraph_ordered_nodes->begin(), subgraph_ordered_nodes->end(), CmpOpNodeOrder);
+  nccl_subgraph_info->begin_op = subgraph_ordered_nodes->front();
+  nccl_subgraph_info->end_op = subgraph_ordered_nodes->back();
+  nccl_subgraph_info->begin_op_global_order = op_node2global_order.at(nccl_subgraph_info->begin_op);
+  nccl_subgraph_info->end_op_global_order = op_node2global_order.at(nccl_subgraph_info->end_op);
+}
+
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
                                              const std::function<void(OpNode*)>& Handler) {
@@ -612,13 +657,85 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   };
 
   std::vector<const OpNode*> ordered_op_nodes;
+  HashMap<const OpNode*, int64_t> op_node2global_order;
   op_graph.TopoForEachNode(op_graph.DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
-                           OpGraphForEachOutDataAndCtrlNode,
-                           [&](const OpNode* node) { ordered_op_nodes.push_back(node); });
+                           OpGraphForEachOutDataAndCtrlNode, [&](const OpNode* node) {
+                             ordered_op_nodes.push_back(node);
+                             op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+                           });
 
+  std::vector<HashSet<const OpNode*>> subgraph_list;
+  FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
+  if (subgraph_list.size() == 0) { return Maybe<void>::Ok(); }
+
+  auto CmpOpNodeOrder = [&](const OpNode* lhs, const OpNode* rhs) {
+    return op_node2global_order.at(lhs) < op_node2global_order.at(rhs);
+  };
+
+  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+
+  HashMap<std::string, PlacementNcclSubGraghsInfo> placement2subgraphs;
+  for (const auto& subgraph : subgraph_list) {
+    const OpNode* rand_node = *subgraph.begin();
+    const ParallelDesc& this_parallel_desc = rand_node->parallel_desc();
+    std::string key = GenParallelConfKey(this_parallel_desc.parallel_conf());
+    const std::shared_ptr<const Shape>& this_time_shape = GetOpNodeTimeShape(rand_node);
+    auto it = placement2subgraphs.find(key);
+    if (it == placement2subgraphs.end()) {
+      it = placement2subgraphs.emplace(key, PlacementNcclSubGraghsInfo()).first;
+      auto& info = it->second;
+      info.parallel_conf_key = key;
+      info.seed_parallel_desc = &this_parallel_desc;
+      info.seed_time_shape = this_time_shape;
+      info.ordered_subgraph.push_back(std::make_shared<InsertNcclSubGraph>());
+      InitInsertNcclSubGraphInfoFromSet(info.ordered_subgraph.back(), subgraph,
+                                        op_node2global_order, CmpOpNodeOrder);
+    } else {
+      auto& info = it->second;
+      if (SharedPtrShapeEqual(info.seed_time_shape, this_time_shape)) {
+        CHECK(this_parallel_desc.EqualsIgnoringHierarchy(*info.seed_parallel_desc));
+        std::shared_ptr<InsertNcclSubGraph> nccl_subgraph_info =
+            std::make_shared<InsertNcclSubGraph>();
+        InitInsertNcclSubGraphInfoFromSet(nccl_subgraph_info, subgraph, op_node2global_order,
+                                          CmpOpNodeOrder);
+        CHECK_GT(info.ordered_subgraph.size(), 0);
+        const auto& first_graph = info.ordered_subgraph.front();
+        const auto& last_graph = info.ordered_subgraph.back();
+        int64_t first_order = first_graph->begin_op_global_order;
+        int64_t last_order = last_graph->end_op_global_order;
+        if (nccl_subgraph_info->end_op_global_order < first_order) {
+          if (IsReachable(nccl_subgraph_info->end_op->op().op_name(),
+                          first_graph->begin_op->op().op_name())) {
+            info.ordered_subgraph.insert(info.ordered_subgraph.begin(), nccl_subgraph_info);
+          }
+        } else if (nccl_subgraph_info->begin_op_global_order > last_order) {
+          if (IsReachable(last_graph->end_op->op().op_name(),
+                          nccl_subgraph_info->begin_op->op().op_name())) {
+            info.ordered_subgraph.push_back(nccl_subgraph_info);
+          }
+        } else {
+          auto before = info.ordered_subgraph.begin();
+          auto next = before + 1;
+          while (next != info.ordered_subgraph.end()) {
+            if ((*before)->end_op_global_order < nccl_subgraph_info->begin_op_global_order
+                && nccl_subgraph_info->end_op_global_order < (*next)->begin_op_global_order) {
+              if (IsReachable((*before)->end_op->op().op_name(),
+                              nccl_subgraph_info->begin_op->op().op_name())
+                  && IsReachable(nccl_subgraph_info->end_op->op().op_name(),
+                                 (*next)->begin_op->op().op_name())) {
+                info.ordered_subgraph.insert(next, nccl_subgraph_info);
+              }
+              break;
+            }
+            before = next;
+            next++;
+          }
+        }
+      }
+    }
+  }
+  // NOTE:delete
   HashSet<const OpNode*> subgraph;
-  FindMaxConnectedSubgraphForGpuExecOrder(&subgraph, op_graph, ordered_op_nodes);
-  if (subgraph.size() <= 1) { return Maybe<void>::Ok(); }
 
   std::vector<const OpNode*> subgraph_order;
   HashMap<const OpNode*, int64_t> node2order;
@@ -638,7 +755,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
   const OpNode* first_node = subgraph_order.at(0);
   HashMap<std::string, OperatorConf> subgraph_op_name2conf;
   subgraph_op_name2conf.emplace(first_node->op().op_name(), first_node->op().op_conf());
-  auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   for (int64_t i = 1; i < subgraph_order.size(); ++i) {
     const OpNode* this_node = subgraph_order.at(i);
     const OpNode* pre_node = subgraph_order.at(i - 1);
