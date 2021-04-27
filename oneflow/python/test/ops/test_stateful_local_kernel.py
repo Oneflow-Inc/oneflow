@@ -39,7 +39,6 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         y = op(x, axis=2)[0]
         test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
 
-
     def test_stateful_local_kernel(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())

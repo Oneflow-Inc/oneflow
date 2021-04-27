@@ -445,7 +445,7 @@ struct LocalCallOpKernelUtil final {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     operand->set_user_opkernel(
         JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
-    operand->mut_opkernel()->UpdateOpAttrs(operand->attrs());
+    operand->mut_opkernel()->ResetOpAttrs(operand->attrs());
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InferOutputTensorDescs(operand));
     JUST(InitOutputBlobs(operand));

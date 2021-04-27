@@ -416,8 +416,9 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
-void StatefulOpKernel::UpdateOpAttrs(const AttrValueMap& attrs) {
+void StatefulOpKernel::ResetOpAttrs(const AttrValueMap& attrs) {
   auto* user_op_conf = op_conf_->mutable_user_conf();
+  user_op_conf->clear_attr();
   for (const auto& it : attrs) {
     AttrValue attr_val;
     it.second->ToProto(&attr_val);
