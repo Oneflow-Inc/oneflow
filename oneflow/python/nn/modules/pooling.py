@@ -38,12 +38,43 @@ from oneflow.python.nn.modules.utils import (
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
 
 
 @oneflow_export("nn.AvgPool2d")
 class AvgPool2d(Module):
-    r"""
+    r"""Performs the 2d-average pooling on the input.
+
+    In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
+    output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
+    can be precisely described as:
+        
+    .. math::
+
+        out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
+                               input(N_i, C_j, stride[0] \times h + m, stride[1] \times w + n)
+
+    Args:
+        kernel_size (Union[int, Tuple[int, int]]):  An int or list of ints that has length 1, 2. The size of the window for each dimension of the input Tensor.
+        strides (Union[int, Tuple[int, int]]): An int or list of ints that has length 1, 2. The stride of the sliding window for each dimension of the input Tensor.
+        padding (Tuple[int, int]): An int or list of ints that has length 1, 2. Implicit zero padding to be added on both sides.
+        ceil_mode (bool, default to False): when True, will use ceil instead of floor to compute the output shape.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+
+        of_avgpool2d = flow.nn.AvgPool2d(
+            kernel_size=(3, 2),
+            padding=0,
+            stride=(2, 1),
+        )
+        x = flow.Tensor(shape=(1, 1, 10, 10))
+        of_y = of_avgpool2d(x)
+
     """
 
     def __init__(
@@ -52,9 +83,9 @@ class AvgPool2d(Module):
         stride: Optional[_size_2_t] = None,
         padding: _size_2_t = 0,
         ceil_mode: bool = False,
-        count_include_pad: bool = None,
+        count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
-        name=None,
+        name: Optional[str] = None,
     ):
         super().__init__()
         kernel_size = _pair(kernel_size)
@@ -64,14 +95,10 @@ class AvgPool2d(Module):
         elif isinstance(padding, tuple):
             padding = [0, 0, *padding]
         else:
-            raise ValueError("padding should only be a int or a tuple of 2 ints")
-
-        ceil_mode = ceil_mode
+            raise ValueError("padding should only be an int or a tuple of 2 ints")
 
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
-        count_include_pad = count_include_pad
-        divisor_override = divisor_override
 
         _channel_pos = "channels_first"
 

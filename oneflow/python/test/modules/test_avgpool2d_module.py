@@ -220,13 +220,14 @@ g_samples = [
                 ]
             ]
         ),
+        "ceil_mode": False,
     }
 ]
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
     def test_AvgPool2d(test_case):
@@ -236,11 +237,12 @@ class TestModule(flow.unittest.TestCase):
                 kernel_size=sample["kernel"],
                 padding=sample["padding"],
                 stride=sample["stride"],
+                ceil_mode=sample["ceil_mode"],
             )
             x = flow.Tensor(sample["in"])
             of_y = of_avgpool2d(x)
-            assert of_y.numpy().shape == sample["out"].shape
-            assert np.allclose(of_y.numpy(), sample["out"], 1e-4, 1e-4)
+            test_case.assertTrue(of_y.numpy().shape == sample["out"].shape)
+            test_case.assertTrue(np.allclose(of_y.numpy(), sample["out"], 1e-4, 1e-4))
 
 
 if __name__ == "__main__":
