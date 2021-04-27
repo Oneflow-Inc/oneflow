@@ -21,15 +21,94 @@ limitations under the License.
 
 namespace oneflow {
 
-class AttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
+class AttrValueMap {
  public:
-  using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
+  AttrValueMap()
+      : attrs_(new HashMap<std::string, std::shared_ptr<cfg::AttrValue>>{}),
+        attr_names_(new HashSet<std::string>{}) {}
+
+  virtual ~AttrValueMap() = default;
+
+  size_t size() const { return attr_names_->size(); }
+
+  Maybe<const AttrValueMap> base() const { return base_attrs_; }
+
+  Maybe<bool> HasAttr(const std::string& attr_name) const {
+    CHECK_OR_RETURN(attr_names_);
+    return attr_names_->count(attr_name);
+  }
 
   template<typename T>
   Maybe<T> GetAttr(const std::string& attr_name) const;
 
+  class iterator {
+   public:
+    using NameSetIter = HashSet<std::string>::const_iterator;
+    using AttrValueMapIter = HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::const_iterator;
+    using const_reference = HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::const_reference;
+    using const_pointer = HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::const_pointer;
+
+    const iterator() = default;
+    explicit iterator(const AttrValueMap* self, const NameSetIter& it, const NameSetIter& end_it)
+        : self_(self), name_set_it_(it), name_set_end_it_(end_it) {
+      UpdateAttrValueMapIter();
+    }
+
+    iterator& operator++() {
+      ++name_set_it_;
+      UpdateAttrValueMapIter();
+      return *this;
+    }
+    explicit operator bool() const { return name_set_it_ != name_set_end_it_; }
+
+    const_reference operator*() const { return attr_value_map_it_.operator*(); }
+    const_pointer operator->() const { return attr_value_map_it_.operator->(); }
+
+    bool operator==(const iterator& other) const {
+      return self_ == other.self_ && name_set_it_ == other.name_set_it_;
+    }
+    bool operator!=(const iterator& other) const {
+      return self_ != other.self_ || name_set_it_ != other.name_set_it_;
+    }
+
+   private:
+    void UpdateAttrValueMapIter() {
+      if (name_set_it_ != name_set_end_it_) { attr_value_map_it_ = self_->Find(*name_set_it_); }
+    }
+
+   private:
+    const AttrValueMap* self_;
+    NameSetIter name_set_it_;
+    NameSetIter name_set_end_it_;
+
+    AttrValueMapIter attr_value_map_it_;
+  };
+
+  friend class iterator;
+
+  iterator begin() const { return iterator(this, attr_names_->begin()); }
+  iterator end() const { return iterator(this, attr_names_->end()); }
+
+ protected:
+  iterator::AttrValueMapIter Find(const std::string& attr_name) const;
+
+  std::shared_ptr<AttrValueMap> base_attrs_;
+  std::shared_ptr<HashMap<std::string, std::shared_ptr<cfg::AttrValue>>> attrs_;
+  std::shared_ptr<HashSet<std::string>> attr_names_;
+};
+
+class MutableAttrValueMap : public AttrValueMap {
+ public:
+  MutableAttrValueMap() : AttrValueMap() {}
+  MutableAttrValueMap(const MutableAttrValueMap&) = delete;
+  virtual ~MutableAttrValueMap() = default;
+
+  MutableAttrValueMap& operator=(const MutableAttrValueMap&) = delete;
+
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+
+  static Maybe<AttrValueMap> Compose(const AttrValueMap& base, const AttrValueMap& current);
 };
 
 }  // namespace oneflow
