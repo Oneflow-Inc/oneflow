@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/framework/config_def.h"
-#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -54,7 +53,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -77,7 +76,7 @@ class MatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -109,7 +108,7 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -129,8 +128,17 @@ class MatmulGpuHalfKernel final : public user_op::OpKernel {
 #endif
 
 #ifdef WITH_CUDA
-REGISTER_USER_KERNEL("matmul").SetCreateFn<MatmulGpuHalfKernel>().SetIsMatchedHob(
-    (user_op::HobDeviceTag() == "gpu") & (user_op::HobDataType("a", 0) == DataType::kFloat16));
+REGISTER_USER_KERNEL("matmul")
+    .SetCreateFn<MatmulGpuHalfKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
+                     & (user_op::HobDataType("a", 0) == DataType::kFloat16))
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.has_input("_add_to_output", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
+      }
+      return Maybe<void>::Ok();
+    });
 #endif
 
 template<DeviceType device_type, typename T>
@@ -155,7 +163,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
     const double alpha = ctx->Attr<double>("alpha");
     double beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
       CHECK_EQ(add_to_output->shape(), out->shape());
@@ -180,7 +188,7 @@ class BatchMatmulFloatingKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -213,7 +221,7 @@ class BatchMatmulGpuHalfKernel final : public user_op::OpKernel {
 
     int32_t m = 0, n = 0, k = 0;
     std::tie(m, n, k) = CalcMNK(a->shape(), out->shape(), trans_a);
-    bool has_add_to_output = ctx->user_op_conf().has_input("_add_to_output", 0);
+    bool has_add_to_output = ctx->has_input("_add_to_output", 0);
     if (has_add_to_output) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), out->data_type());
@@ -237,12 +245,122 @@ REGISTER_USER_KERNEL("batch_matmul")
                      & (user_op::HobDataType("a", 0) == DataType::kFloat16))
     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
                              user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.user_op_conf().has_input("_add_to_output", 0)) {
+      if (ctx.has_input("_add_to_output", 0)) {
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));
       }
       return Maybe<void>::Ok();
     });
 
+#endif
+
+template<DeviceType device_type, typename T>
+class BroadcastMatmulKernel final : public user_op::OpKernel {
+ public:
+  BroadcastMatmulKernel() = default;
+  ~BroadcastMatmulKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    double alpha = ctx->Attr<double>("alpha");
+    bool transpose_a = ctx->Attr<bool>("transpose_a");
+    bool transpose_b = ctx->Attr<bool>("transpose_b");
+    CHECK(!transpose_a);
+
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    double beta = 0.0;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      Memcpy<device_type>(
+          ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      beta = 1.0;
+    }
+
+    CHECK_EQ(b->shape().NumAxes(), 2);
+    CHECK_GT(a->shape().NumAxes(), b->shape().NumAxes());
+    int64_t m = a->shape().Count(0, a->shape().NumAxes() - 1);
+    int64_t k = a->shape().At(a->shape().NumAxes() - 1);
+    int64_t n = -1;
+    if (!transpose_b) {
+      n = b->shape().At(1);
+      CHECK_EQ(k, b->shape().At(0));
+    } else {
+      n = b->shape().At(0);
+      CHECK_EQ(k, b->shape().At(1));
+    }
+
+    CBLAS_TRANSPOSE trans_a = transpose_a ? CblasTrans : CblasNoTrans;
+    CBLAS_TRANSPOSE trans_b = transpose_b ? CblasTrans : CblasNoTrans;
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k, alpha,
+                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+  }
+};
+
+template<DeviceType device_type, typename T>
+class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
+ public:
+  BroadcastMatmulGradBKernel() = default;
+  ~BroadcastMatmulGradBKernel() = default;
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    double alpha = ctx->Attr<double>("alpha");
+    double beta = 0.0;
+    const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
+    const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
+    CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
+    int64_t m = a->shape().At(a->shape().NumAxes() - 1);
+    int64_t n = b->shape().At(b->shape().NumAxes() - 1);
+
+    NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasTrans, CblasNoTrans, m, n, k, alpha,
+                                       a->dptr<T>(), b->dptr<T>(), beta, out->mut_dptr<T>());
+  }
+};
+
+#define REGISTER_BROADCAST_MATMUL_KERNEL(device, dtype)                                         \
+  REGISTER_USER_KERNEL("broadcast_matmul")                                                      \
+      .SetCreateFn<BroadcastMatmulKernel<device, dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      })
+
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kCPU, float);
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kCPU, double);
+#ifdef WITH_CUDA
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float);
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
+REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float16);
+#endif
+
+#define REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("broadcast_matmul_grad_b")               \
+      .SetCreateFn<BroadcastMatmulGradBKernel<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)      \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))
+
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, float);
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, double);
+#ifdef WITH_CUDA
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float);
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, double);
+REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kGPU, float16);
 #endif
 
 }  // namespace oneflow

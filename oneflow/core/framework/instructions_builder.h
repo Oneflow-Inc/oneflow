@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/id_generator.h"
@@ -39,6 +40,12 @@ limitations under the License.
 #include "oneflow/core/job/parallel_signature.cfg.h"
 
 namespace oneflow {
+
+namespace one {
+class StatefulOpKernel;
+class TensorTuple;
+class MirroredTensor;
+}  // namespace one
 
 namespace detail {
 
@@ -107,6 +114,17 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
+
+  Maybe<void> ReleaseTensor(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+                            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
+  Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
+                                   const std::function<void(uint64_t)>& callback,
+                                   const std::string& modifier);
+
+  Maybe<void> ReadTensorShapeByCallback(
+      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
@@ -226,6 +244,11 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     auto* id_cache = Global<symbol::IdCache<T>>::Get();
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
+
+  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+                                one::EagerBlobObjectList input_eager_blob_objects,
+                                one::EagerBlobObjectList output_eager_blob_objects,
+                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,

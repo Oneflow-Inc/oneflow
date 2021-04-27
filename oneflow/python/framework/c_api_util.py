@@ -31,57 +31,62 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 from oneflow.core.framework.config_def_pb2 import ConfigDef
 from oneflow.core.job.inter_user_job_info_pb2 import InterUserJobInfo
 import oneflow
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-
-oneflow_api = oneflow.oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+from oneflow.python.oneflow_export import oneflow_export
 
 
 def CurrentResource():
-    resource = oneflow_api.CurrentResource()
+    resource = oneflow._oneflow_internal.CurrentResource()
     return text_format.Parse(resource, resource_util.Resource())
 
 
 def EnvResource():
-    resource = oneflow_api.EnvResource()
+    resource = oneflow._oneflow_internal.EnvResource()
     return text_format.Parse(resource, resource_util.Resource())
+
+
+def InitDefaultEnv(env_proto):
+    assert type(env_proto) is env_pb2.EnvProto
+    env_proto_str = text_format.MessageToString(env_proto)
+    oneflow._oneflow_internal.InitDefaultEnv(env_proto_str)
 
 
 def InitEnv(env_proto):
     assert type(env_proto) is env_pb2.EnvProto
     env_proto_str = text_format.MessageToString(env_proto)
-    oneflow_api.InitEnv(env_proto_str)
+    oneflow._oneflow_internal.InitEnv(env_proto_str)
 
 
 def InitLazyGlobalSession(config_proto):
     assert type(config_proto) is job_set_pb.ConfigProto
     config_proto_str = text_format.MessageToString(config_proto)
-    oneflow_api.InitLazyGlobalSession(config_proto_str)
+    oneflow._oneflow_internal.InitLazyGlobalSession(config_proto_str)
 
 
 def GetInterUserJobInfo():
-    inter_user_job_info = oneflow_api.GetSerializedInterUserJobInfo()
+    inter_user_job_info = oneflow._oneflow_internal.GetSerializedInterUserJobInfo()
     return text_format.Parse(inter_user_job_info, InterUserJobInfo())
 
 
 def JobBuildAndInferCtx_Open(job_name):
     job_name = str(job_name)
-    oneflow_api.JobBuildAndInferCtx_Open(job_name)
+    oneflow._oneflow_internal.JobBuildAndInferCtx_Open(job_name)
 
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
     serialized_job_conf = str(job_config_proto)
-    oneflow_api.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
 
 
 def CurJobBuildAndInferCtx_SetTrainConf(train_config_proto):
     serialized_train_conf = str(text_format.MessageToString(train_config_proto))
-    oneflow_api.CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf)
 
 
 def InferOpConf(op_conf_proto, upstream_signature):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
     serialized_upstream_sig = str(text_format.MessageToString(upstream_signature))
-    op_attribute_str = oneflow_api.InferOpConf(
+    op_attribute_str = oneflow._oneflow_internal.InferOpConf(
         serialized_op_conf, serialized_upstream_sig,
     )
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
@@ -92,60 +97,70 @@ def IsInterfaceOpConf(op_conf):
     field_number = op_conf_util.OperatorConf.DESCRIPTOR.fields_by_name[
         op_type_field
     ].number
-    return oneflow_api.IsInterfaceOpTypeCase(field_number)
+    return oneflow._oneflow_internal.IsInterfaceOpTypeCase(field_number)
 
 
 def GetOpParallelSymbolId(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    return oneflow_api.GetOpParallelSymbolId(serialized_op_conf)
+    return oneflow._oneflow_internal.GetOpParallelSymbolId(serialized_op_conf)
 
 
 def CheckAndCompleteUserOpConf(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    new_op_conf = oneflow_api.CheckAndCompleteUserOpConf(serialized_op_conf)
+    new_op_conf = oneflow._oneflow_internal.CheckAndCompleteUserOpConf(
+        serialized_op_conf
+    )
     return text_format.Parse(new_op_conf, op_conf_util.OperatorConf())
 
 
 def CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = oneflow_api.CurJobBuildAndInferCtx_AddAndInferConsistentOp
+    add_and_infer = (
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferConsistentOp
+    )
     op_attribute_str = add_and_infer(serialized_op_conf)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
 def CurJobBuildAndInferCtx_AddAndInferMirroredOp(op_conf_proto):
     serialized_op_conf = str(text_format.MessageToString(op_conf_proto))
-    add_and_infer = oneflow_api.CurJobBuildAndInferCtx_AddAndInferMirroredOp
+    add_and_infer = (
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddAndInferMirroredOp
+    )
     op_attribute_str = add_and_infer(serialized_op_conf)
     return text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
 
 
 def CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn):
     lbn = str(lbn)
-    oneflow_api.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLossLogicalBlobName(lbn)
 
 
 def CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(lbi_and_uuid):
     serialized = str(text_format.MessageToString(lbi_and_uuid))
-    oneflow_api.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(serialized)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_AddLbiAndDiffWatcherUuidPair(
+        serialized
+    )
 
 
 def JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    return oneflow_api.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)
+    return oneflow._oneflow_internal.JobBuildAndInferCtx_IsMirroredBlob(job_name, lbn)
 
 
 def JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    return oneflow_api.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(job_name, lbn)
+    return oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetNumSubLbi(
+        job_name, lbn
+    )
 
 
 def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(
+    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_MirroredBlobGetSerializedSubLbi(
         job_name, lbn, index
     )
     return text_format.Parse(ret, logical_blob_id_util.LogicalBlobId())
@@ -154,7 +169,7 @@ def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    axis_str = oneflow_api.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
+    axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
         job_name, lbn
     )
     int_list = text_format.Parse(axis_str, record_util.Int64List())
@@ -164,28 +179,28 @@ def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
 def JobBuildAndInferCtx_GetDataType(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    dtype = oneflow_api.JobBuildAndInferCtx_GetDataType(job_name, lbn)
+    dtype = oneflow._oneflow_internal.JobBuildAndInferCtx_GetDataType(job_name, lbn)
     return int(dtype)
 
 
 def JobBuildAndInferCtx_IsDynamic(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
+    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_IsDynamic(job_name, lbn)
     return ret
 
 
 def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    ret = oneflow_api.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
+    ret = oneflow._oneflow_internal.JobBuildAndInferCtx_DisableBoxing(job_name, lbn)
     return ret
 
 
 def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    split_axis_str = oneflow_api.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
+    split_axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
         job_name, lbn
     )
     split_axis = text_format.Parse(split_axis_str, dtype_util.OptInt64())
@@ -198,7 +213,7 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
     GetParallelConf = (
-        oneflow_api.JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
+        oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedParallelConfFromProducerView
     )
     parallel_conf = GetParallelConf(job_name, lbn)
     parallel_conf = text_format.Parse(parallel_conf, placement_pb.ParallelConf())
@@ -213,32 +228,33 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     serialized_parallel_conf = str(parallel_conf)
-    ofrecord = oneflow_api.GetMachine2DeviceIdListOFRecordFromParallelConf(
+    ofrecord = oneflow._oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
         serialized_parallel_conf
     )
     return text_format.Parse(ofrecord, record_util.OFRecord())
 
 
 def GetFunctionConfigDef():
-    func_config_def = oneflow_api.GetFunctionConfigDef()
+    func_config_def = oneflow._oneflow_internal.GetFunctionConfigDef()
     return text_format.Parse(func_config_def, ConfigDef())
 
 
 def GetScopeConfigDef():
-    scope_config_def = oneflow_api.GetScopeConfigDef()
+    scope_config_def = oneflow._oneflow_internal.GetScopeConfigDef()
     return text_format.Parse(scope_config_def, ConfigDef())
 
 
-def GetOpAttributes():
-    op_attributes = oneflow_api.GetSerializedOpAttributes()
+def GetInterfaceOpAttributes():
+    op_attributes = oneflow._oneflow_internal.GetSerializedInterfaceOpAttributes()
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
+@oneflow_export("experimental.get_job_set")
 def GetJobSet():
-    job_set = oneflow_api.GetSerializedJobSet()
+    job_set = oneflow._oneflow_internal.GetSerializedJobSet()
     return text_format.Parse(job_set, job_set_pb.JobSet())
 
 
 def GetCurrentJob():
-    serialized_job = oneflow_api.GetSerializedCurrentJob()
+    serialized_job = oneflow._oneflow_internal.GetSerializedCurrentJob()
     return text_format.Parse(serialized_job, job_pb.Job())

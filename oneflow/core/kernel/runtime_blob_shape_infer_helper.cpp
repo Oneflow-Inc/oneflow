@@ -77,12 +77,11 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
 }
 
 BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_op,
-                                                       const RtBlobDesc& rt_blob_desc) {
-  BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
-  if (blob_desc != nullptr) { return blob_desc; }
-  blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_dynamic());
-  bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
-  return blob_desc;
+                                                       const BlobDesc& blob_desc) {
+  auto it = bn_in_op2blob_desc_.find(bn_in_op);
+  if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+  if (!it->second) { it->second.reset(new BlobDesc(blob_desc)); }
+  return it->second.get();
 }
 
 void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob) {

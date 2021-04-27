@@ -13,17 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
+#define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 
-Maybe<bool> IsShuttingDown();
+class AttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
+ public:
+  using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
 
-Maybe<void> SetShuttingDown();
+  template<typename T>
+  Maybe<T> GetAttr(const std::string& attr_name) const;
+
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_

@@ -28,6 +28,18 @@ limitations under the License.
 namespace oneflow {
 namespace eager {
 
+class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CpuLocalCallOpKernelInstructionType() = default;
+  ~CpuLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuLocalCallOpKernelInstructionType>("cpu.LocalCallOpKernel"));
+
 class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
   CpuCallOpKernelInstructionType() = default;

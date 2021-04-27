@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
 namespace oneflow {
@@ -116,7 +115,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return RtBlobDesc(*(it->second)).ByteSizeOfBlobBody() == 0;
+        return it->second->ByteSizeOfBlobBody() == 0;
       });
 }
 
@@ -159,8 +158,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
-  return RtBlobDesc(*SoleBlobDesc()).AlignedTotalByteSize()
-         == RtBlobDesc(*(rhs->SoleBlobDesc())).AlignedTotalByteSize();
+  return SoleBlobDesc()->AlignedTotalByteSize() == rhs->SoleBlobDesc()->AlignedTotalByteSize();
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

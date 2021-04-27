@@ -16,16 +16,21 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
 namespace eager {
@@ -113,6 +118,45 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
   eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
   return Maybe<void>::Ok();
 }
+
+void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
+  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  CHECK(static_cast<bool>(phy_instr_operand));
+  const auto* ptr =
+      dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
+  CHECK_NOTNULL(ptr);
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
+  ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
+}
+
+class ReadTensorShapeByCallbackInstructionType : public vm::InstructionType {
+ public:
+  ReadTensorShapeByCallbackInstructionType() = default;
+  ~ReadTensorShapeByCallbackInstructionType() override = default;
+
+  using stream_type = vm::ControlStreamType;
+
+  void Compute(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
+    // do nothing
+  }
+
+  void Infer(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
+    const auto& phy_instr_operand = instr_msg->phy_instr_operand();
+    CHECK(static_cast<bool>(phy_instr_operand));
+    const auto* ptr =
+        dynamic_cast<const vm::ReadTensorShapeArgCbPhyInstrOperand*>(phy_instr_operand.get());
+    CHECK_NOTNULL(ptr);
+    ptr->callback()(ptr->eager_blob_object()->blob_desc().shape_ptr());
+  }
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+
+COMMAND(vm::RegisterInstructionType<ReadTensorShapeByCallbackInstructionType>(
+    "ReadTensorShapeByCallback"));
 
 }  // namespace eager
 }  // namespace oneflow
