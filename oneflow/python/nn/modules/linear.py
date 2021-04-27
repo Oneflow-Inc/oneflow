@@ -24,21 +24,25 @@ import math
 
 @oneflow_export("nn.Identity")
 class Identity(Module):
-    r"""A placeholder identity operator that is argument-insensitive.
+    """A placeholder identity operator that is argument-insensitive.
 
-    Args:
-        args: any argument (unused)
-        kwargs: any keyword argument (unused)
+    For example: 
 
-    Examples::
+    .. code-block:: python 
 
-        >>> m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-        >>> input = flow.Tensor(np.random.rand(2, 3, 4, 5))
-        >>> output = m(input)
+        import numpy as np
+        import oneflow as flow
+
+        m = flow.nn.Identity()
+        input = flow.Tensor(np.random.rand(2, 3, 4, 5))
+
+        output = m(input)
+
+        # output = input
 
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         super().__init__()
 
     def forward(self, input: Tensor) -> Tensor:
@@ -47,6 +51,59 @@ class Identity(Module):
 
 @oneflow_export("nn.Linear")
 class Linear(Module):
+    """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
+
+    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+
+    Args:
+        
+        - in_features: size of each input sample
+
+        - out_features: size of each output sample
+
+        - bias: If set to ``False``, the layer will not learn an additive bias. Default: ``True``
+
+    Shape:
+        - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
+          additional dimensions and :math:`H_{in} = {in\_features}`
+        
+        - Output: :math:`(N, *, H_{out})` where all but the last dimension
+          are the same shape as the input and :math:`H_{out} = {out\_features}`.
+
+    Attributes:
+
+        - weight: the learnable weights of the module of shape :math:`({out\_features}, {in\_features})`. The values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where :math:`(k = 1 / {in\_features})`
+        
+        - bias: the learnable bias of the module of shape :math:`({out\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where :math:`(k = 1 / {in\_features})`
+
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import numpy as np
+        import oneflow as flow
+
+        linear = flow.nn.Linear(3, 8, False)
+        input_arr = np.array(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ]
+        )
+        x = flow.Tensor(input_arr)
+        out = linear(x)
+
+        # out.shape (8, 8)
+
+    """
+
     def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
         super().__init__()
 
