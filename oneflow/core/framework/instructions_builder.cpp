@@ -1558,8 +1558,8 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   const auto& instruction_list = sess->instruction_list();
   const auto& eager_symbol_list = sess->eager_symbol_list();
-  InstructionsBuilder instructions_builder(id_generator, instruction_list.get(), eager_symbol_list.get(), 
-                                           _ReleaseLogicalObject);
+  InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
+                                           eager_symbol_list.get(), _ReleaseLogicalObject);
   Build(&instructions_builder);
   JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
@@ -1570,7 +1570,8 @@ Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) 
   vm::InstructionMsgList instruction_list;
   eager::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
-                                           &instruction_list, &eager_symbol_list, _ReleasePhysicalObject);
+                                           &instruction_list, &eager_symbol_list,
+                                           _ReleasePhysicalObject);
   Build(&instructions_builder);
   JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));

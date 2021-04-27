@@ -63,13 +63,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list, eager::cfg::EagerSymbolList* eager_symbol_list)
+                               vm::InstructionMsgList* instruction_list,
+                               eager::cfg::EagerSymbolList* eager_symbol_list)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
         eager_symbol_list_(eager_symbol_list),
         release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      vm::InstructionMsgList* instruction_list, eager::cfg::EagerSymbolList* eager_symbol_list,
+                      vm::InstructionMsgList* instruction_list,
+                      eager::cfg::EagerSymbolList* eager_symbol_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
