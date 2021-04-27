@@ -247,7 +247,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite:
-          ["cuda", "cuda_op", "cpu", "xla", "cuda_op_eager", "cpu_op_eager"]
+          ["cuda", "cuda_op", "cpu", "xla", "cuda_op_eager", "cpu_op_eager", "cuda_eager"]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
@@ -260,6 +260,10 @@ jobs:
           - test_suite: "cuda_op_eager"
             os: [self-hosted, linux, gpu]
             allow_fail: true
+            build_env: build.cuda.env
+          - test_suite: "cuda_eager"
+            os: [self-hosted, linux, gpu]
+            allow_fail: false
             build_env: build.cuda.env
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
@@ -368,6 +372,20 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
+      - name: Tensor API test
+        if: matrix.test_suite == 'cuda_eager'
+        run: |
+          docker run \
+            $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_tensor_test.sh"
+      - name: Module API test
+        if: matrix.test_suite == 'cuda_eager'
+        run: |
+          docker run \
+            $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_module_test.sh"
       - name: Op test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
         run: |
