@@ -52,7 +52,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   explicit UserOpKernelRegContext(const UserOp* user_op,
                                   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx)
-      : user_op::KernelRegContext(user_op::UserOpConfWrapper(user_op->op_conf())) {
+      : user_op_conf_(user_op->op_conf()) {
     const auto& op_conf = user_op->op_conf();
     CHECK(op_conf.has_user_conf());
 
@@ -100,7 +100,10 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
  private:
+  const user_op::UserOpConfWrapper user_op_conf_;
   ArgVec inputs_;
   ArgVec outputs_;
   DeviceType device_type_;
@@ -109,7 +112,7 @@ class UserOpKernelRegContext final : public user_op::KernelRegContext {
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
-class UserOpInferContext : public user_op::InferContext {
+class UserOpInferContext final : public user_op::InferContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 

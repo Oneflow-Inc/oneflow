@@ -94,7 +94,7 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device,
     std::shared_ptr<StatefulOpKernel>& kernel = it->second;
     if (!attrs.empty()) {
       std::shared_ptr<OperatorConf> op_conf = one::BuildOpConf(*this, attrs, device.of_type());
-      kernel->UpdateOpConf(*op_conf);
+      kernel->UpdateOpConf(op_conf);
     }
     return kernel;
   }
