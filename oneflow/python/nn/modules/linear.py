@@ -51,6 +51,7 @@ class Linear(Module):
 
         self.use_bias = bias
         self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
+        self.bias = None
 
         if bias:
 
@@ -75,10 +76,11 @@ class Linear(Module):
             .Attr("alpha", 1.0)
             .Build()
         )
-        # self.reset_parameters()
+        self.reset_parameters()
 
     def reset_parameters(self) -> None:
         flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+
         if self.bias is not None:
             fan_in, _ = flow.nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
