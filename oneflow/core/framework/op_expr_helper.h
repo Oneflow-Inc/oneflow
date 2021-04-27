@@ -28,6 +28,9 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name);
 Maybe<one::UserOpExpr> AddOp();
 Maybe<one::UserOpExpr> AddOp(const std::string& name);
 
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype);
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name);
+
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 

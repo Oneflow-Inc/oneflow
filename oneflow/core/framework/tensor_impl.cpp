@@ -69,17 +69,16 @@ Maybe<void> EagerConsistentTensorImpl::set_blob_object(
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
                                                  const std::shared_ptr<const DType>& dtype,
                                                  const std::shared_ptr<const Device>& device,
-                                                 bool requires_grad, bool is_leaf, bool retain_grad)
+                                                 bool requires_grad, bool is_leaf)
     : EagerMirroredTensorImpl(shape, dtype, device,
                               std::make_shared<TensorStorage>(device->parallel_desc_ptr()),
-                              requires_grad, is_leaf, retain_grad) {}
+                              requires_grad, is_leaf) {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
     const std::shared_ptr<const Device>& device,
-    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf,
-    bool retain_grad)
-    : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(device, requires_grad, is_leaf),
       shape_(shape),
       dtype_(dtype),
       tensor_storage_(tensor_storage),
