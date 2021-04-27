@@ -377,7 +377,7 @@ jobs:
         run: |
           docker run \
             $extra_docker_args \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Module API test
@@ -385,7 +385,7 @@ jobs:
         run: |
           docker run \
             $extra_docker_args \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Op test
