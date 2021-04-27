@@ -416,15 +416,17 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
-void StatefulOpKernel::ResetOpAttrs(const AttrValueMap& attrs) {
-  auto* user_op_conf = op_conf_->mutable_user_conf();
-  user_op_conf->clear_attr();
+void StatefulOpKernel::ResetDynamicOpAttrs(const AttrValueMap& attrs) {
+  // TODO(jianhao): get attr directly from attrs, remove the copy of OperatorConf and
+  // UserOpConfWrapper here
+  std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>(*op_conf_);
+  auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
     it.second->ToProto(&attr_val);
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
-  *user_op_conf_ = user_op::UserOpConfWrapper(op_conf_);
+  *user_op_conf_ = user_op::UserOpConfWrapper(op_conf);
 }
 }  // namespace one
 }  // namespace oneflow

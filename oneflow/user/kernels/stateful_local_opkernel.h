@@ -266,7 +266,7 @@ class StatefulOpKernel final {
     UpdateInferContext(nullptr, nullptr);
   }
 
-  void ResetOpAttrs(const AttrValueMap& attrs);
+  void ResetDynamicOpAttrs(const AttrValueMap& attrs);
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
