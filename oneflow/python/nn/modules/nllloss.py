@@ -24,7 +24,7 @@ import numpy as np
 @oneflow_export("nn.NLLLoss")
 class NLLLoss(Module):
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "mean",
+        self, weight=None, ignore_index: int = None, reduction: str = "none",
     ) -> None:
         super().__init__()
         if weight != None:
@@ -46,18 +46,18 @@ class NLLLoss(Module):
         input = flow.negative(input)
         mask = np.array(target[0:n].numpy())
 
-        input = [input[i, int(mask[i]),].numpy() for i in range(n)]
+        input = [input[i, int(mask[i]),] for i in range(n)]
         # print(input[0].numpy())
 
         if self.reduction == "sum":
             loss = 0
             for x in input:
-                loss += x
-            return loss
+                loss += x.numpy()
+            return flow.Tensor(loss)
         elif self.reduction == "mean":
             loss = 0
             for x in input:
-                loss += x
-            return loss / n
+                loss += x.numpy()
+            return flow.Tensor(loss / n)
         else:
-            return flow.cat(input)
+            return flow.cat(input, axis=0)
