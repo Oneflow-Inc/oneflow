@@ -112,7 +112,7 @@ class DeviceInferContext {
   virtual bool HasAttr(const std::string& attr_name) const = 0;
 
  protected:
-  InferContext() = default;
+  DeviceInferContext() = default;
   virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
 };
 

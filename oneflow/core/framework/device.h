@@ -32,7 +32,7 @@ class Device final {
   ~Device() = default;
   Device operator=(const Device&) = default;
   const std::string& type() const { return type_; }
-  std::string of_type() const;
+  Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
   size_t hash_value() const { return hash_value_; }
@@ -47,6 +47,8 @@ class Device final {
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
+
+  Maybe<const std::string&> local_call_instruction_name() const;
 
  private:
   Device(const std::string& type, int64_t device_id);

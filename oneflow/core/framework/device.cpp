@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/device/memory_case_util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -37,7 +38,7 @@ Device::Device(const std::string& type, int64_t device_id)
 }
 
 Maybe<void> Device::Init() {
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(of_type()));
+  DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id);
   return Maybe<void>::Ok();
 }
@@ -52,12 +53,26 @@ const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
   return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
 }
 
-std::string Device::of_type() const {
-  if (type_ == "cuda") {
-    return "gpu";
-  } else {
-    return type_;
-  }
+Maybe<const std::string&> Device::of_type() const {
+  static const HashMap<string, std::string> type2device_tag{
+    {"cpu", "cpu"},
+    {"cuda", "gpu"},
+    {"gpu", "gpu"},
+    {"cuda_h2d", "gpu"},
+    {"cuda_d2h", "gpu"},
+  };
+  return MapAt(type2device_tag, type());
+}
+
+Maybe<const std::string&> Device::local_call_instruction_name() const {
+  static const HashMap<string, std::string> type2instr_name{
+    {"cpu", "cpu.LocalCallOpKernel"},
+    {"cuda", "gpu.LocalCallOpKernel"},
+    {"gpu", "gpu.LocalCallOpKernel"},
+    {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
+    {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
+  };
+  return MapAt(type2instr_name, type());
 }
 
 std::string Device::ToString() const {
@@ -75,7 +90,7 @@ Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device)
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
   return std::const_pointer_cast<const ParallelDesc>(
-      JUST(ParallelDesc::New(device.of_type(), {machine_device_id}, nullptr)));
+      JUST(ParallelDesc::New(JUST(device.of_type()), {machine_device_id}, nullptr)));
 }
 
 Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {

@@ -90,10 +90,10 @@ Maybe<void> NaiveInterpret(
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
 
+  const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   auto build_instruction = [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
-    JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                    op_parallel_desc));
-    return Maybe<void>::Ok();
+    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                      op_parallel_desc, instr_type_name);
   };
   JUST(PhysicalRun(build_instruction));
   return Maybe<void>::Ok();

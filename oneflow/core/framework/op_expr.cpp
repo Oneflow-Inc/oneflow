@@ -83,7 +83,7 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const
 
   OperatorConf op_conf;
   BuildOpConf(&op_conf, {});
-  op_conf.set_device_tag(device.of_type());
+  op_conf.set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(device));
   const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, device.mem_case(), parallel_desc,
