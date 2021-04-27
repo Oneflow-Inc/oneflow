@@ -167,7 +167,7 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferSbpSignatureFn(InferSbpSignatureFn infer_sbp_signature_fn) {
+OpRegistry& OpRegistry::SetInferSbpSignatureFn(SbpSignatureInferFn infer_sbp_signature_fn) {
   result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
   return *this;
 }
@@ -183,13 +183,13 @@ OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify
 }
 
 OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
-    InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn) {
+    OutputBlobTimeShapeInferFn infer_output_blob_time_shape_fn) {
   result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
   return *this;
 }
 
 OpRegistry& OpRegistry::SetInferParallelDistributionFn(
-    InferParallelDistributionFn infer_parallel_distribution_fn) {
+    ParallelDistributionInferFn infer_parallel_distribution_fn) {
   result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
   return *this;
 }
