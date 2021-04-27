@@ -702,7 +702,7 @@ def register_tensor_op(op_name):
         setattr(
             Tensor,
             op_name,
-            lambda self, *args, **kwargs: method(self, *args, **kwargs),
+            method
         )
         return method
     return set_tensor_op
