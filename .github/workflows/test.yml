@@ -247,7 +247,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite:
-          ["cuda", "cuda_op", "cpu", "xla", "cuda_op_eager", "cpu_op_eager", "cuda_eager"]
+          ["cuda", "cuda_op", "cuda_eager", "cpu", "xla", "cuda_op_eager", "cpu_op_eager"]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
@@ -257,13 +257,13 @@ jobs:
             os: [self-hosted, linux, gpu]
             allow_fail: false
             build_env: build.cuda.env
-          - test_suite: "cuda_op_eager"
-            os: [self-hosted, linux, gpu]
-            allow_fail: true
-            build_env: build.cuda.env
           - test_suite: "cuda_eager"
             os: [self-hosted, linux, gpu]
             allow_fail: false
+            build_env: build.cuda.env
+          - test_suite: "cuda_op_eager"
+            os: [self-hosted, linux, gpu]
+            allow_fail: true
             build_env: build.cuda.env
           - test_suite: "cpu"
             os: [self-hosted, linux, cpu]
