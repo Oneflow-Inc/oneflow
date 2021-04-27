@@ -61,6 +61,12 @@ import oneflow.python.framework.register_class_method_util as register_class_met
 INVALID_SPLIT_AXIS = oneflow._oneflow_internal.INVALID_SPLIT_AXIS
 
 register_class_method_util.RegisterMethod4Class()
+oneflow._oneflow_internal.RegisterGILForeignLockHelper()
+
+import oneflow.python.framework.env_util as env_util
+
+env_util.init_default_physical_env()
+del env_util
 
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
@@ -74,6 +80,8 @@ __original_exit__ = sys.exit
 
 def custom_exit(returncode):
     if returncode != 0:
+        import oneflow
+
         oneflow._oneflow_internal.MasterSendAbort()
     __original_exit__(returncode)
 

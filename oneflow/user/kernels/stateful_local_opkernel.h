@@ -231,8 +231,8 @@ class StatefulOpKernel final {
   static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
                                      const std::shared_ptr<MemoryCase>& mem_case,
                                      const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                                     const ArgVec* indexed_input_pairs,
-                                     const ArgVec* indexed_output_pairs);
+                                     const std::shared_ptr<ArgVec> indexed_input_pairs,
+                                     const std::shared_ptr<ArgVec> indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
@@ -253,6 +253,11 @@ class StatefulOpKernel final {
   }
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
     return compute_local_dep_object_;
+  }
+
+  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    data_type_infer_fn_(UpdateInferContext(inputs, outputs));
+    UpdateInferContext(nullptr, nullptr);
   }
 
  private:
@@ -291,8 +296,8 @@ class StatefulOpKernel final {
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
+  std::shared_ptr<ArgVec> indexed_input_pairs_;
+  std::shared_ptr<ArgVec> indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;

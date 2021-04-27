@@ -13,21 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
-
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/plan.pb.h"
+#ifndef ONEFLOW_API_FOREIGN_LOCK_HELPER_H
+#define ONEFLOW_API_FOREIGN_LOCK_HELPER_H
+#include <functional>
 
 namespace oneflow {
-
-class RuntimeBuffersScope final {
+class ForeignLockHelper {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RuntimeBuffersScope);
-  RuntimeBuffersScope(const JobConfs& job_confs);
-  ~RuntimeBuffersScope();
+  virtual void WithScopedRelease(const std::function<void()>&) const = 0;
 };
-
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
+#endif  // ONEFLOW_API_FOREIGN_LOCK_HELPER_H

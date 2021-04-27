@@ -13,21 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
-#define ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/job/plan.pb.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-class RuntimeBuffersScope final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RuntimeBuffersScope);
-  RuntimeBuffersScope(const JobConfs& job_confs);
-  ~RuntimeBuffersScope();
-};
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("SetShuttingDown", []() { return SetShuttingDown(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_RUNTIME_BUFFERS_SCOPE_H_
