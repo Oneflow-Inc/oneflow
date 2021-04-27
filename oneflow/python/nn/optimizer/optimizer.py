@@ -121,7 +121,8 @@ class SGD(Optimizer):
                 if "momentum" in self._default_options:
                     # TODO(Wang Yinggang): Use flow.zeros_like instead of numpy
                     self._state[param]["momentum_buf"] = flow.Tensor(
-                        np.zeros(param.shape), device=oneflow._oneflow_internal.device("cuda")
+                        np.zeros(param.shape),
+                        device=oneflow._oneflow_internal.device("cuda"),
                     )
 
         if "momentum" in self._default_options.keys():
@@ -159,7 +160,8 @@ class SGD(Optimizer):
         for param_group in self._param_groups:
             # TODO(Liang Depeng): remove device setting
             lr_tensor = flow.Tensor(
-                [param_group.options["lr"]], device=oneflow._oneflow_internal.device("cuda")
+                [param_group.options["lr"]],
+                device=oneflow._oneflow_internal.device("cuda"),
             )
             for param in param_group.parameters:
                 if param.grad is None:

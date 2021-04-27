@@ -61,10 +61,14 @@ class _NormBase(Module):
         self.track_running_stats = track_running_stats
         if self.affine:
             self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features, device=oneflow._oneflow_internal.device("cuda"))
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                )
             )
             self.bias = flow.nn.Parameter(
-                flow.Tensor(num_features, device=oneflow._oneflow_internal.device("cuda"))
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                )
             )
         else:
             self.register_parameter("weight", None)
@@ -72,11 +76,15 @@ class _NormBase(Module):
         if self.track_running_stats:
             self.register_buffer(
                 "running_mean",
-                flow.Tensor(num_features, device=oneflow._oneflow_internal.device("cuda")),
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                ),
             )
             self.register_buffer(
                 "running_var",
-                flow.Tensor(num_features, device=oneflow._oneflow_internal.device("cuda")),
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                ),
             )
         else:
             self.register_parameter("running_mean", None)
