@@ -34,6 +34,7 @@ namespace one {
 class TensorStorage final {
  public:
   explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  explicit TensorStorage(const std::shared_ptr<eager::TensorBuffer>& tensor_buffer);
   ~TensorStorage();
 
   using ReleaserHookT = std::function<void(const std::shared_ptr<eager::TensorBuffer>&)>;
