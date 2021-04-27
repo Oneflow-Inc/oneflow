@@ -749,7 +749,7 @@ Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.set_string_symbol(str);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -762,7 +762,7 @@ Maybe<void> InstructionsBuilder::InitJobConfSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_job_conf_symbol()->CopyFrom(*job_conf);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -775,7 +775,7 @@ Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_parallel_conf_symbol()->CopyFrom(*parallel_conf);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -788,7 +788,7 @@ Maybe<void> InstructionsBuilder::NewScopeSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_scope_symbol()->CopyFrom(*scope_proto);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -816,7 +816,7 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -829,7 +829,7 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
   eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
-  eager_symbol_list_.mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
+  eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
   return Maybe<void>::Ok();
 }
 
@@ -1557,7 +1557,8 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   const auto& instruction_list = sess->instruction_list();
-  InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
+  const auto& eager_symbol_list = sess->eager_symbol_list();
+  InstructionsBuilder instructions_builder(id_generator, instruction_list.get(), eager_symbol_list.get(), 
                                            _ReleaseLogicalObject);
   Build(&instructions_builder);
   JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
@@ -1567,8 +1568,9 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
 
 Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
+  eager::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
-                                           &instruction_list, _ReleasePhysicalObject);
+                                           &instruction_list, &eager_symbol_list, _ReleasePhysicalObject);
   Build(&instructions_builder);
   JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
