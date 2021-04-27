@@ -30,7 +30,7 @@ class TestModule(flow.unittest.TestCase):
 
         of_out = flow.cat([input1, input2])
         # of_out = input.exp()
-        np_out = np.concatenate(input1.numpy(), input2.numpy())
+        np_out = np.concatenate((input1.numpy(), input2.numpy()), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 

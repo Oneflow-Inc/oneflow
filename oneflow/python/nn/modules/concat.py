@@ -30,19 +30,41 @@ class Cat(Module):
 
     def __init__(self, axis=0, max_dim_size: Optional[int] = None, n=2) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("concat")
-            .Input("in", n)
-            .Output("out")
-            .Attr("axis", axis)
-            .Attr("max_dim_size", max_dim_size)
-            .Build()
-        )
+        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
+        self.axis = axis
+        self.max_dim_size = max_dim_size
 
     def forward(self, inputs):
-        return self._op(*inputs)[0]
 
+        if len(inputs) == 1:
+            return inputs[0]
 
-# @register_op_by_module("cat")
-# def concat_op(inputs):
-#     return Cat(n=len(inputs))(inputs)
+        axis = self.axis
+        max_dim_size = self.max_dim_size
+        assert len(inputs) >= 2
+        if axis < 0:
+            axis += len(inputs[0].shape)
+        assert axis >= 0 and axis < len(
+            inputs[0].shape
+        ), "axis must be in range [0, num_axes of inputs)"
+
+        first_input_shape = inputs[0].shape
+        dynamic_dim_size = 0
+        for input in inputs:
+            assert len(input.shape) == len(first_input_shape)
+            for i in range(len(input.shape)):
+                if i == axis:
+                    dynamic_dim_size += input.shape[i]
+                else:
+                    assert input.shape[i] == first_input_shape[i]
+
+        if max_dim_size is None:
+            max_dim_size = dynamic_dim_size
+        else:
+            assert (
+                max_dim_size >= dynamic_dim_size
+            ), "max diemension size {} is too small to hold concatenated static dimension size {} along the given axis".format(
+                max_dim_size, dynamic_dim_size
+            )
+
+        return self._op(*inputs, axis=axis, max_dim_size=max_dim_size)[0]
