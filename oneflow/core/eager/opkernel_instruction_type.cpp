@@ -558,7 +558,6 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> InferOutputTensorDescs(LocalCallOpKernelPhyInstrOperand* operand) {
-    JUST(WithOpInferContext(operand, operand->opkernel().DataTypeInferFn()));
     return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
   }
 
