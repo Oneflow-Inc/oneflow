@@ -72,7 +72,6 @@ def zeros_(tensor):
     tensor.fill_(0)
 
 
-@oneflow_export("nn.init._calculate_fan_in_and_fan_out")
 def _calculate_fan_in_and_fan_out(tensor):
     dimensions = tensor.ndimension()
     if dimensions < 2:

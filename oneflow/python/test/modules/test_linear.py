@@ -23,9 +23,9 @@ import oneflow.typing as tp
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestLinear(flow.unittest.TestCase):
     def test_identity(test_case):
         m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
         x = flow.Tensor(np.random.rand(2, 3, 4, 5))
@@ -52,7 +52,7 @@ class TestModule(flow.unittest.TestCase):
         flow.nn.init.constant_(linear.weight, 2.3)
         of_out = linear(x)
         np_out = np.matmul(input_arr, np_weight)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
     def test_linear_v2(test_case):
         linear = flow.nn.Linear(3, 8)
@@ -78,7 +78,7 @@ class TestModule(flow.unittest.TestCase):
         of_out = linear(x)
         np_out = np.matmul(input_arr, np_weight)
         np_out += np_bias
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
 if __name__ == "__main__":

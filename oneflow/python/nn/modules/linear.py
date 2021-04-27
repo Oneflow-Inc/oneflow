@@ -17,6 +17,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
 from typing import Optional, List, Tuple
 import math
 
@@ -54,9 +55,7 @@ class Linear(Module):
         self.bias = None
 
         if bias:
-
             self.bias = flow.nn.Parameter(flow.Tensor(out_features))
-
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
                 .Input("a")
@@ -82,7 +81,7 @@ class Linear(Module):
         flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
 
         if self.bias is not None:
-            fan_in, _ = flow.nn.init._calculate_fan_in_and_fan_out(self.weight)
+            fan_in, _ = _calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
