@@ -89,7 +89,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
                             /*out*/ ReadyInstructionList* ready_instruction_list);
   void TryReleaseFinishedInstructions(
           Stream* stream, /*out*/ ReadyInstructionList* ready_instruction_list);
-  void FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list);
+  void FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list);
   void MakeInstructions(TmpPendingInstrMsgList*, /*out*/ NewInstructionList* ret_instruction_list);
   template<int64_t (*TransformLogicalObjectId)(int64_t), typename DoEachT>
   void ForEachMirroredObject(Id2LogicalObject* id2logical_object,

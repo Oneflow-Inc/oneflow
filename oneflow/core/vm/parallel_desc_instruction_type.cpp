@@ -32,6 +32,8 @@ class NewParallelDescSymbolInstructionType final : public InstructionType {
   NewParallelDescSymbolInstructionType() = default;
   ~NewParallelDescSymbolInstructionType() override = default;
 
+  bool ResettingIdToObjectMap() const override { return true; }
+
   using stream_type = ControlStreamType;
 
   // clang-format off

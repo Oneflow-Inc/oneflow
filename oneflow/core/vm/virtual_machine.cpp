@@ -27,7 +27,7 @@ namespace vm {
 
 namespace {
 
-bool IsSourceInstruction(const InstructionMsg& instr_msg) {
+bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
   for (const auto& instr_operand : instr_msg.operand()) {
     if (instr_operand->has_const_operand()) { return false; }
     if (instr_operand->has_mut_operand()) { return false; }
@@ -90,12 +90,13 @@ void VirtualMachine::TryReleaseFinishedInstructions(
   }
 }
 
-void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list) {
+void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
-    const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-    if (stream_type.IsControlStreamType() && !instr_type_id.instruction_type().IsSequential()
-        && IsSourceInstruction(*instr_msg)) {
+    if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
+      const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+      CHECK(stream_type.IsControlStreamType());
+      CHECK(HasImmediateOperandsOnly(*instr_msg));
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
@@ -291,7 +292,7 @@ void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
     phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
   } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMut2MirroredObject(
+    phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
   } else {
     UNIMPLEMENTED();
@@ -639,7 +640,7 @@ void VirtualMachine::Schedule() {
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunSourceInstructions(&tmp_pending_msg_list);
+    FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
     NewInstructionList new_instruction_list;
     MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);
