@@ -80,6 +80,8 @@ __original_exit__ = sys.exit
 
 def custom_exit(returncode):
     if returncode != 0:
+        import oneflow
+
         oneflow._oneflow_internal.MasterSendAbort()
     __original_exit__(returncode)
 

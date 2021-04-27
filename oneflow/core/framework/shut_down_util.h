@@ -20,9 +20,9 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<bool> IsShuttingDown();
+bool IsShuttingDown();
 
-Maybe<void> SetShuttingDown();
+void SetShuttingDown();
 
 }  // namespace oneflow
 

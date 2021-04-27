@@ -62,32 +62,35 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
-  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator)
+  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
+                               vm::InstructionMsgList* instruction_list,
+                               eager::cfg::EagerSymbolList* eager_symbol_list)
       : id_generator_(id_generator),
-        instruction_list_(std::make_shared<vm::InstructionMsgList>()),
-        eager_symbol_list_(std::make_shared<eager::cfg::EagerSymbolList>()),
+        instruction_list_(instruction_list),
+        eager_symbol_list_(eager_symbol_list),
         release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      const std::shared_ptr<vm::InstructionMsgList>& instruction_list,
-                      const std::shared_ptr<eager::cfg::EagerSymbolList>& symbol_list,
+                      vm::InstructionMsgList* instruction_list,
+                      eager::cfg::EagerSymbolList* eager_symbol_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
-        eager_symbol_list_(symbol_list),
+        eager_symbol_list_(eager_symbol_list),
         release_object_(release_object) {}
-  ~InstructionsBuilder() = default;
+  ~InstructionsBuilder() {
+    instruction_list_->Clear();
+    eager_symbol_list_->clear_eager_symbol();
+  }
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
-  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const {
-    return instruction_list_;
-  }
-  const std::shared_ptr<eager::cfg::EagerSymbolList>& eager_symbol_list() const {
-    return eager_symbol_list_;
-  }
+  const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
+  const eager::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
   const std::function<void(compatible_py::Object*)>& object_releaser() const {
     return release_object_;
   }
+
+  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
   Maybe<compatible_py::BlobObject> PackPhysicalBlobsToLogicalBlob(
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& physical_blob_objects,
@@ -114,6 +117,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<compatible_py::BlobObject> MakeReferenceBlobObject(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
+
+  Maybe<void> ReleaseTensor(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+                            const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
                                    const std::function<void(uint64_t)>& callback,
@@ -191,8 +197,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
+          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> StatelessCall(
@@ -201,8 +206,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
       const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          const std::shared_ptr<InstructionsBuilder>&,
-          const std::shared_ptr<compatible_py::BlobObject>&,
+          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
 
   Maybe<void> NoBoxingStatelessCall(
@@ -216,7 +220,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
           bn_in_op2blob_object,
-      const std::function<std::shared_ptr<ParallelDesc>(const std::shared_ptr<InstructionsBuilder>&,
+      const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
                                                         const std::shared_ptr<ParallelDesc>&,
                                                         const std::string&)>& TryReplaceDeviceTag);
 
@@ -429,22 +433,19 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                                  mut_eager_symbol_list(), conf);
   }
 
-  vm::InstructionMsgList* mut_instruction_list() { return instruction_list_.get(); }
-  eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_.get(); }
+  eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
-  std::shared_ptr<vm::InstructionMsgList> instruction_list_;
-  std::shared_ptr<eager::cfg::EagerSymbolList> eager_symbol_list_;
+  vm::InstructionMsgList* instruction_list_;
+  eager::cfg::EagerSymbolList* eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
 
-Maybe<void> LogicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
 
-Maybe<void> PhysicalRun(
-    const std::function<void(const std::shared_ptr<InstructionsBuilder>&)>& Build);
+Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
 
 }  // namespace oneflow
 
