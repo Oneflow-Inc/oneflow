@@ -23,18 +23,15 @@ namespace oneflow {
 
 class Shape;
 
-namespace eager {
+namespace vm {
 
 class EagerBlobObject;
-}
-
-namespace vm {
 
 // read tensor shape arg callback physical instruction operand
 class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   ReadTensorShapeArgCbPhyInstrOperand(
-      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const std::function<void(const std::shared_ptr<const Shape>&)>& callback)
       : eager_blob_object_(eager_blob_object), callback_(callback) {}
   ~ReadTensorShapeArgCbPhyInstrOperand() = default;
@@ -42,7 +39,7 @@ class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
   const std::function<void(const std::shared_ptr<const Shape>&)>& callback() const {
     return callback_;
   }
-  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
 
@@ -60,7 +57,7 @@ class ReadTensorShapeArgCbPhyInstrOperand : public PhyInstrOperand {
   }
 
  private:
-  std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
+  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(const std::shared_ptr<const Shape>&)> callback_;
 };
 

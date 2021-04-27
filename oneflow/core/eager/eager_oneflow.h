@@ -28,36 +28,26 @@ namespace vm {
 namespace cfg {
 
 class InstructionListProto;
-
-}  // namespace cfg
-}  // namespace vm
-
-namespace eager {
-namespace cfg {
-
 class EagerSymbolList;
 
 }  // namespace cfg
-}  // namespace eager
-
-namespace eager {
 
 class EagerOneflow final {
  public:
   Maybe<void> RunLogicalInstruction(vm::InstructionMsgList* instruction_list,
-                                    const eager::cfg::EagerSymbolList& eager_symbol_list);
+                                    const vm::cfg::EagerSymbolList& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(
       const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction);
 
   Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
-                                     const eager::cfg::EagerSymbolList& eager_symbol_list);
+                                     const vm::cfg::EagerSymbolList& eager_symbol_list);
 
   Maybe<void> RunPhysicalInstruction(vm::InstructionMsgList* instruction_list,
-                                     const eager::EagerSymbolList& eager_symbol_list);
+                                     const vm::EagerSymbolList& eager_symbol_list);
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_ONEFLOW_H_
