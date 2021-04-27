@@ -26,11 +26,11 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -62,11 +62,11 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -98,11 +98,11 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -137,11 +137,11 @@ REGISTER_USER_OP("_nccl_logical_s2s")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
       const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
