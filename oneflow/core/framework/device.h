@@ -42,7 +42,6 @@ class Device final {
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
-  static const std::unordered_set<std::string> type_supported;
 
  private:
   const std::string type_;
