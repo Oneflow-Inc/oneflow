@@ -381,7 +381,7 @@ REGISTER_USER_OP("sgd_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
-    .SetInferDataTypeFn(InferSGDUpdateDataType);
+    .SetDataTypeInferFn(InferSGDUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
@@ -415,7 +415,7 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
-    .SetInferDataTypeFn(InferIndexedSlicesSGDUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
 
 REGISTER_USER_OP("momentum_update")
     .Input("model")
@@ -447,7 +447,7 @@ REGISTER_USER_OP("momentum_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferMomentumUpdateDataType);
+    .SetDataTypeInferFn(InferMomentumUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -486,7 +486,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferIndexedSlicesMomentumUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 
 REGISTER_USER_OP("adam_update")
     .Input("model")
@@ -518,7 +518,7 @@ REGISTER_USER_OP("adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetInferDataTypeFn(InferAdamUpdateDataType);
+    .SetDataTypeInferFn(InferAdamUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("model")
@@ -559,7 +559,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetInferDataTypeFn(InferIndexedSlicesAdamUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
 REGISTER_USER_OP("lamb_update")
     .Input("m")
@@ -581,7 +581,7 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     // every bn has sbp broadcast signature
     .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetInferDataTypeFn(InferLambUpdateDataType);
+    .SetDataTypeInferFn(InferLambUpdateDataType);
 
 REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Input("learning_rate")
@@ -595,7 +595,7 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
           *ctx->IsDynamic4ArgNameAndIndex("learning_rate", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("learning_rate", 0);
       return Maybe<void>::Ok();
     });
@@ -649,7 +649,7 @@ REGISTER_USER_OP("rmsprop_update")
         SetInputArgModifierMutable(GetInputArgModifierFn, "mean_gradient", 0);
       }
     })
-    .SetInferDataTypeFn(InferRmsPropUpdateDataType);
+    .SetDataTypeInferFn(InferRmsPropUpdateDataType);
 
 REGISTER_USER_OP("lars_update")
     .Input("model")
@@ -683,7 +683,7 @@ REGISTER_USER_OP("lars_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferLarsUpdateDataType);
+    .SetDataTypeInferFn(InferLarsUpdateDataType);
 
 }  // namespace
 

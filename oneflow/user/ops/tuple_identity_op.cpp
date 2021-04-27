@@ -30,7 +30,7 @@ REGISTER_USER_OP("tuple_identity")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t in_size = ctx->input_size("in");
       CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
       for (int64_t i = 0; i < in_size; ++i) {
@@ -38,7 +38,7 @@ REGISTER_USER_OP("tuple_identity")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+    .SetSbpSignatureInferFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       SbpSignature* signature = ctx->mutable_sbp_signature();
       const SbpSignature& sbp_signature_conf = ctx->sbp_signature_conf();
       auto* bn2sbp = signature->mutable_bn_in_op2sbp_parallel();

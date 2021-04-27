@@ -58,7 +58,7 @@ REGISTER_USER_OP("cast_like")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dtype_like_tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
       user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
