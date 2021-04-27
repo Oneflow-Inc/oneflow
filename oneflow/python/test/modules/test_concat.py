@@ -24,13 +24,31 @@ import oneflow as flow
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_concat(test_case):
+    def test_concat_v1(test_case):
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         of_out = flow.cat([input1, input2])
-        # of_out = input.exp()
         np_out = np.concatenate((input1.numpy(), input2.numpy()), axis=0)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_concat_v2(test_case):
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+
+        of_out = flow.cat([input1, input2], axis=1)
+        np_out = np.concatenate((input1.numpy(), input2.numpy()), axis=1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_concat_v3(test_case):
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+
+        of_out = flow.cat([input1, input2, input3], axis=1)
+        np_out = np.concatenate(
+            (input1.numpy(), input2.numpy(), input3.numpy()), axis=1
+        )
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 

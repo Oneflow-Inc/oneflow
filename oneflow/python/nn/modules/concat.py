@@ -28,13 +28,16 @@ class Cat(Module):
     """
     """
 
-    def __init__(self, axis=0, max_dim_size: Optional[int] = None, n=2) -> None:
+    def __init__(self, axis=0, max_dim_size: Optional[int] = None, n: int = 0) -> None:
         super().__init__()
-        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
         self.axis = axis
         self.max_dim_size = max_dim_size
+        self.n = n
 
     def forward(self, inputs):
+        n = len(inputs)
+
+        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
 
         if len(inputs) == 1:
             return inputs[0]
