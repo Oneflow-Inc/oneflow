@@ -21,6 +21,7 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("Less")
+@register_tensor_op_by_module("lt")
 @register_op_by_module("lt")
 class Less(Module):
     r"""Returns the truth value of :math:`x < y` element-wise.
@@ -57,8 +58,3 @@ class Less(Module):
 
     def forward(self, x, y):
         return self._op(x, y)[0]
-
-
-@register_tensor_op_by_module("lt")
-def less_op(tensor1, tensor2):
-    return Less()(tensor1, tensor2)

@@ -22,6 +22,7 @@ from typing import Optional
 
 
 @oneflow_export("Expand_Dims")
+@register_tensor_op_by_module("tmp.expand_dims")
 @register_op_by_module("tmp.expand_dims")
 class Expand_Dims(Module):
     """This operator inserts a dimention at the specified axis in the input Tensor.
@@ -62,8 +63,3 @@ class Expand_Dims(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-@register_tensor_op_by_module("tmp.expand_dims")
-def expand_dims_op(input, /, axis):
-    return Expand_Dims(axis)(input)

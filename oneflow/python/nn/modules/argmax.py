@@ -25,6 +25,7 @@ from oneflow.python.ops.transpose_util import (
 
 
 @oneflow_export("Argmax")
+@register_tensor_op_by_module("argmax")
 @register_op_by_module("argmax")
 class Argmax(Module):
     """The op computes the index with the largest value of a Tensor at specified axis.
@@ -73,8 +74,3 @@ class Argmax(Module):
             x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
             x = flow.tmp.squeeze(x, axis=[axis])
             return x
-
-
-@register_tensor_op_by_module("argmax")
-def argmax_op(tensor, /, axis=-1):
-    return Argmax(axis)(tensor)

@@ -22,6 +22,7 @@ from typing import Optional, Sequence
 
 
 @oneflow_export("Transpose")
+@register_tensor_op_by_module("tmp.transpose")
 @register_op_by_module("tmp.transpose")
 class Transpose(Module):
     r"""This operator transposes the specified axis of input Tensor.
@@ -76,8 +77,3 @@ class Transpose(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-@register_tensor_op_by_module("tmp.transpose")
-def transpose_op(tensor, /, perm=None, conjugate=False, batch_axis_non_change=False):
-    return Transpose(perm, conjugate, batch_axis_non_change)(tensor)

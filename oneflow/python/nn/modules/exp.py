@@ -21,6 +21,7 @@ from oneflow.python.framework.tensor import register_op_by_module
 
 
 @oneflow_export("Exp")
+@register_tensor_op_by_module("exp")
 @register_op_by_module("exp")
 class Exp(Module):
     """This operator computes the exponential of Tensor.
@@ -57,8 +58,3 @@ class Exp(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-@register_tensor_op_by_module("exp")
-def exp_op(tensor):
-    return Exp()(tensor)

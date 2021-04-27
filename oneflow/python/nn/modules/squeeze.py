@@ -23,6 +23,7 @@ from typing import Optional, Sequence
 
 
 @oneflow_export("Squeeze")
+@register_tensor_op_by_module("tmp.squeeze")
 @register_op_by_module("tmp.squeeze")
 class Squeeze(Module):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
@@ -67,8 +68,3 @@ class Squeeze(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
-
-@register_tensor_op_by_module("tmp.squeeze")
-def squeeze_op(input, /, axis=None):
-    return Squeeze(axis)(input)

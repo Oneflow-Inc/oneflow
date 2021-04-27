@@ -44,6 +44,7 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.Tanh")
+@register_tensor_op_by_module("tanh")
 @register_op_by_module("tanh")
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
@@ -86,12 +87,8 @@ class Tanh(Module):
         return res
 
 
-@register_tensor_op_by_module("tanh")
-def tanh_op():
-    return Tanh()(tensor)
-
-
 @oneflow_export("nn.GeLU")
+@register_tensor_op_by_module("gelu")
 @register_op_by_module("gelu")
 class GeLU(Module):
     r"""Gelu activation operator.
@@ -133,8 +130,3 @@ class GeLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
-
-
-@register_tensor_op_by_module("gelu")
-def gelu_op(tensor):
-    return GeLU()(tensor)
