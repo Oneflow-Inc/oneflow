@@ -77,29 +77,14 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-namespace {
-std::shared_ptr<OperatorConf> BuildOpConf(const UserOpExpr& user_op_expr, const AttrValueMap& attrs,
-                                          const std::string& device_tag) {
-  std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
-  user_op_expr.BuildOpConf(op_conf.get(), attrs);
-  op_conf->set_device_tag(device_tag);
-  return op_conf;
-}
-}  // namespace
-
-Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device,
-                                                     const AttrValueMap& attrs) const {
+Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
   const auto& it = device2kernel_.find(device);
-  if (it != device2kernel_.end()) {
-    std::shared_ptr<StatefulOpKernel>& kernel = it->second;
-    if (!attrs.empty()) {
-      std::shared_ptr<OperatorConf> op_conf = one::BuildOpConf(*this, attrs, device.of_type());
-      kernel->UpdateOpConf(op_conf);
-    }
-    return kernel;
-  }
+  if (it != device2kernel_.end()) { return it->second; }
 
-  std::shared_ptr<OperatorConf> op_conf = one::BuildOpConf(*this, attrs, device.of_type());
+  std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
+  // attrs will be filled when op is being executing
+  BuildOpConf(op_conf.get(), {});
+  op_conf->set_device_tag(device.of_type());
   DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
   // TODO(jianhao): replace them with device.mem_case_ptr() and device.parallel_desc_ptr() after
   // #4670 is merged

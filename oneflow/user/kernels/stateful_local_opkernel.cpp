@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/attr_value_map.h"
 
 namespace oneflow {
 namespace one {
@@ -310,21 +311,23 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const std::shared_ptr<ArgVec> indexed_input_pairs,
     const std::shared_ptr<ArgVec> indexed_output_pairs) {
   auto opkernel = std::shared_ptr<StatefulOpKernel>(new StatefulOpKernel());
+  opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
-  opkernel->device_tag_ = op_conf->device_tag();
   opkernel->mem_case_ = mem_case;
   opkernel->indexed_input_pairs_ = indexed_input_pairs;
   opkernel->indexed_output_pairs_ = indexed_output_pairs;
   opkernel->need_check_mem_case_ = true;
+
+  const std::string& device_tag = op_conf->device_tag();
   opkernel->op_infer_ctx_.reset(new LocalUserOpInferContext(
       opkernel->user_op_conf_.get(), indexed_input_pairs.get(), indexed_output_pairs.get()));
-  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, opkernel->device_tag_, opkernel->user_op_conf_.get(), indexed_input_pairs.get(),
-      indexed_output_pairs.get()));
+  opkernel->compute_ctx_.reset(
+      new LocalUserKernelComputeContext(nullptr, device_tag, opkernel->user_op_conf_.get(),
+                                        indexed_input_pairs.get(), indexed_output_pairs.get()));
   opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(opkernel->user_op_conf_.get()));
-  opkernel->reg_ctx_.reset(
-      new LocalUserKernelRegContext(opkernel->device_tag_, opkernel->user_op_conf_.get(),
-                                    indexed_input_pairs.get(), indexed_output_pairs.get()));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, opkernel->user_op_conf_.get(),
+                                                         indexed_input_pairs.get(),
+                                                         indexed_output_pairs.get()));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -380,7 +383,7 @@ void StatefulOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_kernel,
   }
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
-      device_ctx, device_tag_, user_op_conf_.get(), indexed_input_pairs_.get(),
+      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), indexed_input_pairs_.get(),
       indexed_output_pairs_.get(), inputs, outputs);
   auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(op_kernel, created_state);
@@ -413,5 +416,14 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
+void StatefulOpKernel::UpdateOpAttrs(const AttrValueMap& attrs) {
+  auto* user_op_conf = op_conf_->mutable_user_conf();
+  for (const auto& it : attrs) {
+    AttrValue attr_val;
+    it.second->ToProto(&attr_val);
+    (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
+  }
+  *user_op_conf_ = user_op::UserOpConfWrapper(op_conf_);
+}
 }  // namespace one
 }  // namespace oneflow

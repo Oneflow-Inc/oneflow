@@ -23,6 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class AttrValueMap;
+
 namespace eager {
 struct LocalCallOpKernelUtil;
 }  // namespace eager
@@ -264,9 +266,7 @@ class StatefulOpKernel final {
     UpdateInferContext(nullptr, nullptr);
   }
 
-  void UpdateOpConf(const std::shared_ptr<const OperatorConf>& op_conf) {
-    *user_op_conf_ = user_op::UserOpConfWrapper(op_conf);
-  }
+  void UpdateOpAttrs(const AttrValueMap& attrs);
 
  private:
   friend struct eager::LocalCallOpKernelUtil;
@@ -298,8 +298,8 @@ class StatefulOpKernel final {
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
+  std::shared_ptr<OperatorConf> op_conf_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::string device_tag_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;

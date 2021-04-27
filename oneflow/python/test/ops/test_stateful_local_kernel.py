@@ -23,6 +23,23 @@ import oneflow as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestStatefulLocalKernel(flow.unittest.TestCase):
+    def test_dynamic_attrs(test_case):
+        x = (
+            flow.builtin_op("constant")
+            .Output("out")
+            .Attr("is_floating_value", True)
+            .Attr("floating_value", 3.0)
+            .Attr("dtype", flow.float32)
+            .Attr("shape", [2, 3])
+            .Build()
+        )()[0]
+        op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
+        y = op(x, axis=1)[0]
+        test_case.assertEqual(y.shape, flow.Size((2, 1, 3)))
+        y = op(x, axis=2)[0]
+        test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
+
+
     def test_stateful_local_kernel(test_case):
         func_config = flow.FunctionConfig()
         func_config.default_logical_view(flow.scope.mirrored_view())

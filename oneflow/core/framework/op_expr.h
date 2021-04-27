@@ -116,7 +116,7 @@ class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
                       const std::vector<std::string>& indexed_obns)
       : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){};
 
-  Maybe<StatefulOpKernel> MutKernel4Device(const Device& device, const AttrValueMap& attrs) const;
+  Maybe<StatefulOpKernel> MutKernel4Device(const Device& device) const;
 
  private:
   mutable HashMap<Device, std::shared_ptr<StatefulOpKernel>> device2kernel_;
