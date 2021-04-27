@@ -80,6 +80,24 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         op_nodes_apply_to_diff.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
         continue;
+      } else if (dst_op_conf.has_user_conf()
+                 && dst_op_conf.user_conf().op_type_name() == "scalar_mul_by_tensor") {
+        int64_t out_count = 0;
+        OpNode* out_node;
+        for (const auto* edge : dst_node->out_edges()) {
+          const OperatorConf& out_op_conf = edge->dst_node()->op().op_conf();
+          if (!out_op_conf.has_user_conf()) { return; }
+          if (out_op_conf.user_conf().op_type_name() == "multi_count_not_finite"
+              || out_op_conf.user_conf().op_type_name() == "count_not_finite") {
+            continue;
+          }
+          out_count++;
+          out_node = edge->dst_node();
+        }
+        if (out_count != 1) { return; }
+        op_nodes_apply_to_diff.push_back(dst_node);
+        dst_node = out_node;
+        continue;
       } else {
         return;
       }
@@ -134,6 +152,12 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
         const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&new_conf, "in_0", values_lbn);
         CHECK_EQ(GenLogicalBlobName(node->op().BnInOp2Lbi("in_0")), old_val);
         values_lbn = GenLogicalBlobName(new_conf.name(), "out_0");
+        job_builder->MutOpsOnlyOnce({new_conf});
+      } else if (new_conf.has_user_conf()
+                 && new_conf.user_conf().op_type_name() == "scalar_mul_by_tensor") {
+        const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&new_conf, "x_0", values_lbn);
+        CHECK_EQ(GenLogicalBlobName(node->op().BnInOp2Lbi("x_0")), old_val);
+        values_lbn = GenLogicalBlobName(new_conf.name(), "y_0");
         job_builder->MutOpsOnlyOnce({new_conf});
       } else {
         UNIMPLEMENTED();
