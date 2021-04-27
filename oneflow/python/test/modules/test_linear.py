@@ -33,7 +33,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
 
     def test_linear_v1(test_case):
-        linear = flow.nn.Linear(3, 8)
+        linear = flow.nn.Linear(3, 8, False)
         input_arr = np.array(
             [
                 [-0.94630778, -0.83378579, -0.87060891],
@@ -55,7 +55,7 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     def test_linear_v2(test_case):
-        linear = flow.nn.Linear(3, 8, bias=False)
+        linear = flow.nn.Linear(3, 8)
         input_arr = np.array(
             [
                 [-0.94630778, -0.83378579, -0.87060891],

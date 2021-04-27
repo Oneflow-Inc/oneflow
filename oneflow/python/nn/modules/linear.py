@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import Tensor
+from oneflow.python.nn.module import Module
 from typing import Optional, List, Tuple
 import math
 
@@ -35,7 +38,7 @@ class Identity(Module):
     """
 
     def __init__(self, *args, **kwargs):
-        super(self).__init__()
+        super().__init__()
 
     def forward(self, input: Tensor) -> Tensor:
         return input
@@ -72,7 +75,7 @@ class Linear(Module):
             .Attr("alpha", 1.0)
             .Build()
         )
-        self.reset_parameters()
+        # self.reset_parameters()
 
     def reset_parameters(self) -> None:
         flow.nn.init.kaiming_uniform_(self.weight, a=math.sqrt(5))
@@ -85,5 +88,5 @@ class Linear(Module):
         res = self._op(x, self.weight)[0]
         if self.use_bias:
             res = self._bias_add_op(res, self.bias)[0]
-        
+
         return res
