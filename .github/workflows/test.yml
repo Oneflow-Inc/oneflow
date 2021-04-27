@@ -377,15 +377,17 @@ jobs:
         run: |
           docker run \
             $extra_docker_args \
+            -e ONEFLOW_TEST_TMP_DIR=$PWD/test/tensor \
             oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_tensor_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Module API test
         if: matrix.test_suite == 'cuda_eager'
         run: |
           docker run \
             $extra_docker_args \
+            -e ONEFLOW_TEST_TMP_DIR=$PWD/test/modules \
             oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_module_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Op test
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
         run: |
