@@ -59,6 +59,7 @@ class ReLU(Module):
         # equal to np.maximum(0, arr)
 
     """
+
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("relu").Input("in").Output("out").Build()

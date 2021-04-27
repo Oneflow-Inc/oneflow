@@ -143,4 +143,3 @@ class MaxPool2d(Module):
 
     def forward(self, x):
         return self._op(x)[0]
-
