@@ -74,7 +74,7 @@ REGISTER_USER_OP("batch_gather")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);

@@ -89,7 +89,7 @@ REGISTER_USER_OP("flatten")
     .Attr<int32_t>("end_dim", -1)
     .SetTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn)
-    .SetInferDataTypeFn(DataTypeInferFn);
+    .SetDataTypeInferFn(DataTypeInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {
