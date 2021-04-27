@@ -64,14 +64,14 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
                                vm::InstructionMsgList* instruction_list,
-                               eager::cfg::EagerSymbolList* eager_symbol_list)
+                               vm::cfg::EagerSymbolList* eager_symbol_list)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
         eager_symbol_list_(eager_symbol_list),
         release_object_([](compatible_py::Object*) {}) {}
   InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
                       vm::InstructionMsgList* instruction_list,
-                      eager::cfg::EagerSymbolList* eager_symbol_list,
+                      vm::cfg::EagerSymbolList* eager_symbol_list,
                       const std::function<void(compatible_py::Object*)>& release_object)
       : id_generator_(id_generator),
         instruction_list_(instruction_list),
@@ -84,7 +84,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
-  const eager::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
+  const vm::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
   const std::function<void(compatible_py::Object*)>& object_releaser() const {
     return release_object_;
@@ -118,7 +118,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
-  Maybe<void> ReleaseTensor(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+  Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
@@ -126,7 +126,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                    const std::string& modifier);
 
   Maybe<void> ReadTensorShapeByCallback(
-      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
@@ -433,13 +433,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                                  mut_eager_symbol_list(), conf);
   }
 
-  eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
+  vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
-  eager::cfg::EagerSymbolList* eager_symbol_list_;
+  vm::cfg::EagerSymbolList* eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
 };
 

@@ -158,5 +158,5 @@ class ReadTensorShapeByCallbackInstructionType : public vm::InstructionType {
 COMMAND(vm::RegisterInstructionType<ReadTensorShapeByCallbackInstructionType>(
     "ReadTensorShapeByCallback"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

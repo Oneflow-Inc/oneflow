@@ -24,7 +24,7 @@ namespace one {
 TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
     : buffer_(std::make_shared<vm::TensorBuffer>()) {}
 
-TensorStorage::TensorStorage(const std::shared_ptr<eager::TensorBuffer>& tensor_buffer)
+TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer)
     : buffer_(tensor_buffer) {}
 
 TensorStorage::~TensorStorage() {
