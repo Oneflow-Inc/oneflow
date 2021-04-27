@@ -13,6 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 from functools import reduce
 from typing import Iterable, List, Optional, Sequence, Union, Tuple
@@ -26,20 +38,19 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("gather")
 def gather(
-    params: oneflow_api.BlobDesc,
-    indices: oneflow_api.BlobDesc,
-    validate_indices: Optional[oneflow_api.BlobDesc] = None,
+    params: oneflow._oneflow_internal.BlobDesc,
+    indices: oneflow._oneflow_internal.BlobDesc,
+    validate_indices: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     axis: Optional[int] = None,
     batch_dims: int = 0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator gathers slices from params `axis` according to indices.
-
     Args:
         params: A `Blob`. The blob from which to gather values. Must be at least rank `axis + 1`.
         indices: A `Blob`. Index blob. Must be in range [0, params.shape[axis]).
@@ -49,18 +60,12 @@ def gather(
         name: A name for the operation (optional).
     Returns:
         A blob. Has the same type as params.
-
     For example:
-
     Example 1:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def gather_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
                     indice: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32)
@@ -69,28 +74,19 @@ def gather(
                                     indices=indice,
                                     axis=1)
             return gather_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         indice = np.array([0, 2]).astype(np.int32)
         out = gather_Job(x, indice)
-
         # out [[1. 3.]
         #      [4. 6.]
         #      [7. 9.]]
-
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def gather_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
                     indice: tp.Numpy.Placeholder(shape=(2, ), dtype=flow.int32)
@@ -99,17 +95,13 @@ def gather(
                                     indices=indice,
                                     axis=0)
             return gather_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         indice = np.array([0, 2]).astype(np.int32)
         out = gather_Job(x, indice)
-
         # out [[1. 2. 3.]
         #      [7. 8. 9.]]
-
     """
     params_ndims = len(params.shape)
     if axis is None:
@@ -158,13 +150,12 @@ def gather(
 
 @oneflow_export("flatten")
 def flatten(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     start_dim: int = 0,
     end_dim: int = -1,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Flattens a contiguous range of dims in a Blob.
-
     Args:
         input: A `Blob`.
         start_dim: The first dim to flatten.
@@ -172,27 +163,19 @@ def flatten(
         name: A name for the operation (optional).
     Returns:
         A `Blob`, has the same type as `input`.
-
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def flatten_Job(input: tp.Numpy.Placeholder(shape=(4, 4, 3, 2), dtype=flow.float32)
         ) -> tp.Numpy:
             flatten_blob = flow.flatten(input, start_dim=1, end_dim=-1)
             return flatten_blob
-
-
         input = np.zeros((4, 4, 3, 2)).astype(np.float32)
         out = flatten_Job(input)
-
         # out.shape (4, 24)
-
     """
     if name is None:
         name = id_util.UniqueStr("Flatten_")
@@ -223,45 +206,36 @@ def infer_shape(x, shape):
 
 @oneflow_export("reshape")
 def reshape(
-    x: oneflow_api.BlobDesc, shape: Sequence[int], name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc,
+    shape: Sequence[int],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator reshapes a Blob.
     If the Blob is dynamic, it will call `flow.dynamic_reshape` automatically
-
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
-
     Args:
         x: A `Blob`.
         shape: Shape of the output blob.
         name: A name for the operation (optional).
     Returns:
         A `Blob`, has the same type as `x`.
-
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def reshape_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
         ) -> tp.Numpy:
             reshape_blob = flow.reshape(x,
                                         shape=[2, 2, 2, -1])
             return reshape_blob
-
-
         x = np.array([[1, 2, 3, 4],
                     [5, 6, 7, 8],
                     [9, 10, 11, 12],
                     [13, 14, 15, 16]]).astype(np.float32)
         out = reshape_Job(x)
-
         # out.shape (2, 2, 2, 2)
-
     """
     x = flow.cast_to_current_logical_view(x)
     assert isinstance(shape, tuple) or isinstance(shape, list)
@@ -300,27 +274,22 @@ def reshape(
 
 @oneflow_export("reshape_like")
 def reshape_like(
-    x: oneflow_api.BlobDesc, like: oneflow_api.BlobDesc, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator reshapes the Blob x to be the same as Blob `like` .
-
     Args:
-        x (oneflow_api.BlobDesc): The input Blob.
-        like (oneflow_api.BlobDesc): A Blob.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        like (oneflow._oneflow_internal.BlobDesc): A Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def reshape_like_Job(x: tp.Numpy.Placeholder(shape=(4, 4), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -330,16 +299,12 @@ def reshape_like(
             reshape_like_blob = flow.reshape_like(x,
                                                 like=like_blob)
             return reshape_like_blob
-
-
         x = np.array([[1, 2, 3, 4],
                     [5, 6, 7, 8],
                     [9, 10, 11, 12],
                     [13, 14, 15, 16]]).astype(np.float32)
         out = reshape_like_Job(x)
-
         # out.shape (2, 2, 4)
-
     """
     if name is None:
         name = id_util.UniqueStr("ReshapeLike_")
@@ -357,26 +322,22 @@ def reshape_like(
 
 @oneflow_export("dynamic_reshape")
 def dynamic_reshape(
-    x: oneflow_api.BlobDesc, shape: Sequence[int], name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc,
+    shape: Sequence[int],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator reshapes a dynamic blob.
-
     Args:
-        x (oneflow_api.BlobDesc): The input Blob.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
         shape (Sequence[int]): The output shape.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def dynamic_reshape_Job(x: tp.Numpy.Placeholder(shape=(1, 3, 64, 64), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -391,12 +352,9 @@ def dynamic_reshape(
             matmul_tensor = flow.matmul(reshape_out1, variable1)
             reshape_out2 = flow.dynamic_reshape(matmul_tensor, (-1, 8, 4))
             return reshape_out2
-
         x = np.random.rand(1, 3, 64, 64).astype(np.float32)
         out = dynamic_reshape_Job(x)
-
         # out.shape (192, 8, 4)
-
     """
     assert isinstance(shape, tuple) or isinstance(shape, list)
     shape = list(shape)
@@ -418,48 +376,37 @@ def dynamic_reshape(
 
 @oneflow_export("transpose")
 def transpose(
-    a: oneflow_api.BlobDesc,
+    a: oneflow._oneflow_internal.BlobDesc,
     perm: Sequence[int] = None,
     conjugate: bool = False,
     batch_axis_non_change: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator transposes the specified axis of input Blob.
-
     Args:
-        a (oneflow_api.BlobDesc): The input Blob.
+        a (oneflow._oneflow_internal.BlobDesc): The input Blob.
         perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
         conjugate (bool, optional): Still Unavailable. Defaults to False.
         batch_axis_non_change (bool, optional): deprecated. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Raises:
         NotImplementedError: The attribute `conjugate` still unavailable.
-
     Returns:
-        oneflow_api.BlobDesc: A transposed blob.
-
+        oneflow._oneflow_internal.BlobDesc: A transposed blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def transpose_Job(x: tp.Numpy.Placeholder(shape=(1, 2, 3), dtype=flow.float32)
         ) -> tp.Numpy:
             transpose_blob = flow.transpose(x,
                                             perm=[2, 0, 1])
             return transpose_blob
-
         x = np.random.randn(1, 2, 3).astype(np.float32)
         out = transpose_Job(x)
-
         # out.shape (3, 1, 2)
-
     """
     assert isinstance(perm, (tuple, list))
 
@@ -483,13 +430,12 @@ def transpose(
 
 @oneflow_export("slice")
 def slice(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     begin: Sequence[int],
     size: Sequence[int],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Extracts a slice from a tensor.
-
     Args:
         x: A `Blob`.
         begin: A list or a tuple, indicate each dimension slice begin, whose length must be equal
@@ -498,19 +444,13 @@ def slice(
         size: A list or a tuple, indicate each dimension slice size, whose length must be equal
             to x's number of dimensions, the first element of beign must be set to None.
         name: A name for the operation (optional).
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def slice_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -518,16 +458,13 @@ def slice(
                                     begin=[None, 0],
                                     size=[None, 2])
             return slice_blob
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         out = slice_Job(x)
-
         # out [[1. 2.]
         #      [4. 5.]
         #      [7. 8.]]
-
     """
     ndim = len(x.shape)
     if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
@@ -621,29 +558,23 @@ def _check_slice_tup_list(slice_tup_list, shape):
 
 @oneflow_export("slice_v2")
 def slice_v2(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
     The operator will slice the Blob according to the `slice_top_list`.
-
     Args:
         x: A `Blob`.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     Note: Because the internal op of OneFlow does not support 0-dimension slice at present, we should
     set the zero element in `slice_tup_list` as `None`.
-
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -657,9 +588,7 @@ def slice_v2(
             return slicev2_blob
         x = np.random.randn(3, 6, 9).astype(np.float32)
         out = slicev2_Job(x)
-
         # out.shape (3, 3, 2)
-
     """
     name = name or id_util.UniqueStr("Slice_")
     if not isinstance(name, str):
@@ -682,19 +611,17 @@ def slice_v2(
 
 @oneflow_export("slice_update")
 def api_slice_update(
-    x: oneflow_api.BlobDesc,
-    update: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    update: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Update a slice of tensor `x`.
-
     Args:
         x: A `Blob`, whose slice will be updated.
         update: A `Blob`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
-
     """
     if name is None:
         name = id_util.UniqueStr("SliceUpdate_")
@@ -782,10 +709,10 @@ def _GetSliceAttrs(slice_tup_list, input_shape):
 
 @oneflow_export("experimental.logical_slice")
 def logical_slice(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
 
     name = id_util.UniqueStr("LogicalSlice_") if name is None else name
     if not isinstance(name, str):
@@ -807,11 +734,11 @@ def logical_slice(
 
 @oneflow_export("experimental.logical_slice_assign")
 def logical_slice_assign(
-    x: oneflow_api.BlobDesc,
-    value: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    value: oneflow._oneflow_internal.BlobDesc,
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
 
     name = id_util.UniqueStr("LogicalSliceAssign_") if name is None else name
     if not isinstance(name, str):
@@ -833,50 +760,38 @@ def logical_slice_assign(
 
 @oneflow_export("reverse")
 def reverse(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     axis: Union[int, Sequence[int]],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator reverses the elements on the assigned axis.
-
     Args:
-        input (oneflow_api.BlobDesc): The input Blob.
+        input (oneflow._oneflow_internal.BlobDesc): The input Blob.
         axis (Union[int, Sequence[int]]): The reverse axis.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Raises:
         ValueError: The name must be a string.
         ValueError: The axis must be a int or a list/tuple of int.
         ValueError: The axis is out of range.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def reverse_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32)) -> tp.Numpy:
             reverse_blob = flow.reverse(x,
                                         axis=0)
             return reverse_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         out = reverse_Job(x)
-
         # out [[7. 8. 9.]
         #      [4. 5. 6.]
         #      [1. 2. 3.]]
-
     """
     if name is None:
         name = id_util.UniqueStr("Reverse_")
@@ -906,35 +821,27 @@ def reverse(
 
 @oneflow_export("concat")
 def concat(
-    inputs: Optional[Sequence[oneflow_api.BlobDesc]] = None,
+    inputs: Optional[Sequence[oneflow._oneflow_internal.BlobDesc]] = None,
     axis: int = 0,
     max_dim_size: Optional[int] = None,
     name: Optional[str] = None,
-    values: Optional[Sequence[oneflow_api.BlobDesc]] = None,
-) -> oneflow_api.BlobDesc:
+    values: Optional[Sequence[oneflow._oneflow_internal.BlobDesc]] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Concatenate two or more `Blob` s at specified axis.
-
     Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
-
     Args:
         inputs: a `list` of `Blob`
         axis: a `int`. `0` by default
         max_dim_size: hint of max dimension size along the given axis
         name: name of this operator. `None` by default
         values: deprecated param, use inputs instead
-
     Returns:
         A `Blob`
-
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def concat_Job() -> tp.Numpy:
             constant_blob_1 = flow.constant(value=1.5,
@@ -947,12 +854,8 @@ def concat(
                                             name="blob2")
             return flow.concat(inputs=[constant_blob_1, constant_blob_2],
                             axis=3)
-
-
         out = concat_Job()
-
         # out.shape (1, 3, 3, 8)
-
     """
     # backward compatible with values param name
     if values is not None:
@@ -970,7 +873,7 @@ def concat(
         inputs[0].shape
     ), "axis must be in range [0, num_axes of inputs)"
 
-    first_input_shape = inputs[0].shape  
+    first_input_shape = inputs[0].shape
     static_dim_size = 0
     dynamic_dim_size = 0
     for input in inputs:
@@ -1010,39 +913,27 @@ def concat(
 
 @oneflow_export("gather_nd")
 def gather_nd(
-    params: oneflow_api.BlobDesc,
-    indices: oneflow_api.BlobDesc,
+    params: oneflow._oneflow_internal.BlobDesc,
+    indices: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator is a high-dimensional extension of `gather`, `indices` is a K-dimensional
     tensor, which is regarded as a index of input Blob `params`.
-
     Each element defines a slice of `params`:
-
     .. math::
-
         output[(i_0,i_1,...,i_{K-2})] = param[indices(i_{0},i_{1},...,i_{K-2})]
-
-
     Args:
-        params (oneflow_api.BlobDesc): The input Blob.
-        indices (oneflow_api.BlobDesc): The slice indices.
+        params (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        indices (oneflow._oneflow_internal.BlobDesc): The slice indices.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     Example 1:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
                         indice: tp.Numpy.Placeholder(shape=(2, 1), dtype=flow.int32)
@@ -1050,26 +941,18 @@ def gather_nd(
             gather_nd_blob = flow.gather_nd(params=x,
                                             indices=indice)
             return gather_nd_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         indice = np.array([[0], [2]]).astype(np.int32)
         out = gather_nd_Job(x, indice)
-
         # out [[1. 2. 3.]
         #      [7. 8. 9.]]
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
                         indice: tp.Numpy.Placeholder(shape=(2, 2), dtype=flow.int32)
@@ -1077,25 +960,17 @@ def gather_nd(
             gather_nd_blob = flow.gather_nd(params=x,
                                             indices=indice)
             return gather_nd_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         indice = np.array([[0, 2], [2, 1]]).astype(np.int32)
         out = gather_nd_Job(x, indice)
-
         # out [3. 8.]
-
     Example3:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def gather_nd_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
                         indice: tp.Numpy.Placeholder(shape=(3, 2), dtype=flow.int32)
@@ -1103,16 +978,12 @@ def gather_nd(
             gather_nd_blob = flow.gather_nd(params=x,
                                             indices=indice)
             return gather_nd_blob
-
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9]]).astype(np.float32)
         indice = np.array([[0, 1], [1, 0], [2, 2]]).astype(np.int32)
         out = gather_nd_Job(x, indice)
-
         # out [2. 4. 9.]
-
     """
     if name is None:
         name = id_util.UniqueStr("GatherNd_")
@@ -1129,33 +1000,25 @@ def gather_nd(
 
 @oneflow_export("scatter_nd")
 def scatter_nd(
-    indices: oneflow_api.BlobDesc,
-    updates: oneflow_api.BlobDesc,
+    indices: oneflow._oneflow_internal.BlobDesc,
+    updates: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
     name: Optional[str] = None,
 ):
     """This operator inserts the elements in `updates` according to the `indices` and create a new Blob.
-
     Args:
-        indices (oneflow_api.BlobDesc): The indice of `updates`. Its type should be `flow.int`.
-        updates (oneflow_api.BlobDesc): The update Blob.
+        indices (oneflow._oneflow_internal.BlobDesc): The indice of `updates`. Its type should be `flow.int`.
+        updates (oneflow._oneflow_internal.BlobDesc): The update Blob.
         shape (Sequence[int]): The constant tensor shape, the constant tensor elements are all zero.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     Example 1:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def scatter_nd_Job(indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32),
                         update: tp.Numpy.Placeholder(shape=(3, ), dtype=flow.float32),
@@ -1164,23 +1027,15 @@ def scatter_nd(
                                         updates=update,
                                         shape=[8])
             return scatter_blob
-
-
         indice_array = np.array([[1], [6], [4]]).astype(np.int32)
         update_array = np.array([10.2, 5.1, 12.7]).astype(np.float32)
         out = scatter_nd_Job(indice_array, update_array)
-
         # [ 0.  10.2  0.   0.  12.7  0.   5.1  0. ]
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def scatter_nd_Job(indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32),
                         update: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.float32),
@@ -1189,20 +1044,16 @@ def scatter_nd(
                                         updates=update,
                                         shape=[5, 3])
             return scatter_blob
-
-
         indice_array = np.array([[0], [4], [2]]).astype(np.int32)
         update_array = np.array([[1, 1, 1],
                                 [2, 2, 2],
                                 [3, 3, 3]]).astype(np.float32)
         out = scatter_nd_Job(indice_array, update_array)
-
         # out [[1. 1. 1.]
         #      [0. 0. 0.]
         #      [3. 3. 3.]
         #      [0. 0. 0.]
         #      [2. 2. 2.]]
-
     """
     if name is None:
         name = id_util.UniqueStr("ScatterNd_")
@@ -1220,31 +1071,24 @@ def scatter_nd(
 
 @oneflow_export("tensor_scatter_nd_update")
 def tensor_scatter_nd_update(
-    params: oneflow_api.BlobDesc,
-    indices: oneflow_api.BlobDesc,
-    updates: oneflow_api.BlobDesc,
+    params: oneflow._oneflow_internal.BlobDesc,
+    indices: oneflow._oneflow_internal.BlobDesc,
+    updates: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator inserts the elements in `updates` according to the `indices` into the Blob `params`.
-
     Args:
-        params (oneflow_api.BlobDesc): The input Blob.
-        indices (oneflow_api.BlobDesc): The indice of `updates`. Its type should be `flow.int32`.
-        updates (oneflow_api.BlobDesc): The update Blob.
+        params (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        indices (oneflow._oneflow_internal.BlobDesc): The indice of `updates`. Its type should be `flow.int32`.
+        updates (oneflow._oneflow_internal.BlobDesc): The update Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def tensor_scatter_nd_Job(x: tp.Numpy.Placeholder(shape=(5, 3), dtype=flow.float32),
                                 indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32),
@@ -1254,7 +1098,6 @@ def tensor_scatter_nd_update(
                                                         indices=indice,
                                                         updates=update)
             return scatter_blob
-
         x = np.array([[1, 2, 3],
                     [1, 2, 3],
                     [1, 2, 3],
@@ -1265,13 +1108,11 @@ def tensor_scatter_nd_update(
                                 [2, 2, 2],
                                 [3, 3, 3]]).astype(np.float32)
         out = tensor_scatter_nd_Job(x, indice_array, update_array)
-
         # out [[1. 1. 1.]
         #      [1. 2. 3.]
         #      [3. 3. 3.]
         #      [1. 2. 3.]
         #      [2. 2. 2.]]
-
     """
     if name is None:
         name = id_util.UniqueStr("TensorScatterNdUpdate_")
@@ -1289,31 +1130,24 @@ def tensor_scatter_nd_update(
 
 @oneflow_export("tensor_scatter_nd_add")
 def tensor_scatter_nd_add(
-    params: oneflow_api.BlobDesc,
-    indices: oneflow_api.BlobDesc,
-    updates: oneflow_api.BlobDesc,
+    params: oneflow._oneflow_internal.BlobDesc,
+    indices: oneflow._oneflow_internal.BlobDesc,
+    updates: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator adds elements from 'updates' to Blob 'params' based on the `indices`.
-
     Args:
-        params (oneflow_api.BlobDesc): The input Blob.
-        indices (oneflow_api.BlobDesc): The indice of `updates`. Its type should be `flow.int32`.
-        updates (oneflow_api.BlobDesc): The update Blob.
+        params (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        indices (oneflow._oneflow_internal.BlobDesc): The indice of `updates`. Its type should be `flow.int32`.
+        updates (oneflow._oneflow_internal.BlobDesc): The update Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example：
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def tensor_scatter_nd_add_Job(x: tp.Numpy.Placeholder(shape=(5, 3), dtype=flow.float32),
                                     indice: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.int32),
@@ -1323,7 +1157,6 @@ def tensor_scatter_nd_add(
                                                     indices=indice,
                                                     updates=update)
             return scatter_blob
-
         x = np.array([[1, 2, 3],
                     [1, 2, 3],
                     [1, 2, 3],
@@ -1334,13 +1167,11 @@ def tensor_scatter_nd_add(
                                 [2, 2, 2],
                                 [3, 3, 3]]).astype(np.float32)
         out = tensor_scatter_nd_add_Job(x, indice_array, update_array)
-
         # out [[2. 3. 4.]
         #      [1. 2. 3.]
         #      [4. 5. 6.]
         #      [1. 2. 3.]
         #      [3. 4. 5.]]
-
     """
     if name is None:
         name = id_util.UniqueStr("TensorScatterNdAdd_")
@@ -1358,44 +1189,33 @@ def tensor_scatter_nd_add(
 
 @oneflow_export("argwhere")
 def argwhere(
-    condition: oneflow_api.BlobDesc,
+    condition: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List.
     Each element in the output is a coordinate that points to a non-zero element in the condition.
-
     Args:
-        condition (oneflow_api.BlobDesc): The input Blob.
+        condition (oneflow._oneflow_internal.BlobDesc): The input Blob.
         dtype (Optional[flow.dtype], optional): The data type of output. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob. Its type is `ListNumpy`.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def argwhere_Job(x: tp.Numpy.Placeholder(shape=(2, 3), dtype=flow.float32),
         ) -> tp.ListNumpy:
             return flow.argwhere(x)
-
-
         x = np.array([[0, 1, 0],
                     [2, 0, 2]]).astype(np.float32)
         out = argwhere_Job(x)
-
         # out [array([[0, 1],
         #             [1, 0],
         #             [1, 2]], dtype=int32)]
-
     """
     if name is None:
         name = id_util.UniqueStr("ArgWhere_")
@@ -1418,16 +1238,14 @@ def argwhere(
 
 @oneflow_export("nonzero")
 def nonzero(
-    a: oneflow_api.BlobDesc, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    a: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator finds the indices of input Blob `condition` elements that are non-zero.
-
     Args:
-        a (oneflow_api.BlobDesc): The input Blob.
+        a (oneflow._oneflow_internal.BlobDesc): The input Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
     if name is None:
         argwhere_name = id_util.UniqueStr("Nonzero_ArgWhere_")
@@ -1441,41 +1259,30 @@ def nonzero(
 
 @oneflow_export("where")
 def where(
-    condition: oneflow_api.BlobDesc,
-    x: Optional[oneflow_api.BlobDesc] = None,
-    y: Optional[oneflow_api.BlobDesc] = None,
+    condition: oneflow._oneflow_internal.BlobDesc,
+    x: Optional[oneflow._oneflow_internal.BlobDesc] = None,
+    y: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the elements where condition is larger than 0.
-
     If `x` and `y` is None, this operator is equal to `oneflow.argwhere`.
-
     If `x` and `y` both are not None, If the element in condition is larger than 0,
     it will take the `x` element, else it will take the `y` element.
-
     Args:
-        condition (oneflow_api.BlobDesc): The input Blob.
-        x (Optional[oneflow_api.BlobDesc], optional): A Blob. Defaults to None.
-        y (Optional[oneflow_api.BlobDesc], optional): A Blob. Defaults to None.
+        condition (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        x (Optional[oneflow._oneflow_internal.BlobDesc], optional): A Blob. Defaults to None.
+        y (Optional[oneflow._oneflow_internal.BlobDesc], optional): A Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Raises:
         ValueError: It is not supported when exactly one of x or y is non-None
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob. Its type is `ListNumpy`.
     For example:
-
     Example 1:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def where_Job(condition: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.int32),
                     x: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.float32),
@@ -1484,37 +1291,25 @@ def where(
             return flow.where(condition=condition,
                             x=x,
                             y=y)
-
-
         condition = np.array([3, 0, 1, 0, 1]).astype(np.int32)
         x = np.array([10, 20, 30, 40, 50]).astype(np.float32)
         y = np.array([100, 200, 300, 400, 500]).astype(np.float32)
         out = where_Job(condition, x, y)
-
         # out [array([ 10., 200.,  30., 400.,  50.], dtype=float32)]
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def where_Job(condition: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.int32),
         ) -> tp.ListNumpy:
             return flow.where(condition=condition)
-
-
         condition = np.array([3, 0, 1, 0, 1]).astype(np.int32)
         out = where_Job(condition)
-
         # out [array([[0],
         #             [2],
         #             [4]], dtype=int32)]
-
     """
     if x is None and y is None:
         return argwhere(condition, name=name)
@@ -1547,39 +1342,29 @@ def where(
 
 @oneflow_export("elem_cnt")
 def elem_cnt(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the amount of elements in input Blob.
-
     Args:
-        inputs (oneflow_api.BlobDesc): The input Blob.
+        inputs (oneflow._oneflow_internal.BlobDesc): The input Blob.
         dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob. Its type is `ListNumpy`.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def elem_cnt_Job(x: tp.Numpy.Placeholder(shape=(5, ), dtype=flow.float32),
         ) -> tp.ListNumpy:
             return flow.elem_cnt(inputs=x, dtype=flow.int32)
-
         x = np.array([10, 20, -30, 40, 50]).astype(np.float32)
         out = elem_cnt_Job(x)
-
         # [array([5], dtype=int32)]
-
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -1589,7 +1374,7 @@ def elem_cnt(
 
     op_conf.shape_elem_cnt_conf.exclude_axis_conf.SetInParent()
     if dtype is not None:
-        op_conf.shape_elem_cnt_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(
+        op_conf.shape_elem_cnt_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
             dtype
         )
     op_conf.shape_elem_cnt_conf.y = "y"
@@ -1602,29 +1387,22 @@ def elem_cnt(
 
 @oneflow_export("sync_dynamic_resize")
 def sync_dynamic_resize(
-    inputs: oneflow_api.BlobDesc,
-    size: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    size: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """
-
     Args:
-        inputs (oneflow_api.BlobDesc): The input Blob.
-        size (oneflow_api.BlobDesc): The size of new Blob.
+        inputs (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        size (oneflow._oneflow_internal.BlobDesc): The size of new Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob. Its type is `ListNumpy`.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def sync_dynamic_resize_Job(x: tp.Numpy.Placeholder(shape=(4, 3), dtype=flow.float32),
                                     size: tp.Numpy.Placeholder(shape=(1, ), dtype=flow.int32),
@@ -1632,17 +1410,14 @@ def sync_dynamic_resize(
             resize_Blob = flow.sync_dynamic_resize(inputs=x,
                                                 size=size)
             return resize_Blob
-
         x = np.array([[1, 2, 3],
                     [4, 5, 6],
                     [7, 8, 9],
                     [10, 11, 12]]).astype(np.float32)
         size = np.array([2]).astype(np.int32)
         out = sync_dynamic_resize_Job(x, size)
-
         # out [array([[1., 2., 3.],
         #             [4., 5., 6.]], dtype=float32)]
-
     """
     op_conf = op_conf_util.OperatorConf()
     setattr(
@@ -1664,40 +1439,31 @@ def sync_dynamic_resize(
 
 @oneflow_export("stack")
 def stack(
-    inputs: Sequence[oneflow_api.BlobDesc], axis: int = 0, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    inputs: Sequence[oneflow._oneflow_internal.BlobDesc],
+    axis: int = 0,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator stacks the multiple Blobs on the specified axis.
-
     Args:
-        inputs (Sequence[oneflow_api.BlobDesc]): A list of input Blob.
+        inputs (Sequence[oneflow._oneflow_internal.BlobDesc]): A list of input Blob.
         axis (int): The stack axis.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import oneflow.typing as tp
         import numpy as np
-
-
         @flow.global_function()
         def stack_job(x: tp.Numpy.Placeholder(shape=(2, 4, 6)),
                     y: tp.Numpy.Placeholder(shape=(2, 4, 6)))->tp.Numpy:
             out = flow.stack([x, y], axis=2)
             return out
-
         x = np.ones(shape=(2, 4, 6), dtype=np.float32)
         y = np.ones(shape=(2, 4, 6), dtype=np.float32)
-
         out = stack_job(x, y)
-
         # output.shape (2, 4, 2, 6)
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     """
     if name is None:
         name = id_util.UniqueStr("Stack_")
@@ -1731,40 +1497,32 @@ def stack(
 
 @oneflow_export("random.generate_random_batch_permutation_indices")
 def generate_random_batch_permutation_indices(
-    value: oneflow_api.BlobDesc, seed: Optional[int] = None, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    value: oneflow._oneflow_internal.BlobDesc,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator generates a random permutation of indices in batch axis.
-
     Args:
-        value (oneflow_api.BlobDesc): The input Blob.
+        value (oneflow._oneflow_internal.BlobDesc): The input Blob.
         seed (Optional[int], optional): The random seed. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. Its type is `ListNumpy`.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob. Its type is `ListNumpy`.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def random_indice_Job(x: tp.Numpy.Placeholder(shape=(4, 3), dtype=flow.int32),
         ) -> tp.ListNumpy:
             return flow.random.generate_random_batch_permutation_indices(value=x)
-
         x = np.array([[1, 1, 1],
                     [2, 2, 2],
                     [3, 3, 3],
                     [4, 4, 4]]).astype(np.int32)
         out = random_indice_Job(x)
-
         # out [array([3, 0, 2, 1], dtype=int32)]
-
     """
     import random
 
@@ -1788,83 +1546,64 @@ def generate_random_batch_permutation_indices(
 
 @oneflow_export("random.shuffle")
 def shuffle(
-    value: oneflow_api.BlobDesc, seed: Optional[int] = None, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    value: oneflow._oneflow_internal.BlobDesc,
+    seed: Optional[int] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator shuffle the elements in input Blob.
-
     Args:
-        value (oneflow_api.BlobDesc): The input Blob.
+        value (oneflow._oneflow_internal.BlobDesc): The input Blob.
         seed (Optional[int], optional): The random seed. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def shuffle_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.int32),
         ) -> tp.Numpy:
             return flow.random.shuffle(x)
-
         x = np.array([[1, 1, 1],
                     [2, 2, 2],
                     [3, 3, 3]]).astype(np.int32)
         out = shuffle_Job(x)
-
         # out [[3 3 3]
         #      [1 1 1]
         #      [2 2 2]]
-
     """
     return flow.gather(value, generate_random_batch_permutation_indices(value, seed))
 
 
 @oneflow_export("identity")
 def identity(
-    x: oneflow_api.BlobDesc, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator returns a `Blob` that has identical content and data type to input `Blob`.
-
     Analogous to `tf.identity <https://www.tensorflow.org/api_docs/python/tf/identity>`_
-
     Args:
-        x (oneflow_api.BlobDesc): The input Blob.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def identity_Job(x: tp.Numpy.Placeholder(shape=(3, 3), dtype=flow.int32),
         ) -> tp.Numpy:
             return flow.identity(x)
-
         x = np.array([[1, 1, 1],
                     [2, 2, 2],
                     [3, 3, 3]]).astype(np.int32)
         out = identity_Job(x)
-
         # out [[1 1 1]
         #      [2 2 2]
         #      [3 3 3]]
-
     """
     if name is None:
         name = id_util.UniqueStr("Identity_")
@@ -1877,45 +1616,34 @@ def identity(
 
 @oneflow_export("identity_n")
 def identity_n(
-    inputs: Sequence[oneflow_api.BlobDesc], name: Optional[str] = None
-) -> List[oneflow_api.BlobDesc]:
+    inputs: Sequence[oneflow._oneflow_internal.BlobDesc], name: Optional[str] = None
+) -> List[oneflow._oneflow_internal.BlobDesc]:
     """This operator is similar to `oneflow.identity`. The difference is that the input and output
     of `identity_n` is `List`.
-
     Args:
-        inputs (Iterable[oneflow_api.BlobDesc]): A List of input Blob.
+        inputs (Iterable[oneflow._oneflow_internal.BlobDesc]): A List of input Blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        List[oneflow_api.BlobDesc]: A list of result Blob.
-
+        List[oneflow._oneflow_internal.BlobDesc]: A list of result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
         from typing import List
-
-
         @flow.global_function()
         def identity_Job(x: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32),
                         y: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32),
                         z: tp.Numpy.Placeholder(shape=(1, 3), dtype=flow.int32)
         ) -> List[tp.Numpy]:
             return flow.identity_n([x, y, z])
-
-
         x = np.array([[1, 1, 1]]).astype(np.int32)
         y = np.array([[2, 2, 2]]).astype(np.int32)
         z = np.array([[3, 3, 3]]).astype(np.int32)
         out = identity_Job(x, y, z)
-
         # out[0] [[1, 1, 1]]
         # out[1] [[2, 2, 2]]
         # out[2] [[3, 3, 3]]
-
     """
     return (
         flow.user_op_builder(
@@ -1932,41 +1660,31 @@ def identity_n(
 
 @oneflow_export("cast_to_static_shape")
 def cast_to_static_shape(
-    x: oneflow_api.BlobDesc, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator returns a `Blob` that has identical content and data type to input `Blob`, and whose shape is converted from dynamic to static
-
     Args:
-        x (oneflow_api.BlobDesc): The input Blob which has dynamic shape.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob which has dynamic shape.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob which is identical to input blob but has static shape.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob which is identical to input blob but has static shape.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def cast_to_static_shape_func(
             x: tp.ListNumpy.Placeholder(shape=(3, 3), dtype=flow.float32),
         ) -> tp.Numpy:
             return flow.cast_to_static_shape(x)
-
         x = np.array([[1, 1, 1],
                       [2, 2, 2],
                       [3, 3, 3]]).astype(np.float32)
-
         out = cast_to_static_shape_func(x)
-
         # out [[1 1 1]
         #      [2 2 2]
         #      [3 3 3]]
-
     """
     if not x.is_dynamic:
         return x
@@ -1986,65 +1704,44 @@ def cast_to_static_shape(
 
 @oneflow_export("squeeze")
 def squeeze(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator removes the specified dimention which size is 1 of the input Blob.
     If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Blob.
-
     The amount of element in return value is the same as Blob `input`.
-
     Args:
-        input (oneflow_api.BlobDesc): The input Blob.
+        input (oneflow._oneflow_internal.BlobDesc): The input Blob.
         axis (Optional[Sequence[int]], optional): The axis. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     Example 1:
-
     .. code-block:
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def squeeze_Job(x: tp.Numpy.Placeholder(shape=(1, 1, 1, 3), dtype=flow.int32),
         ) -> tp.Numpy:
             return flow.squeeze(x)
-
-
         x = np.array([[[[1, 1, 1]]]]).astype(np.int32)
         out = squeeze_Job(x)
-
         # out.shape (3,)
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def squeeze_Job(x: tp.Numpy.Placeholder(shape=(1, 1, 1, 3), dtype=flow.int32),
         ) -> tp.Numpy:
             return flow.squeeze(x, axis=[1, 2])
-
-
         x = np.array([[[[1, 1, 1]]]]).astype(np.int32)
         out = squeeze_Job(x)
-
         # out.shape (1, 3)
-
     """
     if axis is None:
         axis = [idx for idx, dim in enumerate(input.shape) if dim == 1]
@@ -2069,42 +1766,33 @@ def squeeze(
 
 @oneflow_export("expand")
 def expand(
-    x: oneflow_api.BlobDesc, expand_size: Sequence[int], name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
-    """This operator expand the input tensor to a larger size.
-    
+    x: oneflow._oneflow_internal.BlobDesc,
+    expand_size: Sequence[int],
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator expand the input Blob to a larger size.
     Passing -1 as the size for a dimension means not changing the size of that dimension.
-
-    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front. 
-    
-    For the new dimensions, the size cannot be set to -1. 
-
+    Blob can be also expanded to a larger number of dimensions and the new ones will be appended at the front.
+    For the new dimensions, the size cannot be set to -1.
     Args:
-        x (oneflow_api.BlobDesc): The input Tensor. 
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
         expand_size (Sequence[int]): The desired expanded size.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob. 
-
-    For example: 
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
+    For example:
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def expandJob(x: tp.Numpy.Placeholder(shape=(1, 3, 1, 2), dtype=flow.int32),
         ) -> tp.Numpy:
-            return flow.expand(input=x, 
+            return flow.expand(input=x,
                                 expand_size=[1, 3, 2, 2])
-
         x = np.array([[[[0, 1]],
                        [[2, 3]],
                        [[4, 5]]]]).astype(np.int32)
-
         out = expandJob(x)
         # out shape: [1, 3, 2, 2]
         # [[[[0, 1],
@@ -2160,42 +1848,31 @@ def expand(
 
 @oneflow_export("expand_dims")
 def expand_dims(
-    input: oneflow_api.BlobDesc, axis: int, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    input: oneflow._oneflow_internal.BlobDesc, axis: int, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator inserts a dimention at the specified axis in the input Blob.
     The size of new dimension can only be 1, and the amount of element in return value is the same as Blob `input`.
-
     Args:
-        input (oneflow_api.BlobDesc): The input Blob.
+        input (oneflow._oneflow_internal.BlobDesc): The input Blob.
         axis (int): The specified dimension index.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def expand_dim_Job(x: tp.Numpy.Placeholder(shape=(1, 3, 3), dtype=flow.int32),
         ) -> tp.Numpy:
             return flow.expand_dims(input=x,
                                     axis=2)
-
-
         x = np.array([[[1, 1, 1],
                     [1, 1, 1],
                     [1, 1, 1]]]).astype(np.int32)
         out = expand_dim_Job(x)
-
         # out.shape (1, 3, 1, 3)
-
     """
     in_num_axes = len(input.shape)
     assert axis >= -(in_num_axes + 1) and axis <= in_num_axes
@@ -2215,36 +1892,27 @@ def expand_dims(
 
 @oneflow_export("broadcast_like")
 def broadcast_like(
-    x: oneflow_api.BlobDesc,
-    like: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
     broadcast_axes: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator broadcast the input Blob `x` on the specified axis with input Blob `like`.
-
     Args:
-        x (oneflow_api.BlobDesc): The input Blob.
-        like (oneflow_api.BlobDesc): A Blob.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        like (oneflow._oneflow_internal.BlobDesc): A Blob.
         broadcast_axes (Optional[Sequence[int]], optional): The broadcast axis. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
-
     Raises:
         ValueError: The length of broadcast_axes must be greater than 0 and less than or equal to number of axes of like shape.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
     For example:
-
     Example 1:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(3, 1), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -2254,26 +1922,17 @@ def broadcast_like(
             return flow.broadcast_like(x=x,
                                     like=like_tensor,
                                     broadcast_axes=(1, ))
-
-
         x = np.array([[1], [1], [1]]).astype(np.float32)
         out = broadcast_like_Job(x)
-
         # out [[[1 1 1]
         #       [1 1 1]
         #       [1 1 1]]]
-
         # out.shape (3, 3)
-
     Example 2:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def broadcast_like_Job(x: tp.Numpy.Placeholder(shape=(3, 1, 1), dtype=flow.float32)
         ) -> tp.Numpy:
@@ -2283,13 +1942,9 @@ def broadcast_like(
             return flow.broadcast_like(x=x,
                                     like=like_tensor,
                                     broadcast_axes=(1, 2))
-
-
         x = np.random.randn(3, 1, 1).astype(np.float32)
         out = broadcast_like_Job(x)
-
         # out.shape (3, 3, 3)
-
     """
     if name is None:
         name = id_util.UniqueStr("BroadcastLike_")
@@ -2318,46 +1973,36 @@ def broadcast_like(
 
 @oneflow_export("masked_fill")
 def masked_fill(
-    x: oneflow_api.BlobDesc,
-    mask: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    mask: oneflow._oneflow_internal.BlobDesc,
     value: Union[float, int],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Fill a blob with a given value according to the given mask.
-
     Args:
-        x (oneflow_api.BlobDesc): Input Blob.
-        mask (oneflow_api.BlobDesc): Composed with 0 and 1, the input blob 'x' will be
+        x (oneflow._oneflow_internal.BlobDesc): Input Blob.
+        mask (oneflow._oneflow_internal.BlobDesc): Composed with 0 and 1, the input blob 'x' will be
             filled with the given value where the mask is 1.
         value (Union[int, int]): The value to use for filling the input blob.
         name (Optional[str], optional): The name for the operation. Defaults to None.
     Attention:
         x and mask must be broadcastable to each other.
         mask must be int type (int8/int32/int64).
-
     Returns:
-        oneflow_api.BlobDesc: The value-filled Blob
-
+        oneflow._oneflow_internal.BlobDesc: The value-filled Blob
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def masked_fill_Job(x: tp.Numpy.Placeholder((4, ), mask: tp.Numpy.Placeholder((4, ),
                             dtype = flow.int8))->tp.Numpy:
             return flow.masked_fill(x, mask, value=5)
-
         x = np.array([1, 2, 3, 4], dtype=np.float32)
         mask = np.array([1, 0, 0, 1], dtype=np.int8)
-
         out = masked_fill_Job(x, mask)
-
         # output [5 2 3 5]
-
     """
     if name is None:
         name = id_util.UniqueStr("MaskedFill_")
@@ -2367,60 +2012,44 @@ def masked_fill(
 
 @oneflow_export("dim_gather")
 def dim_gather(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     dim: int,
-    index: oneflow_api.BlobDesc,
+    index: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r""" This operator gathers elements from `input` according to `index` along with the axis `dim`.
-
     Take a 3-D blob as example, the output is specified by:
-
     .. code-block:: python
-
         output[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
         output[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
         output[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
-
-
     The shape of `input` and `index` should be the same except in the `dim` dimension.
-
     That is, if `input` is a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, x_i, x_{i+1}, \dots, x_n)`,
     and `dim = i`, then `index` must be a n-dimension blob with shape :math:`(x_0, x_1, \dots, x_{i-1}, k, x_{i+1}, \dots, x_n)`
     where :math:`k \geq 1`.
-
     The return Blob `output` will have the same shape with `index`.
-
     Args:
-        input (oneflow_api.BlobDesc): The input blob
+        input (oneflow._oneflow_internal.BlobDesc): The input blob
         dim (int): The axis along which to index
-        index (oneflow_api.BlobDesc): The index blob of elements to gather
+        index (oneflow._oneflow_internal.BlobDesc): The index blob of elements to gather
         name (Optional[str], optional): The name of the operation. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The elements gathered from `input` will be returned as the output Blob.
-
+        oneflow._oneflow_internal.BlobDesc: The elements gathered from `input` will be returned as the output Blob.
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
-
         @flow.global_function()
         def dim_gather_Job(input: tp.Numpy.Placeholder((2, 2), dtype=flow.float64),
                         index:tp.Numpy.Placeholder((2, 2), dtype=flow.int32))->tp.Numpy:
             return flow.dim_gather(input, 1, index)
-
         input = np.array([[1, 2], [3, 4]]).astype(np.float64)
         index = np.array([[1, 0], [0, 1]]).astype(np.int32)
-
         out = dim_gather_Job(input, index)
         # output
         # [[2. 1.]
         #  [3. 4.]]
-
     """
     if len(input.shape) != len(index.shape):
         raise ValueError("Dimensions of input and index should equal")
@@ -2456,8 +2085,8 @@ def dim_gather(
 
 @oneflow_export("amp_white_identity")
 def amp_white_identity(
-    x: oneflow_api.BlobDesc, name: Optional[str] = None
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
+) -> oneflow._oneflow_internal.BlobDesc:
     if name is None:
         name = id_util.UniqueStr("AmpWhiteIdentity_")
     op = (
@@ -2475,35 +2104,24 @@ def zeros(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `0`.
-
     Args:
         shape (Sequence[int]): The shape of the Tensor.
         dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operator. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Tensor filled with value `0`
-
+        oneflow._oneflow_internal.BlobDesc: The result Tensor filled with value `0`
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def zeros_job() -> tp.Numpy:
             return flow.zeros(shape=(2, 3), dtype=flow.float32)
-
-
         out = zeros_job()
-
         # output: [[0. 0. 0.]
         #          [0. 0. 0.]]
-
     """
     if name is None:
         name = id_util.UniqueStr("Zeros_")
@@ -2519,32 +2137,22 @@ def ones(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `1`.
-
     Args:
         shape (Sequence[int]): The shape of the Tensor.
         dtype (Optional[flow.dtype], optional): The data type. Defaults to None.
         name (Optional[str], optional): The name for the operator. Defaults to None.
-
     Returns:
-        oneflow_api.BlobDesc: The result Blob filled with value `1`
-
+        oneflow._oneflow_internal.BlobDesc: The result Blob filled with value `1`
     For example:
-
     .. code-block:: python
-
         import oneflow as flow
         import oneflow.typing as tp
-
-
         @flow.global_function()
         def ones_job() -> tp.Numpy:
             return flow.ones(shape=(2, 3), dtype=flow.float32)
-
-
         out = ones_job()
-
         # output: [[1. 1. 1.]
         #          [1. 1. 1.]]
     """
@@ -2559,8 +2167,8 @@ def ones(
 
 @oneflow_export("profiler.nvtx_start")
 def nvtx_start(
-    x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, mark_prefix: str, name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
 
     if name is None:
         name = id_util.UniqueStr("NvtxStart_")
@@ -2578,8 +2186,8 @@ def nvtx_start(
 
 @oneflow_export("profiler.nvtx_end")
 def nvtx_end(
-    x: oneflow_api.BlobDesc, mark_prefix: str, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, mark_prefix: str, name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
 
     if name is None:
         name = id_util.UniqueStr("NvtxEnd_")

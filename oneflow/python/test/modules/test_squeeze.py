@@ -36,5 +36,6 @@ class TestModule(flow.unittest.TestCase):
         np_out = (1, 3)
         test_case.assertTrue(np.allclose(of_out, np_out))
 
+
 if __name__ == "__main__":
     unittest.main()

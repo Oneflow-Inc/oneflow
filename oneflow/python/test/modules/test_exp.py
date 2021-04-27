@@ -30,12 +30,13 @@ class TestModule(flow.unittest.TestCase):
         # of_out = input.exp()
         np_out = np.exp(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-    
+
     def test_exp_v2(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.exp()
         np_out = np.exp(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
 
 if __name__ == "__main__":
     unittest.main()
