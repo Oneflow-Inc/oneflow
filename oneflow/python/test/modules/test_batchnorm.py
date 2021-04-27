@@ -25,7 +25,7 @@ import oneflow.typing as tp
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestBatchNormModule(flow.unittest.TestCase):
     def test_batchnorm2d(test_case):
         input_arr = np.array(
             [
@@ -88,7 +88,7 @@ class TestModule(flow.unittest.TestCase):
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         x = flow.Tensor(input_arr)
         y = m(x)
-        print(np.allclose(y.numpy(), torch_out, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), torch_out, atol=1e-04))
 
 
 if __name__ == "__main__":
