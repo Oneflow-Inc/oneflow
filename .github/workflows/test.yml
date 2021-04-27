@@ -372,20 +372,20 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
-      - name: Tensor API test
-        if: matrix.test_suite == 'cuda_eager'
-        run: |
-          docker run \
-            $extra_docker_args \
-            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
-            oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Module API test
         if: matrix.test_suite == 'cuda_eager'
         run: |
           docker run \
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
+      - name: Tensor API test
+        if: matrix.test_suite == 'cuda_eager'
+        run: |
+          docker run \
+            $extra_docker_args \
+            -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
       - name: Op test
