@@ -54,7 +54,9 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
                         const TensorTuple& outputs, const AttrValueMap& attrs) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
-    return Capture(state, inputs, outputs, attrs);
+    TensorTuple detach_outputs(outputs.size());
+    for (int i = 0; i < outputs.size(); ++i) { detach_outputs.at(i) = outputs.at(i)->detach(); }
+    return Capture(state, inputs, detach_outputs, attrs);
   }
 
   Maybe<void> ApplyIf(const OpExprInterpState* ctx, const TensorTuple& out_grads,

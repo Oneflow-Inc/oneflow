@@ -39,7 +39,7 @@ from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _siz
 from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 class _NormBase(Module):
@@ -61,10 +61,14 @@ class _NormBase(Module):
         self.track_running_stats = track_running_stats
         if self.affine:
             self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                )
             )
             self.bias = flow.nn.Parameter(
-                flow.Tensor(num_features, device=oneflow_api.device("cuda"))
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                )
             )
         else:
             self.register_parameter("weight", None)
@@ -72,11 +76,15 @@ class _NormBase(Module):
         if self.track_running_stats:
             self.register_buffer(
                 "running_mean",
-                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                ),
             )
             self.register_buffer(
                 "running_var",
-                flow.Tensor(num_features, device=oneflow_api.device("cuda")),
+                flow.Tensor(
+                    num_features, device=oneflow._oneflow_internal.device("cuda")
+                ),
             )
         else:
             self.register_parameter("running_mean", None)

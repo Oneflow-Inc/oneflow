@@ -19,7 +19,7 @@ import functools
 import operator
 
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, List
@@ -27,31 +27,31 @@ from typing import Optional, Sequence, List
 
 @oneflow_export("tensor_buffer_to_tensor")
 def tensor_buffer_to_tensor(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     dtype: flow.dtype,
     instance_shape: Sequence[int],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""This operator converts the Blob's type from TensorBuffer to Tensor. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator converts the Blob's type from TensorBuffer to Tensor.
     Some operator's output data type is `TensorBuffer`, you can use this operator to convert back
-    to `Tensor`. 
+    to `Tensor`.
 
-    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
-    for more about TensorBuffer. 
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_
+    for more about TensorBuffer.
 
 
     Args:
-        x (oneflow_api.BlobDesc): Input `Blob`.
+        x (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
         dtype (flow.dtype): The data dtype.
         instance_shape (Sequence[int]): The shape of each TensorBuffer instance.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: A `Blob`.
+        oneflow._oneflow_internal.BlobDesc: A `Blob`.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -61,10 +61,10 @@ def tensor_buffer_to_tensor(
         @flow.global_function()
         def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
         ) -> tp.Numpy:
-            x = flow.tensor_to_tensor_buffer(x, 
+            x = flow.tensor_to_tensor_buffer(x,
                                             instance_dims=2)
-            return flow.tensor_buffer_to_tensor(x, 
-                                                instance_shape=(64, 64), 
+            return flow.tensor_buffer_to_tensor(x,
+                                                instance_shape=(64, 64),
                                                 dtype=flow.float)
 
         x = np.random.randn(4, 16, 64, 64).astype(np.float32)
@@ -90,25 +90,27 @@ def tensor_buffer_to_tensor(
 
 @oneflow_export("tensor_to_tensor_buffer")
 def tensor_to_tensor_buffer(
-    x: oneflow_api.BlobDesc, instance_dims: int, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""This operator converts the Blob's type from Tensor to TensorBuffer. 
+    x: oneflow._oneflow_internal.BlobDesc,
+    instance_dims: int,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator converts the Blob's type from Tensor to TensorBuffer.
 
-    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_ 
-    for more about TensorBuffer. 
+    Refer to `Concept Explanation <https://docs.oneflow.org/basics_topics/concept_explanation.html#3tensorbuffer-tensorlist>`_
+    for more about TensorBuffer.
 
 
     Args:
-        x (oneflow_api.BlobDesc): Input `Blob`.
-        instance_dims (int): The dimensions of dynamic tensor instance. 
+        x (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
+        instance_dims (int): The dimensions of dynamic tensor instance.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -118,10 +120,10 @@ def tensor_to_tensor_buffer(
         @flow.global_function()
         def tensor_buffer_to_tensor_Job(x: tp.Numpy.Placeholder(shape=(4, 16, 64, 64), dtype=flow.float32),
         ) -> tp.Numpy:
-            x = flow.tensor_to_tensor_buffer(x, 
+            x = flow.tensor_to_tensor_buffer(x,
                                             instance_dims=2)
-            return flow.tensor_buffer_to_tensor(x, 
-                                                instance_shape=(64, 64), 
+            return flow.tensor_buffer_to_tensor(x,
+                                                instance_shape=(64, 64),
                                                 dtype=flow.float)
 
         x = np.random.randn(4, 16, 64, 64).astype(np.float32)
@@ -152,7 +154,7 @@ def gen_tensor_buffer(
     data_type: Optional[flow.dtype] = flow.float32,
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""This operator generates a tensor buffer blob.
 
     Args:
@@ -167,7 +169,7 @@ def gen_tensor_buffer(
         BlobDesc: The result Blob.
 
     For example:
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
 
@@ -177,7 +179,7 @@ def gen_tensor_buffer(
                 x = flow.gen_tensor_buffer([(2,)], [(2, 1), (1, 2)], [0.0, 1.0])
                 y = flow.tensor_buffer_to_list_of_tensors(x, (100, 100), flow.float, True)
                 return y
-                
+
         # y_0.shape (2, 1), y_1.shape (1. 2)
     """
     return (
@@ -199,12 +201,12 @@ def gen_tensor_buffer(
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 def tensor_buffer_to_list_of_tensors(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     out_shape: Sequence[int],
     out_dtype: flow.dtype,
     dynamic_out: Optional[bool] = False,
     name: Optional[str] = None,
-) -> List[oneflow_api.BlobDesc]:
+) -> List[oneflow._oneflow_internal.BlobDesc]:
     r"""This operator converts the Blob of TensorBuffer to list of Tensors. Every element in x will be converted
     to a Tensor and output will be flatten to a list.
 
@@ -219,7 +221,7 @@ def tensor_buffer_to_list_of_tensors(
         List[BlobDesc]: result blobs
 
     For example:
-    .. code-block:: python 
+    .. code-block:: python
         # the same with `gen_tensor_buffer` op
     """
     return (
