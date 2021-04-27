@@ -67,15 +67,15 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
                                        &arg_name2bn_index2output_tensor_tuple_index_);
   for (int i = 0; i < indexed_input_pairs->size(); i++) {
     input_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
-        [this, i]() -> eager::EagerBlobObject* { return input_tensors_->at(i).get(); }));
+        [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
     input_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
-        [this, i]() -> eager::EagerBlobObject* { return input_tensors_->at(i).get(); }));
+        [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
   }
   for (int i = 0; i < indexed_output_pairs->size(); i++) {
     output_tensor_views_.push_back(std::make_unique<EagerBlobObjectTensorView>(
-        [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
+        [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
     output_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
-        [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
+        [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
   }
 }
 
@@ -325,8 +325,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
       &opkernel->output_tuple_indexes4mut_obns_, &opkernel->output_tuple_indexes4mut2_obns_));
 
   opkernel->tmp_blob_object_.reset(
-      new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
-                                 std::make_shared<eager::TensorBuffer>()));
+      new vm::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
+                              std::make_shared<vm::TensorBuffer>()));
   opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   opkernel->compute_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
@@ -378,7 +378,7 @@ const user_op::InferTmpSizeFn& StatefulOpKernel::GetInferTmpSizeFn(
   return *infer_tmp_size_fn_map_.at(op_kernel);
 }
 
-eager::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
+vm::EagerBlobObject* StatefulOpKernel::mut_temp_blob_object() { return tmp_blob_object_.get(); }
 
 user_op::TensorDescInferFn StatefulOpKernel::TensorDescInferFn() const {
   return tensor_desc_infer_fn_;

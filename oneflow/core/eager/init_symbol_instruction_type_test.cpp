@@ -36,7 +36,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
 
 namespace {
@@ -86,5 +86,5 @@ TEST(InitSymbolInstructionType, operator_conf) {
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
