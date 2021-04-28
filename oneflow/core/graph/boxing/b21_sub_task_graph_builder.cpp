@@ -30,10 +30,17 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     const int64_t out_parallel_id = 0;
     const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
         in_parallel_desc, out_parallel_desc, out_parallel_id);
-    TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_parallel_id);
-    TaskNode* proxy =
-        ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_parallel_id);
-    sorted_out_tasks->push_back(proxy);
+    sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
+    FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
+      TaskNode* in_node = sorted_in_tasks.at(i);
+      if (i == nearest_in_parallel_id) {
+        TaskNode* proxy =
+            ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, out_parallel_id);
+        sorted_out_tasks->push_back(proxy);
+      } else {
+        sorted_ctrl_tasks->at(0).push_back(in_node);
+      }
+    }
     return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));
   } else {
     return Error::BoxingNotSupportedError();
