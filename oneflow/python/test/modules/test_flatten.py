@@ -44,6 +44,10 @@ class TestFlattenModule(flow.unittest.TestCase):
         test_case.assertTrue(y4.shape == flow.Size((32, 10, 5)))
         test_case.assertTrue(np.array_equal(y4.numpy().flatten(), x.numpy().flatten()))
 
+        y5 = flow.tmp.flatten(x)
+        test_case.assertTrue(y5.shape == flow.Size((1600,)))
+        test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
+
 
 if __name__ == "__main__":
     unittest.main()

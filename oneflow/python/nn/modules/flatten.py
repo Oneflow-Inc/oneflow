@@ -24,7 +24,7 @@ class Flatten(Module):
     """Flattens a contiguous range of dims into a tensor. For use with: nn.Sequential.
 
     Args:
-        start_dim: first dim to flatten (default = 1).
+        start_dim: first dim to flatten (default = 0).
         end_dim: last dim to flatten (default = -1).
     
 
