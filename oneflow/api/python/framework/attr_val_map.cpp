@@ -29,7 +29,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init<>())
       .def("__getitem__",
            [](const AttrValueMap& m, const std::string& attr_name) {
-             m.GetAttr<cfg::AttrValue>(attr_name).GetOrThrow();
+             m.GetAttr<cfg::AttrValue>(attr_name).GetPtrOrThrow();
            })
       .def(
           "__iter__", [](const AttrValueMap& m) { return py::make_iterator(m.begin(), m.end()); },
