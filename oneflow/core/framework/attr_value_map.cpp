@@ -26,7 +26,7 @@ AttrValueMap::AttrValueMap(const MutableAttrValueMap& other) {
 
 AttrValueMap::AttrValueMap(const MutableCfgAttrValueMap& other) {
   for (const auto& pair : other) {
-    attrs_[pair.first] = CHECK_JUST(user_op::MakeCppAttrValByCfgAttrValue(*pair.second));
+    attrs_[pair.first] = CHECK_JUST(AttrValueUtil::ToCppAttrValue(*pair.second));
   }
 }
 
