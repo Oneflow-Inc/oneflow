@@ -25,7 +25,7 @@ import oneflow as flow
 )
 class TestFlattenModule(flow.unittest.TestCase):
     def test_flatten(test_case):
-        m = flow.nn.Flatten(start_dim=1)
+        m = flow.nn.Flatten()
         x = flow.Tensor(32, 2, 5, 5)
         flow.nn.init.uniform_(x)
         y = m(x)
