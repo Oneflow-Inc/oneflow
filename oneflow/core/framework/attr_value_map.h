@@ -31,6 +31,7 @@ class AttrValueMap {
  public:
   explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
 
+  // without coping AttrVal.
   explicit AttrValueMap(const MutableAttrValueMap& other);
   explicit AttrValueMap(const MutableCfgAttrValueMap& other);
 
@@ -60,15 +61,8 @@ class ComposedAttrValueMap final {
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
-  Maybe<void> ResetPrior(const AttrValueMap& prior) {
-    prior_ = prior;
-    return Maybe<void>::Ok();
-  }
-
-  Maybe<void> ResetBase(const AttrValueMap& base) {
-    base_ = base;
-    return Maybe<void>::Ok();
-  }
+  void ResetPrior(const AttrValueMap& prior) { prior_ = prior; }
+  void ResetBase(const AttrValueMap& base) { base_ = base; }
 
  private:
   AttrValueMap prior_;
