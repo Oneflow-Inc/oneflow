@@ -68,20 +68,21 @@ const char* GetInstrTypeName<cfg::ScopeProto>() {
 }
 
 template<typename T>
-T* MutEagerSymbolConf(vm::cfg::EagerSymbol*);
+T* MutEagerSymbolConf(eager::cfg::EagerSymbol*);
 
 template<>
-cfg::JobConfigProto* MutEagerSymbolConf<cfg::JobConfigProto>(vm::cfg::EagerSymbol* eager_symbol) {
+cfg::JobConfigProto* MutEagerSymbolConf<cfg::JobConfigProto>(
+    eager::cfg::EagerSymbol* eager_symbol) {
   return eager_symbol->mutable_job_conf_symbol();
 }
 
 template<>
-cfg::ParallelConf* MutEagerSymbolConf<cfg::ParallelConf>(vm::cfg::EagerSymbol* eager_symbol) {
+cfg::ParallelConf* MutEagerSymbolConf<cfg::ParallelConf>(eager::cfg::EagerSymbol* eager_symbol) {
   return eager_symbol->mutable_parallel_conf_symbol();
 }
 
 template<>
-cfg::ScopeProto* MutEagerSymbolConf<cfg::ScopeProto>(vm::cfg::EagerSymbol* eager_symbol) {
+cfg::ScopeProto* MutEagerSymbolConf<cfg::ScopeProto>(eager::cfg::EagerSymbol* eager_symbol) {
   return eager_symbol->mutable_scope_symbol();
 }
 
@@ -169,7 +170,7 @@ namespace detail {
 template<typename T>
 Maybe<int64_t> CreateSymbolIdHelper<T>::Call(vm::IdGenerator* id_generator,
                                              vm::InstructionMsgList* instruction_list,
-                                             vm::cfg::EagerSymbolList* eager_symbol_list,
+                                             eager::cfg::EagerSymbolList* eager_symbol_list,
                                              const T& conf) {
   int64_t symbol_id = JUST(NewSymbolId(id_generator, instruction_list));
   {
@@ -192,7 +193,7 @@ template struct CreateSymbolIdHelper<cfg::ScopeProto>;
 template<>
 Maybe<int64_t> CreateSymbolIdHelper<cfg::ParallelConf>::Call(
     vm::IdGenerator* id_generator, vm::InstructionMsgList* instruction_list,
-    vm::cfg::EagerSymbolList* eager_symbol_list, const cfg::ParallelConf& conf) {
+    eager::cfg::EagerSymbolList* eager_symbol_list, const cfg::ParallelConf& conf) {
   int64_t symbol_id = JUST(id_generator->NewSymbolId());
   {
     ObjectMsgPtr<vm::InstructionMsg> instruction =
@@ -646,12 +647,12 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     one::EagerBlobObjectList input_eager_blob_objects,
-    one::EagerBlobObjectList output_eager_blob_objects, const AttrValueMap& attrs,
+    one::EagerBlobObjectList output_eager_blob_objects,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");
-  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
+  auto phy_instr_operand = std::make_shared<eager::LocalCallOpKernelPhyInstrOperand>(
+      opkernel, input_eager_blob_objects, output_eager_blob_objects);
   instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
@@ -745,7 +746,7 @@ Maybe<void> InstructionsBuilder::InitStringSymbol(int64_t symbol_id, std::string
       ObjectMsgPtr<vm::InstructionMsg>::New("InitStringSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.set_string_symbol(str);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -758,7 +759,7 @@ Maybe<void> InstructionsBuilder::InitJobConfSymbol(
       ObjectMsgPtr<vm::InstructionMsg>::New("InitJobDescSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_job_conf_symbol()->CopyFrom(*job_conf);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -771,7 +772,7 @@ Maybe<void> InstructionsBuilder::NewParallelConfSymbol(
       ObjectMsgPtr<vm::InstructionMsg>::New("NewParallelDescSymbol");
   instruction->add_int64_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_parallel_conf_symbol()->CopyFrom(*parallel_conf);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -784,7 +785,7 @@ Maybe<void> InstructionsBuilder::NewScopeSymbol(
       ObjectMsgPtr<vm::InstructionMsg>::New("InitScopeSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_scope_symbol()->CopyFrom(*scope_proto);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -812,7 +813,7 @@ Maybe<void> InstructionsBuilder::InitOpNodeSignatureDescSymbol(
       ObjectMsgPtr<vm::InstructionMsg>::New("InitOpNodeSignatureDescSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_node_signature_symbol()->CopyFrom(*op_node_signature_sym);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -825,7 +826,7 @@ Maybe<void> InstructionsBuilder::InitOpConfSymbol(
       ObjectMsgPtr<vm::InstructionMsg>::New("InitOperatorConfSymbol");
   instruction->add_init_symbol_operand(symbol_id);
   instruction_list_->PushBack(instruction.Mutable());
-  vm::cfg::EagerSymbol eager_symbol;
+  eager::cfg::EagerSymbol eager_symbol;
   eager_symbol.set_symbol_id(symbol_id);
   eager_symbol.mutable_op_conf_symbol()->CopyFrom(*op_conf);
   eager_symbol_list_->mutable_eager_symbol()->Add()->CopyFrom(eager_symbol);
@@ -868,7 +869,7 @@ Maybe<void> InstructionsBuilder::FeedBlob(
 }
 
 Maybe<void> InstructionsBuilder::ReleaseTensor(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
@@ -888,7 +889,8 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const std::function<void(uint64_t)>& callback, const std::string& modifier) {
   std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object =
+      JUST(tensor->eager_blob_object());
   const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
       JUST(tensor->infer_local_dep_object());
   const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
@@ -901,7 +903,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 }
 
 Maybe<void> InstructionsBuilder::ReadTensorShapeByCallback(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
     const std::function<void(const std::shared_ptr<const Shape>&)>& callback) {
   std::string instr_name = "ReadTensorShapeByCallback";
   ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
@@ -1550,29 +1552,26 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> LogicalInstructionsBuilder::LogicalRun(const std::function<void(LogicalInstructionsBuilder*)>& Build) {
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
   std::shared_ptr<Session> sess = JUST(GetDefaultSession());
   const auto& instruction_list = sess->instruction_list();
   const auto& eager_symbol_list = sess->eager_symbol_list();
-  InstructionsBuilder instructions_builder(id_generator, instruction_list.get(),
-                                           eager_symbol_list.get(), _ReleaseLogicalObject);
-  Build(&instructions_builder);
-  JUST(Global<vm::EagerOneflow>::Get()->RunLogicalInstruction(
-      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
+  LogicalInstructionsBuilder logical_instructions_builder(instruction_list.get(), 
+                                           id_generator, eager_symbol_list.get(), _ReleaseLogicalObject);
+  Build(&logical_instructions_builder);
+  JUST(Global<eager::EagerOneflow>::Get()->RunLogicalInstruction(
+      logical_instructions_builder.mut_instruction_list(), logical_instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalInstructionsBuilder::PhysicalRun(const std::function<void(PhysicalInstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
-  vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
-                                           &instruction_list, &eager_symbol_list,
-                                           _ReleasePhysicalObject);
-  Build(&instructions_builder);
-  JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
-      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
+  PhysicalInstructionsBuilder physical_instructions_builder(&instruction_list);
+  Build(&physical_instructions_builder);
+  JUST(Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
+      instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();
 }
 
