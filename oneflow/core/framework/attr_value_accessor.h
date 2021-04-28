@@ -21,6 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace cfg {
+class AttrValue;
+}
+
 namespace user_op {
 
 template<typename T>
@@ -30,9 +34,6 @@ struct AttrValueAccessor final {
 };
 
 class AttrVal;
-namespace cfg {
-class AttrValue;
-}
 
 Maybe<AttrVal> MakeCppAttrValByCfgAttrValue(const cfg::AttrValue&);
 

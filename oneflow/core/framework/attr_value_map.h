@@ -25,24 +25,36 @@ namespace oneflow {
 class MutableAttrValueMap;
 class MutableCfgAttrValueMap;
 
-using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const AttrVal>>;
+using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const user_op::AttrVal>>;
 
-class AttrValueMap {
+class AttrValueMap final {
  public:
+  AttrValueMap() : attrs_(new AttrName2AttrVal) {}
   explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
 
+  using value_type = typename AttrName2AttrVal::value_type;
+  AttrValueMap(std::initializer_list<value_type> init);
+
   // without coping AttrVal.
-  explicit AttrValueMap(const MutableAttrValueMap& other);
-  explicit AttrValueMap(const MutableCfgAttrValueMap& other);
+  /*explicit*/ AttrValueMap(const MutableAttrValueMap& other);
+  /*explicit*/ AttrValueMap(const MutableCfgAttrValueMap& other);
 
   AttrValueMap(const AttrValueMap&) = default;
   AttrValueMap(AttrValueMap&&) = default;
   ~AttrValueMap() = default;
 
+  AttrValueMap& operator=(const AttrValueMap& other) {
+    attrs_ = other.attrs_;
+    return *this;
+  }
+
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
-  using const_iterator = AttrName2AttrVal::const_iterator;
+  size_t size() const { return attrs_->size(); }
+  bool empty() const { return attrs_->empty(); }
+
+  using const_iterator = typename AttrName2AttrVal::const_iterator;
   const_iterator begin() const { return attrs_->begin(); }
   const_iterator end() const { return attrs_->end(); }
 
@@ -69,9 +81,9 @@ class ComposedAttrValueMap final {
   AttrValueMap base_;
 };
 
-class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<AttrVal>> {
+class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<user_op::AttrVal>> {
  public:
-  using HashMap<std::string, std::shared_ptr<AttrVal>>::HashMap;
+  using HashMap<std::string, std::shared_ptr<user_op::AttrVal>>::HashMap;
 
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);

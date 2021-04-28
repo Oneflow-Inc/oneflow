@@ -20,13 +20,21 @@ limitations under the License.
 
 namespace oneflow {
 
-AttrValueMap::AttrValueMap(const MutableAttrValueMap& other) {
-  for (const auto& pair : other) { attrs_[pair.first] = pair.second; }
+AttrValueMap::AttrValueMap(std::initializer_list<AttrValueMap::value_type> init)
+    : attrs_(new AttrName2AttrVal) {
+  for (const auto& pair : init) {
+    attrs_->emplace(pair.first, pair.second);
+  }
 }
 
-AttrValueMap::AttrValueMap(const MutableCfgAttrValueMap& other) {
+AttrValueMap::AttrValueMap(const MutableAttrValueMap& other) : attrs_(new AttrName2AttrVal) {
+  for (const auto& pair : other) { attrs_->emplace(pair.first, pair.second); }
+}
+
+AttrValueMap::AttrValueMap(const MutableCfgAttrValueMap& other) : attrs_(new AttrName2AttrVal) {
   for (const auto& pair : other) {
-    attrs_[pair.first] = CHECK_JUST(user_op::MakeCppAttrValByCfgAttrValue(*pair.second));
+    const auto& attr_value = CHECK_JUST(user_op::MakeCppAttrValByCfgAttrValue(*pair.second));
+    attrs_->emplace(pair.first, attr_value);
   }
 }
 
@@ -34,7 +42,7 @@ template<typename T>
 Maybe<const T&> AttrValueMap::GetAttr(const std::string& attr_name) const {
   const auto& it = this->find(attr_name);                                   
   CHECK_OR_RETURN(it != this->end());                                       
-  const auto* ptr = dynamic_cast<const TypedAttrVal<T>*>(it->second.get());      
+  const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());      
   CHECK_NOTNULL_OR_RETURN(ptr);                                          
   return ptr->val();             
 }
@@ -44,7 +52,7 @@ Maybe<const T&> ComposedAttrValueMap::GetAttr(const std::string& attr_name) cons
   {
     const auto& it = prior_.find(attr_name);                                   
     if (it != prior_.end()) {
-      const auto* ptr = dynamic_cast<const TypedAttrVal<T>*>(it->second.get());      
+      const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());      
       CHECK_NOTNULL_OR_RETURN(ptr);                                          
       return ptr->val();             
     }
@@ -52,7 +60,7 @@ Maybe<const T&> ComposedAttrValueMap::GetAttr(const std::string& attr_name) cons
   {
     const auto& it = base_.find(attr_name);                                   
     if (it != base_.end()) {
-      const auto* ptr = dynamic_cast<const TypedAttrVal<T>*>(it->second.get());      
+      const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());
       CHECK_NOTNULL_OR_RETURN(ptr);                                          
       return ptr->val();             
     }
