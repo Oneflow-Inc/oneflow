@@ -27,10 +27,10 @@ namespace {
 class ReduceSumLikeModule {
  public:
   ReduceSumLikeModule(const std::string& op_name) {
-    identity_op_ = op_expr_helper::IdentityOp(op_name + "_identity").GetPtrOrThrow();
-    reshape_like_op_ = op_expr_helper::ReshapeLikeOp(op_name + "_reshape_like").GetPtrOrThrow();
+    identity_op_ = CHECK_JUST(op_expr_helper::IdentityOp(op_name + "_identity"));
+    reshape_like_op_ = CHECK_JUST(op_expr_helper::ReshapeLikeOp(op_name + "_reshape_like"));
     reduce_sum_like_op_ =
-        op_expr_helper::ReduceSumLikeOp({-1}, op_name + "reduce_sum_like").GetPtrOrThrow();
+        CHECK_JUST(op_expr_helper::ReduceSumLikeOp({-1}, op_name + "reduce_sum_like"));
   }
 
   Maybe<Tensor> forward(const std::shared_ptr<Tensor>& input,
