@@ -23,6 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 class MutableAttrValueMap;
+class MutableCfgAttrValueMap;
 
 using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const AttrVal>>;
 
@@ -31,6 +32,7 @@ class AttrValueMap {
   explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
 
   explicit AttrValueMap(const MutableAttrValueMap& other);
+  explicit AttrValueMap(const MutableCfgAttrValueMap& other);
 
   AttrValueMap(const AttrValueMap&) = default;
   AttrValueMap(AttrValueMap&&) = default;
@@ -73,7 +75,15 @@ class ComposedAttrValueMap final {
   AttrValueMap base_;
 };
 
-class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
+class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<AttrVal>> {
+ public:
+  using HashMap<std::string, std::shared_ptr<AttrVal>>::HashMap;
+
+  template<typename T>
+  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
+};
+
+class MutableCfgAttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
  public:
   using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
 
