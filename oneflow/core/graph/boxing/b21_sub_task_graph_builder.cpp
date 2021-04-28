@@ -30,7 +30,7 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     const int64_t out_parallel_id = 0;
     const int64_t nearest_in_parallel_id = SubTskGphBuilderUtil::FindNearestSrcParallelId(
         in_parallel_desc, out_parallel_desc, out_parallel_id);
-    sorted_ctrl_tasks->resize(out_parallel_desc.parallel_num());
+    sorted_ctrl_tasks->resize(1);
     FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {
       TaskNode* in_node = sorted_in_tasks.at(i);
       if (i == nearest_in_parallel_id) {
