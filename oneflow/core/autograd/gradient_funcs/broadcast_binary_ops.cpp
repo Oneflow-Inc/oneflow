@@ -38,7 +38,7 @@ class ReduceSumLikeModule {
     const auto& in_shape = *(input->shape());
     const auto& like_shape = *(like->shape());
     TensorTuple inputs{input};
-    AttrValueMap attrs;
+    MutableAttrValueMap attrs;
     std::shared_ptr<OpExpr> op = identity_op_;
     if (in_shape != like_shape) {
       const Shape& left_extended_shape =

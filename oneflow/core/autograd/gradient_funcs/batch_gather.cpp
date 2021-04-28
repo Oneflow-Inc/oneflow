@@ -64,7 +64,7 @@ Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTu
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  AttrValueMap attrs;
+  MutableAttrValueMap attrs;
   JUST(attrs.SetAttr<int32_t>("num_segments", ctx->num_segments));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*bw_unsorted_batch_segment_sum_op_,
                                                         {out_grads.at(0), indices}, attrs));

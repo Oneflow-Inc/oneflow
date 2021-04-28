@@ -24,19 +24,31 @@ Maybe<cfg::AttrValue> AttrValueMap::GetAttr(const std::string& attr_name) const 
   JUST(HasAttr(attr_name));
   const auto& it = attrs_->find(attr_name);
   if (it != attrs_->end()) { return it->second; }
-  if (!base_attrs_) { return base_attrs_->GetAttr<cfg::AttrValue>(attr_name); }
+  if (!parents_) {
+    for (const auto& p : *parents_) {
+      if (JUST(p.HasAttr(attr_name))) { return p.GetAttr<cfg::AttrValue>(attr_name); }
+    }
+  }
   UNIMPLEMENTED_THEN_RETURN() << "The attribute with name \"" << attr_name
                               << "\" has not been found.";
 }
 
-#define DEFINE_ATTR_VALUE_MAP_ATTRIBUTE_GETTER(field, cpp_type, attr_type)    \
-  template<>                                                                  \
-  Maybe<cpp_type> AttrValueMap::GetAttr(const std::string& attr_name) const { \
-    const auto& it = this->find(attr_name);                                   \
-    CHECK_OR_RETURN(it != this->end());                                       \
-    AttrValue attr_vale;                                                      \
-    it->second->ToProto(&attr_vale);                                          \
-    return user_op::AttrValueAccessor<cpp_type>::Attr(attr_vale);             \
+#define DEFINE_ATTR_VALUE_MAP_ATTRIBUTE_GETTER(field, cpp_type, attr_type)         \
+  template<>                                                                       \
+  Maybe<cpp_type> AttrValueMap::GetAttr(const std::string& attr_name) const {      \
+    const auto& it = attrs_->find(attr_name);                                      \
+    if (it != attrs_->end()) {                                                     \
+      AttrValue attr_vale;                                                         \
+      it->second->ToProto(&attr_vale);                                             \
+      return user_op::AttrValueAccessor<cpp_type>::Attr(attr_vale);                \
+    }                                                                              \
+    if (!parents_) {                                                               \
+      for (const auto& p : *parents_) {                                            \
+        if (JUST(p.HasAttr(attr_name))) { return p.GetAttr<cpp_type>(attr_name); } \
+      }                                                                            \
+    }                                                                              \
+    UNIMPLEMENTED_THEN_RETURN() << "The attribute with name \"" << attr_name       \
+                                << "\" has not been found.";                       \
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_ATTRIBUTE_GETTER, ATTR_SEQ);
@@ -70,18 +82,43 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_ATTR_VALUE_MAP_ATTRIBUTE_SETTER, ATTR_SEQ);
 
 AttrValueMap::iterator::AttrValueMapIter AttrValueMap::Find(const std::string& attr_name) const {
   const auto& it = attrs_->find(attr_name);
-  if (it != attrs_->end() || !base_attrs_) { return it; }
-  return base_attrs_->Find(attr_name);
+  if (it != attrs_->end()) { return it; }
+  if (!parents_) {
+    for (const auto& p : *parents_) {
+      const auto& it = p.find(attr_name);
+      if (it != p.end()) { return it.internal(); }
+    }
+  }
+  return it;
 }
 
-/*static*/ Maybe<AttrValueMap> MutableAttrValueMap::Compose(const AttrValueMap& base,
-                                                            const AttrValueMap& current) {
-  auto attrs = std::make_shared<AttrValueMap>();
-  attrs->base_attrs_ = std::make_shared<AttrValueMap>(base);
-  attrs->attrs_ = current.attrs_;
-  for (const auto& it : *(base.attr_names_)) { attrs->attr_names_->emplace(*it); }
-  for (const auto& it : *(current.attr_names_)) { attrs->attr_names_->emplace(*it); }
-  return attrs;
+/*static*/ Maybe<AttrValueMap> AttrValueMap::Compose(const AttrValueMap& attrs,
+                                                     const AttrValueMap& parent) {
+  auto current = std::make_shared<AttrValueMap>();
+  current->parents_ = std::make_shared<std::vector<AttrValueMap>>();
+  current->parents_->emplace_back(parent);
+  current->attrs_ = attrs.attrs_;
+  *current->attr_names_ = *attrs.attr_names_;
+  for (const auto& it : *parent.attr_names_) { current->attr_names_->emplace(it); }
+  return current;
+}
+
+Maybe<MutableAttrValueMap&> MutableAttrValueMap::Compose(const AttrValueMap& parent) {
+  if (!parents_) { parents_ = std::make_shared<std::vector<AttrValueMap>>(); }
+  parents_->emplace_back(parent);
+  for (const auto& it : *parent.attr_names_) { attr_names_->emplace(it); }
+  return *this;
+}
+
+/*static*/ Maybe<MutableAttrValueMap> MutableAttrValueMap::Compose(const AttrValueMap& attrs,
+                                                                   const AttrValueMap& parent) {
+  auto current = std::make_shared<MutableAttrValueMap>();
+  current->parents_ = std::make_shared<std::vector<AttrValueMap>>();
+  current->parents_->emplace_back(parent);
+  *current->attrs_ = *attrs.attrs_;
+  *current->attr_names_ = *attrs.attr_names_;
+  for (const auto& it : *parent.attr_names_) { current->attr_names_->emplace(it); }
+  return current;
 }
 
 }  // namespace oneflow

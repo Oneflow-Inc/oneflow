@@ -51,7 +51,7 @@ class UserOpConfTrait {
 
   template<typename T>
   Maybe<T> GetAttr(const std::string& attr_name, const AttrValueMap& priority_attrs) const {
-    if (priority_attrs.count(attr_name)) { return priority_attrs.GetAttr<T>(attr_name); }
+    if (JUST(priority_attrs.HasAttr(attr_name))) { return priority_attrs.GetAttr<T>(attr_name); }
     return GetAttr<T>(attr_name);
   }
 

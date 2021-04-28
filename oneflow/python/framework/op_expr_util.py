@@ -27,7 +27,7 @@ def user_op_expr_call(self, *args, **kwargs):
                 arg.determine()
             args[i] = arg._local_or_consistent_tensor
 
-    attrs = oneflow._oneflow_internal.AttrValueMap()
+    attrs = oneflow._oneflow_internal.MutableAttrValueMap()
     for attr_name, attr_value in kwargs.items():
         assert isinstance(attr_name, str)
         attrs[attr_name] = convert_to_user_attr_value(

@@ -122,7 +122,7 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
     const auto& x = saved_tensors.at(offset);
     const auto& mean = saved_tensors.at(offset + 1);
     const auto& inv_variance = saved_tensors.at(offset + 2);
-    AttrValueMap attrs;
+    MutableAttrValueMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     in_grads->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
