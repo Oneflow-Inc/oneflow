@@ -129,7 +129,7 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
       CHECK(this_subgraph.insert(cur_node).second);
 
       cur_node->ForEachNodeOnInOutEdge([&](const OpNode* next_node) {
-        if (visited.find(next_node) == visited.end()
+        if (visited.find(next_node) == visited.end() && (!IsBreakpointOpNode(next_node))
             && next_node->parallel_desc().EqualsIgnoringHierarchy(seed_parallel_desc)
             && SharedPtrShapeEqual(GetOpNodeTimeShape(next_node), seed_time_shape)) {
           CHECK(visited.insert(next_node).second);
@@ -534,6 +534,9 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
       if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
+      } else {
+        LOG(WARNING) << "Oh no. edge from [" << acc->op().op_name() << "]->["
+                     << op_edge->dst_node()->op().op_name() << "] cannot insert nccl edge!\n";
       }
     }
 
@@ -710,7 +713,8 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   const OpNode* first_acc_op = ordered_acc_op_nodes.front();
   std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
   std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
-  LOG(WARNING) << " Find acc op in Job: " << job_builder->job().job_conf().job_name()
+  LOG(WARNING) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
+               << ") in Job: " << job_builder->job().job_conf().job_name()
                << ", we will try insert special identity and ctrl for "
                << " UNSAFE handle ALL nccl ops between different time shape: "
                << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
