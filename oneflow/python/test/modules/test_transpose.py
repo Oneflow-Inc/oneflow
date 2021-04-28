@@ -28,13 +28,13 @@ class TestTranspose(flow.unittest.TestCase):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
         np_out = input.numpy().transpose((0, 2, 3, 1))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
     def test_transpose_v2(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.transpose(perm=(0, 2, 3, 1))
         np_out = input.numpy().transpose((0, 2, 3, 1))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
 if __name__ == "__main__":

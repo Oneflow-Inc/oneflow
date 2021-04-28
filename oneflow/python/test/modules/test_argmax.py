@@ -29,34 +29,34 @@ class TestArgmax(flow.unittest.TestCase):
         axis = -1
         of_out = flow.argmax(input, dim=axis)
         np_out = np.argmax(input.numpy(), axis=axis)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
     def test_argmax_v2(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         axis = 0
         of_out = input.argmax(dim=axis)
         np_out = np.argmax(input.numpy(), axis=axis)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
     def test_argmax_v3(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         axis = 1
         of_out = flow.argmax(input, dim=axis)
         np_out = np.argmax(input.numpy(), axis=axis)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
     def test_argmax_v4(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         axis = 0
         of_out = input.argmax(axis, True)
         np_out = np.argmax(input.numpy(), axis=axis)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
     
     def test_argmax_v5(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.argmax()
         np_out = np.max(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
 if __name__ == "__main__":
