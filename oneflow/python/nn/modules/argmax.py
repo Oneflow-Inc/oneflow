@@ -62,12 +62,12 @@ class Argmax(Module):
             .Attr("axis", -1)
             .Build()
         )
-        self.reduce_max_op = (
-            flow.builtin_op("reduce_max")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("axis", [1])
-            .Attr("keepdims", False)
+        self._flatten = (
+            flow.builtin_op("flatten")
+            .Input("in")
+            .Output("out")
+            .Attr("start_dim", 0)
+            .Attr("end_dim", -1)
             .Build()
         )
 
@@ -76,8 +76,9 @@ class Argmax(Module):
 
     def forward(self, input):
         if self.dim == None:
-            pass
-
+            input = self._flatten(input)[0]
+            self.dim = 0
+        
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
