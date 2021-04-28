@@ -50,7 +50,7 @@ void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) 
   if (!default_physical_env) {
     FLAGS_log_dir = LogDir(logging_conf.log_dir());
   } else {
-    FLAGS_log_dir = LogDir(logging_conf.default_physical_env_log_dir());
+    FLAGS_log_dir = LogDir(logging_conf.log_dir() + "/default_physical_env_log");
   }
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
