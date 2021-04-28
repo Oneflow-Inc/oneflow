@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 void ReleaseTensorInstructionType::Infer(vm::Instruction* instruction) const {
   // do nothing
@@ -56,5 +56,5 @@ class GpuReleaseTensorInstructionType final : public ReleaseTensorInstructionTyp
 COMMAND(vm::RegisterInstructionType<GpuReleaseTensorInstructionType>("gpu.ReleaseTensor"));
 #endif
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

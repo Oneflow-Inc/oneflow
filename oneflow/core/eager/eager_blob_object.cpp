@@ -17,9 +17,10 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 Maybe<VmLocalDepObject> GetVmLocalDepObject(
@@ -78,6 +79,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   {
     // reset tensor_buffer_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
+      if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
     char* dptr = nullptr;
@@ -90,5 +92,5 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

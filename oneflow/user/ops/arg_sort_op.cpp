@@ -40,7 +40,7 @@ REGISTER_USER_OP("arg_sort")
       CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });

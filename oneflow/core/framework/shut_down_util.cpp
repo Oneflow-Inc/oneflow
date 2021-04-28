@@ -13,32 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/framework/python_interpreter_util.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<std::vector<bool>*> GetShuttingDown() {
-  static std::vector<bool> shutting_down{false};
+std::atomic<bool>* GetShuttingDown() {
+  static std::atomic<bool> shutting_down{false};
   return &shutting_down;
 }
 
 }  // namespace
 
-Maybe<bool> IsShuttingDown() {
-  auto* shutting_down = JUST(GetShuttingDown());
-  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
-  bool is_interpreter_shutdown = (*shutting_down)[0];
+bool IsShuttingDown() {
+  auto* shutting_down = GetShuttingDown();
+  bool is_interpreter_shutdown = *shutting_down;
   return is_interpreter_shutdown;
 }
 
-Maybe<void> SetShuttingDown() {
-  auto* shutting_down = JUST(GetShuttingDown());
-  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
-  (*shutting_down)[0] = true;
-  return Maybe<void>::Ok();
+void SetShuttingDown() {
+  auto* shutting_down = GetShuttingDown();
+  CHECK_EQ(*shutting_down, false);
+  *shutting_down = true;
 }
 
 }  // namespace oneflow

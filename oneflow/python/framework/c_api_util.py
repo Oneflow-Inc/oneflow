@@ -45,6 +45,12 @@ def EnvResource():
     return text_format.Parse(resource, resource_util.Resource())
 
 
+def InitDefaultEnv(env_proto):
+    assert type(env_proto) is env_pb2.EnvProto
+    env_proto_str = text_format.MessageToString(env_proto)
+    oneflow._oneflow_internal.InitDefaultEnv(env_proto_str)
+
+
 def InitEnv(env_proto):
     assert type(env_proto) is env_pb2.EnvProto
     env_proto_str = text_format.MessageToString(env_proto)
@@ -238,8 +244,8 @@ def GetScopeConfigDef():
     return text_format.Parse(scope_config_def, ConfigDef())
 
 
-def GetOpAttributes():
-    op_attributes = oneflow._oneflow_internal.GetSerializedOpAttributes()
+def GetInterfaceOpAttributes():
+    op_attributes = oneflow._oneflow_internal.GetSerializedInterfaceOpAttributes()
     return text_format.Parse(op_attributes, op_attribute_pb.OpAttributeList())
 
 
