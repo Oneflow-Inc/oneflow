@@ -78,7 +78,7 @@ class TestGeLU(flow.unittest.TestCase):
         input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
         x = flow.Tensor(input_arr)
 
-        gelu = flow.nn.GeLU()
+        gelu = flow.nn.GELU()
         y = gelu(x)
         z = np.array([-0.15426877, 0.0, 0.34573123])
 

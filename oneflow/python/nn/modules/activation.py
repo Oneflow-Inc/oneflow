@@ -17,8 +17,7 @@ import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 
 
 @oneflow_export("nn.Sigmoid")
@@ -44,8 +43,6 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.Tanh")
-@register_tensor_op_by_module("tanh")
-@register_op_by_module("tanh")
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
@@ -87,10 +84,14 @@ class Tanh(Module):
         return res
 
 
-@oneflow_export("nn.GeLU")
-@register_tensor_op_by_module("gelu")
-@register_op_by_module("gelu")
-class GeLU(Module):
+@oneflow_export("tanh")
+@register_tensor_op("tanh")
+def tanh_op(tensor):
+    return Tanh()(tensor)
+
+
+@oneflow_export("nn.GELU")
+class GELU(Module):
     r"""Gelu activation operator.
 
     The equation is:
@@ -115,7 +116,7 @@ class GeLU(Module):
 
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         input = flow.Tensor(x)
-        gelu = flow.nn.GeLU()
+        gelu = flow.nn.GELU()
         
         out = gelu(input)
 
@@ -130,3 +131,9 @@ class GeLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+@oneflow_export("gelu")
+@register_tensor_op("gelu")
+def gelu_op(tensor):
+    return GELU()(tensor)

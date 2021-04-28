@@ -16,12 +16,9 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 
 
-@register_tensor_op_by_module("exp")
-@register_op_by_module("exp")
 class Exp(Module):
     """This operator computes the exponential of Tensor.
 
@@ -57,3 +54,9 @@ class Exp(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("exp")
+@register_tensor_op("exp")
+def exp_op(tensor):
+    return Exp()(tensor)
