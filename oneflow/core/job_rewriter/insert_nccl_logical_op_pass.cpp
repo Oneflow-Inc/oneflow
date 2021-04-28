@@ -534,9 +534,6 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
       if (IsOpEdgeAllowInsertNccl(op_edge, seed_time_shape)) {
         queued_edges.push(op_edge);
         CHECK(visited.insert(op_edge).second);
-      } else {
-        LOG(WARNING) << "Oh no. edge from [" << acc->op().op_name() << "]->["
-                     << op_edge->dst_node()->op().op_name() << "] cannot insert nccl edge!\n";
       }
     }
 
