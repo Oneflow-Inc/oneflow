@@ -55,6 +55,9 @@ class Transpose(Module):
         if conjugate:
             raise NotImplementedError
 
+        if batch_axis_non_change:
+            raise NotImplementedError
+
         self._op = (
             flow.builtin_op("transpose")
             .Input("input")

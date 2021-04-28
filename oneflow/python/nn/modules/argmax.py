@@ -28,7 +28,8 @@ class Argmax(Module):
 
     Args:
         input (oneflow.Tensor): Input Tensor
-        axis (int, optional): dimension to be calculated. Defaults to the last dim (-1)
+        dim (int, optional): dimension to be calculated. Defaults to the last dim (-1)
+        keepdim (bool optional):  whether the output tensor has dim retained or not. Ignored if dim=None.
 
     Returns:
         oneflow.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
@@ -49,30 +50,43 @@ class Argmax(Module):
 
     """
 
-    def __init__(self, axis=-1) -> None:
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self._op_softmax_last_dim = (
             flow.builtin_op("argmax").Input("in").Output("out").Build()
         )
-        self.axis = axis
+        self._expand_op = (
+            flow.builtin_op("expand_dims")
+            .Input("in")
+            .Output("out")
+            .Attr("axis", -1)
+            .Build()
+        )
+
+        self.dim = dim
+        self.keepdim = keepdim
 
     def forward(self, input):
         num_axes = len(input.shape)
-        axis = self.axis if self.axis >= 0 else self.axis + num_axes
+        axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
-            return self._op_softmax_last_dim(input)[0]
+            x = self._op_softmax_last_dim(input)[0]
+            if self.keepdim == True:
+                x = self._expand_op(x)
+            return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = flow.tmp.transpose(input, perm=perm)
             x = self._op_softmax_last_dim(x)[0]
-            x = flow.tmp.expand_dims(x, axis=-1)
+            x = self._expand_op(x)[0]
             x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
-            x = flow.tmp.squeeze(x, axis=[axis])
+            if self.keepdim == False:
+                x = flow.tmp.squeeze(x, axis=[axis])
             return x
 
 
 @oneflow_export("argmax")
 @register_tensor_op("argmax")
-def argmax_op(tensor, axis: int = -1):
-    return Argmax(axis=axis)(tensor)
+def argmax_op(tensor, dim: int = None, keepdim: bool = False):
+    return Argmax(dim=dim, keepdim=keepdim)(tensor)

@@ -67,5 +67,5 @@ class Squeeze(Module):
 
 @oneflow_export("tmp.squeeze")
 @register_tensor_op("squeeze")
-def squeeze_op(tensor, axis: int = -1):
+def squeeze_op(tensor, axis: Optional[Sequence[int]] = None):
     return Squeeze(axis=axis)(tensor)
