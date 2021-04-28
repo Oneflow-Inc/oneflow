@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class LocalCallOpKernelInstructionType : public vm::InstructionType {
  public:
@@ -137,7 +137,7 @@ class FeedBlobInstructionType : public vm::InstructionType {
   virtual const char* device_tag() const = 0;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_

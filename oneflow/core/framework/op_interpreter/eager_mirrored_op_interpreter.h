@@ -17,7 +17,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace one {
-Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
-                                                               const Shape& shape);
+Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type, const Shape& shape);
 }
 }  // namespace oneflow

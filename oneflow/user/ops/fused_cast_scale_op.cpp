@@ -67,7 +67,7 @@ REGISTER_USER_OP("fused_cast_scale")
     .Attr<double>("scale", 1.0)
     .SetTensorDescInferFn(TensorDescInfer)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInferDataTypeFn(DataTypeInfer);
+    .SetDataTypeInferFn(DataTypeInfer);
 
 }  // namespace
 }  // namespace oneflow

@@ -26,7 +26,7 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
@@ -116,5 +116,5 @@ class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
