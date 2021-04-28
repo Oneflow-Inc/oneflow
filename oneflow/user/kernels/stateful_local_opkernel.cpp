@@ -86,9 +86,6 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
   if (tmp_buffer != nullptr) {
     tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
   }
-  if (tmp_buffer != nullptr) {
-    tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
-  }
 }
 
 void ZeroCopyBaseContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
