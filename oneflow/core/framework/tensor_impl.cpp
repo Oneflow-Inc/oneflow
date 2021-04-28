@@ -14,12 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
+#include "oneflow/api/foreign_lock_helper.h"
+#include "oneflow/core/common/blocking_counter.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 namespace one {
@@ -54,8 +58,8 @@ Maybe<void> ConsistentTensorImpl::set_parallel_desc(
 
 Maybe<void> EagerMirroredTensorImpl::set_blob_object(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  blob_object_ = blob_object;
-  return SyncBlobObject2Attributes(blob_object);
+  UNIMPLEMENTED();
+  return Maybe<void>::Ok();
 }
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
@@ -66,23 +70,21 @@ Maybe<void> EagerConsistentTensorImpl::set_blob_object(
   return SyncBlobObject2Attributes(blob_object);
 }
 
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                                                 const std::shared_ptr<const DType>& dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool requires_grad, bool is_leaf, bool retain_grad)
-    : EagerMirroredTensorImpl(shape, dtype, device, nullptr, requires_grad, is_leaf, retain_grad) {
-  tensor_storage_ = std::make_shared<TensorStorage>(parallel_desc());
-}
-
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const Device>& device,
-    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf,
-    bool retain_grad)
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf, bool retain_grad)
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
-      shape_(shape),
-      dtype_(dtype),
-      tensor_storage_(tensor_storage) {}
+      eager_blob_object_(eager_blob_object) {
+  dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
+  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  const auto& parallel_desc = this->parallel_desc();
+  tensor_storage_->set_releaser_hook(
+      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
+        PhysicalRun([&](InstructionsBuilder* builder) {
+          builder->ReleaseTensor(eager_blob_object, parallel_desc);
+        });
+      });
+}
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
   return eager_blob_object_->infer_local_dep_object();
@@ -90,6 +92,24 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const 
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return eager_blob_object_->compute_local_dep_object();
+}
+
+const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+  const std::shared_ptr<const Shape>* result = nullptr;
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([this, &result]() {
+    BlockingCounter bc(1);
+    auto callback = [&bc, &result](const std::shared_ptr<const Shape>& shape) -> void {
+      result = &shape;
+      bc.Decrease();
+    };
+    auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
+      JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
+      return Maybe<void>::Ok();
+    };
+    CHECK_JUST(PhysicalRun(build_instruction));
+    bc.WaitUntilCntEqualZero();
+  });
+  return *result;
 }
 
 }  // namespace one

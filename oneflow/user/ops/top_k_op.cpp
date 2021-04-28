@@ -31,7 +31,7 @@ REGISTER_USER_OP("top_k")
           std::min(ctx->Attr<int32_t>("k"), static_cast<int32_t>(in_shape->dim_vec().back())));
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     })

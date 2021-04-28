@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 class TensorBuffer {
  public:
@@ -67,6 +67,8 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<VmLocalDepObject> compute_local_dep_object() const { return compute_local_dep_object_; }
 
+  std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
+
  private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
@@ -77,7 +79,7 @@ class EagerBlobObject final : public BlobObject {
   Maybe<VmLocalDepObject> compute_local_dep_object_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_

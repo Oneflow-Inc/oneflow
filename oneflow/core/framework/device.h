@@ -34,15 +34,15 @@ class Device final {
   std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
+  size_t hash_value() const { return hash_value_; }
+  bool operator==(const Device& device) const {
+    return type_ == device.type() && device_id_ == device.device_id();
+  }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
-
-  size_t hash_value() const { return hash_value_; }
-  bool operator==(const Device& rhs) const {
-    return type_ == rhs.type_ && device_id_ == rhs.device_id_;
-  }
 
  private:
   const std::string type_;

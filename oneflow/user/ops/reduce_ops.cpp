@@ -83,7 +83,7 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       .Attr<bool>("keepdims")                         \
       .SetTensorDescInferFn(InferTensorDescFn)        \
       .SetGetSbpFn(GetSbpFn<binary_func>)             \
-      .SetInferDataTypeFn(InferDataType);
+      .SetDataTypeInferFn(InferDataType);
 
 REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
 REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)

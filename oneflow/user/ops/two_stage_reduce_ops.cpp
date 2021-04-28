@@ -209,7 +209,7 @@ Maybe<void> GetReduceDeviceStageGradSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")                                       \
       .SetLogicalTensorDescInferFn(InferReduceDeviceStageLogicalTensorDescFn)   \
       .SetPhysicalTensorDescInferFn(InferReduceDeviceStagePhysicalTensorDescFn) \
-      .SetInferDataTypeFn(InferReduceDeviceStageDtypeFn)                        \
+      .SetDataTypeInferFn(InferReduceDeviceStageDtypeFn)                        \
       .SetGetSbpFn(GetReduceDeviceStageSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_min_device_stage")
@@ -223,7 +223,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP("reduce_max_device_stage")
       .Output("in_diff")                                            \
       .Attr<std::vector<int32_t>>("axis")                           \
       .SetTensorDescInferFn(InferReduceDeviceStageGradTensorDescFn) \
-      .SetInferDataTypeFn(InferReduceDeviceStageGradDtypeFn)        \
+      .SetDataTypeInferFn(InferReduceDeviceStageGradDtypeFn)        \
       .SetGetSbpFn(GetReduceDeviceStageGradSbpFn);
 
 REGISTER_REDUCE_DEVICE_STAGE_GRAD_USER_OP("reduce_min_device_stage_grad")
@@ -263,7 +263,7 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .Attr<std::vector<int32_t>>("axis")                                         \
       .Attr<bool>("keepdims")                                                     \
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
-      .SetInferDataTypeFn(InferReduceGlobalStageDtypeFn)                          \
+      .SetDataTypeInferFn(InferReduceGlobalStageDtypeFn)                          \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
                               const user_op::UserOpConfWrapper&) {                \
         user_op::InputArgModifier* device_count_modifier =                        \
@@ -292,7 +292,7 @@ REGISTER_REDUCE_GLOBAL_STAGE_USER_OP("reduce_max_global_stage")
       .Attr<std::vector<int32_t>>("axis")                           \
       .Attr<bool>("keepdims")                                       \
       .SetTensorDescInferFn(InferReduceGlobalStageGradTensorDescFn) \
-      .SetInferDataTypeFn(InferReduceGlobalStageGradDtypeFn)        \
+      .SetDataTypeInferFn(InferReduceGlobalStageGradDtypeFn)        \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); });
 
 REGISTER_REDUCE_GLOBAL_STAGE_GRAD_USER_OP("reduce_min_global_stage_grad")
