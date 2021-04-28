@@ -13,10 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
 
-from typing import Optional, Sequence, Sized, Union
 import collections
+from typing import Optional, Sequence, Sized, Union, List, Tuple
+
+import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
@@ -26,13 +27,8 @@ from oneflow.python.nn.modules.utils import (
     _reverse_repeat_tuple,
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
-from oneflow.python.framework.tensor import (
-    register_tensor_op_by_module,
-    register_op_by_module,
-)
+from oneflow.python.framework.tensor import register_tensor_op
 
 
 def _check_axis(axis, shape):
@@ -61,7 +57,6 @@ class Sum(Module):
         name: Optional[str] = None,
     ) -> None:
         super().__init__()
-        assert isinstance(axis, int)
 
         self.axis = axis
         self.keepdims = keepdims
@@ -73,21 +68,24 @@ class Sum(Module):
         )
 
     def forward(self, input):
-        calc_axis = _check_axis(self.axis, input.shape)
-
-        if len(calc_axis) == 0:
+        axis_checked = _check_axis(self.axis, input.shape)
+        if len(axis_checked) == 0:
             return input
-
-        return self._op(input, axis=calc_axis, keepdims=self.keepdims)[0]
+        return self._op(input, axis=axis_checked, keepdims=self.keepdims)[0]
 
 
 @oneflow_export("sum")
-@register_tensor_op_by_module("sum")
-def _sum(input, /, dim, keepdim=False):
+@register_tensor_op("sum")
+def _sum(input, dim, keepdim=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
 
     .. code-block:: python
+
+        #Example
+        
+        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        of_out = flow.sum(input, dim=(2,1))
 
     """
 
@@ -167,7 +165,7 @@ class BroadcastMul(Module):
 
 
 @oneflow_export("mul")
-@register_tensor_op_by_module("mul")
+@register_tensor_op("mul")
 def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -246,7 +244,7 @@ class Mean(Module):
 
 
 @oneflow_export("mean")
-@register_tensor_op_by_module("mean")
+@register_tensor_op("mean")
 def _mean(input_tensor, dim, keepdim):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
@@ -330,7 +328,7 @@ class ScalarAdd(Module):
 
 
 @oneflow_export("sub")
-@register_tensor_op_by_module("sub")
+@register_tensor_op("sub")
 def _sub(x, y):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -404,7 +402,7 @@ class ScalarDivByTensor(Module):
 
 
 @oneflow_export("div")
-@register_tensor_op_by_module("div")
+@register_tensor_op("div")
 def _div(x, y):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -465,7 +463,7 @@ class Reciprocal(Module):
 
 
 @oneflow_export("reciprocal")
-@register_tensor_op_by_module("reciprocal")
+@register_tensor_op("reciprocal")
 def _reciprocal(x):
     r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
     be also set to zero.
@@ -555,7 +553,7 @@ class BroadcastAdd(Module):
 
 
 @oneflow_export("add")
-@register_tensor_op_by_module("add")
+@register_tensor_op("add")
 def _add(x, y):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:

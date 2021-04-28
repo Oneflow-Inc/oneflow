@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+from typing import Optional, List, Tuple
 
+import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
@@ -24,7 +25,6 @@ from oneflow.python.nn.modules.utils import (
     _reverse_repeat_tuple,
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from typing import Optional, List, Tuple
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
 
@@ -65,16 +65,16 @@ class CrossEntropyLoss(Module):
         name: Optional[str] = None,
     ) -> None:
         super().__init__()
-        if weight != None:
+        if weight is not None:
             raise ValueError("Argument weight is not supported yet")
-        if ignore_index != None:
+        if ignore_index is not None:
             raise ValueError("Argument ignore_index is not supported yet")
         assert reduction in [
             "sum",
             "none",
             "mean",
             None,
-        ], "only 'sum', 'mean' and None supported by now"
+        ], "only 'sum', 'mean', 'none' and None supported by now"
 
         self.reduction = reduction
         self._op = (
