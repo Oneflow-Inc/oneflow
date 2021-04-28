@@ -105,7 +105,7 @@ user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::
 
 user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
                                                              const int32_t index) const {
-  if (arg_name == "tmp_buffer" && index == 0 && tmp_buffer_view_ != nullptr) {
+  if (tmp_buffer_view_ != nullptr && arg_name == "tmp_buffer" && index == 0) {
     return tmp_buffer_view_.get();
   }
   int32_t i = TryGetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
