@@ -699,13 +699,11 @@ def _input_args_is_shape(*args):
 
 def register_tensor_op(op_name):
     def set_tensor_op(method):
-        setattr(
-            Tensor,
-            op_name,
-            method
-        )
+        setattr(Tensor, op_name, method)
         return method
+
     return set_tensor_op
+
 
 def _convert_to_placement_scope(placement_or_device):
     if isinstance(placement_or_device, flow.placement):
