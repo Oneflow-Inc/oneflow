@@ -48,6 +48,19 @@ class Conv2d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *kernel_size)
         )
+        self.bias = None
+        self._bias_add_op = None
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self._bias_add_op = (
+                flow.builtin_op("bias_add")
+                .Input("a")
+                .Input("b")
+                .Output("out")
+                .Attr("axis", 1)
+                .Build()
+            )
+
         self._op = (
             flow.builtin_op("conv2d")
             .Input("in")
@@ -65,4 +78,6 @@ class Conv2d(Module):
 
     def forward(self, x):
         res = self._op(x, self.weight)[0]
+        if self._bias_add_op is not None:
+            res = self._bias_add_op(res, self.bias)[0]
         return res
