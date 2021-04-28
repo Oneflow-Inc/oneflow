@@ -69,5 +69,40 @@ class TestTanhModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestGeLU(flow.unittest.TestCase):
+    def test_gelu_v1(test_case):
+        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        x = flow.Tensor(input_arr)
+
+        gelu = flow.nn.GeLU()
+        y = gelu(x)
+        z = np.array([-0.15426877, 0.0, 0.34573123])
+
+        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+
+    def test_gelu_v2(test_case):
+        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        x = flow.Tensor(input_arr)
+
+        y = flow.gelu(x)
+        z = np.array([-0.15426877, 0.0, 0.34573123])
+
+        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+
+    def test_gelu_v3(test_case):
+        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        x = flow.Tensor(input_arr)
+
+        y = x.gelu()
+
+        z = np.array([-0.15426877, 0.0, 0.34573123])
+
+        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+
+
 if __name__ == "__main__":
     unittest.main()

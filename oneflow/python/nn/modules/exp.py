@@ -20,7 +20,6 @@ from oneflow.python.framework.tensor import register_tensor_op_by_module
 from oneflow.python.framework.tensor import register_op_by_module
 
 
-@oneflow_export("Exp")
 @register_tensor_op_by_module("exp")
 @register_op_by_module("exp")
 class Exp(Module):
