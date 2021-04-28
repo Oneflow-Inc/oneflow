@@ -48,7 +48,7 @@ REGISTER_USER_OP("cast")
     .Output("out")
     .SetTensorDescInferFn(TensorDescInfer)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                         user_op::AddOpFn AddOp) {
