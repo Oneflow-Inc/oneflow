@@ -120,6 +120,17 @@ void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::st
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
 }
 
+Maybe<AttrVal> MakeCppAttrValByCfgAttrValue(const cfg::AttrValue& cfg_attr_value) {
+  switch (static_cast<int>(cfg_attr_value.value_case())) {
+#define MAKE_ENTRY(field, T, attr_type) \
+  case static_cast<int>(attr_type): return AttrValueAccessor<T>(cfg_attr_value);
+OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ATTR_SEQ);
+#undef MAKE_ENTRY
+  default:
+    OF_UNIMPLEMENTED();
+  }
+}
+
 }  // namespace user_op
 
 }  // namespace oneflow
