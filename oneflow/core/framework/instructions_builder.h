@@ -62,33 +62,15 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
-  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list,
-                               eager::cfg::EagerSymbolList* eager_symbol_list)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list),
-        release_object_([](compatible_py::Object*) {}) {}
-  InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      vm::InstructionMsgList* instruction_list,
-                      eager::cfg::EagerSymbolList* eager_symbol_list,
-                      const std::function<void(compatible_py::Object*)>& release_object)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list),
-        release_object_(release_object) {}
+  explicit InstructionsBuilder(vm::InstructionMsgList* instruction_list)
+      : instruction_list_(instruction_list){}
+  InstructionsBuilder(vm::InstructionMsgList* instruction_list)
+      : instruction_list_(instruction_list){}
   ~InstructionsBuilder() {
     instruction_list_->Clear();
-    eager_symbol_list_->clear_eager_symbol();
   }
 
-  const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
-  const eager::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
-
-  const std::function<void(compatible_py::Object*)>& object_releaser() const {
-    return release_object_;
-  }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
@@ -427,26 +409,62 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& lhs_objects,
       const std::vector<std::shared_ptr<compatible_py::BlobObject>>& rhs_objects);
 
-  template<typename T>
-  Maybe<int64_t> CreateSymbolId(const T& conf) {
-    return detail::CreateSymbolIdHelper<T>::Call(mut_id_generator(), mut_instruction_list(),
+    protected:
+     vm::InstructionMsgList* instruction_list_;
+};
+
+class LogicalInstructionsBuilder : public InstructionsBuilder{
+    public:
+     LogicalInstructionsBuilder(const LogicalInstructionsBuilder&) = delete;
+     LogicalInstructionsBuilder(LogicalInstructionsBuilder&&) = delete;
+     explicit LogicalInstructionsBuilder(vm::InstructionMsgList* instruction_list,
+                                         const shared_ptr<vm::IdGenerator>& id_generator,
+                                         vm::cfg::EagerSymbolList* eager_symbol_list)
+        : InstructionsBuilder(instruction_list),
+        id_generator_(id_generator),
+        eager_symbol_list_(eager_symbol_list),
+        release_object_([](compatible_py::Object*){}){}
+     LogicalInstructionsBuilder(vm::InstructionMsgList* instruction_list,
+                      const std::shared_ptr<vm::IdGenerator>& id_generator,
+                      vm::cfg::EagerSymbolList* eager_symbol_list,
+                      const std::function<void(compatible_py::Object*)>& release_object)
+        : InstructionsBuilder(instruction_list),
+        id_generator_(id_generator),
+        eager_symbol_list_(eager_symbol_list),
+        release_object_(release_object) {}
+     ~LogicalInstructionsBuilder() { eager_symbol_list_->clear_eager_symbol(); }
+
+     const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
+     const vm::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
+     const std::function<void(compatible_py::Object*)>& object_releaser() const { return release_object_; }
+     eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
+     vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
+
+     Maybe<void> LogicalRun(const std::function<void(LogicalInstructionsBuilder*)>& Build);
+     template<typename T>
+     Maybe<int64_t> CreateSymbolId(const T& conf) {
+         return detail::CreateSymbolIdHelper<T>::Call(mut_id_generator(), mut_instruction_list(),
                                                  mut_eager_symbol_list(), conf);
   }
 
-  eager::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
-
-  vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
-
-  std::shared_ptr<vm::IdGenerator> id_generator_;
-  vm::InstructionMsgList* instruction_list_;
-  eager::cfg::EagerSymbolList* eager_symbol_list_;
-  std::function<void(compatible_py::Object*)> release_object_;
+    private:
+     std::shared_ptr<vm::IdGenerator> id_generator_;
+     eager::cfg::EagerSymbolList* eager_symbol_list_;
+     std::function<void(compatible_py::Object*)> release_object_;
 };
 
-Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+class PhysicalInstructionsBuilder : public InstructionsBuilder{
+    public:
+     PhysicalInstructionsBuilder(const InstructionsBuilder&) = delete;
+     PhysicalInstructionsBuilder(InstructionsBuilder&&) = delete;
+     explicit PhysicalInstructionsBuilder(vm::InstructionMsgList* instruction_list)
+      : InstructionsBuilder(instruction_list),
+     PhysicalInstructionsBuilder(vm::InstructionMsgList* instruction_list)
+      : InstructionsBuilder(instruction_list)
+     ~PhysicalInstructionsBuilder(){ instruction_list_->Clear(); }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+     Maybe<void> PhysicalRun(const std::function<void(PhysicalInstructionsBuilder*)>& Build);
+};
 
 }  // namespace oneflow
-
 #endif  // ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
