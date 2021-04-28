@@ -27,7 +27,8 @@ import oneflow.typing as tp
 class TestFlattenModule(flow.unittest.TestCase):
     def test_flatten(test_case):
         m = flow.nn.Flatten()
-        x = flow.Tensor(32, 2, 5, 5, data_initializer=flow.random_normal_initializer())
+        x = flow.Tensor(32, 2, 5, 5)
+        flow.nn.init.uniform_(x)
         y = m(x)
         test_case.assertTrue(y.shape[1] == 50)
         test_case.assertTrue(np.array_equal(y.numpy().flatten(), x.numpy().flatten()))
