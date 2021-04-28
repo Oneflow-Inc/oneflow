@@ -66,10 +66,11 @@ class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::Att
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
 
-  const std::shared_ptr<AttrName2AttrVal>& map() const;
+  const std::shared_ptr<AttrName2AttrVal>& FreeseAndGetMap();
 
  priavate:
   std::shared_ptr<AttrName2AttrVal> map_; 
+  bool frozen_;
 };
 
 }  // namespace oneflow
