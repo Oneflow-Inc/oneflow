@@ -23,9 +23,14 @@ namespace oneflow {
 
 using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const AttrVal>>;
 
+class MutableAttrValueMap;
+
 class AttrValueMap {
  public:
-  explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& map): map_(map) {}
+  explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& attrs): attrs_(attrs) {}
+
+  explicit AttrValueMap(const MutableAttrValueMap& other);
+
   AttrValueMap(const AttrValueMap&) = default;
   AttrValueMap(AttrValueMap&&) = default;
   ~AttrValueMap() = default;
@@ -33,44 +38,38 @@ class AttrValueMap {
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
-  const AttrName2AttrVal& map() const { return *map_; }
+  using const_iterator = AttrName2AttrVal::const_iterator;
+  const_iterator begin() const {
+    return attrs_->begin();
+  }
+  const_iterator end() const { return attrs_->end(); }
 
  private:
-  std::shared_ptr<const AttrName2AttrVal> map_;
+  std::shared_ptr<const AttrName2AttrVal> attrs_;
 };
 
 class ComposedAttrValueMap final {
  public:
-  ComposedAttrValueMap(const AttrValueMap& base): base_(base) {}
-  ComposedAttrValueMap(const ComposedAttrValueMap&) = delete;
-  ComposedAttrValueMap(ComposedAttrValueMap&&) = delete;
-  ~ComposedAttrValueMap() = default;
-
-  void reset_prior(const AttrValueMap& prior) { prior_ = prior; }
+  ComposedAttrValueMap(const AttrValueMap& prior, const AttrValueMap& base)
+      : prior_(prior), base_(base) {}
 
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
  private:
-  const AttrValueMap base_;
   AttrValueMap prior_;
+  AttrValueMap base_;
 };
 
 class MutableAttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
  public:
-  MutableAttrValueMap(); 
+  MutableAttrValueMap();
 
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
   template<typename T>
   Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
-
-  const std::shared_ptr<AttrName2AttrVal>& FreeseAndGetMap();
-
- priavate:
-  std::shared_ptr<AttrName2AttrVal> map_; 
-  bool frozen_;
 };
 
 }  // namespace oneflow
