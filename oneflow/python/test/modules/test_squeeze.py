@@ -30,7 +30,7 @@ class TestSqueeze(flow.unittest.TestCase):
         np_shape = (1, 3)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
-    def test_squeeze_by_tensor(test_case):
+    def test_tensor_squeeze(test_case):
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
         of_shape = input.squeeze(axis=[1, 2]).numpy().shape
         np_shape = (1, 3)
