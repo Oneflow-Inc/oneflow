@@ -22,27 +22,27 @@ import oneflow.typing as tp
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
-    def test_sigmoid(test_case):
+class TestFlattenModule(flow.unittest.TestCase):
+    def test_flatten(test_case):
         m = flow.nn.Flatten()
         x = flow.Tensor(32, 2, 5, 5, data_initializer=flow.random_normal_initializer())
         y = m(x)
         test_case.assertTrue(y.shape[1] == 50)
-        test_case.assertTrue(np.allclose(y.numpy().flatten(), x.numpy().flatten()))
+        test_case.assertTrue(np.array_equal(y.numpy().flatten(), x.numpy().flatten()))
 
         y2 = flow.tmp.flatten(x, start_dim=2)
         test_case.assertTrue(y2.shape[2] == 25)
-        test_case.assertTrue(np.allclose(y2.numpy().flatten(), x.numpy().flatten()))
+        test_case.assertTrue(np.array_equal(y2.numpy().flatten(), x.numpy().flatten()))
 
         y3 = x.flatten(start_dim=1)
         test_case.assertTrue(y3.shape[1] == 50)
-        test_case.assertTrue(np.allclose(y3.numpy().flatten(), x.numpy().flatten()))
+        test_case.assertTrue(np.array_equal(y3.numpy().flatten(), x.numpy().flatten()))
 
         y4 = x.flatten(start_dim=1, end_dim=2)
         test_case.assertTrue(y4.shape[1] == 10)
-        test_case.assertTrue(np.allclose(y4.numpy().flatten(), x.numpy().flatten()))
+        test_case.assertTrue(np.array_equal(y4.numpy().flatten(), x.numpy().flatten()))
 
 
 if __name__ == "__main__":

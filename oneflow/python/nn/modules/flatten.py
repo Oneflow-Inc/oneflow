@@ -16,8 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 
 
 @oneflow_export("nn.Flatten")
@@ -46,8 +45,6 @@ class Flatten(Module):
 
     def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
-        self.start_dim = start_dim
-        self.end_dim = end_dim
         self.op_ = (
             flow.builtin_op("flatten")
             .Input("in")
@@ -62,10 +59,15 @@ class Flatten(Module):
 
 
 @oneflow_export("tmp.flatten")
+@register_tensor_op("flatten")
 def _flow_flatten(input, start_dim: int = 1, end_dim: int = -1):
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
 
 
-@register_tensor_op_by_module("flatten")
-def _tensor_flatten(start_dim: int = 1, end_dim: int = -1):
-    return Flatten(start_dim=start_dim, end_dim=end_dim)
+# @register_tensor_op("flatten")
+# def _tensor_flatten(delf, start_dim: int = 1, end_dim: int = -1):
+
+
+# @register_tensor_op_by_module("flatten")
+# def _tensor_flatten(start_dim: int = 1, end_dim: int = -1):
+#     return Flatten(start_dim=start_dim, end_dim=end_dim)
