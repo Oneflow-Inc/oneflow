@@ -84,6 +84,7 @@ class AvgPool2d(Module):
         assert divisor_override is None, "divisor_override not supported yet"
 
         _channel_pos = "channels_first"
+        # TODO(yaochi): align with pytorch when padding is asymmetric
         _padding_type, _pads_list = calc_pool_padding(
             padding, get_dhw_offset(_channel_pos), 2
         )
