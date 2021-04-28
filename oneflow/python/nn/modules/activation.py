@@ -51,7 +51,7 @@ class ReLU(Module):
         import oneflow as flow
         import numpy as np
 
-        m = nn.ReLU()
+        m = flow.nn.ReLU()
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr)
         output = m(input)
