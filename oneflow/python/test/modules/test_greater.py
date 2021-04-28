@@ -31,7 +31,7 @@ class TestGreater(flow.unittest.TestCase):
         np_out = np.greater(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
-    def test_greater_v2(test_case):
+    def test_greater_by_tensor(test_case):
         input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
         input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         of_out = input1.gt(input2)

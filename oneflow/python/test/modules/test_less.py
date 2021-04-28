@@ -31,7 +31,7 @@ class TestLess(flow.unittest.TestCase):
         np_out = np.less(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
-    def test_less_v2(test_case):
+    def test_less_by_tensor(test_case):
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input1.lt(input2)
