@@ -34,14 +34,14 @@ class Flatten(Module):
 
         import oneflow as flow
         input = flow.Tensor(32, 1, 5, 5)
-        m = flow.nn.Flatten()
+        m = flow.nn.Flatten(start_dim=1)
         output = m(input)
         output.size()
         # out flow.Size([32, 25])
 
     """
 
-    def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
+    def __init__(self, start_dim: int = 0, end_dim: int = -1) -> None:
         super().__init__()
         self.op_ = (
             flow.builtin_op("flatten")
@@ -58,5 +58,5 @@ class Flatten(Module):
 
 @oneflow_export("tmp.flatten")
 @register_tensor_op("flatten")
-def _flow_flatten(input, start_dim: int = 1, end_dim: int = -1):
+def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
