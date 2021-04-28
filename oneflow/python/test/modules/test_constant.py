@@ -1,5 +1,5 @@
 """
-Copyright 2021 The OneFlow Authors. All rights reserved.
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -29,6 +29,9 @@ class TestConstantModule(flow.unittest.TestCase):
         y2 = flow.tmp.ones(10)
         test_case.assertTrue(np.allclose(np.ones(10), y2.numpy()))
 
+        y3 = flow.tmp.ones(10, dtype=flow.float)
+        test_case.assertTrue(np.allclose(np.ones(10, dtype=np.float), y3.numpy()))
+
     def test_zeros(test_case):
         shape = (3, 2, 5, 1)
         y = flow.tmp.zeros(shape)
@@ -36,6 +39,9 @@ class TestConstantModule(flow.unittest.TestCase):
 
         y2 = flow.tmp.zeros(10)
         test_case.assertTrue(np.allclose(np.zeros(10), y2.numpy()))
+
+        y3 = flow.tmp.zeros(10, dtype=flow.int)
+        test_case.assertTrue(np.allclose(np.zeros(10, dtype=np.int), y3.numpy()))
 
 
 if __name__ == "__main__":
