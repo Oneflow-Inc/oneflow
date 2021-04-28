@@ -21,27 +21,25 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 @oneflow_export("nn.Flatten")
 class Flatten(Module):
-    r"""
-    Flattens a contiguous range of dims into a tensor. For use with :class:`~nn.Sequential`.
-    Shape:
-        - Input: :math:`(N, *dims)`
-        - Output: :math:`(N, \prod *dims)` (for the default case).
+    """Flattens a contiguous range of dims into a tensor. For use with: nn.Sequential.
+
     Args:
         start_dim: first dim to flatten (default = 1).
         end_dim: last dim to flatten (default = -1).
-    Examples::
-        >>> input = flow.randn(32, 1, 5, 5)
-        >>> m = nn.Sequential(
-        >>>     nn.Conv2d(1, 32, 5, 1, 1),
-        >>>     nn.Flatten()
-        >>> )
-        >>> output = m(input)
-        >>> output.size()
-        flow.Size([32, 288])
+    
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        input = flow.Tensor(32, 1, 5, 5)
+        m = flow.nn.Flatten()
+        output = m(input)
+        output.size()
+        # out flow.Size([32, 25])
+
     """
-    __constants__ = ["start_dim", "end_dim"]
-    start_dim: int
-    end_dim: int
 
     def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
@@ -62,12 +60,3 @@ class Flatten(Module):
 @register_tensor_op("flatten")
 def _flow_flatten(input, start_dim: int = 1, end_dim: int = -1):
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
-
-
-# @register_tensor_op("flatten")
-# def _tensor_flatten(delf, start_dim: int = 1, end_dim: int = -1):
-
-
-# @register_tensor_op_by_module("flatten")
-# def _tensor_flatten(start_dim: int = 1, end_dim: int = -1):
-#     return Flatten(start_dim=start_dim, end_dim=end_dim)
