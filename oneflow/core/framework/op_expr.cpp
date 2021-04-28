@@ -115,6 +115,46 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
+class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
+ public:
+  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr) : user_op_expr_(user_op_expr) {}
+
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    return *user_op_expr_->indexed_input_pairs();
+  }
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    return *user_op_expr_->indexed_output_pairs();
+  }
+
+  std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name, int32_t index) override {
+    const auto& iter = arg_name2index2input_device_getter_.find(name);
+    CHECK(iter != arg_name2index2input_device_getter_.end());
+    const auto& index2device_getter = iter->second;
+    const auto& device_getter_iter = index2device_getter.find(name);
+    CHECK(device_getter_iter != index2device_getter.end());
+    return device_getter_iter.second()
+  }
+
+  const std::shared_ptr<const Device>& InputTensorDevice4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+    const auto& iter = arg_name2index2output_device_getter_.find(name);
+    CHECK(iter != arg_name2index2output_device_getter_.end());
+    const auto& index2device_getter = iter->second;
+    const auto& device_getter_iter = index2device_getter.find(name);
+    CHECK(device_getter_iter != index2device_getter.end());
+    return device_getter_iter.second()
+  }
+
+  bool HasAttr(const std::string& attr_name) const override {
+    return attr_value_map_->HasAttr(attr_name);
+  }
+
+ private:
+  const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const override {
+    return attr_value_map_->Attr4AttrName(attr_name);
+  }
+  const UserOpExpr* user_op_expr_;
+};
+
 UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
             const std::vector<std::string>& indexed_ibns,
             const std::vector<std::string>& indexed_obns)
