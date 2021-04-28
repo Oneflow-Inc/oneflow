@@ -20,7 +20,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 from typing import Optional, Tuple, Sequence
 
-# TODO: Need dynamic attr support
+
 class _ConstantBase(Module):
     def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
         super().__init__()
