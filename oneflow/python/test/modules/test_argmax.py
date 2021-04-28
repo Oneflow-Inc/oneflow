@@ -46,7 +46,7 @@ class TestArgmax(flow.unittest.TestCase):
         np_out = np.argmax(input.numpy(), axis=axis)
         test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
-    def test_argmax_v4(test_case):
+    def test_argmax_keepdims(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         axis = 0
         of_out = input.argmax(axis, True)
@@ -56,7 +56,7 @@ class TestArgmax(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
         test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
-    def test_argmax_v5(test_case):
+    def test_argmax_dim_equal_none(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.argmax()
         np_out = np.argmax(input.numpy().flatten(), axis=0)
