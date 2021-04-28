@@ -129,6 +129,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+
 template<typename T>
 class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
  public:
@@ -154,7 +155,8 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 
     CHECK_EQ(in->data_type(), out->data_type());
     const int64_t num_ranks = ctx->parallel_ctx().parallel_num();
-    const int64_t in_split_axis = ctx->Attr<int64_t>("in_split_axis");
+    const int64_t num_ranks = nccl_comm->num_ranks();
+    const int64_t in_split_axis = ctx->Attr<int64_t>("in_dim1_split_axis");
 
     DimVector logical_shape_dim_vec;
     in->shape().ToDimVector(&logical_shape_dim_vec);
@@ -196,6 +198,7 @@ size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx
   return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
                             * GetSizeOfDataType(in_tensor->data_type()));
 }
+
 
 template<typename T>
 class NcclLogicalS2SKernel final : public user_op::OpKernel {
@@ -343,21 +346,6 @@ REGISTER_USER_KERNEL("_nccl_logical_reduce_scatter")
 REGISTER_USER_KERNEL("_nccl_logical_all_gather")
     .SetCreateFn<NcclLogicalAllGatherKernel>()
     .SetIsMatchedHob(user_op::HobDeviceTag() == "gpu");
-
-#define REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(dtype)                                  \
-  REGISTER_USER_KERNEL("_nccl_logical_all_gather_noncontinuous")                        \
-      .SetCreateFn<NcclLogicalAllGatherNoncontinuous<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                               \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)   \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(InferAllGatherNoncontinuousKernelTmpBufferSize);
-
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int8_t)
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int32_t)
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(int64_t)
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float)
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(double)
-REGISTER_ALLGATHER_NONCONTINUOUS_KERNEL(float16)
 
 #define REGISTER_S2S_KERNEL(dtype)                                                      \
   REGISTER_USER_KERNEL("_nccl_logical_s2s")                                             \
