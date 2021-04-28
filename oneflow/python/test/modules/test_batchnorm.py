@@ -18,8 +18,6 @@ import numpy as np
 
 import oneflow as flow
 
-import torch
-
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -36,7 +34,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             ]
         )
 
-        torch_out = np.array(
+        output_arr = np.array(
             [
                 [-0.3056, 1.4066, 0.4151, -0.5783, -0.3864],
                 [0.7326, 0.1884, -1.7100, -0.6563, 1.3170],
@@ -48,7 +46,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1)
         x = flow.Tensor(input_arr)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), torch_out, rtol=1e-04, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
 
     def test_batchnorm1d_3D_input(test_case):
         input_arr = np.array(
@@ -66,7 +64,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             ]
         )
 
-        torch_out = np.array(
+        output_arr = np.array(
             [
                 [
                     [-0.4640, 1.9673, 0.6798, -0.3859],
@@ -84,7 +82,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1)
         x = flow.Tensor(input_arr)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), torch_out, rtol=1e-04, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
 
     def test_batchnorm2d(test_case):
         input_arr = np.array(
@@ -116,7 +114,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             ]
         )
 
-        torch_out = np.array(
+        output_arr = np.array(
             [
                 [
                     [
@@ -148,7 +146,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         x = flow.Tensor(input_arr)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), torch_out, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, atol=1e-04))
 
         def test_batchnorm2d_infer(test_case):
             input_arr = np.array(
@@ -180,7 +178,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                 ]
             )
 
-            torch_out = np.array(
+            output_arr = np.array(
                 [
                     [
                         [
@@ -213,7 +211,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
             m.eval()
             x = flow.Tensor(input_arr)
             y = m(x)
-            test_case.assertTrue(np.allclose(y.numpy(), torch_out, atol=1e-04))
+            test_case.assertTrue(np.allclose(y.numpy(), output_arr, atol=1e-04))
 
 
 if __name__ == "__main__":
