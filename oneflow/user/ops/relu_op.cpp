@@ -38,7 +38,7 @@ REGISTER_USER_OP("relu")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
@@ -66,7 +66,7 @@ REGISTER_USER_OP("relu_grad")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType data_type = *ctx->Dtype4ArgNameAndIndex("y", 0);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), data_type);
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = data_type;

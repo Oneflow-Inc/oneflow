@@ -97,7 +97,7 @@ REGISTER_USER_OP("broadcast_like")
       like_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("broadcast_like")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
