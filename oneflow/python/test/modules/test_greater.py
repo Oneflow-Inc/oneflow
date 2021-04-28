@@ -38,5 +38,6 @@ class TestGreater(flow.unittest.TestCase):
         np_out = np.greater(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 if __name__ == "__main__":
     unittest.main()

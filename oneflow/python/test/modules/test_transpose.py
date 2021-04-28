@@ -48,5 +48,6 @@ class TestTranspose(flow.unittest.TestCase):
         np_out = input.numpy().transpose((0, 2, 3, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 if __name__ == "__main__":
     unittest.main()
