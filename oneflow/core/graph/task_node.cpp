@@ -190,6 +190,12 @@ void TaskNode::UnbindBnWithEmptyRegst() {
   exec_gph_.ForEachNode([&](ExecNode* exec_node) { exec_node->UnbindBnWithEmptyRegst(); });
 }
 
+void TaskNode::ResetContents() {
+  exec_gph_.ClearNodes();
+  produced_regsts_.clear();
+  consumed_regsts_.clear();
+}
+
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n"

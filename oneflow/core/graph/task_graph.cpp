@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
@@ -539,6 +540,41 @@ void TaskGraph::RemoveEmptyRegsts() {
 void TaskGraph::MergeChainAndAddOrderingCtrlEdgeInSameChain() {
   MergeChain();
   BuildCtrlRegstDescInSameChain();
+}
+
+void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
+  auto* job_id2op_attribute_ref_table = plan->mutable_job_id2op_attribute_ref_table();
+  CHECK(task_proto->exec_sequence().exec_node_size() == 1);
+  auto* exec_node = task_proto->mutable_exec_sequence()->mutable_exec_node(0);
+  CHECK(exec_node->kernel_conf().has_op_attribute());
+  const std::string op_name = exec_node->kernel_conf().op_attribute().op_conf().name();
+  auto* op_name2op_attribute =
+      (*job_id2op_attribute_ref_table)[job_id].mutable_op_name2op_attribute();
+  auto find_it = op_name2op_attribute->find(op_name);
+  if (find_it == op_name2op_attribute->end()) {
+    op_name2op_attribute->insert(
+        {op_name, task_proto->exec_sequence().exec_node(0).kernel_conf().op_attribute()});
+  }
+  auto* kernel_conf =
+      task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
+  kernel_conf->set_op_attribute_ref(op_name);
+  // NOTE(levi): op_attribute_ is released here to decrease memory peak.
+  kernel_conf->set_allocated_op_attribute(nullptr);
+}
+
+void TaskGraph::MoveContentsIntoPlan(Plan* plan, int64_t job_id) {
+  ClearEdges();
+  ForEachNode([&](TaskNode* task_node) {
+    if (task_node->IsMeaningLess()) { return; }
+    TaskProto task_proto;
+    task_node->ToProto(&task_proto);
+    if (task_node->GetTaskType() == kNormalForward) {
+      CreateOpAttributeRef(plan, job_id, &task_proto);
+    }
+    // NOTE(levi): contents of task_node is released here to decrease momory peak.
+    task_node->ResetContents();
+    plan->mutable_task()->Add(std::move(task_proto));
+  });
 }
 
 void TaskGraph::SetOrderInGraphForEachNode() {

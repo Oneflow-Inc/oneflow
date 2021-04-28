@@ -27,6 +27,7 @@ limitations under the License.
 
 namespace oneflow {
 
+class Plan;
 class SubTskGphBuilderCtx;
 class HierarchicalSubTskGphBuilder;
 
@@ -47,6 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
   void MergeChainAndAddOrderingCtrlEdgeInSameChain();
+  void MoveContentsIntoPlan(Plan* plan, int64_t job_id);
 
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
