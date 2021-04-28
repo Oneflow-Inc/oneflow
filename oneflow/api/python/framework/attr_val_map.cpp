@@ -25,24 +25,21 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<AttrValueMap, std::shared_ptr<AttrValueMap>>(m, "AttrValueMap")
+  py::class_<MutableCfgAttrValueMap, std::shared_ptr<MutableCfgAttrValueMap>>(
+      m, "MutableCfgAttrValueMap")
       .def(py::init<>())
-      .def("__getitem__",
-           [](const AttrValueMap& m, const std::string& attr_name) {
-             m.GetAttr<cfg::AttrValue>(attr_name).GetOrThrow();
+      .def("__setitem__",
+           [](MutableCfgAttrValueMap* m, const std::string& attr_name,
+              const std::shared_ptr<cfg::AttrValue>& attr_value) {
+             m->SetAttr(attr_name, attr_value).GetOrThrow();
            })
+      .def("__getitem__", [](const MutableCfgAttrValueMap& m,
+                             const std::string& attr_name) { return m.at(attr_name); })
       .def(
-          "__iter__", [](const AttrValueMap& m) { return py::make_iterator(m.begin(), m.end()); },
+          "__iter__",
+          [](const MutableCfgAttrValueMap& m) { return py::make_iterator(m.begin(), m.end()); },
           py::keep_alive<0, 1>())
-      .def("__len__", [](const AttrValueMap& m) { return m.size(); });
-
-  py::class_<MutableAttrValueMap, AttrValueMap, std::shared_ptr<MutableAttrValueMap>>(
-      m, "MutableAttrValueMap")
-      .def(py::init<>())
-      .def("__setitem__", [](MutableAttrValueMap* m, const std::string& attr_name,
-                             const std::shared_ptr<cfg::AttrValue>& attr_value) {
-        m->SetAttr(attr_name, attr_value).GetOrThrow();
-      });
+      .def("__len__", [](const MutableCfgAttrValueMap& m) { return m.size(); });
 }
 
 }  // namespace oneflow

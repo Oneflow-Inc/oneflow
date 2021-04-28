@@ -76,11 +76,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-              const AttrValueMap& attrs) {
+              const MutableCfgAttrValueMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
       .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
-                       const AttrValueMap& attrs) {
+                       const MutableCfgAttrValueMap& attrs) {
         return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
       });
 

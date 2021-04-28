@@ -30,7 +30,7 @@ using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const user_op::Att
 class AttrValueMap final {
  public:
   AttrValueMap() : attrs_(new AttrName2AttrVal) {}
-  explicit AttrValueMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
+  explicit AttrValueMap(const std::shared_ptr<AttrName2AttrVal>& attrs) : attrs_(attrs) {}
 
   using value_type = typename AttrName2AttrVal::value_type;
   AttrValueMap(std::initializer_list<value_type> init);
@@ -61,7 +61,7 @@ class AttrValueMap final {
   const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
 
  private:
-  std::shared_ptr<const AttrName2AttrVal> attrs_;
+  std::shared_ptr<AttrName2AttrVal> attrs_;
 };
 
 class ComposedAttrValueMap final {

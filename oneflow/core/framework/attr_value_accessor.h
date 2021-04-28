@@ -37,9 +37,9 @@ struct AttrValueAccessor final {
 class AttrVal;
 
 struct AttrValueUtil final {
- static Maybe<AttrVal> ToCppAttrValue(const AttrValue& proto_attr_value);
- static Maybe<AttrVal> ToCppAttrValue(const cfg::AttrValue& cfg_attr_value);
- static Maybe<void> ToProtoAttrValue(const AttrVal& cpp_attr_value, AttrValue* attr_value);
+  static Maybe<AttrVal> ToCppAttrValue(const AttrValue& proto_attr_value);
+  static Maybe<AttrVal> ToCppAttrValue(const cfg::AttrValue& cfg_attr_value);
+  static Maybe<void> ToProtoAttrValue(const AttrVal& cpp_attr_value, AttrValue* attr_value);
 };
 
 }  // namespace user_op

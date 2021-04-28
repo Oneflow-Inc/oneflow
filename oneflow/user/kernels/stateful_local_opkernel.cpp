@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+
+#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel.h"
@@ -423,7 +425,7 @@ void StatefulOpKernel::ResetDynamicOpAttrs(const AttrValueMap& attrs) {
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
-    it.second->ToProto(&attr_val);
+    user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val);
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
   *user_op_conf_ = user_op::UserOpConfWrapper(op_conf);
