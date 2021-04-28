@@ -109,9 +109,7 @@ user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& 
   if (i >= 0) { return input_tensor_views_.at(i).get(); }
   i = TryGetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
   if (i >= 0) { return output_tensor_views_.at(i).get(); }
-  if (tmp_buffer_view_ != nullptr && arg_name == "tmp_buffer" && index == 0) {
-    return tmp_buffer_view_.get();
-  }
+  if (arg_name == "tmp_buffer" && index == 0) { return CHECK_NOTNULL(tmp_buffer_view_.get()); }
   LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found";
   return nullptr;
 }
