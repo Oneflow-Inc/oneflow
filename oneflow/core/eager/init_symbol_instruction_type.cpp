@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 COMMAND(Global<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
 using ScopeInstr = vm::InitSymbolInstructionType<Scope>;
@@ -42,5 +42,5 @@ COMMAND(Global<symbol::Storage<OpNodeSignatureDesc>>::SetAllocated(
 using OpNodeSignatureInstr = vm::InitSymbolInstructionType<OpNodeSignatureDesc>;
 COMMAND(vm::RegisterInstructionType<OpNodeSignatureInstr>("InitOpNodeSignatureDescSymbol"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

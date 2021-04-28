@@ -107,7 +107,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .Output("z")                                                     \
       .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged) \
       .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)            \
-      .SetInferDataTypeFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
+      .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
 
 #define REGISTER_ELEMENTWISE_XIMUM_BW_OP(op_type_name) \
   REGISTER_USER_OP(op_type_name)                       \
@@ -118,7 +118,7 @@ user_op::BackwardOpConfGenFn MakeGenBackwardOpFn(const std::string& op_type_name
       .OptionalOutput("dy")                            \
       .SetTensorDescInferFn(InferTensorDesc)           \
       .SetGetSbpFn(GetSbpSignature)                    \
-      .SetInferDataTypeFn(InferDataType)
+      .SetDataTypeInferFn(InferDataType)
 
 #define REGISTER_ELEMENTWISE_XIMUM_GRAD(op_type_name) \
   REGISTER_USER_OP_GRAD(op_type_name)                 \

@@ -23,7 +23,7 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value")
     .Output("value")
     .Attr<int64_t>("head_size")
     .Attr<float>("alpha")
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType dtype = *ctx->Dtype4ArgNameAndIndex("hidden_states", 0);
       *ctx->Dtype4ArgNameAndIndex("query_mul_key", 0) = dtype;
       *ctx->Dtype4ArgNameAndIndex("value", 0) = dtype;
@@ -70,7 +70,7 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value_grad")
     .Input("hidden_states")
     .Output("hidden_states_grad")
     .Attr<float>("alpha")
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType dtype = *ctx->Dtype4ArgNameAndIndex("query_mul_key_grad", 0);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("value_grad", 0), dtype);
       *ctx->Dtype4ArgNameAndIndex("hidden_states_grad", 0) = dtype;
