@@ -12,28 +12,15 @@ limitations under the License.
 """
 import oneflow as flow
 
-from typing import Optional, Sequence, Union
-import collections
+from typing import Optional, Union
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import (
-    _single,
-    _pair,
-    _triple,
-    _reverse_repeat_tuple,
-)
-from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from typing import Optional, List, Tuple
-from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
-import oneflow.python.framework.id_util as id_util
-from oneflow.python.framework.tensor import (
-    register_tensor_op_by_module,
-    register_op_by_module,
-)
+from typing import Optional
+from oneflow.python.framework.tensor import register_tensor_op
 
 
-@register_op_by_module("pow")
-@oneflow_export("Pow")
+@register_tensor_op("pow")
+@oneflow_export("pow")
 class Pow(Module):
     r"""Takes the power of each element in input with exponent and returns a tensor with the result.
     exponent can be either a single float number or a single int number.

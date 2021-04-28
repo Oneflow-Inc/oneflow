@@ -17,9 +17,9 @@ import numpy as np
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestPowModule(flow.unittest.TestCase):
     def test_pow(test_case):
         pow = flow.Pow()
         input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
