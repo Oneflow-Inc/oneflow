@@ -192,9 +192,9 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(in_tensor->data_type()));
+  const user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor->data_type()));
 }
 
 template<typename T>
