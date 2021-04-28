@@ -23,8 +23,7 @@ class ModelInitV2Op : public Operator {
  public:
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_init_v2_conf());
-    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
-    FOR_RANGE(int64_t, i, 0, num) {
+    FOR_RANGE(int64_t, i, 0, op_conf().model_init_v2_conf().ref_size()) {
       EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
     }
   }
@@ -63,8 +62,7 @@ class ModelLoadV2Op : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_load_v2_conf());
     EnrollInputBn("path", false);
-    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
-    FOR_RANGE(int64_t, i, 0, num) {
+    FOR_RANGE(int64_t, i, 0, op_conf().model_load_v2_conf().ref_size()) {
       EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
     }
   }
@@ -88,8 +86,7 @@ class ModelLoadV2Op : public Operator {
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
-    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
-    FOR_RANGE(int64_t, i, 0, num) {
+    FOR_RANGE(int64_t, i, 0, op_conf().model_load_v2_conf().ref_size()) {
       const std::string ref_bn = GenRepeatedBn("ref", i);
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[ref_bn] =
           JUST(ParallelDistributionInferHint4Ibn(ref_bn))->parallel_distribution();
@@ -137,8 +134,7 @@ class ModelSaveV2Op final : public Operator {
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
-    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("in").size();
-    FOR_RANGE(int64_t, i, 0, num) {
+    FOR_RANGE(int64_t, i, 0, op_conf().model_save_v2_conf().in_size()) {
       const std::string in_bn = GenRepeatedBn("in", i);
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[in_bn] =
           JUST(ParallelDistributionInferHint4Ibn(in_bn))->parallel_distribution();
