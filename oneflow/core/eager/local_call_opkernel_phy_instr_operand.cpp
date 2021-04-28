@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
@@ -73,5 +73,5 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
   }
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

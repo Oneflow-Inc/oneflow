@@ -215,7 +215,7 @@ REGISTER_USER_OP("normalization")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn())
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(MakeFwDataTypeInferFn());
+    .SetDataTypeInferFn(MakeFwDataTypeInferFn());
 
 REGISTER_USER_OP("normalization_add_relu")
     .Input("x")
@@ -255,7 +255,7 @@ REGISTER_USER_OP("normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(
+    .SetDataTypeInferFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kInt32;
@@ -341,7 +341,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(
+    .SetDataTypeInferFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kChar;
@@ -445,7 +445,7 @@ REGISTER_USER_OP("normalization_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 REGISTER_USER_OP("normalization_add_relu_grad")
     .Input("x")
@@ -464,7 +464,7 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
@@ -485,7 +485,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 #endif
 

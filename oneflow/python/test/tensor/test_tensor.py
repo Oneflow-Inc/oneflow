@@ -30,10 +30,6 @@ def fake_flow_ones(shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_mirrored_tensor_and_op(test_case):
         x1 = flow.Tensor([[1.0, 2.0]])
         test_case.assertEqual(x1.dtype, flow.float32)
@@ -54,10 +50,6 @@ class TestTensor(flow.unittest.TestCase):
             np.array_equal(y.numpy(), np.array([[5.0]], dtype=np.float32))
         )
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_numpy(test_case):
         shape = (2, 3)
         test_case.assertTrue(
@@ -66,10 +58,6 @@ class TestTensor(flow.unittest.TestCase):
             )
         )
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_init(test_case):
         shape = (2, 3)
         x = flow.Tensor(*shape)
@@ -86,10 +74,6 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.xavier_normal_(z)
         flow.nn.init.xavier_uniform_(z)
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_creating_consistent_tensor(test_case):
         shape = (2, 3)
         x = flow.Tensor(*shape, placement=flow.placement("gpu", ["0:0"], None))
@@ -98,10 +82,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(not x.is_cuda)
         x.determine()
 
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_user_defined_data(test_case):
         list_data = [5, 5]
         tuple_data = (5, 5)

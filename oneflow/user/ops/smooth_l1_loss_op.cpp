@@ -43,7 +43,7 @@ REGISTER_USER_OP("smooth_l1_loss")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
                          *ctx->Dtype4ArgNameAndIndex("label", 0));
       *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
@@ -74,7 +74,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("loss_grad", 0),
                          *ctx->Dtype4ArgNameAndIndex("prediction", 0));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),

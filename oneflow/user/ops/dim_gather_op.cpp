@@ -50,7 +50,7 @@ REGISTER_USER_OP("dim_gather")
 
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
       CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
       const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
@@ -124,7 +124,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
 
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* input = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
       *out->mut_data_type() = input->data_type();
