@@ -201,6 +201,7 @@ std::string TaskNode::VisualStr() const {
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
+  // Step1: process some scalar items.
   CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
@@ -209,13 +210,19 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_job_id(GlobalJobDesc().job_id());
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+
+  // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
+
+  // Step3: process produced_regst.
   auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
+
+  // Step4: process consumed_regst.
   auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
