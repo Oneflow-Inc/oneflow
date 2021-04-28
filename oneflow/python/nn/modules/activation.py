@@ -17,6 +17,7 @@ import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.framework.tensor import register_tensor_op
 
 
 @oneflow_export("nn.Sigmoid")
@@ -39,3 +40,100 @@ class ReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+@oneflow_export("nn.Tanh")
+class Tanh(Module):
+    r"""This operator computes the hyperbolic tangent value of Tensor.
+
+    The equation is: 
+
+    .. math:: 
+
+        out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([-1, 0, 1]).astype(np.float32)
+        input = flow.Tensor(x)
+        tanh = flow.nn.Tanh()
+        out = tanh(input).numpy()
+
+        # out [-0.7615942  0.         0.7615942]
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
+@oneflow_export("tanh")
+@register_tensor_op("tanh")
+def tanh_op(tensor):
+    return Tanh()(tensor)
+
+
+@oneflow_export("nn.GELU")
+class GELU(Module):
+    r"""Gelu activation operator.
+
+    The equation is:
+
+    .. math::
+        out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+
+    Args:
+        x (oneflow.Tensor): Input Tensor
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow.Tensor: A Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        input = flow.Tensor(x)
+        gelu = flow.nn.GELU()
+        
+        out = gelu(input)
+
+        # out [-0.15426877, 0., 0.34573123]
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("gelu").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
+@oneflow_export("gelu")
+@register_tensor_op("gelu")
+def gelu_op(tensor):
+    return GELU()(tensor)
