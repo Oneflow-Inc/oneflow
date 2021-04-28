@@ -43,6 +43,7 @@ class MaxPool2dNumpy:
         self.out_width = None
 
         self.arg_max = None
+        self.min_val = np.finfo(np.float64).min
 
     def __call__(self, x):
         self.x = x
@@ -51,6 +52,7 @@ class MaxPool2dNumpy:
         self.in_height = np.shape(x)[2]
         self.in_width = np.shape(x)[3]
 
+        
         pad_x = np.pad(
             x,
             (
@@ -60,7 +62,7 @@ class MaxPool2dNumpy:
                 (self.padding[1], self.padding[1]),
             ),
             "constant",
-            constant_values=(0, 0),
+            constant_values=(self.min_val, self.min_val),
         )
         self.pad_x = pad_x
         self.pad_shape = pad_x.shape
@@ -70,7 +72,6 @@ class MaxPool2dNumpy:
         self.pad_out_height = np.uint16(
             math.ceil((self.pad_shape[2] - self.w_height + 1) / self.stride[0])
         )
-        asd = (self.pad_shape[3] - self.w_width + 1) / self.stride[1]
         self.pad_out_width = np.uint16(
             math.ceil((self.pad_shape[3] - self.w_width + 1) / self.stride[1])
         )
@@ -186,10 +187,11 @@ class TestPoolingModule(flow.unittest.TestCase):
         m = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
         x = flow.Tensor(input_arr)
         output = m(x)
+
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
     def test_maxpool2d_v6(test_case):
-        input_arr = np.ones((1, 1, 1, 1), dtype=np.float)
+        input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float)
         kernel_size, stride, padding = (5, 5), (5, 5), (2, 2)
 
         m_numpy = MaxPool2dNumpy(kernel_size, stride, padding)
@@ -198,6 +200,8 @@ class TestPoolingModule(flow.unittest.TestCase):
         m = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
         x = flow.Tensor(input_arr)
         output = m(x)
+        print("numpy_output >>>>>>>>>>>>> ", numpy_output)
+        print("of_output    >>>>>>>>>>>>> ", output.numpy())
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
 if __name__ == "__main__":
