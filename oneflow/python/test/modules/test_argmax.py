@@ -51,7 +51,7 @@ class TestArgmax(flow.unittest.TestCase):
         of_out = input.argmax(axis, True)
         np_out = np.argmax(input.numpy(), axis=axis)
         test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
-    
+
     def test_argmax_v5(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.argmax()
