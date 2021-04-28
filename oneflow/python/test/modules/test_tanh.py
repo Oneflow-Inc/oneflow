@@ -20,7 +20,7 @@ import oneflow as flow
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
 class TestTanhModule(flow.unittest.TestCase):
     def _test_body_tanh(test_case, input_arr):

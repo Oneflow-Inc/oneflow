@@ -21,9 +21,9 @@ import oneflow as flow
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestExp(flow.unittest.TestCase):
     def test_exp_v1(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.exp(input)

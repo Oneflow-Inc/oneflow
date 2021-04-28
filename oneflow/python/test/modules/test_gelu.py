@@ -21,9 +21,9 @@ import oneflow as flow
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestGeLU(flow.unittest.TestCase):
     def test_gelu_v1(test_case):
         input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
         x = flow.Tensor(input_arr)
