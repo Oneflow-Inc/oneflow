@@ -21,17 +21,14 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
-
-class EagerBlobObject;
-}
-
 class VmLocalDepObject;
 namespace vm {
 
+class EagerBlobObject;
+
 class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
  public:
-  ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+  ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                                   const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
                                   const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
@@ -39,7 +36,7 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
         compute_local_dep_object_(compute_local_dep_object) {}
   ~ReleaseTensorArgPhyInstrOperand() override = default;
 
-  const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object() const {
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object() const {
     return eager_blob_object_;
   }
 
@@ -53,7 +50,7 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
       const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
 
  private:
-  std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
+  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };

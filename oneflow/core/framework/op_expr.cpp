@@ -81,9 +81,10 @@ Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const
   const auto& it = device2kernel_.find(device);
   if (it != device2kernel_.end()) { return it->second; }
 
-  OperatorConf op_conf;
-  BuildOpConf(&op_conf, {});
-  op_conf.set_device_tag(device.of_type());
+  std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
+  // attrs will be filled when op is being executing
+  BuildOpConf(op_conf.get(), {});
+  op_conf->set_device_tag(device.of_type());
   DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
   // TODO(jianhao): replace them with device.mem_case_ptr() and device.parallel_desc_ptr() after
   // #4670 is merged

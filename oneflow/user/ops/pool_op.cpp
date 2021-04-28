@@ -124,7 +124,7 @@ REGISTER_USER_OP("avg_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_1d_grad")
     .Input("x")
@@ -140,7 +140,7 @@ REGISTER_USER_OP("avg_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 1));
 
@@ -156,7 +156,7 @@ REGISTER_USER_OP("avg_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_2d_grad")
     .Input("x")
@@ -172,7 +172,7 @@ REGISTER_USER_OP("avg_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 2));
 
@@ -188,7 +188,7 @@ REGISTER_USER_OP("avg_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("avg_pool_3d_grad")
     .Input("x")
@@ -204,7 +204,7 @@ REGISTER_USER_OP("avg_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("avg_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("avg", 3));
 
@@ -220,7 +220,7 @@ REGISTER_USER_OP("max_pool_1d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(1))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_1d_grad")
     .Input("x")
@@ -236,7 +236,7 @@ REGISTER_USER_OP("max_pool_1d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 1));
 
@@ -252,7 +252,7 @@ REGISTER_USER_OP("max_pool_2d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(2))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_2d_grad")
     .Input("x")
@@ -268,7 +268,7 @@ REGISTER_USER_OP("max_pool_2d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 2));
 
@@ -284,7 +284,7 @@ REGISTER_USER_OP("max_pool_3d")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeFwTensorDescInferFn(3))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(FwInferDataType);
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("max_pool_3d_grad")
     .Input("x")
@@ -300,7 +300,7 @@ REGISTER_USER_OP("max_pool_3d_grad")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwInferDataType);
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MakeGenBackwardOpConfFn("max", 3));
 

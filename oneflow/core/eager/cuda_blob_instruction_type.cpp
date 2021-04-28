@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_stream_type.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
  public:
   GpuLazyReferenceInstructionType() = default;
@@ -37,6 +37,6 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 #endif

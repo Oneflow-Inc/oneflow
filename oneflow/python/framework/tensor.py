@@ -697,34 +697,12 @@ def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
 
 
-def register_tensor_op_by_module(op_name):
-    def set_method(module):
-        setattr(
-            Tensor,
-            op_name,
-            lambda self, *args, **kwargs: module(**kwargs).forward(self, *args),
-        )
-        return module
+def register_tensor_op(op_name):
+    def set_tensor_op(method):
+        setattr(Tensor, op_name, method)
+        return method
 
-    return set_method
-
-
-def register_op_by_module(op_name):
-    def set_method(module):
-        oneflow_export(op_name)(_get_module_impl(module))
-        return module
-
-    def _get_module_impl(module):
-        def module_impl(x, *args, **kwargs):
-            return module(**kwargs).forward(x, *args)
-
-        name = module.__name__ + "_op"
-        module_impl.__name__ = name
-        globals()[name] = module_impl
-
-        return module_impl
-
-    return set_method
+    return set_tensor_op
 
 
 def _convert_to_placement_scope(placement_or_device):
