@@ -410,11 +410,12 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
       if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
       const LogicalBlobId& in_diff_lbi = in_diff_lbi_it->second;
       if (in_diff_lbi_of_multi_oba.find(in_diff_lbi) == in_diff_lbi_of_multi_oba.end()) {
-        if (in_diff_lbi2in_oba.find(in_diff_lbi) == in_diff_lbi2in_oba.end()) {
+        const auto in_diff_lbi2in_oba_it = in_diff_lbi2in_oba.find(in_diff_lbi);
+        if (in_diff_lbi2in_oba_it == in_diff_lbi2in_oba.end()) {
           in_diff_lbi2in_oba[in_diff_lbi] = in_diff_lbi_it->first;
         } else {
           CHECK(in_diff_lbi_of_multi_oba.emplace(in_diff_lbi).second);
-          in_diff_lbi2in_oba.erase(in_diff_lbi);
+          in_diff_lbi2in_oba.erase(in_diff_lbi2in_oba_it);
         }
       }
     }
@@ -428,11 +429,12 @@ void CalcFwBwObaPairs(const OpGraph& op_graph,
       if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { continue; }
       const LogicalBlobId& out_diff_lbi = out_diff_lbi_it->second;
       if (out_diff_lbi_of_multi_oba.find(out_diff_lbi) == out_diff_lbi_of_multi_oba.end()) {
-        if (out_diff_lbi2out_oba.find(out_diff_lbi) == out_diff_lbi2out_oba.end()) {
+        const auto out_diff_lbi2out_oba_it = out_diff_lbi2out_oba.find(out_diff_lbi);
+        if (out_diff_lbi2out_oba_it == out_diff_lbi2out_oba.end()) {
           out_diff_lbi2out_oba[out_diff_lbi] = out_diff_lbi_it->first;
         } else {
           CHECK(out_diff_lbi_of_multi_oba.emplace(out_diff_lbi).second);
-          out_diff_lbi2out_oba.erase(out_diff_lbi);
+          out_diff_lbi2out_oba.erase(out_diff_lbi2out_oba_it);
         }
       }
     }
