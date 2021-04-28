@@ -16,13 +16,9 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 
 
-@oneflow_export("Less")
-@register_tensor_op_by_module("lt")
-@register_op_by_module("lt")
 class Less(Module):
     r"""Returns the truth value of :math:`x < y` element-wise.
 
@@ -58,3 +54,9 @@ class Less(Module):
 
     def forward(self, x, y):
         return self._op(x, y)[0]
+
+
+@oneflow_export("le")
+@register_tensor_op("le")
+def less_op(tensor1, tensor2):
+    return Less()(tensor1, tensor2)

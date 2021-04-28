@@ -16,14 +16,11 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 import oneflow.python.framework.id_util as id_util
 from typing import Optional, Sequence
 
 
-@oneflow_export("Squeeze")
-@register_op_by_module("tmp.squeeze")
 class Squeeze(Module):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
@@ -33,7 +30,6 @@ class Squeeze(Module):
     Args:
         input (oneflow.Tensor): The input Tensor.
         axis (Optional[Sequence[int]], optional): The axis. Defaults to None.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -67,3 +63,9 @@ class Squeeze(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("tmp.squeeze")
+@register_tensor_op("squeeze")
+def squeeze_op(tensor, axis: int = -1):
+    return Squeeze(axis=axis)(tensor)

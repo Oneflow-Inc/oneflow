@@ -24,13 +24,19 @@ import oneflow as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestGreater(flow.unittest.TestCase):
-    def test_greater(test_case):
+    def test_greater_v1(test_case):
         input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
         input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         of_out = flow.gt(input1, input2)
         np_out = np.greater(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_greater_v2(test_case):
+        input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        of_out = input1.gt(input2)
+        np_out = np.greater(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 if __name__ == "__main__":
     unittest.main()

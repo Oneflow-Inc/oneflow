@@ -30,7 +30,11 @@ class TestSqueeze(flow.unittest.TestCase):
         np_out = (1, 3)
         test_case.assertTrue(np.allclose(of_out, np_out))
 
-
+    def test_squeeze_v1(test_case):
+        input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        of_out = input.squeeze(axis=[1, 2]).numpy().shape
+        np_out = (1, 3)
+        test_case.assertTrue(np.allclose(of_out, np_out))
 
 if __name__ == "__main__":
     unittest.main()

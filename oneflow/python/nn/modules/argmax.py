@@ -16,17 +16,13 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
     get_inversed_perm,
 )
 
 
-@oneflow_export("Argmax")
-@register_tensor_op_by_module("argmax")
-@register_op_by_module("argmax")
 class Argmax(Module):
     """The op computes the index with the largest value of a Tensor at specified axis.
 
@@ -74,3 +70,9 @@ class Argmax(Module):
             x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
             x = flow.tmp.squeeze(x, axis=[axis])
             return x
+
+
+@oneflow_export("argmax")
+@register_tensor_op("argmax")
+def argmax_op(tensor, axis: int = -1):
+    return Argmax(axis=axis)(tensor)

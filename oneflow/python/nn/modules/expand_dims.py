@@ -16,21 +16,17 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op_by_module
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
 
 
-@oneflow_export("Expand_Dims")
-@register_op_by_module("tmp.expand_dims")
-class Expand_Dims(Module):
+class ExpandDims(Module):
     """This operator inserts a dimention at the specified axis in the input Tensor.
     The size of new dimension can only be 1, and the amount of element in return value is the same as Tensor `input`.
 
     Args:
         input (oneflow.Tensor): The input Tensor.
         axis (int): The specified dimension index.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -49,7 +45,7 @@ class Expand_Dims(Module):
 
     """
 
-    def __init__(self, axis: int) -> None:
+    def __init__(self, axis: int = 0) -> None:
         super().__init__()
 
         self._op = (
@@ -62,3 +58,8 @@ class Expand_Dims(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("tmp.expand_dims")
+def expand_dims_op(tensor, axis: int = 0):
+    return ExpandDims(axis=axis)(tensor)
