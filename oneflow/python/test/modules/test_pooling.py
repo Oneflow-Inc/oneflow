@@ -136,7 +136,6 @@ class TestPoolingModule(flow.unittest.TestCase):
         output = m(x)
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
-
     def test_maxpool2d_diff_kernel_stride(test_case):
         input_arr = np.random.randn(9, 7, 32, 20)
         kernel_size, stride, padding = (2, 3), (4, 5), (1, 2)

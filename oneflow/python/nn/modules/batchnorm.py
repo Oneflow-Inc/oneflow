@@ -38,23 +38,17 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features)
-            )
-            self.bias = flow.nn.Parameter(
-                flow.Tensor(num_features)
-            )
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean",
-                flow.Tensor(num_features),
+                "running_mean", flow.Tensor(num_features),
             )
             self.register_buffer(
-                "running_var",
-                flow.Tensor(num_features),
+                "running_var", flow.Tensor(num_features),
             )
         else:
             self.register_parameter("running_mean", None)
