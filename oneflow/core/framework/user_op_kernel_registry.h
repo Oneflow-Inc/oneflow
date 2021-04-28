@@ -45,19 +45,16 @@ class KernelRegContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+    return user_op_conf().attr<T>(attr_name);
   }
 
  protected:
-  KernelRegContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
+  KernelRegContext() = default;
   KernelRegContext(const KernelRegContext&) = delete;
-
- private:
-  UserOpConfWrapper user_op_conf_;
 };
 
 using OpKernelCreateFn = std::function<const OpKernel*(KernelCreateContext* ctx)>;

@@ -47,7 +47,7 @@ REGISTER_USER_OP("transpose")
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     })

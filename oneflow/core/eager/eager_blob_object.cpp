@@ -17,9 +17,32 @@ limitations under the License.
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
+
+namespace {
+Maybe<VmLocalDepObject> GetVmLocalDepObject(
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  return parallel_desc != nullptr
+             ? Maybe<VmLocalDepObject>(std::make_shared<VmLocalDepObject>(parallel_desc))
+             : Error::Unimplemented();
+}
+}  // namespace
+
+EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
+                                 const std::shared_ptr<Shape>& shape, DataType data_type,
+                                 const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                                 const std::shared_ptr<const ParallelDesc>& parallel_desc)
+    : BlobObject(mem_case, shape, data_type),
+      tensor_buffer_(tensor_buffer),
+      blob_body_bytes_(0),
+      infer_local_dep_object_(GetVmLocalDepObject(parallel_desc)),
+      compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
+  CHECK(static_cast<bool>(shape));
+  CHECK(static_cast<bool>(tensor_buffer));
+}
 
 Maybe<void> EagerBlobObject::TryInitBlob() {
   if (!blob_) { JUST(InitBlob()); }
@@ -56,6 +79,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   {
     // reset tensor_buffer_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
+      if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
     char* dptr = nullptr;
@@ -68,5 +92,5 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
