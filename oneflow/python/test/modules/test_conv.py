@@ -50,7 +50,9 @@ class TestConv2d(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         flow.nn.init.constant_(conv.weight, 2.3)
         of_out = conv(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), output_arr))
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), output_arr, rtol=1e-2, atol=1e-5)
+        )
 
     def test_conv2d_with_bias(test_case):
         input_arr = np.array(
@@ -80,7 +82,9 @@ class TestConv2d(flow.unittest.TestCase):
         flow.nn.init.constant_(conv.weight, 2.3)
         flow.nn.init.constant_(conv.bias, 2.3)
         of_out = conv(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), output_arr))
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), output_arr, rtol=1e-2, atol=1e-5)
+        )
 
 
 if __name__ == "__main__":
