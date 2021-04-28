@@ -76,10 +76,7 @@ class Argmax(Module):
 
     def forward(self, input):
         if self.dim == None:
-            axis = []
-            for i in range(len(input.shape)):
-                axis.append(i)
-            return self.reduce_max_op(input, axis=axis)[0]
+            pass
 
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes

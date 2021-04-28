@@ -50,7 +50,7 @@ class Squeeze(Module):
 
     """
 
-    def __init__(self, axis: Optional[Sequence[int]] = None,) -> None:
+    def __init__(self, axis: Optional[Sequence[int]] = None) -> None:
         super().__init__()
 
         self._op = (
