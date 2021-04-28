@@ -67,7 +67,7 @@ class OpInterpUtil {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   static Maybe<Tensor> BuildEagerMirroredTensorFromEagerBlobObject(
-      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const std::shared_ptr<const Device>& device);
 };
 

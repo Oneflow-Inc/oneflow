@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 class TensorBuffer {
  public:
@@ -79,7 +79,7 @@ class EagerBlobObject final : public BlobObject {
   Maybe<VmLocalDepObject> compute_local_dep_object_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_EAGER_BLOB_OBJECT_H_

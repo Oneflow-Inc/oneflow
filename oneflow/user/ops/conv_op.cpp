@@ -240,7 +240,7 @@ REGISTER_USER_OP("conv1d")
     .SetCheckAttrFn(CheckAttr<1>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
@@ -261,7 +261,7 @@ REGISTER_USER_OP("conv2d")
     .SetCheckAttrFn(CheckAttr<2>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
@@ -282,7 +282,7 @@ REGISTER_USER_OP("conv3d")
     .SetCheckAttrFn(CheckAttr<3>)
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
@@ -333,7 +333,7 @@ REGISTER_USER_OP("conv_data_grad")
       ctx->NewBuilder().Split(split_args, 0).Broadcast(user_op::OpArg("filter", 0)).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x_like = ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
       CHECK_EQ_OR_RETURN(x_like->data_type(), dy->data_type());
@@ -406,7 +406,7 @@ REGISTER_USER_OP("conv_filter_grad")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(x->data_type(), dy->data_type());
@@ -456,7 +456,7 @@ REGISTER_USER_OP("conv_bias_grad")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* bias_diff = ctx->TensorDesc4ArgNameAndIndex("bias_diff", 0);
       *bias_diff->mut_data_type() = dy->data_type();
