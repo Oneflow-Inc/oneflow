@@ -16,88 +16,36 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_op_by_module
+from oneflow.python.framework.tensor import register_tensor_op
 
 from typing import Optional, Tuple, Sequence
 
 # TODO: Need dynamic attr support
-# class _ConstantBase(Module):
-#     def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
-#         super().__init__()
-#         assert size is not None, "shape must not be None!"
-#         assert isinstance(
-#             size, (int, list, tuple)
-#         ), "shape should be int, list or tuple format!"
+class _ConstantBase(Module):
+    def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
+        super().__init__()
+        assert size is not None, "shape must not be None!"
+        assert isinstance(
+            size, (int, list, tuple)
+        ), "shape should be int, list or tuple format!"
         
-#         if isinstance(size, (int)):
-#             self.shape = [size]
-#         else:
-#             self.shape = size
+        if isinstance(size, (int)):
+            self.shape = [size]
+        else:
+            self.shape = size
 
-#         self.dtype = dtype
-#         self._op = (
-#             flow.builtin_op("constant")
-#             .Output("out")
-#             .Build()
-#         )
+        self.dtype = dtype
+        self._op = (
+            flow.builtin_op("constant")
+            .Output("out")
+            .Build()
+        )
     
-#     def forward(self, floating_value, integer_value, is_floating_value, dtype, shape):
-#         return self._op()[0]
+    def forward(self, floating_value, integer_value, is_floating_value, dtype, shape):
+        return self._op()[0]
 
 
-# class Ones(_ConstantBase):
-#     def forward(self):
-#         if self.dtype == None or self.dtype == flow.int:
-#             self.dtype = flow.int
-#             floating_value = float(0)
-#             integer_value = int(1)
-#             is_floating_value = False
-#         else:
-#             self.dtype = flow.float
-#             floating_value = float(1.0)
-#             integer_value = int(0)
-#             is_floating_value = True
-        
-#         return self._op(
-#             floating_value = floating_value, 
-#             integer_value = integer_value, 
-#             is_floating_value = is_floating_value, 
-#             dtype = self.dtype, 
-#             shape = self.shape
-#         )[0]
-
-# @oneflow_export("tmp.ones")
-# def ones_op(size, dtype=None):
-#     return TestOnes(size, dtype)()
-
-
-# class Zeros(_ConstantBase):
-#     def forward(self):
-#         if dtype == None or dtype == flow.float:
-#             self.dtype = flow.float32
-#             floating_value = float(0.0)
-#             integer_value = int(0)
-#             is_floating_value = True
-#         else:
-#             self.dtype = flow.int
-#             floating_value = float(0.0)
-#             integer_value = int(0)
-#             is_floating_value = False
-        
-#         return self._op(
-#             floating_value = floating_value, 
-#             integer_value = integer_value, 
-#             is_floating_value = is_floating_value, 
-#             dtype = self.dtype, 
-#             shape = self.shape
-#         )[0]
-
-# @oneflow_export("tmp.zeros")
-# def ones_op(size, dtype=None):
-#     return TestZeros(size, dtype)()
-
-
-class Ones(Module):
+class Ones(_ConstantBase):
     r"""
     Returns a tensor filled with the scalar value 1, 
     with the shape defined by the variable argument `size`.
@@ -116,9 +64,8 @@ class Ones(Module):
         # [1 1 1 1 1 1 1 1 1 1]
         
     """
-    def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
-        super().__init__()
-        if dtype == None or dtype == flow.int:
+    def forward(self):
+        if self.dtype == None or self.dtype == flow.int:
             self.dtype = flow.int
             floating_value = float(0)
             integer_value = int(1)
@@ -128,36 +75,21 @@ class Ones(Module):
             floating_value = float(1.0)
             integer_value = int(0)
             is_floating_value = True
-
-        assert size is not None, "shape must not be None!"
-        assert isinstance(
-            size, (int, list, tuple)
-        ), "shape should be int, list or tuple format!"
-        if isinstance(size, (int)):
-            self.shape = [size]
-        else:
-            self.shape = size
-
-        self._op = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("floating_value", floating_value)
-            .Attr("integer_value", integer_value)
-            .Attr("is_floating_value", is_floating_value)
-            .Attr("dtype", self.dtype)
-            .Attr("shape", self.shape)
-            .Build()
-        )
-
-    def forward(self):
-        return self._op()[0]
+        
+        return self._op(
+            floating_value = floating_value, 
+            integer_value = integer_value, 
+            is_floating_value = is_floating_value, 
+            dtype = self.dtype, 
+            shape = self.shape
+        )[0]
 
 @oneflow_export("tmp.ones")
 def ones_op(size, dtype=None):
     return Ones(size, dtype)()
 
 
-class Zeros(Module):
+class Zeros(_ConstantBase):
     r"""
     Returns a tensor filled with the scalar value 0, 
     with the shape defined by the variable argument `size`.
@@ -178,17 +110,7 @@ class Zeros(Module):
         # [0. 0. 0. 0. 0. ]
 
     """
-    def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
-        super().__init__()
-        assert size is not None, "shape must not be None!"
-        assert isinstance(
-            size, (int, list, tuple)
-        ), "size should be int, list or tuple format!"
-        if isinstance(size, (int)):
-            self.shape = [size]
-        else:
-            self.shape = size
-
+    def forward(self):
         if dtype == None or dtype == flow.float:
             self.dtype = flow.float32
             floating_value = float(0.0)
@@ -199,21 +121,15 @@ class Zeros(Module):
             floating_value = float(0.0)
             integer_value = int(0)
             is_floating_value = False
-
-        self._op = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("floating_value", floating_value)
-            .Attr("integer_value", integer_value)
-            .Attr("is_floating_value", is_floating_value)
-            .Attr("dtype", self.dtype)
-            .Attr("shape", self.shape)
-            .Build()
-        )
-
-    def forward(self):
-        return self._op()[0]
+        
+        return self._op(
+            floating_value = floating_value, 
+            integer_value = integer_value, 
+            is_floating_value = is_floating_value, 
+            dtype = self.dtype, 
+            shape = self.shape
+        )[0]
 
 @oneflow_export("tmp.zeros")
-def zeros_op(size, dtype=None):
+def ones_op(size, dtype=None):
     return Zeros(size, dtype)()

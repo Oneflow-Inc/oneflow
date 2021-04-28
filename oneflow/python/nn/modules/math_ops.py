@@ -16,13 +16,9 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import (
-    register_tensor_op_by_module,
-    register_op_by_module,
-)
+from oneflow.python.framework.tensor import register_tensor_op
 
 
-@register_tensor_op_by_module("sin")
 class Sin(Module):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
@@ -57,11 +53,11 @@ class Sin(Module):
         return self._op(x)[0]
 
 @oneflow_export("sin")
+@register_tensor_op("sin")
 def sin_op(tensor):
     return Sin()(tensor)
 
 
-@register_tensor_op_by_module("cos")
 class Cos(Module):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
@@ -95,11 +91,11 @@ class Cos(Module):
         return self._op(x)[0]
 
 @oneflow_export("cos")
+@register_tensor_op("cos")
 def cos_op(tensor):
     return Cos()(tensor)
 
 
-@register_tensor_op_by_module("log")
 class Log(Module):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
@@ -131,6 +127,7 @@ class Log(Module):
 
 
 @oneflow_export("log")
+@register_tensor_op("log")
 def log_op(tensor):
     return Log()(tensor)
 
