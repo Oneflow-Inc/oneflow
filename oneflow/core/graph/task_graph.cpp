@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/id_serialization.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -82,6 +82,13 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       || op_conf.has_acc_tick_conf()) {
     return true;
   }
+  if (op_conf.has_user_conf()) {
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
+    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
+        || user_type_name == "unpack") {
+      return true;
+    }
+  }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
   if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
       && IsOptimizerPassOp(op)) {
@@ -108,10 +115,17 @@ bool CanBeMergedInChain(const TaskNode* node) {
   return true;
 }
 
+std::shared_ptr<const Shape> GetTaskNodeTimeShape(const TaskNode* node) {
+  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
+  CHECK(fw_comp_node != nullptr);
+  return CHECK_JUST(fw_comp_node->op()->GetOpTimeShape());
+}
+
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
   CHECK_NE(this_chain_id, -1);
   CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
+  std::shared_ptr<const Shape> seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
@@ -125,7 +139,8 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
 
     cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()) {
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
@@ -371,7 +386,7 @@ void ForEachOpGraphNecessaryCtrlEdge(
       const OpNode* src = op_graph->OpNode4OpName(ctrl_in_op_name);
       CHECK(!IsOpGraphDataReachable(dst, src));
       if (!IsOpGraphDataReachable(src, dst)) {
-        CHECK(src->parallel_desc().EqualsIgnoringDeviceType(dst->parallel_desc()));
+        CHECK_EQ(dst->parallel_desc().parallel_num(), src->parallel_desc().parallel_num());
         const Shape* src_time_shape = CHECK_JUST(src->op().GetOpTimeShape()).get();
         const Shape* dst_time_shape = CHECK_JUST(dst->op().GetInputBlobFastestTimeShape()).get();
         if (dst_time_shape == nullptr) {
@@ -800,7 +815,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks.at(i);
     CompTaskNode* dst = sorted_dst_comp_tasks.at(i);
-    for (const LogicalBlobId& lbi : op_edge->lbis()) { BuildTaskPath(src, dst, lbi); }
+    for (const LogicalBlobId& lbi : op_edge->lbis()) { ConnectWithLbi(src, dst, lbi); }
   }
 }
 

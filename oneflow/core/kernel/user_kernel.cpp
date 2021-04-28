@@ -34,10 +34,10 @@ using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
 namespace {
 
-void FillTensorDescWithBlob(const Blob* blob, user_op::TensorDesc* tensor_desc) {
+void FillTensorDescWithBlob(const Blob* blob, user_op::NaiveTensorDesc* tensor_desc) {
   BlobDescProto proto;
-  blob->blob_desc().header_pod_desc().ToProto(proto.mutable_header());
-  blob->blob_desc().body().ToProto(proto.mutable_body());
+  blob->blob_desc().shape().ToProto(proto.mutable_shape());
+  proto.set_data_type(blob->blob_desc().data_type());
   proto.set_is_dynamic(blob->blob_desc().is_dynamic());
   *tensor_desc = proto;
   tensor_desc->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
@@ -66,7 +66,7 @@ class UserKernelBaseContext {
     device_type_ = CHECK_JUST(DeviceType4DeviceTag(device_tag_));
     parallel_ctx_ = kernel_conf.parallel_ctx();
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
-      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::TensorDesc(pair.second));
+      arg2tensor_desc_.emplace(GenUnRepeatedBn(pair.first), user_op::NaiveTensorDesc(pair.second));
     }
   }
   ~UserKernelBaseContext() = default;
@@ -91,7 +91,7 @@ class UserKernelBaseContext {
   DeviceType device_type_;
   std::string device_tag_;
   ParallelContext parallel_ctx_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
   const JobDesc& job_desc_;
 };
 
@@ -100,9 +100,13 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
   explicit KernelCreateContext(const KernelConf& kernel_conf)
       : user_op_conf_(kernel_conf.op_attribute().op_conf()) {}
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   user_op::UserOpConfWrapper user_op_conf_;
 };
 
@@ -110,8 +114,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
-      : user_op::KernelInitContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
@@ -123,7 +126,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
-                                       user_op::TensorDesc(pair.second));
+                                       user_op::NaiveTensorDesc(pair.second));
     }
   }
   ~UserKernelInitContext() override = default;
@@ -170,10 +173,18 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
   const ParallelDistributionSignature* parallel_distribution_signature_;
 };
@@ -206,7 +217,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
       arg2logical_tensor_desc_.emplace(GenUnRepeatedBn(pair.first),
-                                       user_op::TensorDesc(pair.second));
+                                       user_op::NaiveTensorDesc(pair.second));
     }
   }
   ~UserKernelOpInferContext() override = default;
@@ -263,13 +274,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
   void UpdateArg2TensorDesc(const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
     for (auto& pair : arg2tensor_desc_) {
       const auto& arg_pair = pair.first;
-      std::unique_ptr<user_op::TensorDesc>* arg_tensor_desc_ptr = &pair.second;
+      std::unique_ptr<user_op::NaiveTensorDesc>* arg_tensor_desc_ptr = &pair.second;
       Blob* blob = BnInOp2Blob(GenRepeatedBn(arg_pair.first, arg_pair.second));
       CHECK_NOTNULL(blob);
       if (*arg_tensor_desc_ptr) {
         (*arg_tensor_desc_ptr)->mut_shape()->CheckNumAxesIdenticalAndAssign(blob->shape());
       } else {
-        arg_tensor_desc_ptr->reset(new user_op::TensorDesc());
+        arg_tensor_desc_ptr->reset(new user_op::NaiveTensorDesc());
         FillTensorDescWithBlob(blob, arg_tensor_desc_ptr->get());
       }
     }
@@ -277,9 +288,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
   user_op::UserOpConfWrapper user_op_conf_;
   const JobDesc* job_desc_;
   ArgVec inputs_;
@@ -288,16 +303,16 @@ class UserKernelOpInferContext : public user_op::InferContext {
   SbpSignature sbp_signature_;
   ParallelDistributionSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;
-  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::TensorDesc>> arg2tensor_desc_;
-  HashMap<std::pair<std::string, int32_t>, user_op::TensorDesc> arg2logical_tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
+      arg2tensor_desc_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
 };
 
 class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
-      : user_op::KernelInferContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf, &job_desc) {
@@ -371,6 +386,13 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   }
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
@@ -405,8 +427,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
-      : user_op::KernelComputeContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -458,6 +479,14 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
  private:
+  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4AttrName(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
@@ -466,7 +495,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit UserKernelRegContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
-      : user_op::KernelRegContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)) {}
   ~UserKernelRegContext() = default;
 
@@ -480,7 +509,10 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
  private:
+  user_op::UserOpConfWrapper user_op_conf_;
   UserKernelBaseContext base_ctx_;
 };
 

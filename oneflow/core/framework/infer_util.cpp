@@ -26,6 +26,16 @@ namespace oneflow {
 
 namespace user_op {
 
+#define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                  \
+  template<>                                                                         \
+  const cpp_type& InferContext::Attr<cpp_type>(const std::string& attr_name) const { \
+    const auto& attr = Attr4AttrName(attr_name);                                     \
+    return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();           \
+  }
+OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
+
+#undef KERNEL_CONTETX_ATTR_MEMBER_FUNC
+
 Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   const TensorDesc* first_tensor_desc = nullptr;
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
@@ -34,6 +44,26 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
       const TensorDesc* tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc->shape(), first_tensor_desc->shape());
+    } else {
+      first_tensor_desc = ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
+    }
+  }
+  for (size_t i = 0; i < ctx->outputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
+    *ctx->IsDynamic4ArgNameAndIndex(output_arg.first, output_arg.second) =
+        first_tensor_desc->is_dynamic();
+    *ctx->Shape4ArgNameAndIndex(output_arg.first, output_arg.second) = first_tensor_desc->shape();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
+  const TensorDesc* first_tensor_desc = nullptr;
+  for (size_t i = 0; i < ctx->inputs().size(); ++i) {
+    const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
+    if (first_tensor_desc) {
+      const TensorDesc* tensor_desc =
+          ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
       CHECK_EQ_OR_RETURN(tensor_desc->data_type(), first_tensor_desc->data_type());
     } else {
       first_tensor_desc = ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
@@ -41,7 +71,8 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->TensorDesc4ArgNameAndIndex(output_arg.first, output_arg.second) = *first_tensor_desc;
+    *ctx->Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) =
+        first_tensor_desc->data_type();
   }
   return Maybe<void>::Ok();
 }

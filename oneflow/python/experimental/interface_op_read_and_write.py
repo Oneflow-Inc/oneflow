@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.eager.blob_cache as blob_cache_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.framework.input_blob_def as input_blob_def_util
 import oneflow.python.framework.dtype as dtype_util
@@ -25,32 +24,36 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager.op_executor as op_executor
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
-import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+import oneflow._oneflow_internal
 
 
 def sync_default_session_if_normal():
+    # TODO merge with same function in framework/check_point_v2.py
     if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
         flow.sync_default_session()
     else:
+        # do nothing
         pass
 
 
-blob_register = oneflow_api.GetDefaultBlobRegister()
+blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def _GetInterfaceBlobObject(builder, op_name):
     sess = session_ctx.GetDefaultSession()
-    if oneflow_api.EagerExecutionEnabled():
+    if oneflow._oneflow_internal.EagerExecutionEnabled():
         return sess.var_name2var_blob[op_name].blob_object
     sess = session_ctx.GetDefaultSession()
     op_attribute = sess.OpAttribute4InterfaceOpName(op_name)
-    cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(str(op_attribute))
+    cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
+        str(op_attribute)
+    )
     parallel_conf = sess.ParallelConf4LazyInterfaceOpName(op_name)
     if not isinstance(
-        parallel_conf, oneflow_api.oneflow.core.job.placement.ParallelConf
+        parallel_conf, oneflow._oneflow_internal.oneflow.core.job.placement.ParallelConf
     ):
         parallel_conf_cfg = placement_cfg.ParallelConf()
         parallel_conf_cfg.set_device_tag(parallel_conf.device_tag)
@@ -86,18 +89,20 @@ def GetEagerInterfaceBlob(op_name):
             assert len(op_attribute.output_bns) == 1
             lbi.set_blob_name(op_attribute.output_bns[0])
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = oneflow_api.EagerMirroredBlob(
+                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(
                     lbi, blob_object, blob_register, job_name
                 )
             else:
-                remote_blob = oneflow_api.EagerConsistentBlob(
+                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(
                     lbi, blob_object, blob_register, job_name
                 )
 
             Yield(remote_blob)
 
         def AsyncGetInterfaceBlob(Yield):
-            oneflow_api.deprecated.LogicalRun(lambda builder: Build(builder, Yield))
+            oneflow._oneflow_internal.deprecated.LogicalRun(
+                lambda builder: Build(builder, Yield)
+            )
 
         blob = async_util.Await(1, AsyncGetInterfaceBlob)[0]
         return blob
@@ -126,17 +131,17 @@ def GetInterfaceBlobValue(op_name):
                 cfg_lbi.set_blob_name(lbi.blob_name)
                 lbi = cfg_lbi
             if blob_object.op_arg_parallel_attr.is_mirrored():
-                remote_blob = oneflow_api.EagerMirroredBlob(
+                remote_blob = oneflow._oneflow_internal.EagerMirroredBlob(
                     lbi, blob_object, blob_register, job_name
                 )
             else:
-                remote_blob = oneflow_api.EagerConsistentBlob(
+                remote_blob = oneflow._oneflow_internal.EagerConsistentBlob(
                     lbi, blob_object, blob_register, job_name
                 )
             value = remote_blob.numpy()
             Yield(value)
 
-        oneflow_api.deprecated.LogicalRun(build)
+        oneflow._oneflow_internal.deprecated.LogicalRun(build)
 
     return async_util.Await(1, AsyncGetInterfaceBlobValue)[0]
 
@@ -157,7 +162,7 @@ def FeedValueToInterfaceBlobObject(blob_object, ndarray):
             )
         push_util.FeedValueToEagerBlob(blob_object, input_blob_def, ndarray)
 
-    oneflow_api.deprecated.LogicalRun(build)
+    oneflow._oneflow_internal.deprecated.LogicalRun(build)
 
 
 @oneflow_export("experimental.set_interface_blob_value")
@@ -170,6 +175,6 @@ def FeedValueToInterfaceBlob(op_name, ndarray):
             FeedValueToInterfaceBlobObject(blob_object, ndarray)
             Yield()
 
-        oneflow_api.deprecated.LogicalRun(build)
+        oneflow._oneflow_internal.deprecated.LogicalRun(build)
 
     async_util.Await(1, AsyncFeedValueToInterfaceBlob)

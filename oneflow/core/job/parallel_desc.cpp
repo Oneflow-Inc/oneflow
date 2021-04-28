@@ -19,6 +19,9 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/control/global_process_ctx.h"
+#include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -75,6 +78,18 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
 Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& parallel_conf) {
   std::shared_ptr<ParallelDesc> parallel_desc(new ParallelDesc(symbol_id));
   parallel_desc->MaybeInit(parallel_conf);
+  return parallel_desc;
+}
+
+Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
+                                      const std::vector<std::string>& machine_device_ids,
+                                      const std::shared_ptr<Shape>& hierarchy) {
+  const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
+  std::shared_ptr<ParallelDesc> parallel_desc;
+  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+    parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
+    return Maybe<void>::Ok();
+  }));
   return parallel_desc;
 }
 
@@ -148,6 +163,18 @@ bool ParallelDesc::Equals(const ParallelDesc& rhs) const {
 bool ParallelDesc::EqualsIgnoringDeviceType(const ParallelDesc& rhs) const {
   return sorted_machine_ids_ == rhs.sorted_machine_ids_ && EqualsMachineId2SortedDevPhyIds(rhs)
          && *hierarchy_ == *rhs.hierarchy_;
+}
+
+bool ParallelDesc::EqualsIgnoringHierarchy(const ParallelDesc& rhs) const {
+  return (this == &rhs)
+         || (device_type_ == rhs.device_type_ && sorted_machine_ids_ == rhs.sorted_machine_ids_
+             && EqualsMachineId2SortedDevPhyIds(rhs));
+}
+
+bool ParallelDesc::EqualsOnlyForMachineAndDeviceIds(const ParallelDesc& rhs) const {
+  return (this == &rhs)
+         || (sorted_machine_ids_ == rhs.sorted_machine_ids_
+             && EqualsMachineId2SortedDevPhyIds(rhs));
 }
 
 bool ParallelDesc::EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const {

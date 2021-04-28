@@ -22,6 +22,18 @@ message CollectiveBoxingConf {
   optional bool nccl_enable_mixed_fusion = 111 [default = false];
 }
 
+message CudnnConfig {
+  optional bool enable_cudnn = 1 [default = true];
+  optional int64 cudnn_buf_limit_mbyte = 2 [default = 1024];  // 1GByte
+  optional int32 cudnn_conv_force_fwd_algo = 3;
+  optional int32 cudnn_conv_force_bwd_data_algo = 4;
+  optional int32 cudnn_conv_force_bwd_filter_algo = 5;
+  optional bool cudnn_conv_heuristic_search_algo = 6 [default = true];
+  optional bool cudnn_conv_use_deterministic_algo_only = 7 [default = false];
+  optional bool enable_cudnn_fused_normalization_add_relu = 8;
+  optional bool cudnn_conv_enable_pseudo_half = 9 [default = true];
+}
+
 message Resource {
   optional int32 machine_num = 1 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
@@ -41,8 +53,10 @@ message Resource {
   optional bool enable_debug_mode = 18 [default = false];
   optional CollectiveBoxingConf collective_boxing_conf = 19;
   optional bool enable_tensor_float_32_compute = 20 [default = true];
+  optional bool enable_mem_chain_merge = 21 [default = true];
 
   // NOTE(chengcheng) to reuse nccl memory and speed up
   optional bool nccl_use_compute_stream = 30 [default = false];
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
+  optional CudnnConfig cudnn_conf = 32;
 }

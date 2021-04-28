@@ -28,7 +28,7 @@ import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -44,7 +44,7 @@ def api_enable_eager_execution(val: bool = True) -> None:
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
-    return oneflow_api.EnableEagerEnvironment(val)
+    return oneflow._oneflow_internal.EnableEagerEnvironment(val)
 
 
 @oneflow_export("env.init")
@@ -63,11 +63,18 @@ def env_init():
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto)
-    if oneflow_api.CurrentMachineId() == 0:
+    if oneflow._oneflow_internal.CurrentMachineId() == 0:
         scope_util.InitScopeStack()
     else:
         exit(0)
     return True
+
+
+def init_default_physical_env():
+    default_physical_env_proto = _DefaultEnvProto()
+    default_physical_env_proto.is_default_physical_env = True
+    CompleteEnvProto(default_physical_env_proto)
+    c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
 @oneflow_export("env.current_resource", "current_resource")
@@ -98,7 +105,7 @@ def api_get_current_machine_id():
 
 @enable_if.condition(hob.in_normal_mode & hob.env_initialized)
 def get_current_machine_id() -> int:
-    return oneflow_api.CurrentMachineId()
+    return oneflow._oneflow_internal.CurrentMachineId()
 
 
 @oneflow_export("env.machine")
@@ -155,27 +162,6 @@ def api_data_port(val: int) -> None:
 def data_port(val):
     assert type(val) is int
     default_env_proto.data_port = val
-
-
-@oneflow_export("env.rpc_backend")
-def api_rpc_backend(val: int) -> None:
-    r"""Set which rpc backend to use. For single process: local. For multiple nodes: grpc
-
-    Args:
-        val: rpc backend's name
-    """
-    return enable_if.unique([rpc_backend, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
-def rpc_backend(val: str):
-    assert type(val) is str
-    val = val.lower()
-    if val == "grpc":
-        assert oneflow_api.flags.has_rpc_backend_grpc()
-    if val == "local":
-        assert oneflow_api.flags.has_rpc_backend_local()
-    default_env_proto.rpc_backend = val.lower()
 
 
 @oneflow_export("env.grpc_use_no_signal")
@@ -250,8 +236,13 @@ def do_nothing(*args, **kwargs):
 
 
 def CompleteEnvProto(env_proto):
-    if len(env_proto.machine) == 1 and env_proto.HasField("ctrl_port") == False:
-        env_proto.ctrl_port = _FindFreePort()
+    if env_proto.HasField("ctrl_port") == False:
+        if len(env_proto.machine) == 1:
+            env_proto.ctrl_port = _FindFreePort()
+        else:
+            raise ValueError(
+                "a ctrl_port is required if running multi-node, set it with 'oneflow.env.ctrl_port([YOUR PORT])'"
+            )
 
 
 def _MakeMachine(machines):
@@ -372,14 +363,6 @@ def _DefaultEnvProto():
     machine = env_proto.machine.add()
     machine.id = 0
     machine.addr = "127.0.0.1"
-    if oneflow_api.flags.has_rpc_backend_grpc():
-        env_proto.rpc_backend = "grpc"
-    elif oneflow_api.flags.has_rpc_backend_local():
-        env_proto.rpc_backend = "local"
-    else:
-        raise ValueError(
-            "at least one of rpc backend: 'grpc, local' should be available"
-        )
     return env_proto
 
 

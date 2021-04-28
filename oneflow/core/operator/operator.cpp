@@ -677,7 +677,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
         ParallelDistributionInferHint4Ibn) const {
   const auto IsBroadcast = [](const ParallelDistribution& parallel_distribution,
                               const ParallelDesc& parallel_desc) -> bool {
-    if (parallel_desc.hierarchy()->NumAxes() == 1) { return true; }
+    if (parallel_desc.parallel_num() == 1) { return true; }
     for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
       if (!parallel_distribution.sbp_parallel(i).has_broadcast_parallel()) { return false; }
     }
@@ -722,7 +722,9 @@ Maybe<void> Operator::InferParallelDistributionSignature(
       }
       if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
         CHECK_OR_RETURN(IsBroadcast(distribution,
-                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
+                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()))
+            << ibn << "'s hierarchy is different from " << op_name()
+            << "'s, it should be broadcast but get " << distribution.DebugString();
         distribution.clear_sbp_parallel();
         for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
           distribution.add_sbp_parallel()->mutable_broadcast_parallel();
@@ -1180,7 +1182,8 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   if (bn2parallel_desc_) {
     auto* map = op_attribute->mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf();
     for (const auto& pair : *bn2parallel_desc_) {
-      (*map)[pair.first] = pair.second->parallel_conf();
+      const bool has_same_parallel_conf_as_op = *op_parallel_desc_ == *pair.second;
+      if (!has_same_parallel_conf_as_op) { (*map)[pair.first] = pair.second->parallel_conf(); }
     }
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {

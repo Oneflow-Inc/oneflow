@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -46,7 +45,10 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"dropout", user_op::OpArg("out", 0)},
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
-       {"batch_matmul", user_op::OpArg("out", 0)}});
+       {"batch_matmul", user_op::OpArg("out", 0)},
+       {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
+       {"broadcast_matmul", user_op::OpArg("out", 0)},
+       {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();

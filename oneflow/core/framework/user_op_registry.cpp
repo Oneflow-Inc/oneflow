@@ -166,9 +166,8 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
-
-OpRegistry& OpRegistry::SetInferSbpSignatureFn(InferSbpSignatureFn infer_sbp_signature_fn) {
-  result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
+OpRegistry& OpRegistry::SetSbpSignatureInferFn(SbpSignatureInferFn sbp_signature_infer_fn) {
+  result_.sbp_signature_infer_fn = std::move(sbp_signature_infer_fn);
   return *this;
 }
 
@@ -182,15 +181,20 @@ OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
-    InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn) {
-  result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
+OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
+    OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn) {
+  result_.output_blob_time_shape_infer_fn = std::move(output_blob_time_shape_infer_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferParallelDistributionFn(
-    InferParallelDistributionFn infer_parallel_distribution_fn) {
-  result_.infer_parallel_distribution_fn = std::move(infer_parallel_distribution_fn);
+OpRegistry& OpRegistry::SetParallelDistributionInferFn(
+    ParallelDistributionInferFn parallel_distribution_infer_fn) {
+  result_.parallel_distribution_infer_fn = std::move(parallel_distribution_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
+  result_.data_type_infer_fn = std::move(data_type_infer_fn);
   return *this;
 }
 
@@ -198,7 +202,7 @@ OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
-    auto logical_fn = result_.logical_tensor_desc_infer_fn;
+    const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
     result_.physical_tensor_desc_infer_fn =
         [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
       if (ctx->parallel_num() == 1) {

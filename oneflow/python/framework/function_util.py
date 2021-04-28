@@ -31,11 +31,12 @@ import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.distribute_context as distribute_ctx
 import oneflow.python.framework.placement_context as placement_ctx
 import oneflow.python.framework.typing_util as oft_util
+import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.lib.core.pb_util as pb_util
 from oneflow.python.framework.function_desc import FunctionDesc
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api.oneflow.core.common.data_type as data_type_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.common.data_type as data_type_cfg
+import oneflow._oneflow_internal
 import traceback
 import sys
 
@@ -169,6 +170,15 @@ def lazy_oneflow_function(function_config=FunctionConfig()):
     return Decorator
 
 
+def global_function_or_identity(*args, **kwargs):
+    if rt_mode.CurrentMode() == rt_mode.NORMAL_MODE:
+        return api_oneflow_function(*args, **kwargs)
+    else:
+        assert rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+        identity_decorator = lambda func: func
+        return identity_decorator
+
+
 def _CloneFunctionDesc(func_desc, job_func):
     new_func_desc = FunctionDesc(job_func=job_func)
     new_func_desc.job_config_proto.CopyFrom(func_desc.job_config_proto)
@@ -230,7 +240,9 @@ def set_default_data_type(func_desc, value):
         value ([type]): data type. e.g. flow.float
     """
     func_desc.job_config_proto.set_default_data_type(
-        data_type_cfg.DataType(oneflow_api.deprecated.GetProtoDtype4OfDtype(value))
+        data_type_cfg.DataType(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(value)
+        )
     )
 
 
@@ -257,17 +269,6 @@ def set_exp_run_conf(value):
     """
     assert type(func_desc, value) is dict
     pb_util.PythonDict2CFG(value, func_desc.job_config_proto.mutable_exp_run_conf())
-
-
-@oneflow_function_config("use_memory_allocation_algorithm_v2")
-def set_use_memory_allocation_algorithm_v2(func_desc, value):
-    r"""Set to use memory allocation algorithm(v2)
-
-    Args:
-        func_desc ([type]): [description]
-        value ([type]): [description]
-    """
-    func_desc.job_config_proto.set_use_memory_allocation_algorithm_v2(value)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.has")
@@ -297,7 +298,7 @@ def static_mem_alloc_policy_white_list_add_policy(func_desc, policy):
     getattr(
         func_desc.job_config_proto.mutable_memory_allocation_algorithm_conf(),
         "set_" + policy,
-    )(Ture)
+    )(True)
 
 
 @oneflow_function_config("static_mem_alloc_policy_white_list.remove")
@@ -646,6 +647,17 @@ def set_prune_cast_to_static_shape_ops(func_desc, value=True):
     func_desc.job_config_proto.set_prune_cast_to_static_shape_ops(value)
 
 
+@oneflow_function_config("prune_amp_white_identity_ops")
+def set_prune_amp_white_identity_ops(func_desc, value=True):
+    r"""Whether prune amp_white_identity operations or not.
+
+    Args:
+        func_desc ([type]): [description]
+        value (bool, optional): [description]. Defaults to True.
+    """
+    func_desc.job_config_proto.set_prune_amp_white_identity_ops(value)
+
+
 @oneflow_function_config("non_distributed_optimizer_group_size_mbyte")
 def set_non_distributed_optimizer_group_size_mbyte(func_desc, value):
     print(
@@ -870,6 +882,11 @@ def set_secondary_lr(func_desc, value):
     )
     print(traceback.format_stack()[-3])
     func_desc.job_config_proto.mutable_train_conf().set_secondary_lr(value)
+
+
+@oneflow_function_config("train.num_gradient_accumulation_steps")
+def set_num_gradient_accumulation_steps(func_desc, value):
+    func_desc.job_config_proto.set_num_gradient_accumulation_steps(value)
 
 
 @oneflow_function_config("default_placement_scope")

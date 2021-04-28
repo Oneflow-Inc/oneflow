@@ -23,10 +23,11 @@ class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
         # TODO: uncomment this line when autograd is ready
         # data.requires_grad = True
-        data.set_is_consistent(True)
-        # TODO: set a proper placement
-        data.set_placement(flow.placement("cpu", ["0:0"], None))
+        # TODO: uncomment the following two lines when consistent <-> local conversion is ready
+        # data.set_is_consistent(True)
+        # data.set_placement(flow.placement("gpu", ["0:0"], None))
         self._data = data
+        self._data.requires_grad = requires_grad
 
     def __getattr__(self, name):
         return getattr(self._data, name)

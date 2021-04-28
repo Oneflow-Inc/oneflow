@@ -18,6 +18,16 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
+  const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, out_shape);
+}
+
+}  // namespace
+
 REGISTER_USER_OP("reshape_like")
     .Input("in")
     .Input("like")
@@ -27,7 +37,6 @@ REGISTER_USER_OP("reshape_like")
       const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(in_shape->elem_cnt(), like_shape->elem_cnt());
       *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -49,8 +58,15 @@ REGISTER_USER_OP("reshape_like")
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
+      user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
       return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, like_shape, {{"in", 0}},
-                                                              {{"like", 0}, {"out", 0}}, ctx);
+                                                              {{"like", 0}, {"out", 0}},
+                                                              ctx->parallel_num(), &builder);
+    })
+    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

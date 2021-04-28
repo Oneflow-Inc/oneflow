@@ -33,6 +33,7 @@ limitations under the License.
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
+#include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
 
@@ -45,8 +46,12 @@ std::string LogDir(const std::string& log_dir) {
   return v;
 }
 
-void InitLogging(const CppLoggingConf& logging_conf) {
-  FLAGS_log_dir = LogDir(logging_conf.log_dir());
+void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) {
+  if (!default_physical_env) {
+    FLAGS_log_dir = LogDir(logging_conf.log_dir());
+  } else {
+    FLAGS_log_dir = LogDir(logging_conf.default_physical_env_log_dir());
+  }
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
   FLAGS_stderrthreshold = 1;  // 1=WARNING
@@ -69,7 +74,7 @@ int32_t GetDefaultGpuDeviceNum() {
 Resource GetDefaultResource(const EnvProto& env_proto) {
   Resource resource;
   if (env_proto.has_ctrl_bootstrap_conf()) {
-    resource.set_machine_num(env_proto.ctrl_bootstrap_conf().world_size());
+    resource.set_machine_num(GlobalProcessCtx::NodeSize());
   } else {
     resource.set_machine_num(env_proto.machine_size());
   }
@@ -81,7 +86,9 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
 }  // namespace
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
-  InitLogging(env_proto.cpp_logging_conf());
+  thread_id_ = std::this_thread::get_id();
+  is_default_physical_env_ = env_proto.is_default_physical_env();
+  InitLogging(env_proto.cpp_logging_conf(), JUST(is_default_physical_env_));
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
@@ -89,21 +96,26 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<ProcessCtx>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
-  if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
-      || (env_proto.has_ctrl_bootstrap_conf()
-          && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+  if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(ERROR) << "using rpc backend: local";
-    auto* local_manager = new LocalRpcManager();
-    Global<RpcManager>::SetAllocated(local_manager);
+    LOG(INFO) << "using rpc backend: dry-run";
+    Global<RpcManager>::SetAllocated(new DryRunRpcManager());
+#else
+    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+#endif  // RPC_BACKEND_LOCAL
+  } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
+             || (env_proto.has_ctrl_bootstrap_conf()
+                 && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
+#ifdef RPC_BACKEND_LOCAL
+    LOG(INFO) << "using rpc backend: local";
+    Global<RpcManager>::SetAllocated(new LocalRpcManager());
 #else
     static_assert(false, "requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
-    LOG(ERROR) << "using rpc backend: gRPC";
-    auto* grpc_manager = new GrpcRpcManager();
-    Global<RpcManager>::SetAllocated(grpc_manager);
+    LOG(INFO) << "using rpc backend: gRPC";
+    Global<RpcManager>::SetAllocated(new GrpcRpcManager());
 #else
     UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
@@ -123,10 +135,18 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    Global<EpollCommNet>::New();
+    Global<Transport>::New();
+  }
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+    Global<Transport>::Delete();
+    Global<EpollCommNet>::Delete();
+  }
 #ifdef WITH_CUDA
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
@@ -146,6 +166,24 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 #ifdef WITH_CUDA
   Global<cudaDeviceProp>::Delete();
 #endif
+  google::ShutdownGoogleLogging();
+}
+
+const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
+    const Device& device) {
+  CHECK(thread_id_ == std::this_thread::get_id());
+  {
+    const auto& iter = device2parallel_desc_.find(device);
+    if (iter != device2parallel_desc_.end()) { return iter->second; }
+  }
+  std::string machine_device_id =
+      "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(device.of_type());
+  parallel_conf.add_device_name(machine_device_id);
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      std::make_shared<const ParallelDesc>(parallel_conf);
+  return device2parallel_desc_.emplace(device, parallel_desc).first->second;
 }
 
 }  // namespace oneflow

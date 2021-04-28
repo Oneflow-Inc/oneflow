@@ -775,6 +775,7 @@ Maybe<const ParallelDesc*> JobBuildAndInferCtx::MirroredBlobGetParallelDescFromP
 Maybe<void> JobBuildAndInferCtx::CheckJob() const {
   JUST(CheckPlacement());
   JUST(CheckJobConf());
+  JUST(CheckOpScope());
   return Maybe<void>::Ok();
 }
 
@@ -807,6 +808,18 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
 Maybe<void> JobBuildAndInferCtx::CheckJobConf() const {
   if (job_->job_conf().job_type_case() == JobConfigProto::JOB_TYPE_NOT_SET) {
     return Error::JobTypeNotSetError() << "job_type not set, please set predict_conf or train_conf";
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuildAndInferCtx::CheckOpScope() const {
+  for (const OperatorConf& op_conf : job_->net().op()) {
+    if (!op_conf.has_scope_symbol_id()) {
+      // NOTE(chengcheng): LOG(WARNING) instead of CHECK_OR_RETURN() for transition
+      LOG(WARNING) << " ERROR! op_name: " << op_conf.name()
+                   << " has NOT set scope(scope_symbol_id) in job: " << job_->job_conf().job_name()
+                   << " net. \n op_conf = " << op_conf.DebugString();
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -961,8 +974,11 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("SetDefaultVariableConf"));
     JUST(DoPass("AddInputOutputOpsPass"));
+    JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
+    JUST(DoPass("GradientAccumulationRewritePass"));
 #ifdef WITH_CUDA
     JUST(DoPass("AutoMixedPrecision"));
+    JUST(DoPass("PruneAmpWhiteIdentityOpPass"));
 #endif
     JUST(DoPass("OptimizerPlacementOptimizationPass"));
     JUST(DoPass("DynamicLossScaleSchedulePass"));
@@ -975,6 +991,9 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
     JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     JUST(DoPass("FuseAddToOutputPass"));
+    // run this pass again to fuse ops created in the first run.
+    // TODO(guoran): loop multiple times inside the pass
+    JUST(DoPass("FuseAddToOutputPass"));
     JUST(DoPass("IndexedSlicesOptimizerRewritePass"));
     JUST(DoPass("SplitSparseSoftmaxCrossEntropyOpPass"));
     JUST(DoPass("DoParallelCastBeforeWideningTypeCast"));
@@ -985,6 +1004,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("DumpVariableInfoPass"));
   }
   JUST(DoPass("DumpBlobParallelConfPass"));
+  JUST(CheckJob());
   return Maybe<void>::Ok();
 }
 

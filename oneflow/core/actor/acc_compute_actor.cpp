@@ -71,15 +71,17 @@ int64_t AccCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
 
 void AccCompActor::Act() {
   Regst* out_regst = GetNaiveCurWriteable("out");
+  Regst* in_regst = GetNaiveCurReadable("in");
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   if (acc_cnt_ == 0) {
+    const Blob* in_blob = in_regst->GetMutSoleBlob();
     Blob* out_blob = out_regst->GetMutSoleBlob();
     if (GetDeviceType() == DeviceType::kCPU) {
-      Memset<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+      Memcpy<DeviceType::kCPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
     } else if (GetDeviceType() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      Memset<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->mut_dptr(), 0,
+      Memcpy<DeviceType::kGPU>(kernel_ctx.device_ctx, out_blob->ForceMutDptr(), in_blob->dptr(),
                                out_blob->ByteSizeOfBlobBody());
 #else
       UNIMPLEMENTED();
@@ -87,8 +89,9 @@ void AccCompActor::Act() {
     } else {
       UNIMPLEMENTED();
     }
+  } else {
+    AsyncLaunchKernel(kernel_ctx);
   }
-  AsyncLaunchKernel(kernel_ctx);
   acc_cnt_ += 1;
 }
 

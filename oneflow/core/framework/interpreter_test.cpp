@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/vm/test_util.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
 
 namespace oneflow {

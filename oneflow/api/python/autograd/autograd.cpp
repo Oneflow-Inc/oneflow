@@ -18,11 +18,12 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/framework/op_interpreter_util.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -41,21 +42,28 @@ bool IsScalarTensor(const one::Tensor& tensor) {
 // `flow.ones([1])`).
 Maybe<one::TensorTuple> CheckAndInitOutGrads(const one::TensorTuple& outputs,
                                              const one::TensorTuple& out_grads) {
-  auto gradients = std::make_shared<one::TensorTuple>(out_grads.size());
-  for (int i = 0; i < out_grads.size(); ++i) {
-    if (out_grads.at(i).get()) {
+  size_t grad_size = out_grads.empty() ? outputs.size() : out_grads.size();
+  auto gradients = std::make_shared<one::TensorTuple>(grad_size);
+  CHECK_EQ_OR_RETURN(outputs.size(), gradients->size())
+      << "RuntimeError: got " << outputs.size() << " tensors and " << gradients->size()
+      << " gradients";
+  for (int i = 0; i < outputs.size(); ++i) {
+    CHECK_OR_RETURN(outputs.at(i)->requires_grad())
+        << "All output tensors `.requires_grad` should be true";
+    if (out_grads.empty()) {
+      CHECK_OR_RETURN(IsScalarTensor(*outputs.at(i)))
+          << "Grad can be implicitly created only for scalar outputs";
+      const auto& ones = JUST(
+          op_expr_helper::OnesOp(*outputs.at(i)->shape(), outputs.at(i)->dtype()->data_type()));
+      const auto& interpreter = JUST(one::OpInterpUtil::GetInterpreter());
+      one::TensorTuple grad_output(1);
+      JUST(interpreter->Apply(*ones, one::TensorTuple(), &grad_output));
+      gradients->at(i) = grad_output.at(0);
+    } else {
       CHECK_OR_RETURN(*(outputs.at(i)->shape()) == *(out_grads.at(i)->shape()))
           << "out_grad's shape must be same as output's (" << outputs.at(i)->shape()->ToString()
           << " vs " << out_grads.at(i)->shape()->ToString() << ")";
       gradients->at(i) = out_grads.at(i);
-    } else {
-      CHECK_OR_RETURN(IsScalarTensor(*out_grads.at(i)))
-          << "Grad can be implicitly created only for scalar outputs";
-      const auto& ones_like = JUST(op_expr_helper::OnesLikeOp());
-      const auto& interpreter = JUST(one::OpInterpUtil::GetInterpreter());
-      one::TensorTuple grad_output(1);
-      interpreter->Apply(*ones_like, one::TensorTuple({outputs.at(i)}), &grad_output);
-      gradients->at(i) = grad_output.at(0);
     }
   }
   return gradients;

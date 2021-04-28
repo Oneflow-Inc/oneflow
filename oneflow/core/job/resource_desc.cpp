@@ -64,6 +64,8 @@ bool ResourceDesc::enable_debug_mode() const {
   return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || resource_.enable_debug_mode();
 }
 
+bool ResourceDesc::enable_dry_run() const { return std::getenv("ONEFLOW_DRY_RUN") != nullptr; }
+
 CollectiveBoxingConf ResourceDesc::collective_boxing_conf() const {
   if (resource_.has_collective_boxing_conf()) {
     return resource_.collective_boxing_conf();
@@ -78,6 +80,38 @@ bool ResourceDesc::nccl_use_compute_stream() const {
 #else
   return false;
 #endif
+}
+
+void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
+  resource_.clear_cudnn_conf();
+  auto* cudnn_conf = resource_.mutable_cudnn_conf();
+  if (job_conf.has_enable_cudnn()) { cudnn_conf->set_enable_cudnn(job_conf.enable_cudnn()); }
+  if (job_conf.has_cudnn_buf_limit_mbyte()) {
+    cudnn_conf->set_cudnn_buf_limit_mbyte(job_conf.cudnn_buf_limit_mbyte());
+  }
+  if (job_conf.has_cudnn_conv_force_fwd_algo()) {
+    cudnn_conf->set_cudnn_conv_force_fwd_algo(job_conf.cudnn_conv_force_fwd_algo());
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_data_algo()) {
+    cudnn_conf->set_cudnn_conv_force_bwd_data_algo(job_conf.cudnn_conv_force_bwd_data_algo());
+  }
+  if (job_conf.has_cudnn_conv_force_bwd_filter_algo()) {
+    cudnn_conf->set_cudnn_conv_force_bwd_filter_algo(job_conf.cudnn_conv_force_bwd_filter_algo());
+  }
+  if (job_conf.has_cudnn_conv_heuristic_search_algo()) {
+    cudnn_conf->set_cudnn_conv_heuristic_search_algo(job_conf.cudnn_conv_heuristic_search_algo());
+  }
+  if (job_conf.has_cudnn_conv_use_deterministic_algo_only()) {
+    cudnn_conf->set_cudnn_conv_use_deterministic_algo_only(
+        job_conf.cudnn_conv_use_deterministic_algo_only());
+  }
+  if (job_conf.has_enable_cudnn_fused_normalization_add_relu()) {
+    cudnn_conf->set_enable_cudnn_fused_normalization_add_relu(
+        job_conf.enable_cudnn_fused_normalization_add_relu());
+  }
+  if (job_conf.has_cudnn_conv_enable_pseudo_half()) {
+    cudnn_conf->set_cudnn_conv_enable_pseudo_half(job_conf.cudnn_conv_enable_pseudo_half());
+  }
 }
 
 }  // namespace oneflow
