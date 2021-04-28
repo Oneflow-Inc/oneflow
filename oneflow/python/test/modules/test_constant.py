@@ -44,7 +44,7 @@ class TestConstantModule(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(np.zeros(10), y2.numpy()))
 
         y3 = flow.tmp.zeros(10, dtype=flow.int)
-        test_case.assertTrue(np.array_equal(np.zeros(10, dtype=np.int), y3.numpy()))
+        test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
 
 
 if __name__ == "__main__":

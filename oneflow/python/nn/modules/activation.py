@@ -55,7 +55,6 @@ class ReLU(Module):
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr)
         output = m(input)
-
         # equal to np.maximum(0, arr)
 
     """

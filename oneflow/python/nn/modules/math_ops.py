@@ -39,8 +39,6 @@ class Sin(Module):
         arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.sin(input)
-
-        # output
         # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
 
     """
@@ -79,8 +77,6 @@ class Cos(Module):
         arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.cos(input)
-
-        # output
         # [0.13944048 0.29570782 0.6553126  0.5573547 ]
         
     """
@@ -119,6 +115,7 @@ class Log(Module):
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.log(input)
+        # equal to np.log(input)
         
     """
 

@@ -124,7 +124,6 @@ class Zeros(_ConstantBase):
         import numpy as np
 
         y = flow.zeros(5)
-
         # [0. 0. 0. 0. 0. ]
 
     """
