@@ -14,14 +14,8 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import (
-    _single,
-    _pair,
-    _triple,
-    _reverse_repeat_tuple,
-)
-from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from typing import Optional, List, Tuple
+from oneflow.python.nn.modules.utils import _pair
+from oneflow.python.nn.common_types import _size_2_t
 
 
 @oneflow_export("nn.Conv2d")
