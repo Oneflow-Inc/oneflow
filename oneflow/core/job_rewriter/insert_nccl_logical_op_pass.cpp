@@ -710,12 +710,12 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   const OpNode* first_acc_op = ordered_acc_op_nodes.front();
   std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
   std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
-  LOG(WARNING) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
-               << ") in Job: " << job_builder->job().job_conf().job_name()
-               << ", we will try insert special identity and ctrl for "
-               << " UNSAFE handle ALL nccl ops between different time shape: "
-               << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
-               << "\n\n";
+  LOG(INFO) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
+            << ") in Job: " << job_builder->job().job_conf().job_name()
+            << ", we will try insert special identity and ctrl for "
+            << " UNSAFE handle ALL nccl ops between different time shape: "
+            << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
+            << "\n\n";
   CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
   CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
 
