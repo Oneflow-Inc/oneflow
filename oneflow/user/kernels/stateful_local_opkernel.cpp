@@ -60,6 +60,11 @@ void InitArgName2BnIndex2TensorTupleIndex(
 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
                                          const ArgVec* indexed_output_pairs)
+    : ZeroCopyBaseContext(indexed_input_pairs, indexed_output_pairs, nullptr) {}
+
+ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
+                                         const ArgVec* indexed_output_pairs,
+                                         eager::EagerBlobObject* tmp_buffer)
     : indexed_input_pairs_(indexed_input_pairs), indexed_output_pairs_(indexed_output_pairs) {
   InitArgName2BnIndex2TensorTupleIndex(indexed_input_pairs,
                                        &arg_name2bn_index2input_tensor_tuple_index_);
@@ -76,6 +81,9 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const ArgVec* indexed_input_pairs,
         [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
     output_tensor_desc_views_.push_back(std::make_unique<EagerBlobObjectTensorDescView>(
         [this, i]() -> eager::EagerBlobObject* { return output_tensors_->at(i).get(); }));
+  }
+  if (tmp_buffer != nullptr) {
+    tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
   }
 }
 
@@ -95,6 +103,9 @@ user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::
 
 user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& arg_name,
                                                              const int32_t index) const {
+  if (arg_name == "tmp_buffer" && index == 0 && tmp_buffer_view_ != nullptr) {
+    return tmp_buffer_view_.get();
+  }
   int32_t i = TryGetTensorTupleIndex(arg_name2bn_index2input_tensor_tuple_index_, arg_name, index);
   if (i >= 0) { return input_tensor_views_.at(i).get(); }
   i = TryGetTensorTupleIndex(arg_name2bn_index2output_tensor_tuple_index_, arg_name, index);
@@ -105,9 +116,16 @@ user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& 
 LocalUserKernelBaseContext::LocalUserKernelBaseContext(const std::string& device_tag,
                                                        const ArgVec* indexed_input_pairs,
                                                        const ArgVec* indexed_output_pairs)
-    : ZeroCopyBaseContext(indexed_input_pairs, indexed_output_pairs),
+    : LocalUserKernelBaseContext(device_tag, indexed_input_pairs, indexed_output_pairs, nullptr) {}
+
+LocalUserKernelBaseContext::LocalUserKernelBaseContext(const std::string& device_tag,
+                                                       const ArgVec* indexed_input_pairs,
+                                                       const ArgVec* indexed_output_pairs,
+                                                       eager::EagerBlobObject* tmp_buffer)
+    : ZeroCopyBaseContext(indexed_input_pairs, indexed_output_pairs, tmp_buffer),
       device_tag_(device_tag),
-      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
+      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))),
+      tmp_buffer_(tmp_buffer) {}
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
@@ -215,10 +233,11 @@ void LocalUserOpInferContext::Update(EagerBlobObjectList inputs, EagerBlobObject
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(DeviceCtx* device_ctx,
                                                              const OperatorConf& op_conf,
                                                              const ArgVec* index_input_pairs,
-                                                             const ArgVec* indexed_output_pairs)
+                                                             const ArgVec* indexed_output_pairs,
+                                                             eager::EagerBlobObject* tmp_buffer)
     : user_op::KernelComputeContext(user_op::UserOpConfWrapper(op_conf)),
       device_ctx_(device_ctx),
-      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs) {}
+      base_ctx_(op_conf.device_tag(), index_input_pairs, indexed_output_pairs, tmp_buffer) {}
 
 void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                                            DeviceCtx* device_ctx) {
@@ -302,10 +321,16 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
   opkernel->indexed_input_pairs_ = indexed_input_pairs;
   opkernel->indexed_output_pairs_ = indexed_output_pairs;
   opkernel->need_check_mem_case_ = true;
+
+  opkernel->tmp_blob_object_.reset(
+      new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
+                                 std::make_shared<eager::TensorBuffer>()));
+
   opkernel->op_infer_ctx_.reset(
       new LocalUserOpInferContext(op_conf, indexed_input_pairs.get(), indexed_output_pairs.get()));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, op_conf, indexed_input_pairs.get(), indexed_output_pairs.get()));
+      nullptr, op_conf, indexed_input_pairs.get(), indexed_output_pairs.get(),
+      opkernel->mut_temp_blob_object()));
   opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(op_conf));
   opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(op_conf, indexed_input_pairs.get(),
                                                          indexed_output_pairs.get()));
@@ -324,9 +349,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const OperatorConf& op_conf,
       &opkernel->input_tuple_indexes4const_ibns_, &opkernel->input_tuple_indexes4mut_ibns_,
       &opkernel->output_tuple_indexes4mut_obns_, &opkernel->output_tuple_indexes4mut2_obns_));
 
-  opkernel->tmp_blob_object_.reset(
-      new eager::EagerBlobObject(opkernel->mem_case_, std::make_shared<Shape>(), DataType::kChar,
-                                 std::make_shared<eager::TensorBuffer>()));
   opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   opkernel->compute_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
