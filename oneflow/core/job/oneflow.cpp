@@ -385,10 +385,11 @@ void MergePlanWithoutGenNetTopo(Plan* plan, Plan&& other) {
     CHECK(
         plan->mutable_collective_boxing_plan()->mutable_job_id2request_set()->insert(pair).second);
   }
-  for (auto& pair : other.job_id2op_attribute_ref_table()) {
-    const bool result =
-        plan->mutable_job_id2op_attribute_ref_table()->insert(std::move(pair)).second;
-    CHECK(result) << "fail to merge op attribute info for job: " << pair.first;
+  for (auto& pair : *(other.mutable_job_id2op_attribute_ref_table())) {
+    CHECK(plan->job_id2op_attribute_ref_table().find(pair.first)
+          == plan->job_id2op_attribute_ref_table().end())
+        << "fail to merge op attribute info for job: " << pair.first;
+    (*plan->mutable_job_id2op_attribute_ref_table())[pair.first] = std::move(pair.second);
   }
 }
 
@@ -1141,6 +1142,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, pull_job.get());
     jobs.emplace_back(pull_job);
   }
+
   std::vector<Plan> sub_plans(jobs.size());
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
