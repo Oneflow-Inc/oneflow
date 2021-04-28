@@ -46,6 +46,9 @@ class ParallelDesc final {
   ParallelDesc(const ParallelConf& user_conf);
 
   static Maybe<ParallelDesc> New(int64_t symbol_id, const ParallelConf& parallel_conf);
+  static Maybe<ParallelDesc> New(const std::string& device_tag,
+                                 const std::vector<std::string>& machine_device_ids,
+                                 const std::shared_ptr<Shape>& hierarchy);
 
   Maybe<void> MaybeInit(const ParallelConf& user_conf);
 

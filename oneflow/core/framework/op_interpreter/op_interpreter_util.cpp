@@ -15,10 +15,12 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
+#include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -50,7 +52,8 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (EagerExecutionEnabled()) {
     const auto& session = JUST(GetDefaultSession());
-    bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());
+    bool is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
+                                        || JUST(session->IsMirroredStrategyEnabled());
     if (is_mirrored_strategy_enabled) {
       return g_eager_mirrored_interpreter;
     } else {
@@ -160,12 +163,20 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
         /*retain_grad=*/false));
   } else {
-    const auto& distribute =
-        compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
+    const auto& distribute = JUST(compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())));
     return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
         blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
   }
+}
+
+/*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<const Device>& device) {
+  auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
+                                                /* requires_grad */ false, /* is_leaf */ false,
+                                                /* retain_grad */ false);
+  return std::static_pointer_cast<Tensor>(tensor);
 }
 
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildTensorFromBlobObject(

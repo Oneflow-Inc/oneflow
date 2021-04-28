@@ -28,11 +28,11 @@ REGISTER_USER_OP("cast_to_tick")
       *out_shape = Shape({1});
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);

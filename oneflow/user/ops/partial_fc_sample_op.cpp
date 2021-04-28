@@ -78,7 +78,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("mapped_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
       *ctx->Dtype4ArgNameAndIndex("sampled_weight", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
       *ctx->Dtype4ArgNameAndIndex("sampled_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
@@ -131,7 +131,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
           *ctx->Dtype4ArgNameAndIndex("sampled_weight_diff", 0);
       *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =

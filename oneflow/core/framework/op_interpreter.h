@@ -32,7 +32,7 @@ class OpExprInterpState {
   const TensorTuple& SavedTensors() const { return saved_tensors_; }
 
   void SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
-    saved_tensors_.push_back(tensor);
+    saved_tensors_.push_back(tensor->detach());
   }
 
  private:

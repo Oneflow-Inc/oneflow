@@ -57,7 +57,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   }
   out->mut_shape()->Set(num_axes - 2, m);
   out->mut_shape()->Set(num_axes - 1, n);
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+  if (ctx->has_input("_add_to_output", 0)) {
     const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
     CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
   }
@@ -67,7 +67,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   DataType dtype = *ctx->Dtype4ArgNameAndIndex("a", 0);
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("b", 0), dtype);
-  if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+  if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("_add_to_output", 0), dtype);
   }
   *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
@@ -204,7 +204,7 @@ REGISTER_USER_OP("matmul")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn(InferDataType4Matmul);
+    .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("matmul").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                           user_op::AddOpFn AddOp) {
@@ -232,7 +232,7 @@ REGISTER_USER_OP("batch_matmul")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn(InferDataType4Matmul);
+    .SetDataTypeInferFn(InferDataType4Matmul);
 
 REGISTER_USER_OP_GRAD("batch_matmul")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
@@ -247,7 +247,7 @@ REGISTER_USER_OP("broadcast_matmul")
     .Attr<bool>("transpose_a", false)
     .Attr<bool>("transpose_b", false)
     .Attr<double>("alpha", 1.0)
-    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetDataTypeInferFn(InferDataType4Matmul)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       bool transpose_a = ctx->Attr<bool>("transpose_a");
       bool transpose_b = ctx->Attr<bool>("transpose_b");
@@ -276,6 +276,12 @@ REGISTER_USER_OP("broadcast_matmul")
       }
       out_dim_vec.push_back(n);
       *out->mut_shape() = Shape(out_dim_vec);
+
+      if (ctx->has_input("_add_to_output", 0)) {
+        const user_op::TensorDesc* add_to_output =
+            ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
+      }
 
       return Maybe<void>::Ok();
     })
@@ -342,9 +348,10 @@ REGISTER_USER_OP("broadcast_matmul")
 REGISTER_USER_OP("broadcast_matmul_grad_b")
     .Input("a")
     .Input("b")
+    .OptionalInput("_add_to_output")
     .Output("out")
     .Attr<double>("alpha", 1.0)
-    .SetInferDataTypeFn(InferDataType4Matmul)
+    .SetDataTypeInferFn(InferDataType4Matmul)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
@@ -358,18 +365,30 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
       *out->mut_shape() =
           Shape({a->shape().At(a->shape().NumAxes() - 1), b->shape().At(b->shape().NumAxes() - 1)});
 
+      if (ctx->has_input("_add_to_output", 0)) {
+        const user_op::TensorDesc* add_to_output =
+            ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
+        CHECK_EQ_OR_RETURN(add_to_output->shape(), out->shape());
+      }
+
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& a_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("a", 0).shape();
       int64_t last_axis = a_shape.NumAxes() - 1;
 
+      std::vector<user_op::OpArg> out_and_add_to_output_args;
+      out_and_add_to_output_args.emplace_back("out", 0);
+      if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+        out_and_add_to_output_args.emplace_back("_add_to_output", 0);
+      }
+
       // S(b or m axis) x S(b or m axis) -> P
       for (int64_t i = 0; i < last_axis; ++i) {
         ctx->NewBuilder()
             .Split(user_op::OpArg("a", 0), i)
             .Split(user_op::OpArg("b", 0), i)
-            .PartialSum(user_op::OpArg("out", 0))
+            .PartialSum(out_and_add_to_output_args)
             .Build();
       }
 
@@ -380,12 +399,12 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
       ctx->NewBuilder()
           .Split(user_op::OpArg("a", 0), last_axis)
           .Broadcast(user_op::OpArg("b", 0))
-          .Split(user_op::OpArg("out", 0), 0)
+          .Split(out_and_add_to_output_args, 0)
           .Build();
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("a", 0))
           .Split(user_op::OpArg("b", 0), last_axis)
-          .Split(user_op::OpArg("out", 0), 1)
+          .Split(out_and_add_to_output_args, 1)
           .Build();
 
       return Maybe<void>::Ok();

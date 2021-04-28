@@ -2085,16 +2085,16 @@ def expand(
     expand_size: Sequence[int],
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    """This operator expand the input tensor to a larger size.
+    """This operator expand the input Blob to a larger size.
 
     Passing -1 as the size for a dimension means not changing the size of that dimension.
 
-    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front.
+    Blob can be also expanded to a larger number of dimensions and the new ones will be appended at the front.
 
     For the new dimensions, the size cannot be set to -1.
 
     Args:
-        x (oneflow._oneflow_internal.BlobDesc): The input Tensor.
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob.
         expand_size (Sequence[int]): The desired expanded size.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 

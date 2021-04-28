@@ -76,10 +76,6 @@ bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
          && !mem_case.host_mem().used_by_network();
 }
 
-int64_t MemoryCaseUtil::MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& mem_case) {
-  return (thrd_id << 21) | (MemoryCaseUtil::GenMemZoneId(mem_case));
-}
-
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,
                                                         const int64_t device_id) {
   const auto& mem_case = std::make_shared<MemoryCase>();

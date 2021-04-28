@@ -13,17 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#ifndef ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/vm/instruction_type.h"
 
 namespace oneflow {
 
-Maybe<bool> IsShuttingDown();
+namespace vm {
 
-Maybe<void> SetShuttingDown();
+class ReleaseTensorInstructionType : public vm::InstructionType {
+ public:
+  ReleaseTensorInstructionType() = default;
+  ~ReleaseTensorInstructionType() override = default;
 
+  void Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override;
+};
+
+}  // namespace vm
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#endif  // ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_

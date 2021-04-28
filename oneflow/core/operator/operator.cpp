@@ -1182,7 +1182,8 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   if (bn2parallel_desc_) {
     auto* map = op_attribute->mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf();
     for (const auto& pair : *bn2parallel_desc_) {
-      (*map)[pair.first] = pair.second->parallel_conf();
+      const bool has_same_parallel_conf_as_op = *op_parallel_desc_ == *pair.second;
+      if (!has_same_parallel_conf_as_op) { (*map)[pair.first] = pair.second->parallel_conf(); }
     }
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {
