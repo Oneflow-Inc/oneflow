@@ -115,7 +115,11 @@ void MakeModelInitJob(
     OperatorConf model_init_op_conf{};
     model_init_op_conf.set_name("System-ModelInit-" + NewUniqueId());
     ModelInitV2OpConf* model_init_conf = model_init_op_conf.mutable_model_init_v2_conf();
-    for (int64_t i = 0; i < variable_op_confs.size(); ++i) {
+    const int64_t num_var = variable_op_confs.size();
+    model_init_conf->mutable_ref()->Reserve(num_var);
+    model_init_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_init_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
       model_init_conf->add_ref(GetVariableLbn(variable_op_confs.at(i)));
       model_init_conf->add_variable_op_name(variable_op_confs.at(i).name());
       *model_init_conf->add_original_variable_conf() =
@@ -155,7 +159,11 @@ void MakeModelLoadJob(
     ModelLoadV2OpConf* model_load_conf = model_load_op_conf.mutable_model_load_v2_conf();
     model_load_conf->set_path(GenLogicalBlobName(foreign_input_op_conf.name(),
                                                  foreign_input_op_conf.foreign_input_conf().out()));
-    for (int64_t i = 0; i < variable_op_confs.size(); ++i) {
+    const int64_t num_var = variable_op_confs.size();
+    model_load_conf->mutable_ref()->Reserve(num_var);
+    model_load_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_load_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
       model_load_conf->add_ref(GetVariableLbn(variable_op_confs.at(i)));
       model_load_conf->add_variable_op_name(variable_op_confs.at(i).name());
       *model_load_conf->add_original_variable_conf() =
@@ -195,7 +203,11 @@ void MakeModelSaveJob(
     ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
     model_save_conf->set_path(GenLogicalBlobName(foreign_input_op_conf.name(),
                                                  foreign_input_op_conf.foreign_input_conf().out()));
-    for (int64_t i = 0; i < variable_op_confs.size(); ++i) {
+    const int64_t num_var = variable_op_confs.size();
+    model_save_conf->mutable_in()->Reserve(num_var);
+    model_save_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_save_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
       *model_save_conf->add_in() = GetVariableLbn(variable_op_confs.at(i));
       *model_save_conf->add_variable_op_name() = variable_op_confs.at(i).name();
       *model_save_conf->add_original_variable_conf() =

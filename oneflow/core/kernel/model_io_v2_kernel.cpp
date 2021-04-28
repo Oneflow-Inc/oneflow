@@ -210,8 +210,10 @@ class ModelInitV2Kernel final : public KernelIf<device_type> {
     hierarchy_index_helper.OffsetToNdIndex(parallel_ctx.parallel_id(), parallel_rank.data());
     const auto& model_init_v2_conf = this->op_conf().model_init_v2_conf();
     const int64_t num_var = model_init_v2_conf.variable_op_name_size();
-    CHECK_EQ(num_var, model_init_v2_conf.ref_size());
-    CHECK_EQ(num_var, model_init_v2_conf.original_variable_conf_size());
+    CHECK_EQ(model_init_v2_conf.ref_size(), num_var);
+    CHECK_EQ(model_init_v2_conf.original_variable_conf_size(), num_var);
+    seeds_.reserve(num_var);
+    tensor_slice_views_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       int64_t seed_num = 1;
       int64_t seed_offset = 0;
@@ -288,13 +290,13 @@ class ModelLoadV2Kernel final : public KernelIf<device_type> {
             .hierarchy();
     const auto& model_load_v2_conf = this->op_conf().model_load_v2_conf();
     const int64_t num_var = model_load_v2_conf.variable_op_name_size();
-    CHECK_EQ(num_var, model_load_v2_conf.ref_size());
-    CHECK_EQ(num_var, model_load_v2_conf.original_variable_conf_size());
+    CHECK_EQ(model_load_v2_conf.ref_size(), num_var);
+    CHECK_EQ(model_load_v2_conf.original_variable_conf_size(), num_var);
+    tensor_slice_views_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       const ParallelDistribution& parallel_distribution =
           GetParallelDistribution(this->kernel_conf(), GenRepeatedBn("ref", i));
-      const Shape logical_blob_shape(
-          this->op_conf().model_load_v2_conf().original_variable_conf(i).shape());
+      const Shape logical_blob_shape(model_load_v2_conf.original_variable_conf(i).shape());
       tensor_slice_views_.push_back(
           GetTensorSliceView4ParallelId(*hierarchy, parallel_distribution, logical_blob_shape,
                                         this->kernel_conf().parallel_ctx().parallel_id()));
@@ -351,8 +353,12 @@ class ModelSaveV2Kernel final : public KernelIf<device_type> {
     std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
     const auto& model_save_v2_conf = this->op_conf().model_save_v2_conf();
     const int64_t num_var = model_save_v2_conf.variable_op_name_size();
-    CHECK_EQ(num_var, model_save_v2_conf.in_size());
-    CHECK_EQ(num_var, model_save_v2_conf.original_variable_conf_size());
+    CHECK_EQ(model_save_v2_conf.in_size(), num_var);
+    CHECK_EQ(model_save_v2_conf.original_variable_conf_size(), num_var);
+    counters_.reserve(num_var);
+    part_id2slice_views_.reserve(num_var);
+    need_do_saves_.reserve(num_var);
+    part_ids_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       counters_.emplace_back(new int64_t(0));
       const ParallelDistribution& parallel_distribution =
