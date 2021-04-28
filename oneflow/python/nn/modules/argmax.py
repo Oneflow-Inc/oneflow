@@ -78,7 +78,7 @@ class Argmax(Module):
         if self.dim == None:
             input = self._flatten(input)[0]
             self.dim = 0
-        
+
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
