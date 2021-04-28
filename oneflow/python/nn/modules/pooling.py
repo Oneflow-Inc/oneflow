@@ -18,13 +18,8 @@ from typing import Optional, List, Tuple
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import (
-    _single,
-    _pair,
-    _triple,
-    _reverse_repeat_tuple,
-)
-from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
+from oneflow.python.nn.modules.utils import _pair
+from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
 
@@ -78,18 +73,17 @@ class AvgPool2d(Module):
         super().__init__()
         kernel_size = _pair(kernel_size)
         stride = _pair(stride) if (stride is not None) else kernel_size
-        if isinstance(padding, int):
-            padding = [0, 0, padding, padding]
-        elif isinstance(padding, tuple):
-            padding = [0, 0, *padding]
-        else:
-            raise ValueError("padding should only be an int or a tuple of 2 ints")
+
+        assert isinstance(padding, int) or isinstance(
+            padding, tuple
+        ), "padding can only int int or tuple of 2 ints."
+        padding = _pair(padding)
+        padding = [0, 0, *padding]
 
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
 
         _channel_pos = "channels_first"
-
         _padding_type, _pads_list = calc_pool_padding(
             padding, get_dhw_offset(_channel_pos), 2
         )
