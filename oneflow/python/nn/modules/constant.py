@@ -17,19 +17,20 @@ import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
+from oneflow.python.nn.common_types import _size_any_t
 
-from typing import Optional, Sequence, Union
+from typing import Optional, Union
 
 
 class _ConstantBase(Module):
     def __init__(
-        self, size: Sequence[int], value: Union[float, int], dtype: Optional[flow.dtype]
+        self, size: _size_any_t, value: Union[float, int], dtype: Optional[flow.dtype]
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
-            size, (int, list, tuple)
-        ), "shape should be int, list or tuple!"
+            size, (int, tuple)
+        ), "shape should be int or tuple int!"
 
         if isinstance(size, int):
             size = [size]
@@ -62,7 +63,6 @@ class _ConstantBase(Module):
         else:
             raise NotImplementedError("Unsupport data type")
 
-        self.dtype = dtype
         self._op = (
             flow.builtin_op("constant")
             .Output("out")
@@ -84,7 +84,7 @@ class Ones(_ConstantBase):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size (int...) – a sequence of integers defining the shape of the output tensor. 
+        size(an integer or tuple of integer values) defining the shape of the output tensor. 
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
@@ -113,7 +113,7 @@ class Zeros(_ConstantBase):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size (int...) – a sequence of integers defining the shape of the output tensor. 
+        size(an integer or tuple of integer values) defining the shape of the output tensor. 
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
