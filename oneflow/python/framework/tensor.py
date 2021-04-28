@@ -90,7 +90,6 @@ class Tensor:
         determining_initializer=None,
     ):
         assert len(args) > 0
-        dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
         if placement is None:
             device = (
                 device
@@ -115,6 +114,7 @@ class Tensor:
                 is_lazy=is_lazy,
             )
         elif _input_args_is_shape(*args):
+            dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
             shape = args
             self._local_or_consistent_tensor = None
             self._undetermined_tensor = UndeterminedTensor(
@@ -515,13 +515,15 @@ class Tensor:
     ):
         numpy_data = None
         if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
+            numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
+            numpy_data = args[0]
+        if dtype is not None:
+            numpy_data = numpy_data.astype(
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
             )
+        else:
+            dtype = flow.convert_numpy_dtype_to_oneflow_dtype(numpy_data.dtype)
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(
