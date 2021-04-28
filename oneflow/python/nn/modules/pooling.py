@@ -19,7 +19,7 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _pair
 
-from oneflow.python.nn.common_types import _size_any_t
+from oneflow.python.nn.common_types import _size_2_t, _size_any_t
 from typing import Optional
 from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
@@ -91,10 +91,10 @@ class MaxPool2d(Module):
 
     def __init__(
         self,
-        kernel_size: _size_any_t,
-        stride: Optional[_size_any_t] = None,
-        padding: _size_any_t = 0,
-        dilation: _size_any_t = 1,
+        kernel_size: _size_2_t,
+        stride: Optional[_size_2_t] = None,
+        padding: _size_2_t = 0,
+        dilation: _size_2_t = 1,
         return_indices: bool = False,
         ceil_mode: bool = False,
     ):
