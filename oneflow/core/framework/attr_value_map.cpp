@@ -33,7 +33,7 @@ AttrValueMap::AttrValueMap(const MutableAttrValueMap& other) : attrs_(new AttrNa
 
 AttrValueMap::AttrValueMap(const MutableCfgAttrValueMap& other) : attrs_(new AttrName2AttrVal) {
   for (const auto& pair : other) {
-    const auto& attr_value = CHECK_JUST(user_op::MakeCppAttrValByCfgAttrValue(*pair.second));
+    const auto& attr_value = CHECK_JUST(AttrValueUtil::ToCppAttrValue(*pair.second));
     attrs_->emplace(pair.first, attr_value);
   }
 }
