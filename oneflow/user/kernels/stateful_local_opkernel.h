@@ -23,6 +23,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class AttrValueMap;
+
 namespace vm {
 struct LocalCallOpKernelUtil;
 }  // namespace vm
@@ -97,6 +99,8 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs,
+                      vm::EagerBlobObject* tmp_buffer);
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
@@ -116,6 +120,7 @@ class ZeroCopyBaseContext {
   std::vector<std::unique_ptr<EagerBlobObjectTensorView>> output_tensor_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
+  std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectList input_tensors_;
   EagerBlobObjectList output_tensors_;
 };
@@ -124,6 +129,8 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  public:
   LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
                              const ArgVec* indexed_output_pairs);
+  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
+                             const ArgVec* indexed_output_pairs, vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
@@ -133,12 +140,13 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  private:
   const std::string device_tag_;
   const DeviceType device_type_;
+  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
-  LocalUserOpInferContext(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
-                          const ArgVec* indexed_output_pairs);
+  LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
+                          const ArgVec* index_input_pairs, const ArgVec* indexed_output_pairs);
   ~LocalUserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -179,21 +187,23 @@ class LocalUserOpInferContext : public user_op::InferContext {
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
       const std::string& attr_name) const override {
     return user_op_conf().Attr4AttrName(attr_name);
   }
 
-  const user_op::UserOpConfWrapper user_op_conf_;
+  const user_op::UserOpConfWrapper* user_op_conf_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                                         const ArgVec* indexed_input_pairs,
-                                         const ArgVec* indexed_output_pairs);
+  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
+                                         const user_op::UserOpConfWrapper* user_op_conf,
+                                         const ArgVec* index_input_pairs,
+                                         const ArgVec* indexed_output_pairs,
+                                         vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -216,11 +226,13 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx);
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
       const std::string& attr_name) const override {
     return user_op_conf().Attr4AttrName(attr_name);
   }
 
+  const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -228,7 +240,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  static Maybe<StatefulOpKernel> New(const OperatorConf& op_conf,
+  static Maybe<StatefulOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
                                      const std::shared_ptr<MemoryCase>& mem_case,
                                      const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                      const std::shared_ptr<ArgVec> indexed_input_pairs,
@@ -260,9 +272,11 @@ class StatefulOpKernel final {
     UpdateInferContext(nullptr, nullptr);
   }
 
+  void ResetDynamicOpAttrs(const AttrValueMap& attrs);
+
  private:
   friend struct vm::LocalCallOpKernelUtil;
-  StatefulOpKernel(const OperatorConf& op_conf);
+  StatefulOpKernel() = default;
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
@@ -290,7 +304,8 @@ class StatefulOpKernel final {
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
-  const OperatorConf op_conf_;
+  std::shared_ptr<OperatorConf> op_conf_;
+  std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
