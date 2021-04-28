@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/framework/attr_value_map.h"
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
@@ -26,7 +27,7 @@ namespace one {
 class StatefulOpKernel;
 
 using EagerBlobObjectList =
-    std::shared_ptr<const std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 }  // namespace one
 
@@ -36,7 +37,7 @@ class OpKernel;
 
 }  // namespace user_op
 
-namespace eager {
+namespace vm {
 
 class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
@@ -46,12 +47,14 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
                                    const one::EagerBlobObjectList inputs,
-                                   const one::EagerBlobObjectList outputs)
-      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs) {}
+                                   const one::EagerBlobObjectList outputs,
+                                   const AttrValueMap& attrs)
+      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs) {}
 
   const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectList& inputs() const { return inputs_; }
   const one::EagerBlobObjectList& outputs() const { return outputs_; }
+  const AttrValueMap& attrs() const { return attrs_; }
 
   one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
 
@@ -81,10 +84,11 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   std::shared_ptr<one::StatefulOpKernel> opkernel_;
   one::EagerBlobObjectList inputs_;
   one::EagerBlobObjectList outputs_;
+  const AttrValueMap attrs_;
   const user_op::OpKernel* user_opkernel_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_

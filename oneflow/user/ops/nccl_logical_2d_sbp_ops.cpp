@@ -26,11 +26,11 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -62,11 +62,11 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -98,11 +98,11 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -137,11 +137,11 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);
@@ -179,11 +179,11 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all2all")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       const ParallelDistribution& in_dis_hint =
           ctx->ParallelDistributionHint4InputArgNameAndIndex("in", 0);

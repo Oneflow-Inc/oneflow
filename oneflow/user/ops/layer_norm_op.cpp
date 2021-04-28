@@ -102,7 +102,7 @@ REGISTER_USER_OP("layer_norm")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const bool center = ctx->Attr<bool>("center");
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -157,7 +157,7 @@ REGISTER_USER_OP("layer_norm_grad")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(dy->data_type(), x->data_type());
@@ -249,7 +249,7 @@ REGISTER_USER_OP("layer_norm_param_grad")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto has_tensor = [ctx](const std::string& bn) -> bool {
         bool ret = false;
         for (auto& t : ctx->inputs()) {

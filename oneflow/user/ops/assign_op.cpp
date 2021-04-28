@@ -82,7 +82,7 @@ REGISTER_USER_OP("assign")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP("assign_if")
     .Input("ref")
@@ -91,7 +91,7 @@ REGISTER_USER_OP("assign_if")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP("assign_if_not")
     .Input("ref")
@@ -100,6 +100,6 @@ REGISTER_USER_OP("assign_if_not")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(GetSbpSignatures)
     .SetInputArgModifyFn(InputArgModifierFn)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 }  // namespace oneflow
