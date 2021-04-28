@@ -42,7 +42,7 @@ namespace {
 std::string LogDir(const std::string& log_dir) {
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-  std::string v = log_dir + "/" + std::string(hostname);
+  std::string v = JoinPath(log_dir, std::string(hostname));
   return v;
 }
 
@@ -50,7 +50,8 @@ void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) 
   if (!default_physical_env) {
     FLAGS_log_dir = LogDir(logging_conf.log_dir());
   } else {
-    FLAGS_log_dir = LogDir(logging_conf.log_dir() + "/default_physical_env_log");
+    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
+    FLAGS_log_dir = LogDir(default_env_log_path);
   }
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
