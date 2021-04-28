@@ -63,14 +63,14 @@ struct OpRegistryResult {
   TensorDescInferFn logical_tensor_desc_infer_fn;
   TensorDescInferFn physical_tensor_desc_infer_fn;
   GetSbpFn get_sbp_fn;
-  SbpSignatureInferFn infer_sbp_signature_fn;
+  SbpSignatureInferFn sbp_signature_infer_fn;
   DataTypeInferFn data_type_infer_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
-  OutputBlobTimeShapeInferFn infer_output_blob_time_shape_fn;
-  ParallelDistributionInferFn infer_parallel_distribution_fn;
+  OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
+  ParallelDistributionInferFn parallel_distribution_infer_fn;
 };
 
 class OpRegistry final {
@@ -107,13 +107,13 @@ class OpRegistry final {
   OpRegistry& SetLogicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetPhysicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
-  OpRegistry& SetInferSbpSignatureFn(SbpSignatureInferFn fn);
+  OpRegistry& SetSbpSignatureInferFn(SbpSignatureInferFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
-  OpRegistry& SetInferOutputBlobTimeShapeFn(OutputBlobTimeShapeInferFn fn);
-  OpRegistry& SetInferParallelDistributionFn(ParallelDistributionInferFn fn);
+  OpRegistry& SetOutputBlobTimeShapeInferFn(OutputBlobTimeShapeInferFn fn);
+  OpRegistry& SetParallelDistributionInferFn(ParallelDistributionInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
-  OpRegistry& SetInferDataTypeFn(DataTypeInferFn fn);
+  OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
 
   OpRegistry& Finish();
   OpRegistryResult GetResult() { return result_; }

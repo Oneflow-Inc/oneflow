@@ -68,7 +68,7 @@ REGISTER_USER_OP("empty")
       ctx->NewBuilder().PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferSbpSignatureFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
+    .SetSbpSignatureInferFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {
       auto* bn2sbp = ctx->mutable_sbp_signature()->mutable_bn_in_op2sbp_parallel();
       const std::string& obn = GenRepeatedBn("out", 0);
       const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
@@ -99,7 +99,7 @@ REGISTER_USER_OP("empty")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType dtype = ctx->Attr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       return Maybe<void>::Ok();

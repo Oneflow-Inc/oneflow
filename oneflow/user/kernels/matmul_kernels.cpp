@@ -313,11 +313,21 @@ class BroadcastMatmulGradBKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     double alpha = ctx->Attr<double>("alpha");
-    double beta = 0.0;
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
+    double beta = 0.0;
+    if (ctx->has_input("_add_to_output", 0)) {
+      const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
+      CHECK_EQ(add_to_output->shape(), out->shape());
+      Memcpy<device_type>(
+          ctx->device_ctx(), out->mut_dptr<void>(), add_to_output->dptr<void>(),
+          add_to_output->shape().elem_cnt() * GetSizeOfDataType(add_to_output->data_type()));
+      beta = 1.0;
+    }
+
+    CHECK_EQ(a->shape().NumAxes(), b->shape().NumAxes());
     int64_t k = a->shape().Count(0, a->shape().NumAxes() - 1);
     CHECK_EQ(b->shape().Count(0, b->shape().NumAxes() - 1), k);
     int64_t m = a->shape().At(a->shape().NumAxes() - 1);
@@ -349,11 +359,18 @@ REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, double);
 REGISTER_BROADCAST_MATMUL_KERNEL(DeviceType::kGPU, float16);
 #endif
 
-#define REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(device, dtype)  \
-  REGISTER_USER_KERNEL("broadcast_matmul_grad_b")               \
-      .SetCreateFn<BroadcastMatmulGradBKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)      \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))
+#define REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(device, dtype)                                  \
+  REGISTER_USER_KERNEL("broadcast_matmul_grad_b")                                               \
+      .SetCreateFn<BroadcastMatmulGradBKernel<device, dtype>>()                                 \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))           \
+      .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
+          OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "_add_to_output", 0, true));         \
+        }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
+      })
 
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, float);
 REGISTER_BROADCAST_MATMUL_GRAD_B_KERNEL(DeviceType::kCPU, double);

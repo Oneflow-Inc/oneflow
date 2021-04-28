@@ -188,7 +188,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Output("z")                                                            \
       .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcast##tensor_suffix);
 
 #define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
   REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)

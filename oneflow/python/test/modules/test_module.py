@@ -28,10 +28,7 @@ def np_relu(np_arr):
     return np.where(np_arr > 0, np_arr, 0)
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+@flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
     def test_nested_module(test_case):
         class CustomModule(flow.nn.Module):
