@@ -52,6 +52,7 @@ class Sin(Module):
     def forward(self, x):
         return self._op(x)[0]
 
+
 @oneflow_export("sin")
 @register_tensor_op("sin")
 def sin_op(tensor):
@@ -83,12 +84,14 @@ class Cos(Module):
         # [0.13944048 0.29570782 0.6553126  0.5573547 ]
         
     """
+
     def __init__(self) -> None:
         super().__init__()
         self._op = flow.builtin_op("cos").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 @oneflow_export("cos")
 @register_tensor_op("cos")
@@ -118,6 +121,7 @@ class Log(Module):
         output = flow.log(input)
         
     """
+
     def __init__(self) -> None:
         super().__init__()
         self._op = flow.builtin_op("log").Input("x").Output("y").Build()
@@ -130,4 +134,3 @@ class Log(Module):
 @register_tensor_op("log")
 def log_op(tensor):
     return Log()(tensor)
-

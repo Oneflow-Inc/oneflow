@@ -18,30 +18,63 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
-from typing import Optional, Tuple, Sequence
+from typing import Optional, Sequence, Union
 
 
 class _ConstantBase(Module):
-    def __init__(self, size:Sequence[int], dtype: Optional[flow.dtype] = None) -> None:
+    def __init__(
+        self, size: Sequence[int], value: Union[float, int], dtype: Optional[flow.dtype]
+    ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, list, tuple)
-        ), "shape should be int, list or tuple format!"
-        
-        if isinstance(size, (int)):
-            self.shape = [size]
+        ), "shape should be int, list or tuple!"
+
+        if isinstance(size, int):
+            size = [size]
+        if dtype is None:
+            dtype = flow.float32
+
+        if dtype in [
+            flow.int,
+            flow.int64,
+            flow.int32,
+            flow.char,
+            flow.int8,
+            flow.long,
+            flow.uint8,
+        ]:
+            floating_value = float(0)
+            integer_value = int(value)
+            is_floating_value = False
+        elif dtype in [
+            flow.float32,
+            flow.float,
+            flow.double,
+            flow.float64,
+            flow.float16,
+            flow.half,
+        ]:
+            floating_value = float(value)
+            integer_value = int(0)
+            is_floating_value = True
         else:
-            self.shape = size
+            raise NotImplementedError("Unsupport data type")
 
         self.dtype = dtype
         self._op = (
             flow.builtin_op("constant")
             .Output("out")
+            .Attr("is_floating_value", is_floating_value)
+            .Attr("floating_value", floating_value)
+            .Attr("integer_value", integer_value)
+            .Attr("dtype", dtype)
+            .Attr("shape", size)
             .Build()
         )
-    
-    def forward(self, floating_value, integer_value, is_floating_value, dtype, shape):
+
+    def forward(self):
         return self._op()[0]
 
 
@@ -64,25 +97,10 @@ class Ones(_ConstantBase):
         # [1 1 1 1 1 1 1 1 1 1]
         
     """
-    def forward(self):
-        if self.dtype == None or self.dtype == flow.int:
-            self.dtype = flow.int
-            floating_value = float(0)
-            integer_value = int(1)
-            is_floating_value = False
-        else:
-            self.dtype = flow.float
-            floating_value = float(1.0)
-            integer_value = int(0)
-            is_floating_value = True
-        
-        return self._op(
-            floating_value = floating_value, 
-            integer_value = integer_value, 
-            is_floating_value = is_floating_value, 
-            dtype = self.dtype, 
-            shape = self.shape
-        )[0]
+
+    def __init__(self, size, dtype=None):
+        super().__init__(size, 1, dtype)
+
 
 @oneflow_export("tmp.ones")
 def ones_op(size, dtype=None):
@@ -110,26 +128,11 @@ class Zeros(_ConstantBase):
         # [0. 0. 0. 0. 0. ]
 
     """
-    def forward(self):
-        if dtype == None or dtype == flow.float:
-            self.dtype = flow.float32
-            floating_value = float(0.0)
-            integer_value = int(0)
-            is_floating_value = True
-        else:
-            self.dtype = flow.int
-            floating_value = float(0.0)
-            integer_value = int(0)
-            is_floating_value = False
-        
-        return self._op(
-            floating_value = floating_value, 
-            integer_value = integer_value, 
-            is_floating_value = is_floating_value, 
-            dtype = self.dtype, 
-            shape = self.shape
-        )[0]
+
+    def __init__(self, size, dtype=None):
+        super().__init__(size, 0, dtype)
+
 
 @oneflow_export("tmp.zeros")
-def ones_op(size, dtype=None):
+def zeros_op(size, dtype=None):
     return Zeros(size, dtype)()

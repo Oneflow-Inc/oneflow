@@ -37,7 +37,6 @@ class MaxPool2dNumpy:
         self.in_height = np.shape(x)[2]
         self.in_width = np.shape(x)[3]
 
-        
         pad_x = np.pad(
             x,
             (
@@ -137,7 +136,6 @@ class TestPoolingModule(flow.unittest.TestCase):
         output = m(x)
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
-    
     def test_maxpool2d_v3(test_case):
         input_arr = np.random.randn(1, 1, 6, 6)
         kernel_size, stride, padding = (1, 1), (5, 5), (0, 0)
@@ -149,7 +147,7 @@ class TestPoolingModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         output = m(x)
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
-    
+
     def test_maxpool2d_v4(test_case):
         input_arr = np.random.randn(8, 16, 32, 18)
         kernel_size, stride, padding = (3, 4), (2, 3), (1, 2)
@@ -186,6 +184,7 @@ class TestPoolingModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         output = m(x)
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()
