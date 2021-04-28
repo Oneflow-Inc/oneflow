@@ -23,7 +23,10 @@ class ModelInitV2Op : public Operator {
  public:
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_init_v2_conf());
-    EnrollInputBn("ref", false)->set_is_mutable(true);
+    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
+    FOR_RANGE(int64_t, i, 0, num) {
+      EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
+    }
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -45,8 +48,10 @@ class ModelInitV2Op : public Operator {
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
-    (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["ref"] =
-        JUST(ParallelDistributionInferHint4Ibn("ref"))->parallel_distribution();
+    for (const auto& bn : input_bns()) {
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[bn] =
+          JUST(ParallelDistributionInferHint4Ibn(bn))->parallel_distribution();
+    }
     return Maybe<void>::Ok();
   }
 };
@@ -58,7 +63,10 @@ class ModelLoadV2Op : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_load_v2_conf());
     EnrollInputBn("path", false);
-    EnrollInputBn("ref", false)->set_is_mutable(true);
+    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
+    FOR_RANGE(int64_t, i, 0, num) {
+      EnrollInputBn(GenRepeatedBn("ref", i), false)->set_is_mutable(true);
+    }
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -80,8 +88,12 @@ class ModelLoadV2Op : public Operator {
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
-    (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["ref"] =
-        JUST(ParallelDistributionInferHint4Ibn("ref"))->parallel_distribution();
+    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("ref").size();
+    FOR_RANGE(int64_t, i, 0, num) {
+      const std::string ref_bn = GenRepeatedBn("ref", i);
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[ref_bn] =
+          JUST(ParallelDistributionInferHint4Ibn(ref_bn))->parallel_distribution();
+    }
     const auto& hierarchy = parallel_desc.hierarchy();
     for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["path"]
@@ -103,7 +115,7 @@ class ModelSaveV2Op final : public Operator {
   void InitFromOpConf() override {
     CHECK(op_conf().has_model_save_v2_conf());
     EnrollInputBn("path", false);
-    EnrollInputBn("in", false);
+    EnrollRepeatedInputBn("in", false);
   }
 
   Maybe<void> InferLogicalOutBlobDescs(
@@ -125,8 +137,12 @@ class ModelSaveV2Op final : public Operator {
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
-    (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["in"] =
-        JUST(ParallelDistributionInferHint4Ibn("in"))->parallel_distribution();
+    const int64_t num = GetPbRpfFromCustomizedConf<std::string>("in").size();
+    FOR_RANGE(int64_t, i, 0, num) {
+      const std::string in_bn = GenRepeatedBn("in", i);
+      (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())[in_bn] =
+          JUST(ParallelDistributionInferHint4Ibn(in_bn))->parallel_distribution();
+    }
     const auto& hierarchy = parallel_desc.hierarchy();
     for (int64_t i = 0; i < hierarchy->NumAxes(); ++i) {
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["path"]
