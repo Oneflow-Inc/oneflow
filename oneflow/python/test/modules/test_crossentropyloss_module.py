@@ -44,7 +44,7 @@ g_test_samples = [
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestCrossEntropyLossModule(flow.unittest.TestCase):
     def test_CrossEntropyLoss(test_case):
         global g_test_samples
         for sample in g_test_samples:

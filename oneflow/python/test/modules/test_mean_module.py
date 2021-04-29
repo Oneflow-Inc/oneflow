@@ -20,22 +20,19 @@ import numpy as np
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
-    def test_sum(test_case):
+class TestMeanModule(flow.unittest.TestCase):
+    def test_mean(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.mean(input, axis=1)
+        of_out = flow.mean(input, dim=1)
         np_out = np.mean(input.numpy(), axis=1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.mean(input, axis=0)
+        of_out = flow.mean(input, dim=0)
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-        test_case.assertTrue(
-            np.allclose(of_out.numpy(), input.mean(axis=0).numpy(), 1e-4, 1e-4)
-        )
 
 
 if __name__ == "__main__":

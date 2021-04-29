@@ -20,9 +20,9 @@ import numpy as np
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(2, 3))
@@ -48,6 +48,7 @@ class TestModule(flow.unittest.TestCase):
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    def test_add_tensor_method(test_case):
         # test __add__
         x = flow.Tensor(np.random.randn(1, 1))
         y = flow.Tensor(np.random.randn(2, 3))
