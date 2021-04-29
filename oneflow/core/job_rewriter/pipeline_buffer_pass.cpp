@@ -95,27 +95,25 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
                                  + "-stage_id_" + std::to_string(stage_id);
     auto it = buffer_op_name2op_conf->find(buffer_op_name);
     if (it == buffer_op_name2op_conf->end()) {
-      auto ret_pair = buffer_op_name2op_conf->emplace(
-          buffer_op_name, user_op::UserOpConfWrapperBuilder(buffer_op_name)
-                              .Op("identity_buffer")
-                              .Input("in", lbn)
-                              .Output("out")
-                              .Attr<int64_t>("buffer_size", buffer_size)
-                              .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
-                              .Build()
-                              .op_conf());
+      it = buffer_op_name2op_conf
+               ->emplace(buffer_op_name,
+                         user_op::UserOpConfWrapperBuilder(buffer_op_name)
+                             .Op("identity_buffer")
+                             .Input("in", lbn)
+                             .Output("out")
+                             .Attr<int64_t>("buffer_size", buffer_size)
+                             .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                             .Build()
+                             .op_conf())
+               .first;
       CHECK(buffer_op_name2parallel_conf
                 ->emplace(buffer_op_name, dst_node->parallel_desc().parallel_conf())
                 .second);
-      CHECK(ret_pair.second);
-      it = ret_pair.first;
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
     if (mut_op_it == mut_op_name2conf->end()) {
-      auto ret_pair = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf());
-      CHECK(ret_pair.second);
-      mut_op_it = ret_pair.first;
+      mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
     }
 
     const std::string buffer_out = user_op::UserOpConfWrapper(it->second).output("out", 0);
@@ -157,13 +155,13 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     if (!IsBackwardPass(this_node)) { return; /* ignore fw dst op */ }
     for (const OpEdge* in_edge : this_node->in_edges()) {
       const OpNode* src_node = in_edge->src_node();
-      if (!OpNodeHasScope(src_node)) { return; /* ignore op without scope */ }
+      if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
       const int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
       CHECK_GE(buffer_size, 0);
       CHECK_LT(buffer_size, total_stage_num);
-      if (buffer_size == 0) { return; /* last stage(loss) does NOT need to insert buffer */ }
+      if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
         if (src_stage_id != dst_stage_id) {
@@ -178,7 +176,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     }
     for (const std::string& ctrl_in_op_name : this_node->op().op_conf().ctrl_in_op_name()) {
       const OpNode* src_node = op_graph.OpNode4OpName(ctrl_in_op_name);
-      if (!OpNodeHasScope(src_node)) { return; /* ignore op without scope */ }
+      if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       if (IsForwardPass(src_node)) {
         LOG(WARNING) << "CtrlEdge: src_op[FwPass]: " << src_node->op().op_conf().DebugString()
                      << " dst_op[BwPass]: " << this_node->op().op_conf().DebugString()
@@ -191,11 +189,15 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
     const OpNode* src_node = edge->src_node();
     const OpNode* dst_node = edge->dst_node();
     if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsForwardPass(src_node)
-        && IsForwardPass(dst_node) && GetStageIdHint(src_node) == 0
-        && GetStageIdHint(dst_node) == max_stage_id) {
-      const int64_t buffer_size = total_stage_num - 1;
-      TryInsertOrUseBufferOp(edge, buffer_size, &buffer_op_name2op_conf,
-                             &buffer_op_name2parallel_conf, &mut_op_name2conf);
+        && IsForwardPass(dst_node)) {
+      const int64_t src_stage_id = GetStageIdHint(src_node);
+      const int64_t dst_stage_id = GetStageIdHint(dst_node);
+      // NOTE(chengcheng): buffer_size = stage diff - 1, because CopyHD can act as a buffer.
+      const int64_t buffer_size = dst_stage_id - src_stage_id - 1;
+      if (src_stage_id < dst_stage_id && buffer_size >= 1) {
+        TryInsertOrUseBufferOp(edge, buffer_size, &buffer_op_name2op_conf,
+                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+      }
     }
   });
 
