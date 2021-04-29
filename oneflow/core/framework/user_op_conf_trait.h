@@ -17,8 +17,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_TRAIT_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_CONF_TRAIT_H_
 
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/framework/user_op_conf.pb.h"
 
 namespace oneflow {
 namespace user_op {
@@ -46,14 +47,14 @@ class UserOpConfTrait {
   Maybe<T> GetAttr(const std::string& attr_name) const {
     const auto& it = attrs_.find(attr_name);
     CHECK_OR_RETURN(it != attrs_.end()) << "The op has no attribute named " << attr_name;
-    return dynamic_cast<const TypedAttrVal<T>*>(it->second.get())->val();
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<T>*>(it->second.get()))->val();
   }
 
   template<typename T>
   Maybe<T> GetAttr(const std::string& attr_name, const AttrMap& priority_attrs) const {
     const auto& it = priority_attrs.find(attr_name);
     if (it != priority_attrs.end()) {
-      return dynamic_cast<const TypedAttrVal<T>*>(it->second.get())->val();
+      return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<T>*>(it->second.get()))->val();
     }
     return GetAttr<T>(attr_name);
   }
