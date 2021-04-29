@@ -75,7 +75,6 @@ def _sum(input, dim=None, keepdims=False):
 
     .. code-block:: python
 
-        #Example
         import oneflow as flow
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = flow.sum(input, dim=(2,1))
@@ -168,18 +167,20 @@ def _mul(x, y):
 
     .. code-block:: python
 
-        # Example
         import oneflow as flow
+
         # element-wise multiply
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.mul(x,y).numpy()
         print(out.shape) # (2,3)
+
         # scalar mutiply
         x = 5
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.mul(x,y).numpy()
         print(out.shape) # (2,3)
+
         # broadcast mutiply
         x = flow.Tensor(np.random.randn(1,1))
         y = flow.Tensor(np.random.randn(2,3))
@@ -232,7 +233,8 @@ class Mean(Module):
 @oneflow_export("mean")
 @register_tensor_op("mean")
 def _mean(input_tensor, dim=None, keepdim=False):
-    r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    r"""Computes the mean of row of elements in a tensor in the given axis,
+    if the axis is None, mean of all elements will be caculated.
 
     For example:
 
@@ -241,15 +243,18 @@ def _mean(input_tensor, dim=None, keepdim=False):
         import oneflow as flow
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input) # out: [3.5]
+        out = flow.mean(input)
+        # out: [3.5]
         print(out.numpy())
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=0) # out: [2.5 3.5 4.5]
+        out = flow.mean(input, axis=0)
+        # out: [2.5 3.5 4.5]
         print(out.numpy())
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=1) # out: [ 2. 5.]
+        out = flow.mean(input, axis=1)
+        # out: [ 2. 5.]
         print(out.numpy())
 
     """
@@ -327,16 +332,19 @@ def _sub(x, y):
     .. code-block:: python
 
         import oneflow as flow
+
         # element-wise subtract
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.sub(x,y).numpy()
         print(out.shape) # (2,3)
+
         # scalar subtract
         x = 5
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.sub(x,y).numpy()
         print(out.shape) # (2,3)
+
         # broadcast subtract
         x = flow.Tensor(np.random.randn(1,1))
         y = flow.Tensor(np.random.randn(2,3))
@@ -402,16 +410,19 @@ def _div(x, y):
     .. code-block:: python
 
         import oneflow as flow
+
         # element-wise divide
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.div(x,y).numpy()
         print(out.shape) # (2,3)
+
         # scalar divide
         x = 5
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.div(x,y).numpy()
         print(out.shape) # (2,3)
+
         # broadcast divide
         x = flow.Tensor(np.random.randn(1,1))
         y = flow.Tensor(np.random.randn(2,3))

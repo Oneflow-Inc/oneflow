@@ -34,7 +34,8 @@ class CrossEntropyLoss(Module):
 
     For example:
     .. code-block:: python 
-    
+
+        import oneflow as flow
         input = flow.Tensor(
             [[-0.1664078, -1.7256707, -0.14690138],
                 [-0.21474946, 0.53737473, 0.99684894],
@@ -66,7 +67,7 @@ class CrossEntropyLoss(Module):
             "none",
             "mean",
             None,
-        ], "only 'sum', 'mean', 'none' and None supported by now"
+        ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
         self._op = (
