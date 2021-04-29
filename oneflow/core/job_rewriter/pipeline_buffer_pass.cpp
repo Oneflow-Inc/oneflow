@@ -158,10 +158,11 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
-      const int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
+      int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
       CHECK_GE(buffer_size, 0);
       CHECK_LT(buffer_size, total_stage_num);
       if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
+      buffer_size += 1; /* NOTE(chengcheng): quick fix for debug */
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
         if (src_stage_id != dst_stage_id) {
@@ -193,8 +194,9 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       // NOTE(chengcheng): buffer_size = stage diff - 1, because CopyHD can act as a buffer.
-      const int64_t buffer_size = dst_stage_id - src_stage_id - 1;
+      int64_t buffer_size = dst_stage_id - src_stage_id - 1;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
+        buffer_size += 1; /* NOTE(chengcheng): quick fix for debug */
         TryInsertOrUseBufferOp(edge, buffer_size, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
