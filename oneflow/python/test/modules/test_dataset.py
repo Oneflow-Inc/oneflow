@@ -14,16 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
 import numpy as np
-
 import oneflow as flow
-import oneflow.typing as tp
+from oneflow.python.nn.modules.dataset import OfrecordReader, raw_decoder
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
     def test_dataset(test_case):
@@ -31,16 +29,13 @@ class TestModule(flow.unittest.TestCase):
 
         @flow.global_function()
         def job():
-            record_handle = flow.tmp.OfrecordReader(
-                "/dataset/lenet_mnist/data/ofrecord/train"
-            )
-            i = flow.tmp.RawDecoder(
-                record_handle, "image_raw", shape=(784,), dtype=flow.float32
-            )
-            assert type(record_handle) == flow.Tensor
-            assert type(i.numpy()) == np.ndarray
+            record_handle = OfrecordReader("/dataset/mnist_kaggle/6/train")()
+            i = raw_decoder(record_handle, "img_raw", shape=(784,), dtype=flow.float32)
+            test_case.assertTrue(type(record_handle) == flow.Tensor)
+            test_case.assertTrue(type(i.numpy()) == np.ndarray)
 
         job()
+
 
 if __name__ == "__main__":
     unittest.main()

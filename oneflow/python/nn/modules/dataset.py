@@ -142,14 +142,3 @@ def get_ofrecord_handle(
         shuffle_after_epoch,
         name,
     )()
-
-
-if __name__ == "__main__":
-    flow.env.init()
-    flow.InitEagerGlobalSession()
-    flow.enable_eager_execution(True)
-    flow.env.init()
-    record = OfrecordReader("/dataset/lenet_mnist/data/ofrecord/train")()
-    i = raw_decoder(record, "image_raw", shape=(784,), dtype=flow.float32)
-    print(type(record))
-    print(i.numpy())
