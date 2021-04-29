@@ -80,19 +80,26 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   auto* kernel_conf =
       task_proto->mutable_exec_sequence()->mutable_exec_node(0)->mutable_kernel_conf();
   kernel_conf->set_op_attribute_ref(op_name);
-  kernel_conf->clear_op_attribute();
+  // NOTE(levi): memory of op_attribute_ is released here.
+  kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
 void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
-  const JobDesc& job_desc = GlobalJobDesc();
+  // Step1: ensure job is completed.
   if (need_job_complete) { JobCompleter().Complete(job); }
+
+  // Step2: new Global<OpGraph> and set log configs.
   Global<OpGraph>::New(*job);
+  const JobDesc& job_desc = GlobalJobDesc();
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
       || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     TeePersistentLogStream::Create(StrCat("optimized_job", job_desc.job_id()))->Write(*job);
     Global<OpGraph>::Get()->ToDotWithFilePath("optimized_dlnet_" + std::to_string(job_desc.job_id())
                                               + "_op_graph.dot");
   }
+
+  // Step3: build task_gph.
+  // TODO(levi): we can rewrite this part of code in visitor pattern.
   auto task_gph = std::make_unique<TaskGraph>();
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -101,33 +108,31 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->TopoForEachNode(&TaskNode::Build);
   task_gph->RemoveEmptyRegsts();
   task_gph->MergeChainAndAddOrderingCtrlEdgeInSameChain();
-  if (job_desc.enable_inplace()) {
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
-    task_gph->EnableInplaceMemSharing(IsReachable);
-  }
+  auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
+  if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
-
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
+  // Step4: put infomation from task_gph into plan.
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
-    const bool use_op_attribute_ref = task_node->GetTaskType() == kNormalForward;
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (use_op_attribute_ref) { CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto); }
+    if (task_node->GetTaskType() == kNormalForward) {
+      CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+    }
     plan->mutable_task()->Add(std::move(task_proto));
   });
-  {
-    auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
-    (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
-  }
-  {
-    // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
-    auto IsReachable = Global<OpGraph>::Get()->MakePredicatorIsOpNameDataOrCtrlReachable();
-    IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
-    PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
-    PlanUtil::GenMemBlockAndChunk4Plan(plan);
-  }
+  // NOTE(levi): release task_gph here to decrise memory peak.
+  task_gph.reset();
+
+  // Step5: post-process for plan and delete Global<OpGraph>.
+  auto* job_id2job_conf = plan->mutable_job_confs()->mutable_job_id2job_conf();
+  (*job_id2job_conf)[GlobalJobDesc().job_id()] = GlobalJobDesc().job_conf();
+  // NOTE(chengcheng): infer mem blob id & set inplace & add ctrl
+  IntraJobMemSharingUtil::InferMemBlockId4MemReusedRegst(plan, IsReachable);
+  PlanUtil::SetUniqueMemBlockId4UnreusedMemRegst(plan);
+  PlanUtil::GenMemBlockAndChunk4Plan(plan);
   Global<OpGraph>::Delete();
 }
 

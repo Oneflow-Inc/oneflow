@@ -45,8 +45,7 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
-          << "op: " << ctx->user_op_conf().op_name()
-          << ", type: " << ctx->user_op_conf().op_type_name() << ", i: " << i
+          << "op: " << ctx->op_name() << ", type: " << ctx->op_type_name() << ", i: " << i
           << ", x_shape: " << x_shape << ", y_shape: " << y_shape;
       out_shape.Set(i, std::max(x_shape.At(i), y_shape.At(i)));
     }
@@ -189,7 +188,7 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
       .Output("z")                                                            \
       .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
       .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetInferDataTypeFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcast##tensor_suffix);
 
 #define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
   REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)

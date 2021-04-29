@@ -31,23 +31,20 @@ namespace oneflow {
 class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
-  IBVerbsCommNet() = delete;
   ~IBVerbsCommNet();
-
-  DEPRECATED static void Init(const Plan& plan) {
-    Global<CommNet>::SetAllocated(new IBVerbsCommNet(plan));
-  }
 
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
+  friend class Global<IBVerbsCommNet>;
+  IBVerbsCommNet();
+
   IBVerbsMemDesc* NewMemDesc(void* ptr, size_t byte_size) override {
     return new IBVerbsMemDesc(pd_, ptr, byte_size);
   }
 
-  DEPRECATED IBVerbsCommNet(const Plan&);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
 
@@ -60,13 +57,6 @@ class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
   std::vector<IBVerbsQP*> qp_vec_;
   std::atomic_flag poll_exit_flag_;
   std::thread poll_thread_;
-};
-
-// DEPRECATED
-template<>
-class Global<IBVerbsCommNet> final {
- public:
-  static IBVerbsCommNet* Get() { return static_cast<IBVerbsCommNet*>(Global<CommNet>::Get()); }
 };
 
 }  // namespace oneflow

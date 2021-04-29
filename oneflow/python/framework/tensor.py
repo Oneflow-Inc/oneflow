@@ -16,16 +16,62 @@ limitations under the License.
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 import numpy as np
 import inspect
-import oneflow_api.oneflow.core.job.placement as placement_cfg
+from typing import Union
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
 import oneflow.python.framework.runtime_mode as rt_mode
+import oneflow.python.framework.ofblob as ofblob_util
+import oneflow.python.lib.core.async_util as async_util
+import oneflow.python.ops.initializer_util as initializer_util
 import oneflow as flow
 from oneflow.python.nn.modules import *
+
+
+def _access_blob_by_callback(local_tensor, callback, modifier):
+    def AsyncAccess(Yield):
+        def MakeAccessor(Yield):
+            def AccessOfBlobPtr(ofblob_ptr):
+                ofblob = ofblob_util.OfBlob(ofblob_ptr)
+                Yield(callback(ofblob))
+
+            return AccessOfBlobPtr
+
+        accessor = MakeAccessor(Yield)
+
+        def BuildInstruction(builder):
+            builder.AccessBlobByCallback(local_tensor, accessor, modifier)
+
+        flow._oneflow_internal.deprecated.PhysicalRun(BuildInstruction)
+
+    return async_util.Await(1, AsyncAccess)[0]
+
+
+def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
+    _access_blob_by_callback(
+        eager_local_tensor, lambda ofblob: ofblob.CopyFromNdarray(np_arr), "mut"
+    )
+
+
+def _init_eager_local_tensor_by_initializer_conf(
+    eager_local_tensor, initializer_conf, random_seed=0
+):
+    shape = tuple(eager_local_tensor.shape)
+    initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
+    # initializer is None if and only if the initializer_conf is empty_initializer
+    if initializer is None:
+        return
+
+    _copy_from_numpy_to_eager_local_tensor(
+        eager_local_tensor,
+        check_point_v2.generate_values_by_initializer(
+            initializer, shape, eager_local_tensor.dtype
+        ),
+    )
 
 
 @oneflow_export("Tensor")
@@ -45,9 +91,13 @@ class Tensor:
         determining_initializer=None,
     ):
         assert len(args) > 0
-        dtype = dtype if dtype is not None else oneflow_api.float32
+        dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
         if placement is None:
-            device = device if device is not None else oneflow_api.device("cpu")
+            device = (
+                device
+                if device is not None
+                else oneflow._oneflow_internal.device("cuda")
+            )
         if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
         elif _input_args_is_consistent_or_local(*args):
@@ -166,6 +216,18 @@ class Tensor:
         else:
             return True
 
+    @requires_grad.setter
+    def requires_grad(self, requires_grad):
+        if self._local_or_consistent_tensor is not None:
+            if self.is_leaf:
+                self._local_or_consistent_tensor._set_requires_grad(requires_grad)
+            else:
+                raise RuntimeError(
+                    "You can only change requires_grad flags of leaf tensors."
+                )
+        else:
+            self._undetermined_tensor.requires_grad = requires_grad
+
     def size(self):
         return self.shape
 
@@ -181,6 +243,9 @@ class Tensor:
             return flow.Tensor(self._local_or_consistent_tensor.detach())
         else:
             return None
+
+    def requires_grad_(self, requires_grad=True):
+        self.requires_grad = requires_grad
 
     def get_device(self):
         if self._local_or_consistent_tensor is not None:
@@ -206,18 +271,20 @@ class Tensor:
 
     @_auto_determine
     def numpy(self):
-        return remote_blob_util.BlobObjectNumpy(
-            self._local_or_consistent_tensor._blob_object
-        )
+        internal_tensor = self._local_or_consistent_tensor
+        if not internal_tensor.is_lazy and not internal_tensor.is_consistent:
+            return _access_blob_by_callback(
+                internal_tensor, lambda ofblob: ofblob.CopyToNdarray(), "const"
+            )
+
+        return remote_blob_util.BlobObjectNumpy(internal_tensor._blob_object)
 
     def tolist(self):
         TODO()
 
-    def backward(
-        self, gradient=None, retain_graph=False, create_graph=False, inputs=None
-    ):
+    def backward(self, gradient=None, retain_graph=False, create_graph=False):
         assert self.is_determined
-        TODO()  # liyurui
+        flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     def __str__(self):
         return self.__repr__()
@@ -262,7 +329,7 @@ class Tensor:
         self._undetermined_tensor.device = None
 
     def set_sbp(self, sbp):
-        assert isinstance(sbp, oneflow_api.Distribute)
+        assert isinstance(sbp, oneflow._oneflow_internal.Distribute)
         assert self._local_or_consistent_tensor is None
         assert self._undetermined_tensor is not None
         self._undetermined_tensor.sbp = sbp
@@ -363,11 +430,32 @@ class Tensor:
         initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
         return self._init_by_initializer_conf(initializer_conf)
 
+    @_auto_determine
+    def copy_(self, other: Union["Tensor", np.ndarray]):
+        internal_tensor = self._local_or_consistent_tensor
+        if internal_tensor.is_lazy:
+            TODO()
+        if internal_tensor.is_consistent:
+            TODO()
+
+        if isinstance(other, Tensor):
+            src_np = other.numpy()
+        else:
+            assert isinstance(other, np.ndarray)
+            src_np = other
+
+        _copy_from_numpy_to_eager_local_tensor(internal_tensor, src_np)
+
     def _init_by_initializer_conf(self, initializer_conf):
         if self.is_determined:
-            with self._placement_scope():
-                check_point_v2.init_by_initializer_conf(
-                    self, initializer_conf, True, None
+            if self.is_consistent:
+                with self._placement_scope():
+                    check_point_v2.init_by_initializer_conf(
+                        self, initializer_conf, True, None
+                    )
+            else:
+                _init_eager_local_tensor_by_initializer_conf(
+                    self._local_or_consistent_tensor, initializer_conf
                 )
         else:
             self.set_data_initializer(initializer_conf)
@@ -405,7 +493,7 @@ class Tensor:
             numpy_data = args[0].astype(
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
             )
-        shape = oneflow_api.Size(tuple(numpy_data.shape))
+        shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(
             shape,
@@ -436,16 +524,18 @@ class UndeterminedTensor:
         data_initializer=None,
         numpy_data=None,
     ):
-        if not isinstance(shape, oneflow_api.Size):
+        if not isinstance(shape, oneflow._oneflow_internal.Size):
             if not isinstance(shape, tuple):
                 shape = tuple(shape)
-            shape = oneflow_api.Size(shape)
+            shape = oneflow._oneflow_internal.Size(shape)
         data_initializer = (
             data_initializer
             if data_initializer is not None
             else flow.empty_initializer(dtype=dtype)
         )
-        device = device if device is not None else oneflow_api.device("cpu")
+        device = (
+            device if device is not None else oneflow._oneflow_internal.device("cuda")
+        )
         self.shape = shape
         self.dtype = dtype
         self.device = device
@@ -470,29 +560,31 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _default_initializer_for_determining(tensor):
-    assert not tensor.is_determined
-    undetermined_tensor = tensor._undetermined_tensor
-    variable_name = id_util.UniqueStr("tensor_")
-
+def _create_blob_object(shape, dtype, initializer, placement_scope_getter):
     blob = None
 
     @global_function_or_identity()
     def job():
         nonlocal blob
-        with tensor._placement_scope():
+        variable_name = id_util.UniqueStr("tensor_")
+        with placement_scope_getter():
             blob = flow.get_variable(
-                name=variable_name,
-                shape=tuple(undetermined_tensor.shape),
-                dtype=undetermined_tensor.dtype,
-                initializer=undetermined_tensor.data_initializer,
+                name=variable_name, shape=shape, dtype=dtype, initializer=initializer,
             )
 
     job()
+    return blob.blob_object
+
+
+def _default_initializer_for_determining(tensor):
+    assert not tensor.is_determined
+    undetermined_tensor = tensor._undetermined_tensor
     if undetermined_tensor.is_consistent:
-        determined_tensor = oneflow_api.ConsistentTensor(
-            undetermined_tensor.shape,
-            undetermined_tensor.dtype,
+        shape = undetermined_tensor.shape
+        dtype = undetermined_tensor.dtype
+        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
+            shape,
+            dtype,
             undetermined_tensor.sbp,
             undetermined_tensor.placement,
             undetermined_tensor.is_lazy,
@@ -500,41 +592,56 @@ def _default_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
+        determined_tensor._set_blob_object(
+            _create_blob_object(
+                tuple(shape),
+                dtype,
+                undetermined_tensor.data_initializer,
+                tensor._placement_scope,
+            )
+        )
     else:
-        determined_tensor = oneflow_api.LocalTensor(
-            undetermined_tensor.shape,
-            undetermined_tensor.dtype,
+        shape = undetermined_tensor.shape
+        dtype = undetermined_tensor.dtype
+        determined_tensor = oneflow._oneflow_internal.LocalTensor(
+            shape,
+            dtype,
             undetermined_tensor.device,
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
             undetermined_tensor.retain_grad,
         )
-    determined_tensor._set_blob_object(blob.blob_object)
+        _init_eager_local_tensor_by_initializer_conf(
+            determined_tensor, undetermined_tensor.data_initializer
+        )
     return determined_tensor
 
 
 def _numpy_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
-    assert undetermined_tensor.numpy_data is not None
-    variable_name = id_util.UniqueStr("tensor_")
+    numpy_data = undetermined_tensor.numpy_data
+    assert numpy_data is not None
 
-    @global_function_or_identity()
-    def set_numpy_data():
-        with tensor._placement_scope():
-            flow.get_variable(
-                name=variable_name,
-                shape=tuple(undetermined_tensor.shape),
-                dtype=undetermined_tensor.dtype,
-                initializer=undetermined_tensor.data_initializer,
-            )
-
-    set_numpy_data()
-    flow.load_variables({variable_name: undetermined_tensor.numpy_data})
-    blob = flow.get_all_variables()[variable_name]
     if undetermined_tensor.is_consistent:
-        determined_tensor = oneflow_api.ConsistentTensor(
+        variable_name = id_util.UniqueStr("tensor_")
+
+        @global_function_or_identity()
+        def set_numpy_data():
+            with tensor._placement_scope():
+                flow.get_variable(
+                    name=variable_name,
+                    shape=tuple(undetermined_tensor.shape),
+                    dtype=undetermined_tensor.dtype,
+                    initializer=undetermined_tensor.data_initializer,
+                )
+
+        set_numpy_data()
+        flow.load_variables({variable_name: numpy_data})
+        blob = flow.get_all_variables()[variable_name]
+
+        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.sbp,
@@ -544,8 +651,9 @@ def _numpy_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
+        determined_tensor._set_blob_object(blob.blob_object)
     else:
-        determined_tensor = oneflow_api.LocalTensor(
+        determined_tensor = oneflow._oneflow_internal.LocalTensor(
             undetermined_tensor.shape,
             undetermined_tensor.dtype,
             undetermined_tensor.device,
@@ -554,7 +662,8 @@ def _numpy_initializer_for_determining(tensor):
             True,
             undetermined_tensor.retain_grad,
         )
-    determined_tensor._set_blob_object(blob.blob_object)
+        _copy_from_numpy_to_eager_local_tensor(determined_tensor, numpy_data)
+
     return determined_tensor
 
 
@@ -568,7 +677,11 @@ def _input_args_is_numpy(*args):
 
 def _input_args_is_consistent_or_local(*args):
     return len(args) == 1 and isinstance(
-        args[0], (oneflow_api.ConsistentTensor, oneflow_api.LocalTensor)
+        args[0],
+        (
+            oneflow._oneflow_internal.ConsistentTensor,
+            oneflow._oneflow_internal.LocalTensor,
+        ),
     )
 
 
@@ -584,67 +697,12 @@ def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
 
 
-def register_tensor_op_by_module(op_name):
-    def set_method(module):
-        if is_unary_module(module):
-            setattr(
-                Tensor,
-                op_name,
-                lambda self, *args, **kwargs: module(*args, **kwargs).forward(self),
-            )
-        else:
-            assert is_binary_module(module)
-            setattr(
-                Tensor,
-                op_name,
-                lambda self, x, *args, **kwargs: module(*args, **kwargs).forward(
-                    self, x
-                ),
-            )
-        return module
+def register_tensor_op(op_name):
+    def set_tensor_op(method):
+        setattr(Tensor, op_name, method)
+        return method
 
-    return set_method
-
-
-def register_op_by_module(op_name):
-    def set_method(module):
-        if is_unary_module(module):
-            oneflow_export(op_name)(_get_unary_module_impl(module))
-        else:
-            assert is_binary_module(module)
-            oneflow_export(op_name)(_get_binary_module_impl(module))
-
-        return module
-
-    def _get_unary_module_impl(module):
-        def unary_module_impl(x, *args, **kwargs):
-            return module(*args, **kwargs).forward(x)
-
-        name = module.__name__ + "_op"
-        unary_module_impl.__name__ = name
-        globals()[name] = unary_module_impl
-
-        return unary_module_impl
-
-    def _get_binary_module_impl(module):
-        def binary_module_impl(x, y, *args, **kwargs):
-            return module(*args, **kwargs).forward(x, y)
-
-        name = module.__name__ + "_op"
-        binary_module_impl.__name__ = name
-        globals()[name] = binary_module_impl
-
-        return binary_module_impl
-
-    return set_method
-
-
-def is_unary_module(module):
-    return True if len(inspect.signature(module.forward).parameters) == 2 else False
-
-
-def is_binary_module(module):
-    return True if len(inspect.signature(module.forward).parameters) == 3 else False
+    return set_tensor_op
 
 
 def _convert_to_placement_scope(placement_or_device):

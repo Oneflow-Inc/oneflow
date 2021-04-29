@@ -21,49 +21,49 @@ import oneflow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("pad")
 def pad(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     paddings: Sequence[int],
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
-        x (oneflow_api.BlobDesc): The input Blob
-        paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`. 
+        x (oneflow._oneflow_internal.BlobDesc): The input Blob
+        paddings (Sequence[int]): A list of integers to specify the padding width, its length must equal with the length of `x.shape`.
         constant_value (Union[int, float], optional): The constant value to pad. Defaults to 0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
-        ValueError: The parameter `paddings` must be a tuple or a list. 
+        ValueError: The parameter `paddings` must be a tuple or a list.
 
     Returns:
-        oneflow_api.BlobDesc: The Blob after padding.  
+        oneflow._oneflow_internal.BlobDesc: The Blob after padding.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()
         def pad_Job(x: tp.Numpy.Placeholder((3, 3))
         ) -> tp.Numpy:
-            return flow.pad(x, 
-                            paddings=((2, 2), (1, 1)), 
+            return flow.pad(x,
+                            paddings=((2, 2), (1, 1)),
                             constant_value=5)
 
 
-        x = np.array([[1, 1, 1], 
-                    [1, 1, 1], 
+        x = np.array([[1, 1, 1],
+                    [1, 1, 1],
                     [1, 1, 1]]).astype(np.float32)
         out = pad_Job(x)
 
@@ -117,11 +117,11 @@ def pad(
 
 @oneflow_export("pad_grad")
 def pad_grad(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     paddings: Sequence[int],
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     padding_before = []
     padding_after = []
     if isinstance(paddings, (list, tuple)):
@@ -155,45 +155,45 @@ def pad_grad(
 
 @oneflow_export("same_padding")
 def same_padding(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     padding: Sequence[int],
     data_format: str,
     kernel_size: Sequence[int],
     strides: Sequence[int],
     dilation_rate: Sequence[int],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator do the padding in "SAME" mode, It can computes the pad width according to the `kernel_size` and `strides` to keep the size of feature map unchanged after convolution or other operations.
 
     Args:
-        x (oneflow_api.BlobDesc): The input blob. 
-        padding (Sequence[int]): The padding mode. It should be "SAME_UPPER" or "SAME_LOWER" 
-        data_format ([type]): The data format of input Blob. If the string starts with "NC", it means the data format is `channel first`, else the data format is `channel last`. 
-        kernel_size (Sequence[int]): The kernel size of operations. Its type should be tuple or list. 
-        strides (Sequence[int]): The strides of operations. Its type should be tuple or list. 
-        dilation_rate (Sequence[int]): The dilation rate of operations. Its type should be tuple or list.  
+        x (oneflow._oneflow_internal.BlobDesc): The input blob.
+        padding (Sequence[int]): The padding mode. It should be "SAME_UPPER" or "SAME_LOWER"
+        data_format ([type]): The data format of input Blob. If the string starts with "NC", it means the data format is `channel first`, else the data format is `channel last`.
+        kernel_size (Sequence[int]): The kernel size of operations. Its type should be tuple or list.
+        strides (Sequence[int]): The strides of operations. Its type should be tuple or list.
+        dilation_rate (Sequence[int]): The dilation rate of operations. Its type should be tuple or list.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The Blob after padding. 
+        oneflow._oneflow_internal.BlobDesc: The Blob after padding.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()
         def same_pad_Job(x: tp.Numpy.Placeholder((1, 1, 3, 3))
         ) -> tp.Numpy:
-            return flow.same_padding(x, 
-                                    padding="SAME_UPPER", 
-                                    data_format="NCHW", 
-                                    kernel_size=(3, 3), 
-                                    strides=(1, 1), 
+            return flow.same_padding(x,
+                                    padding="SAME_UPPER",
+                                    data_format="NCHW",
+                                    kernel_size=(3, 3),
+                                    strides=(1, 1),
                                     dilation_rate=(1, 1))
 
 
@@ -239,28 +239,28 @@ def same_padding(
 
 @oneflow_export("reflection_pad2d")
 def reflection_pad2d(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """Pads the input tensor using the reflection of the input boundary. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """Pads the input tensor using the reflection of the input boundary.
 
     Args:
-        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
-        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        x (oneflow._oneflow_internal.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow._oneflow_internal.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: [description]
+        oneflow._oneflow_internal.BlobDesc: [description]
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()
@@ -320,28 +320,28 @@ def reflection_pad2d(
 
 @oneflow_export("replication_pad2d")
 def replication_pad2d(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """Pads the input tensor using the replication of the input boundary. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """Pads the input tensor using the replication of the input boundary.
 
     Args:
-        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
-        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        x (oneflow._oneflow_internal.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow._oneflow_internal.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: [description]
+        oneflow._oneflow_internal.BlobDesc: [description]
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()
@@ -401,30 +401,30 @@ def replication_pad2d(
 
 @oneflow_export("constant_pad2d")
 def constant_pad2d(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
     constant_value: Union[int, float] = 0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """Pads the input tensor using an input constant value. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """Pads the input tensor using an input constant value.
 
     Args:
-        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
-        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        x (oneflow._oneflow_internal.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow._oneflow_internal.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
         constant_value (Union[int, float]): The constant value used for padding. Defaults to Zero.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: [description]
+        oneflow._oneflow_internal.BlobDesc: [description]
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()
@@ -498,28 +498,28 @@ def constant_pad2d(
 
 @oneflow_export("zero_pad2d")
 def zero_pad2d(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """Pads the input tensor using zeros. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """Pads the input tensor using zeros.
 
     Args:
-        x (oneflow_api.BlobDesc): input blob, only support "NCHW" format.
-        padding (Union[int, oneflow_api.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
+        x (oneflow._oneflow_internal.BlobDesc): input blob, only support "NCHW" format.
+        padding (Union[int, oneflow._oneflow_internal.BlobDesc]): The size or bundary of padding, if is int uses the same padding in all dimension;
         if 4-dims tuple, uses (\text{padding\_left}padding_left , \text{padding\_right}padding_right , \text{padding\_top}padding_top , \text{padding\_bottom}padding_bottom )
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: [description]
+        oneflow._oneflow_internal.BlobDesc: [description]
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
-        import numpy as np 
+        import numpy as np
 
 
         @flow.global_function()

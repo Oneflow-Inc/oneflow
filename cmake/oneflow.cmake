@@ -205,7 +205,6 @@ add_custom_target(make_pyproto_dir ALL
   COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/python_scripts/oneflow/core
   COMMAND ${CMAKE_COMMAND} -E make_directory ${of_proto_python_dir}
 	)
-add_dependencies(make_pyproto_dir prepare_oneflow_third_party)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -216,23 +215,28 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(of_protoobj ${oneflow_third_party_libs})
-add_dependencies(of_protoobj make_pyproto_dir)
+add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
 
 # cfg obj lib
 include(cfg)
 GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
-target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 add_dependencies(of_cfgobj of_protoobj)
 if (BUILD_SHARED_LIBS)
+  target_link_libraries(of_protoobj ${PROTOBUF_STATIC_LIBRARIES})
+  target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
   target_link_libraries(of_cfgobj of_protoobj)
+else()
+  # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
+  target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+  target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
+add_dependencies(of_ccobj prepare_oneflow_third_party)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
@@ -251,7 +255,7 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 # py ext lib
-add_library(of_pyext_obj STATIC ${of_pyext_obj_cc})
+add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
@@ -298,6 +302,9 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${Python_EXECUTABLE} "${PROJECT_SOURCE_DIR}/tools/generate_oneflow_symbols_export_file.py"
         "${PROJECT_SOURCE_DIR}" "${of_pyscript_dir}/oneflow/python_gen/__export_symbols__.py")
 
+# source this file to add oneflow in PYTHONPATH
+file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH")
+
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
@@ -311,7 +318,7 @@ add_dependencies(pip_install generate_api)
 add_custom_command(
   TARGET pip_install
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  COMMAND ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --install-option="--build_dir=${PROJECT_BINARY_DIR_RELATIVE}" --user)
+  COMMAND export ONEFLOW_CMAKE_BUILD_DIR=${PROJECT_BINARY_DIR_RELATIVE} && ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --user)
 
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})

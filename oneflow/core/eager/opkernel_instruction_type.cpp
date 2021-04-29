@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/eager/opkernel_instruction.msg.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
+#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -37,9 +38,11 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/operator/op_node_signature_desc.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/framework/tensor_impl.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class InitOpKernelObjectInstructionType final : public vm::InstructionType {
  public:
@@ -99,18 +102,6 @@ class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
 COMMAND(vm::RegisterInstructionType<DeleteOpKernelObjectInstructionType>("DeleteOpKernelObject"));
 
 namespace {
-
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
-  const auto& mem_case = std::make_shared<MemoryCase>();
-  if (device_type == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type == DeviceType::kGPU) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(device_id);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return mem_case;
-}
 
 template<typename T, typename CallbackT>
 Maybe<void> ForEachConstInputBnAndBlobObject(vm::Instruction* instruction, const T& args,
@@ -393,7 +384,7 @@ Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instr
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        blob_object->TryAllocateBlobBodyMemory(device_ctx);
+        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
   std::shared_ptr<user_op::OpKernelState> new_state;
@@ -417,7 +408,7 @@ Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction*
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   JUST(ForEachOutputBnAndBlobObject(
       instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        blob_object->TryAllocateBlobBodyMemory(device_ctx);
+        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
         return Maybe<void>::Ok();
       }));
   KernelCtx kernel_ctx;
@@ -449,12 +440,180 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 
 }  // namespace
 
+struct LocalCallOpKernelUtil final {
+  static inline Maybe<void> Infer(vm::Instruction* instruction) {
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    operand->set_user_opkernel(
+        JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
+    operand->mut_opkernel()->ResetDynamicOpAttrs(operand->attrs());
+    JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
+    JUST(InferOutputTensorDescs(operand));
+    JUST(InitOutputBlobs(operand));
+    JUST(InferTempStorageBlobDesc(operand));
+    JUST(ResetTempStorageBlob(operand));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> Compute(vm::Instruction* instruction) {
+    auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+    user_op::OpKernelState* state;
+    TryInitOpKernelState(operand, device_ctx, &state);
+    JUST(OpKernelCompute(operand, device_ctx, state));
+    JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+    operand->set_user_opkernel(nullptr);
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  static inline Maybe<LocalCallOpKernelPhyInstrOperand*> GetLocalCallOpKernelPhyInstrOperand(
+      vm::Instruction* instruction) {
+    const auto& operand = instruction->instr_msg().phy_instr_operand();
+    CHECK_OR_RETURN(static_cast<bool>(operand));
+    auto* ptr = dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand.get());
+    CHECK_NOTNULL_OR_RETURN(ptr);
+    return ptr;
+  }
+
+  static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
+    const auto& mem_case = operand->opkernel().mem_case();
+    CHECK_OR_RETURN(static_cast<bool>(mem_case));
+    return *mem_case;
+  }
+
+  static inline Maybe<void> CheckMemCase(const MemoryCase& mem_case, DeviceType device_type,
+                                         int64_t device_id) {
+    if (mem_case.has_host_mem()) {
+      CHECK_EQ_OR_RETURN(device_type, DeviceType::kCPU);
+    } else if (mem_case.has_device_cuda_mem()) {
+      CHECK_EQ_OR_RETURN(mem_case.device_cuda_mem().device_id(), device_id);
+    } else {
+      OF_UNIMPLEMENTED();
+    }
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> CheckOutputBlobObjectsMemCase(LocalCallOpKernelPhyInstrOperand* operand,
+                                                          const vm::Stream& stream) {
+    DeviceType device_type = JUST(DeviceType4DeviceTag(stream.stream_type().device_tag()));
+    const auto& mem_case = JUST(GetMemCase(operand));
+    JUST(CheckMemCase(mem_case, device_type, stream.device_id()));
+    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      if (operand->opkernel().need_check_mem_case()) {
+        JUST(CheckMemCase(blob_object->mem_case(), device_type, stream.device_id()));
+      }
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
+    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      CHECK_OR_RETURN(static_cast<bool>(blob_object));
+      JUST(blob_object->InitBlob());
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
+    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
+    auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
+    CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
+    JUST(WithOpInferContext(operand, [&](user_op::InferContext* infer_ctx) -> Maybe<void> {
+      size_t temp_size = InferTmpSizeFn(infer_ctx);
+      temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+      temp_blob_desc->set_is_dynamic(true);
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
+    JUST(operand->mut_opkernel()->mut_temp_blob_object()->InitBlob());
+    return Maybe<void>::Ok();
+  }
+
+  template<typename CallbackT>
+  static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
+                                               const CallbackT& Callback) {
+    auto* opkernel = operand->mut_opkernel();
+    JUST(Callback(opkernel->UpdateInferContext(operand->inputs(), operand->outputs())));
+    // tensor tuples are not allowed to be hold by StatefulOpKernel
+    opkernel->UpdateInferContext(nullptr, nullptr);
+    return Maybe<void>::Ok();
+  }
+
+  template<typename CallbackT>
+  static inline Maybe<void> WithComputeContext(LocalCallOpKernelPhyInstrOperand* operand,
+                                               DeviceCtx* device_ctx, const CallbackT& Callback) {
+    auto* opkernel = operand->mut_opkernel();
+    JUST(Callback(
+        opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(), device_ctx)));
+    // tensor tuples are not allowed to be hold by StatefulOpKernel
+    opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> InferOutputTensorDescs(LocalCallOpKernelPhyInstrOperand* operand) {
+    return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
+  }
+
+  static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
+                                          DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+    operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
+                                                  operand->inputs(), operand->outputs(), state);
+  }
+
+  static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
+                                                      DeviceCtx* device_ctx) {
+    JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
+      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
+      return Maybe<void>::Ok();
+    }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
+                                            DeviceCtx* device_ctx, user_op::OpKernelState* state) {
+    JUST(WithComputeContext(operand, device_ctx,
+                            [&](user_op::KernelComputeContext* compute_ctx) -> Maybe<void> {
+                              operand->user_opkernel()->Compute(compute_ctx, state);
+                              return Maybe<void>::Ok();
+                            }));
+    return Maybe<void>::Ok();
+  }
+
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(
+      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    JUST(operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr());
+    return Maybe<void>::Ok();
+  }
+};
+
+void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
+  CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
+}
+
+void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
+}
+
 Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
                                                     const CallOpKernelInstrOperand& args) const {
   auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -496,7 +655,7 @@ Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
   DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
   int64_t device_id = instruction->stream().device_id();
   auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
-  const auto& mem_case = MakeMemCase(device_type, device_id);
+  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
   JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
   return Maybe<void>::Ok();
 }
@@ -533,7 +692,7 @@ void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruct
 
 std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
     const DeviceType device_type, const int64_t device_id) const {
-  return MakeMemCase(device_type, device_id);
+  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
 }
 
 Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
@@ -600,5 +759,5 @@ void FeedBlobInstructionType::Compute(vm::Instruction* instruction) const {
   FeedOrFetchBlob<FeedBlobInstrOperand>(instruction);
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

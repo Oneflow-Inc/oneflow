@@ -899,6 +899,7 @@ void Operator::GenKernelConf(
     if (blob_desc == nullptr) { continue; }
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
+
   CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                            [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
@@ -912,6 +913,7 @@ void Operator::GenKernelConf(
     }
     kernel_conf->set_data_type(data_type);
   }
+
   if (parallel_ctx != nullptr) { *(kernel_conf->mutable_parallel_ctx()) = *parallel_ctx; }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
@@ -1182,7 +1184,8 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   if (bn2parallel_desc_) {
     auto* map = op_attribute->mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf();
     for (const auto& pair : *bn2parallel_desc_) {
-      (*map)[pair.first] = pair.second->parallel_conf();
+      const bool has_same_parallel_conf_as_op = *op_parallel_desc_ == *pair.second;
+      if (!has_same_parallel_conf_as_op) { (*map)[pair.first] = pair.second->parallel_conf(); }
     }
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {
