@@ -28,14 +28,14 @@ def np_repeat(x, sizes):
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_repeat_v1(test_case):
+    def test_repeat_new_dim(test_case):
         input = flow.Tensor(np.random.randn(2, 4, 1, 3), dtype=flow.float32)
         sizes = (4, 3, 2, 3, 3)
         np_out = np_repeat(input.numpy(), sizes)
         of_out = input.repeat(sizes=sizes)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
-    def test_repeat_v2(test_case):
+    def test_repeat_same_dim(test_case):
         input = flow.Tensor(np.random.randn(1, 2, 5, 3), dtype=flow.float32)
         sizes = (4, 2, 3, 19)
         of_out = input.repeat(sizes=sizes)

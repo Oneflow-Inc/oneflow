@@ -71,7 +71,13 @@ class Reshape(Module):
         assert all(dim == -1 or dim > 0 for dim in shape)
         assert shape.count(-1) <= 1
 
-        self._op = flow.builtin_op("reshape").Input("in").Output("out").Attr("shape", shape).Build()
+        self._op = (
+            flow.builtin_op("reshape")
+            .Input("in")
+            .Output("out")
+            .Attr("shape", shape)
+            .Build()
+        )
         self.shape = shape
 
     def forward(self, x):

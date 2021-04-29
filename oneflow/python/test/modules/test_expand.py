@@ -82,7 +82,7 @@ def getExpandGrad(input_shape, expand_size):
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_expand_v1(test_case):
+    def test_expand_new_dims(test_case):
         input_shape = (1, 4, 1, 32)
         expand_dim = [2, 1, 2, 4, 2, 32]
         input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
@@ -91,7 +91,7 @@ class TestModule(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
-    def test_expand_v2(test_case):
+    def test_expand_same_dim(test_case):
         input_shape = (2, 4, 1, 32)
         expand_dim = [2, 4, 2, 32]
         input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
@@ -100,16 +100,7 @@ class TestModule(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
-    def test_expand_v3(test_case):
-        input_shape = (1, 6, 5, 3)
-        expand_dim = [4, 6, 5, 3]
-        input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
-        of_input = flow.Tensor(input, dtype=flow.float32)
-        of_out = of_input.expand(expand_size=expand_dim)
-
-        test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
-
-    def test_expand_v4(test_case):
+    def test_expand_same_dim_v2(test_case):
         input_shape = (1, 6, 5, 3)
         expand_dim = [4, 6, 5, 3]
         input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
