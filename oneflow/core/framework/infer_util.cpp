@@ -30,13 +30,13 @@ namespace user_op {
   template<>                                                                         \
   const cpp_type& InferContext::Attr<cpp_type>(const std::string& attr_name) const { \
     const auto* attr = Attr4AttrName(attr_name).get();                               \
-    const auto* typed_attr = dynamic_cast<TypedAttrVal<cpp_type>*>(attr);            \
+    const auto* typed_attr = dynamic_cast<const TypedAttrVal<cpp_type>*>(attr);            \
     return CHECK_NOTNULL(typed_attr)->val();                                         \
   }                                                                                  \
   template<>                                                                         \
   const cpp_type& DeviceInferContext::Attr<cpp_type>(const std::string& attr_name) const { \
     const auto* attr = Attr4AttrName(attr_name).get();                               \
-    const auto* typed_attr = dynamic_cast<TypedAttrVal<cpp_type>*>(attr);            \
+    const auto* typed_attr = dynamic_cast<const TypedAttrVal<cpp_type>*>(attr);            \
     return CHECK_NOTNULL(typed_attr)->val();                                         \
   }                                                                                  
 OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)

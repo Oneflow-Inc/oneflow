@@ -168,9 +168,9 @@ class LocalUserKernelCreateContext final : public user_op::KernelCreateContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
@@ -217,9 +217,9 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
 
  private:
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -353,8 +353,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
-  if (op_reg_val->physical_tensor_desc_infer_fn) {
-    opkernel->tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+  if (op_reg_val->logical_tensor_desc_infer_fn) {
+    opkernel->tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   } else {
     return Error::Unimplemented();
   }
