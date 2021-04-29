@@ -90,28 +90,28 @@ def _sum(input, dim=None, keepdims=False):
 class ScalarMul(Module):
     def __init__(self, operand, name=None) -> None:
         super().__init__()
-        self.operand = operand
-        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out").Build()
-
-    def forward(self, x):
-        if isinstance(self.operand, int):
-            return self._op(
-                x,
-                has_int_operand=True,
-                has_float_operand=False,
-                int_operand=self.operand,
-                float_operand=0.0,
-            )[0]
-        elif isinstance(self.operand, float):
-            return self._op(
-                x,
-                has_int_operand=False,
-                has_float_operand=True,
-                int_operand=0,
-                float_operand=self.operand,
-            )[0]
+        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out")
+        if isinstance(operand, int):
+            self._op = (
+                self._op.Attr("has_int_operand", True)
+                .Attr("has_float_operand", False)
+                .Attr("int_operand", operand)
+                .Attr("float_operand", 0.0)
+                .Build()
+            )
+        elif isinstance(operand, float):
+            self._op = (
+                self._op.Attr("has_int_operand", False)
+                .Attr("has_float_operand", True)
+                .Attr("int_operand", 0)
+                .Attr("float_operand", operand)
+                .Build()
+            )
         else:
             raise ValueError("operand type can only be int or float")
+
+    def forward(self, x):
+        return self._op(x)[0]
 
 
 class ScalarMulByTensor(Module):
@@ -211,29 +211,23 @@ class Mean(Module):
         name: Optional[str] = None,
     ) -> None:
         super().__init__()
-        self.axis = axis
         self.keepdims = keepdims
         self.name = name
+        self.axis = axis
+        # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
+        if axis is None:
+            axes = []
+        else:
+            self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
 
     def forward(self, input_tensor):
         reduce_sum = flow.sum(input_tensor, dim=self.axis, keepdims=self.keepdims)
-
-        # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
-
-        if self.axis is None:
-            axes = []
-        else:
-            axes = (
-                list(self.axis)
-                if isinstance(self.axis, collections.Sized)
-                else [self.axis]
-            )
         reduce_count = 1
-        if len(axes) == 0:
+        if len(self.axes) == 0:
             for dim in input_tensor.shape:
                 reduce_count *= dim
         else:
-            for i in axes:
+            for i in self.axes:
                 reduce_count *= input_tensor.shape[i]
         return flow.mul(reduce_sum, 1.0 / reduce_count)
 
