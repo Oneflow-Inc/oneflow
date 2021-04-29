@@ -99,6 +99,8 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs,
+                      vm::EagerBlobObject* tmp_buffer);
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
@@ -118,6 +120,7 @@ class ZeroCopyBaseContext {
   std::vector<std::unique_ptr<EagerBlobObjectTensorView>> output_tensor_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
+  std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectList input_tensors_;
   EagerBlobObjectList output_tensors_;
 };
@@ -126,6 +129,8 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  public:
   LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
                              const ArgVec* indexed_output_pairs);
+  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
+                             const ArgVec* indexed_output_pairs, vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
@@ -135,6 +140,7 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  private:
   const std::string device_tag_;
   const DeviceType device_type_;
+  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
@@ -196,7 +202,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
                                          const ArgVec* index_input_pairs,
-                                         const ArgVec* indexed_output_pairs);
+                                         const ArgVec* indexed_output_pairs,
+                                         vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
