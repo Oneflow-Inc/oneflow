@@ -128,15 +128,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-<<<<<<< HEAD
-                                                const AttrValueMap& attrs) const {
-  OF_UNIMPLEMENTED();
-=======
                                                 const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(inputs.size(), 0);
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  return NaiveInterpret(op_expr, inputs, outputs, attrs);
->>>>>>> master
+  OF_UNIMPLEMENTED();
 }
 
 static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
