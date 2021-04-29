@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+
+#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 
 namespace oneflow {
 namespace one {
@@ -351,8 +353,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf->user_conf().op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
-  if (op_reg_val->physical_tensor_desc_infer_fn) {
-    opkernel->tensor_desc_infer_fn_ = op_reg_val->physical_tensor_desc_infer_fn;
+  if (op_reg_val->logical_tensor_desc_infer_fn) {
+    opkernel->tensor_desc_infer_fn_ = op_reg_val->logical_tensor_desc_infer_fn;
   } else {
     return Error::Unimplemented();
   }
@@ -433,14 +435,14 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
-void StatefulOpKernel::ResetDynamicOpAttrs(const AttrValueMap& attrs) {
+void StatefulOpKernel::ResetDynamicOpAttrs(const AttrMap& attrs) {
   // TODO(jianhao): get attr directly from attrs, remove the copy of OperatorConf and
   // UserOpConfWrapper here
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>(*op_conf_);
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
-    it.second->ToProto(&attr_val);
+    user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val);
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
   *user_op_conf_ = user_op::UserOpConfWrapper(op_conf);
