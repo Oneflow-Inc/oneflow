@@ -148,7 +148,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    int64_t data_size = GetCudaAlignedSize(out->shape().elem_cnt() * dtype_size);
     void* unpack_from_ptr = tmp_buffer->mut_dptr();
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
 
