@@ -34,7 +34,7 @@ class Eq(Module):
         return self.eq_op(input, other)[0]
 
 
-@oneflow_export("eq")
+@oneflow_export("eq", "equal")
 @register_tensor_op("eq")
 def eq_op(input, other):
     r"""

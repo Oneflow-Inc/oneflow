@@ -31,8 +31,10 @@ class TestEq(flow.unittest.TestCase):
         other = flow.Tensor(arr2, dtype=flow.float32)
 
         of_out = flow.eq(input, other)
+        of_out2 = flow.equal(input, other)
         np_out = np.equal(arr1, arr2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out))
 
     def test_eq_tensor_function(test_case):
         arr1 = np.random.randint(1, 10, size=(2, 3, 4, 5))
