@@ -2155,7 +2155,8 @@ def range(
 
     """
     # Ensure the dtype is not None
-    assert dtype is not None, "Please specified data type"
+    if dtype is None:
+        dtype = flow.int64
 
     if limit is None:
         # If limit is None, We start from zero.
