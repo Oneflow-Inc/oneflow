@@ -123,7 +123,7 @@ class MaxPool2d(Module):
                                     & \text{input}(N_i, C_j, \text{stride[0]} \times h + m,
                                                    \text{stride[1]} \times w + n)
         \end{aligned}
-    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+    If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
     Note:
@@ -136,7 +136,7 @@ class MaxPool2d(Module):
     Args:
         kernel_size: the size of the window to take a max over
         stride: the stride of the window. Default value is :attr:`kernel_size`
-        padding: implicit zero padding to be added on both sides
+        padding: implicit minimum value padding to be added on both sides
         dilation: a parameter that controls the stride of elements in the window
         return_indices: if ``True``, will return the max indices along with the outputs.
                         Useful for :class:`torch.nn.MaxUnpool2d` later
@@ -171,37 +171,39 @@ class MaxPool2d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        _kernel_size = _pair(kernel_size)
-        _strides = _pair(stride) if (stride is not None) else kernel_size
-        _data_format = "NCHW"
-        _channel_pos = "channels_last" if _data_format == "NHWC" else "channels_first"
+        kernel_size = _pair(kernel_size)
+        strides = _pair(stride) if (stride is not None) else kernel_size
+        data_format = "NCHW"
+        channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
 
         assert return_indices == False, "Only support return_indices==False for now!"
         assert dilation == 1, "Only support dilation==1 for now!"
 
         if isinstance(padding, int):
-            _padding = _pair(padding)
+            padding = _pair(padding)
         if len(padding) == 2:
-            if _data_format == "NCHW":
-                _padding = (0, 0, padding[0], padding[1])
+            if data_format == "NCHW":
+                padding = (0, 0, padding[0], padding[1])
             else:
                 raise ValueError("error padding param!")
+        else:
+            raise ValueError("error padding param!")
 
-        _padding_type, _pads_list = calc_pool_padding(
-            _padding, get_dhw_offset(_channel_pos), 2
+        padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(channel_pos), 2
         )
-        _padding_before = [pad[0] for pad in _pads_list]
-        _padding_after = [pad[1] for pad in _pads_list]
+        padding_before = [pad[0] for pad in pads_list]
+        padding_after = [pad[1] for pad in pads_list]
 
         self._op = (
             flow.builtin_op("max_pool_2d")
-            .Attr("data_format", _channel_pos)
-            .Attr("pool_size", _kernel_size)
-            .Attr("strides", _strides)
+            .Attr("data_format", channel_pos)
+            .Attr("pool_size", kernel_size)
+            .Attr("strides", strides)
             .Attr("ceil_mode", ceil_mode)
-            .Attr("padding", _padding_type)
-            .Attr("padding_before", _padding_before)
-            .Attr("padding_after", _padding_after)
+            .Attr("padding", padding_type)
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
             .Input("x")
             .Output("y")
             .Build()
