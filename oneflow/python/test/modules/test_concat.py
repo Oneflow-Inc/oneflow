@@ -28,7 +28,7 @@ class TestModule(flow.unittest.TestCase):
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
-        of_out = flow.cat([input1, input2], axis=0)
+        of_out = flow.cat([input1, input2], dim=0)
         np_out = np.concatenate((input1.numpy(), input2.numpy()), axis=0)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
@@ -36,7 +36,7 @@ class TestModule(flow.unittest.TestCase):
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
-        of_out = flow.cat([input1, input2], axis=1)
+        of_out = flow.cat([input1, input2], dim=1)
         np_out = np.concatenate((input1.numpy(), input2.numpy()), axis=1)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
@@ -45,7 +45,7 @@ class TestModule(flow.unittest.TestCase):
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
-        of_out = flow.cat([input1, input2, input3], axis=1)
+        of_out = flow.cat([input1, input2, input3], dim=1)
         np_out = np.concatenate(
             (input1.numpy(), input2.numpy(), input3.numpy()), axis=1
         )

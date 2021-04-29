@@ -22,37 +22,9 @@ from typing import Optional, Sequence
 
 
 class Cat(Module):
-    r"""Concatenate two or more `Tensor` s at specified axis.
-
-    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
-
-    Args:
-        inputs: a `list` of `Tensor`
-        axis: a `int`. `0` by default
-
-    Returns:
-        A `Tensor`
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        import numpy as np
-
-        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-
-        out = flow.cat([input1, input2, input3], axis=1)
-
-        # out.shape (2, 18, 5, 3)
-
-    """
-
-    def __init__(self, axis=0) -> None:
+    def __init__(self, dim=0) -> None:
         super().__init__()
-        self.axis = axis
+        self.axis = dim
 
     def forward(self, inputs):
         n = len(inputs)
@@ -94,5 +66,32 @@ class Cat(Module):
 
 
 @oneflow_export("cat")
-def concat_op(inputs, axis=0):
-    return Cat(axis=axis)(inputs)
+def concat_op(inputs, dim=0):
+    r"""Concatenate two or more `Tensor` s at specified axis.
+
+    Analogous to `numpy.concatenate <https://docs.scipy.org/doc/numpy/reference/generated/numpy.concatenate.html>`_
+
+    Args:
+        inputs: a `list` of `Tensor`
+        dim: a `int`. 
+
+    Returns:
+        A `Tensor`
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+
+        out = flow.cat([input1, input2, input3], dim=1)
+
+        # out.shape (2, 18, 5, 3)
+
+    """
+    return Cat(dim=dim)(inputs)

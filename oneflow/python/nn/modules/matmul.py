@@ -22,6 +22,28 @@ from typing import Optional, Sequence
 
 
 class MatMul(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
+    def forward(self, a, b):
+        assert len(a.shape) == 2
+        assert len(b.shape) == 2
+        return self._op(a, b)[0]
+
+
+@oneflow_export("tmp.matmul")
+@register_tensor_op("matmul")
+def matmul_op(a, b):
     r"""This operator applies matrix multiplication to two Tensor.
 
     Args:
@@ -45,27 +67,4 @@ class MatMul(Module):
         # of_out.shape (2, 5)
 
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._op = (
-            flow.builtin_op("matmul")
-            .Input("a")
-            .Input("b")
-            .Output("out")
-            .Attr("transpose_a", False)
-            .Attr("transpose_b", False)
-            .Attr("alpha", 1.0)
-            .Build()
-        )
-
-    def forward(self, a, b):
-        assert len(a.shape) == 2
-        assert len(b.shape) == 2
-        return self._op(a, b)[0]
-
-
-@oneflow_export("tmp.matmul")
-@register_tensor_op("matmul")
-def matmul_op(input1, input2):
-    return MatMul()(input1, input2)
+    return MatMul()(a, b)
