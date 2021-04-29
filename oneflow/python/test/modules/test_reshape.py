@@ -29,18 +29,18 @@ class TestModule(flow.unittest.TestCase):
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
         input = flow.Tensor(x)
-        of_out = flow.tmp.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
-        np_out = (2, 2, 2, 2)
-        test_case.assertTrue(np.array_equal(of_out, np_out))
+        of_shape = flow.tmp.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
+        np_shape = (2, 2, 2, 2)
+        test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
     def test_tensor_reshape(test_case):
         x = np.array(
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
         ).astype(np.float32)
         input = flow.Tensor(x)
-        of_out = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
-        np_out = (2, 2, 2, 2)
-        test_case.assertTrue(np.array_equal(of_out, np_out))
+        of_shape = input.reshape(shape=[2, 2, 2, -1]).numpy().shape
+        np_shape = (2, 2, 2, 2)
+        test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
 
 if __name__ == "__main__":

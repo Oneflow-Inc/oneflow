@@ -24,10 +24,10 @@ class Expand(Module):
     def __init__(self, expand_size) -> None:
         super().__init__()
         self._op = flow.builtin_op("expand").Input("in").Output("out").Build()
-        self.expand_size = expand_size
+        self.expand_size = list(expand_size)
 
     def forward(self, x):
-        expand_size = list(self.expand_size)
+        expand_size = self.expand_size
         assert len(expand_size) >= len(
             x.shape
         ), "The desired expanded dims should not be less than the input dims."
