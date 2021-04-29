@@ -58,6 +58,7 @@ class Sum(Module):
             flow.builtin_op("reduce_sum", name)
             .Input("input_tensor")
             .Output("output_tensor")
+            .Attr("keepdims", keepdims)
             .Build()
         )
 
@@ -65,7 +66,7 @@ class Sum(Module):
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
-        return self._op(input, axis=axis_checked, keepdims=self.keepdims)[0]
+        return self._op(input, axis=axis_checked)[0]
 
 
 @oneflow_export("sum")
@@ -473,35 +474,6 @@ def _reciprocal(x):
     """
 
     return Reciprocal()(x)
-
-
-class ScalarAdd(Module):
-    def __init__(self, operand, name=None) -> None:
-        super().__init__()
-        self._op = flow.builtin_op("scalar_add", name).Input("in").Output("out")
-
-        if isinstance(operand, int):
-            self._op = (
-                self._op.Attr("has_int_operand", True)
-                .Attr("has_float_operand", False)
-                .Attr("int_operand", operand)
-                .Attr("float_operand", 0.0)
-                .Build()
-            )
-        elif isinstance(operand, float):
-            self._op = (
-                self._op.Attr("has_int_operand", False)
-                .Attr("has_float_operand", True)
-                .Attr("int_operand", 0)
-                .Attr("float_operand", operand)
-                .Build()
-            )
-        else:
-            raise ValueError("operand type can only be int or float")
-
-    def forward(self, x):
-        return self._op(x)[0]
-
 
 class ScalarAddByTensor(Module):
     def __init__(self, name=None) -> None:
