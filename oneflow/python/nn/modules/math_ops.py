@@ -32,6 +32,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 def _check_axis(axis, shape):
+    # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
     if axis is None:
         axis = list(range(len(shape)))
 
