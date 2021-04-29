@@ -179,8 +179,7 @@ class MaxPool2d(Module):
         assert return_indices == False, "Only support return_indices==False for now!"
         assert dilation == 1, "Only support dilation==1 for now!"
 
-        if isinstance(padding, int):
-            padding = _pair(padding)
+        padding = _pair(padding)
         if len(padding) == 2:
             if data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
