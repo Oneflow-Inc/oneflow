@@ -17,20 +17,27 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
-#include "oneflow/core/framework/user_op_conf.h"
 
 namespace oneflow {
 
+namespace cfg {
+class AttrValue;
+}
+namespace user_op {
+class AttrVal;
+}
+class AttrValue;
 class MutableAttrMap;
 class MutableCfgAttrMap;
 
 using AttrName2AttrVal = HashMap<std::string, std::shared_ptr<const user_op::AttrVal>>;
 
+const std::shared_ptr<const AttrName2AttrVal>& EmptyAttrName2AttrVal();
+
 class AttrMap final {
  public:
-  AttrMap() : attrs_(new AttrName2AttrVal) {}
-  explicit AttrMap(const std::shared_ptr<AttrName2AttrVal>& attrs) : attrs_(attrs) {}
+  AttrMap() : attrs_(EmptyAttrName2AttrVal()) {}
+  explicit AttrMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
 
   using value_type = typename AttrName2AttrVal::value_type;
   AttrMap(std::initializer_list<value_type> init);
@@ -50,6 +57,8 @@ class AttrMap final {
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
 
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
+
   size_t size() const { return attrs_->size(); }
   bool empty() const { return attrs_->empty(); }
 
@@ -60,7 +69,7 @@ class AttrMap final {
   const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
 
  private:
-  std::shared_ptr<AttrName2AttrVal> attrs_;
+  std::shared_ptr<const AttrName2AttrVal> attrs_;
 };
 
 class ComposedAttrMap final {
@@ -70,6 +79,8 @@ class ComposedAttrMap final {
 
   template<typename T>
   Maybe<const T&> GetAttr(const std::string& attr_name) const;
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
 
   void ResetPrior(const AttrMap& prior) { prior_ = prior; }
   void ResetBase(const AttrMap& base) { base_ = base; }
