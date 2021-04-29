@@ -22,7 +22,7 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(2, 3))

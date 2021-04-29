@@ -22,7 +22,7 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestReciprocalModule(flow.unittest.TestCase):
     def test_reciprocal(test_case):
         x = flow.Tensor(np.random.randn(2, 3))
         of_out = flow.reciprocal(x)
