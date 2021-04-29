@@ -568,7 +568,8 @@ void TaskGraph::MoveContentsIntoPlan(Plan* plan, int64_t job_id) {
     if (task_node->IsMeaningLess()) { return; }
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (task_node->GetTaskType() == kNormalForward) {
+    if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+        || task_node->GetTaskType() == kAcc) {
       CreateOpAttributeRef(plan, job_id, &task_proto);
     }
     // NOTE(levi): contents of task_node is released here to decrease momory peak.
