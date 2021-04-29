@@ -22,6 +22,21 @@ import oneflow as flow
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestReLUModule(flow.unittest.TestCase):
+    def test_relu(test_case):
+        m = flow.nn.ReLU()
+        arr = np.random.randn(2, 3, 4, 5)
+
+        np_out = np.maximum(0, arr)
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTanhModule(flow.unittest.TestCase):
     def _test_body_tanh(test_case, input_arr):
         x = flow.Tensor(input_arr)
