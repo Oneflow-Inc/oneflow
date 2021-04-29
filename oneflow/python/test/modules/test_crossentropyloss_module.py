@@ -16,12 +16,6 @@ limitations under the License.
 import oneflow as flow
 import unittest
 import numpy as np
-from oneflow.python.nn.modules.utils import (
-    _single,
-    _pair,
-    _triple,
-    _reverse_repeat_tuple,
-)
 
 g_test_samples = [
     {
