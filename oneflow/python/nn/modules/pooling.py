@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, List, Tuple
+from typing import Optional
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
@@ -30,7 +30,7 @@ class AvgPool2d(Module):
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and `kernel_size` :math:`(kH, kW)`
     can be precisely described as:
-        
+
     .. math::
 
         out(N_i, C_j, h, w)  = \frac{1}{kH * kW} \sum_{m=0}^{kH-1} \sum_{n=0}^{kW-1}
@@ -112,8 +112,7 @@ class AvgPool2d(Module):
 
 @oneflow_export("nn.MaxPool2d")
 class MaxPool2d(Module):
-    r"""Applies a 2D max pooling over an input signal composed of several input
-    planes.
+    r"""Applies a 2D max pooling over an input signal composed of several input planes.
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
     can be precisely described as:
@@ -126,6 +125,7 @@ class MaxPool2d(Module):
     If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+
     Note:
         When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
         or the input. Sliding windows that would start in the right padded region are ignored.
@@ -133,6 +133,7 @@ class MaxPool2d(Module):
         - a single ``int`` -- in which case the same value is used for the height and width dimension
         - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
           and the second `int` for the width dimension
+
     Args:
         kernel_size: the size of the window to take a max over
         stride: the stride of the window. Default value is :attr:`kernel_size`
@@ -141,6 +142,7 @@ class MaxPool2d(Module):
         return_indices: if ``True``, will return the max indices along with the outputs.
                         Useful for :class:`torch.nn.MaxUnpool2d` later
         ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+
     Shape:
         - Input: :math:`(N, C, H_{in}, W_{in})`
         - Output: :math:`(N, C, H_{out}, W_{out})`, where
@@ -150,9 +152,11 @@ class MaxPool2d(Module):
           .. math::
               W_{out} = \left\lfloor\frac{W_{in} + 2 * \text{padding[1]} - \text{dilation[1]}
                     \times (\text{kernel\_size[1]} - 1) - 1}{\text{stride[1]}} + 1\right\rfloor
-                
+
     For example:
+
     .. code-block:: python
+
         import oneflow as flow
         import numpy as np
         kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
@@ -176,7 +180,7 @@ class MaxPool2d(Module):
         data_format = "NCHW"
         channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
 
-        assert return_indices == False, "Only support return_indices==False for now!"
+        assert return_indices is False, "Only support return_indices==False for now!"
         assert dilation == 1, "Only support dilation==1 for now!"
 
         padding = _pair(padding)

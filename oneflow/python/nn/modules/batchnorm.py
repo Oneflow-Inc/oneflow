@@ -203,9 +203,9 @@ class BatchNorm1d(_BatchNorm):
         - Input: :math:`(N, C)` or :math:`(N, C, L)`
         - Output: :math:`(N, C)` or :math:`(N, C, L)` (same shape as input)
 
-    For example: 
-    
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -281,9 +281,9 @@ class BatchNorm2d(_BatchNorm):
         - Input: :math:`(N, C, H, W)`
         - Output: :math:`(N, C, H, W)` (same shape as input)
 
-    For example: 
-    
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np

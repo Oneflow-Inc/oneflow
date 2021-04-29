@@ -44,10 +44,10 @@ class ReLU(Module):
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
-    For example: 
-    
-    .. code-block:: python 
+
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -73,9 +73,9 @@ class ReLU(Module):
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
@@ -86,9 +86,9 @@ class Tanh(Module):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -144,7 +144,7 @@ class GELU(Module):
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         input = flow.Tensor(x)
         gelu = flow.nn.GELU()
-        
+
         out = gelu(input)
 
         # out [-0.15426877, 0., 0.34573123]

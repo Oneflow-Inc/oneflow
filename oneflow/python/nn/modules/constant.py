@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.common_types import _size_any_t
 from oneflow.python.nn.modules.utils import _single
 
@@ -85,11 +84,11 @@ class Ones(_ConstantBase):
 @oneflow_export("tmp.ones")
 def ones_op(size, dtype=None):
     r"""
-    Returns a tensor filled with the scalar value 1, 
+    Returns a tensor filled with the scalar value 1,
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor. 
+        size(an integer or tuple of integer values): defining the shape of the output tensor.
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
@@ -100,7 +99,7 @@ def ones_op(size, dtype=None):
 
         y = flow.ones(10)
         # [1 1 1 1 1 1 1 1 1 1]
-        
+
     """
     return Ones(size, dtype)()
 
@@ -112,12 +111,11 @@ class Zeros(_ConstantBase):
 
 @oneflow_export("tmp.zeros")
 def zeros_op(size, dtype=None):
-    r"""
-    Returns a tensor filled with the scalar value 0, 
+    r"""Returns a tensor filled with the scalar value 0,
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values):defining the shape of the output tensor. 
+        size(an integer or tuple of integer values):defining the shape of the output tensor.
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
