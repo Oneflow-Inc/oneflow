@@ -231,8 +231,8 @@ const boxing::collective::RankDesc& GetRankDesc(const OperatorConf& conf) {
 
 const boxing::collective::RankDesc& GetRankDesc(Plan* plan, const TaskProto& task_proto) {
   CHECK_EQ(task_proto.exec_sequence().exec_node_size(), 1);
-  return GetRankDesc(PlanUtil::GeOpAttribute(plan, task_proto.job_id(),
-                                             task_proto.exec_sequence().exec_node(0).kernel_conf())
+  return GetRankDesc(PlanUtil::GetOpAttribute(plan, task_proto.job_id(),
+                                              task_proto.exec_sequence().exec_node(0).kernel_conf())
                          .op_conf());
 }
 
@@ -432,8 +432,8 @@ RegstDescProto* GetSoleDataRegstDescProto(TaskProto* task) {
 
 const OperatorConf& GetSoleOpConf(Plan* plan, const TaskProto& task) {
   CHECK_EQ(task.exec_sequence().exec_node_size(), 1);
-  return PlanUtil::GeOpAttribute(plan, task.job_id(),
-                                 task.exec_sequence().exec_node(0).kernel_conf())
+  return PlanUtil::GetOpAttribute(plan, task.job_id(),
+                                  task.exec_sequence().exec_node(0).kernel_conf())
       .op_conf();
 }
 
@@ -441,7 +441,7 @@ void UpdateSoleObnRegstDescId(Plan* plan, TaskProto* task) {
   CHECK_EQ(task->exec_sequence().exec_node_size(), 1);
   auto* exec_node = task->mutable_exec_sequence()->mutable_exec_node(0);
   const auto& obns =
-      PlanUtil::GeOpAttribute(plan, task->job_id(), exec_node->kernel_conf()).output_bns();
+      PlanUtil::GetOpAttribute(plan, task->job_id(), exec_node->kernel_conf()).output_bns();
   CHECK_EQ(obns.size(), 1);
   int64_t regst_desc_id = GetSoleDataRegstDescProto(task)->regst_desc_id();
   (*exec_node->mutable_bn_in_op2regst_desc_id())[obns.Get(0)] = regst_desc_id;
@@ -504,7 +504,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       if (task->exec_sequence().exec_node_size() != 1) { return false; }
       const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
       OperatorConf::OpTypeCase op_type_case =
-          PlanUtil::GeOpAttribute(plan, task->job_id(), kernel_conf).op_conf().op_type_case();
+          PlanUtil::GetOpAttribute(plan, task->job_id(), kernel_conf).op_conf().op_type_case();
       return op_type_case == OperatorConf::kSourceTickConf
              || op_type_case == OperatorConf::kSinkTickConf;
     };
@@ -516,7 +516,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
     if (IsInterfaceTickTockTask(task) == false) { continue; }
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
     const auto& op_name =
-        PlanUtil::GeOpAttribute(plan, task->job_id(), kernel_conf).op_conf().name();
+        PlanUtil::GetOpAttribute(plan, task->job_id(), kernel_conf).op_conf().name();
     CHECK(sole_tick_op_name2sole_task.emplace(op_name, task).second);
   }
   auto TaskProto4TaskId = PlanUtil::MakeGetterTaskProto4TaskId(*plan);
@@ -547,7 +547,7 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
       if (task.task_type() == TaskType::kSourceTick) {
         CHECK(task.exec_sequence().exec_node_size() == 1);
         const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
-        const auto& op_conf = PlanUtil::GeOpAttribute(plan, task.job_id(), kernel_conf).op_conf();
+        const auto& op_conf = PlanUtil::GetOpAttribute(plan, task.job_id(), kernel_conf).op_conf();
         CHECK(op_conf.has_source_tick_conf());
         CHECK(source_tick_op_names.find(op_conf.name()) != source_tick_op_names.end());
         return true;
@@ -883,7 +883,7 @@ Maybe<void> ConnectCriticalSectionEndToReentrantLockEnd(
     CHECK_EQ_OR_RETURN(task->exec_sequence().exec_node_size(), 1);
     const auto& kernel_conf = task->exec_sequence().exec_node(0).kernel_conf();
     const auto& op_name =
-        PlanUtil::GeOpAttribute(main_plan, task->job_id(), kernel_conf).op_conf().name();
+        PlanUtil::GetOpAttribute(main_plan, task->job_id(), kernel_conf).op_conf().name();
     if (op_name == lock_back_edge.reentrant_lock_op_name) {
       CHECK_ISNULL_OR_RETURN(reentrant_lock_task);
       reentrant_lock_task = task;
@@ -950,7 +950,7 @@ void FinishGlobalCriticalSectionDesc(const Plan& plan, int64_t job_size) {
     if (task.exec_sequence().exec_node_size() == 1) {
       const auto& kernel_conf = task.exec_sequence().exec_node(0).kernel_conf();
       const std::string& op_name =
-          PlanUtil::GeOpAttribute(&plan, task.job_id(), kernel_conf).op_conf().name();
+          PlanUtil::GetOpAttribute(&plan, task.job_id(), kernel_conf).op_conf().name();
       HashSet<int64_t>* mem_block_ids =
           &(job_id2sole_op_name2mem_block_ids.at(task.job_id())[op_name]);
       for (const auto& pair : task.produced_regst_desc()) {
