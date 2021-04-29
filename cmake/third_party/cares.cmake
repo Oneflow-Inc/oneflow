@@ -1,7 +1,7 @@
 include(ExternalProject)
-set(CARES_TAR_URL https://github.com/c-ares/c-ares/releases/download/cares-1_15_0/c-ares-1.15.0.tar.gz)
+set(CARES_TAR_URL https://github.com/c-ares/c-ares/releases/download/cares-1_17_1/c-ares-1.17.1.tar.gz)
 use_mirror(VARIABLE CARES_TAR_URL URL ${CARES_TAR_URL})
-set(CARES_URL_HASH d2391da274653f7643270623e822dff7)
+set(CARES_URL_HASH 28f65c8ee6c097986bd902fd4f0804e2)
 set(CARES_INSTALL ${THIRD_PARTY_DIR}/cares)
 SET(CARES_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/cares/src/cares)
 
