@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import math
 import oneflow as flow
-
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _pair
 from oneflow.python.nn.common_types import _size_2_t
+from oneflow.python.nn import init
 
 
 @oneflow_export("nn.Conv2d")
@@ -72,6 +73,14 @@ class Conv2d(Module):
             .Output("out")
             .Build()
         )
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         res = self._op(x, self.weight)[0]

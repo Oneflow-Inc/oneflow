@@ -704,6 +704,17 @@ def _test_conv2d(test_case, conv, data, output, weight, bias=None):
     ".numpy() doesn't work in lazy mode",
 )
 class TestConv2d(flow.unittest.TestCase):
+    def test_conv2d_default_init(test_case):
+        conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True)
+        test_case.assertTrue(
+            not np.allclose(
+                conv.weight.numpy(), np.ones((1, 1, 3, 3)), rtol=1e-4, atol=1e-8
+            )
+        )
+        test_case.assertTrue(
+            not np.allclose(conv.bias.numpy(), np.ones((1,)), rtol=1e-4, atol=1e-8)
+        )
+
     def test_conv2d(test_case):
         conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False)
         _test_conv2d(
@@ -722,7 +733,7 @@ class TestConv2d(flow.unittest.TestCase):
         )
 
     def test_conv2d_group(test_case):
-        conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2)
+        conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False)
         _test_conv2d(
             test_case,
             conv,
@@ -732,7 +743,7 @@ class TestConv2d(flow.unittest.TestCase):
         )
 
     def test_conv2d_padding(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2))
+        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False)
         _test_conv2d(
             test_case,
             conv,
@@ -742,7 +753,7 @@ class TestConv2d(flow.unittest.TestCase):
         )
 
     def test_conv2d_stride(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 1), stride=(2, 3))
+        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False)
         _test_conv2d(
             test_case,
             conv,
@@ -762,7 +773,7 @@ class TestConv2d(flow.unittest.TestCase):
         )
 
     def test_conv2d_dilation(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), bias=False, dilation=(2, 3))
+        conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False)
         _test_conv2d(
             test_case,
             conv,
