@@ -31,7 +31,7 @@ class BatchGather : public OpExprGradFunction<BatchGatherInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const BatchGatherInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -49,7 +49,7 @@ Maybe<void> BatchGather::Init(const OpExpr& op) {
 }
 
 Maybe<void> BatchGather::Capture(BatchGatherInterpState* ctx, const TensorTuple& inputs,
-                                 const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                                 const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& in_shape = inputs.at(0)->shape();
@@ -64,7 +64,7 @@ Maybe<void> BatchGather::Apply(const BatchGatherInterpState* ctx, const TensorTu
   in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& indices = ctx->SavedTensors().at(0);
-  AttrValueMap attrs;
+  MutableAttrMap attrs;
   JUST(attrs.SetAttr<int32_t>("num_segments", ctx->num_segments));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*bw_unsorted_batch_segment_sum_op_,
                                                         {out_grads.at(0), indices}, attrs));

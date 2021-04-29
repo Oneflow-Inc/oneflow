@@ -52,6 +52,33 @@ class Sigmoid(Module):
 
 @oneflow_export("nn.ReLU")
 class ReLU(Module):
+    r"""Applies the rectified linear unit function element-wise:
+
+    :math:`\text{ReLU}(x) = (x)^+ = \max(0, x)`
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        m = flow.nn.ReLU()
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = m(input)
+        # equal to np.maximum(0, arr)
+
+    """
+
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
