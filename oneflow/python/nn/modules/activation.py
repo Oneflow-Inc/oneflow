@@ -273,7 +273,6 @@ class Softmax(Module):
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
-
         if need_transpose:
             x = x.transpose(perm=permute)
 
@@ -284,7 +283,6 @@ class Softmax(Module):
 
 
 @oneflow_export("softmax")
-@register_tensor_op("softmax")
 def softmax_op(tensor, /, dim=None):
     r"""Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor

@@ -177,7 +177,6 @@ class TestSoftmaxModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
     def test_softmax_dim_2(test_case):
-        m = flow.nn.Softmax(dim=2)
         x = flow.Tensor(
             np.array(
                 [
@@ -196,7 +195,7 @@ class TestSoftmaxModule(flow.unittest.TestCase):
                 ]
             )
         )
-        y = m(x)
+        y = flow.softmax(x, dim=2)
         output = np.array(
             [
                 [
