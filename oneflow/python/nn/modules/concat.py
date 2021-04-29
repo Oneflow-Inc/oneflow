@@ -32,7 +32,6 @@ class Cat(Module):
             return inputs[0]
 
         axis = self.axis
-        max_dim_size = None
         assert len(inputs) >= 2
         if axis < 0:
             axis += len(inputs[0].shape)
