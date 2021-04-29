@@ -50,16 +50,7 @@ class Cat(Module):
                 else:
                     assert input.shape[i] == first_input_shape[i]
 
-        if max_dim_size is None:
-            max_dim_size = dynamic_dim_size
-        else:
-            assert (
-                max_dim_size >= dynamic_dim_size
-            ), "max diemension size {} is too small to hold concatenated static dimension size {} along the given axis".format(
-                max_dim_size, dynamic_dim_size
-            )
-
-        return self._op(*inputs, axis=axis, max_dim_size=max_dim_size)[0]
+        return self._op(*inputs, axis=axis, max_dim_size=dynamic_dim_size)[0]
 
 
 @oneflow_export("cat")
