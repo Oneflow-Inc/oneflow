@@ -26,7 +26,6 @@ class Cat(Module):
         super().__init__()
         self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
         self.axis = dim
-        self.n = n
 
     def forward(self, inputs):
         if len(inputs) == 1:
