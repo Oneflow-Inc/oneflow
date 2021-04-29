@@ -376,13 +376,7 @@ class LogSoftmax(Module):
         self, dim: Optional[int] = 1,
     ):
         super().__init__()
-
         self.dim = dim
-        self.softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
-        self.log_op = flow.builtin_op("log").Input("x").Output("y").Build()
-        self.transpose_op = (
-            flow.builtin_op("transpose").Input("input").Output("output").Build()
-        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -392,11 +386,14 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = self.transpose_op(x, perm=permute)[0]
-        res = self.softmax_op(x)[0]
-        res = self.log_op(res)[0]
+            x = x.transpose(perm=permute)
+
+        x = flow.softmax(x)
+        res = flow.log(x)
+
         if need_transpose:
-            res = self.transpose_op(res, perm=permute)[0]
+            res = res.transpose(perm=permute)
+
         return res
 
     def extra_repr(self):
