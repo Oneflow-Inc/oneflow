@@ -198,8 +198,6 @@ def subtract(
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
-    elif x.shape == (1,):
-        return scalar_sub_by_tensor(y, x, name)
     elif y.shape == (1,):
         return scalar_sub_by_tensor(x, y, name)
     else:
@@ -315,8 +313,6 @@ def divide(
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
-    elif x.shape == (1,):
-        return scalar_div_by_tensor(y, x, name)
     elif y.shape == (1,):
         return scalar_div_by_tensor(x, y, name)
     else:

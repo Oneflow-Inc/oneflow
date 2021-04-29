@@ -363,8 +363,6 @@ def _sub(x, y):
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return BroadcastSub()(x, y)
-    elif x.shape == (1,):
-        return ScalarSubByTensor()(y, x)
     elif y.shape == (1,):
         return ScalarSubByTensor()(x, y)
     else:
@@ -443,10 +441,8 @@ def _div(x, y):
         return ScalarMul(y)(x)
     elif x.shape == y.shape:
         return BroadcastDiv()(x, y)
-    elif x.shape == (1,):
-        return ScalarDivByTensor(y, x)
     elif y.shape == (1,):
-        return ScalarDivByTensor(x, y)
+        return ScalarDivByTensor()(x, y)
     else:
         return BroadcastDiv()(x, y)
 
