@@ -35,7 +35,7 @@ class Cast : public OpExprGradFunction<OpExprInterpState> {
   }
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrValueMap& attrs) const override {
+                      const AttrMap& attrs) const override {
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
@@ -44,7 +44,7 @@ class Cast : public OpExprGradFunction<OpExprInterpState> {
                     TensorTuple* in_grads) const override {
     const auto& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    AttrValueMap attrs;
+    MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", x->dtype()->data_type()));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();

@@ -3848,13 +3848,6 @@ def bce_with_logits_loss(
         reduction
     )
 
-    assert pos_weight.shape[0] == input.shape[-1], (
-        "The length of `pos_weight` must be equal to the number of classes. "
-        "Found the length of pos_weight {} vs classes {}".format(
-            pos_weight.shape[0], input.shape[-1]
-        )
-    )
-
     if name is None:
         name = id_util.UniqueStr("BCEWithLogitsLoss")
 
@@ -3863,6 +3856,12 @@ def bce_with_logits_loss(
     _neg_max_val = flow.math.negative(_max_val)
 
     if pos_weight:
+        assert pos_weight.shape[0] == input.shape[-1], (
+            "The length of `pos_weight` must be equal to the number of classes. "
+            "Found the length of pos_weight {} vs classes {}".format(
+                pos_weight.shape[0], input.shape[-1]
+            )
+        )
         _log_weight = ((pos_weight - 1) * target) + 1
         _loss = (1 - target) * input + _log_weight * (
             flow.math.log(
