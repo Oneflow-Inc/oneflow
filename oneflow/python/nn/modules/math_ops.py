@@ -15,12 +15,11 @@ limitations under the License.
 """
 
 import collections
-from typing import Optional, Sequence, Sized, Union, List, Tuple
+from typing import Optional, Sequence, Union
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -47,15 +46,14 @@ class Sum(Module):
     def __init__(
         self,
         axis: Optional[Union[int, Sequence[int]]] = None,
-        keepdims: bool = False,
-        name: Optional[str] = None,
+        keepdims: bool = False
     ) -> None:
         super().__init__()
 
         self.axis = axis
         self.keepdims = keepdims
         self._op = (
-            flow.builtin_op("reduce_sum", name)
+            flow.builtin_op("reduce_sum")
             .Input("input_tensor")
             .Output("output_tensor")
             .Attr("keepdims", keepdims)
@@ -78,7 +76,7 @@ def _sum(input, dim=None, keepdims=False):
     .. code-block:: python
 
         #Example
-        
+        import oneflow as flow
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = flow.sum(input, dim=(2,1))
 
@@ -88,9 +86,9 @@ def _sum(input, dim=None, keepdims=False):
 
 
 class ScalarMul(Module):
-    def __init__(self, operand, name=None) -> None:
+    def __init__(self, operand) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_mul", name).Input("in").Output("out")
+        self._op = flow.builtin_op("scalar_mul").Input("in").Output("out")
         if isinstance(operand, int):
             self._op = (
                 self._op.Attr("has_int_operand", True)
@@ -115,10 +113,10 @@ class ScalarMul(Module):
 
 
 class ScalarMulByTensor(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("scalar_mul_by_tensor", name)
+            flow.builtin_op("scalar_mul_by_tensor")
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -130,10 +128,10 @@ class ScalarMulByTensor(Module):
 
 
 class ElementwiseMul(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("multiply", name)
+            flow.builtin_op("multiply")
             .Input("x")
             .Input("y")
             .Output("out")
@@ -145,10 +143,10 @@ class ElementwiseMul(Module):
 
 
 class BroadcastMul(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_mul", name)
+            flow.builtin_op("broadcast_mul")
             .Input("x")
             .Input("y")
             .Output("z")
@@ -167,10 +165,11 @@ def _mul(x, y):
     .. math::
         out = x \times y
     For example:
-    
+
     .. code-block:: python
-        
+
         # Example
+        import oneflow as flow
         # element-wise multiply
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
@@ -208,15 +207,13 @@ class Mean(Module):
         self,
         axis: Optional[Union[collections.Sized, int]] = None,
         keepdims: bool = False,
-        name: Optional[str] = None,
     ) -> None:
         super().__init__()
         self.keepdims = keepdims
-        self.name = name
         self.axis = axis
         # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
         if axis is None:
-            axes = []
+            self.axes = []
         else:
             self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
 
@@ -236,15 +233,17 @@ class Mean(Module):
 @register_tensor_op("mean")
 def _mean(input_tensor, dim=None, keepdim=False):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
-    
+
     For example:
 
     .. code-block:: python
 
+        import oneflow as flow
+
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         out = flow.mean(input) # out: [3.5]
         print(out.numpy())
-        
+
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         out = flow.mean(input, axis=0) # out: [2.5 3.5 4.5]
         print(out.numpy())
@@ -259,10 +258,10 @@ def _mean(input_tensor, dim=None, keepdim=False):
 
 
 class ScalarSubByTensor(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("scalar_sub_by_tensor", name)
+            flow.builtin_op("scalar_sub_by_tensor")
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -274,10 +273,10 @@ class ScalarSubByTensor(Module):
 
 
 class BroadcastSub(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_sub", name)
+            flow.builtin_op("broadcast_sub")
             .Input("x")
             .Input("y")
             .Output("z")
@@ -289,9 +288,9 @@ class BroadcastSub(Module):
 
 
 class ScalarAdd(Module):
-    def __init__(self, operand, name=None) -> None:
+    def __init__(self, operand) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_add", name).Input("in").Output("out")
+        self._op = flow.builtin_op("scalar_add").Input("in").Output("out")
 
         if isinstance(operand, int):
             self._op = (
@@ -327,6 +326,7 @@ def _sub(x, y):
 
     .. code-block:: python
 
+        import oneflow as flow
         # element-wise subtract
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
@@ -359,10 +359,10 @@ def _sub(x, y):
 
 
 class BroadcastDiv(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_div", name)
+            flow.builtin_op("broadcast_div")
             .Input("x")
             .Input("y")
             .Output("z")
@@ -374,10 +374,10 @@ class BroadcastDiv(Module):
 
 
 class ScalarDivByTensor(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("scalar_div_by_tensor", name)
+            flow.builtin_op("scalar_div_by_tensor")
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -398,10 +398,10 @@ def _div(x, y):
     Args:
         x (Union[int, float, flow.Tensor]): X.
         y (Union[int, float, flow.Tensor]): Y.
-        name (Optional[str], optional): The name for the operation. Defaults to None.
     For example:
     .. code-block:: python
 
+        import oneflow as flow
         # element-wise divide
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
@@ -437,10 +437,10 @@ def _div(x, y):
 
 
 class Reciprocal(Module):
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("reciprocal_no_nan", name).Input("x").Output("y").Build()
+            flow.builtin_op("reciprocal_no_nan").Input("x").Output("y").Build()
         )
 
     def forward(self, x):
@@ -452,14 +452,12 @@ class Reciprocal(Module):
 def _reciprocal(x):
     r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
     be also set to zero.
-    
-    Args:
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-    
-    For example: 
+
+    For example:
 
     .. code-block:: python 
-    
+
+        import oneflow as flow
         x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         out = flow.reciprocal()(x)
         # out [[1.         0.5        0.33333334]
@@ -471,10 +469,10 @@ def _reciprocal(x):
 
 
 class ScalarAddByTensor(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("scalar_add_by_tensor", name)
+            flow.builtin_op("scalar_add_by_tensor")
             .Input("x")
             .Input("scalar")
             .Output("y")
@@ -486,19 +484,19 @@ class ScalarAddByTensor(Module):
 
 
 class ElementwiseAdd(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("add_n", name).Input("in", 2).Output("out").Build()
+        self._op = flow.builtin_op("add_n").Input("in", 2).Output("out").Build()
 
     def forward(self, x, y):
         return self._op(x, y)[0]
 
 
 class BroadcastAdd(Module):
-    def __init__(self, name=None) -> None:
+    def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_add", name)
+            flow.builtin_op("broadcast_add")
             .Input("x")
             .Input("y")
             .Output("z")
@@ -521,6 +519,7 @@ def _add(x, y):
     .. code-block:: python
 
         # Example
+        import oneflow as flow
         # element-wise add
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))

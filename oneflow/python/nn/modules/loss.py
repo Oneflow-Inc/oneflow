@@ -13,19 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, List, Tuple
+from typing import Optional
 
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.utils import (
-    _single,
-    _pair,
-    _triple,
-    _reverse_repeat_tuple,
-)
-from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
 
 
 @oneflow_export("nn.CrossEntropyLoss")
