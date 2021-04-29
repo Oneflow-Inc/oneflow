@@ -29,8 +29,8 @@ namespace user_op {
 #define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                  \
   template<>                                                                         \
   const cpp_type& InferContext::Attr<cpp_type>(const std::string& attr_name) const { \
-    const auto& attr = Attr4AttrName(attr_name);                                     \
-    return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(attr)->val();           \
+    const auto* attr = Attr4Name(attr_name).get();                                   \
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<cpp_type>*>(attr))->val();  \
   }
 OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
 
