@@ -35,7 +35,32 @@ def infer_shape(x, shape):
 
 
 class Reshape(Module):
-    r"""This operator reshapes a Tensor.
+    def __init__(self, shape: Sequence[int]) -> None:
+        super().__init__()
+
+        assert isinstance(shape, tuple) or isinstance(shape, list)
+        shape = list(shape)
+        assert all(dim == -1 or dim > 0 for dim in shape)
+        assert shape.count(-1) <= 1
+
+        self._op = (
+            flow.builtin_op("reshape")
+            .Input("in")
+            .Output("out")
+            .Attr("shape", shape)
+            .Build()
+        )
+        self.shape = shape
+
+    def forward(self, x):
+        new_shape = infer_shape(x, self.shape)
+        return self._op(x, shape=new_shape)[0]
+
+
+@oneflow_export("tmp.reshape")
+@register_tensor_op("reshape")
+def reshape_op(x, shape: Sequence[int] = None):
+    """This operator reshapes a Tensor.
 
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
 
@@ -62,30 +87,4 @@ class Reshape(Module):
         # y (2, 2, 2, 2)
 
     """
-
-    def __init__(self, shape: Sequence[int]) -> None:
-        super().__init__()
-
-        assert isinstance(shape, tuple) or isinstance(shape, list)
-        shape = list(shape)
-        assert all(dim == -1 or dim > 0 for dim in shape)
-        assert shape.count(-1) <= 1
-
-        self._op = (
-            flow.builtin_op("reshape")
-            .Input("in")
-            .Output("out")
-            .Attr("shape", shape)
-            .Build()
-        )
-        self.shape = shape
-
-    def forward(self, x):
-        new_shape = infer_shape(x, self.shape)
-        return self._op(x, shape=new_shape)[0]
-
-
-@oneflow_export("tmp.reshape")
-@register_tensor_op("reshape")
-def reshape_op(tensor, shape: Sequence[int] = None):
-    return Reshape(shape=shape)(tensor)
+    return Reshape(shape=shape)(x)
