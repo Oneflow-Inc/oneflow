@@ -22,15 +22,13 @@ from typing import Optional, Sequence
 
 
 class Cat(Module):
-    def __init__(self, dim=0) -> None:
+    def __init__(self, dim=0, n=0) -> None:
         super().__init__()
+        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
         self.axis = dim
+        self.n = n
 
     def forward(self, inputs):
-        n = len(inputs)
-
-        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
-
         if len(inputs) == 1:
             return inputs[0]
 
@@ -94,4 +92,5 @@ def concat_op(inputs, dim=0):
         # out.shape (2, 18, 5, 3)
 
     """
-    return Cat(dim=dim)(inputs)
+    n = len(inputs)
+    return Cat(dim=dim, n=n)(inputs)
