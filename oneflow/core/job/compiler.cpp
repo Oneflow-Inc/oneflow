@@ -118,7 +118,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
     if (task_node->IsMeaningLess()) { return; }
     TaskProto task_proto;
     task_node->ToProto(&task_proto);
-    if (task_node->GetTaskType() == kNormalForward) {
+    if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+        || task_node->GetTaskType() == kAcc) {
       CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
     }
     plan->mutable_task()->Add(std::move(task_proto));
