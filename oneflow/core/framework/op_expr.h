@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -68,7 +68,7 @@ class BuiltinOpExpr : public OpExpr {
     return indexed_output_pairs_;
   }
 
-  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const = 0;
+  virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const = 0;
 
  protected:
   std::string op_name_;
@@ -99,7 +99,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
-  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrValueMap& attrs) const override;
+  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
   ProtoType op_proto_;

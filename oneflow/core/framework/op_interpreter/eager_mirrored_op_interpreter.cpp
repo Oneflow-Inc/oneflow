@@ -46,7 +46,7 @@ using EagerBlobObjectList = std::vector<std::shared_ptr<eager::EagerBlobObject>>
 Maybe<void> NaiveInterpret(
     const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     const std::shared_ptr<EagerBlobObjectList>& output_eager_blob_objects,
-    const AttrValueMap& attrs) {
+    const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   std::shared_ptr<const Device> default_device;
@@ -93,13 +93,13 @@ Maybe<void> NaiveInterpret(
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      op_parallel_desc, instr_type_name);
+                                      attrs, op_parallel_desc, instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
 
-Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
-                                                               const Shape& shape) {
+Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
+                                                            const Shape& shape) {
   const auto zeros_expr = JUST(op_expr_helper::ZerosOp(shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
@@ -109,7 +109,7 @@ Maybe<eager::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_typ
 }
 
 static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const AttrValueMap& attrs) {
+                                  TensorTuple* outputs, const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs);
@@ -122,14 +122,21 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return NaiveInterpret(op_expr, inputs, outputs, attrs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
+<<<<<<< HEAD
                                                 const AttrValueMap& attrs) const {
   OF_UNIMPLEMENTED();
+=======
+                                                const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 0);
+  CHECK_EQ_OR_RETURN(outputs->size(), 1);
+  return NaiveInterpret(op_expr, inputs, outputs, attrs);
+>>>>>>> master
 }
 
 static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_expr,
@@ -141,13 +148,13 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
@@ -160,13 +167,13 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
@@ -179,13 +186,13 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
-                                                const AttrValueMap& attrs) const {
+                                                const AttrMap& attrs) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 

@@ -71,7 +71,7 @@ Maybe<void> EagerConsistentTensorImpl::set_blob_object(
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf, bool retain_grad)
     : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
       eager_blob_object_(eager_blob_object) {
@@ -79,7 +79,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->parallel_desc();
   tensor_storage_->set_releaser_hook(
-      [eager_blob_object, parallel_desc](const std::shared_ptr<eager::TensorBuffer>&) {
+      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         PhysicalRun([&](InstructionsBuilder* builder) {
           builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
