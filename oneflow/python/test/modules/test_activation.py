@@ -108,24 +108,50 @@ class TestGeLU(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestSigmoid(flow.unittest.TestCase):
+    def test_sigmoid(test_case):
+        m = flow.nn.Sigmoid()
+        x = flow.Tensor(
+            np.array(
+                [
+                    [0.81733328, 0.43621480, 0.10351428],
+                    [-1.15555191, -0.67776406, 0.27372134],
+                ]
+            )
+        )
+        y = m(x)
+        y2 = flow.sigmoid(x)
+        y3 = x.sigmoid()
+        output = np.array(
+            [[0.69366997, 0.60735673, 0.52585548], 
+            [0.23947647, 0.33676055, 0.56800622]]
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestLogSoftmax(flow.unittest.TestCase):
     def test_logsoftmax(test_case):
-        m1 = flow.nn.LogSoftmax(1)
-        x1 = flow.Tensor(
+        m = flow.nn.LogSoftmax(1)
+        x = flow.Tensor(
             np.array([[0.4296, -1.1957, 2.5463], [1.2552, -1.5747, 0.6923]])
         )
-        y1 = m1(x1)
-        torch_out1 = np.array(
+        y = m(x)
+        output = np.array(
             [
                 [-2.25134873, -3.87664890, -0.13464880],
                 [-0.48770463, -3.31760454, -1.05060458],
             ]
         )
-        test_case.assertTrue(np.allclose(y1.numpy(), torch_out1, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
     def test_logsoftmax_v2(test_case):
-        m2 = flow.nn.LogSoftmax(dim=2)
-        x2 = flow.Tensor(
+        m = flow.nn.LogSoftmax(dim=2)
+        x = flow.Tensor(
             np.array(
                 [
                     [
@@ -156,8 +182,8 @@ class TestLogSoftmax(flow.unittest.TestCase):
             )
         )
 
-        y2 = m2(x2)
-        torch_out2 = np.array(
+        y = m(x)
+        output = np.array(
             [
                 [
                     [
@@ -186,7 +212,7 @@ class TestLogSoftmax(flow.unittest.TestCase):
             ]
         )
 
-        test_case.assertTrue(np.allclose(y2.numpy(), torch_out2, rtol=1e-05))
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
 
 if __name__ == "__main__":

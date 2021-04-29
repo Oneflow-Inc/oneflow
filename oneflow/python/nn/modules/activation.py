@@ -159,6 +159,82 @@ def gelu_op(tensor):
     return GELU()(tensor)
 
 
+@oneflow_export("nn.Sigmoid")
+class Sigmoid(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Sigmoid}(x) = \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = flow.Tensor(
+            np.array(
+                [
+                    [0.81733328, 0.43621480, 0.10351428],
+                    [-1.15555191, -0.67776406, 0.27372134],
+                ]
+            )
+        )
+        m = flow.nn.Sigmoid() # or y = flow.sigmoid(x)
+        y = m(x)
+        # [[0.69366997, 0.60735673, 0.52585548], 
+        # [0.23947647, 0.33676055, 0.56800622]]
+
+    """
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+@oneflow_export("sigmoid")
+@register_tensor_op("sigmoid")
+def sigmoid_op(tensor):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Sigmoid}(x) = \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = flow.Tensor(
+            np.array(
+                [
+                    [0.81733328, 0.43621480, 0.10351428],
+                    [-1.15555191, -0.67776406, 0.27372134],
+                ]
+            )
+        )
+        y = x.sigmoid()
+        # [[0.69366997, 0.60735673, 0.52585548], 
+        # [0.23947647, 0.33676055, 0.56800622]]
+
+    """
+    return Sigmoid()(tensor)
+
+
 @oneflow_export("nn.LogSoftmax")
 class LogSoftmax(Module):
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
