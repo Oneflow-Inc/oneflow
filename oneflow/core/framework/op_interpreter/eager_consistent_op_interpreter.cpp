@@ -30,7 +30,7 @@ namespace oneflow {
 namespace one {
 
 static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                  TensorTuple* outputs, const AttrValueMap& attrs) {
+                                  TensorTuple* outputs, const AttrMap& attrs) {
   using namespace std::placeholders;
   const auto& scope = JUST(GetCurrentScope());
   const auto& op_attribute = JUST(OpInterpUtil::InferOpAttribute(op_expr, inputs, attrs));
@@ -54,13 +54,13 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return NaiveInterpret(op_expr, inputs, outputs, attrs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), 0);
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   return NaiveInterpret(op_expr, inputs, outputs, attrs);
@@ -90,13 +90,13 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
@@ -137,13 +137,13 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeCloneOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunDistributeSplitOrCloneInstruction(op_expr, inputs, outputs);
 }
 
@@ -178,13 +178,13 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeConcatOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
-                                                  const AttrValueMap& attrs) const {
+                                                  const AttrMap& attrs) const {
   return BuildAndRunDistributeConcatAndAddInstruction(op_expr, inputs, outputs);
 }
 

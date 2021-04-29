@@ -66,7 +66,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 template<>
 /*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
                                                                   const TensorTuple& inputs,
-                                                                  const AttrValueMap& attrs) {
+                                                                  const AttrMap& attrs) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
   JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
   return outputs;
@@ -75,7 +75,7 @@ template<>
 template<>
 /*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
                                                         const TensorTuple& inputs,
-                                                        const AttrValueMap& attrs) {
+                                                        const AttrMap& attrs) {
   return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
 }
 
@@ -94,7 +94,7 @@ template<>
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(const BuiltinOpExpr& op_expr,
                                                                   const TensorTuple& inputs,
-                                                                  const AttrValueMap& attrs) {
+                                                                  const AttrMap& attrs) {
   const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());
@@ -133,7 +133,7 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 }
 
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
-                                                              const AttrValueMap& attrs) {
+                                                              const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
   op_expr.BuildOpConf(op_conf.get(), attrs);
   return op_conf;
