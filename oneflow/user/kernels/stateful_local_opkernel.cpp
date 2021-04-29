@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 
 namespace oneflow {
 namespace one {
@@ -418,7 +418,7 @@ LocalUserKernelComputeContext* StatefulOpKernel::UpdateComputeContext(EagerBlobO
   return compute_ctx_.get();
 }
 
-void StatefulOpKernel::ResetDynamicOpAttrs(const AttrValueMap& attrs) {
+void StatefulOpKernel::ResetDynamicOpAttrs(const AttrMap& attrs) {
   // TODO(jianhao): get attr directly from attrs, remove the copy of OperatorConf and
   // UserOpConfWrapper here
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>(*op_conf_);

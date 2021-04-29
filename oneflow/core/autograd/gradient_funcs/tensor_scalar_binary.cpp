@@ -34,7 +34,7 @@ class TensorScalarAddOrSub : public OpExprGradFunction<TensorScalarInterpState> 
 
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
 
  protected:
   std::shared_ptr<OpExpr> identity_op_;
@@ -56,8 +56,7 @@ Maybe<void> TensorScalarAddOrSub::Init(const OpExpr& op) {
 }
 
 Maybe<void> TensorScalarAddOrSub::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                                          const TensorTuple& outputs,
-                                          const AttrValueMap& attrs) const {
+                                          const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
   return Maybe<void>::Ok();
@@ -75,7 +74,7 @@ class TensorScalarAdd : public TensorScalarAddOrSub {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
       std::vector<int32_t> axes_vec(num_axes);
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
-      MutableAttrValueMap attrs;
+      MutableAttrMap attrs;
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
       in_grads->at(1) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
@@ -97,7 +96,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
       std::vector<int32_t> axes_vec(num_axes);
       std::iota(axes_vec.begin(), axes_vec.end(), 0);
-      MutableAttrValueMap attrs;
+      MutableAttrMap attrs;
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
       const auto& reduce_sum =
           JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {out_grads.at(0)}, attrs));
@@ -114,7 +113,7 @@ class TensorScalarMul : public OpExprGradFunction<TensorScalarInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -136,7 +135,7 @@ Maybe<void> TensorScalarMul::Init(const OpExpr& op) {
 }
 
 Maybe<void> TensorScalarMul::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
   if (ctx->x_requires_grad) { ctx->SaveTensorForBackward(inputs.at(1)); }
@@ -158,7 +157,7 @@ Maybe<void> TensorScalarMul::Apply(const TensorScalarInterpState* ctx, const Ten
     int32_t num_axes = out_grads.at(0)->shape()->NumAxes();
     std::vector<int32_t> axes_vec(num_axes);
     std::iota(axes_vec.begin(), axes_vec.end(), 0);
-    MutableAttrValueMap attrs;
+    MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axes_vec));
     in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {y}, attrs));
   }
@@ -171,7 +170,7 @@ class TensorScalarDiv : public OpExprGradFunction<TensorScalarInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const TensorScalarInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -190,7 +189,7 @@ Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
 }
 
 Maybe<void> TensorScalarDiv::Capture(TensorScalarInterpState* ctx, const TensorTuple& inputs,
-                                     const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                                     const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   ctx->scalar_requires_grad = inputs.at(1)->requires_grad();
   if (ctx->x_requires_grad || ctx->scalar_requires_grad) {

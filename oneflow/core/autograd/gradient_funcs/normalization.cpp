@@ -67,7 +67,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
   }
 
   Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override {
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     ctx->is_training = JUST(op_trait_->GetAttr<bool>("training", attrs));
     ctx->SaveTensorForBackward(inputs.at(0));  // x
     ctx->SaveTensorForBackward(inputs.at(3));  // gamma
@@ -118,7 +118,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
         dim_vec.push_back(x->shape()->At(axis_));
       }
     }
-    MutableAttrValueMap shape_attr;
+    MutableAttrMap shape_attr;
     shape_attr.SetAttr<Shape>("shape", Shape(dim_vec));
     const auto& reshaped_gamma =
         JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_gamma_op_, {gamma}, shape_attr));

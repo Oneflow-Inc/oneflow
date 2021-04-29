@@ -17,7 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -32,7 +32,7 @@ namespace oneflow {
 namespace {
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
-                                  const AttrValueMap& attrs) {
+                                  const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
       << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
@@ -44,7 +44,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple&
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
                                   const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                                  const AttrValueMap& attrs) {
+                                  const AttrMap& attrs) {
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   return JUST(Interpret(op, input_list, attrs));
@@ -76,11 +76,11 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-              const MutableCfgAttrValueMap& attrs) {
+              const MutableCfgAttrMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
       .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
-                       const MutableCfgAttrValueMap& attrs) {
+                       const MutableCfgAttrMap& attrs) {
         return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
       });
 

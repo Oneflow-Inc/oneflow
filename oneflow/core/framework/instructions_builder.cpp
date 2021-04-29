@@ -646,7 +646,7 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulOpKernel>& opkernel,
     one::EagerBlobObjectList input_eager_blob_objects,
-    one::EagerBlobObjectList output_eager_blob_objects, const AttrValueMap& attrs,
+    one::EagerBlobObjectList output_eager_blob_objects, const AttrMap& attrs,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");

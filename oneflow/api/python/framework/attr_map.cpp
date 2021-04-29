@@ -17,7 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace py = pybind11;
@@ -25,21 +25,20 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<MutableCfgAttrValueMap, std::shared_ptr<MutableCfgAttrValueMap>>(
-      m, "MutableCfgAttrValueMap")
+  py::class_<MutableCfgAttrMap, std::shared_ptr<MutableCfgAttrMap>>(m, "MutableCfgAttrMap")
       .def(py::init<>())
       .def("__setitem__",
-           [](MutableCfgAttrValueMap* m, const std::string& attr_name,
+           [](MutableCfgAttrMap* m, const std::string& attr_name,
               const std::shared_ptr<cfg::AttrValue>& attr_value) {
              m->SetAttr(attr_name, attr_value).GetOrThrow();
            })
-      .def("__getitem__", [](const MutableCfgAttrValueMap& m,
-                             const std::string& attr_name) { return m.at(attr_name); })
+      .def("__getitem__",
+           [](const MutableCfgAttrMap& m, const std::string& attr_name) { return m.at(attr_name); })
       .def(
           "__iter__",
-          [](const MutableCfgAttrValueMap& m) { return py::make_iterator(m.begin(), m.end()); },
+          [](const MutableCfgAttrMap& m) { return py::make_iterator(m.begin(), m.end()); },
           py::keep_alive<0, 1>())
-      .def("__len__", [](const MutableCfgAttrValueMap& m) { return m.size(); });
+      .def("__len__", [](const MutableCfgAttrMap& m) { return m.size(); });
 }
 
 }  // namespace oneflow

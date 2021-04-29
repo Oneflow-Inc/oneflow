@@ -32,7 +32,7 @@ class SplitLike : public OpExprGradFunction<SplitLikeInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const SplitLikeInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -61,7 +61,7 @@ Maybe<void> SplitLike::Init(const OpExpr& op) {
 }
 
 Maybe<void> SplitLike::Capture(SplitLikeInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), outputs.size() + 1);
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -92,7 +92,7 @@ Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple&
       inputs.push_back(zero_grad);
     }
   }
-  MutableAttrValueMap concat_attrs;
+  MutableAttrMap concat_attrs;
   concat_attrs.SetAttr<int>("axis", axis_);
   concat_attrs.SetAttr<int>("max_dim_size", ctx->max_dim_size);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*concat_op_, inputs, concat_attrs));
