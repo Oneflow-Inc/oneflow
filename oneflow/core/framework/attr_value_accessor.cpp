@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
 
 namespace oneflow {
 
@@ -28,6 +30,11 @@ namespace user_op {
   cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                     \
     CHECK(val.has_##field());                                                            \
     return val.field();                                                                  \
+  }                                                                                      \
+  template<>                                                                             \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                \
+    CHECK(val.has_##field());                                                            \
+    return static_cast<cpp_type>(val.field());                                           \
   }                                                                                      \
   template<>                                                                             \
   void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) { \
@@ -48,6 +55,12 @@ template<>
 Shape AttrValueAccessor<Shape>::Attr(const AttrValue& val) {
   return Shape(val.at_shape());
 }
+
+template<>
+Shape AttrValueAccessor<Shape>::Attr(const cfg::AttrValue& val) {
+  return Shape(val.at_shape());
+}
+
 template<>
 void AttrValueAccessor<Shape>::Attr(const Shape& cpp_val, AttrValue* attr_val) {
   cpp_val.ToProto(attr_val->mutable_at_shape());
@@ -58,6 +71,11 @@ void AttrValueAccessor<Shape>::Attr(const Shape& cpp_val, AttrValue* attr_val) {
   template<>                                                                                    \
   cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                            \
     return PbRf2StdVec<cpp_type::value_type>(val.field().val());                                \
+  }                                                                                             \
+  template<>                                                                                    \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                       \
+    const auto& rp_val = val.field().val();                                                     \
+    return cpp_type(rp_val.begin(), rp_val.end());                                              \
   }                                                                                             \
   template<>                                                                                    \
   void AttrValueAccessor<cpp_type>::Attr(const cpp_type& cpp_val, AttrValue* attr_val) {        \
@@ -72,6 +90,15 @@ OF_PP_FOR_EACH_TUPLE(LIST_BASIC_ATTR_SEQ_ENTRY, LIST_BASIC_ATTR_SEQ)
 #define LIST_ENUM_ATTR_SEQ_ENTRY(field, cpp_type, attr_type)                                   \
   template<>                                                                                   \
   cpp_type AttrValueAccessor<cpp_type>::Attr(const AttrValue& val) {                           \
+    std::vector<cpp_type::value_type> ret;                                                     \
+    ret.reserve(val.field().val_size());                                                       \
+    for (const auto& value : val.field().val()) {                                              \
+      ret.emplace_back(static_cast<cpp_type::value_type>(value));                              \
+    }                                                                                          \
+    return ret;                                                                                \
+  }                                                                                            \
+  template<>                                                                                   \
+  cpp_type AttrValueAccessor<cpp_type>::Attr(const cfg::AttrValue& val) {                      \
     std::vector<cpp_type::value_type> ret;                                                     \
     ret.reserve(val.field().val_size());                                                       \
     for (const auto& value : val.field().val()) {                                              \
@@ -118,6 +145,47 @@ template<>
 void AttrValueAccessor<std::vector<std::string>>::Attr(const std::vector<std::string>& cpp_val,
                                                        AttrValue* attr_val) {
   *(attr_val->mutable_at_list_string()->mutable_val()) = StdVec2PbRpf<std::string>(cpp_val);
+}
+
+template<typename ProtoT>
+Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_value) {
+  switch (static_cast<int>(cfg_attr_value.value_case())) {
+#define MAKE_ENTRY(field, T, attr_type)       \
+  case static_cast<int>(attr_type):           \
+    return std::static_pointer_cast<AttrVal>( \
+        std::make_shared<TypedAttrVal<T>>(AttrValueAccessor<T>::Attr(cfg_attr_value)));
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ATTR_SEQ);
+#undef MAKE_ENTRY
+    default: OF_UNIMPLEMENTED();
+  }
+}
+
+/*static*/ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const AttrValue& proto_attr_value) {
+  return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
+}
+
+/*static*/ Maybe<AttrVal> AttrValueUtil::ToCppAttrValue(const cfg::AttrValue& cfg_attr_value) {
+  AttrValue proto_attr_value;
+  cfg_attr_value.ToProto(&proto_attr_value);
+  return MakeCppAttrValueFromProtoOrCfgAttrValue(proto_attr_value);
+}
+
+/*static*/ Maybe<void> AttrValueUtil::ToProtoAttrValue(const AttrVal& cpp_attr_value,
+                                                       AttrValue* attr_value) {
+  if (false) {
+// clang-format off
+#define MAKE_ENTRY(field, cpp_type, attr_type)                                        \
+  }                                                                                   \
+  else if (dynamic_cast<const TypedAttrVal<cpp_type>*>(&cpp_attr_value) != nullptr) { \
+    const auto* ptr = dynamic_cast<const TypedAttrVal<cpp_type>*>(&cpp_attr_value);   \
+    AttrValueAccessor<cpp_type>::Attr(ptr->val(), attr_value);
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ATTR_SEQ);
+#undef MAKE_ENTRY
+    // clang-format on
+  } else {
+    OF_UNIMPLEMENTED();
+  }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace user_op
