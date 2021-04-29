@@ -475,6 +475,7 @@ def _reciprocal(x):
 
     return Reciprocal()(x)
 
+
 class ScalarAddByTensor(Module):
     def __init__(self, name=None) -> None:
         super().__init__()
