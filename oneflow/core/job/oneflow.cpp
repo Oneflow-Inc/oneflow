@@ -1137,7 +1137,6 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     MakePushJob(std::string("System-Push-") + pair.first, pair.first, pair.second, push_job.get());
     jobs.emplace_back(push_job);
   }
-
   for (const auto& pair : pull_op_name2parallel_blob_conf) {
     auto pull_job = std::make_shared<Job>();
     MakePullJob(std::string("System-Pull-") + pair.first, pair.first, pair.second, pull_job.get());
@@ -1150,7 +1149,6 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
-
   MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
