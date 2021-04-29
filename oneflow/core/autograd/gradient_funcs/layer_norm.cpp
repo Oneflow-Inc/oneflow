@@ -76,7 +76,7 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
 Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
-  CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
+  CHECK_EQ_OR_RETURN(outputs.size(), scale_ + 3);
   ctx->has_beta_diff = center_ && inputs.at(1)->requires_grad();
   const int gamma_index = center_ + 1;
   ctx->has_gamma_diff = scale_ && inputs.at(gamma_index)->requires_grad();
