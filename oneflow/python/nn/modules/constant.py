@@ -32,9 +32,7 @@ class _ConstantBase(Module):
         assert isinstance(
             size, (int, tuple)
         ), "shape should be int or tuple int!"
-
-        if isinstance(size, int):
-            size = _single(size)
+        size = _single(size)
         if dtype is None:
             dtype = flow.float32
 
@@ -85,7 +83,7 @@ class Ones(_ConstantBase):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values) defining the shape of the output tensor. 
+        size(an integer or tuple of integer values): defining the shape of the output tensor. 
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
