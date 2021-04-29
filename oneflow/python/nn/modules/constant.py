@@ -28,9 +28,7 @@ class _ConstantBase(Module):
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
-        assert isinstance(
-            size, (int, tuple)
-        ), "shape should be int or tuple int!"
+        assert isinstance(size, (int, tuple)), "shape should be int or tuple int!"
         size = _single(size)
         if dtype is None:
             dtype = flow.float32

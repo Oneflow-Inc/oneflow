@@ -53,14 +53,18 @@ class TestMathModule(flow.unittest.TestCase):
         input = flow.Tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
         of_out = flow.log(input)
         np_out = np.log(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
         test_case.assertTrue(np.allclose(input.log().numpy(), np_out, equal_nan=True))
 
         arr = np.array([-0.7168, -0.5471, -0.8933, -1.4428, -0.1190])
         input2 = flow.Tensor(arr, dtype=flow.float32)
         np_out = np.full((5,), np.nan)
         of_out2 = flow.log(input2)
-        test_case.assertTrue(np.allclose(of_out2.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+        test_case.assertTrue(
+            np.allclose(of_out2.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
 
 
 if __name__ == "__main__":

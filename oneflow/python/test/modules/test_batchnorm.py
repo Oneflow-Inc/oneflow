@@ -48,7 +48,6 @@ class TestBatchNormModule(flow.unittest.TestCase):
         y = m(x)
         test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
 
-
     def test_batchnorm1d_3D_input(test_case):
         input_arr = np.array(
             [
@@ -84,7 +83,6 @@ class TestBatchNormModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         y = m(x)
         test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
-
 
     def test_batchnorm2d(test_case):
         input_arr = np.array(
@@ -149,8 +147,6 @@ class TestBatchNormModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         y = m(x)
         test_case.assertTrue(np.allclose(y.numpy(), output_arr, atol=1e-04))
-
-
 
     def test_batchnorm2d_infer(test_case):
         input_arr = np.array(

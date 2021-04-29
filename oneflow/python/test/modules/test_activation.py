@@ -32,6 +32,7 @@ class TestReLUModule(flow.unittest.TestCase):
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

@@ -128,4 +128,3 @@ def log_op(tensor):
         
     """
     return Log()(tensor)
-
