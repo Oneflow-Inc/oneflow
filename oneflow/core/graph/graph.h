@@ -129,8 +129,7 @@ class Graph {
   void AddAllocatedNode(NodeType*);
   void AddAllocatedEdge(EdgeType*);
   void DeleteNode(NodeType*);
-  void ClearNodes();
-  void ClearEdges();
+  void ResetGraph();
 
   // ToDot
   template<typename StreamT>
@@ -149,6 +148,10 @@ class Graph {
                          const std::function<bool(EdgeType*)>& IsEdgeAllowed,
                          const std::string& file_path) const;
   void ToDotWithAutoFilePath() const;
+
+ protected:
+  void ProtectedDestoryNodes();
+  void ProtectedDestoryEdges();
 
  private:
   std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
@@ -289,12 +292,18 @@ void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ClearNodes() {
+void Graph<NodeType, EdgeType>::ResetGraph() {
+  ProtectedDestoryEdges();
+  ProtectedDestoryNodes();
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::ProtectedDestoryNodes() {
   nodes_.clear();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ClearEdges() {
+void Graph<NodeType, EdgeType>::ProtectedDestoryEdges() {
   edges_.clear();
 }
 
