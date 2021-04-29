@@ -76,7 +76,7 @@ class Sum(Module):
 
 @oneflow_export("sum")
 @register_tensor_op("sum")
-def _sum(input, dim, keepdim=False):
+def _sum(input, dim=None, keepdims=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
 
@@ -89,7 +89,7 @@ def _sum(input, dim, keepdim=False):
 
     """
 
-    return Sum(dim, keepdim)(input)
+    return Sum(dim, keepdims)(input)
 
 
 class ScalarMul(Module):
@@ -245,7 +245,7 @@ class Mean(Module):
 
 @oneflow_export("mean")
 @register_tensor_op("mean")
-def _mean(input_tensor, dim, keepdim):
+def _mean(input_tensor, dim=None, keepdim=False):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
     For example:

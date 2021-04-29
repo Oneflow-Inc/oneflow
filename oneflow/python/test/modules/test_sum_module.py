@@ -22,7 +22,7 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestModule(flow.unittest.TestCase):
+class TestSumModule(flow.unittest.TestCase):
     def test_sum(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = flow.sum(input, dim=0)

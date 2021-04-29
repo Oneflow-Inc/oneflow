@@ -94,6 +94,91 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(y.numpy(), 5 * np.ones(y.shape)))
         test_case.assertTrue(np.array_equal(z.numpy(), 5 * np.ones(z.shape)))
 
+    def test_div(test_case):
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x / y
+        np_out = np.divide(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x / 3
+        np_out = np.divide(x.numpy(), 3)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 / x
+        np_out = np.divide(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(1))
+        of_out = 3 / x
+        np_out = np.divide(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    def test_mul(test_case):
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x * y
+        np_out = np.multiply(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x * 3
+        np_out = np.multiply(x.numpy(), 3)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 * x
+        np_out = np.multiply(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    def test_add_tensor_method(test_case):
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x + y
+        np_out = np.add(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x + 3
+        np_out = np.add(x.numpy(), 3)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 + x
+        np_out = np.add(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    def test_sub_tensor_method(test_case):
+        x = flow.Tensor(np.random.randn(1, 1))
+        y = flow.Tensor(np.random.randn(2, 3))
+        of_out = x - y
+        np_out = np.subtract(x.numpy(), y.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = x - 3
+        np_out = np.subtract(x.numpy(), 3)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        x = flow.Tensor(np.random.randn(2, 3))
+        of_out = 3 - x
+        np_out = np.subtract(3, x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    def test_sum(test_case):
+        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        of_out = input.sum(dim=(2, 1))
+        np_out = np.sum(input.numpy(), axis=(2, 1))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    def test_mean(test_case):
+        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
+        of_out = input.mean(dim=0)
+        np_out = np.mean(input.numpy(), axis=0)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()

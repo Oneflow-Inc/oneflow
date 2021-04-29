@@ -60,29 +60,6 @@ class TestDiv(flow.unittest.TestCase):
         np_out = np.divide(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    def test_div_tensor_op(test_case):
-        # test __truediv__
-        x = flow.Tensor(np.random.randn(1, 1))
-        y = flow.Tensor(np.random.randn(2, 3))
-        of_out = x / y
-        np_out = np.divide(x.numpy(), y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(2, 3))
-        of_out = x / 3
-        np_out = np.divide(x.numpy(), 3)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(2, 3))
-        of_out = 3 / x
-        np_out = np.divide(3, x.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(1))
-        of_out = 3 / x
-        np_out = np.divide(3, x.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
 
 if __name__ == "__main__":
     unittest.main()
