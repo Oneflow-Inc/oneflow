@@ -18,6 +18,26 @@ import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
+from typing import Optional
+
+
+
+def _softmax_need_transpose(x, axis):
+    assert type(axis) is int
+    dim_num = len(x.shape)
+    assert dim_num >= 2
+    if axis < 0:
+        axis += dim_num
+    assert axis >= 0
+    assert axis < dim_num
+
+    need_transpose = False
+    permute = list(range(dim_num))
+    if axis != dim_num - 1:
+        need_transpose = True
+        permute[axis] = permute[-1]
+        permute[-1] = axis
+    return need_transpose, permute
 
 
 @oneflow_export("nn.Sigmoid")
@@ -137,3 +157,71 @@ class GELU(Module):
 @register_tensor_op("gelu")
 def gelu_op(tensor):
     return GELU()(tensor)
+
+
+@oneflow_export("nn.LogSoftmax")
+class LogSoftmax(Module):
+    r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
+    input Tensor. 
+    The LogSoftmax formulation can be simplified as:
+
+    .. math::
+        \text{LogSoftmax}(x_{i}) = \log\left(\frac{\exp(x_i) }{ \sum_j \exp(x_j)} \right)
+
+    Args:
+        dim (int): A dimension along which LogSoftmax will be computed.
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example: 
+    
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+    
+        m = flow.nn.LogSoftmax(dim=1)
+        x = flow.Tensor(
+            np.array(
+                [[ 0.4296, -1.1957,  2.5463],
+                [ 1.2552, -1.5747,  0.6923]]
+            )
+        )
+        y = m(x)
+        # [[-2.251349   -3.8766491  -0.13464898]
+        # [-0.48770458 -3.3176045  -1.0506046 ]]
+    """
+
+    def __init__(
+        self, dim: Optional[int] = 1,
+    ):
+        super().__init__()
+
+        self.dim = dim
+        self.softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+        self.log_op = flow.builtin_op("log").Input("x").Output("y").Build()
+        self.transpose_op = (
+            flow.builtin_op("transpose").Input("input").Output("output").Build()
+        )
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, "dim"):
+            self.dim = None
+
+    def forward(self, x):
+        need_transpose, permute = _softmax_need_transpose(x, self.dim)
+        if need_transpose:
+            x = self.transpose_op(x, perm=permute)[0]
+        res = self.softmax_op(x)[0]
+        res = self.log_op(res)[0]
+        if need_transpose:
+            res = self.transpose_op(res, perm=permute)[0]
+        return res
+
+    def extra_repr(self):
+        return "dim={dim}".format(dim=self.dim)
+
