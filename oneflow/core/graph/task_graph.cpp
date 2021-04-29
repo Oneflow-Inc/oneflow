@@ -562,8 +562,8 @@ void CreateOpAttributeRef(Plan* plan, int64_t job_id, TaskProto* task_proto) {
   kernel_conf->set_allocated_op_attribute(nullptr);
 }
 
-void TaskGraph::MoveContentsIntoPlan(Plan* plan, int64_t job_id) {
-  ClearEdges();
+void TaskGraph::MoveContentsIntoPlanAndDestory(Plan* plan, int64_t job_id) {
+  ProtectedDestoryEdges();
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     TaskProto task_proto;
