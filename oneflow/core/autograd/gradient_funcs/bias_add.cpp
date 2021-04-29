@@ -43,7 +43,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
   }
 
   Maybe<void> Capture(BiasAddInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override {
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();
     ctx->bias_requires_grad = inputs.at(1)->requires_grad();
@@ -60,7 +60,7 @@ class BiasAdd : public OpExprGradFunction<BiasAddInterpState> {
       for (int i = 0; i < num_axes; ++i) {
         if (i != axis_) { reduce_axes_vec.push_back(i); }
       }
-      AttrValueMap attrs;
+      MutableAttrMap attrs;
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axes_vec));
       in_grads->at(1) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*backward_bias_op_, {out_grads.at(0)}, attrs));

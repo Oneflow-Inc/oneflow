@@ -38,7 +38,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
   Maybe<void> Init(const OpExpr& op) override;
 
   Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
 
   Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -68,7 +68,7 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
 }
 
 Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
   CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
   ctx->has_beta_diff = center_ && inputs.at(1)->requires_grad();
@@ -122,7 +122,7 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
     const auto& x = saved_tensors.at(offset);
     const auto& mean = saved_tensors.at(offset + 1);
     const auto& inv_variance = saved_tensors.at(offset + 2);
-    AttrValueMap attrs;
+    MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     in_grads->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
