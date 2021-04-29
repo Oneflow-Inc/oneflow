@@ -20,6 +20,17 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Sin(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("sin").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("sin")
+@register_tensor_op("sin")
+def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
@@ -42,22 +53,21 @@ class Sin(Module):
         # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
 
     """
+    return Sin()(tensor)
 
+
+class Cos(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("sin").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("cos").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
 
-@oneflow_export("sin")
-@register_tensor_op("sin")
-def sin_op(tensor):
-    return Sin()(tensor)
-
-
-class Cos(Module):
+@oneflow_export("cos")
+@register_tensor_op("cos")
+def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
 
@@ -80,22 +90,21 @@ class Cos(Module):
         # [0.13944048 0.29570782 0.6553126  0.5573547 ]
         
     """
+    return Cos()(tensor)
 
+
+class Log(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("cos").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("log").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
 
-@oneflow_export("cos")
-@register_tensor_op("cos")
-def cos_op(tensor):
-    return Cos()(tensor)
-
-
-class Log(Module):
+@oneflow_export("log")
+@register_tensor_op("log")
+def log_op(tensor):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
 
@@ -118,16 +127,5 @@ class Log(Module):
         # equal to np.log(input)
         
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._op = flow.builtin_op("log").Input("x").Output("y").Build()
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
-@oneflow_export("log")
-@register_tensor_op("log")
-def log_op(tensor):
     return Log()(tensor)
+

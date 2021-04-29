@@ -78,6 +78,12 @@ class _ConstantBase(Module):
 
 
 class Ones(_ConstantBase):
+    def __init__(self, size, dtype=None):
+        super().__init__(size, 1, dtype)
+
+
+@oneflow_export("tmp.ones")
+def ones_op(size, dtype=None):
     r"""
     Returns a tensor filled with the scalar value 1, 
     with the shape defined by the variable argument `size`.
@@ -96,17 +102,16 @@ class Ones(_ConstantBase):
         # [1 1 1 1 1 1 1 1 1 1]
         
     """
-
-    def __init__(self, size, dtype=None):
-        super().__init__(size, 1, dtype)
-
-
-@oneflow_export("tmp.ones")
-def ones_op(size, dtype=None):
     return Ones(size, dtype)()
 
 
 class Zeros(_ConstantBase):
+    def __init__(self, size, dtype=None):
+        super().__init__(size, 0, dtype)
+
+
+@oneflow_export("tmp.zeros")
+def zeros_op(size, dtype=None):
     r"""
     Returns a tensor filled with the scalar value 0, 
     with the shape defined by the variable argument `size`.
@@ -126,11 +131,4 @@ class Zeros(_ConstantBase):
         # [0. 0. 0. 0. 0. ]
 
     """
-
-    def __init__(self, size, dtype=None):
-        super().__init__(size, 0, dtype)
-
-
-@oneflow_export("tmp.zeros")
-def zeros_op(size, dtype=None):
     return Zeros(size, dtype)()
