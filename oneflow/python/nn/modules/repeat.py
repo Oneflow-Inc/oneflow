@@ -26,6 +26,8 @@ class Repeat(Module):
 
     def forward(self, input):
         repeat = self.sizes
+        for repeat_v in repeat:
+            assert repeat_v > 0
         input_shape = input.shape
         assert len(repeat) >= len(input_shape)
         in_reshape = []
