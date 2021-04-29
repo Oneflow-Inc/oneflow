@@ -150,8 +150,8 @@ class Graph {
   void ToDotWithAutoFilePath() const;
 
  protected:
-  void ProtectedDestoryNodes();
-  void ProtectedDestoryEdges();
+  void DestoryNodes();
+  void DestoryEdges();
 
  private:
   std::unique_ptr<HashSet<NodeType*>> FindFirstNontrivialSCC(
@@ -293,17 +293,17 @@ void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ResetGraph() {
-  ProtectedDestoryEdges();
-  ProtectedDestoryNodes();
+  DestoryEdges();
+  DestoryNodes();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ProtectedDestoryNodes() {
+void Graph<NodeType, EdgeType>::DestoryNodes() {
   nodes_.clear();
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ProtectedDestoryEdges() {
+void Graph<NodeType, EdgeType>::DestoryEdges() {
   edges_.clear();
 }
 
