@@ -708,11 +708,11 @@ class TestConv2d(flow.unittest.TestCase):
         conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True)
         test_case.assertTrue(
             not np.allclose(
-                conv.weight.numpy(), np.ones((1, 1, 3, 3)), rtol=1e-4, atol=1e-8
+                conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
             )
         )
         test_case.assertTrue(
-            not np.allclose(conv.bias.numpy(), np.ones((1,)), rtol=1e-4, atol=1e-8)
+            not np.allclose(conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10)
         )
 
     def test_conv2d(test_case):
