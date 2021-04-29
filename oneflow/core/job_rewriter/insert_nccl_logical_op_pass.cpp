@@ -198,6 +198,20 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
                .Build()
                .op_conf();
     return true;
+  } else if ((src_sbp.has_split_parallel() && dst_sbp.has_broadcast_parallel())
+             && (src_sbp.split_parallel().axis() > 0)
+             && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num
+                 == 0)) {
+    // S(1)->B : AllGather Noncontinuous
+    *ret = user_op::UserOpConfWrapperBuilder(kNcclLogicalOpNamePrefix + "-S2B-" + NewUniqueId())
+               .Op("_nccl_logical_all_gather_noncontinuous")
+               .Input("in", lbn)
+               .Output("out")
+               .Attr<int64_t>("in_split_axis", src_sbp.split_parallel().axis())
+               .ScopeSymbolId(scope_symbol_id)
+               .Build()
+               .op_conf();
+    return true;
   } else if ((src_sbp.has_split_parallel() && dst_sbp.has_split_parallel())
              && (src_sbp.split_parallel().axis() != dst_sbp.split_parallel().axis())
              && (logical_blob_desc.shape().At(src_sbp.split_parallel().axis()) % parallel_num == 0)

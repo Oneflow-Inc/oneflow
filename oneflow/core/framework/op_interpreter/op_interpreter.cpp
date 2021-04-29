@@ -34,7 +34,7 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                   TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                   TensorTuple* outputs, const AttrMap& attrs) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, attrs);                     \
@@ -49,7 +49,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                       TensorTuple* outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), op_expr.input_size());
   const auto& scope = JUST(GetCurrentScope());
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, attrs));
@@ -93,14 +93,14 @@ Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const Tenso
 }
 
 Maybe<void> LazyInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                       TensorTuple* outputs, const AttrMap& attrs) const {
   // TODO(hjchen2)
   UNIMPLEMENTED();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                    TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                    TensorTuple* outputs, const AttrMap& attrs) const {
 #define APPLY_IF(op_type)                                              \
   if (const auto* op = dynamic_cast<const op_type##Expr*>(&op_expr)) { \
     return ApplyImpl(*op, inputs, outputs, attrs);                     \
@@ -122,7 +122,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
 }
 
 Maybe<void> EagerInterpreter::ApplyImpl(const FunctionOpExpr& op_expr, const TensorTuple& inputs,
-                                        TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                        TensorTuple* outputs, const AttrMap& attrs) const {
   // TODO(hjchen2)
   UNIMPLEMENTED();
   return Maybe<void>::Ok();
@@ -144,7 +144,7 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 }  // namespace
 
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
-                                       TensorTuple* outputs, const AttrValueMap& attrs) const {
+                                       TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
   {
     autograd::AutoGradMode mode(false);

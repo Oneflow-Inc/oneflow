@@ -17,15 +17,29 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_ATTR_VAL_ACCESSOR_H_
 
 #include "oneflow/core/framework/attr_value.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+namespace cfg {
+class AttrValue;
+}
 
 namespace user_op {
 
 template<typename T>
 struct AttrValueAccessor final {
   static T Attr(const AttrValue&);
+  static T Attr(const cfg::AttrValue&);
   static void Attr(const T&, AttrValue*);
+};
+
+class AttrVal;
+
+struct AttrValueUtil final {
+  static Maybe<AttrVal> ToCppAttrValue(const AttrValue& proto_attr_value);
+  static Maybe<AttrVal> ToCppAttrValue(const cfg::AttrValue& cfg_attr_value);
+  static Maybe<void> ToProtoAttrValue(const AttrVal& cpp_attr_value, AttrValue* attr_value);
 };
 
 }  // namespace user_op
