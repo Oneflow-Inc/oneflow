@@ -39,7 +39,7 @@ class TestMaskedFill(flow.unittest.TestCase):
                 ],
             ]
         )
-        
+
         output = np.array(
             [
                 [

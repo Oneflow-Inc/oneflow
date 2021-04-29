@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import numpy as np
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
@@ -44,7 +43,7 @@ class MaskedFill(Module):
 @register_tensor_op("masked_fill")
 def masked_fill_op(tensor, mask, /, value):
     r"""
-    Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True. 
+    Fills elements of :attr:`self` tensor with :attr:`value` where :attr:`mask` is True.
     The shape of :attr:`mask` must be broadcastable with the shape of the underlying tensor.
 
     Args:
@@ -72,7 +71,7 @@ def masked_fill_op(tensor, mask, /, value):
         input = flow.Tensor(in_arr, dtype=flow.float32)
         mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
 
-        output = input.masked_fill(mask, fill_value) 
+        output = input.masked_fill(mask, fill_value)
         #  [[[-0.13169311  8.765432    8.765432    8.765432  ]
         #   [-1.5195427   8.765432   -0.53301203  8.765432  ]
         #   [-1.3824419  -2.6344805   8.765432   -0.6714487 ]]

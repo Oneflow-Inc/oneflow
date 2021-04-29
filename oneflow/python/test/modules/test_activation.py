@@ -123,12 +123,12 @@ class TestSigmoid(flow.unittest.TestCase):
         y2 = flow.sigmoid(x)
         y3 = x.sigmoid()
         output = np.array(
-            [[0.69366997, 0.60735673, 0.52585548], 
-            [0.23947647, 0.33676055, 0.56800622]]
+            [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
         )
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

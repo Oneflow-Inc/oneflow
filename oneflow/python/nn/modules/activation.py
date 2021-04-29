@@ -21,7 +21,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
 
 
-
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
@@ -66,9 +65,9 @@ class ReLU(Module):
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
@@ -79,9 +78,9 @@ class Tanh(Module):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -137,7 +136,7 @@ class GELU(Module):
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         input = flow.Tensor(x)
         gelu = flow.nn.GELU()
-        
+
         out = gelu(input)
 
         # out [-0.15426877, 0., 0.34573123]
@@ -170,10 +169,10 @@ class Sigmoid(Module):
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -188,16 +187,18 @@ class Sigmoid(Module):
         )
         m = flow.nn.Sigmoid() # or y = flow.sigmoid(x)
         y = m(x)
-        # [[0.69366997, 0.60735673, 0.52585548], 
+        # [[0.69366997, 0.60735673, 0.52585548],
         # [0.23947647, 0.33676055, 0.56800622]]
 
     """
+
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 @oneflow_export("sigmoid")
 @register_tensor_op("sigmoid")
@@ -211,10 +212,10 @@ def sigmoid_op(tensor):
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -228,7 +229,7 @@ def sigmoid_op(tensor):
             )
         )
         y = x.sigmoid()
-        # [[0.69366997, 0.60735673, 0.52585548], 
+        # [[0.69366997, 0.60735673, 0.52585548],
         # [0.23947647, 0.33676055, 0.56800622]]
 
     """
@@ -238,7 +239,7 @@ def sigmoid_op(tensor):
 @oneflow_export("nn.LogSoftmax")
 class LogSoftmax(Module):
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
-    input Tensor. 
+    input Tensor.
     The LogSoftmax formulation can be simplified as:
 
     .. math::
@@ -252,13 +253,13 @@ class LogSoftmax(Module):
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
 
-    For example: 
-    
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
-    
+
         m = flow.nn.LogSoftmax(dim=1)
         x = flow.Tensor(
             np.array(
@@ -300,4 +301,3 @@ class LogSoftmax(Module):
 
     def extra_repr(self):
         return "dim={dim}".format(dim=self.dim)
-
