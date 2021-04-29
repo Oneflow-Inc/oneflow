@@ -18,6 +18,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.common_types import _size_any_t
+from oneflow.python.nn.modules.utils import _single
 
 from typing import Optional, Union
 
@@ -33,7 +34,7 @@ class _ConstantBase(Module):
         ), "shape should be int or tuple int!"
 
         if isinstance(size, int):
-            size = [size]
+            size = _single(size)
         if dtype is None:
             dtype = flow.float32
 
