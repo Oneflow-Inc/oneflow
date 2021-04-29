@@ -32,12 +32,12 @@ class Arange(Module):
         assert type(self.end) == int, "Params `end`'s type should be int"
         assert type(self.step) == int, "Params `step`'s type should be int"
         # TODO: zhaoluyang Put dtype attr in forward() after bug fixed
-        self._op_arange = flow.builtin_op("range").Output("out").Attr("dtype", self.dtype).Build()
+        self._op_arange = (
+            flow.builtin_op("range").Output("out").Attr("dtype", self.dtype).Build()
+        )
 
     def forward(self):
-        return self._op_arange(
-            start=self.start, delta=self.step, limit=self.end
-        )[0]
+        return self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
 
 
 @oneflow_export("arange")

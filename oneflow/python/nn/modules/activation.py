@@ -263,6 +263,81 @@ def sigmoid_op(tensor):
     return Sigmoid()(tensor)
 
 
+@oneflow_export("nn.Softmax")
+@oneflow_export("softmax")
+class Softmax(Module):
+    def __init__(self, dim: Optional[int] = None):
+        super().__init__()
+        self.axis = -1 if dim is None else dim
+        self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        need_transpose, permute = _softmax_need_transpose(x, self.axis)
+
+        if need_transpose:
+            x = x.transpose(perm=permute)
+
+        res = self._op(x)[0]
+        if need_transpose:
+            res = res.transpose(perm=permute)
+        return res
+
+
+@oneflow_export("softmax")
+@register_tensor_op("softmax")
+def softmax_op(tensor, /, dim=None):
+    r"""Applies the Softmax function to an n-dimensional input Tensor
+    rescaling them so that the elements of the n-dimensional output Tensor
+    lie in the range [0,1] and sum to 1.
+
+    Softmax is defined as:
+
+    .. math::
+        \text{Softmax}(x_{i}) = \frac{\exp(x_i)}{\sum_j \exp(x_j)}
+
+    When the input Tensor is a sparse tensor then the unspecifed
+    values are treated as ``-inf``.
+
+    Shape:
+        - Input: :math:`(*)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(*)`, same shape as the input
+
+    Returns:
+        a Tensor of the same dimension and shape as the input with
+        values in the range [0, 1]
+
+    Args:
+        dim (int): A dimension along which Softmax will be computed (so every slice
+            along dim will sum to 1).
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        m = flow.nn.Softmax(dim = 2)
+        x = flow.Tensor(
+            np.array(
+                [[[[-0.46716809,  0.40112534,  0.61984003],
+                [-1.31244969, -0.42528763,  1.47953856]]],
+
+                [[[ 1.02978742, -0.49383053,  1.88214159],
+                [ 1.35351622, -1.46251285, -1.40751374]]]]
+            )
+        )
+        y = m(x)
+        # [[[[0.6995764  0.6955959  0.29740235]
+        # [0.3004236  0.30440408 0.7025977 ]]]
+
+        # [[[0.4197673  0.7248568  0.96407217]
+        # [0.58023274 0.27514324 0.03592779]]]]
+    """
+    return Softmax(dim)(tensor)
+
+
 @oneflow_export("nn.LogSoftmax")
 class LogSoftmax(Module):
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional

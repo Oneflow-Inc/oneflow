@@ -123,7 +123,7 @@ class TestGeLU(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestSigmoid(flow.unittest.TestCase):
+class TestSigmoidModule(flow.unittest.TestCase):
     def test_sigmoid(test_case):
         m = flow.nn.Sigmoid()
         x = flow.Tensor(
@@ -149,7 +149,117 @@ class TestSigmoid(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestLogSoftmax(flow.unittest.TestCase):
+class TestSoftmaxModule(flow.unittest.TestCase):
+    def test_softmax(test_case):
+        m = flow.nn.Softmax(dim=1)
+        x = flow.Tensor(
+            np.array(
+                [
+                    [
+                        [
+                            [-0.46716809, 0.40112534, 0.61984003],
+                            [-1.31244969, -0.42528763, 1.47953856],
+                        ]
+                    ],
+                    [
+                        [
+                            [1.02978742, -0.49383053, 1.88214159],
+                            [1.35351622, -1.46251285, -1.40751374],
+                        ]
+                    ],
+                ]
+            )
+        )
+        y = m(x)
+        output = np.array(
+            [[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]], [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+    def test_softmax_dim_2(test_case):
+        m = flow.nn.Softmax(dim=2)
+        x = flow.Tensor(
+            np.array(
+                [
+                    [
+                        [
+                            [-0.46716809, 0.40112534, 0.61984003],
+                            [-1.31244969, -0.42528763, 1.47953856],
+                        ]
+                    ],
+                    [
+                        [
+                            [1.02978742, -0.49383053, 1.88214159],
+                            [1.35351622, -1.46251285, -1.40751374],
+                        ]
+                    ],
+                ]
+            )
+        )
+        y = m(x)
+        output = np.array(
+            [
+                [
+                    [
+                        [0.69957644, 0.69559592, 0.29740232],
+                        [0.30042359, 0.30440408, 0.70259768],
+                    ]
+                ],
+                [
+                    [
+                        [0.41976729, 0.72485679, 0.96407223],
+                        [0.58023274, 0.27514324, 0.03592779],
+                    ]
+                ],
+            ]
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+    def test_softmax_dim_3(test_case):
+        m = flow.nn.Softmax(dim=3)
+        x = flow.Tensor(
+            np.array(
+                [
+                    [
+                        [
+                            [-0.46716809, 0.40112534, 0.61984003],
+                            [-1.31244969, -0.42528763, 1.47953856],
+                        ]
+                    ],
+                    [
+                        [
+                            [1.02978742, -0.49383053, 1.88214159],
+                            [1.35351622, -1.46251285, -1.40751374],
+                        ]
+                    ],
+                ]
+            )
+        )
+        y = m(x)
+        output = np.array(
+            [
+                [
+                    [
+                        [0.15752424, 0.37535521, 0.46712062],
+                        [0.05065432, 0.12300029, 0.82634538],
+                    ]
+                ],
+                [
+                    [
+                        [0.28065580, 0.06116108, 0.65818310],
+                        [0.89041674, 0.05328530, 0.05629803],
+                    ]
+                ],
+            ]
+        )
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLogSoftmaxModule(flow.unittest.TestCase):
     def test_logsoftmax(test_case):
         m = flow.nn.LogSoftmax(1)
         x = flow.Tensor(
