@@ -44,7 +44,7 @@ class DefaultOpExprGradFunction : public OpExprGradFunction<DefaultOpExprInterpS
   Maybe<void> Init(const OpExpr& op) override;
 
   Maybe<void> Capture(DefaultOpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
 
   Maybe<void> Apply(const DefaultOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -285,7 +285,7 @@ Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(DefaultOpExprInter
 Maybe<void> DefaultOpExprGradFunction::Capture(DefaultOpExprInterpState* ctx,
                                                const TensorTuple& inputs,
                                                const TensorTuple& outputs,
-                                               const AttrValueMap& attrs) const {
+                                               const AttrMap& attrs) const {
   CHECK_OR_RETURN(attrs.empty())
       << "The default op expr gradient func does not support dynamic attributes.";
   JUST(UpdateRequiresBackward(ctx, inputs));

@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-class AttrValueMap;
+class AttrMap;
 
 namespace vm {
 struct LocalCallOpKernelUtil;
@@ -272,7 +272,7 @@ class StatefulOpKernel final {
     UpdateInferContext(nullptr, nullptr);
   }
 
-  void ResetDynamicOpAttrs(const AttrValueMap& attrs);
+  void ResetDynamicOpAttrs(const AttrMap& attrs);
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
