@@ -33,7 +33,7 @@ class CrossEntropyLoss(Module):
             :attr:`reduction`. Default: ``'mean'``
 
     For example:
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         input = flow.Tensor(
@@ -53,8 +53,8 @@ class CrossEntropyLoss(Module):
     def __init__(
         self,
         weight=None,
-        ignore_index: int = None,
-        reduction: str = "mean"
+        ignore_index: Optional[int] = None,
+        reduction: Optional[str] = "mean"
     ) -> None:
         super().__init__()
         if weight is not None:

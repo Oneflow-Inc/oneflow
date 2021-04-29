@@ -461,12 +461,12 @@ class Reciprocal(Module):
 @oneflow_export("reciprocal")
 @register_tensor_op("reciprocal")
 def _reciprocal(x):
-    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will 
+    r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
 
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
@@ -529,18 +529,20 @@ def _add(x, y):
 
     .. code-block:: python
 
-        # Example
         import oneflow as flow
+
         # element-wise add
         x = flow.Tensor(np.random.randn(2,3))
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.add(x,y).numpy()
         print(out.shape) # (2,3)
+
         # scalar add
         x = 5
         y = flow.Tensor(np.random.randn(2,3))
         out = flow.add(x,y).numpy()
         print(out.shape) # (2,3)
+
         # broadcast add
         x = flow.Tensor(np.random.randn(1,1))
         y = flow.Tensor(np.random.randn(2,3))
