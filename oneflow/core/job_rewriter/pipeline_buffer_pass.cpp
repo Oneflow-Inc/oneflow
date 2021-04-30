@@ -206,6 +206,14 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         && IsForwardPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
+      if (src_node->parallel_desc().device_type() == DeviceType::kCPU
+          && dst_node->parallel_desc().device_type() == DeviceType::kGPU) {
+        if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
+          TryInsertOrUseBufferOp(edge, total_stage_num * 2, true, &buffer_op_name2op_conf,
+                                 &buffer_op_name2parallel_conf, &mut_op_name2conf);
+          return;
+        }
+      }
       bool near_dst = false;
       if (src_node->parallel_desc().device_type() != DeviceType::kGPU) { near_dst = true; }
       // NOTE(chengcheng): buffer_size = stage id diff.
