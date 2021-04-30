@@ -229,7 +229,6 @@ def gelu_op(x):
     return GELU()(x)
 
 
-
 @oneflow_export("nn.Sigmoid")
 class Sigmoid(Module):
     r"""Applies the element-wise function:
