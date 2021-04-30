@@ -49,7 +49,7 @@ def eq_op(input, other):
 
     Args:
     input (Tensor): the tensor to compare
-    other (Tensor or float): the tensor or value to compare
+    other (Tensor): the tensor to compare
 
     Returns:
     A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
