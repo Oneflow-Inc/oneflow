@@ -81,7 +81,7 @@ int64_t GetStageIdHint(const OpNode* node) {
   return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
-void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
+void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size, const bool near_dst,
                             HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
                             HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
                             HashMap<std::string, OperatorConf>* mut_op_name2conf) {
@@ -91,8 +91,16 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
   const int64_t stage_id = GetStageIdHint(dst_node);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
-    std::string buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
-                                 + "-stage_id_" + std::to_string(stage_id);
+    std::string buffer_op_name;
+    std::string buffer_near;
+    if (near_dst) {
+      buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
+                       + "-stage_id_" + std::to_string(stage_id);
+      buffer_near = "(near dst)";
+    } else {
+      buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name();
+      buffer_near = "(near src)";
+    }
     auto it = buffer_op_name2op_conf->find(buffer_op_name);
     if (it == buffer_op_name2op_conf->end()) {
       it = buffer_op_name2op_conf
@@ -106,9 +114,19 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
                              .Build()
                              .op_conf())
                .first;
+      const OpNode* buffer_near_op = nullptr;
+      if (near_dst) {
+        buffer_near_op = dst_node;
+      } else {
+        buffer_near_op = src_node;
+      }
       CHECK(buffer_op_name2parallel_conf
-                ->emplace(buffer_op_name, dst_node->parallel_desc().parallel_conf())
+                ->emplace(buffer_op_name, buffer_near_op->parallel_desc().parallel_conf())
                 .second);
+
+      LOG(INFO) << "\n Insert buffer op " << buffer_near << " : [" << buffer_op_name
+                << "](buffer_size:" << buffer_size << ") \n from [" << src_node->op().op_name()
+                << "] -> [" << dst_node->op().op_name() << "] \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -122,10 +140,6 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
           ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, buffer_out);
       CHECK_EQ(old_lbn, lbn);
     }
-
-    LOG(INFO) << "\n Insert buffer op: [" << buffer_op_name << "](buffer_size:" << buffer_size
-              << ") \n from [" << src_node->op().op_name() << "] -> [" << dst_node->op().op_name()
-              << "] \n";
   }
 }
 
@@ -171,7 +185,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        TryInsertOrUseBufferOp(in_edge, buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOp(in_edge, buffer_size, true, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
@@ -193,12 +207,25 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         && IsForwardPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
-      // NOTE(chengcheng): buffer_size = stage diff - 1, because CopyHD can act as a buffer.
+      bool near_dst = false;
+      if (src_node->parallel_desc().device_type() != DeviceType::kGPU) { near_dst = true; }
+      // NOTE(chengcheng): buffer_size = stage id diff.
       //   Buffer size need be careful in some complex case.
-      int64_t buffer_size = dst_stage_id - src_stage_id - 1;
+      int64_t buffer_size = dst_stage_id - src_stage_id;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
-        buffer_size += 1; /* NOTE(chengcheng): quick fix for debug */
-        TryInsertOrUseBufferOp(edge, buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOp(edge, buffer_size, near_dst, &buffer_op_name2op_conf,
+                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+      }
+    }
+    if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
+        && IsBackwardPass(dst_node)) {
+      const int64_t src_stage_id = GetStageIdHint(src_node);
+      const int64_t dst_stage_id = GetStageIdHint(dst_node);
+      // NOTE(chengcheng): buffer_size = stage id diff.
+      //   Buffer size need be careful in some complex case.
+      int64_t buffer_size = dst_stage_id - src_stage_id;
+      if (src_stage_id < dst_stage_id && buffer_size >= 1) {
+        TryInsertOrUseBufferOp(edge, buffer_size, false, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
