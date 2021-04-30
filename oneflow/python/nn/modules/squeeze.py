@@ -22,6 +22,24 @@ from typing import Optional, Sequence
 
 
 class Squeeze(Module):
+    def __init__(self, axis: Optional[Sequence[int]] = None) -> None:
+        super().__init__()
+
+        self._op = (
+            flow.builtin_op("squeeze")
+            .Input("in")
+            .Output("out")
+            .Attr("axes", axis)
+            .Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("tmp.squeeze")
+@register_tensor_op("squeeze")
+def squeeze_op(input, axis: Optional[Sequence[int]] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
     If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
@@ -49,23 +67,4 @@ class Squeeze(Module):
         # out.shape (1, 3)
 
     """
-
-    def __init__(self, axis: Optional[Sequence[int]] = None) -> None:
-        super().__init__()
-
-        self._op = (
-            flow.builtin_op("squeeze")
-            .Input("in")
-            .Output("out")
-            .Attr("axes", axis)
-            .Build()
-        )
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
-@oneflow_export("tmp.squeeze")
-@register_tensor_op("squeeze")
-def squeeze_op(tensor, axis: Optional[Sequence[int]] = None):
-    return Squeeze(axis=axis)(tensor)
+    return Squeeze(axis=axis)(input)

@@ -24,32 +24,6 @@ from oneflow.python.ops.transpose_util import (
 
 
 class Argmax(Module):
-    """The op computes the index with the largest value of a Tensor at specified axis.
-
-    Args:
-        input (oneflow.Tensor): Input Tensor
-        dim (int, optional): dimension to be calculated. Defaults to the last dim (-1)
-        keepdim (bool optional):  whether the output tensor has dim retained or not. Ignored if dim=None.
-
-    Returns:
-        oneflow.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
-
-    For example:
-
-    .. code-block:: python 
-
-        import oneflow as flow
-        import numpy as np
-
-        x = np.array([[1, 3, 8, 7, 2],
-                    [1, 9, 4, 3, 2]], dtype=np.float32)
-
-        out = flow.argmax(flow.Tensor(x))
-
-        # out [2 1]
-
-    """
-
     def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
         self._op_softmax_last_dim = (
@@ -100,5 +74,30 @@ class Argmax(Module):
 
 @oneflow_export("argmax")
 @register_tensor_op("argmax")
-def argmax_op(tensor, dim: int = None, keepdim: bool = False):
-    return Argmax(dim=dim, keepdim=keepdim)(tensor)
+def argmax_op(input, dim: int = None, keepdim: bool = False):
+    """The op computes the index with the largest value of a Tensor at specified axis.
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int, optional): dimension to be calculated. Defaults to the last dim (-1)
+        keepdim (bool optional):  whether the output tensor has dim retained or not. Ignored if dim=None.
+
+    Returns:
+        oneflow.Tensor: A Tensor(dtype=int32) contains the index with the largest value of `input`
+
+    For example:
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([[1, 3, 8, 7, 2],
+                    [1, 9, 4, 3, 2]], dtype=np.float32)
+
+        out = flow.argmax(flow.Tensor(x))
+
+        # out [2 1]
+
+    """
+    return Argmax(dim=dim, keepdim=keepdim)(input)
