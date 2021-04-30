@@ -81,7 +81,6 @@ class Tanh(Module):
 
     Args:
         x (oneflow.Tensor): A Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: The result Tensor
@@ -113,8 +112,37 @@ class Tanh(Module):
 
 @oneflow_export("tanh")
 @register_tensor_op("tanh")
-def tanh_op(tensor):
-    return Tanh()(tensor)
+def tanh_op(x):
+    r"""This operator computes the hyperbolic tangent value of Tensor.
+
+    The equation is: 
+
+    .. math:: 
+
+        out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([-1, 0, 1]).astype(np.float32)
+        input = flow.Tensor(x)
+        tanh = flow.nn.Tanh()
+        out = tanh(input).numpy()
+
+        # out [-0.7615942  0.         0.7615942]
+
+    """
+    return Tanh()(x)
 
 
 @oneflow_export("nn.GELU")
@@ -128,7 +156,6 @@ class GELU(Module):
 
     Args:
         x (oneflow.Tensor): Input Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: A Tensor.
@@ -162,5 +189,35 @@ class GELU(Module):
 
 @oneflow_export("gelu")
 @register_tensor_op("gelu")
-def gelu_op(tensor):
-    return GELU()(tensor)
+def gelu_op(x):
+    r"""Gelu activation operator.
+
+    The equation is:
+
+    .. math::
+        out = 0.5 * x * (1 + tanh(\sqrt{\frac{2}{\pi}} * (x + 0.044715x^{3})))
+
+    Args:
+        x (oneflow.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor: A Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        input = flow.Tensor(x)
+        gelu = flow.nn.GELU()
+        
+        out = gelu(input)
+
+        # out [-0.15426877, 0., 0.34573123]
+
+    """
+    return GELU()(x)
