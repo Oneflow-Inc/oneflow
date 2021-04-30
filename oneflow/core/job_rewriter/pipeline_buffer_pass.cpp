@@ -172,7 +172,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
-      const int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
+      const int64_t buffer_size = total_stage_num; /* NOTE(chengcheng): max buffer size */
       CHECK_GE(buffer_size, 0);
       CHECK_LT(buffer_size, total_stage_num);
       if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
