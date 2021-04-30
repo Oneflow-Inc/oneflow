@@ -34,7 +34,7 @@ class Unsqueeze(Module):
 
 @oneflow_export("unsqueeze")
 @register_tensor_op("unsqueeze")
-def unsqueeze_op(tensor, /, dim):
+def unsqueeze_op(tensor, dim):
     r"""Returns a new tensor with a dimension of size one inserted at the
     specified position.
 

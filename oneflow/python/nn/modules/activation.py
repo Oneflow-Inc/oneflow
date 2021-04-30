@@ -283,7 +283,7 @@ class Softmax(Module):
 
 
 @oneflow_export("softmax")
-def softmax_op(tensor, /, dim=None):
+def softmax_op(tensor, dim=None):
     r"""Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
     lie in the range [0,1] and sum to 1.
