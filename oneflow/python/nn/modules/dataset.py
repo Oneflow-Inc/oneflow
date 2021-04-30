@@ -37,7 +37,7 @@ from oneflow.python.nn.modules.utils import (
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple, Sequence
-
+import traceback
 
 class OfrecordReader(Module):
     def __init__(
@@ -98,6 +98,208 @@ class OfrecordRawDecoder(Module):
             .Attr("auto_zero_padding", auto_zero_padding)
             .Build()
         )
+
+    def forward(self, input):
+        res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.CoinFlip")
+class CoinFlip(Module):
+    def __init__(
+        self,
+        batch_size: int = 1,
+        random_seed: Optional[int] = None,
+        probability: float = 0.5,
+    ):
+        super().__init__()
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, True
+        self._op = (
+            flow.builtin_op("coin_flip")
+            .Output("out")
+            .Attr("batch_size", batch_size)
+            .Attr("probability", probability)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .Build()
+        )
+
+    def forward(self):
+        res = self._op()[0]
+        return res
+
+
+@oneflow_export("nn.CropMirrorNormalize")
+class CropMirrorNormalize(Module):
+    def __init__(
+        self,
+        color_space: str = "BGR",
+        output_layout: str = "NCHW",
+        crop_h: int = 0,
+        crop_w: int = 0,
+        crop_pos_y: float = 0.5,
+        crop_pos_x: float = 0.5,
+        mean: Sequence[float] = [0.0],
+        std: Sequence[float] = [1.0],
+        output_dtype: flow.dtype = flow.float,
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("crop_mirror_normalize_from_uint8")
+            .Input("in")
+            .Input("mirror")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("output_layout", output_layout)
+            .Attr("mean", mean)
+            .Attr("std", std)
+            .Attr("crop_h", crop_h)
+            .Attr("crop_w", crop_w)
+            .Attr("crop_pos_y", crop_pos_y)
+            .Attr("crop_pos_x", crop_pos_x)
+            .Attr("output_dtype", output_dtype)
+            .Build()
+        )
+
+    def forward(self, input, mirror):
+        res = self._op(input, mirror)[0]
+        return res
+
+
+@oneflow_export("nn.OFRecordImageDecoderRandomCrop")
+class OFRecordImageDecoderRandomCrop(Module):
+    def __init__(
+        self,
+        blob_name: str,
+        color_space: str = "BGR",
+        num_attempts: int = 10,
+        random_seed: Optional[int] = None,
+        random_area: Sequence[float] = [0.08, 1.0],
+        random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
+    ):
+        super().__init__()
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, False
+        self._op = (
+            flow.builtin_op("ofrecord_image_decoder_random_crop")
+            .Input("in")
+            .Output("out")
+            .Attr("name", blob_name)
+            .Attr("color_space", color_space)
+            .Attr("num_attempts", num_attempts)
+            .Attr("random_area", random_area)
+            .Attr("random_aspect_ratio", random_aspect_ratio)
+            .Attr("has_seed", has_seed)
+            .Attr("seed", seed)
+            .Build()
+        )
+
+    def forward(self, input):
+        res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.image.Resize")
+class ImageResize(Module):
+    def __init__(
+        self,
+        target_size: Union[int, Sequence[int]] = None,
+        min_size: Optional[int] = None,
+        max_size: Optional[int] = None,
+        keep_aspect_ratio: bool = False,
+        resize_side: str = "shorter",
+        channels: int = 3,
+        dtype: Optional[flow.dtype] = None,
+        interpolation_type: str = "auto",
+        name: Optional[str] = None,
+        # deprecated params, reserve for backward compatible
+        color_space: Optional[str] = None,
+        interp_type: Optional[str] = None,
+        resize_shorter: int = 0,
+        resize_x: int = 0,
+        resize_y: int = 0,
+    ):
+        super().__init__()
+        # process deprecated params
+        deprecated_param_used = False
+        if color_space is not None:
+            print(
+                "WARNING: color_space has been deprecated. Please use channels instead."
+            )
+            print(traceback.format_stack()[-2])
+            deprecated_param_used = True
+            assert isinstance(color_space, str)
+            if color_space.upper() == "RGB" or color_space.upper() == "BGR":
+                channels = 3
+            elif color_space.upper() == "GRAY":
+                channels = 1
+            else:
+                raise ValueError("invalid color_space")
+        if interp_type is not None:
+            print(
+                "WARNING: interp_type has been deprecated. Please use interpolation_type instead."
+            )
+            print(traceback.format_stack()[-2])
+            deprecated_param_used = True
+            assert isinstance(interp_type, str)
+            if interp_type == "Linear":
+                interpolation_type = "bilinear"
+            elif interp_type == "NN":
+                interpolation_type = "nearest_neighbor"
+            elif interp_type == "Cubic":
+                interpolation_type = "bicubic"
+            else:
+                raise ValueError("invalid interp_type")
+
+        if resize_x > 0 and resize_y > 0:
+            print(
+                "WARNING: resize_x and resize_y has been deprecated. Please use target_size instead."
+            )
+            print(traceback.format_stack()[-2])
+            deprecated_param_used = True
+            target_size = (resize_x, resize_y)
+            keep_aspect_ratio = False
+
+        if resize_shorter > 0:
+            print(
+                "WARNING: resize_shorter has been deprecated. Please use target_size instead."
+            )
+            print(traceback.format_stack()[-2])
+            deprecated_param_used = True
+            target_size = resize_shorter
+            keep_aspect_ratio = True
+            resize_side = "shorter"
+
+        if keep_aspect_ratio:
+            #  TODO(Liang Depeng)
+            assert False
+        else:
+            if (
+                not isinstance(target_size, (list, tuple))
+                or len(target_size) != 2
+                or not all(isinstance(size, int) for size in target_size)
+            ):
+                raise ValueError(
+                    "target_size must be a form like (width, height) when keep_aspect_ratio is False"
+                )
+
+            if dtype is None:
+                dtype = flow.uint8
+
+            target_w, target_h = target_size
+            self._op = (
+                flow.builtin_op("image_resize_to_fixed")
+                .Input("in")
+                .Output("out")
+                .Output("scale")
+                .Attr("target_width", target_w)
+                .Attr("target_height", target_h)
+                .Attr("channels", channels)
+                .Attr("data_type", dtype)
+                .Attr("interpolation_type", interpolation_type)
+                .Build()
+            )
 
     def forward(self, input):
         res = self._op(input)[0]
