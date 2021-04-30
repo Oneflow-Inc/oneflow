@@ -44,9 +44,7 @@ def _check_axis(axis, shape):
 
 class Sum(Module):
     def __init__(
-        self,
-        axis: Optional[Union[int, Sequence[int]]] = None,
-        keepdims: bool = False
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
     ) -> None:
         super().__init__()
 
@@ -130,11 +128,7 @@ class ElementwiseMul(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("multiply")
-            .Input("x")
-            .Input("y")
-            .Output("out")
-            .Build()
+            flow.builtin_op("multiply").Input("x").Input("y").Output("out").Build()
         )
 
     def forward(self, x, y):
@@ -145,11 +139,7 @@ class BroadcastMul(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_mul")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
+            flow.builtin_op("broadcast_mul").Input("x").Input("y").Output("z").Build()
         )
 
     def forward(self, x, y):
@@ -281,11 +271,7 @@ class BroadcastSub(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_sub")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
+            flow.builtin_op("broadcast_sub").Input("x").Input("y").Output("z").Build()
         )
 
     def forward(self, x, y):
@@ -370,11 +356,7 @@ class BroadcastDiv(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_div")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
+            flow.builtin_op("broadcast_div").Input("x").Input("y").Output("z").Build()
         )
 
     def forward(self, x, y):
@@ -450,9 +432,7 @@ def _div(x, y):
 class Reciprocal(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("reciprocal_no_nan").Input("x").Output("y").Build()
-        )
+        self._op = flow.builtin_op("reciprocal_no_nan").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
@@ -507,11 +487,7 @@ class BroadcastAdd(Module):
     def __init__(self) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_add")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
+            flow.builtin_op("broadcast_add").Input("x").Input("y").Output("z").Build()
         )
 
     def forward(self, x, y):

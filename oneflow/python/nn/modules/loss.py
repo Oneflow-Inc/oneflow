@@ -54,7 +54,7 @@ class CrossEntropyLoss(Module):
         self,
         weight=None,
         ignore_index: Optional[int] = None,
-        reduction: Optional[str] = "mean"
+        reduction: Optional[str] = "mean",
     ) -> None:
         super().__init__()
         if weight is not None:
