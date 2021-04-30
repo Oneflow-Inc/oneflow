@@ -172,17 +172,17 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
-      const int64_t buffer_size = total_stage_num; /* NOTE(chengcheng): max buffer size */
+      const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
+        /* last stage(loss) does NOT need to insert buffer */
+        if (dst_stage_id == max_stage_id) { continue; }
         if (src_stage_id != dst_stage_id) {
           LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        /* last stage(loss) does NOT need to insert buffer */
-        if (dst_stage_id == max_stage_id) { continue; }
         TryInsertOrUseBufferOp(in_edge, buffer_size, true, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
