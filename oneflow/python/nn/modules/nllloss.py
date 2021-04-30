@@ -80,21 +80,26 @@ class NLLLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
+        self._gather_nd_op = (
+            flow.builtin_op("gather_nd")
+            .Input("params")
+            .Input("indices")
+            .Output("out")
+            .Build()
+        )
 
     def forward(self, input, target):
         n = input.shape[0]
-        c = input.shape[1]
-        input = flow.negative(input)
-        mask = np.array(target[0:n].numpy())
-
-        if len(mask.shape) > 1:
-            input = [input[i, int(mask[i][0]),] for i in range(n)]
+        idx = flow.unsqueeze(flow.arange(0, b, 1), dim=1)
+        target = flow.unsqueeze(target, axis=1)
+        t = flow.cat([idx, target], axis=1)
+        res = self._gather_nd_op(x, indices=t)[0]
+        if self.reduction == 'none':
+            return res
+        elif self.reduction == 'sum':
+            return flow.sum(res)
         else:
-            input = [input[i, int(mask[i]),] for i in range(n)]
+            return flow.mean(res)
 
-        if self.reduction == "sum":
-            return input
-        elif self.reduction == "mean":
-            return input / n
-        else:
-            return flow.cat(input, axis=0)
+
+        

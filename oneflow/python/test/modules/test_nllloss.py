@@ -19,38 +19,43 @@ import numpy as np
 import oneflow as flow
 
 
-def np_nll_loss(input, target, mode=None):
-    n = input.shape[0]
-    c = input.shape[1]
-    input = -input
-    mask = target[0:n]
+def nll_loss_1d(logs, targets, reduction='none'):
+    input_shape = logs.shape
+    N = input_shape[0]
+    C = input_shape[1]
+    out = np.zeros_like(targets).astype(np.float64)
+    total_weight = N
+    for i in range(N):
+        cur_target = targets[i]
+        out[i] = -logs[i][cur_target]
+    if reduction == 'sum':
+        return np.sum(out), np.array([total_weight]).astype('float64')
+    elif reduction == 'mean':
+        return out.sum() / total_weight, np.array(
+            [total_weight]).astype('float64')
+    elif reduction == 'none':
+        return out
 
-    if len(mask.shape) > 1:
-            input = [input[i, int(mask[i][0]),] for i in range(n)]
-        else:
-            input = [input[i, int(mask[i]),] for i in range(n)]
-    
-    if mode == "sum":
-        loss = 0
-        for x in input:
-            loss += x
-        return loss
-    elif mode == "mean":
-        loss = 0
-        for x in input:
-            loss += x
-        return loss / n
-    else:
-        new_shape = tuple()
-        if len(mask.shape) == 1:
-            input = np.reshape(input, (target.shape[0], 1,))
-        else:
-            new_shape.append(target.shape[0])
-            new_shape.append(1)
-            for i in range(1, len(target.shape)):
-                new_shape.append(target.shape[i])
-            input = np.reshape(input, new_shape)
-        return input
+
+def nll_loss_2d(logs, targets, reduction='none'):
+    input_shape = logs.shape
+    N = input_shape[0]
+    H = input_shape[2]
+    W = input_shape[3]
+    out = np.zeros_like(targets).astype(np.float64)
+    total_weight =  N * H * W
+    for i in range(N):
+        for h in range(H):
+            for w in range(W):
+                cur_target = targets[i][h][w]
+                out[i][h][w] = -logs[i][cur_target][h][w] * cur_weight
+    if reduction == 'sum':
+        return np.sum(out), np.array([total_weight]).astype('float64')
+    elif reduction == 'mean':
+        return out.sum() / total_weight, np.array(
+            [total_weight]).astype('float64')
+    elif reduction == 'none':
+        return out
 
 
 @unittest.skipIf(
@@ -73,7 +78,7 @@ class TestNLLLossModule(flow.unittest.TestCase):
 
         target = flow.Tensor(y, dtype=flow.int)
         nll_loss = flow.nn.NLLLoss()
-        of_out = nll_loss(input, target)
+        of_out = nll_loss_1d(input, target)
         np_out = np_nll_loss(input.numpy(), target.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
@@ -93,7 +98,7 @@ class TestNLLLossModule(flow.unittest.TestCase):
         target = flow.Tensor(y, dtype=flow.int)
         nll_loss = flow.nn.NLLLoss(reduction="mean")
         of_out = nll_loss(input, target)
-        np_out = np_nll_loss(input.numpy(), target.numpy(), mode="mean")
+        np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="mean")
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     def test_nllloss_sum(test_case):
@@ -112,7 +117,7 @@ class TestNLLLossModule(flow.unittest.TestCase):
         target = flow.Tensor(y, dtype=flow.int)
         nll_loss = flow.nn.NLLLoss(reduction="sum")
         of_out = nll_loss(input, target)
-        np_out = np_nll_loss(input.numpy(), target.numpy(), mode="sum")
+        np_out = np_nll_loss(input.numpy(), target.numpy(), reduction="sum")
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
     def test_nllloss_segmentation_none(test_case):
@@ -124,7 +129,31 @@ class TestNLLLossModule(flow.unittest.TestCase):
         target = flow.Tensor(y, dtype=flow.int)
         nll_loss = flow.nn.NLLLoss()
         of_out = nll_loss(input, target)
-        np_out = np_nll_loss(input.numpy(), target.numpy())
+        np_out = nll_loss_2d(input.numpy(), target.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_nllloss_segmentation_mean(test_case):
+        x = np.array(
+            [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
+        ).astype(np.float32)
+        input = flow.Tensor(x, dtype=flow.float32)
+        y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
+        target = flow.Tensor(y, dtype=flow.int)
+        nll_loss = flow.nn.NLLLoss(reduction="mean")
+        of_out = nll_loss(input, target)
+        np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="mean")
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    
+    def test_nllloss_segmentation_sum(test_case):
+        x = np.array(
+            [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
+        ).astype(np.float32)
+        input = flow.Tensor(x, dtype=flow.float32)
+        y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
+        target = flow.Tensor(y, dtype=flow.int)
+        nll_loss = flow.nn.NLLLoss(reduction="sum")
+        of_out = nll_loss(input, target)
+        np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="sum")
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
