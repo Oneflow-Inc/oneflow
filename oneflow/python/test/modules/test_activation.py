@@ -145,114 +145,58 @@ class TestSigmoidModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
 
 
+def numpy_softmax(x, axis):
+    x = x - x.max(axis=axis, keepdims=True)
+    y = np.exp(x)
+    return y / y.sum(axis=axis, keepdims=True)
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestSoftmaxModule(flow.unittest.TestCase):
     def test_softmax(test_case):
-        m = flow.nn.Softmax(dim=1)
-        x = flow.Tensor(
-            np.array(
-                [
-                    [
-                        [
-                            [-0.46716809, 0.40112534, 0.61984003],
-                            [-1.31244969, -0.42528763, 1.47953856],
-                        ]
-                    ],
-                    [
-                        [
-                            [1.02978742, -0.49383053, 1.88214159],
-                            [1.35351622, -1.46251285, -1.40751374],
-                        ]
-                    ],
-                ]
-            )
-        )
+        axis = 0
+        m = flow.nn.Softmax(dim=axis)
+        arr = np.random.randn(2, 3, 4, 5)
+        x = flow.Tensor(arr)
         y = m(x)
-        output = np.array(
-            [[[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]], [[[1.0, 1.0, 1.0], [1.0, 1.0, 1.0]]]]
-        )
+        output = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
+    
+    def test_softmax_dim_1(test_case):
+        axis = 1
+        m = flow.nn.Softmax(dim=axis)
+        arr = np.random.randn(9, 7, 8, 16)
+        x = flow.Tensor(arr)
+        y = m(x)
+        output = numpy_softmax(arr, axis)
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    
     def test_softmax_dim_2(test_case):
-        x = flow.Tensor(
-            np.array(
-                [
-                    [
-                        [
-                            [-0.46716809, 0.40112534, 0.61984003],
-                            [-1.31244969, -0.42528763, 1.47953856],
-                        ]
-                    ],
-                    [
-                        [
-                            [1.02978742, -0.49383053, 1.88214159],
-                            [1.35351622, -1.46251285, -1.40751374],
-                        ]
-                    ],
-                ]
-            )
-        )
-        y = flow.softmax(x, dim=2)
-        output = np.array(
-            [
-                [
-                    [
-                        [0.69957644, 0.69559592, 0.29740232],
-                        [0.30042359, 0.30440408, 0.70259768],
-                    ]
-                ],
-                [
-                    [
-                        [0.41976729, 0.72485679, 0.96407223],
-                        [0.58023274, 0.27514324, 0.03592779],
-                    ]
-                ],
-            ]
-        )
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
-    def test_softmax_dim_3(test_case):
-        m = flow.nn.Softmax(dim=3)
-        x = flow.Tensor(
-            np.array(
-                [
-                    [
-                        [
-                            [-0.46716809, 0.40112534, 0.61984003],
-                            [-1.31244969, -0.42528763, 1.47953856],
-                        ]
-                    ],
-                    [
-                        [
-                            [1.02978742, -0.49383053, 1.88214159],
-                            [1.35351622, -1.46251285, -1.40751374],
-                        ]
-                    ],
-                ]
-            )
-        )
+        axis = 2
+        m = flow.nn.Softmax(dim=axis)
+        arr = np.random.randn(2, 5, 6, 3)
+        x = flow.Tensor(arr)
         y = m(x)
-        output = np.array(
-            [
-                [
-                    [
-                        [0.15752424, 0.37535521, 0.46712062],
-                        [0.05065432, 0.12300029, 0.82634538],
-                    ]
-                ],
-                [
-                    [
-                        [0.28065580, 0.06116108, 0.65818310],
-                        [0.89041674, 0.05328530, 0.05629803],
-                    ]
-                ],
-            ]
-        )
+        output = numpy_softmax(arr, axis)
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    
+    def test_softmax_dim_3(test_case):
+        axis = 3
+        m = flow.nn.Softmax(dim=axis)
+        arr = np.random.randn(1, 3, 4, 7)
+        x = flow.Tensor(arr)
+        y = m(x)
+        output = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
+        axis2 = -1
+        m2 = flow.nn.Softmax(dim=axis)
+        y2 = m(x)
+        output2 = numpy_softmax(arr, axis)
+        test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
+    
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
