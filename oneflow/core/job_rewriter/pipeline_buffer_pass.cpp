@@ -88,6 +88,8 @@ void TryInsertOrUseBufferOpToDstNode(
     HashMap<std::string, OperatorConf>* mut_op_name2conf) {
   const OpNode* src_node = op_edge->src_node();
   const OpNode* dst_node = op_edge->dst_node();
+  const int64_t src_stage_id = GetStageIdHint(src_node);
+  const int64_t dst_stage_id = GetStageIdHint(dst_node);
   const std::string& dst_op_name = dst_node->op().op_name();
   const int64_t stage_id = GetStageIdHint(dst_node);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
@@ -113,8 +115,10 @@ void TryInsertOrUseBufferOpToDstNode(
                 .second);
 
       LOG(INFO) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
-                << ") \n from [" << src_node->op().op_name() << "] -> [" << dst_node->op().op_name()
-                << "] \n";
+                << ") \n from [" << src_node->op().op_name()
+                << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+                << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+                << ") \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -199,7 +203,9 @@ void TryInsertOrUseBufferOpBothSrcDst(
 
     LOG(INFO) << "\n Insert buffer op : [" << src_buffer_op_name << " , " << dst_buffer_op_name
               << "](buffer_size:" << buffer_size << ") \n from [" << src_node->op().op_name()
-              << "] -> [" << dst_node->op().op_name() << "] \n";
+              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+              << ") \n";
 
     const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
     for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
@@ -241,16 +247,16 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t dst_stage_id = GetStageIdHint(this_node);
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
+        if (dst_stage_id == max_stage_id) {
+          continue; /* last stage(loss) does NOT need to insert buffer */
+        }
         if (src_stage_id != dst_stage_id) {
           LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        if (dst_stage_id == max_stage_id) {
-          continue; /* last stage(loss) does NOT need to insert buffer */
-        }
-        const int64_t buffer_size = total_stage_num; /* NOTE(chengcheng): max buffer size */
+        const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
