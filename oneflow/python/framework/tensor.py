@@ -292,6 +292,12 @@ class Tensor:
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
+    def __gt__(self, other):
+        return self.gt(other)
+
+    def __lt__(self, other):
+        return self.lt(other)
+
     def __array__(self):
         TODO()
 
