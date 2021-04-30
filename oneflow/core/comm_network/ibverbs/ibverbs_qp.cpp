@@ -23,6 +23,12 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+constexpr int kMaxSendWr = 4096;
+
+}
+
 IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv_cq) {
   // ctx_, pd_
   ctx_ = ctx;
@@ -38,7 +44,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   qp_init_attr.send_cq = send_cq;
   qp_init_attr.recv_cq = recv_cq;
   qp_init_attr.srq = nullptr;
-  qp_init_attr.cap.max_send_wr = device_attr.max_qp_wr;
+  qp_init_attr.cap.max_send_wr = std::min(device_attr.max_qp_wr, kMaxSendWr);
   qp_init_attr.cap.max_recv_wr = max_recv_wr;
   qp_init_attr.cap.max_send_sge = 1;
   qp_init_attr.cap.max_recv_sge = 1;
