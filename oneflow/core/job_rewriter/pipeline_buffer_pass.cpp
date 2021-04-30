@@ -172,11 +172,10 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
-      int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
+      const int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
       CHECK_GE(buffer_size, 0);
       CHECK_LT(buffer_size, total_stage_num);
       if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
-      buffer_size += 1; /* NOTE(chengcheng): quick fix for debug */
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
         if (src_stage_id != dst_stage_id) {
@@ -211,7 +210,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (src_node->parallel_desc().device_type() != DeviceType::kGPU) { near_dst = true; }
       // NOTE(chengcheng): buffer_size = stage id diff.
       //   Buffer size need be careful in some complex case.
-      int64_t buffer_size = dst_stage_id - src_stage_id;
+      const int64_t buffer_size = dst_stage_id - src_stage_id;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
         TryInsertOrUseBufferOp(edge, buffer_size, near_dst, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
@@ -223,7 +222,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       // NOTE(chengcheng): buffer_size = stage id diff.
       //   Buffer size need be careful in some complex case.
-      int64_t buffer_size = src_stage_id - dst_stage_id;
+      const int64_t buffer_size = src_stage_id - dst_stage_id;
       if (src_stage_id > dst_stage_id && buffer_size >= 1) {
         TryInsertOrUseBufferOp(edge, buffer_size, false, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);

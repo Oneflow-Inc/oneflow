@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("copy_out", false, 2, 2);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("copy_out", false);
   ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("copy_out", out_regst); });
 }
 
