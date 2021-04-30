@@ -631,3 +631,104 @@ def log_op(tensor):
         
     """
     return Log()(tensor)
+
+
+class Subtract(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        pass
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarAdd(x)(-1 * y)
+        elif isinstance(y, (int, float)):
+            return ScalarAdd(-1 * y)(x)
+        elif x.shape == y.shape:
+            # TODO: add element-wise op
+            return BroadcastSub()(x, y)
+        elif x.shape == (1,):
+            return ScalarSubByTensor()(y, x)
+        elif y.shape == (1,):
+            return ScalarSubByTensor()(x, y)
+        else:
+            return BroadcastSub()(x, y)
+
+
+class Std(Module):
+    def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
+        super().__init__()
+        assert unbiased == True, "Only support 'unbiased=True' for now!"
+        self.unbiased = unbiased
+        self.keepdim = keepdim
+        self.dim = dim
+        self.reduce_count = 1
+
+        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
+        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
+        self.reduce_sum_op = (
+            flow.builtin_op("reduce_sum")
+            .Input("input_tensor")
+            .Attr("keepdims", keepdim)
+            .Output("output_tensor")
+            .Build()
+        )
+
+    def forward(self, x):
+        self.axis = _check_axis(self.dim, x.shape)
+        if isinstance(self.axis, list) and len(self.axis) == 0:
+            return flow.tmp.zeros(size=x.shape)
+        else:
+            if len(self.axis) == 0:
+                self.reduce_count = x.nelemenet()
+            else:
+                for i in self.axis:
+                    self.reduce_count *= x.shape[i]
+
+            res = self.sqrt_op(
+                Subtract()(
+                    self.reduce_sum_op(self.square_op(x)[0], axis=self.axis)[0]
+                    / self.reduce_count,
+                    self.square_op(
+                        self.reduce_sum_op(x, axis=self.axis)[0] / self.reduce_count,
+                    )[0],
+                )
+            )[0]
+            return res
+
+
+@oneflow_export("tmp.std")
+@register_tensor_op("std")
+def std_op(tensor, dim, unbiased=True, keepdim=False):
+    r"""
+    Returns the standard-deviation of each row of the :attr:`input` tensor in the
+    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
+    reduce over all of them.
+
+    If keepdim is True, the output tensor is of the same size as input except in 
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
+
+    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
+    via the biased estimator. Otherwise, Bessel's correction will be used.
+
+    Args:
+        input (Tensor) – the input tensor.
+        dim (int or tuple of python:ints) – the dimension or dimensions to reduce.
+        unbiased (bool) – whether to use the unbiased estimation or not
+        keepdim (bool) – whether the output tensor has `dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = flow.std(input, dim=2)
+
+        # equal to numpy np.std(arr, axis=2)
+
+    """
+    return Std(dim, unbiased, keepdim)(tensor)
