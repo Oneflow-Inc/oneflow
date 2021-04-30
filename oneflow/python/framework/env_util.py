@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 
 import socket
+import os
 from contextlib import closing
 
 import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
@@ -72,6 +73,9 @@ def env_init():
 
 def init_default_physical_env():
     default_physical_env_proto = _DefaultEnvProto()
+    log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
+    if log_dir:
+        default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
     default_physical_env_proto.is_default_physical_env = True
     CompleteEnvProto(default_physical_env_proto)
     c_api_util.InitDefaultEnv(default_physical_env_proto)
