@@ -429,7 +429,8 @@ gcc --version
                     args.dry,
                     args.use_system_proxy,
                 )
-            cuda_version_literal = "".join(cuda_version.split("."))
+            print(cuda_version.split("."))
+            cuda_version_literal = "".join(cuda_version.split(".")[:2])
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
