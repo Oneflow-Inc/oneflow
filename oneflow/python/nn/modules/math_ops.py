@@ -539,3 +539,95 @@ def _add(x, y):
         return ScalarAddByTensor()(x, y)
     else:
         return BroadcastAdd()(x, y)
+
+
+class Sin(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("sin").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("sin")
+@register_tensor_op("sin")
+def sin_op(tensor):
+    r"""
+    Returns a new tensor with the sine of the elements of :attr:`input`.
+    .. math::
+        \text{out}_{i} = \sin(\text{input}_{i})
+    Args:
+        input (Tensor) – the input tensor.
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.sin(input)
+        # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
+    """
+    return Sin()(tensor)
+
+
+class Cos(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("cos").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("cos")
+@register_tensor_op("cos")
+def cos_op(tensor):
+    r"""
+    Returns a new tensor with the cosine  of the elements of :attr:`input`.
+    .. math::
+        \text{out}_{i} = \cos(\text{input}_{i})
+    Args:
+        input (Tensor) – the input tensor.
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cos(input)
+        # [0.13944048 0.29570782 0.6553126  0.5573547 ]
+        
+    """
+    return Cos()(tensor)
+
+
+class Log(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("log").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("log")
+@register_tensor_op("log")
+def log_op(tensor):
+    r"""
+    Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
+    .. math::
+        y_{i} = \log_{e} (x_{i})
+    Args:
+        input (Tensor) – the input tensor.
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        import numpy as np
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.log(input)
+        # equal to np.log(input)
+        
+    """
+    return Log()(tensor)
