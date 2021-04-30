@@ -81,26 +81,20 @@ int64_t GetStageIdHint(const OpNode* node) {
   return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
-void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size, const bool near_dst,
-                            HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
-                            HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
-                            HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+void TryInsertOrUseBufferOpToDstNode(
+    const OpEdge* op_edge, const int64_t buffer_size,
+    HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
+    HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
+    HashMap<std::string, OperatorConf>* mut_op_name2conf) {
   const OpNode* src_node = op_edge->src_node();
   const OpNode* dst_node = op_edge->dst_node();
   const std::string& dst_op_name = dst_node->op().op_name();
   const int64_t stage_id = GetStageIdHint(dst_node);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
-    std::string buffer_op_name;
-    std::string buffer_near;
-    if (near_dst) {
-      buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
-                       + "-stage_id_" + std::to_string(stage_id);
-      buffer_near = "(near dst)";
-    } else {
-      buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name();
-      buffer_near = "(near src)";
-    }
+    std::string buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
+                                 + "-stage_id_" + std::to_string(stage_id);
+
     auto it = buffer_op_name2op_conf->find(buffer_op_name);
     if (it == buffer_op_name2op_conf->end()) {
       it = buffer_op_name2op_conf
@@ -110,23 +104,17 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size, co
                              .Input("in", lbn)
                              .Output("out")
                              .Attr<int64_t>("buffer_size", buffer_size)
-                             .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                             .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
                              .Build()
                              .op_conf())
                .first;
-      const OpNode* buffer_near_op = nullptr;
-      if (near_dst) {
-        buffer_near_op = dst_node;
-      } else {
-        buffer_near_op = src_node;
-      }
       CHECK(buffer_op_name2parallel_conf
-                ->emplace(buffer_op_name, buffer_near_op->parallel_desc().parallel_conf())
+                ->emplace(buffer_op_name, dst_node->parallel_desc().parallel_conf())
                 .second);
 
-      LOG(INFO) << "\n Insert buffer op " << buffer_near << " : [" << buffer_op_name
-                << "](buffer_size:" << buffer_size << ") \n from [" << src_node->op().op_name()
-                << "] -> [" << dst_node->op().op_name() << "] \n";
+      LOG(INFO) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
+                << ") \n from [" << src_node->op().op_name() << "] -> [" << dst_node->op().op_name()
+                << "] \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -138,6 +126,85 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size, co
     for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
       std::string old_lbn =
           ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, buffer_out);
+      CHECK_EQ(old_lbn, lbn);
+    }
+  }
+}
+
+void TryInsertOrUseBufferOpBothSrcDst(
+    const OpEdge* op_edge, const int64_t buffer_size,
+    HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
+    HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
+    HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+  const OpNode* src_node = op_edge->src_node();
+  const OpNode* dst_node = op_edge->dst_node();
+  const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
+  const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
+  CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc));
+  const std::string& dst_op_name = dst_node->op().op_name();
+  const int64_t src_stage_id = GetStageIdHint(src_node);
+  const int64_t dst_stage_id = GetStageIdHint(dst_node);
+  CHECK_NE(src_stage_id, dst_stage_id);
+  for (const LogicalBlobId& lbi : op_edge->lbis()) {
+    std::string lbn = GenLogicalBlobName(lbi);
+    std::string src_buffer_op_name =
+        kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name();
+    std::string dst_buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-"
+                                     + lbi.blob_name() + "-stage_id_"
+                                     + std::to_string(dst_stage_id);
+
+    auto src_buffer_it = buffer_op_name2op_conf->find(src_buffer_op_name);
+    if (src_buffer_it == buffer_op_name2op_conf->end()) {
+      src_buffer_it = buffer_op_name2op_conf
+                          ->emplace(src_buffer_op_name,
+                                    user_op::UserOpConfWrapperBuilder(src_buffer_op_name)
+                                        .Op("identity_buffer")
+                                        .Input("in", lbn)
+                                        .Output("out")
+                                        .Attr<int64_t>("buffer_size", buffer_size)
+                                        .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                                        .Build()
+                                        .op_conf())
+                          .first;
+      CHECK(buffer_op_name2parallel_conf
+                ->emplace(src_buffer_op_name, src_parallel_desc.parallel_conf())
+                .second);
+    }
+    const OperatorConf& src_conf = src_buffer_it->second;
+    const std::string src_buffer_out = user_op::UserOpConfWrapper(src_conf).output("out", 0);
+
+    auto dst_buffer_it = buffer_op_name2op_conf->find(dst_buffer_op_name);
+    if (dst_buffer_it == buffer_op_name2op_conf->end()) {
+      dst_buffer_it = buffer_op_name2op_conf
+                          ->emplace(dst_buffer_op_name,
+                                    user_op::UserOpConfWrapperBuilder(dst_buffer_op_name)
+                                        .Op("identity_buffer")
+                                        .Input("in", lbn)
+                                        .Output("out")
+                                        .Attr<int64_t>("buffer_size", buffer_size)
+                                        .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
+                                        .Build()
+                                        .op_conf())
+                          .first;
+      CHECK(buffer_op_name2parallel_conf
+                ->emplace(dst_buffer_op_name, dst_parallel_desc.parallel_conf())
+                .second);
+    }
+    const OperatorConf& dst_conf = dst_buffer_it->second;
+
+    auto mut_op_it = mut_op_name2conf->find(dst_op_name);
+    if (mut_op_it == mut_op_name2conf->end()) {
+      mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
+    }
+
+    LOG(INFO) << "\n Insert buffer op : [" << src_buffer_op_name << " , " << dst_buffer_op_name
+              << "](buffer_size:" << buffer_size << ") \n from [" << src_node->op().op_name()
+              << "] -> [" << dst_node->op().op_name() << "] \n";
+
+    const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
+    for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+      std::string old_lbn =
+          ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, dst_buffer_out);
       CHECK_EQ(old_lbn, lbn);
     }
   }
@@ -184,8 +251,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        TryInsertOrUseBufferOp(in_edge, buffer_size, true, &buffer_op_name2op_conf,
-                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+        TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
+                                        &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
     for (const std::string& ctrl_in_op_name : this_node->op().op_conf().ctrl_in_op_name()) {
@@ -209,19 +276,17 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (src_node->parallel_desc().device_type() == DeviceType::kCPU
           && dst_node->parallel_desc().device_type() == DeviceType::kGPU) {
         if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
-          TryInsertOrUseBufferOp(edge, total_stage_num * 2, true, &buffer_op_name2op_conf,
-                                 &buffer_op_name2parallel_conf, &mut_op_name2conf);
+          TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, &buffer_op_name2op_conf,
+                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
           return;
         }
       }
-      bool near_dst = false;
-      if (src_node->parallel_desc().device_type() != DeviceType::kGPU) { near_dst = true; }
       // NOTE(chengcheng): buffer_size = stage id diff.
       //   Buffer size need be careful in some complex case.
       const int64_t buffer_size = dst_stage_id - src_stage_id;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOp(edge, buffer_size, near_dst, &buffer_op_name2op_conf,
-                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+        TryInsertOrUseBufferOpBothSrcDst(edge, buffer_size, &buffer_op_name2op_conf,
+                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
     if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
@@ -232,8 +297,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       //   Buffer size need be careful in some complex case.
       const int64_t buffer_size = src_stage_id - dst_stage_id;
       if (src_stage_id > dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOp(edge, buffer_size, false, &buffer_op_name2op_conf,
-                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+        TryInsertOrUseBufferOpBothSrcDst(edge, buffer_size, &buffer_op_name2op_conf,
+                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
   });
