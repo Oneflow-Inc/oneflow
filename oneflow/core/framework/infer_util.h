@@ -109,7 +109,7 @@ class DeviceInferContext {
 
  protected:
   DeviceInferContext() = default;
-  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
 };
 
 struct TensorDescInferFnUtil {

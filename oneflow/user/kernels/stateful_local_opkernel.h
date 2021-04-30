@@ -156,13 +156,13 @@ class LocalUserOpInferContext : public user_op::InferContext {
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
   const ArgVec& inputs() const override { return zero_copy_base_ctx_.inputs(); }
@@ -187,6 +187,12 @@ class LocalUserOpInferContext : public user_op::InferContext {
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
+  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                         int32_t index) {
+    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(arg_name, index);
+    if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
+    return tensor_desc;
+  }
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
