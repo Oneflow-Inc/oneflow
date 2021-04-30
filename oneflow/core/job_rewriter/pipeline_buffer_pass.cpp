@@ -173,9 +173,6 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
       const int64_t buffer_size = total_stage_num; /* NOTE(chengcheng): max buffer size */
-      CHECK_GE(buffer_size, 0);
-      CHECK_LT(buffer_size, total_stage_num);
-      if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
         if (src_stage_id != dst_stage_id) {
@@ -184,6 +181,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
+        /* last stage(loss) does NOT need to insert buffer */
+        if (dst_stage_id == max_stage_id) { continue; }
         TryInsertOrUseBufferOp(in_edge, buffer_size, true, &buffer_op_name2op_conf,
                                &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
