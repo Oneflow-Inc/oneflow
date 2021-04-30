@@ -13,25 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
-#define ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
-
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
-class AttrValueMap : public HashMap<std::string, std::shared_ptr<cfg::AttrValue>> {
- public:
-  using HashMap<std::string, std::shared_ptr<cfg::AttrValue>>::HashMap;
+namespace {
 
-  template<typename T>
-  Maybe<T> GetAttr(const std::string& attr_name) const;
+REGISTER_SCOPE_CONFIG_DEF().Int64(
+    "pipeline_stage_id_hint", 0,
+    "Manually marking different stages of pipelining parallelism. \n Generally speaking, different "
+    "stages are on different devices, and these stages are connected sequentially, so that the "
+    "whole network can be pipeline parallel.");
 
-  template<typename T>
-  Maybe<void> SetAttr(const std::string& attr_name, const T& attr_val);
-};
+}  // namespace
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_MAP_H_
