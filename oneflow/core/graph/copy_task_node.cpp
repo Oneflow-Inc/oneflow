@@ -23,24 +23,8 @@ limitations under the License.
 namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::string name("copy_out");
-  std::shared_ptr<RegstDesc> out_regst(nullptr);
-  CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
-  if (copy_hd != nullptr) {
-    TaskNode* first_dst_node = nullptr;
-    ForEachNodeOnOutDataEdge([&](TaskNode* node) {
-      if (first_dst_node == nullptr) { first_dst_node = node; }
-    });
-    if (out_regst == nullptr) {
-      // normal copy hd task can reuse mem
-      out_regst = ProduceRegst(name, true);
-    }
-  }
-  if (out_regst == nullptr) {
-    // copy comm_net task cannot reuse mem
-    out_regst = ProduceRegst(name, false);
-  }
-  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst(name, out_regst); });
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("copy_out", false);
+  ForEachOutDataEdge([&](TaskEdge* edge) { edge->AddRegst("copy_out", out_regst); });
 }
 
 void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInDataEdge()->GetSoleRegst()); }
