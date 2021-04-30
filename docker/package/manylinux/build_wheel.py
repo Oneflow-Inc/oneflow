@@ -50,7 +50,10 @@ def build_img(
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
-    from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
+    cuda_version_img = cuda_version
+    if cuda_version == "11.2":
+        cuda_version_img = "11.2.2"
+    from_img = f"nvidia/cuda:{cuda_version_img}-cudnn{cudnn_version}-devel-centos7"
     tuna_build_arg = ""
     if use_tuna:
         tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://mirrors.aliyun.com/pypi/simple"'
@@ -356,8 +359,6 @@ if __name__ == "__main__":
         def build():
             img_tag = None
             skip_img = args.skip_img
-            if cuda_version == "11.2":
-                cuda_version = "11.2.2"
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
