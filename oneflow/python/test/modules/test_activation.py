@@ -120,16 +120,19 @@ class TestGeLU(flow.unittest.TestCase):
 
 
 def numpy_sigmoid(x):
-  return 1.0 / (1 + np.exp(-x))
+    return 1.0 / (1 + np.exp(-x))
+
 
 def numpy_softmax(x, axis):
     x = x - x.max(axis=axis, keepdims=True)
     y = np.exp(x)
     return y / y.sum(axis=axis, keepdims=True)
 
+
 def numpy_logsoftmax(x, dim):
     e_x = np.exp(x - np.max(x, axis=dim, keepdims=True))
     return np.log(e_x / e_x.sum(axis=dim, keepdims=True))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -164,7 +167,7 @@ class TestSoftmaxModule(flow.unittest.TestCase):
         y = m(x)
         output = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    
+
     def test_softmax_dim_1(test_case):
         axis = 1
         m = flow.nn.Softmax(dim=axis)
@@ -173,7 +176,7 @@ class TestSoftmaxModule(flow.unittest.TestCase):
         y = m(x)
         output = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    
+
     def test_softmax_dim_2(test_case):
         axis = 2
         m = flow.nn.Softmax(dim=axis)
@@ -182,7 +185,7 @@ class TestSoftmaxModule(flow.unittest.TestCase):
         y = m(x)
         output = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    
+
     def test_softmax_dim_3(test_case):
         axis = 3
         m = flow.nn.Softmax(dim=axis)
@@ -197,7 +200,7 @@ class TestSoftmaxModule(flow.unittest.TestCase):
         y2 = m(x)
         output2 = numpy_softmax(arr, axis)
         test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
-    
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -221,7 +224,7 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
         y = m(x)
         output = numpy_logsoftmax(input_arr, dim)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    
+
     def test_logsoftmax_dim_3(test_case):
         dim = 3
         m = flow.nn.LogSoftmax(dim)

@@ -32,11 +32,15 @@ class Eq(Module):
                 assert (
                     input.shape[i] >= other.shape[i]
                 ), "The second tensor's shape should broadcastable with the first argument."
-        elif isinstance(other,int) or isinstance(other,float):
-            raise NotImplementedError("Unsupport data type, int or float data type are not support yet!")
+        elif isinstance(other, int) or isinstance(other, float):
+            raise NotImplementedError(
+                "Unsupport data type, int or float data type are not support yet!"
+            )
         else:
-            raise NotImplementedError("Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument.")
-   
+            raise NotImplementedError(
+                "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
+            )
+
         return self.eq_op(input, other)[0]
 
 

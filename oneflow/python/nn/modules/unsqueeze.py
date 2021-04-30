@@ -27,11 +27,11 @@ class Unsqueeze(Module):
 
     def forward(self, input):
         assert (
-            -(1+input.ndimension()) <= self.dim <= input.ndimension()
+            -(1 + input.ndimension()) <= self.dim <= input.ndimension()
         ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
-        
+
         if self.dim < 0:
-            self.dim = 1+input.ndimension() + self.dim
+            self.dim = 1 + input.ndimension() + self.dim
         return self._op(input, axis=self.dim)[0]
 
 
