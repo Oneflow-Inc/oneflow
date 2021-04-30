@@ -26,6 +26,10 @@ import math
 class Identity(Module):
     """A placeholder identity operator that is argument-insensitive.
 
+    Args:
+        args: any argument (unused)
+        kwargs: any keyword argument (unused)
+
     For example: 
 
     .. code-block:: python 
@@ -41,8 +45,7 @@ class Identity(Module):
         # output = input
 
     """
-
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super().__init__()
 
     def forward(self, input: Tensor) -> Tensor:
