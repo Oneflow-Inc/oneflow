@@ -213,6 +213,7 @@ def build_oneflow(
     bash_wrap,
     dry,
     use_system_proxy,
+    enter_bash,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -239,14 +240,23 @@ def build_oneflow(
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
     )
+    if enter_bash:
+        docker_cmd += " -it"
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib:$LD_LIBRARY_PATH
+export ONEFLOW_SRC_DIR={oneflow_src_dir}
+export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
+"""
+    if enter_bash:
+        bash_cmd += "\nbash"
+    else:
+        bash_cmd += f"""
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
-    if skip_wheel:
+    if skip_wheel or enter_bash:
         pass
     else:
         bash_cmd += f"""
@@ -329,6 +339,7 @@ if __name__ == "__main__":
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
+    parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
@@ -454,6 +465,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.bash,
                 )
 
         try:
