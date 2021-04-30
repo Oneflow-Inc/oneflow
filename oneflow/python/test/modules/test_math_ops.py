@@ -10,8 +10,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
 import unittest
+import oneflow as flow
 import numpy as np
 
 
@@ -21,7 +21,7 @@ import numpy as np
 )
 class TestPowModule(flow.unittest.TestCase):
     def test_pow(test_case):
-        pow = flow.Pow()
+        pow = flow.pow()
         input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
         of_out = pow(input, 2.1)
         np_out = np.power(input.numpy(), 2.1)

@@ -11,11 +11,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-
-from typing import Optional, Union
-from oneflow.python.oneflow_export import oneflow_export
+from typing import Union
 from oneflow.python.nn.module import Module
-from typing import Optional
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -27,16 +25,16 @@ class Pow(Module):
     
     For example:
     .. code-block:: python
-        # Example
-        pow = flow.Pow()
+        import oneflow as flow
+        pow = flow.pow()
         x = flow.Tensor(np.array([1,2,3,4,5,6]))
         out = pow(x,2).numpy()
         print(out) # [1,4,9,16,25,36]
     """
 
-    def __init__(self, name: Optional[str] = None) -> None:
+    def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_pow", name).Input("in").Output("out").Build()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
 
     def forward(self, x, exponent: Union[int, float]):
         return self._op(x, exponent=float(exponent))[0]
