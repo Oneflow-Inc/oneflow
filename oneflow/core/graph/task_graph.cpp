@@ -49,6 +49,17 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_scope_symbol_id());
+  int64_t scope_symbol_id = op_conf.scope_symbol_id();
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+      << " Error! op : \n " << op_conf.DebugString()
+      << " has error scope_symbol_id = " << scope_symbol_id
+      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
+  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return scope.scope_proto().calculation_pass_name();
+}
+
 bool IsOptimizerPassOp(const Operator* op) {
   // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
   // ops with fw/bw ops
@@ -57,13 +68,7 @@ bool IsOptimizerPassOp(const Operator* op) {
     // optimizer subgraph ops.
     return false;
   }
-  int64_t scope_symbol_id = op->op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op->op_conf().DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
+  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
 }
 
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
@@ -85,7 +90,7 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
   if (op_conf.has_user_conf()) {
     const std::string& user_type_name = op_conf.user_conf().op_type_name();
     if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
-        || user_type_name == "unpack") {
+        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
       return true;
     }
   }
@@ -137,7 +142,7 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     CHECK_EQ(cur_node->chain_id(), -1);
     cur_node->set_chain_id(this_chain_id);
 
-    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
+    cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
           && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
           && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
