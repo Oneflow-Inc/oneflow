@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from typing import Union
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
@@ -128,3 +129,25 @@ def log_op(tensor):
         
     """
     return Log()(tensor)
+
+@register_tensor_op("pow")
+@oneflow_export("pow")
+class Pow(Module):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+    .. code-block:: python
+        import oneflow as flow
+        pow = flow.pow()
+        x = flow.Tensor(np.array([1,2,3,4,5,6]))
+        out = pow(x,2).numpy()
+        print(out) # [1,4,9,16,25,36]
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+
+    def forward(self, x, exponent: Union[int, float]):
+        return self._op(x, exponent=float(exponent))[0]
