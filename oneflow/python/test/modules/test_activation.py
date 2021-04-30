@@ -127,6 +127,10 @@ def numpy_softmax(x, axis):
     y = np.exp(x)
     return y / y.sum(axis=axis, keepdims=True)
 
+def numpy_logsoftmax(x, dim):
+    e_x = np.exp(x - np.max(x, axis=dim, keepdims=True))
+    return np.log(e_x / e_x.sum(axis=dim, keepdims=True))
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -201,82 +205,30 @@ class TestSoftmaxModule(flow.unittest.TestCase):
 )
 class TestLogSoftmaxModule(flow.unittest.TestCase):
     def test_logsoftmax(test_case):
-        m = flow.nn.LogSoftmax(1)
-        x = flow.Tensor(
-            np.array([[0.4296, -1.1957, 2.5463], [1.2552, -1.5747, 0.6923]])
-        )
+        dim = 1
+        m = flow.nn.LogSoftmax(dim)
+        input_arr = np.random.randn(4, 7)
+        x = flow.Tensor(input_arr)
         y = m(x)
-        output = np.array(
-            [
-                [-2.25134873, -3.87664890, -0.13464880],
-                [-0.48770463, -3.31760454, -1.05060458],
-            ]
-        )
+        output = numpy_logsoftmax(input_arr, dim)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
-    def test_logsoftmax_v2(test_case):
-        m = flow.nn.LogSoftmax(dim=2)
-        x = flow.Tensor(
-            np.array(
-                [
-                    [
-                        [
-                            [2.55630851, 1.57471120, 0.25240266, -0.57634264],
-                            [0.72222596, 0.35014620, 0.43715513, 1.41162395],
-                            [0.12103304, -1.15901530, 1.08098269, 0.04042318],
-                        ],
-                        [
-                            [-0.43854573, 1.07273626, 1.80571628, -1.72897887],
-                            [1.33143651, -1.53906214, -1.45766914, -1.10325944],
-                            [-0.14271064, 0.38371494, 0.45469931, -0.32640621],
-                        ],
-                    ],
-                    [
-                        [
-                            [1.75221181, -1.04841065, -0.41832924, -0.56028533],
-                            [0.89104170, -0.10217502, -0.21890916, -0.24784143],
-                            [-0.35868922, -1.64597833, -0.19254614, 0.24511036],
-                        ],
-                        [
-                            [0.08831860, 2.37159801, 0.79408669, -0.39868262],
-                            [-0.69181246, -1.11924624, -0.47067565, 0.14795294],
-                            [-0.23413812, -0.71034479, 0.44405901, -0.90119874],
-                        ],
-                    ],
-                ]
-            )
-        )
-
+    def test_logsoftmax_dim_2(test_case):
+        dim = 2
+        m = flow.nn.LogSoftmax(dim)
+        input_arr = np.random.randn(3, 4, 5)
+        x = flow.Tensor(input_arr)
         y = m(x)
-        output = np.array(
-            [
-                [
-                    [
-                        [-0.22100820, -0.30664772, -1.50251734, -2.31782818],
-                        [-2.05509090, -1.53121281, -1.31776488, -0.32986164],
-                        [-2.65628386, -3.04037428, -0.67393732, -1.70106244],
-                    ],
-                    [
-                        [-2.10596132, -0.45455331, -0.26023546, -1.93661511],
-                        [-0.33597916, -3.06635165, -3.52362084, -1.31089568],
-                        [-1.81012630, -1.14357471, -1.61125243, -0.53404248],
-                    ],
-                ],
-                [
-                    [
-                        [-0.43424436, -1.41734290, -1.24530625, -1.52699995],
-                        [-1.29541445, -0.47110727, -1.04588616, -1.21455598],
-                        [-2.54514551, -2.01491070, -1.01952314, -0.72160423],
-                    ],
-                    [
-                        [-0.78056860, -0.07357123, -0.68661338, -1.20370412],
-                        [-1.56069970, -3.56441545, -1.95137572, -0.65706855],
-                        [-1.10302532, -3.15551400, -1.03664112, -1.70622015],
-                    ],
-                ],
-            ]
-        )
-
+        output = numpy_logsoftmax(input_arr, dim)
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    
+    def test_logsoftmax_dim_3(test_case):
+        dim = 3
+        m = flow.nn.LogSoftmax(dim)
+        input_arr = np.random.randn(8, 9, 7, 3)
+        x = flow.Tensor(input_arr)
+        y = m(x)
+        output = numpy_logsoftmax(input_arr, dim)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
 
