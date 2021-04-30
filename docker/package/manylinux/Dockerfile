@@ -30,11 +30,13 @@ RUN yum -y install unzip && curl -L -o manylinux.zip https://github.com/Oneflow-
 ENV SSL_CERT_FILE=/opt/_internal/certs.pem
 # manylinux2014 end
 
-RUN yum-config-manager --add-repo https://yum.repos.intel.com/setup/intelproducts.repo && \
-    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB && \
+COPY docker/package/manylinux/CentOS7-Base-163.repo /tmp/CentOS-Base.repo
+RUN if [ "${use_tuna_yum}" = "1" ]; then mv /tmp/CentOS-Base.repo /etc/yum.repos.d/ && yum makecache ; fi
+RUN yum-config-manager --add-repo https://yum.repos.intel.com/oneapi && \
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB && \
     yum update -y && yum install -y epel-release && \
     yum -y install centos-release-scl && \
-    yum install -y intel-mkl-64bit-2020.0-088 nasm rdma-core-devel devtoolset-7-gcc* rsync
+    yum install -y intel-oneapi-mkl-2021.2.0 nasm rdma-core-devel devtoolset-7-gcc* rsync
 
 RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
@@ -46,8 +48,7 @@ RUN curl -L $bazel_url -o /usr/local/bin/bazel \
     && bazel
 
 COPY dev-requirements.txt /tmp/dev-requirements.txt
-RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
-    && /opt/python/cp36-cp36m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
+RUN /opt/python/cp36-cp36m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && /opt/python/cp37-cp37m/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && /opt/python/cp38-cp38/bin/pip install $pip_args -r /tmp/dev-requirements.txt --user \
     && rm /tmp/dev-requirements.txt
