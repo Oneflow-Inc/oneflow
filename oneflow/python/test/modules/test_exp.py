@@ -24,13 +24,13 @@ import oneflow as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestExp(flow.unittest.TestCase):
-    def test_exp_v1(test_case):
+    def test_exp(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.exp(input)
         np_out = np.exp(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-    def test_exp_v2(test_case):
+    def test_tensor_exp(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.exp()
         np_out = np.exp(input.numpy())
