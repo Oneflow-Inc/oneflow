@@ -205,9 +205,9 @@ class UserOpInferContext final : public user_op::InferContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   const UserOp* op_;

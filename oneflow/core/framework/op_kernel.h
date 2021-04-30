@@ -60,16 +60,12 @@ class KernelCreateContext {
   const std::string& op_name() const { return user_op_conf().op_name(); }
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
-  bool has_attr(const std::string& attr_name) const {
-    const auto& attr_name2attr_val = user_op_conf().attrs();
-    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
-  }
   template<typename T>
   const T& Attr(const std::string& attr_name) const;
 
  protected:
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInitContext {
@@ -113,10 +109,6 @@ class KernelInitContext {
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
-  bool has_attr(const std::string& attr_name) const {
-    const auto& attr_name2attr_val = user_op_conf().attrs();
-    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
-  }
   template<typename T>
   const T& Attr(const std::string& attr_name) const;
 
@@ -128,7 +120,7 @@ class KernelInitContext {
   KernelInitContext(const KernelInitContext&) = delete;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInferContext {
@@ -170,10 +162,6 @@ class KernelInferContext {
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
-  bool has_attr(const std::string& attr_name) const {
-    const auto& attr_name2attr_val = user_op_conf().attrs();
-    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
-  }
   template<typename T>
   const T& Attr(const std::string& attr_name) const;
 
@@ -188,7 +176,7 @@ class KernelInferContext {
   KernelInferContext(const KernelInferContext&) = delete;
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class Tensor;
@@ -230,10 +218,6 @@ class KernelComputeContext {
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
-  bool has_attr(const std::string& attr_name) const {
-    const auto& attr_name2attr_val = user_op_conf().attrs();
-    return attr_name2attr_val.find(attr_name) != attr_name2attr_val.end();
-  }
   template<typename T>
   const T& Attr(const std::string& attr_name) const;
 
@@ -243,7 +227,7 @@ class KernelComputeContext {
 
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
 
-  virtual const std::shared_ptr<AttrVal>& Attr4AttrName(const std::string& attr_name) const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class OpKernelState {
