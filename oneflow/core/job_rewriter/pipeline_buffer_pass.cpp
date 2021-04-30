@@ -194,6 +194,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       // NOTE(chengcheng): buffer_size = stage diff - 1, because CopyHD can act as a buffer.
+      //   Buffer size need be careful in some complex case.
       int64_t buffer_size = dst_stage_id - src_stage_id - 1;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
         buffer_size += 1; /* NOTE(chengcheng): quick fix for debug */
