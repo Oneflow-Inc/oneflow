@@ -41,7 +41,15 @@ def np_nll_loss(input, target, mode=None):
             loss += x
         return loss / n
     else:
-        input = np.reshape(input, (target.shape[0], 1,))
+        new_shape = tuple()
+        if len(mask.shape) == 1:
+            input = np.reshape(input, (target.shape[0], 1,))
+        else:
+            new_shape.append(target.shape[0])
+            new_shape.append(1)
+            for i in range(1, len(target.shape)):
+                new_shape.append(target.shape[i])
+            input = np.reshape(input, new_shape)
         return input
 
 
