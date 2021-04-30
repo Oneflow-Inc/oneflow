@@ -72,11 +72,11 @@ class Dropout(Module):
     def __init__(self, p: float = 0.5, inplace: bool = False):
         super().__init__()
         assert inplace is False, "Not support inplace=True yet!"
-        assert (0 <= p < 1.0), "Dropout rate should be in range [0,1)"
+        assert 0 <= p < 1.0, "Dropout rate should be in range [0,1)"
         self.rate = p
         seed = random.randint(-sys.maxsize, sys.maxsize)
         scale = float(1.0 / (1.0 - self.rate))
-        
+
         self._op = (
             flow.builtin_op("dropout")
             .Input("in")

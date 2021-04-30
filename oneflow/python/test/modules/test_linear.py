@@ -80,7 +80,7 @@ class TestLinear(flow.unittest.TestCase):
         np_out += np_bias
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-    
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

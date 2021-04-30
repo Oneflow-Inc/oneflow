@@ -28,7 +28,7 @@ class TestSin(flow.unittest.TestCase):
         of_out = flow.sin(input)
         np_out = np.sin(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    
+
     def test_sin_tensor_function(test_case):
         input = flow.Tensor(np.random.randn(8, 11, 9, 7))
         of_out = input.sin()
@@ -47,7 +47,7 @@ class TestCos(flow.unittest.TestCase):
         np_out = np.cos(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
         test_case.assertTrue(np.allclose(input.cos().numpy(), np_out, 1e-5, 1e-5))
-    
+
     def test_cos_tensor_function(test_case):
         arr = np.random.randn(4, 5, 6, 7)
         input = flow.Tensor(arr, dtype=flow.float32)

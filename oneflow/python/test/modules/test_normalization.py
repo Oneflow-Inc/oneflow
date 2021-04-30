@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -33,7 +48,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                     [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
                 ],
             ],
-            dtype=np.float32
+            dtype=np.float32,
         )
         output = np.array(
             [
@@ -66,7 +81,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                     [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
                 ],
             ],
-            dtype=np.float32
+            dtype=np.float32,
         )
         output = np.array(
             [
@@ -82,10 +97,10 @@ class TestLayerNorm(flow.unittest.TestCase):
             dtype=np.float32,
         )
         x = flow.Tensor(input_arr)
-        m = flow.nn.LayerNorm([2, 2], eps = 1e-5)
+        m = flow.nn.LayerNorm([2, 2], eps=1e-5)
         y = m(x)
         test_case.assertTrue(np.allclose(y.numpy(), output))
-    
+
     def test_layernorm_v3(test_case):
         input_arr = np.array(
             [
@@ -98,7 +113,7 @@ class TestLayerNorm(flow.unittest.TestCase):
                     [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
                 ],
             ],
-            dtype=np.float32
+            dtype=np.float32,
         )
         output = np.array(
             [
