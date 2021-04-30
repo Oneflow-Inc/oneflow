@@ -37,6 +37,7 @@ Maybe<void> Run(const std::string& env_proto_filepath) {
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
   JUST(Cluster::WorkerLoop());
+  Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 

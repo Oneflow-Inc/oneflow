@@ -295,7 +295,6 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .Attr<std::vector<std::string>>("string_list")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
-      const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
       const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
         *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
