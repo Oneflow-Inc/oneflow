@@ -25,14 +25,26 @@ import oneflow as flow
 )
 class TestUnsqueeze(flow.unittest.TestCase):
     def test_unsqueeze(test_case):
-        x = flow.Tensor(np.random.rand(2, 6, 9, 3))
-        y = flow.unsqueeze(x, dim=1)
-        test_case.assertTrue(np.allclose(flow.Size([2, 1, 6, 9, 3]), y.shape))
+        np_arr = np.random.rand(2, 6, 9, 3)
+        x = flow.Tensor(np_arr)
+        y = flow.unsqueeze(x, dim = 1)
+        output = np.expand_dims(np_arr, axis = 1)
+        test_case.assertTrue(np.allclose(output, y.numpy(), rtol=1e-05))
 
     def test_unsqueeze_tensor_function(test_case):
-        x = flow.Tensor(np.random.rand(2, 3, 4))
-        y = x.unsqueeze(dim=2)
-        test_case.assertTrue(np.allclose(flow.Size([2, 3, 1, 4]), y.shape))
+        np_arr = np.random.rand(2, 3, 4)
+        x = flow.Tensor(np_arr)
+        y = x.unsqueeze(dim = 2)
+        output = np.expand_dims(np_arr, axis = 2)
+        test_case.assertTrue(np.allclose(output, y.numpy(), rtol=1e-05))
+    
+    def test_unsqueeze_different_dim(test_case):
+        np_arr = np.random.rand(4, 5, 6, 7)
+        x = flow.Tensor(np_arr)
+        for axis in range(-5, 5):
+            y = flow.unsqueeze(x, dim = axis)
+            output = np.expand_dims(np_arr, axis = axis)
+            test_case.assertTrue(np.allclose(output, y.numpy(), rtol=1e-05))
 
 
 if __name__ == "__main__":

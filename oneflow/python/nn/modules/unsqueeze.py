@@ -20,15 +20,18 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Unsqueeze(Module):
-    def __init__(self, dim: int = 0,) -> None:
+    def __init__(self, dim: int = 0) -> None:
         super().__init__()
         self.dim = dim
         self._op = flow.builtin_op("expand_dims").Input("in").Output("out").Build()
 
     def forward(self, input):
         assert (
-            0 <= self.dim <= len(input.size())
-        ), "dim should large than 0 and less than the size of input tensor!"
+            -(1+input.ndimension()) <= self.dim <= input.ndimension()
+        ), "dim should within the range [-input.ndimension() - 1, input.ndimension() + 1)"
+        
+        if self.dim < 0:
+            self.dim = 1+input.ndimension() + self.dim
         return self._op(input, axis=self.dim)[0]
 
 
@@ -40,9 +43,9 @@ def unsqueeze_op(tensor, dim):
 
     The returned tensor shares the same underlying data with this tensor.
 
-    A :attr:`dim` value within the range ``[0, input.dim() + 1)``
+    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1)`
     can be used. Negative :attr:`dim` will correspond to :meth:`unsqueeze`
-    applied at :attr:`dim` = ``dim + input.dim() + 1``.
+    applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
 
     Args:
         input (Tensor) – the input tensor.
