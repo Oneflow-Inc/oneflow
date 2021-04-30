@@ -356,6 +356,8 @@ if __name__ == "__main__":
         def build():
             img_tag = None
             skip_img = args.skip_img
+            if cuda_version == "11.2":
+                cuda_version = "11.2.2"
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
