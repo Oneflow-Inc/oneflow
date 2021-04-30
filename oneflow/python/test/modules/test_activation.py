@@ -119,6 +119,14 @@ class TestGeLU(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
 
 
+def numpy_sigmoid(x):
+  return 1.0 / (1 + np.exp(-x))
+
+def numpy_softmax(x, axis):
+    x = x - x.max(axis=axis, keepdims=True)
+    y = np.exp(x)
+    return y / y.sum(axis=axis, keepdims=True)
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -126,29 +134,18 @@ class TestGeLU(flow.unittest.TestCase):
 class TestSigmoidModule(flow.unittest.TestCase):
     def test_sigmoid(test_case):
         m = flow.nn.Sigmoid()
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
+        input_arr = np.random.randn(2, 3, 4, 5)
+        x = flow.Tensor(input_arr)
+
         y = m(x)
         y2 = flow.sigmoid(x)
         y3 = x.sigmoid()
-        output = np.array(
-            [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
-        )
+        output = numpy_sigmoid(input_arr)
+
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
 
-
-def numpy_softmax(x, axis):
-    x = x - x.max(axis=axis, keepdims=True)
-    y = np.exp(x)
-    return y / y.sum(axis=axis, keepdims=True)
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

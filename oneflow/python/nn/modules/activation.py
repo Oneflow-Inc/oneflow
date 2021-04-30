@@ -229,7 +229,7 @@ class Sigmoid(Module):
 
 @oneflow_export("sigmoid")
 @register_tensor_op("sigmoid")
-def sigmoid_op(tensor):
+def sigmoid_op(x):
     r"""Applies the element-wise function:
 
     .. math::
@@ -260,7 +260,7 @@ def sigmoid_op(tensor):
         # [0.23947647, 0.33676055, 0.56800622]]
 
     """
-    return Sigmoid()(tensor)
+    return Sigmoid()(x)
 
 
 @oneflow_export("nn.Softmax")
