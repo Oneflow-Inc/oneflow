@@ -105,42 +105,49 @@ class TestModule(flow.unittest.TestCase):
             np.allclose(x_grad.numpy(), np.full((2, 3), 2.2), 1e-4, 1e-4)
         )
 
-    # def test_add_case3(test_case):
-    #     flow.clear_default_session()
-    #     flow.config.enable_debug_mode(True)
-    #     def fn3():
-    #         x_ones = Ones(flow.float32)
-    #         x = x_ones((2, 3))
-    #         x.requires_grad = True
+    def test_add_case3(test_case):
+        flow.clear_default_session()
+        flow.config.enable_debug_mode(True)
+        init_val = np.random.randn(2, 3)
+        def fn3():
+            x = Parameter(flow.Tensor(init_val))
 
-    #         y_ones = Ones(flow.float32)
-    #         y = y_ones((2, 3))
+            y_ones = Ones(flow.float32)
+            y = y_ones((2, 3))
 
-    #         of_out = flow.add(x*2, y)
+            of_out = flow.add(x*2, y)
+            
+            # lazy opt before backward
+            g_ones = Ones(flow.float32)
+            grad = g_ones((2, 3))
+            of_out.backward(grad)
 
-    #         g_ones = Ones(flow.float32)
-    #         grad = g_ones((2, 3))
-    #         of_out.backward(grad)
+            param_list = list()
+            param_list.append(x)
+            sgd = flow.optim.SGD(param_list, lr=1.0, momentum=1.0)
+            sgd.step()
+            # sgd.zero_grad()
+    
+            return (of_out, x.grad, x)
 
-    #         param_list = list()
-    #         param_list.append(x)
-    #         sgd = flow.optim.SGD(param_list, lr=1.0, momentum=1.0)
-    #         sgd.step()
-    #         #sgd.zero_grad()
-    #
-    #         return (of_out, x.grad, x)
+        graph_fn = flow.compiler.trace(fn3)
+        # graph_fn = flow.compiler.trace(fn3, type="predict")
 
-    #     graph_fn = flow.compiler.trace(fn3, type="predict")
-
-    #     out = graph_fn().get()
-    #     print("out", out[0].numpy())
-    #     print("x.grad", out[1].numpy())
-    #     print("x", out[2].numpy())
-
-    # grad = flow.Tensor(np.ones((2, 3), dtype=np.float32))
-    # of_out.backward(grad)
-    # test_case.assertTrue(np.allclose(x.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
-    # test_case.assertTrue(np.allclose(y.grad.numpy(), grad.numpy(), 1e-4, 1e-4))
+        x_val = init_val
+        x_grad_val = 0 
+        for i in range(5):
+            print("run {}th time:".format(i))
+            out = graph_fn().get()
+            print("loss ", out[0].numpy())
+            x_grad_val = out[1].numpy()
+            print("x.grad ", x_grad_val)
+            print("x now should be", x_val)
+            # here return x value before update
+            print("x before update ", out[2].numpy())
+            test_case.assertTrue(
+                np.allclose(out[2].numpy(), x_val, 1e-4, 1e-4)
+            )
+            x_val -= x_grad_val
 
 
 if __name__ == "__main__":
