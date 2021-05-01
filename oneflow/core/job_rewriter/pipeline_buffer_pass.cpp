@@ -288,22 +288,29 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
           return;
         }
       }
-      // NOTE(chengcheng): buffer_size = stage id diff.
-      //   Buffer size need be careful in some complex case.
-      const int64_t buffer_size = dst_stage_id - src_stage_id;
-      if (src_stage_id < dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOpBothSrcDst(edge, 1, total_stage_num * 2, &buffer_op_name2op_conf,
-                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
+      if (src_stage_id < dst_stage_id) {
+        // NOTE(chengcheng): We insert double buffer between src / dst node.
+        const int64_t src_buffer_size = 1;
+        /* NOTE(chengcheng):
+         *   src_buffer_size = 1 because we need free memory as early as possible so we can overlap
+         *   CopyD2H with Compute.
+         */
+        const int64_t dst_buffer_size = total_stage_num * 2;
+        /* NOTE(chengcheng):
+         *   dst_buffer_size = total_stage_num * 2 because we want store as much as possible micro-
+         *   batch data for pipeline.
+         */
+        TryInsertOrUseBufferOpBothSrcDst(edge, src_buffer_size, dst_buffer_size,
+                                         &buffer_op_name2op_conf, &buffer_op_name2parallel_conf,
+                                         &mut_op_name2conf);
       }
     }
     if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
         && IsBackwardPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
-      // NOTE(chengcheng): buffer_size = stage id diff.
-      //   Buffer size need be careful in some complex case.
-      const int64_t buffer_size = src_stage_id - dst_stage_id;
-      if (src_stage_id > dst_stage_id && buffer_size >= 1) {
+      // NOTE(chengcheng): Same with Forward. Buffer size need be careful in some complex case.
+      if (src_stage_id > dst_stage_id) {
         TryInsertOrUseBufferOpBothSrcDst(edge, 1, total_stage_num * 2, &buffer_op_name2op_conf,
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
