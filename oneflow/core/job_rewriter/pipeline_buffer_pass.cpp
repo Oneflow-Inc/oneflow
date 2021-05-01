@@ -81,18 +81,22 @@ int64_t GetStageIdHint(const OpNode* node) {
   return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
 }
 
-void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
-                            HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
-                            HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
-                            HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+void TryInsertOrUseBufferOpToDstNode(
+    const OpEdge* op_edge, const int64_t buffer_size,
+    HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
+    HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
+    HashMap<std::string, OperatorConf>* mut_op_name2conf) {
   const OpNode* src_node = op_edge->src_node();
   const OpNode* dst_node = op_edge->dst_node();
+  const int64_t src_stage_id = GetStageIdHint(src_node);
+  const int64_t dst_stage_id = GetStageIdHint(dst_node);
   const std::string& dst_op_name = dst_node->op().op_name();
   const int64_t stage_id = GetStageIdHint(dst_node);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
     std::string buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name()
                                  + "-stage_id_" + std::to_string(stage_id);
+
     auto it = buffer_op_name2op_conf->find(buffer_op_name);
     if (it == buffer_op_name2op_conf->end()) {
       it = buffer_op_name2op_conf
@@ -102,13 +106,19 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
                              .Input("in", lbn)
                              .Output("out")
                              .Attr<int64_t>("buffer_size", buffer_size)
-                             .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                             .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
                              .Build()
                              .op_conf())
                .first;
       CHECK(buffer_op_name2parallel_conf
                 ->emplace(buffer_op_name, dst_node->parallel_desc().parallel_conf())
                 .second);
+
+      LOG(INFO) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
+                << ") \n from [" << src_node->op().op_name()
+                << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+                << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+                << ") \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -122,10 +132,90 @@ void TryInsertOrUseBufferOp(const OpEdge* op_edge, const int64_t buffer_size,
           ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, buffer_out);
       CHECK_EQ(old_lbn, lbn);
     }
+  }
+}
 
-    LOG(INFO) << "\n Insert buffer op: [" << buffer_op_name << "](buffer_size:" << buffer_size
-              << ") \n from [" << src_node->op().op_name() << "] -> [" << dst_node->op().op_name()
-              << "] \n";
+void TryInsertOrUseBufferOpBothSrcDst(
+    const OpEdge* op_edge, const int64_t src_buffer_size, const int64_t dst_buffer_size,
+    HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
+    HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
+    HashMap<std::string, OperatorConf>* mut_op_name2conf) {
+  const OpNode* src_node = op_edge->src_node();
+  const OpNode* dst_node = op_edge->dst_node();
+  const ParallelDesc& src_parallel_desc = src_node->parallel_desc();
+  const ParallelDesc& dst_parallel_desc = dst_node->parallel_desc();
+  CHECK(!src_parallel_desc.EqualsIgnoringHierarchy(dst_parallel_desc));
+  const std::string& dst_op_name = dst_node->op().op_name();
+  const int64_t src_stage_id = GetStageIdHint(src_node);
+  const int64_t dst_stage_id = GetStageIdHint(dst_node);
+  CHECK_NE(src_stage_id, dst_stage_id);
+  CHECK_GE(src_buffer_size, 1);
+  CHECK_GE(dst_buffer_size, 1);
+  for (const LogicalBlobId& lbi : op_edge->lbis()) {
+    std::string lbn = GenLogicalBlobName(lbi);
+    std::string src_buffer_op_name =
+        kBufferOpNamePrefix + "-" + lbi.op_name() + "-" + lbi.blob_name();
+    std::string dst_buffer_op_name = kBufferOpNamePrefix + "-" + lbi.op_name() + "-"
+                                     + lbi.blob_name() + "-stage_id_"
+                                     + std::to_string(dst_stage_id);
+
+    auto src_buffer_it = buffer_op_name2op_conf->find(src_buffer_op_name);
+    if (src_buffer_it == buffer_op_name2op_conf->end()) {
+      src_buffer_it = buffer_op_name2op_conf
+                          ->emplace(src_buffer_op_name,
+                                    user_op::UserOpConfWrapperBuilder(src_buffer_op_name)
+                                        .Op("identity_buffer")
+                                        .Input("in", lbn)
+                                        .Output("out")
+                                        .Attr<int64_t>("buffer_size", src_buffer_size)
+                                        .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
+                                        .Build()
+                                        .op_conf())
+                          .first;
+      CHECK(buffer_op_name2parallel_conf
+                ->emplace(src_buffer_op_name, src_parallel_desc.parallel_conf())
+                .second);
+    }
+    const OperatorConf& src_conf = src_buffer_it->second;
+    const std::string src_buffer_out = user_op::UserOpConfWrapper(src_conf).output("out", 0);
+
+    auto dst_buffer_it = buffer_op_name2op_conf->find(dst_buffer_op_name);
+    if (dst_buffer_it == buffer_op_name2op_conf->end()) {
+      dst_buffer_it = buffer_op_name2op_conf
+                          ->emplace(dst_buffer_op_name,
+                                    user_op::UserOpConfWrapperBuilder(dst_buffer_op_name)
+                                        .Op("identity_buffer")
+                                        .Input("in", src_buffer_out)
+                                        .Output("out")
+                                        .Attr<int64_t>("buffer_size", dst_buffer_size)
+                                        .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
+                                        .Build()
+                                        .op_conf())
+                          .first;
+      CHECK(buffer_op_name2parallel_conf
+                ->emplace(dst_buffer_op_name, dst_parallel_desc.parallel_conf())
+                .second);
+    }
+    const OperatorConf& dst_conf = dst_buffer_it->second;
+
+    auto mut_op_it = mut_op_name2conf->find(dst_op_name);
+    if (mut_op_it == mut_op_name2conf->end()) {
+      mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
+    }
+
+    LOG(INFO) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
+              << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
+              << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
+              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+              << ") \n";
+
+    const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
+    for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
+      std::string old_lbn =
+          ReplaceInputLbnInOpCustomizedConf(&(mut_op_it->second), ibn, dst_buffer_out);
+      CHECK_EQ(old_lbn, lbn);
+    }
   }
 }
 
@@ -158,20 +248,20 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       if (!OpNodeHasScope(src_node)) { continue; /* ignore op without scope */ }
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(this_node);
-      const int64_t buffer_size = total_stage_num - 1 - dst_stage_id;
-      CHECK_GE(buffer_size, 0);
-      CHECK_LT(buffer_size, total_stage_num);
-      if (buffer_size == 0) { continue; /* last stage(loss) does NOT need to insert buffer */ }
 
       if (IsForwardPass(src_node) && (!IsIdentityBufferOrRepeatOpNode(src_node))) {
+        if (dst_stage_id == max_stage_id) {
+          continue; /* last stage(loss) does NOT need to insert buffer */
+        }
         if (src_stage_id != dst_stage_id) {
           LOG(WARNING) << " Cross diff stage link From: [" << src_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(src_stage_id) << ") -> ["
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        TryInsertOrUseBufferOp(in_edge, buffer_size, &buffer_op_name2op_conf,
-                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+        const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
+        TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
+                                        &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
     for (const std::string& ctrl_in_op_name : this_node->op().op_conf().ctrl_in_op_name()) {
@@ -192,12 +282,33 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         && IsForwardPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
-      // NOTE(chengcheng): buffer_size = stage diff - 1, because CopyHD can act as a buffer.
-      //   Buffer size need be careful in some complex case.
-      const int64_t buffer_size = dst_stage_id - src_stage_id - 1;
-      if (src_stage_id < dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOp(edge, buffer_size, &buffer_op_name2op_conf,
-                               &buffer_op_name2parallel_conf, &mut_op_name2conf);
+      if (src_node->parallel_desc().device_type() == DeviceType::kCPU
+          && dst_node->parallel_desc().device_type() == DeviceType::kGPU) {
+        if (src_stage_id == 0 && (dst_stage_id == max_stage_id || dst_stage_id == 0)) {
+          TryInsertOrUseBufferOpToDstNode(edge, total_stage_num * 2, &buffer_op_name2op_conf,
+                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
+          return;
+        }
+      }
+      if (src_stage_id < dst_stage_id) {
+        /* NOTE(chengcheng): We insert double buffer between src / dst node.
+         *   src_buffer_size = 1 because we need free memory as early as possible so we can overlap
+         *   CopyD2H with Compute.
+         *   dst_buffer_size = dst_stage_id - src_stage_id for pipeline.
+         */
+        const int64_t dst_buffer_size = dst_stage_id - src_stage_id;
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, dst_buffer_size, &buffer_op_name2op_conf,
+                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
+      }
+    }
+    if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
+        && IsBackwardPass(dst_node)) {
+      const int64_t src_stage_id = GetStageIdHint(src_node);
+      const int64_t dst_stage_id = GetStageIdHint(dst_node);
+      // NOTE(chengcheng): Backward ONLY need buffer size 1.
+      if (src_stage_id > dst_stage_id) {
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, 1, &buffer_op_name2op_conf,
+                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
   });
