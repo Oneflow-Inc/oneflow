@@ -92,10 +92,27 @@ class NLLLoss(Module):
     def forward(self, input, target):
         n = input.shape[0]
         input = flow.negative(input)
-        idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
-        target = flow.unsqueeze(target, dim=1)
-        t = flow.cat([idx, target], dim=1)
-        res = self._gather_nd_op(input, t)[0]
+        if len(input.shape) == 2:
+            idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
+            target = flow.unsqueeze(target, dim=1)
+            t = flow.cat([idx, target], dim=1)
+            res = self._gather_nd_op(input, t)[0]
+        elif len(input.shape) == 4:
+            target = flow.tmp.flatten(target)
+            output = flow.tmp.flatten(flow.tmp.transpose(input, (0, 2, 3, 1)))
+            onehot = flow.Tensor(np.eye(input.shape[1])[target.numpy()].flatten())
+            output = flow.mul(output, onehot)
+            tmp_output = []
+            for x in output.numpy():
+                if x == 0:
+                    continue
+                tmp_output.append(x)
+            output = flow.Tensor(np.array(tmp_output))
+            output = flow.tmp.reshape(output, (input.shape[2], input.shape[3]))
+            res = output
+        else:
+            raise NotImplemented
+        
         if self.reduction == "none":
             return res
         elif self.reduction == "sum":
