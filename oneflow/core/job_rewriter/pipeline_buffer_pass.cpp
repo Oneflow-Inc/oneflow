@@ -136,7 +136,7 @@ void TryInsertOrUseBufferOpToDstNode(
 }
 
 void TryInsertOrUseBufferOpBothSrcDst(
-    const OpEdge* op_edge, const int64_t buffer_size,
+    const OpEdge* op_edge, const int64_t src_buffer_size, const int64_t dst_buffer_size,
     HashMap<std::string, OperatorConf>* buffer_op_name2op_conf,
     HashMap<std::string, ParallelConf>* buffer_op_name2parallel_conf,
     HashMap<std::string, OperatorConf>* mut_op_name2conf) {
@@ -165,7 +165,7 @@ void TryInsertOrUseBufferOpBothSrcDst(
                                         .Op("identity_buffer")
                                         .Input("in", lbn)
                                         .Output("out")
-                                        .Attr<int64_t>("buffer_size", buffer_size)
+                                        .Attr<int64_t>("buffer_size", src_buffer_size)
                                         .ScopeSymbolId(src_node->op().op_conf().scope_symbol_id())
                                         .Build()
                                         .op_conf())
@@ -183,9 +183,9 @@ void TryInsertOrUseBufferOpBothSrcDst(
                           ->emplace(dst_buffer_op_name,
                                     user_op::UserOpConfWrapperBuilder(dst_buffer_op_name)
                                         .Op("identity_buffer")
-                                        .Input("in", lbn)
+                                        .Input("in", src_buffer_out)
                                         .Output("out")
-                                        .Attr<int64_t>("buffer_size", buffer_size)
+                                        .Attr<int64_t>("buffer_size", src_buffer_size)
                                         .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
                                         .Build()
                                         .op_conf())
@@ -201,8 +201,9 @@ void TryInsertOrUseBufferOpBothSrcDst(
       mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
     }
 
-    LOG(INFO) << "\n Insert buffer op : [" << src_buffer_op_name << " , " << dst_buffer_op_name
-              << "](buffer_size:" << buffer_size << ") \n from [" << src_node->op().op_name()
+    LOG(INFO) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
+              << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
+              << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
               << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
               << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
               << ") \n";
@@ -291,7 +292,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       //   Buffer size need be careful in some complex case.
       const int64_t buffer_size = dst_stage_id - src_stage_id;
       if (src_stage_id < dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOpBothSrcDst(edge, buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, total_stage_num * 2, &buffer_op_name2op_conf,
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
@@ -303,7 +304,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       //   Buffer size need be careful in some complex case.
       const int64_t buffer_size = src_stage_id - dst_stage_id;
       if (src_stage_id > dst_stage_id && buffer_size >= 1) {
-        TryInsertOrUseBufferOpBothSrcDst(edge, buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, total_stage_num * 2, &buffer_op_name2op_conf,
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
