@@ -149,6 +149,8 @@ void TryInsertOrUseBufferOpBothSrcDst(
   const int64_t src_stage_id = GetStageIdHint(src_node);
   const int64_t dst_stage_id = GetStageIdHint(dst_node);
   CHECK_NE(src_stage_id, dst_stage_id);
+  ParallelConf dst_buffer_parallel_conf = dst_parallel_desc.parallel_conf();
+  dst_buffer_parallel_conf.set_device_tag("cpu");  // NOTE(chengcheng): buffer cpu offload
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
     std::string src_buffer_op_name =
@@ -190,8 +192,7 @@ void TryInsertOrUseBufferOpBothSrcDst(
                                         .Build()
                                         .op_conf())
                           .first;
-      CHECK(buffer_op_name2parallel_conf
-                ->emplace(dst_buffer_op_name, dst_parallel_desc.parallel_conf())
+      CHECK(buffer_op_name2parallel_conf->emplace(dst_buffer_op_name, dst_buffer_parallel_conf)
                 .second);
     }
     const OperatorConf& dst_conf = dst_buffer_it->second;
