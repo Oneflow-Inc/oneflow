@@ -660,6 +660,7 @@ void InsertNcclLogicalOpsInSubGraph(
     const std::vector<const OpNode*>& subgraph_order,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
+  node2subgraph_order.reserve(subgraph_order.size());
   for (int64_t i = 0; i < subgraph_order.size(); ++i) {
     CHECK(node2subgraph_order.emplace(subgraph_order.at(i), i).second);
   }
@@ -706,6 +707,7 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   std::vector<OperatorConf> mut_op_confs;
+  mut_op_confs.reserve(mut_op_names.size());
   for (const std::string& mut_op_name : mut_op_names) {
     mut_op_confs.push_back(subgraph_op_name2conf.at(mut_op_name));
   }
