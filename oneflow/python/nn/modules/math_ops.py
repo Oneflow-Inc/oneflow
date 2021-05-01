@@ -636,7 +636,6 @@ def log_op(tensor):
 class Subtract(Module):
     def __init__(self) -> None:
         super().__init__()
-        pass
 
     def forward(self, x, y):
         if isinstance(x, (int, float)):
