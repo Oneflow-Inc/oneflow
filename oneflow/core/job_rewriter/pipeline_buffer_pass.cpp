@@ -149,6 +149,8 @@ void TryInsertOrUseBufferOpBothSrcDst(
   const int64_t src_stage_id = GetStageIdHint(src_node);
   const int64_t dst_stage_id = GetStageIdHint(dst_node);
   CHECK_NE(src_stage_id, dst_stage_id);
+  CHECK_GE(src_buffer_size, 1);
+  CHECK_GE(dst_buffer_size, 1);
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
     std::string lbn = GenLogicalBlobName(lbi);
     std::string src_buffer_op_name =
@@ -289,20 +291,14 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         }
       }
       if (src_stage_id < dst_stage_id) {
-        // NOTE(chengcheng): We insert double buffer between src / dst node.
-        const int64_t src_buffer_size = 1;
-        /* NOTE(chengcheng):
+        /* NOTE(chengcheng): We insert double buffer between src / dst node.
          *   src_buffer_size = 1 because we need free memory as early as possible so we can overlap
          *   CopyD2H with Compute.
+         *   dst_buffer_size = dst_stage_id - src_stage_id for pipeline.
          */
-        const int64_t dst_buffer_size = total_stage_num * 2;
-        /* NOTE(chengcheng):
-         *   dst_buffer_size = total_stage_num * 2 because we want store as much as possible micro-
-         *   batch data for pipeline.
-         */
-        TryInsertOrUseBufferOpBothSrcDst(edge, src_buffer_size, dst_buffer_size,
-                                         &buffer_op_name2op_conf, &buffer_op_name2parallel_conf,
-                                         &mut_op_name2conf);
+        const int64_t dst_buffer_size = dst_stage_id - src_stage_id;
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, dst_buffer_size, &buffer_op_name2op_conf,
+                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
     if (OpNodeHasScope(src_node) && OpNodeHasScope(dst_node) && IsBackwardPass(src_node)
@@ -311,7 +307,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
       // NOTE(chengcheng): Same with Forward. Buffer size need be careful in some complex case.
       if (src_stage_id > dst_stage_id) {
-        TryInsertOrUseBufferOpBothSrcDst(edge, 1, total_stage_num * 2, &buffer_op_name2op_conf,
+        const int64_t dst_buffer_size = src_stage_id - dst_stage_id;
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, dst_buffer_size, &buffer_op_name2op_conf,
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
