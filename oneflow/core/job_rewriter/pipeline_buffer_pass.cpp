@@ -185,7 +185,7 @@ void TryInsertOrUseBufferOpBothSrcDst(
                                         .Op("identity_buffer")
                                         .Input("in", src_buffer_out)
                                         .Output("out")
-                                        .Attr<int64_t>("buffer_size", src_buffer_size)
+                                        .Attr<int64_t>("buffer_size", dst_buffer_size)
                                         .ScopeSymbolId(dst_node->op().op_conf().scope_symbol_id())
                                         .Build()
                                         .op_conf())
