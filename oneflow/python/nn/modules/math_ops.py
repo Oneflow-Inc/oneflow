@@ -653,6 +653,76 @@ class Subtract(Module):
             return BroadcastSub()(x, y)
 
 
+class Sqrt(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.sqrt_op(input)[0]
+
+
+@oneflow_export("sqrt")
+@register_tensor_op("sqrt")
+def sqrt_op(input):
+    r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import numpy as np
+
+            arr = np.random.randn(3, 2, 5, 7)
+            input = flow.Tensor(arr)
+            output = flow.sqrt(input)
+            # output equal to np.sqrt(arr)
+        """
+    return Sqrt()(input)
+
+
+class Square(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.square_op(input)[0]
+
+
+@oneflow_export("square")
+@register_tensor_op("square")
+def square_op(input):
+    r"""Returns a new tensor with the square of the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import numpy as np
+
+            arr = np.random.randn(3, 2, 5, 7)
+            input = flow.Tensor(arr)
+            output = flow.square(input)
+            # output equal to np.square(arr)
+        """
+    return Square()(input)
+
+
 class Std(Module):
     def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
         super().__init__()
@@ -661,16 +731,6 @@ class Std(Module):
         self.keepdim = keepdim
         self.dim = dim
         self.reduce_count = 1
-
-        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
-        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
-        self.reduce_sum_op = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Attr("keepdims", keepdim)
-            .Output("output_tensor")
-            .Build()
-        )
 
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
@@ -683,15 +743,15 @@ class Std(Module):
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
 
-            res = self.sqrt_op(
-                Subtract()(
-                    self.reduce_sum_op(self.square_op(x)[0], axis=self.axis)[0]
-                    / self.reduce_count,
-                    self.square_op(
-                        self.reduce_sum_op(x, axis=self.axis)[0] / self.reduce_count,
-                    )[0],
-                )
-            )[0]
+            sum = (
+                flow.sum(x.square(), dim=self.axis, keepdims=self.keepdim)
+                / self.reduce_count
+            )
+            square = flow.square(
+                flow.sum(x, dim=self.axis, keepdims=self.keepdim) / self.reduce_count
+            )
+            subtract = Subtract()(sum, square)
+            res = subtract.sqrt()
             return res
 
 
