@@ -18,6 +18,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 import numpy as np
 
+
 @oneflow_export("nn.NLLLoss")
 class NLLLoss(Module):
     r""" The negative log likelihood loss. It is useful to train a classification problem with C classes.
@@ -90,16 +91,14 @@ class NLLLoss(Module):
 
     def forward(self, input, target):
         n = input.shape[0]
-        idx = flow.unsqueeze(flow.arange(0, b, 1), dim=1)
-        target = flow.unsqueeze(target, axis=1)
-        t = flow.cat([idx, target], axis=1)
-        res = self._gather_nd_op(x, indices=t)[0]
-        if self.reduction == 'none':
+        input = flow.negative(input)
+        idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
+        target = flow.unsqueeze(target, dim=1)
+        t = flow.cat([idx, target], dim=1)
+        res = self._gather_nd_op(input, t)[0]
+        if self.reduction == "none":
             return res
-        elif self.reduction == 'sum':
+        elif self.reduction == "sum":
             return flow.sum(res)
         else:
             return flow.mean(res)
-
-
-        
