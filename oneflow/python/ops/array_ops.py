@@ -693,13 +693,37 @@ def api_slice_update(
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r"""Update a slice of tensor `x`.
+    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
     Args:
         x: A `Blob`, whose slice will be updated.
         update: A `Blob`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def slice_update_job(x: tp.Numpy.Placeholder(shape=(5, )), 
+                            update: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            out = flow.slice_update(x=x, 
+                                    update=update, 
+                                    slice_tup_list=[[1, 4, 1]])
+
+            return out 
+
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        update = np.array([2, 3, 4]).astype(np.float32)
+        out = slice_update_job(x, update)
+
+        # out [1. 2. 3. 4. 1.]
 
     """
     if name is None:
