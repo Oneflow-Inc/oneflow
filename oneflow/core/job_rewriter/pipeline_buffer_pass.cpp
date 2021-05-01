@@ -305,10 +305,9 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
         && IsBackwardPass(dst_node)) {
       const int64_t src_stage_id = GetStageIdHint(src_node);
       const int64_t dst_stage_id = GetStageIdHint(dst_node);
-      // NOTE(chengcheng): Same with Forward. Buffer size need be careful in some complex case.
+      // NOTE(chengcheng): Backward ONLY need buffer size 1.
       if (src_stage_id > dst_stage_id) {
-        const int64_t dst_buffer_size = src_stage_id - dst_stage_id;
-        TryInsertOrUseBufferOpBothSrcDst(edge, 1, dst_buffer_size, &buffer_op_name2op_conf,
+        TryInsertOrUseBufferOpBothSrcDst(edge, 1, 1, &buffer_op_name2op_conf,
                                          &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
     }
