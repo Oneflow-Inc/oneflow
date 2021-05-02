@@ -731,6 +731,9 @@ class Std(Module):
         self.keepdim = keepdim
         self.dim = dim
         self.reduce_count = 1
+        self.square_op = Square()
+        self.sqrt_op = Sqrt()
+        self.subtract_op = Subtract()
 
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
@@ -742,16 +745,16 @@ class Std(Module):
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
-
+            
             sum = (
-                flow.sum(x.square(), dim=self.axis, keepdims=self.keepdim)
+                Sum(self.axis, self.keepdim)(self.square_op(x))
                 / self.reduce_count
             )
-            square = flow.square(
-                flow.sum(x, dim=self.axis, keepdims=self.keepdim) / self.reduce_count
+            square = self.square_op(
+                Sum(self.axis, self.keepdim)(x) / self.reduce_count
             )
-            subtract = Subtract()(sum, square)
-            res = subtract.sqrt()
+            subtract = self.subtract_op(sum, square)
+            res = self.sqrt_op(subtract)
             return res
 
 
