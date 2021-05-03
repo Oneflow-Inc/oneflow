@@ -370,5 +370,6 @@ class TestTensor(flow.unittest.TestCase):
         np_out = -input.numpy()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+
 if __name__ == "__main__":
     unittest.main()
