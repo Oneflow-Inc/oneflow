@@ -259,7 +259,8 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
                        << this_node->op().op_conf().DebugString()
                        << "](stage_id:" << std::to_string(dst_stage_id) << ")\n";
         }
-        const int64_t buffer_size = total_stage_num * 2; /* NOTE(chengcheng): max buffer size */
+        const int64_t buffer_size = total_stage_num - dst_stage_id - 1;
+        /* NOTE(chengcheng): min buffer size for test ctrl. */
         TryInsertOrUseBufferOpToDstNode(in_edge, buffer_size, &buffer_op_name2op_conf,
                                         &buffer_op_name2parallel_conf, &mut_op_name2conf);
       }
