@@ -655,6 +655,27 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
+const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+}
+
+const Scope& Scope4OpNode(const OpNode* op_node) {
+  const OperatorConf& op_conf = op_node->op().op_conf();
+  CHECK(op_conf.has_scope_symbol_id());
+  return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
+}
+
+int64_t GetStageIdHint(const OpNode* node) {
+  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
+}
+
+bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
+
+bool IsForwardPass(const OpNode* node) {
+  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kForwardPass;
+}
+
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
@@ -705,6 +726,41 @@ void InsertNcclLogicalOpsInSubGraph(
     LOG(INFO) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
+
+  // NOTE(chengcheng): Hack code for pipeline nccl fw/bw exec order correct.
+  do {
+    if (!OpNodeHasScope(first_node)) {
+      LOG(INFO) << "this subgraph first node has NOT scope! all ordered op list = [";
+      for (int64_t i = 0; i < subgraph_order.size(); ++i) {
+        const OpNode* this_node = subgraph_order.at(i);
+        LOG(INFO) << "i = " << i << " op_name: " << this_node->op().op_name();
+      }
+      LOG(INFO) << "].\n";
+      break;
+    }
+
+    int64_t max_stage_id = 0;
+    op_graph.ForEachNode([&](const OpNode* this_node) {
+      if (OpNodeHasScope(this_node)) {
+        max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
+      }
+    });
+
+    const int64_t total_stage_num = max_stage_id + 1;
+    LOG(INFO) << "total stage num = " << total_stage_num;
+
+    int64_t this_subgraph_stage_id = GetStageIdHint(first_node);
+    if (total_stage_num >= 2 && this_subgraph_stage_id >= 0 && this_subgraph_stage_id < max_stage_id
+        && !IsForwardPass(first_node) && nccl_op_confs.size() >= 1) {
+      LOG(INFO) << "Yeah! set all op to 99 stream.";
+      // Backward subgraph in pipeline Middle stage.
+      for (auto& pair : subgraph_op_name2conf) {
+        mut_op_names.insert(pair.first);
+        pair.second.set_stream_id_hint(99);  // new bw stream id = 99
+      }
+      for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_id_hint(99); }
+    }
+  } while (false);
 
   std::vector<OperatorConf> mut_op_confs;
   mut_op_confs.reserve(mut_op_names.size());

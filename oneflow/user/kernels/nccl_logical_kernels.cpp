@@ -29,7 +29,7 @@ namespace {
 class NcclLogicalKernelCommState final : public user_op::OpKernelState {
  public:
   NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
-      : is_init_(false), parallel_desc_(ctx->parallel_desc()) {}
+      : is_init_(false), name_(ctx->op_name()), parallel_desc_(ctx->parallel_desc()) {}
   ~NcclLogicalKernelCommState() = default;
 
   ncclComm_t comm() {
@@ -40,7 +40,8 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
         int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
-      comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+      comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())
+                  ->GetCommForDeviceAndOpName(device_set, name_);
       is_init_ = true;
     }
     return comm_;
@@ -48,6 +49,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
 
  private:
   bool is_init_;
+  std::string name_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_;
 };

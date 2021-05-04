@@ -31,6 +31,8 @@ class EagerNcclCommMgr final {
   ~EagerNcclCommMgr();
 
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
+  ncclComm_t GetCommForDeviceAndOpName(const std::set<std::pair<int64_t, int64_t>>& device_set,
+                                       const std::string& name);
 
  private:
   friend class Global<EagerNcclCommMgr>;
