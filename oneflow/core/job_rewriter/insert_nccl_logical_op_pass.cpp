@@ -68,7 +68,7 @@ bool IsBreakpointOpNode(const OpNode* node) {
   //   variable, tick, repeat/acc/pack/unpack change timeshape
   const Operator& op = node->op();
   const OperatorConf& op_conf = op.op_conf();
-  if (op_conf.has_variable_conf() || op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
+  if (op_conf.has_tick_conf() || op_conf.has_device_tick_conf()
       || op_conf.has_src_subset_tick_conf() || op_conf.has_dst_subset_tick_conf()
       || op_conf.has_source_tick_conf() || op_conf.has_sink_tick_conf()
       || op_conf.has_acc_tick_conf()) {
