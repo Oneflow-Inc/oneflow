@@ -29,7 +29,9 @@ namespace {
 class NcclLogicalKernelCommState final : public user_op::OpKernelState {
  public:
   NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
-      : is_init_(false), name_(ctx->op_name()), parallel_desc_(ctx->parallel_desc()) {}
+      : is_init_(false),
+        stream_id_(ctx->op_conf().stream_id_hint()),
+        parallel_desc_(ctx->parallel_desc()) {}
   ~NcclLogicalKernelCommState() = default;
 
   ncclComm_t comm() {
@@ -41,7 +43,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
       comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())
-                  ->GetCommForDeviceAndOpName(device_set, name_);
+                  ->GetCommForDeviceAndStreamId(device_set, stream_id_);
       is_init_ = true;
     }
     return comm_;
@@ -49,7 +51,7 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
 
  private:
   bool is_init_;
-  std::string name_;
+  int32_t stream_id_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_;
 };

@@ -31,8 +31,8 @@ class EagerNcclCommMgr final {
   ~EagerNcclCommMgr();
 
   ncclComm_t GetCommForDevice(const std::set<std::pair<int64_t, int64_t>>& device_set);
-  ncclComm_t GetCommForDeviceAndOpName(const std::set<std::pair<int64_t, int64_t>>& device_set,
-                                       const std::string& name);
+  ncclComm_t GetCommForDeviceAndStreamId(const std::set<std::pair<int64_t, int64_t>>& device_set,
+                                         const int32_t stream_id);
 
  private:
   friend class Global<EagerNcclCommMgr>;
@@ -40,6 +40,7 @@ class EagerNcclCommMgr final {
 
   std::map<std::set<std::pair<int64_t, int64_t>>, HashMap<int64_t, ncclComm_t>>
       device_set2device_id2comm_;
+  std::map<std::string, HashMap<int64_t, ncclComm_t>> device7stream2device_id2comm_;
   std::mutex mutex_;
 };
 
