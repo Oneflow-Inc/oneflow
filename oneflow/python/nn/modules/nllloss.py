@@ -98,18 +98,8 @@ class NLLLoss(Module):
             t = flow.cat([idx, target], dim=1)
             res = self._gather_nd_op(input, t)[0]
         elif len(input.shape) == 4:
-            target = flow.tmp.flatten(target)
-            output = flow.tmp.flatten(flow.tmp.transpose(input, (0, 2, 3, 1)))
-            onehot = flow.Tensor(np.eye(input.shape[1])[target.numpy()].flatten())
-            output = flow.mul(output, onehot)
-            tmp_output = []
-            for x in output.numpy():
-                if x == 0:
-                    continue
-                tmp_output.append(x)
-            output = flow.Tensor(np.array(tmp_output))
-            output = flow.tmp.reshape(output, (input.shape[2], input.shape[3]))
-            res = output
+            raise NotImplemented
+
         else:
             raise NotImplemented
 
