@@ -631,3 +631,161 @@ def log_op(tensor):
         
     """
     return Log()(tensor)
+
+
+class Subtract(Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self, x, y):
+        if isinstance(x, (int, float)):
+            return ScalarAdd(x)(-1 * y)
+        elif isinstance(y, (int, float)):
+            return ScalarAdd(-1 * y)(x)
+        elif x.shape == y.shape:
+            # TODO: add element-wise op
+            return BroadcastSub()(x, y)
+        elif x.shape == (1,):
+            return ScalarSubByTensor()(y, x)
+        elif y.shape == (1,):
+            return ScalarSubByTensor()(x, y)
+        else:
+            return BroadcastSub()(x, y)
+
+
+class Sqrt(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.sqrt_op(input)[0]
+
+
+@oneflow_export("sqrt")
+@register_tensor_op("sqrt")
+def sqrt_op(input):
+    r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import numpy as np
+
+            arr = np.random.randn(3, 2, 5, 7)
+            input = flow.Tensor(arr)
+            output = flow.sqrt(input)
+            # output equal to np.sqrt(arr)
+        """
+    return Sqrt()(input)
+
+
+class Square(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.square_op(input)[0]
+
+
+@oneflow_export("square")
+@register_tensor_op("square")
+def square_op(input):
+    r"""Returns a new tensor with the square of the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \sqrt{\text{input}_{i}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+            import numpy as np
+
+            arr = np.random.randn(3, 2, 5, 7)
+            input = flow.Tensor(arr)
+            output = flow.square(input)
+            # output equal to np.square(arr)
+        """
+    return Square()(input)
+
+
+class Std(Module):
+    def __init__(self, dim=None, unbiased=True, keepdim=False) -> None:
+        super().__init__()
+        assert unbiased == True, "Only support 'unbiased=True' for now!"
+        self.unbiased = unbiased
+        self.keepdim = keepdim
+        self.dim = dim
+        self.reduce_count = 1
+        self.square_op = Square()
+        self.sqrt_op = Sqrt()
+        self.subtract_op = Subtract()
+
+    def forward(self, x):
+        self.axis = _check_axis(self.dim, x.shape)
+        if isinstance(self.axis, list) and len(self.axis) == 0:
+            return flow.tmp.zeros(size=x.shape)
+        else:
+            if len(self.axis) == 0:
+                self.reduce_count = x.nelemenet()
+            else:
+                for i in self.axis:
+                    self.reduce_count *= x.shape[i]
+
+            sum = Sum(self.axis, self.keepdim)(self.square_op(x)) / self.reduce_count
+            square = self.square_op(Sum(self.axis, self.keepdim)(x) / self.reduce_count)
+            subtract = self.subtract_op(sum, square)
+            res = self.sqrt_op(subtract)
+            return res
+
+
+@oneflow_export("tmp.std")
+@register_tensor_op("std")
+def std_op(tensor, dim, unbiased=True, keepdim=False):
+    r"""
+    Returns the standard-deviation of each row of the :attr:`input` tensor in the
+    dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
+    reduce over all of them.
+
+    If keepdim is True, the output tensor is of the same size as input except in 
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
+
+    If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
+    via the biased estimator. Otherwise, Bessel's correction will be used.
+
+    Args:
+        input (Tensor) – the input tensor.
+        dim (int or tuple of python:ints) – the dimension or dimensions to reduce.
+        unbiased (bool) – whether to use the unbiased estimation or not
+        keepdim (bool) – whether the output tensor has `dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = flow.std(input, dim=2)
+
+        # equal to numpy np.std(arr, axis=2)
+
+    """
+    return Std(dim, unbiased, keepdim)(tensor)
