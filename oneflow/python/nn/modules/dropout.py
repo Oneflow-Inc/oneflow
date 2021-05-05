@@ -21,8 +21,26 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.id_util as id_util
 
 
+class _DropoutNd(Module):
+    __constants__ = ['p', 'inplace']
+    p: float
+    inplace: bool
+
+    def __init__(self, p: float = 0.5, inplace: bool = False) -> None:
+        super(_DropoutNd, self).__init__()
+        assert inplace is False, "Not support inplace=True yet!"
+        if p < 0 or p > 1:
+            raise ValueError("dropout probability has to be between 0 and 1, "
+                             "but got {}".format(p))
+        self.p = p
+        self.inplace = inplace
+
+    def extra_repr(self) -> str:
+        return 'p={}, inplace={}'.format(self.p, self.inplace)
+
+
 @oneflow_export("nn.Dropout")
-class Dropout(Module):
+class Dropout(_DropoutNd):
     r"""During training, randomly zeroes some of the elements of the input
     tensor with probability :attr:`p` using samples from a Bernoulli
     distribution. Each channel will be zeroed out independently on every forward
@@ -70,13 +88,14 @@ class Dropout(Module):
     """
 
     def __init__(self, p: float = 0.5, inplace: bool = False):
-        super().__init__()
-        assert inplace is False, "Not support inplace=True yet!"
-        assert 0 <= p < 1.0, "Dropout rate should be in range [0,1)"
-        self.rate = p
-        seed = random.randint(-sys.maxsize, sys.maxsize)
-        scale = float(1.0 / (1.0 - self.rate))
+        _DropoutNd.__init__(self, p, inplace) 
 
+        if self.p == 1.0:
+            scale = 1
+        else:
+            scale = float(1.0 / (1.0 - self.p))
+
+        seed = random.randint(-sys.maxsize, sys.maxsize)
         self._op = (
             flow.builtin_op("dropout")
             .Input("in")
@@ -89,13 +108,13 @@ class Dropout(Module):
             flow.builtin_op("random_mask_like")
             .Input("like")
             .Output("out")
-            .Attr("rate", self.rate)
+            .Attr("rate", self.p)
             .Attr("seed", seed)
             .Build()
         )
 
     def forward(self, x):
-        if self.rate == 0.0:
+        if self.p == 0.0:
             return x
         mask = self._mask_op(x)[0]
         return self._op(x, mask)[0]
