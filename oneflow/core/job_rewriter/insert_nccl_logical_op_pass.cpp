@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 
+#ifdef WITH_CUDA
+
 namespace oneflow {
 
 namespace {
@@ -655,16 +657,6 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
-int64_t GetStageIdHint(const OpNode* node) {
-  const int64_t scope_symbol_id = node->op().op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
-  return Global<symbol::Storage<Scope>>::Get()
-      ->Get(scope_symbol_id)
-      .Int64("pipeline_stage_id_hint");
-}
-
-bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
-
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
@@ -719,9 +711,7 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (!OpNodeHasScope(first_node) || nccl_op_confs.size() == 0) { break; }
-
-    if (subgraph_id_in_same_placement_group <= 0) {
+    if (nccl_op_confs.size() == 0 || subgraph_id_in_same_placement_group <= 0) {
       break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
     }
 
@@ -972,3 +962,5 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
