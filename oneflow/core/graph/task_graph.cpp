@@ -286,11 +286,11 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       StreamId::stream_index_t stream_index =
           StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
               device_id, comp_task_node->GetTaskType());
-      if (op_node->op().op_conf().has_stream_id_hint()) {
-        int32_t stream_id_hint = op_node->op().op_conf().stream_id_hint();
-        if (stream_id_hint > 90) { /* NOTE(chengcheng): magic number for GPT independent stream. */
-          LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_id_hint;
-          stream_index = static_cast<StreamId::stream_index_t>(stream_id_hint);
+      if (op_node->op().op_conf().has_stream_index_hint()) {
+        int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
+        if (stream_index_hint >= 0) {
+          LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
+          stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
         }
       }
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));

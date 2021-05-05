@@ -30,7 +30,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
  public:
   NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_id_(ctx->op_conf().stream_id_hint()),
+        stream_id_(ctx->op_conf().stream_index_hint()),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
   ~NcclLogical2DSameDim0KernelCommState() = default;

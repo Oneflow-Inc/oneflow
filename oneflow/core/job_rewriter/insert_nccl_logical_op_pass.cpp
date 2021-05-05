@@ -655,31 +655,21 @@ void InitInsertNcclSubGraphInfoFromSet(
   CHECK_LT(nccl_subgraph_info->begin_op_global_order, nccl_subgraph_info->end_op_global_order);
 }
 
-const Scope& Scope4ScopeSymbolId(int64_t scope_symbol_id) {
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
-  return Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-}
-
-const Scope& Scope4OpNode(const OpNode* op_node) {
-  const OperatorConf& op_conf = op_node->op().op_conf();
-  CHECK(op_conf.has_scope_symbol_id());
-  return Scope4ScopeSymbolId(op_conf.scope_symbol_id());
-}
-
 int64_t GetStageIdHint(const OpNode* node) {
-  return Scope4OpNode(node).Int64("pipeline_stage_id_hint");
+  const int64_t scope_symbol_id = node->op().op_conf().scope_symbol_id();
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id));
+  return Global<symbol::Storage<Scope>>::Get()
+      ->Get(scope_symbol_id)
+      .Int64("pipeline_stage_id_hint");
 }
 
 bool OpNodeHasScope(const OpNode* node) { return node->op().op_conf().has_scope_symbol_id(); }
 
-bool IsForwardPass(const OpNode* node) {
-  return Scope4OpNode(node).scope_proto().calculation_pass_name() == kForwardPass;
-}
-
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
-    const std::function<bool(const std::string&, const std::string&)>& IsReachable) {
+    const std::function<bool(const std::string&, const std::string&)>& IsReachable,
+    const int32_t subgraph_id_in_same_placement_group, const int32_t total_stage_num) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
   node2subgraph_order.reserve(subgraph_order.size());
   for (int64_t i = 0; i < subgraph_order.size(); ++i) {
@@ -727,39 +717,28 @@ void InsertNcclLogicalOpsInSubGraph(
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
-  // NOTE(chengcheng): Hack code for pipeline nccl fw/bw exec order correct.
+  // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (!OpNodeHasScope(first_node)) {
-      LOG(INFO) << "this subgraph first node has NOT scope! all ordered op list = [";
-      for (int64_t i = 0; i < subgraph_order.size(); ++i) {
-        const OpNode* this_node = subgraph_order.at(i);
-        LOG(INFO) << "i = " << i << " op_name: " << this_node->op().op_name();
-      }
-      LOG(INFO) << "].\n";
-      break;
+    if (!OpNodeHasScope(first_node) || total_stage_num == 1 || nccl_op_confs.size() == 0) { break; }
+
+    if (subgraph_id_in_same_placement_group <= 0) {
+      break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
     }
 
-    int64_t max_stage_id = 0;
-    op_graph.ForEachNode([&](const OpNode* this_node) {
-      if (OpNodeHasScope(this_node)) {
-        max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
-      }
-    });
-
-    const int64_t total_stage_num = max_stage_id + 1;
-    LOG(INFO) << "total stage num = " << total_stage_num;
-
-    int64_t this_subgraph_stage_id = GetStageIdHint(first_node);
-    if (total_stage_num >= 2 && this_subgraph_stage_id >= 0 && this_subgraph_stage_id < max_stage_id
-        && !IsForwardPass(first_node) && nccl_op_confs.size() >= 1) {
-      LOG(INFO) << "Yeah! set all op to 99 stream.";
-      // Backward subgraph in pipeline Middle stage.
-      for (auto& pair : subgraph_op_name2conf) {
-        mut_op_names.insert(pair.first);
-        pair.second.set_stream_id_hint(99);  // new bw stream id = 99
-      }
-      for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_id_hint(99); }
+    int64_t nccl_compute_stream_id = subgraph_id_in_same_placement_group - 1;
+    CudaStreamIndexGenerator stream_idx_gen;
+    if (nccl_compute_stream_id > stream_idx_gen.GetNcclComputeStreamCount()) {
+      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() subgraphs.
     }
+    int32_t stream_index =
+        static_cast<int32_t>(stream_idx_gen.GenerateNcclComputeStreamIndex(nccl_compute_stream_id));
+
+    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
+    for (auto& pair : subgraph_op_name2conf) {
+      mut_op_names.insert(pair.first);
+      pair.second.set_stream_index_hint(stream_index);
+    }
+    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_index_hint(stream_index); }
   } while (false);
 
   std::vector<OperatorConf> mut_op_confs;
@@ -959,6 +938,17 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
   }
 
+  // NOTE(chengcheng): Get stage num for pipeline & insert nccl logical.
+  int64_t max_stage_id = 0;
+  op_graph.ForEachNode([&](const OpNode* this_node) {
+    if (OpNodeHasScope(this_node)) {
+      max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
+    }
+  });
+
+  const int64_t total_stage_num = max_stage_id + 1;
+  LOG(INFO) << "total stage num = " << total_stage_num;
+
   for (auto& pair : placement2subgraphs) {
     PlacementNcclSubGraghsInfo& info = pair.second;
     for (int i = 0; i < info.ordered_subgraph.size() - 1; i++) {
@@ -967,9 +957,10 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
-    for (const auto& subgraph_ptr : info.ordered_subgraph) {
-      auto& ordered_op_nodes = subgraph_ptr->ordered_op_nodes;
-      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable);
+    for (int i = 0; i < info.ordered_subgraph.size(); i++) {
+      auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
+      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable, i,
+                                     total_stage_num);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
