@@ -51,6 +51,10 @@ class GrpcCtrlClient final : public CtrlClient {
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
+  void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override;
+  void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override;
 
  private:
   const ProcessCtx& process_ctx() const { return process_ctx_; }

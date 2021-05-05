@@ -23,9 +23,157 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+class CriticalSectionGroupState {
+ public:
+  explicit CriticalSectionGroupState(int64_t num_ranks)
+      : num_ranks_(num_ranks),
+        enter_count_(0),
+        leave_count_(0),
+        enter_calls_(num_ranks),
+        leave_calls_(num_ranks),
+        occupied_(false) {}
+  ~CriticalSectionGroupState() = default;
+
+  bool Enter(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    CHECK_EQ(num_ranks, num_ranks_);
+    CHECK_LE(enter_count_, num_ranks_);
+    CHECK_LE(rank, num_ranks_);
+    CHECK(!enter_calls_.at(rank));
+    enter_calls_.at(rank) = true;
+    enter_count_ += 1;
+    return enter_count_ == num_ranks_;
+  }
+
+  bool Leave(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    CHECK_EQ(num_ranks, num_ranks_);
+    CHECK_EQ(enter_count_, num_ranks_);
+    CHECK_LE(leave_count_, num_ranks_);
+    CHECK(!leave_calls_.at(rank));
+    leave_calls_.at(rank) = true;
+    leave_count_ += 1;
+    return leave_count_ == num_ranks_;
+  }
+
+  void Occupy() { occupied_ = true; }
+
+  bool Occupied() const { return occupied_; }
+
+ private:
+  int64_t num_ranks_;
+  int64_t enter_count_;
+  int64_t leave_count_;
+  std::vector<bool> enter_calls_;
+  std::vector<bool> leave_calls_;
+  bool occupied_;
+};
+
+class CriticalSection {
+ public:
+  CriticalSection() = default;
+  ~CriticalSection() = default;
+
+  bool Enter(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    std::unique_lock<std::mutex> lck(mutex_);
+    auto it = name2group_.find(group);
+    if (it == name2group_.end()) {
+      it = name2group_.emplace(group, CriticalSectionGroupState(num_ranks)).first;
+    }
+    CriticalSectionGroupState* group_state = &it->second;
+    bool all_enter = group_state->Enter(critical_section, group, rank, num_ranks);
+    if (all_enter) {
+      if (owner_) {
+        queueing_.push_back(group);
+        while (!group_state->Occupied()) { owner_cv_.wait(lck); }
+      } else {
+        owner_.reset(new std::string(group));
+        group_state->Occupy();
+        owner_cv_.notify_all();
+      }
+    } else {
+      while (!group_state->Occupied()) { owner_cv_.wait(lck); }
+    }
+    return all_enter;
+  }
+
+  bool Leave(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    std::unique_lock<std::mutex> lck(mutex_);
+    CHECK(owner_);
+    CHECK_EQ(group, *owner_);
+    auto it = name2group_.find(group);
+    CHECK(it != name2group_.end());
+    bool all_leave = it->second.Leave(critical_section, group, rank, num_ranks);
+    if (all_leave) {
+      name2group_.erase(it);
+      if (!queueing_.empty()) {
+        *owner_ = queueing_.front();
+        queueing_.pop_front();
+        auto owner_it = name2group_.find(*owner_);
+        CHECK(owner_it != name2group_.end());
+        owner_it->second.Occupy();
+        owner_cv_.notify_all();
+      } else {
+        owner_.reset();
+      }
+    }
+    return all_leave && name2group_.empty();
+  }
+
+ private:
+  std::mutex mutex_;
+  std::unique_ptr<std::string> owner_;
+  std::list<std::string> queueing_;
+  HashMap<std::string, CriticalSectionGroupState> name2group_;
+  std::condition_variable owner_cv_;
+};
+
+}  // namespace
+
+class LocalCtrlClient::CriticalSectionStore {
+ public:
+  CriticalSectionStore() = default;
+  ~CriticalSectionStore() = default;
+
+  void Enter(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    CriticalSection* section;
+    {
+      std::unique_lock<std::mutex> lck(mutex_);
+      section = &name2critical_section_[critical_section];
+    }
+    section->Enter(critical_section, group, rank, num_ranks);
+  }
+
+  void Leave(const std::string& critical_section, const std::string& group, int64_t rank,
+             int64_t num_ranks) {
+    CriticalSection* section;
+    {
+      std::unique_lock<std::mutex> lck(mutex_);
+      auto it = name2critical_section_.find(critical_section);
+      CHECK(it != name2critical_section_.end());
+      section = &it->second;
+    }
+    bool all_leave = section->Leave(critical_section, group, rank, num_ranks);
+    if (all_leave) {
+      std::unique_lock<std::mutex> lck(mutex_);
+      CHECK_GT(name2critical_section_.erase(critical_section), 0);
+    }
+  }
+
+ private:
+  std::mutex mutex_;
+  HashMap<std::string, CriticalSection> name2critical_section_;
+};
+
 LocalCtrlClient::LocalCtrlClient(const ProcessCtx& process_ctx) {
   CHECK(process_ctx.ctrl_addr_size() == 1);
   CHECK(process_ctx.node_size() == 1);
+  critical_section_store_.reset(new CriticalSectionStore());
 }
 
 void LocalCtrlClient::Barrier(const std::string& barrier_name) {
@@ -145,6 +293,18 @@ void LocalCtrlClient::EraseCount(const std::string& k) {
   counter_.erase(k);
 }
 
+void LocalCtrlClient::CriticalSectionEnter(const std::string& critical_section,
+                                           const std::string& group, int64_t rank,
+                                           int64_t num_ranks) {
+  critical_section_store_->Enter(critical_section, group, rank, num_ranks);
+}
+
+void LocalCtrlClient::CriticalSectionLeave(const std::string& critical_section,
+                                           const std::string& group, int64_t rank,
+                                           int64_t num_ranks) {
+  critical_section_store_->Leave(critical_section, group, rank, num_ranks);
+}
+
 class DryRunCtrlClient : public CtrlClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DryRunCtrlClient);
@@ -199,6 +359,16 @@ class DryRunCtrlClient : public CtrlClient {
     return local_ctrl_client_->IncreaseCount(k, v);
   }
   void EraseCount(const std::string& k) override { local_ctrl_client_->EraseCount(k); }
+
+  void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override {
+    UNIMPLEMENTED();
+  }
+
+  void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override {
+    UNIMPLEMENTED();
+  }
 
  private:
   std::unique_ptr<LocalCtrlClient> local_ctrl_client_;

@@ -15,11 +15,130 @@ limitations under the License.
 */
 #include "oneflow/core/control/rpc_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/env_desc.h"
 #include "grpc/grpc_posix.h"
 
 namespace oneflow {
+
+namespace {
+
+class CriticalSectionGroupState {
+ public:
+  explicit CriticalSectionGroupState(int64_t num_ranks)
+      : num_ranks_(num_ranks),
+        enter_count_(0),
+        leave_count_(0),
+        enter_calls_(num_ranks),
+        leave_calls_(num_ranks) {}
+  ~CriticalSectionGroupState() = default;
+
+  bool Enter(CtrlCall<CtrlMethod::kCriticalSectionEnter>* call) {
+    CHECK_EQ(call->request().num_ranks(), num_ranks_);
+    CHECK_LE(enter_count_, num_ranks_);
+    const int64_t rank = call->request().rank();
+    CHECK_LE(rank, num_ranks_);
+    CHECK(enter_calls_.at(rank) == nullptr);
+    enter_calls_.at(rank) = call;
+    enter_count_ += 1;
+    return enter_count_ == num_ranks_;
+  }
+
+  void Notify() {
+    for (auto* call : enter_calls_) { call->SendResponse(); }
+  }
+
+  bool Leave(CtrlCall<CtrlMethod::kCriticalSectionLeave>* call) {
+    CHECK_EQ(call->request().num_ranks(), num_ranks_);
+    CHECK_EQ(enter_count_, num_ranks_);
+    CHECK_LE(leave_count_, num_ranks_);
+    const int64_t rank = call->request().rank();
+    CHECK(!leave_calls_.at(rank));
+    leave_calls_.at(rank) = true;
+    leave_count_ += 1;
+    call->SendResponse();
+    return leave_count_ == num_ranks_;
+  }
+
+ private:
+  int64_t num_ranks_;
+  int64_t enter_count_;
+  int64_t leave_count_;
+  std::vector<CtrlCall<CtrlMethod::kCriticalSectionEnter>*> enter_calls_;
+  std::vector<bool> leave_calls_;
+};
+
+class CriticalSection {
+ public:
+  CriticalSection() = default;
+  ~CriticalSection() = default;
+
+  bool Enter(CtrlCall<CtrlMethod::kCriticalSectionEnter>* call) {
+    const std::string& group = call->request().group();
+    auto it = name2group_.find(group);
+    if (it == name2group_.end()) {
+      it = name2group_.emplace(group, CriticalSectionGroupState(call->request().num_ranks())).first;
+    }
+    bool all_enter = it->second.Enter(call);
+    if (all_enter) {
+      if (owner_) {
+        queueing_.push_back(group);
+      } else {
+        owner_.reset(new std::string(group));
+        it->second.Notify();
+      }
+    }
+    return all_enter;
+  }
+
+  bool Leave(CtrlCall<CtrlMethod::kCriticalSectionLeave>* call) {
+    const std::string& group = call->request().group();
+    auto it = name2group_.find(group);
+    CHECK(owner_);
+    CHECK_EQ(group, *owner_);
+    CHECK(it != name2group_.end());
+    bool all_leave = it->second.Leave(call);
+    if (all_leave) {
+      name2group_.erase(it);
+      if (!queueing_.empty()) {
+        *owner_ = queueing_.front();
+        queueing_.pop_front();
+        name2group_.at(*owner_).Notify();
+      } else {
+        owner_.reset();
+      }
+    }
+    return all_leave && name2group_.empty();
+  }
+
+ private:
+  std::unique_ptr<std::string> owner_;
+  std::list<std::string> queueing_;
+  HashMap<std::string, CriticalSectionGroupState> name2group_;
+};
+
+}  // namespace
+
+class RpcServer::CriticalSectionStore {
+ public:
+  CriticalSectionStore() = default;
+  ~CriticalSectionStore() = default;
+
+  void Enter(CtrlCall<CtrlMethod::kCriticalSectionEnter>* call) {
+    name2critical_section_[call->request().critical_section()].Enter(call);
+  }
+
+  void Leave(CtrlCall<CtrlMethod::kCriticalSectionLeave>* call) {
+    auto it = name2critical_section_.find(call->request().critical_section());
+    CHECK(it != name2critical_section_.end());
+    const bool all_leave = it->second.Leave(call);
+    if (all_leave) { name2critical_section_.erase(it); }
+  }
+
+ private:
+  HashMap<std::string, CriticalSection> name2critical_section_;
+};
+
+RpcServer::RpcServer() { critical_section_store_.reset(new CriticalSectionStore); }
 
 RpcServer::~RpcServer() {
   // NOTE(chengcheng): This enqueues a special event (with a null tag) that causes
@@ -195,6 +314,16 @@ void RpcServer::Init() {
     CHECK_EQ(count_.erase(call->request().key()), 1);
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kEraseCount>();
+  });
+
+  Add([this](CtrlCall<CtrlMethod::kCriticalSectionEnter>* call) {
+    critical_section_store_->Enter(call);
+    EnqueueRequest<CtrlMethod::kCriticalSectionEnter>();
+  });
+
+  Add([this](CtrlCall<CtrlMethod::kCriticalSectionLeave>* call) {
+    critical_section_store_->Leave(call);
+    EnqueueRequest<CtrlMethod::kCriticalSectionLeave>();
   });
 }
 

@@ -24,19 +24,21 @@ limitations under the License.
 
 namespace oneflow {
 
-#define CTRL_METHOD_SEQ               \
-  OF_PP_MAKE_TUPLE_SEQ(LoadServer)    \
-  OF_PP_MAKE_TUPLE_SEQ(Barrier)       \
-  OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
-  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
-  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(PushKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(ClearKV)       \
-  OF_PP_MAKE_TUPLE_SEQ(PullKV)        \
-  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
-  OF_PP_MAKE_TUPLE_SEQ(Clear)         \
-  OF_PP_MAKE_TUPLE_SEQ(IncreaseCount) \
-  OF_PP_MAKE_TUPLE_SEQ(EraseCount)
+#define CTRL_METHOD_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ(LoadServer)           \
+  OF_PP_MAKE_TUPLE_SEQ(Barrier)              \
+  OF_PP_MAKE_TUPLE_SEQ(TryLock)              \
+  OF_PP_MAKE_TUPLE_SEQ(NotifyDone)           \
+  OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone)        \
+  OF_PP_MAKE_TUPLE_SEQ(PushKV)               \
+  OF_PP_MAKE_TUPLE_SEQ(ClearKV)              \
+  OF_PP_MAKE_TUPLE_SEQ(PullKV)               \
+  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)         \
+  OF_PP_MAKE_TUPLE_SEQ(Clear)                \
+  OF_PP_MAKE_TUPLE_SEQ(IncreaseCount)        \
+  OF_PP_MAKE_TUPLE_SEQ(EraseCount)           \
+  OF_PP_MAKE_TUPLE_SEQ(CriticalSectionEnter) \
+  OF_PP_MAKE_TUPLE_SEQ(CriticalSectionLeave)
 
 #define CatRequest(method) method##Request,
 #define CatReqponse(method) method##Response,
@@ -106,6 +108,10 @@ class CtrlClient {
   virtual int32_t IncreaseCount(const std::string& k, int32_t v) = 0;
   int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
   virtual void EraseCount(const std::string& k) = 0;
+  virtual void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                                    int64_t rank, int64_t num_ranks) = 0;
+  virtual void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                                    int64_t rank, int64_t num_ranks) = 0;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
