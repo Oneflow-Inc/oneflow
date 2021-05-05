@@ -112,7 +112,7 @@ class NLLLoss(Module):
             res = output
         else:
             raise NotImplemented
-        
+
         if self.reduction == "none":
             return res
         elif self.reduction == "sum":

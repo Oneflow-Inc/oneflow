@@ -28,10 +28,37 @@ class Negative(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("neg")
 @oneflow_export("negative")
 @register_tensor_op("negative")
 def negative_op(x):
+    """This operator computes the negative value of Tensor.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        input = flow.Tensor(
+            np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        )
+        out = flow.negative(input).numpy()
+
+        # out [-1.0, 1.0, -2.3]
+
+    """
+    return Negative()(x)
+
+
+@oneflow_export("neg")
+def neg_op(x):
     """This operator computes the negative value of Tensor.
 
     Args:
