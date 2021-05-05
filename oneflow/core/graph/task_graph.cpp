@@ -283,15 +283,14 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index =
-          StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
-              device_id, comp_task_node->GetTaskType());
+      StreamId::stream_index_t stream_index;
       if (op_node->op().op_conf().has_stream_index_hint()) {
         int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
-        if (stream_index_hint >= 0) {
-          LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
-          stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
-        }
+        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
+        stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
+      } else {
+        stream_index = StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
+            device_id, comp_task_node->GetTaskType());
       }
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);

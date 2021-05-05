@@ -30,7 +30,8 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
  public:
   NcclLogicalKernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
-        stream_id_(ctx->op_conf().stream_index_hint()),
+        has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
+        stream_index_(ctx->op_conf().stream_index_hint()),
         parallel_desc_(ctx->parallel_desc()) {}
   ~NcclLogicalKernelCommState() = default;
 
@@ -42,8 +43,12 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
         int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
         device_set.emplace(std::make_pair(machine_id, device_id));
       }
-      comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())
-                  ->GetCommForDeviceAndStreamId(device_set, stream_id_);
+      EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+      if (has_independent_stream_) {
+        comm_ = comm_mgr->GetCommForDeviceAndStreamId(device_set, stream_index_);
+      } else {
+        comm_ = comm_mgr->GetCommForDevice(device_set);
+      }
       is_init_ = true;
     }
     return comm_;
@@ -51,7 +56,8 @@ class NcclLogicalKernelCommState final : public user_op::OpKernelState {
 
  private:
   bool is_init_;
-  int32_t stream_id_;
+  bool has_independent_stream_;
+  uint32_t stream_index_;
   ParallelDesc parallel_desc_;
   ncclComm_t comm_;
 };

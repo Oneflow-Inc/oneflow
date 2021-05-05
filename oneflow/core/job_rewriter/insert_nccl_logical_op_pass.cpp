@@ -669,7 +669,7 @@ void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
     const std::function<bool(const std::string&, const std::string&)>& IsReachable,
-    const int32_t subgraph_id_in_same_placement_group, const int32_t total_stage_num) {
+    const int32_t subgraph_id_in_same_placement_group, uint32_t* stream_offset) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
   node2subgraph_order.reserve(subgraph_order.size());
   for (int64_t i = 0; i < subgraph_order.size(); ++i) {
@@ -719,16 +719,16 @@ void InsertNcclLogicalOpsInSubGraph(
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
   do {
-    if (!OpNodeHasScope(first_node) || total_stage_num == 1 || nccl_op_confs.size() == 0) { break; }
+    if (!OpNodeHasScope(first_node) || nccl_op_confs.size() == 0) { break; }
 
     if (subgraph_id_in_same_placement_group <= 0) {
       break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
     }
 
-    int64_t nccl_compute_stream_id = subgraph_id_in_same_placement_group - 1;
+    int64_t nccl_compute_stream_id = *stream_offset;
     CudaStreamIndexGenerator stream_idx_gen;
-    if (nccl_compute_stream_id > stream_idx_gen.GetNcclComputeStreamCount()) {
-      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() subgraphs.
+    if (nccl_compute_stream_id >= stream_idx_gen.GetNcclComputeStreamCount()) {
+      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() insert nccl subgraphs.
     }
     int32_t stream_index =
         static_cast<int32_t>(stream_idx_gen.GenerateNcclComputeStreamIndex(nccl_compute_stream_id));
@@ -739,6 +739,7 @@ void InsertNcclLogicalOpsInSubGraph(
       pair.second.set_stream_index_hint(stream_index);
     }
     for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_index_hint(stream_index); }
+    (*stream_offset)++;
   } while (false);
 
   std::vector<OperatorConf> mut_op_confs;
@@ -938,17 +939,6 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
   }
 
-  // NOTE(chengcheng): Get stage num for pipeline & insert nccl logical.
-  int64_t max_stage_id = 0;
-  op_graph.ForEachNode([&](const OpNode* this_node) {
-    if (OpNodeHasScope(this_node)) {
-      max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
-    }
-  });
-
-  const int64_t total_stage_num = max_stage_id + 1;
-  LOG(INFO) << "total stage num = " << total_stage_num;
-
   for (auto& pair : placement2subgraphs) {
     PlacementNcclSubGraghsInfo& info = pair.second;
     for (int i = 0; i < info.ordered_subgraph.size() - 1; i++) {
@@ -957,10 +947,11 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
+    uint32_t stream_offset = 0;
     for (int i = 0; i < info.ordered_subgraph.size(); i++) {
       auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
       InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable, i,
-                                     total_stage_num);
+                                     &stream_offset);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
