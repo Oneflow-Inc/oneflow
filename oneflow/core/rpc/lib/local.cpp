@@ -362,12 +362,12 @@ class DryRunCtrlClient : public CtrlClient {
 
   void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
                             int64_t rank, int64_t num_ranks) override {
-    UNIMPLEMENTED();
+    local_ctrl_client_->CriticalSectionEnter(critical_section, group, rank, num_ranks);
   }
 
   void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
                             int64_t rank, int64_t num_ranks) override {
-    UNIMPLEMENTED();
+    local_ctrl_client_->CriticalSectionLeave(critical_section, group, rank, num_ranks);
   }
 
  private:
