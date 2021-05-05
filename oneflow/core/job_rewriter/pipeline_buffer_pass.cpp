@@ -228,6 +228,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
   op_graph.ForEachNode([&](const OpNode* this_node) {
     if (!OpNodeHasScope(this_node)) {
       LOG(WARNING) << " op : " << this_node->op().op_conf().DebugString() << " has NOT scope!";
+      return;
     }
     max_stage_id = std::max(max_stage_id, GetStageIdHint(this_node));
   });
