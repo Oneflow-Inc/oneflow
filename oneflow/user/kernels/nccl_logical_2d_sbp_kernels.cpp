@@ -30,6 +30,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
  public:
   NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
+        stream_id_(ctx->op_conf().stream_id_hint()),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
   ~NcclLogical2DSameDim0KernelCommState() = default;
@@ -62,12 +63,14 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())
+                ->GetCommForDeviceAndStreamId(device_set, stream_id_);
     num_ranks_ = group_size;
     is_init_ = true;
   }
 
   bool is_init_;
+  int32_t stream_id_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
   int64_t num_ranks_;
