@@ -28,6 +28,7 @@ class Negative(Module):
         return self._op(x)[0]
 
 
+@oneflow_export("neg")
 @oneflow_export("negative")
 @register_tensor_op("negative")
 def negative_op(x):
