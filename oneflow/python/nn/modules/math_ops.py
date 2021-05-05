@@ -745,14 +745,9 @@ class Std(Module):
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
-            
-            sum = (
-                Sum(self.axis, self.keepdim)(self.square_op(x))
-                / self.reduce_count
-            )
-            square = self.square_op(
-                Sum(self.axis, self.keepdim)(x) / self.reduce_count
-            )
+
+            sum = Sum(self.axis, self.keepdim)(self.square_op(x)) / self.reduce_count
+            square = self.square_op(Sum(self.axis, self.keepdim)(x) / self.reduce_count)
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
             return res

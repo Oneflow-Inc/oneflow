@@ -48,7 +48,7 @@ class TestDropout(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         y = m(x)
         test_case.assertTrue(np.allclose(y.numpy(), input_arr))
-    
+
     def test_dropout_special_case(test_case):
         input_arr = np.array(
             [
@@ -58,11 +58,7 @@ class TestDropout(flow.unittest.TestCase):
             ]
         )
         output = np.array(
-            [
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-                [0.0, 0.0, 0.0, 0.0],
-            ]
+            [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],]
         )
         m = flow.nn.Dropout(p=1.0)
         x = flow.Tensor(input_arr)

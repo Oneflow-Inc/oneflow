@@ -22,7 +22,7 @@ import oneflow.python.framework.id_util as id_util
 
 
 class _DropoutNd(Module):
-    __constants__ = ['p', 'inplace']
+    __constants__ = ["p", "inplace"]
     p: float
     inplace: bool
 
@@ -30,13 +30,14 @@ class _DropoutNd(Module):
         super(_DropoutNd, self).__init__()
         assert inplace is False, "Not support inplace=True yet!"
         if p < 0 or p > 1:
-            raise ValueError("dropout probability has to be between 0 and 1, "
-                             "but got {}".format(p))
+            raise ValueError(
+                "dropout probability has to be between 0 and 1, " "but got {}".format(p)
+            )
         self.p = p
         self.inplace = inplace
 
     def extra_repr(self) -> str:
-        return 'p={}, inplace={}'.format(self.p, self.inplace)
+        return "p={}, inplace={}".format(self.p, self.inplace)
 
 
 @oneflow_export("nn.Dropout")
@@ -88,7 +89,7 @@ class Dropout(_DropoutNd):
     """
 
     def __init__(self, p: float = 0.5, inplace: bool = False):
-        _DropoutNd.__init__(self, p, inplace) 
+        _DropoutNd.__init__(self, p, inplace)
 
         if self.p == 1.0:
             scale = 1
