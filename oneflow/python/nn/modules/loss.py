@@ -140,7 +140,7 @@ class NLLLoss(Module):
             :attr:`reduction`. Default: ``'mean'``
     
     For example:
-    
+
     .. code-block:: python 
         
         import oneflow as flow
@@ -186,24 +186,25 @@ class NLLLoss(Module):
             .Build()
         )
 
+    def nllloss_1d(self, input, target):
+        n = input.shape[0]
+        idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
+        target = flow.unsqueeze(target, dim=1)
+        t = flow.cat([idx, target], dim=1)
+        res = self._gather_nd_op(input, t)[0]
+        return res
+
     def forward(self, input, target):
         n = input.shape[0]
         input = flow.negative(input)
         if len(input.shape) == 2:
-            idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
-            target = flow.unsqueeze(target, dim=1)
-            t = flow.cat([idx, target], dim=1)
-            res = self._gather_nd_op(input, t)[0]
+            res = self.nllloss_1d(input, target)
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
             input = flow.tmp.transpose(input, (0, 2, 3, 1))
             input = flow.tmp.reshape(input, shape=[-1, input.shape[3]])
             target = flow.tmp.flatten(target)
-            n = input.shape[0]
-            idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
-            target = flow.unsqueeze(target, dim=1)
-            t = flow.cat([idx, target], dim=1)
-            res = self._gather_nd_op(input, t)[0]
+            res = self.nllloss_1d(input, target)
             res = flow.tmp.reshape(res, (b, h, w))
 
         else:

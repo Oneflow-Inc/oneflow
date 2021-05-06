@@ -47,7 +47,7 @@ class TestNegativeModule(flow.unittest.TestCase):
         of_out = input.negative()
         np_out = -(input.numpy())
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-    
+
     def test_self_tensor_negative(test_case):
         input = flow.Tensor(
             np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
