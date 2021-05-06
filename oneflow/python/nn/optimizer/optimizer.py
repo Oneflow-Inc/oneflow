@@ -95,9 +95,9 @@ class SGD(Optimizer):
         scale: float = 1.0,
     ):
         super().__init__()
-        assert lr > 0.0, f"Invalid learning rate: {lr}"
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
+        assert scale >= 0.0, f"Invalid scale factor: {scale}"
 
         self._default_options = dict()
         self._default_options["lr"] = lr
@@ -117,9 +117,9 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if "momentum" in self._default_options:
-                    # TODO: Use flow.zeros_like instead of numpy
-                    self._state[param]["momentum_buf"] = flow.Tensor(
-                        np.zeros(param.shape)
+                    self._state[param]["momentum_buf"] = flow.tmp.zeros(
+                        # TODO: zeros module support flow.Size parameter
+                        tuple(param.shape)
                     )
 
         if "momentum" in self._default_options.keys():
