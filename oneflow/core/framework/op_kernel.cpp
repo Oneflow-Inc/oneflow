@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
@@ -29,6 +30,32 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
     if (mut_shape_view) { mut_shape_view->set_shape(shape); }
   }
 }
+
+#define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                          \
+  template<>                                                                                 \
+  const cpp_type& KernelCreateContext::Attr<cpp_type>(const std::string& attr_name) const {  \
+    const auto* attr = Attr4Name(attr_name).get();                                           \
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<cpp_type>*>(attr))->val();          \
+  }                                                                                          \
+  template<>                                                                                 \
+  const cpp_type& KernelInitContext::Attr<cpp_type>(const std::string& attr_name) const {    \
+    const auto* attr = Attr4Name(attr_name).get();                                           \
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<cpp_type>*>(attr))->val();          \
+  }                                                                                          \
+  template<>                                                                                 \
+  const cpp_type& KernelInferContext::Attr<cpp_type>(const std::string& attr_name) const {   \
+    const auto* attr = Attr4Name(attr_name).get();                                           \
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<cpp_type>*>(attr))->val();          \
+  }                                                                                          \
+  template<>                                                                                 \
+  const cpp_type& KernelComputeContext::Attr<cpp_type>(const std::string& attr_name) const { \
+    const auto* attr = Attr4Name(attr_name).get();                                           \
+    return CHECK_NOTNULL(dynamic_cast<const TypedAttrVal<cpp_type>*>(attr))->val();          \
+  }
+
+OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
+
+#undef KERNEL_CONTETX_ATTR_MEMBER_FUNC
 
 }  // namespace user_op
 

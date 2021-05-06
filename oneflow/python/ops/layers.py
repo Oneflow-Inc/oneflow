@@ -23,17 +23,20 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]
 
 
 @oneflow_export("layers.dense")
 def dense(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     units: int,
     activation: Optional[
-        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -42,16 +45,16 @@ def dense(
     bias_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     trainable: bool = True,
     name: str = "Dense",
-    model_distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
-) -> oneflow_api.BlobDesc:
-    r"""Fully-connected layer. 
+    model_distribute: oneflow._oneflow_internal.distribute.Distribute = oneflow._oneflow_internal.distribute.broadcast(),
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""Fully-connected layer.
 
-    The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob. 
+    The fully-connected layer multiplies input Blob with weight matrix and produces an Output Blob.
 
     Args:
-        inputs (oneflow_api.BlobDesc): A 2D input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): A 2D input `Blob`.
         units (int): A positive integer for the dimensionality of the output space.
-        activation (Optional[oneflow_api.BlobDesc], optional):  Activation function. Defaults to None.
+        activation (Optional[oneflow._oneflow_internal.BlobDesc], optional):  Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -59,19 +62,19 @@ def dense(
         bias_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): Regularizer for the bias vector. Defaults to None.
         trainable (bool, optional): A boolean specifies whether to train the variables. Defaults to True.
         name (Optional[str], optional): This layer's name. Defaults to None.
-        model_distribute (oneflow_api.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.distribute.broadcast().
+        model_distribute (oneflow._oneflow_internal.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow._oneflow_internal.distribute.broadcast().
 
     Returns:
-        oneflow_api.BlobDesc:  A N-D `Blob` with the shape of (batch_size, units).
+        oneflow._oneflow_internal.BlobDesc:  A N-D `Blob` with the shape of (batch_size, units).
 
     Raises:
         ValueError: The dimension of input `Blob` must be less than 2.
         VauleError: Model distribute must be in auto, broadcast, split.
         ValueError: The input must be a 2D `Blob` when the model distribute is split.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -103,12 +106,12 @@ def dense(
     assert in_num_axes >= 2
 
     assert (
-        model_distribute is oneflow_api.distribute.auto()
-        or model_distribute is oneflow_api.distribute.broadcast()
-        or model_distribute is oneflow_api.distribute.split(0)
+        model_distribute is oneflow._oneflow_internal.distribute.auto()
+        or model_distribute is oneflow._oneflow_internal.distribute.broadcast()
+        or model_distribute is oneflow._oneflow_internal.distribute.split(0)
     )
 
-    if model_distribute is oneflow_api.distribute.split(0):
+    if model_distribute is oneflow._oneflow_internal.distribute.split(0):
         assert in_num_axes == 2  # model distribute is hard for reshape split dim 1
 
     if in_num_axes > 2:
@@ -162,7 +165,7 @@ def dense(
 
 @oneflow_export("layers.conv1d")
 def conv1d(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
     kernel_size: Union[int, Tuple[int]] = 1,
     strides: Union[int, Tuple[int]] = 1,
@@ -171,7 +174,10 @@ def conv1d(
     dilation_rate: Optional[Union[int, Tuple[int]]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -182,13 +188,13 @@ def conv1d(
     name: str = "Conv1d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""1D convolution layer. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""1D convolution layer.
 
-    This layer computes a 1-D convolution with 3D input Blob and filters. 
+    This layer computes a 1-D convolution with 3D input Blob and filters.
 
     Args:
-        inputs (oneflow_api.BlobDesc): A 3D input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): A 3D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -199,7 +205,7 @@ def conv1d(
                         "NWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, width). Defaults to "NCW".
         dilation_rate (Optional[Union[int, Tuple[int]]], optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -216,11 +222,11 @@ def conv1d(
         ValueError: Number of group must be one when data_format is 'NWC'.
 
     Returns:
-        oneflow_api.BlobDesc: A 3D `Blob` with the shape of (batch_size, filters, new_width).
+        oneflow._oneflow_internal.BlobDesc: A 3D `Blob` with the shape of (batch_size, filters, new_width).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -356,7 +362,7 @@ def conv1d(
 
 @oneflow_export("layers.conv2d")
 def conv2d(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
     kernel_size: Union[int, IntPair] = 1,
     strides: Union[int, IntPair] = 1,
@@ -365,7 +371,10 @@ def conv2d(
     dilation_rate: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -376,13 +385,13 @@ def conv2d(
     name: str = "Conv2d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""2D convolution layer. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""2D convolution layer.
 
-    This layer computes a 2D convolution with 4D input Blob and filters. 
+    This layer computes a 2D convolution with 4D input Blob and filters.
 
     Args:
-        inputs (oneflow_api.BlobDesc): A 4D input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): A 4D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Tuple[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -393,7 +402,7 @@ def conv2d(
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels). Defaults to "NCHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -412,11 +421,11 @@ def conv2d(
         ValueError: Number of group must be one when data_format is 'NHWC'.
 
     Returns:
-        oneflow_api.BlobDesc: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+        oneflow._oneflow_internal.BlobDesc: A 4D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -553,7 +562,7 @@ def conv2d(
 
 @oneflow_export("layers.conv3d")
 def conv3d(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     filters: int,
     kernel_size: Union[int, Sequence[int]] = 1,
     strides: Union[int, Sequence[int]] = 1,
@@ -562,7 +571,10 @@ def conv3d(
     dilation_rate: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
     activation: Optional[
-        Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc]
+        Callable[
+            [oneflow._oneflow_internal.BlobDesc, str],
+            oneflow._oneflow_internal.BlobDesc,
+        ]
     ] = None,
     use_bias: bool = True,
     kernel_initializer: Optional[initializer_conf_util.InitializerConf] = None,
@@ -573,13 +585,13 @@ def conv3d(
     name: str = "Conv3d",
     weight_name: Optional[str] = None,
     bias_name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""3D convolution layer. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""3D convolution layer.
 
     This layer computes 3D convolution with 5D input Blob and filters
 
     Args:
-        inputs (oneflow_api.BlobDesc): A 5D input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): A 5D input `Blob`.
         filters (int): An integer specifies the dimensionality of the output space.
         kernel_size (Union[int, List[int], Sequence[int]], optional): An integer or tuple/list specifies the height and width of the convolution window.
                         When it is an integer, a square window is applied to the input. Defaults to 1.
@@ -590,7 +602,7 @@ def conv3d(
                         "NDHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, channels, depth, height, width). Defaults to "NCDHW".
         dilation_rate (int, optional): An integer or tuple/list specifies the dilation rate for the dilated convolution. When it is an integer, the same dilation rate is applied for the all dimensions. Defaults to 1.
         groups (int, optional): A positive integer specifies number of groups for the Group conv. Defaults to 1.
-        activation (Optional[ Callable[[oneflow_api.BlobDesc, str], oneflow_api.BlobDesc] ], optional): Activation function. Defaults to None.
+        activation (Optional[ Callable[[oneflow._oneflow_internal.BlobDesc, str], oneflow._oneflow_internal.BlobDesc] ], optional): Activation function. Defaults to None.
         use_bias (bool, optional): A boolean specifies whether to use a bias vector. Defaults to True.
         kernel_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the kernel weights matrix. Defaults to None.
         bias_initializer (Optional[initializer_conf_util.InitializerConf], optional): Initializer for the bias vector. Defaults to None.
@@ -609,11 +621,11 @@ def conv3d(
         ValueError: Number of group must be one when data_format is 'NDHWC'.
 
     Returns:
-        oneflow_api.BlobDesc: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
+        oneflow._oneflow_internal.BlobDesc: A 5D `Blob` with the shape of (batch_size, filters, new_height, new_width).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -765,7 +777,7 @@ def conv3d(
 
 @oneflow_export("layers.layer_norm")
 def layer_norm(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     center: bool = True,
     scale: bool = True,
     trainable: bool = True,
@@ -773,11 +785,11 @@ def layer_norm(
     begin_params_axis: int = -1,
     epsilon: float = 1e-5,
     name: str = "LayerNorm",
-) -> oneflow_api.BlobDesc:
-    r"""Layer Normalization. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""Layer Normalization.
 
     Args:
-        inputs (oneflow_api.BlobDesc): Input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
         center (bool, optional): A boolean specifies whether to shift input `Blob`. Defaults to True.
         scale (bool, optional): A boolean specifies whether to scale input `Blob`. Defaults to True.
         trainable (bool, optional): A boolean specifies whether to train variables. Defaults to True.
@@ -787,11 +799,11 @@ def layer_norm(
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: A normalized `Blob` with same shape of input.
+        oneflow._oneflow_internal.BlobDesc: A normalized `Blob` with same shape of input.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -830,7 +842,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(0.0),
                 trainable=trainable,
                 model_name="beta",
-                distribute=oneflow_api.distribute.broadcast(),
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
                 reuse=False,
             )
 
@@ -843,7 +855,7 @@ def layer_norm(
                 initializer=flow.constant_initializer(1.0),
                 trainable=trainable,
                 model_name="gamma",
-                distribute=oneflow_api.distribute.broadcast(),
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
                 reuse=False,
             )
 
@@ -905,25 +917,25 @@ def layer_norm(
 
 @oneflow_export("layers.layer_norm_grad")
 def layer_norm_grad(
-    dy: oneflow_api.BlobDesc,
-    x: oneflow_api.BlobDesc,
-    mean: oneflow_api.BlobDesc,
-    inv_variance: oneflow_api.BlobDesc,
+    dy: oneflow._oneflow_internal.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
+    mean: oneflow._oneflow_internal.BlobDesc,
+    inv_variance: oneflow._oneflow_internal.BlobDesc,
     begin_norm_axis: int = 1,
     name: str = "LayerNormGrad",
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Layer normalization
 
     Args:
-        dy (oneflow_api.BlobDesc): Upstream derivstives.
-        x (oneflow_api.BlobDesc): Input `Blob`.
-        mean (oneflow_api.BlobDesc): Mean over neurons.
-        inv_variance (oneflow_api.BlobDesc): Variance over neurons.
+        dy (oneflow._oneflow_internal.BlobDesc): Upstream derivstives.
+        x (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
+        mean (oneflow._oneflow_internal.BlobDesc): Mean over neurons.
+        inv_variance (oneflow._oneflow_internal.BlobDesc): Variance over neurons.
         begin_norm_axis (int, optional): An integer specifies which axis to normalize at first. Defaults to 1.
         name (Optional[str], optional): This layer's name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: Gradient with respect to input `Blob`.
+        oneflow._oneflow_internal.BlobDesc: Gradient with respect to input `Blob`.
     """
     op = (
         flow.user_op_builder(name)
@@ -942,23 +954,27 @@ def layer_norm_grad(
 
 @oneflow_export("layers.layer_norm_param_grad")
 def layer_norm_param_grad(
-    dy: oneflow_api.BlobDesc,
-    norm: oneflow_api.BlobDesc,
-    gamma: oneflow_api.BlobDesc,
+    dy: oneflow._oneflow_internal.BlobDesc,
+    norm: oneflow._oneflow_internal.BlobDesc,
+    gamma: oneflow._oneflow_internal.BlobDesc,
     begin_params_axis: int = -1,
     name: str = "LayerNormParamGrad",
-) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
+) -> Tuple[
+    oneflow._oneflow_internal.BlobDesc,
+    oneflow._oneflow_internal.BlobDesc,
+    oneflow._oneflow_internal.BlobDesc,
+]:
     r"""Backward pass for layer normalization
 
     Args:
-        dy (oneflow_api.BlobDesc): Upstream derivstives.
-        norm (oneflow_api.BlobDesc): Normalized output.
-        gamma (oneflow_api.BlobDesc): Scale parameter.
+        dy (oneflow._oneflow_internal.BlobDesc): Upstream derivstives.
+        norm (oneflow._oneflow_internal.BlobDesc): Normalized output.
+        gamma (oneflow._oneflow_internal.BlobDesc): Scale parameter.
         begin_params_axis (int, optional): From which parameters to begin with. Defaults to -1.
         name (Optional[str], optional): This layer's name. Defaults to 'LayerNormParamGrad'.
 
     Returns:
-        Tuple[oneflow_api.BlobDesc]:
+        Tuple[oneflow._oneflow_internal.BlobDesc]:
                 normalized_diff: Gradient with respect to input `Blob`.
                 beta_diff: Gradient with respect to shift parameter beta.
                 gamma_diff: Gradient with respect to scale parameter gamma.
@@ -1014,7 +1030,7 @@ def _get_batch_normalization_variables(
                 initializer=beta_initializer or flow.zeros_initializer(),
                 regularizer=beta_regularizer,
                 trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
                 reuse=False,
             )
         else:
@@ -1036,7 +1052,7 @@ def _get_batch_normalization_variables(
                 initializer=gamma_initializer or flow.ones_initializer(),
                 regularizer=gamma_regularizer,
                 trainable=trainable,
-                distribute=oneflow_api.distribute.broadcast(),
+                distribute=oneflow._oneflow_internal.distribute.broadcast(),
                 reuse=False,
             )
         else:
@@ -1056,7 +1072,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_mean_initializer or flow.zeros_initializer(),
             trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
+            distribute=oneflow._oneflow_internal.distribute.broadcast(),
             reuse=False,
         )
         return moving_mean
@@ -1074,7 +1090,7 @@ def _get_batch_normalization_variables(
             dtype=params_dtype,
             initializer=moving_variance_initializer or flow.ones_initializer(),
             trainable=False,
-            distribute=oneflow_api.distribute.broadcast(),
+            distribute=oneflow._oneflow_internal.distribute.broadcast(),
             reuse=False,
         )
         return moving_variance
@@ -1090,7 +1106,7 @@ def _get_batch_normalization_variables(
 
 @oneflow_export("layers.batch_normalization")
 def batch_normalization(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1109,15 +1125,15 @@ def batch_normalization(
     beta_name: Optional[str] = None,
     moving_mean_name: Optional[str] = None,
     moving_variance_name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""The BatchNormalization Layer. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""The BatchNormalization Layer.
 
     This layer can be used in conv or dense layer.
 
     The input data will be normalized by the mean and variance of the current batch data
 
     Args:
-        inputs (oneflow_api.BlobDesc): Input `Blob`.
+        inputs (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
         axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
         momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1138,14 +1154,14 @@ def batch_normalization(
         moving_variance_name (Optional[str], optional): This moving_var's name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc:  A `Blob` with same shape of input.
+        oneflow._oneflow_internal.BlobDesc:  A `Blob` with same shape of input.
 
     Raises:
         ValueError: If axis is out of dimension of input.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -1271,8 +1287,8 @@ def batch_normalization(
 
 @oneflow_export("layers.batch_normalization_add_relu")
 def batch_normalization_add_relu(
-    inputs: oneflow_api.BlobDesc,
-    addend: Optional[oneflow_api.BlobDesc] = None,
+    inputs: oneflow._oneflow_internal.BlobDesc,
+    addend: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1291,12 +1307,12 @@ def batch_normalization_add_relu(
     beta_name: Optional[str] = None,
     moving_mean_name: Optional[str] = None,
     moving_variance_name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Fused flow.layers.batch_normalization + flow.math.add + flow.math.relu
 
     Args:
-        inputs (oneflow_api.BlobDesc): Input `Blob`.
-        addend (oneflow_api.BlobDesc): `Blob` add to batch_normalization output.
+        inputs (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
+        addend (oneflow._oneflow_internal.BlobDesc): `Blob` add to batch_normalization output.
         axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
         momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
         epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1317,7 +1333,7 @@ def batch_normalization_add_relu(
         moving_variance_name (Optional[str], optional): This moving_var's name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc:  A `Blob` with same shape of input.
+        oneflow._oneflow_internal.BlobDesc:  A `Blob` with same shape of input.
 
     Raises:
         ValueError: If axis is out of dimension of input.
@@ -1402,7 +1418,7 @@ def batch_normalization_add_relu(
 
 @oneflow_export("layers.batch_normalization_relu")
 def batch_normalization_relu(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     axis: int = -1,
     momentum: float = 0.99,
     epsilon: float = 0.001,
@@ -1417,11 +1433,11 @@ def batch_normalization_relu(
     trainable: bool = True,
     training: bool = True,
     name: str = "BatchNorm",
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Fused flow.layers.batch_normalization + flow.math.relu
 
 Args:
-    inputs (oneflow_api.BlobDesc): Input `Blob`.
+    inputs (oneflow._oneflow_internal.BlobDesc): Input `Blob`.
     axis (int, optional): An int specifies the axis that should be normalized . Default is -1, which normalizes the last axis.
     momentum (float, optional):  A float specifies the momentum for the moving average. Defaults to 0.99.
     epsilon (float, optional): A small float added to avoid division by zero. Defaults to 0.001.
@@ -1438,7 +1454,7 @@ Args:
     name (Optional[str], optional): This layer's name. Defaults to None.
 
 Returns:
-    oneflow_api.BlobDesc:  A `Blob` with same shape of input.
+    oneflow._oneflow_internal.BlobDesc:  A `Blob` with same shape of input.
 
 Raises:
     ValueError: If axis is out of dimension of input.
@@ -1465,14 +1481,14 @@ Raises:
 
 @oneflow_export("layers.upsample_2d")
 def upsample(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     size: Sequence[int] = (2, 2),
     align_corners: bool = False,
     data_format: str = "NCHW",
     interpolation: str = "nearest",
     name: str = "Upsample2D",
 ):
-    r"""The Upsample Layer, this layer can upsample the feature map to a specified scale. 
+    r"""The Upsample Layer, this layer can upsample the feature map to a specified scale.
 
     Args:
         x ([type]): Input `Blob`.
@@ -1488,11 +1504,11 @@ def upsample(
         ValueError: data_format must be "NHWC" or "NCHW"
 
     Returns:
-        [type]: oneflow_api.BlobDesc:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
+        [type]: oneflow._oneflow_internal.BlobDesc:  A `Blob` which is the upsampled `x`. If `size` is (2, 2), the shape of return value is [N, C, 2H, 2W].
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np

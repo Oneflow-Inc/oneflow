@@ -32,8 +32,16 @@ inline void InitEnv(const std::string& env_proto_str) {
   return oneflow::InitEnv(env_proto_str).GetOrThrow();
 }
 
+inline void InitDefaultEnv(const std::string& env_proto_str) {
+  return oneflow::InitDefaultEnv(env_proto_str).GetOrThrow();
+}
+
 inline void DestroyEnv() { return oneflow::DestroyEnv().GetOrThrow(); }
 
 inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
+
+inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
+
+inline size_t GetWordSize() { return oneflow::GetWordSize().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

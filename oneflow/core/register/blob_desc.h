@@ -47,8 +47,9 @@ class BlobDesc final {
   BlobDesc& operator=(const BlobDesc&);
 
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
-  Shape& mut_shape() { return *CHECK_NOTNULL(shape_.get()); }
-  void set_shape(const Shape& shape) { *CHECK_NOTNULL(shape_.get()) = shape; }
+  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
+  Shape& mut_shape() { return *CHECK_NOTNULL(mut_shape_ptr().get()); }
+  void set_shape(const Shape& shape) { *CHECK_NOTNULL(mut_shape_ptr().get()) = shape; }
 
   DataType data_type() const { return data_type_; }
   DataType* mut_data_type() { return &data_type_; }
@@ -69,7 +70,8 @@ class BlobDesc final {
   size_t AlignedTotalByteSize() const;
 
  private:
-  std::shared_ptr<Shape> shape_;
+  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<Shape> mut_shape_ptr() const { return std::const_pointer_cast<Shape>(shape_); }
   DataType data_type_;
   bool is_dynamic_;
 };
