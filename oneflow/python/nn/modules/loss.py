@@ -88,15 +88,48 @@ class CrossEntropyLoss(Module):
             return out
 
 
-import oneflow as flow
-from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
-import numpy as np
-
-
 @oneflow_export("nn.NLLLoss")
 class NLLLoss(Module):
-    r""" The negative log likelihood loss. It is useful to train a classification problem with C classes.
+    r""" The negative log likelihood loss. It is useful to train a classification
+    problem with `C` classes.
+
+    The `input` given through a forward call is expected to contain
+    log-probabilities of each class. `input` has to be a Tensor of size either
+    :math:`(minibatch, C)` or :math:`(minibatch, C, d_1, d_2, ..., d_K)`
+    with :math:`K \geq 1` for the `K`-dimensional case (described later).
+
+    Obtaining log-probabilities in a neural network is easily achieved by
+    adding a  `LogSoftmax`  layer in the last layer of your network.
+    You may use `CrossEntropyLoss` instead, if you prefer not to add an extra
+    layer.
+
+    The `target` that this loss expects should be a class index in the range :math:`[0, C-1]`
+    where `C = number of classes`; 
+
+    The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
+
+    .. math::
+        \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+        l_n = - w_{y_n} x_{n,y_n}, \quad
+        w_{c} = \mathbb{1},
+
+    where :math:`x` is the input, :math:`y` is the target, :math:`w` is the weight, and
+    :math:`N` is the batch size. If :attr:`reduction` is not ``'none'``
+    (default ``'mean'``), then
+
+    .. math::
+        \ell(x, y) = \begin{cases}
+            \sum_{n=1}^N \frac{1}{N} l_n, &
+            \text{if reduction} = \text{`mean';}\\
+            \sum_{n=1}^N l_n,  &
+            \text{if reduction} = \text{`sum'.}
+        \end{cases}
+
+    Can also be used for higher dimension inputs, such as 2D images, by providing
+    an input of size :math:`(minibatch, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`,
+    where :math:`K` is the number of dimensions, and a target of appropriate shape
+    (see below). In the case of images, it computes NLL loss per-pixel.
+
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
@@ -107,6 +140,7 @@ class NLLLoss(Module):
             :attr:`reduction`. Default: ``'mean'``
     
     For example:
+    
     .. code-block:: python 
         
         import oneflow as flow
