@@ -25,6 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
+class Device;
+
 namespace user_op {
 
 class UserOpDefWrapper;

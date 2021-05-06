@@ -30,7 +30,7 @@ class Device final {
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
-  Device operator=(const Device&) = default;
+  Device& operator=(const Device&) = default;
   const std::string& type() const { return type_; }
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }

@@ -24,20 +24,8 @@ namespace oneflow {
 
 namespace user_op {
 
-namespace {
-
-AttrMap MakeAttrMap(const OperatorConf& op_conf) {
-  const auto& attrs = std::make_shared<HashMap<std::string, std::shared_ptr<const AttrVal>>>();
-  for (const auto& kv : op_conf.user_conf().attr()) {
-    attrs->emplace(kv.first, CHECK_JUST(AttrValueUtil::ToCppAttrValue(kv.second)));
-  }
-  return AttrMap(attrs);
-}
-
-}  // namespace
-
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
-    : op_conf_(op_conf), attrs_(MakeAttrMap(*op_conf)) {
+    : op_conf_(op_conf), attrs_(MakeAttrMapFromUserOpConf(op_conf->user_conf())) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
 }

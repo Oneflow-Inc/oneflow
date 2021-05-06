@@ -42,7 +42,7 @@ limitations under the License.
 namespace oneflow {
 
 namespace one {
-class StatefulOpKernel;
+class StatefulLocalOpKernel;
 class TensorTuple;
 class MirroredTensor;
 }  // namespace one
@@ -246,11 +246,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
 
-  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
-                                one::EagerBlobObjectList input_eager_blob_objects,
-                                one::EagerBlobObjectList output_eager_blob_objects,
+  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+                                const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+                                const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                                 const AttrMap& attrs,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym);
+                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+                                const std::string& instr_type_name);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,

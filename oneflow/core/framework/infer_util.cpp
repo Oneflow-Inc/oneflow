@@ -26,23 +26,6 @@ namespace oneflow {
 
 namespace user_op {
 
-#define KERNEL_CONTETX_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                  \
-  template<>                                                                         \
-  const cpp_type& InferContext::Attr<cpp_type>(const std::string& attr_name) const { \
-    const auto* attr = Attr4AttrName(attr_name).get();                               \
-    const auto* typed_attr = dynamic_cast<const TypedAttrVal<cpp_type>*>(attr);            \
-    return CHECK_NOTNULL(typed_attr)->val();                                         \
-  }                                                                                  \
-  template<>                                                                         \
-  const cpp_type& DeviceInferContext::Attr<cpp_type>(const std::string& attr_name) const { \
-    const auto* attr = Attr4AttrName(attr_name).get();                               \
-    const auto* typed_attr = dynamic_cast<const TypedAttrVal<cpp_type>*>(attr);            \
-    return CHECK_NOTNULL(typed_attr)->val();                                         \
-  }                                                                                  
-OF_PP_FOR_EACH_TUPLE(KERNEL_CONTETX_ATTR_MEMBER_FUNC, ATTR_SEQ)
-
-#undef KERNEL_CONTETX_ATTR_MEMBER_FUNC
-
 Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   const TensorDesc* first_tensor_desc = nullptr;
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
