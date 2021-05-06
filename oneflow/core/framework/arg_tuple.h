@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 namespace oneflow {
 
@@ -33,14 +33,15 @@ class ArgTuple final {
   const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index() const {
     return indexed_arg_name_and_index_;
   }
-  const std::map<std::string, std::vector<int32_t>>& arg_name2bn_index2tensor_tuple_index() const {
+  const std::unordered_map<std::string, std::vector<int32_t>>&
+  arg_name2bn_index2tensor_tuple_index() const {
     return arg_name2bn_index2tensor_tuple_index_;
   }
 
  private:
   std::vector<std::string> indexed_bns_;
   std::vector<std::pair<std::string, int32_t>> indexed_arg_name_and_index_;
-  std::map<std::string, std::vector<int32_t>> arg_name2bn_index2tensor_tuple_index_;
+  std::unordered_map<std::string, std::vector<int32_t>> arg_name2bn_index2tensor_tuple_index_;
 };
 
 }  // namespace oneflow

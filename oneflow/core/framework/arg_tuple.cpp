@@ -29,7 +29,7 @@ std::pair<std::string, int> GetPair(const std::string& bn) {
 
 void InitArgName2BnIndex2TensorTupleIndex(
     const std::vector<std::pair<std::string, int32_t>>& indexed_arg_pairs,
-    std::map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
+    std::unordered_map<std::string, std::vector<int32_t>>* arg_name2bn_index2tensor_tuple_index) {
   for (int i = 0; i < indexed_arg_pairs.size(); i++) {
     const auto& pair = indexed_arg_pairs.at(i);
     const std::string& arg_name = pair.first;

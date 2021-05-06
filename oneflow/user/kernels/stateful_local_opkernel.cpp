@@ -39,9 +39,9 @@ class InputAndOutputListScope {
   T* ctx_;
 };
 
-int32_t TryGetTensorTupleIndex(
-    const std::map<std::string, std::vector<int32_t>>& arg_name2bn_index2tensor_tuple_index,
-    const std::string& arg_name, const int32_t arg_index) {
+int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
+                                   arg_name2bn_index2tensor_tuple_index,
+                               const std::string& arg_name, const int32_t arg_index) {
   auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
   if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
   return -1;
