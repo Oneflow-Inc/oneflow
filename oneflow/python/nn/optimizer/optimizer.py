@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from collections import OrderedDict
-from typing import List, Dict, Callable, Union, Any, Iterator
+from typing import List, Dict, Callable, Union, Any, Iterator, Tuple
 from types import GeneratorType
 import numpy as np
 
@@ -91,6 +91,96 @@ class SGD(Optimizer):
         self,
         parameters: Union[Iterator[Parameter], List[Dict]],
         lr: float,
+        momentum: float = 0.0,
+        scale: float = 1.0,
+    ):
+        super().__init__()
+        assert lr > 0.0, f"Invalid learning rate: {lr}"
+        assert momentum >= 0.0, f"Invalid momentum: {momentum}"
+        assert scale > 0.0, f"Invalid scale factor: {scale}"
+
+        self._default_options = dict()
+        self._default_options["lr"] = lr
+        self._default_options["scale"] = scale
+        if momentum != 0.0:
+            self._default_options["momentum"] = momentum
+
+        # Add parameters
+        if isinstance(parameters, GeneratorType):
+            self._param_groups.append(ParamGroup(parameters, self._default_options))
+        else:  # List[Dict]
+            for param in parameters:
+                self._param_groups.append(ParamGroup(param, self._default_options))
+
+        for param_group in self._param_groups:
+            for param in param_group.parameters:
+                assert param.is_leaf, "parameters must be leaf tensor"
+                self._state[param] = dict()
+                if "momentum" in self._default_options:
+                    # TODO: Use flow.zeros_like instead of numpy
+                    self._state[param]["momentum_buf"] = flow.Tensor(np.zeros(param.shape))
+
+        if "momentum" in self._default_options.keys():
+            self._op = (
+                flow.builtin_op("momentum_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("learning_rate")
+                .Input("momentum")
+                .Attr("scale", self._default_options["scale"])
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Attr("beta", self._default_options["momentum"])
+                .Attr("weight_decay", 0.0)
+                .Build()
+            )
+        else:
+            self._op = (
+                flow.builtin_op("sgd_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("learning_rate")
+                .Attr("scale", self._default_options["scale"])
+                .Attr("weight_decay", 0.0)
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Build()
+            )
+
+    def step(self, closure: Callable = None):
+        loss = None
+        if closure is not None:
+            loss = closure()
+
+        for param_group in self._param_groups:
+            lr_tensor = flow.Tensor([param_group.options["lr"]])
+            for param in param_group.parameters:
+                if param.grad is None:
+                    continue
+                if "momentum" in self._default_options:
+                    momentum_buf = self._state[param]["momentum_buf"]
+                    self._op(param, param.grad, lr_tensor, momentum_buf)
+                else:
+                    self._op(param, param.grad, lr_tensor)
+
+        self._state["step"] = self._state["step"] + 1
+        return loss
+
+
+@oneflow_export("optim.Adam")
+class Adam(Optimizer):
+    r"""
+    TODO
+    """
+
+    def __init__(
+        self,
+        parameters: Union[Iterator[Parameter], List[Dict]],
+        lr: float = 1e-3,
+        betas: Tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay : float = 0,
+        amsgrad  : bool = False,
         momentum: float = 0.0,
         scale: float = 1.0,
     ):
