@@ -85,9 +85,7 @@ inline Maybe<std::string> GetSerializedInterUserJobInfo() {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
-  return ret;
+  return Global<InterUserJobInfo>::Get()->SerializeAsString();
 }
 
 inline Maybe<const JobSet&> GetJobSet() {
@@ -101,7 +99,7 @@ inline Maybe<const JobSet&> GetJobSet() {
   return job_ctx_mgr->job_set();
 }
 
-inline Maybe<std::string> GetSerializedJobSet() { return PbMessage2TxtString(JUST(GetJobSet())); }
+inline Maybe<std::string> GetSerializedJobSet() { return JUST(GetJobSet()).SerializeAsString(); }
 
 inline Maybe<std::string> GetSerializedCurrentJob() {
   auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
@@ -109,7 +107,7 @@ inline Maybe<std::string> GetSerializedCurrentJob() {
   auto* job_ctx =
       JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));
   CHECK_NOTNULL_OR_RETURN(job_ctx);
-  return PbMessage2TxtString(job_ctx->job());
+  return job_ctx->job().SerializeAsString();
 }
 
 inline Maybe<std::string> GetFunctionConfigDef() {
