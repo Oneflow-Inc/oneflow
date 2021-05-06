@@ -60,9 +60,10 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
 }
 
 template<typename T>
-__host__ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool align_corners, const T scale) {
-  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1) :
-                         (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
+__host__ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
+                             bool align_corners, const T scale) {
+  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1)
+                       : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
 }
 
 template<typename T>
@@ -87,8 +88,8 @@ struct BilinearParam {
 
 template<typename T>
 __device__ void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
-                                 const int64_t in_height, const int64_t in_width,
-                                 const T scale_h, const T scale_w, BilinearParam<T>* params) {
+                                 const int64_t in_height, const int64_t in_width, const T scale_h,
+                                 const T scale_w, BilinearParam<T>* params) {
   const T in_h = GetAreaPixelSourceIndex(scale_h, h, align_corners);
   const T in_w = GetAreaPixelSourceIndex(scale_w, w, align_corners);
   params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
@@ -104,8 +105,8 @@ __global__ void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr
                                         NdIndexOffsetHelper<int64_t, 4> in_helper,
                                         NdIndexOffsetHelper<int64_t, 4> out_helper,
                                         const int64_t in_height, const int64_t in_width,
-                                        const T scale_h, const T scale_w,
-                                        const bool align_corners, T* out_dptr) {
+                                        const T scale_h, const T scale_w, const bool align_corners,
+                                        T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -128,8 +129,8 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
                                          NdIndexOffsetHelper<int64_t, 4> dy_helper,
                                          NdIndexOffsetHelper<int64_t, 4> dx_helper,
                                          const int64_t dx_height, const int64_t dx_width,
-                                         const T scale_h, const T scale_w,
-                                         const bool align_corners, T* dx_dptr) {
+                                         const T scale_h, const T scale_w, const bool align_corners,
+                                         T* dx_dptr) {
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
@@ -252,9 +253,8 @@ class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
     RUN_CUDA_KERNEL((UpsampleBilinearForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    x_blob->dptr<T>(), in_helper, out_helper, in_height,
-                    in_width, scale_height, scale_width, align_corners,
-                    y_blob->mut_dptr<T>());
+                    x_blob->dptr<T>(), in_helper, out_helper, in_height, in_width, scale_height,
+                    scale_width, align_corners, y_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -288,9 +288,8 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
     RUN_CUDA_KERNEL((UpsampleBilinearBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
-                    dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
-                    in_width, scale_height, scale_width, align_corners,
-                    dx_blob->mut_dptr<T>());
+                    dy_blob->dptr<T>(), dy_helper, dx_helper, in_height, in_width, scale_height,
+                    scale_width, align_corners, dx_blob->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
