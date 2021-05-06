@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class LazyReferenceInstructionType : public vm::InstructionType {
  public:
@@ -53,5 +53,5 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   }
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

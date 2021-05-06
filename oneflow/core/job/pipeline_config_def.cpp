@@ -13,32 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <vector>
-#include "oneflow/core/framework/python_interpreter_util.h"
+#include "oneflow/core/framework/config_def.h"
 
 namespace oneflow {
 
 namespace {
 
-Maybe<std::vector<bool>*> GetShuttingDown() {
-  static std::vector<bool> shutting_down{false};
-  return &shutting_down;
-}
+REGISTER_SCOPE_CONFIG_DEF().Int64(
+    "pipeline_stage_id_hint", 0,
+    "Manually marking different stages of pipelining parallelism. \n Generally speaking, different "
+    "stages are on different devices, and these stages are connected sequentially, so that the "
+    "whole network can be pipeline parallel.");
 
 }  // namespace
-
-Maybe<bool> IsShuttingDown() {
-  auto* shutting_down = JUST(GetShuttingDown());
-  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
-  bool is_interpreter_shutdown = (*shutting_down)[0];
-  return is_interpreter_shutdown;
-}
-
-Maybe<void> SetShuttingDown() {
-  auto* shutting_down = JUST(GetShuttingDown());
-  CHECK_EQ_OR_RETURN(shutting_down->size(), 1);
-  (*shutting_down)[0] = true;
-  return Maybe<void>::Ok();
-}
 
 }  // namespace oneflow

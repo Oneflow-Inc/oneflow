@@ -168,10 +168,8 @@ class Session(object):
         return self
 
     def UpdateInfo4InterfaceOp(self):
-        for op_attr in c_api_util.GetOpAttributes().op_attribute:
-            op_conf = op_attr.op_conf
-            if c_api_util.IsInterfaceOpConf(op_conf):
-                self.interface_op_name2op_attr_[op_conf.name] = op_attr
+        for op_attr in c_api_util.GetInterfaceOpAttributes().op_attribute:
+            self.interface_op_name2op_attr_[op_attr.op_conf.name] = op_attr
         for job in c_api_util.GetJobSet().job:
             op_name2parallel_conf = {}
             for placement_group in job.placement.placement_group:

@@ -13,17 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
-#include "oneflow/core/common/maybe.h"
+namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<bool> IsShuttingDown();
-
-Maybe<void> SetShuttingDown();
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("SetShuttingDown", []() { return SetShuttingDown(); });
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_PYTHON_INTERPRETER_UTIL_H_

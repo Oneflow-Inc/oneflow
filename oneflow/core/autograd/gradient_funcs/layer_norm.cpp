@@ -28,6 +28,12 @@ struct LayerNormInterpState : public OpExprInterpState {
   bool has_beta_diff;
   bool has_gamma_diff;
   bool has_normalized_diff;
+
+  size_t gamma_index;
+  size_t normalized_index;
+  size_t x_index;
+  size_t mean_index;
+  size_t inv_variance_index;
 };
 
 // y, mean, inv_variance, [normalized] =
@@ -38,7 +44,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
   Maybe<void> Init(const OpExpr& op) override;
 
   Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
+                      const TensorTuple& outputs, const AttrMap& attrs) const override;
 
   Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
@@ -68,22 +74,22 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
 }
 
 Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
-  CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
+  CHECK_EQ_OR_RETURN(outputs.size(), scale_ + 3);
   ctx->has_beta_diff = center_ && inputs.at(1)->requires_grad();
   const int gamma_index = center_ + 1;
   ctx->has_gamma_diff = scale_ && inputs.at(gamma_index)->requires_grad();
   ctx->has_normalized_diff = scale_ && inputs.at(0)->requires_grad();
   if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
-    ctx->SaveTensorForBackward(inputs.at(gamma_index));
+    ctx->gamma_index = ctx->SaveTensorForBackward(inputs.at(gamma_index));
   }
-  if (ctx->has_gamma_diff) { ctx->SaveTensorForBackward(outputs.at(3)); }
+  if (ctx->has_gamma_diff) { ctx->normalized_index = ctx->SaveTensorForBackward(outputs.at(3)); }
   ctx->x_requires_grad = inputs.at(0)->requires_grad();
   if (ctx->x_requires_grad) {
-    ctx->SaveTensorForBackward(inputs.at(0));
-    ctx->SaveTensorForBackward(outputs.at(0));
-    ctx->SaveTensorForBackward(outputs.at(1));
+    ctx->x_index = ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->mean_index = ctx->SaveTensorForBackward(outputs.at(1));
+    ctx->inv_variance_index = ctx->SaveTensorForBackward(outputs.at(2));
   }
   return Maybe<void>::Ok();
 }
@@ -97,20 +103,18 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
   if (begin_params_axis < 0) { begin_params_axis += dy->shape()->NumAxes(); }
   int64_t begin_norm_axis = begin_norm_axis_;
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
-  int offset = 0;
   if (ctx->has_beta_diff || ctx->has_gamma_diff || ctx->has_normalized_diff) {
     const auto& param_grad_op = JUST(op_expr_helper::LayerNormParamGradOp(
         begin_params_axis, ctx->has_beta_diff, ctx->has_gamma_diff, ctx->has_normalized_diff,
         GradientOpName(op_trait_->op_name() + "_param")));
     TensorTuple inputs{dy};
     if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
-      inputs.push_back(saved_tensors.at(offset++));  // gamma
+      inputs.push_back(saved_tensors.at(ctx->gamma_index));  // gamma
     }
     if (ctx->has_gamma_diff) {
-      inputs.push_back(saved_tensors.at(offset++));  // normalized
+      inputs.push_back(saved_tensors.at(ctx->normalized_index));  // normalized
     }
-    const auto& results =
-        JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs, /*attrs=*/{}));
+    const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs));
     if (ctx->has_beta_diff) { in_grads->at(1) = results->at(0); }
     if (ctx->has_gamma_diff) {
       in_grads->at(ctx->has_beta_diff + 1) = results->at(ctx->has_beta_diff);
@@ -118,11 +122,10 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
     if (ctx->has_normalized_diff) { dy = results->at(ctx->has_beta_diff + ctx->has_gamma_diff); }
   }
   if (ctx->x_requires_grad) {
-    CHECK_EQ_OR_RETURN(saved_tensors.size(), offset + 3);
-    const auto& x = saved_tensors.at(offset);
-    const auto& mean = saved_tensors.at(offset + 1);
-    const auto& inv_variance = saved_tensors.at(offset + 2);
-    AttrValueMap attrs;
+    const auto& x = saved_tensors.at(ctx->x_index);
+    const auto& mean = saved_tensors.at(ctx->mean_index);
+    const auto& inv_variance = saved_tensors.at(ctx->inv_variance_index);
+    MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     in_grads->at(0) =
         JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));

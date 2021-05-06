@@ -289,6 +289,12 @@ class Tensor:
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
+    def __gt__(self, other):
+        return self.gt(other)
+
+    def __lt__(self, other):
+        return self.lt(other)
+
     def __array__(self):
         TODO()
 
@@ -297,6 +303,33 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __rsub__(self, other):
+        return flow.sub(other, self)
+
+    def __truediv__(self, other):
+        return self.div(other)
+
+    def __rtruediv__(self, other):
+        return flow.div(other, self)
+
+    def __neg__(self):
+        return flow.mul(-1, self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
@@ -686,34 +719,12 @@ def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
 
 
-def register_tensor_op_by_module(op_name):
-    def set_method(module):
-        setattr(
-            Tensor,
-            op_name,
-            lambda self, *args, **kwargs: module(**kwargs).forward(self, *args),
-        )
-        return module
+def register_tensor_op(op_name):
+    def set_tensor_op(method):
+        setattr(Tensor, op_name, method)
+        return method
 
-    return set_method
-
-
-def register_op_by_module(op_name):
-    def set_method(module):
-        oneflow_export(op_name)(_get_module_impl(module))
-        return module
-
-    def _get_module_impl(module):
-        def module_impl(x, *args, **kwargs):
-            return module(**kwargs).forward(x, *args)
-
-        name = module.__name__ + "_op"
-        module_impl.__name__ = name
-        globals()[name] = module_impl
-
-        return module_impl
-
-    return set_method
+    return set_tensor_op
 
 
 def _convert_to_placement_scope(placement_or_device):

@@ -71,11 +71,18 @@ Maybe<void> EagerConsistentTensorImpl::set_blob_object(
 }
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<eager::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(device, requires_grad, is_leaf), eager_blob_object_(eager_blob_object) {
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+  const auto& parallel_desc = this->parallel_desc();
+  tensor_storage_->set_releaser_hook(
+      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
+        PhysicalRun([&](InstructionsBuilder* builder) {
+          builder->ReleaseTensor(eager_blob_object, parallel_desc);
+        });
+      });
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
@@ -94,8 +101,7 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
       result = &shape;
       bc.Decrease();
     };
-    auto build_instruction =
-        [&](const std::shared_ptr<InstructionsBuilder>& builder) -> Maybe<void> {
+    auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
       JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
       return Maybe<void>::Ok();
     };

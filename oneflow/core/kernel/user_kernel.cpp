@@ -102,9 +102,9 @@ class KernelCreateContext final : public user_op::KernelCreateContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -114,8 +114,7 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
  public:
   explicit UserKernelInitContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                  const JobDesc& job_desc)
-      : user_op::KernelInitContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
@@ -174,11 +173,14 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
 
  private:
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   const SbpSignature* sbp_signature_;
@@ -288,9 +290,9 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
   user_op::UserOpConfWrapper user_op_conf_;
@@ -310,8 +312,7 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
  public:
   explicit UserKernelInferContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                   const JobDesc& job_desc)
-      : user_op::KernelInferContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
         op_infer_ctx_(kernel_conf, &job_desc) {
@@ -385,11 +386,13 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
   }
 
  private:
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
   UserKernelOpInferContext op_infer_ctx_;
@@ -424,8 +427,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
   explicit UserKernelComputeContext(DeviceCtx* device_ctx, const KernelConf& kernel_conf,
                                     const JobDesc& job_desc)
-      : user_op::KernelComputeContext(
-          user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(std::move(UserKernelBaseContext(kernel_conf, job_desc))) {
     auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map) {
@@ -477,11 +479,14 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
  private:
-  const std::shared_ptr<user_op::AttrVal>& Attr4AttrName(
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4AttrName(attr_name);
+    return user_op_conf().Attr4Name(attr_name);
   }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
+  user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   HashMap<std::pair<std::string, int32_t>, BnTensorPair> arg2bn_tensor_pair_;
   UserKernelBaseContext base_ctx_;
@@ -490,7 +495,7 @@ class UserKernelComputeContext final : public user_op::KernelComputeContext {
 class UserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit UserKernelRegContext(const KernelConf& kernel_conf, const JobDesc& job_desc)
-      : user_op::KernelRegContext(user_op::UserOpConfWrapper(kernel_conf.op_attribute().op_conf())),
+      : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)) {}
   ~UserKernelRegContext() = default;
 
@@ -504,7 +509,10 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+
  private:
+  user_op::UserOpConfWrapper user_op_conf_;
   UserKernelBaseContext base_ctx_;
 };
 

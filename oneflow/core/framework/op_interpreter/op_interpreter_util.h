@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_INTERPRETER_UTIL_H_
 
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/op_arg_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -34,23 +34,20 @@ class OpInterpUtil {
   static Maybe<AutogradInterpreter> GetInterpreter();
 
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
-                           const AttrValueMap& attrs);
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs);
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, AttrValueMap{});
+    return Dispatch<T>(op_expr, inputs, AttrMap{});
   }
 
-  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
-                                              const AttrValueMap& attrs);
+  static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
 
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
   static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                  const TensorTuple& inputs,
-                                                  const AttrValueMap& attrs);
+                                                  const TensorTuple& inputs, const AttrMap& attrs);
 
   static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
   MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs);
@@ -67,7 +64,7 @@ class OpInterpUtil {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   static Maybe<Tensor> BuildEagerMirroredTensorFromEagerBlobObject(
-      const std::shared_ptr<eager::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
       const std::shared_ptr<const Device>& device);
 };
 
