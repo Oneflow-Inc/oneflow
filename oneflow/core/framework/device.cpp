@@ -18,10 +18,25 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 
 const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
+
+namespace {
+
+inline size_t HashDevice(const std::string& type, int64_t device_id) {
+  return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
+}
+}  // namespace
+
+Device::Device(const std::string& type, int64_t device_id)
+    : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
+
+const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
+  return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
+}
 
 std::string Device::of_type() const {
   if (type_ == "cuda") {
@@ -45,10 +60,8 @@ Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device)
   int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
   int64_t device_id = device.device_id();
   std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(device.of_type());
-  parallel_conf.add_device_name(machine_device_id);
-  return std::make_shared<const ParallelDesc>(parallel_conf);
+  return std::const_pointer_cast<const ParallelDesc>(
+      JUST(ParallelDesc::New(device.of_type(), {machine_device_id}, nullptr)));
 }
 
 Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {

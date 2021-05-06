@@ -25,7 +25,7 @@ namespace {
 std::function<Maybe<void>(const std::string&)> MakeCheckParamTensorDescFn(
     user_op::InferContext* ctx, const Shape& shape) {
   return [=](const std::string& bn) -> Maybe<void> {
-    if (ctx->user_op_conf().has_input(bn, 0)) {
+    if (ctx->has_input(bn, 0)) {
       const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       CHECK_EQ_OR_RETURN(tensor_desc->shape(), shape);
@@ -37,7 +37,7 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamTensorDescFn(
 std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op::InferContext* ctx,
                                                                         DataType data_type) {
   return [=](const std::string& bn) -> Maybe<void> {
-    if (ctx->user_op_conf().has_input(bn, 0)) {
+    if (ctx->has_input(bn, 0)) {
       const auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       CHECK_EQ_OR_RETURN(tensor_desc->data_type(), data_type);
@@ -49,7 +49,7 @@ std::function<Maybe<void>(const std::string&)> MakeCheckParamDataTypeFn(user_op:
 std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op::InferContext* ctx,
                                                                         const Shape& shape) {
   return [=](const std::string& bn) -> Maybe<void> {
-    if (ctx->user_op_conf().has_output(bn, 0)) {
+    if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       *tensor_desc->mut_shape() = shape;
@@ -61,7 +61,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamTensorDescFn(user_op:
 std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::InferContext* ctx,
                                                                       DataType data_type) {
   return [=](const std::string& bn) -> Maybe<void> {
-    if (ctx->user_op_conf().has_output(bn, 0)) {
+    if (ctx->has_output(bn, 0)) {
       auto* tensor_desc = ctx->TensorDesc4ArgNameAndIndex(bn, 0);
       CHECK_OR_RETURN(tensor_desc != nullptr);
       *tensor_desc->mut_data_type() = data_type;
@@ -123,12 +123,12 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     const auto data_type = x->data_type();
     const Shape& x_shape = x->shape();
-    if (ctx->user_op_conf().has_input("addend", 0)) {
+    if (ctx->has_input("addend", 0)) {
       const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
       CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
       CHECK_EQ_OR_RETURN(addend->shape(), x_shape);
     }
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ_OR_RETURN(add_to_output->data_type(), data_type);
       CHECK_EQ_OR_RETURN(add_to_output->shape(), x_shape);
@@ -146,7 +146,7 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn(
     JUST(CheckParamTensorDesc("gamma"));
     JUST(SetParamTensorDesc("mean"));
     JUST(SetParamTensorDesc("inv_variance"));
-    if (ctx->user_op_conf().has_output("reserve_space", 0)) {
+    if (ctx->has_output("reserve_space", 0)) {
       CHECK(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, x, ctx->TensorDesc4ArgNameAndIndex("reserve_space", 0));
     }
@@ -160,11 +160,11 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
   return [reserve_space_infer_fn](user_op::InferContext* ctx) -> Maybe<void> {
     const auto* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
     const auto data_type = x->data_type();
-    if (ctx->user_op_conf().has_input("addend", 0)) {
+    if (ctx->has_input("addend", 0)) {
       const auto* addend = ctx->TensorDesc4ArgNameAndIndex("addend", 0);
       CHECK_EQ_OR_RETURN(addend->data_type(), data_type);
     }
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const auto* add_to_output = ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ_OR_RETURN(add_to_output->data_type(), data_type);
     }
@@ -178,7 +178,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn(
     JUST(CheckParamDataType("gamma"));
     JUST(SetParamDataType("mean"));
     JUST(SetParamDataType("inv_variance"));
-    if (ctx->user_op_conf().has_output("reserve_space", 0)) {
+    if (ctx->has_output("reserve_space", 0)) {
       CHECK(reserve_space_infer_fn);
       reserve_space_infer_fn(ctx, x, ctx->TensorDesc4ArgNameAndIndex("reserve_space", 0));
     }
@@ -215,7 +215,7 @@ REGISTER_USER_OP("normalization")
     .SetInputArgModifyFn(FwInputArgModifyFn)
     .SetTensorDescInferFn(MakeFwTensorDescInferFn())
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(MakeFwDataTypeInferFn());
+    .SetDataTypeInferFn(MakeFwDataTypeInferFn());
 
 REGISTER_USER_OP("normalization_add_relu")
     .Input("x")
@@ -255,7 +255,7 @@ REGISTER_USER_OP("normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(
+    .SetDataTypeInferFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kInt32;
@@ -307,7 +307,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
             n = n / ctx->parallel_num();
           }
           cudnnBatchNormOps_t ops;
-          if (ctx->user_op_conf().has_input("addend", 0)) {
+          if (ctx->has_input("addend", 0)) {
             ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
           } else {
             ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
@@ -329,7 +329,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           int64_t w = 1;
           int64_t c = x_shape.At(axis);
           cudnnBatchNormOps_t ops;
-          if (ctx->user_op_conf().has_input("addend", 0)) {
+          if (ctx->has_input("addend", 0)) {
             ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
           } else {
             ops = CUDNN_BATCHNORM_OPS_BN_ACTIVATION;
@@ -341,7 +341,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu")
           return Maybe<void>::Ok();
         }))
     .SetGetSbpFn(FwGetSbpFn)
-    .SetInferDataTypeFn(
+    .SetDataTypeInferFn(
         MakeFwDataTypeInferFn([](user_op::InferContext* ctx, const user_op::TensorDesc* x,
                                  user_op::TensorDesc* reserve_space) -> Maybe<void> {
           *reserve_space->mut_data_type() = DataType::kChar;
@@ -359,12 +359,12 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   const Shape& x_shape = x->shape();
   const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy->shape(), x_shape);
-  if (ctx->user_op_conf().has_input("y", 0)) {
+  if (ctx->has_input("y", 0)) {
     const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     CHECK_EQ_OR_RETURN(y->shape(), x_shape);
   }
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *x;
-  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+  if (ctx->has_output("addend_diff", 0)) {
     *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = *x;
   }
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
@@ -384,12 +384,12 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
   const DataType x_type = x->data_type();
   const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy->data_type(), x_type);
-  if (ctx->user_op_conf().has_input("y", 0)) {
+  if (ctx->has_input("y", 0)) {
     const user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     CHECK_EQ_OR_RETURN(y->data_type(), x_type);
   }
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *x;
-  if (ctx->user_op_conf().has_output("addend_diff", 0)) {
+  if (ctx->has_output("addend_diff", 0)) {
     *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = *x;
   }
   const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
@@ -445,7 +445,7 @@ REGISTER_USER_OP("normalization_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 REGISTER_USER_OP("normalization_add_relu_grad")
     .Input("x")
@@ -464,7 +464,7 @@ REGISTER_USER_OP("normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
@@ -485,7 +485,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
     .Attr<float>("epsilon")
     .SetTensorDescInferFn(BwTensorDescInferFn)
     .SetGetSbpFn(BwGetSbpFn)
-    .SetInferDataTypeFn(BwDataTypeInferFn);
+    .SetDataTypeInferFn(BwDataTypeInferFn);
 
 #endif
 

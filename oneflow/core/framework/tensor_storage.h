@@ -23,34 +23,30 @@ namespace oneflow {
 
 class ParallelDesc;
 
-namespace eager {
+namespace vm {
 
 class TensorBuffer;
 
-}
-
-class VmLocalDepObject;
+}  // namespace vm
 
 namespace one {
 
 class TensorStorage final {
  public:
   explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  explicit TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer);
   ~TensorStorage();
 
-  using ReleaserHookT = std::function<void(const std::shared_ptr<eager::TensorBuffer>&)>;
+  using ReleaserHookT = std::function<void(const std::shared_ptr<vm::TensorBuffer>&)>;
 
-  const std::shared_ptr<eager::TensorBuffer> buffer() const { return buffer_; }
+  const std::shared_ptr<vm::TensorBuffer> buffer() const { return buffer_; }
 
   void set_releaser_hook(const ReleaserHookT& releaser_hook) {
     releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
   }
 
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() { return compute_local_dep_object_; }
-
  private:
-  std::shared_ptr<eager::TensorBuffer> buffer_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
+  std::shared_ptr<vm::TensorBuffer> buffer_;
   std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
 

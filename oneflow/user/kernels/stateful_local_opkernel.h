@@ -23,9 +23,11 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+class AttrMap;
+
+namespace vm {
 struct LocalCallOpKernelUtil;
-}  // namespace eager
+}  // namespace vm
 
 namespace one {
 
@@ -37,11 +39,12 @@ class LocalUserOpInferContext;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using EagerBlobObjectList = std::shared_ptr<std::vector<std::shared_ptr<eager::EagerBlobObject>>>;
+using EagerBlobObjectList =
+    std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
  public:
-  EagerBlobObjectTensorView(const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+  EagerBlobObjectTensorView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
       : mut_eager_blob_object_(mut_eager_blob_object) {}
 
   const ShapeView& shape() const override { return mut_eager_blob_object_()->blob().shape(); }
@@ -61,13 +64,12 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
   void* mut_raw_dptr() override { return mut_eager_blob_object_()->mut_blob()->mut_dptr(); }
 
  private:
-  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
  public:
-  EagerBlobObjectTensorDescView(
-      const std::function<eager::EagerBlobObject*()>& mut_eager_blob_object)
+  EagerBlobObjectTensorDescView(const std::function<vm::EagerBlobObject*()>& mut_eager_blob_object)
       : mut_eager_blob_object_(mut_eager_blob_object) {}
 
   const Shape& shape() const override { return mut_eager_blob_object_()->blob_desc().shape(); }
@@ -91,12 +93,14 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   }
 
  private:
-  const std::function<eager::EagerBlobObject*()> mut_eager_blob_object_;
+  const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
 };
 
 class ZeroCopyBaseContext {
  public:
   ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  ZeroCopyBaseContext(const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs,
+                      vm::EagerBlobObject* tmp_buffer);
 
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name, int32_t index) const;
 
@@ -116,6 +120,7 @@ class ZeroCopyBaseContext {
   std::vector<std::unique_ptr<EagerBlobObjectTensorView>> output_tensor_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
+  std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
   EagerBlobObjectList input_tensors_;
   EagerBlobObjectList output_tensors_;
 };
@@ -124,6 +129,8 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  public:
   LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
                              const ArgVec* indexed_output_pairs);
+  LocalUserKernelBaseContext(const std::string& device_tag, const ArgVec* indexed_input_pairs,
+                             const ArgVec* indexed_output_pairs, vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelBaseContext() = default;
 
   DeviceType device_type() const { return device_type_; }
@@ -133,12 +140,13 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
  private:
   const std::string device_tag_;
   const DeviceType device_type_;
+  vm::EagerBlobObject* tmp_buffer_;
 };
 
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
-  LocalUserOpInferContext(const OperatorConf& op_conf, const ArgVec* indexed_input_pairs,
-                          const ArgVec* indexed_output_pairs);
+  LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
+                          const ArgVec* index_input_pairs, const ArgVec* indexed_output_pairs);
   ~LocalUserOpInferContext() override = default;
 
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -148,13 +156,13 @@ class LocalUserOpInferContext : public user_op::InferContext {
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
-    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+    return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
   }
 
   const ArgVec& inputs() const override { return zero_copy_base_ctx_.inputs(); }
@@ -176,20 +184,32 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return 1; }
 
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
-
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
 
  private:
-  const user_op::UserOpConfWrapper user_op_conf_;
+  user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                         int32_t index) {
+    user_op::TensorDesc* tensor_desc = TensorDesc4ArgNameAndIndex(arg_name, index);
+    if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
+    return tensor_desc;
+  }
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper* user_op_conf_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
 class LocalUserKernelComputeContext final : public user_op::KernelComputeContext {
  public:
-  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const OperatorConf& op_conf,
-                                         const ArgVec* indexed_input_pairs,
-                                         const ArgVec* indexed_output_pairs);
+  explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
+                                         const user_op::UserOpConfWrapper* user_op_conf,
+                                         const ArgVec* index_input_pairs,
+                                         const ArgVec* indexed_output_pairs,
+                                         vm::EagerBlobObject* tmp_buffer);
   ~LocalUserKernelComputeContext() = default;
 
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -212,6 +232,13 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx);
 
  private:
+  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
+
+  const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -219,13 +246,43 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
 class StatefulOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulOpKernel);
-  StatefulOpKernel(const OperatorConf& op_conf, const std::shared_ptr<MemoryCase>& mem_case,
-                   const ArgVec* indexed_input_pairs, const ArgVec* indexed_output_pairs);
+  static Maybe<StatefulOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
+                                     const std::shared_ptr<MemoryCase>& mem_case,
+                                     const std::shared_ptr<const ParallelDesc>& parallel_desc,
+                                     const std::shared_ptr<ArgVec> indexed_input_pairs,
+                                     const std::shared_ptr<ArgVec> indexed_output_pairs);
   ~StatefulOpKernel();
   const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
+  const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
+    return input_tuple_indexes4const_ibns_;
+  }
+  const std::vector<int64_t>& input_tuple_indexes4mut_ibns() const {
+    return input_tuple_indexes4mut_ibns_;
+  }
+  const std::vector<int64_t>& output_tuple_indexes4mut_obns() const {
+    return output_tuple_indexes4mut_obns_;
+  }
+  const std::vector<int64_t>& output_tuple_indexes4mut2_obns() const {
+    return output_tuple_indexes4mut2_obns_;
+  }
+
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
+    return infer_local_dep_object_;
+  }
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
+    return compute_local_dep_object_;
+  }
+
+  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+    data_type_infer_fn_(UpdateInferContext(inputs, outputs));
+    UpdateInferContext(nullptr, nullptr);
+  }
+
+  void ResetDynamicOpAttrs(const AttrMap& attrs);
 
  private:
-  friend struct eager::LocalCallOpKernelUtil;
+  friend struct vm::LocalCallOpKernelUtil;
+  StatefulOpKernel() = default;
   LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
                                               EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
@@ -239,7 +296,7 @@ class StatefulOpKernel final {
                             EagerBlobObjectList inputs, EagerBlobObjectList outputs,
                             user_op::OpKernelState** state);
 
-  eager::EagerBlobObject* mut_temp_blob_object();
+  vm::EagerBlobObject* mut_temp_blob_object();
 
   user_op::OpKernelState* mut_opkernel_state(const user_op::OpKernel* opkernel) {
     return op_kernel_state_map_.at(opkernel).get();
@@ -253,14 +310,15 @@ class StatefulOpKernel final {
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
-  const OperatorConf op_conf_;
+  std::shared_ptr<OperatorConf> op_conf_;
+  std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
-  const ArgVec* indexed_input_pairs_;
-  const ArgVec* indexed_output_pairs_;
+  std::shared_ptr<ArgVec> indexed_input_pairs_;
+  std::shared_ptr<ArgVec> indexed_output_pairs_;
   bool need_check_mem_case_;
   user_op::TensorDescInferFn tensor_desc_infer_fn_;
   user_op::DataTypeInferFn data_type_infer_fn_;
@@ -268,7 +326,13 @@ class StatefulOpKernel final {
       op_kernel_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
-  std::unique_ptr<eager::EagerBlobObject> tmp_blob_object_;
+  std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
+  std::vector<int64_t> input_tuple_indexes4const_ibns_;
+  std::vector<int64_t> input_tuple_indexes4mut_ibns_;
+  std::vector<int64_t> output_tuple_indexes4mut_obns_;
+  std::vector<int64_t> output_tuple_indexes4mut2_obns_;
+  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one

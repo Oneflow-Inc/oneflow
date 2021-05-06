@@ -17,9 +17,9 @@ from __future__ import absolute_import
 
 import oneflow.python.eager.symbol as symbol_util
 import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+import oneflow._oneflow_internal
 import random
 
 
@@ -54,7 +54,7 @@ def MiddleOpArgParallelAttr(get_parallel_desc_symbol, get_sbp_parallel):
     def GetOpArgParallelAttr(
         builder, produced_blob_object, consumer_op_arg_parallel_attr
     ):
-        return oneflow_api.OpArgParallelAttribute(
+        return oneflow._oneflow_internal.OpArgParallelAttribute(
             get_parallel_desc_symbol(
                 builder, produced_blob_object, consumer_op_arg_parallel_attr
             ),
@@ -150,7 +150,7 @@ def ReplaceDeviceTag(parallel_desc_symbol, device_tag, builder=None):
     assert hierarchy.dim_size() > 0
     parallel_conf.mutable_hierarchy().CopyFrom(hierarchy)
     if builder is None:
-        return oneflow_api.PlacementSymbol(
+        return oneflow._oneflow_internal.PlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
@@ -167,7 +167,7 @@ def RandomParallelIdPerMachine(parallel_desc_symbol, device_tag=None, builder=No
         dev_id = dev_ids[random.randint(0, len(dev_ids) - 1)]
         parallel_conf.add_device_name("@%s:%s" % (machine_id, dev_id))
     if builder is None:
-        return oneflow_api.PlacementSymbol(
+        return oneflow._oneflow_internal.PlacementSymbol(
             parallel_desc_symbol.symbol_id, parallel_conf
         )
     else:
