@@ -40,6 +40,17 @@ g_test_samples = [
         "out_sum": np.array([4.0263], dtype=np.float32),
         "out_mean": np.array([1.0066], dtype=np.float32),
     },
+    {
+        "input": np.array(
+            [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]],
+            [[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
+        ),
+        "target": np.array([[[1, 0], [0, 1]], [[1, 0], [0, 1]]], dtype=np.int32),
+        "out": np.array([[[0.6882, 0.6832], [0.8544, 1.8006]],[[0.6882, 0.6832], [0.8544, 1.8006]]], dtype=np.float32),
+        "out_sum": np.array([8.0526], dtype=np.float32),
+        "out_mean": np.array([1.0066], dtype=np.float32),
+    },
+    
 ]
 
 
