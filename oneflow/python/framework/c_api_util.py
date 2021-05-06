@@ -65,7 +65,9 @@ def InitLazyGlobalSession(config_proto):
 
 def GetInterUserJobInfo():
     inter_user_job_info = oneflow._oneflow_internal.GetSerializedInterUserJobInfo()
-    return text_format.Parse(inter_user_job_info, InterUserJobInfo())
+    ret = InterUserJobInfo()
+    ret.ParseFromString(inter_user_job_info)
+    return ret
 
 
 def JobBuildAndInferCtx_Open(job_name):
@@ -252,9 +254,13 @@ def GetInterfaceOpAttributes():
 @oneflow_export("experimental.get_job_set")
 def GetJobSet():
     job_set = oneflow._oneflow_internal.GetSerializedJobSet()
-    return text_format.Parse(job_set, job_set_pb.JobSet())
+    ret = job_set_pb.JobSet()
+    ret.ParseFromString(job_set)
+    return ret
 
 
 def GetCurrentJob():
     serialized_job = oneflow._oneflow_internal.GetSerializedCurrentJob()
-    return text_format.Parse(serialized_job, job_pb.Job())
+    ret = job_pb.Job()
+    ret.ParseFromString(serialized_job)
+    return ret
