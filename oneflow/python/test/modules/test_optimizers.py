@@ -43,8 +43,10 @@ def compare_with_numpy_sgd(
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = flow.sum(x * grad_tensor)
-            loss.backward()
+            loss = x * grad_tensor
+            # BUG: loss = flow.sum(x * grad_tensor)
+            grad = flow.Tensor(np.ones(list(loss.shape)))
+            loss.backward(grad)
             sgd.step()
             sgd.zero_grad()
 
@@ -75,7 +77,7 @@ def compare_with_numpy_sgd(
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in eager mode",
+    ".numpy() doesn't work in lazy mode",
 )
 class TestOptimizers(flow.unittest.TestCase):
     def test_sgd(test_case):
