@@ -181,19 +181,21 @@ class Adam(Optimizer):
         eps: float = 1e-8,
         weight_decay : float = 0,
         amsgrad  : bool = False,
-        momentum: float = 0.0,
         scale: float = 1.0,
     ):
         super().__init__()
-        assert lr > 0.0, f"Invalid learning rate: {lr}"
-        assert momentum >= 0.0, f"Invalid momentum: {momentum}"
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
+        assert eps >= 0.0, f"Invalid epsilon value: {eps}"
+        assert betas[0] >= 0.0 and betas[0] < 1.0, f"Invalid beta parameter at index 0: {betas[0]}"
+        assert betas[1] >= 0.0 and betas[1] < 1.0, f"Invalid beta parameter at index 1: {betas[1]}"
+        assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
+
 
         self._default_options = dict()
         self._default_options["lr"] = lr
         self._default_options["scale"] = scale
-        if momentum != 0.0:
-            self._default_options["momentum"] = momentum
+        
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
