@@ -22,7 +22,30 @@ from oneflow.python.nn.module import Module
 
 @oneflow_export("nn.CrossEntropyLoss")
 class CrossEntropyLoss(Module):
-    r"""
+    r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
+
+    It is useful when training a classification problem with `C` classes.
+    
+    The `input` is expected to contain raw, unnormalized scores for each class.
+
+    `input` has to be a Tensor of size either :math:`(minibatch, C)` or
+    :math:`(minibatch, C, d_1, d_2, ..., d_K)`
+    with :math:`K \geq 1` for the `K`-dimensional case (described later).
+
+    This criterion expects a class index in the range :math:`[0, C-1]` as the
+    `target` for each value of a 1D tensor of size `minibatch`; 
+
+    The loss can be described as:
+
+    .. math::
+        \text{loss}(x, class) = -\log\left(\frac{\exp(x[class])}{\sum_j \exp(x[j])}\right)
+                       = -x[class] + \log\left(\sum_j \exp(x[j])\right)
+
+    Can also be used for higher dimension inputs, such as 2D images, by providing
+    an input of size :math:`(minibatch, C, d_1, d_2, ..., d_K)` with :math:`K \geq 1`,
+    where :math:`K` is the number of dimensions, and a target of appropriate shape
+    (see below).
+
     Args:
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
@@ -33,6 +56,7 @@ class CrossEntropyLoss(Module):
             :attr:`reduction`. Default: ``'mean'``
 
     For example:
+
     .. code-block:: python
 
         import oneflow as flow
@@ -47,6 +71,7 @@ class CrossEntropyLoss(Module):
         # out_sum: [2.2769074]
         out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         # out_mean: [0.7589692]
+        
 
     """
 
