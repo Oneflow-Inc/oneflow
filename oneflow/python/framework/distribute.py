@@ -183,7 +183,7 @@ def assert_is_valid_distribute(
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
 
 
-@oneflow_export("distribute.get_rank")
+@oneflow_export("distributed.get_rank")
 def get_rank():
     r"""Returns the rank of current process group.
 
@@ -194,7 +194,7 @@ def get_rank():
     return oneflow._oneflow_internal.GetRank()
 
 
-@oneflow_export("distribute.get_world_size")
+@oneflow_export("distributed.get_world_size")
 def get_world_size():
     r"""Returns the number of processes in the current process group.
 
