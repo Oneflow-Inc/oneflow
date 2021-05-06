@@ -542,7 +542,7 @@ struct LocalCallOpKernelUtil final {
                                                const CallbackT& Callback) {
     auto* opkernel = operand->mut_opkernel();
     JUST(Callback(opkernel->UpdateInferContext(operand->inputs(), operand->outputs())));
-    // tensor tuples are not allowed to be hold by StatefulOpKernel
+    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateInferContext(nullptr, nullptr);
     return Maybe<void>::Ok();
   }
@@ -553,7 +553,7 @@ struct LocalCallOpKernelUtil final {
     auto* opkernel = operand->mut_opkernel();
     JUST(Callback(
         opkernel->UpdateComputeContext(operand->inputs(), operand->outputs(), device_ctx)));
-    // tensor tuples are not allowed to be hold by StatefulOpKernel
+    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();
   }

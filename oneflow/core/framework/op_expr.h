@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/arg_tuple.h"
 
 namespace oneflow {
 namespace one {
@@ -54,29 +55,27 @@ class BuiltinOpExpr : public OpExpr {
 
   const std::string& op_name() const { return op_name_; }
 
-  int input_size() const override { return indexed_ibns_.size(); }
-  int output_size() const override { return indexed_obns_.size(); }
+  int input_size() const override { return input_arg_tuple_->size(); }
+  int output_size() const override { return output_arg_tuple_->size(); }
 
-  const std::vector<std::string>& indexed_ibns() const { return indexed_ibns_; }
-  const std::vector<std::string>& indexed_obns() const { return indexed_obns_; }
-  const std::shared_ptr<std::vector<std::pair<std::string, int32_t>>>& indexed_input_pairs() const {
-    return indexed_input_pairs_;
+  const std::shared_ptr<const ArgTuple>& input_arg_tuple() const { return input_arg_tuple_; }
+  const std::shared_ptr<const ArgTuple>& output_arg_tuple() const { return output_arg_tuple_; }
+
+  const std::vector<std::string>& indexed_ibns() const { return input_arg_tuple_->indexed_bns(); }
+  const std::vector<std::string>& indexed_obns() const { return output_arg_tuple_->indexed_bns(); }
+  const std::vector<std::pair<std::string, int32_t>>& indexed_input_pairs() const {
+    return input_arg_tuple_->indexed_arg_name_and_index();
   }
-  const std::shared_ptr<std::vector<std::pair<std::string, int32_t>>>& indexed_output_pairs()
-      const {
-    return indexed_output_pairs_;
+  const std::vector<std::pair<std::string, int32_t>>& indexed_output_pairs() const {
+    return output_arg_tuple_->indexed_arg_name_and_index();
   }
 
   virtual Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const = 0;
 
  protected:
   std::string op_name_;
-  // The indexed input blob names.
-  std::vector<std::string> indexed_ibns_;
-  // The indexed output blob names.
-  std::vector<std::string> indexed_obns_;
-  std::shared_ptr<std::vector<std::pair<std::string, int32_t>>> indexed_input_pairs_;
-  std::shared_ptr<std::vector<std::pair<std::string, int32_t>>> indexed_output_pairs_;
+  std::shared_ptr<const ArgTuple> input_arg_tuple_;
+  std::shared_ptr<const ArgTuple> output_arg_tuple_;
 };
 
 template<typename ProtoType>
@@ -105,7 +104,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
-class StatefulOpKernel;
+class StatefulLocalOpKernel;
 
 class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
  public:
@@ -116,10 +115,10 @@ class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
                       const std::vector<std::string>& indexed_obns)
       : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){};
 
-  Maybe<StatefulOpKernel> MutKernel4Device(const Device& device) const;
+  Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
  private:
-  mutable HashMap<Device, std::shared_ptr<StatefulOpKernel>> device2kernel_;
+  mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
