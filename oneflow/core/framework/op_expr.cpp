@@ -13,14 +13,40 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/op_expr.h"
 
 #include "oneflow/core/common/auto_registration_factory.h"
-#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace one {
+
+namespace {
+std::pair<std::string, int> GetPair(const std::string& bn) {
+  const size_t pos = bn.rfind('_');
+  CHECK_NE(pos, std::string::npos) << "bn: " << bn;
+  return std::make_pair(bn.substr(0, pos), std::stoi(bn.substr(pos + 1)));
+};
+}  // namespace
+
+BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
+                             const std::vector<std::string>& indexed_ibns,
+                             const std::vector<std::string>& indexed_obns)
+    : op_name_(op_name), indexed_ibns_(indexed_ibns), indexed_obns_(indexed_obns) {
+  indexed_input_pairs_ =
+      std::make_shared<std::vector<std::pair<std::string, int32_t>>>(indexed_ibns.size());
+  indexed_output_pairs_ =
+      std::make_shared<std::vector<std::pair<std::string, int32_t>>>(indexed_obns.size());
+  for (int i = 0; i < indexed_ibns.size(); i++) {
+    indexed_input_pairs_->at(i) = GetPair(indexed_ibns.at(i));
+  }
+  for (int i = 0; i < indexed_obns.size(); i++) {
+    indexed_output_pairs_->at(i) = GetPair(indexed_obns.at(i));
+  }
+}
 
 #define DEFINE_OPEXPR_TYPE_NAME(_T, _type_name)                \
   template<>                                                   \
@@ -41,16 +67,36 @@ DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                       const AttrValueMap& attrs) const {
+                                                       const AttrMap& attrs) const {
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_user_conf()) = op_proto_;
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
-    it.second->ToProto(&attr_val);
+    user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val);
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<StatefulOpKernel> UserOpExpr::MutKernel4Device(const Device& device) const {
+  const auto& it = device2kernel_.find(device);
+  if (it != device2kernel_.end()) { return it->second; }
+
+  std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
+  // attrs will be filled when op is being executing
+  BuildOpConf(op_conf.get(), {});
+  op_conf->set_device_tag(device.of_type());
+  DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
+  // TODO(jianhao): replace them with device.mem_case_ptr() and device.parallel_desc_ptr() after
+  // #4670 is merged
+  std::shared_ptr<MemoryCase> mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(Device::MakeParallelDescByDevice(device));
+  const auto& opkernel = JUST(StatefulOpKernel::New(op_conf, mem_case, parallel_desc,
+                                                    indexed_input_pairs(), indexed_output_pairs()));
+  device2kernel_.emplace(device, opkernel);
+  return opkernel;
 }
 
 template<>
@@ -78,7 +124,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
 
 template<>
 Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                           const AttrValueMap& attrs) const {
+                                                           const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
@@ -97,7 +143,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<VariableOpConf>::GetOrCreateOpGradClo
 
 template<>
 Maybe<void> BuiltinOpExprImpl<CastToMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                 const AttrValueMap& attrs) const {
+                                                                 const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_to_mirrored_conf()) = op_proto_;
@@ -110,8 +156,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToMirroredOpConf>::GetOrCreateOpG
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(
-    OperatorConf* op_conf, const AttrValueMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                   const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_cast_from_mirrored_conf()) = op_proto_;
@@ -126,7 +172,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateO
 
 template<>
 Maybe<void> BuiltinOpExprImpl<DistributeSplitOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                  const AttrValueMap& attrs) const {
+                                                                  const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_split_conf()) = op_proto_;
@@ -141,7 +187,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeSplitOpConf>::GetOrCreateOp
 
 template<>
 Maybe<void> BuiltinOpExprImpl<DistributeCloneOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                  const AttrValueMap& attrs) const {
+                                                                  const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_clone_conf()) = op_proto_;
@@ -155,8 +201,8 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeCloneOpConf>::GetOrCreateOp
 }
 
 template<>
-Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(
-    OperatorConf* op_conf, const AttrValueMap& attrs) const {
+Maybe<void> BuiltinOpExprImpl<DistributeConcatOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                   const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_concat_conf()) = op_proto_;
@@ -171,7 +217,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<DistributeConcatOpConf>::GetOrCreateO
 
 template<>
 Maybe<void> BuiltinOpExprImpl<DistributeAddOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                const AttrValueMap& attrs) const {
+                                                                const AttrMap& attrs) const {
   CHECK_EQ_OR_RETURN(attrs.size(), 0);
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_distribute_add_conf()) = op_proto_;

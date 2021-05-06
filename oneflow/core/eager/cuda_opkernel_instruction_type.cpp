@@ -30,7 +30,19 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
+
+class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CudaLocalCallOpKernelInstructionType() = default;
+  ~CudaLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
 class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
@@ -143,7 +155,7 @@ class GpuFeedBlobInstructionType final : public FeedBlobInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<GpuFeedBlobInstructionType>("gpu.FeedBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif
