@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace one {
 
-class StatefulOpKernel;
+class StatefulLocalOpKernel;
 
 using EagerBlobObjectList =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
@@ -45,17 +45,17 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
-  LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+  LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                    const one::EagerBlobObjectList inputs,
                                    const one::EagerBlobObjectList outputs, const AttrMap& attrs)
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs) {}
 
-  const one::StatefulOpKernel& opkernel() const { return *opkernel_; }
+  const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectList& inputs() const { return inputs_; }
   const one::EagerBlobObjectList& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return attrs_; }
 
-  one::StatefulOpKernel* mut_opkernel() { return opkernel_.get(); }
+  one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
 
   template<typename DoEachT>
   Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
@@ -80,7 +80,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   void set_user_opkernel(const user_op::OpKernel* user_opkernel) { user_opkernel_ = user_opkernel; }
 
  private:
-  std::shared_ptr<one::StatefulOpKernel> opkernel_;
+  std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectList inputs_;
   one::EagerBlobObjectList outputs_;
   const AttrMap attrs_;
