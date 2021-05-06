@@ -181,3 +181,25 @@ def assert_is_valid_distribute(
         distribute, oneflow._oneflow_internal.distribute.Distribute
     ), """not a valid distribute policy.
            expected: 1) oneflow.distribute.split(axis); 2) oneflow.distribute.broadcast(); 3) oneflow.distribute.auto()"""
+
+
+@oneflow_export("distribute.get_rank")
+def get_rank():
+    r"""Returns the rank of current process group
+
+    Returns:
+        The rank of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetRank()
+
+
+@oneflow_export("distribute.get_world_size")
+def get_world_size():
+    r"""Returns the number of processes in the current process group
+
+    Returns:
+        The world size of the process group.
+
+    """
+    return oneflow._oneflow_internal.GetWordSize()
