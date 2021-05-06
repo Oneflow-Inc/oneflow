@@ -292,6 +292,12 @@ class Tensor:
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
+    def __gt__(self, other):
+        return self.gt(other)
+
+    def __lt__(self, other):
+        return self.lt(other)
+
     def __array__(self):
         TODO()
 
@@ -300,6 +306,33 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __rsub__(self, other):
+        return flow.sub(other, self)
+
+    def __truediv__(self, other):
+        return self.div(other)
+
+    def __rtruediv__(self, other):
+        return flow.div(other, self)
+
+    def __neg__(self):
+        return flow.mul(-1, self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
