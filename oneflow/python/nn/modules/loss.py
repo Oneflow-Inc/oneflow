@@ -86,3 +86,98 @@ class CrossEntropyLoss(Module):
             return flow.sum(out)
         else:
             return out
+
+
+import oneflow as flow
+from oneflow.python.nn.module import Module
+from oneflow.python.oneflow_export import oneflow_export
+import numpy as np
+
+
+@oneflow_export("nn.NLLLoss")
+class NLLLoss(Module):
+    r""" The negative log likelihood loss. It is useful to train a classification problem with C classes.
+    Args:
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will
+            be applied, ``'mean'``: the weighted mean of the output is taken,
+            ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in
+            the meantime, specifying either of those two args will override
+            :attr:`reduction`. Default: ``'mean'``
+    
+    For example:
+    .. code-block:: python 
+        
+        import oneflow as flow
+        import numpy as np
+
+        input = flow.Tensor(
+            [[-0.1664078, -1.7256707, -0.14690138],
+                [-0.21474946, 0.53737473, 0.99684894],
+                [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
+        target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+        out = flow.nn.NLLLoss(reduction="none")(input, target)
+        # out: [0.80199665 1.1166505  0.35826027]
+
+        out_sum = flow.nn.NLLLoss(reduction="sum")(input, target)
+        # out_sum: [2.2769074]
+        
+        out_mean = flow.nn.NLLLoss(reduction="mean")(input, target)
+        # out_mean: [0.7589692]
+    
+    """
+
+    def __init__(
+        self, weight=None, ignore_index: int = None, reduction: str = "none",
+    ) -> None:
+        super().__init__()
+        if weight != None:
+            raise ValueError("Argument weight is not supported yet")
+        if ignore_index != None:
+            raise ValueError("Argument ignore_index is not supported yet")
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+        self._gather_nd_op = (
+            flow.builtin_op("gather_nd")
+            .Input("params")
+            .Input("indices")
+            .Output("out")
+            .Build()
+        )
+
+    def forward(self, input, target):
+        n = input.shape[0]
+        input = flow.negative(input)
+        if len(input.shape) == 2:
+            idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
+            target = flow.unsqueeze(target, dim=1)
+            t = flow.cat([idx, target], dim=1)
+            res = self._gather_nd_op(input, t)[0]
+        elif len(input.shape) == 4:
+            b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
+            input = flow.tmp.transpose(input, (0, 2, 3, 1))
+            input = flow.tmp.reshape(input, shape=[-1, input.shape[3]])
+            target = flow.tmp.flatten(target)
+            n = input.shape[0]
+            idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
+            target = flow.unsqueeze(target, dim=1)
+            t = flow.cat([idx, target], dim=1)
+            res = self._gather_nd_op(input, t)[0]
+            res = flow.tmp.reshape(res, (b, h, w))
+
+        else:
+            raise NotImplemented
+
+        if self.reduction == "none":
+            return res
+        elif self.reduction == "sum":
+            return flow.sum(res)
+        else:
+            return flow.mean(res)
