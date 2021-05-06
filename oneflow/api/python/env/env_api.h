@@ -40,4 +40,8 @@ inline void DestroyEnv() { return oneflow::DestroyEnv().GetOrThrow(); }
 
 inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
 
+inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
+
+inline size_t GetWordSize() { return oneflow::GetWordSize().GetOrThrow(); }
+
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_
