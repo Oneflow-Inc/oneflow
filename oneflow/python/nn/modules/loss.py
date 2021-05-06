@@ -79,10 +79,18 @@ class CrossEntropyLoss(Module):
         )
 
     def forward(self, input, target):
+        input_shape_len = len(input.shape)
+        if input_shape_len == 4:
+            b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
+            input = flow.tmp.transpose(input, (0, 2, 3, 1))
+            input = flow.tmp.reshape(input, shape=[-1, input.shape[3]])
+            target = flow.tmp.flatten(target)
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
         if self.reduction == "mean":
             return flow.mean(out)
         elif self.reduction == "sum":
             return flow.sum(out)
         else:
+            if input_shape_len == 4:
+                out = flow.tmp.reshape(out, (b, h, w))
             return out
