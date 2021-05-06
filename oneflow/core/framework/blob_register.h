@@ -60,7 +60,10 @@ class BlobRegister : public std::enable_shared_from_this<BlobRegister> {
 
   bool HasObject4BlobName(const std::string& blob_name) const;
 
-  std::shared_ptr<BlobObject> GetObject4BlobName(const std::string& blob_name) const;
+  Maybe<BlobObject> GetObject4BlobName(const std::string& blob_name) const;
+  std::shared_ptr<BlobObject> ApiGetObject4BlobName(const std::string& blob_name) const {
+    return GetObject4BlobName(blob_name).GetPtrOrThrow();
+  }
 
   void SetObject4BlobName(const std::string& blob_name, const std::shared_ptr<BlobObject>& obj);
 
