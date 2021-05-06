@@ -65,7 +65,6 @@ def compare_with_numpy_sgd(
 
         for i in range(train_iters):
             x, vt = train_one_iter(random_grad_seq[i])
-
         return x
 
     oneflow_res = train_by_oneflow().numpy()

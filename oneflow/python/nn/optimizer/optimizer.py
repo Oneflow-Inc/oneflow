@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from collections import OrderedDict
 from typing import List, Dict, Callable, Union, Any, Iterator
 from types import GeneratorType
-import numpy as np
 
+import numpy as np
 import oneflow as flow
+
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
