@@ -60,13 +60,16 @@ class Optimizer(object):
         self._op = None
 
     def add_param_group(self, param_group) -> None:
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def load_state_dict(self, state_dict) -> None:
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def state_dict(self):
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
