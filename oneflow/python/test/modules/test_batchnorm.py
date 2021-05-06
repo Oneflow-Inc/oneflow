@@ -31,7 +31,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                 [0.5836, 0.1350, -0.8860, -1.7878, 1.0592],
                 [0.7252, -1.1488, -0.0274, 1.4051, 0.1018],
                 [-0.3595, -0.1801, 0.1146, -1.5712, -1.9291],
-            ]
+            ], dtype=np.float32
         )
 
         output_arr = np.array(
@@ -40,7 +40,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                 [0.7326, 0.1884, -1.7100, -0.6563, 1.3170],
                 [1.0668, -1.3949, 0.4674, 1.7292, 0.4521],
                 [-1.4938, -0.2002, 0.8275, -0.4945, -1.3827],
-            ]
+            ], dtype=np.float32
         )
 
         m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1)
@@ -61,7 +61,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                     [-0.2975, -0.0227, -0.2302, -0.3762],
                     [-0.7759, -0.6789, 1.1444, 1.8077],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         output_arr = np.array(
@@ -76,7 +76,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                     [-0.5481, -0.2840, -0.4834, -0.6237],
                     [-1.0224, -0.9274, 0.8573, 1.5066],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1)
@@ -111,7 +111,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                         [0.6957, -0.4523, -0.8819, 1.0164],
                     ],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         output_arr = np.array(
@@ -140,7 +140,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                         [0.5190, -0.7375, -1.2078, 0.8700],
                     ],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
@@ -175,7 +175,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                         [0.6957, -0.4523, -0.8819, 1.0164],
                     ],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         output_arr = np.array(
@@ -204,7 +204,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
                         [0.69569653, -0.45229775, -0.8818956, 1.0163949],
                     ],
                 ],
-            ]
+            ], dtype=np.float32
         )
 
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
