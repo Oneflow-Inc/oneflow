@@ -42,6 +42,6 @@ inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrTh
 
 inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
 
-inline int64_t GetWordSize() { return oneflow::GetWordSize().GetOrThrow(); }
+inline size_t GetWordSize() { return oneflow::GetWordSize().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_
