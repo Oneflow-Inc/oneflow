@@ -38,9 +38,9 @@ class ParamGroup(object):
             assert "param" in parameters
             self._parameters = list(parameters["param"])
             self._options = default_options
-            for key, value in default_options.items():
+            for key in self._options:
                 if key in parameters:
-                    parameters[key] = value
+                    self._options[key] = parameters[key]
 
     @property
     def options(self):
