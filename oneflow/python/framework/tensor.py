@@ -329,7 +329,7 @@ class Tensor:
         return flow.div(other, self)
 
     def __neg__(self):
-        return flow.mul(-1, self)
+        return flow.neg(self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
