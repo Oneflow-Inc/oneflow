@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.common_types import _size_any_t
 from oneflow.python.nn.modules.utils import _single
 
@@ -24,7 +24,10 @@ from typing import Optional, Union
 
 class _ConstantBase(Module):
     def __init__(
-        self, size: _size_any_t, value: Union[float, int], dtype: Optional[flow.dtype]
+        self,
+        size: _size_any_t,
+        value: Union[float, int],
+        dtype: Optional[flow._oneflow_internal.dtype],
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
@@ -79,7 +82,8 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype)
 
 
-@oneflow_export("tmp.ones")
+@oneflow_export("ones")
+@experimental_api
 def ones_op(size, dtype=None):
     r"""
     Returns a tensor filled with the scalar value 1,
@@ -107,7 +111,8 @@ class Zeros(_ConstantBase):
         super().__init__(size, 0, dtype)
 
 
-@oneflow_export("tmp.zeros")
+@oneflow_export("zeros")
+@experimental_api
 def zeros_op(size, dtype=None):
     r"""Returns a tensor filled with the scalar value 0,
     with the shape defined by the variable argument `size`.

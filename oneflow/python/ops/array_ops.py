@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from functools import reduce
 from typing import Iterable, List, Optional, Sequence, Union, Tuple
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 
 import numpy as np
 import operator
@@ -30,6 +30,7 @@ import oneflow._oneflow_internal
 
 
 @oneflow_export("gather")
+@stable_api
 def gather(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -157,6 +158,7 @@ def gather(
 
 
 @oneflow_export("flatten")
+@stable_api
 def flatten(
     input: oneflow._oneflow_internal.BlobDesc,
     start_dim: int = 0,
@@ -222,6 +224,7 @@ def infer_shape(x, shape):
 
 
 @oneflow_export("reshape")
+@stable_api
 def reshape(
     x: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -423,6 +426,7 @@ def dynamic_reshape(
 
 
 @oneflow_export("transpose")
+@stable_api
 def transpose(
     a: oneflow._oneflow_internal.BlobDesc,
     perm: Sequence[int] = None,
@@ -1389,7 +1393,7 @@ def tensor_scatter_nd_add(
 @oneflow_export("argwhere")
 def argwhere(
     condition: oneflow._oneflow_internal.BlobDesc,
-    dtype: Optional[flow.dtype] = None,
+    dtype: Optional[flow._oneflow_internal.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List.
@@ -1447,6 +1451,7 @@ def argwhere(
 
 
 @oneflow_export("nonzero")
+@stable_api
 def nonzero(
     a: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1578,7 +1583,7 @@ def where(
 @oneflow_export("elem_cnt")
 def elem_cnt(
     inputs: oneflow._oneflow_internal.BlobDesc,
-    dtype: Optional[flow.dtype] = None,
+    dtype: Optional[flow._oneflow_internal.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the amount of elements in input Blob.
@@ -2021,6 +2026,7 @@ def cast_to_static_shape(
 
 
 @oneflow_export("squeeze")
+@stable_api
 def squeeze(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -2104,6 +2110,7 @@ def squeeze(
 
 
 @oneflow_export("expand")
+@stable_api
 def expand(
     x: oneflow._oneflow_internal.BlobDesc,
     expand_size: Sequence[int],
@@ -2355,6 +2362,7 @@ def broadcast_like(
 
 
 @oneflow_export("masked_fill")
+@stable_api
 def masked_fill(
     x: oneflow._oneflow_internal.BlobDesc,
     mask: oneflow._oneflow_internal.BlobDesc,
@@ -2509,9 +2517,10 @@ def amp_white_identity(
 
 
 @oneflow_export("zeros")
+@stable_api
 def zeros(
     shape: Sequence[int],
-    dtype: Optional[flow.dtype] = None,
+    dtype: Optional[flow._oneflow_internal.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `0`.
@@ -2553,9 +2562,10 @@ def zeros(
 
 
 @oneflow_export("ones")
+@stable_api
 def ones(
     shape: Sequence[int],
-    dtype: Optional[flow.dtype] = None,
+    dtype: Optional[flow._oneflow_internal.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `1`.

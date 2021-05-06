@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
 
@@ -49,12 +49,13 @@ class Transpose(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.transpose")
+@oneflow_export("transpose")
 @register_tensor_op("transpose")
-def transpose_op(a, perm: Sequence[int] = None):
+@experimental_api
+def transpose_op(tensor, perm: Sequence[int] = None):
     r"""This operator transposes the specified axis of input Tensor.
     Args:
-        a (oneflow.Tensor): The input tensor.
+        tensor (oneflow.Tensor): The input tensor.
         perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
     Returns:
         oneflow.Tensor: A transposed tensor.
@@ -68,4 +69,4 @@ def transpose_op(a, perm: Sequence[int] = None):
 
         # out.shape (2, 5, 3, 6)
     """
-    return Transpose(perm=perm)(a)
+    return Transpose(perm=perm)(tensor)

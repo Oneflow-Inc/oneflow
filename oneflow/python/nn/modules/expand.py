@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
 
@@ -62,8 +62,9 @@ class Expand(Module):
         )[0]
 
 
-@oneflow_export("tmp.expand")
+@oneflow_export("expand")
 @register_tensor_op("expand")
+@experimental_api
 def expand_op(x, expand_size):
     """This operator expand the input tensor to a larger size.
     

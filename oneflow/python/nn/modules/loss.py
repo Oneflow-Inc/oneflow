@@ -16,11 +16,12 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.CrossEntropyLoss")
+@experimental_api
 class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
@@ -112,9 +113,9 @@ class CrossEntropyLoss(Module):
             target = flow.tmp.flatten(target)
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
         if self.reduction == "mean":
-            return flow.mean(out)
+            return flow.experimental.mean(out)
         elif self.reduction == "sum":
-            return flow.sum(out)
+            return flow.experimental.sum(out)
         else:
             if input_shape_len == 4:
                 out = flow.tmp.reshape(out, (b, h, w))

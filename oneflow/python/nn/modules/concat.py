@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
@@ -53,6 +53,7 @@ class Cat(Module):
 
 
 @oneflow_export("cat")
+@experimental_api
 def concat_op(inputs, dim=0):
     r"""Concatenate two or more `Tensor` s at specified axis.
 

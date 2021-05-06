@@ -26,7 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
@@ -903,7 +903,9 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: oneflow._oneflow_internal.BlobDesc, dtype: flow.dtype, name: Optional[str] = None
+    x: oneflow._oneflow_internal.BlobDesc,
+    dtype: flow._oneflow_internal.dtype,
+    name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The op takes input x and casts it to the output with `dtype`
 
@@ -1344,7 +1346,7 @@ def maximum(
 def elem_cnt(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
-    dtype: Optional[flow.dtype] = None,
+    dtype: Optional[flow._oneflow_internal.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed.
@@ -1669,9 +1671,9 @@ def clip_by_value(
         name = id_util.UniqueStr("ClipByValue_")
 
     is_floating = values.dtype in [
-        flow.float32,
-        flow.float16,
-        flow.float64,
+        flow._oneflow_internal.float32,
+        flow._oneflow_internal.float16,
+        flow._oneflow_internal.float64,
     ]
 
     if min_value is not None:
@@ -2097,6 +2099,7 @@ def in_top_k(
 
 
 @oneflow_export("range")
+@stable_api
 def range(
     start, limit=None, delta=1, dtype=None, name="range"
 ) -> oneflow._oneflow_internal.BlobDesc:

@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -36,6 +36,7 @@ class Greater(Module):
 
 @oneflow_export("gt")
 @register_tensor_op("gt")
+@experimental_api
 def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
