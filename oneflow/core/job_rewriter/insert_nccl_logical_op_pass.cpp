@@ -23,6 +23,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 
+#ifdef WITH_CUDA
+
 namespace oneflow {
 
 namespace {
@@ -658,7 +660,8 @@ void InitInsertNcclSubGraphInfoFromSet(
 void InsertNcclLogicalOpsInSubGraph(
     const OpGraph& op_graph, JobBuilder* job_builder,
     const std::vector<const OpNode*>& subgraph_order,
-    const std::function<bool(const std::string&, const std::string&)>& IsReachable) {
+    const std::function<bool(const std::string&, const std::string&)>& IsReachable,
+    const int32_t subgraph_id_in_same_placement_group, uint32_t* stream_offset) {
   HashMap<const OpNode*, int64_t> node2subgraph_order;
   node2subgraph_order.reserve(subgraph_order.size());
   for (int64_t i = 0; i < subgraph_order.size(); ++i) {
@@ -705,6 +708,29 @@ void InsertNcclLogicalOpsInSubGraph(
     LOG(INFO) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
+
+  // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
+  do {
+    if (nccl_op_confs.size() == 0 || subgraph_id_in_same_placement_group <= 0) {
+      break;  // NOTE(chengcheng): skip for first subgraph using compute stream(0).
+    }
+
+    int64_t nccl_compute_stream_id = *stream_offset;
+    CudaStreamIndexGenerator stream_idx_gen;
+    if (nccl_compute_stream_id >= stream_idx_gen.GetNcclComputeStreamCount()) {
+      break;  // NOTE(chengcheng): ONLY support GetNcclComputeStreamCount() insert nccl subgraphs.
+    }
+    int32_t stream_index =
+        static_cast<int32_t>(stream_idx_gen.GenerateNcclComputeStreamIndex(nccl_compute_stream_id));
+
+    // NOTE(chengcheng): set ALL subgraph op and ALL nccl op stream index.
+    for (auto& pair : subgraph_op_name2conf) {
+      mut_op_names.insert(pair.first);
+      pair.second.set_stream_index_hint(stream_index);
+    }
+    for (auto& nccl_op : nccl_op_confs) { nccl_op.set_stream_index_hint(stream_index); }
+    (*stream_offset)++;
+  } while (false);
 
   std::vector<OperatorConf> mut_op_confs;
   mut_op_confs.reserve(mut_op_names.size());
@@ -911,9 +937,11 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
     }
 
     // NOTE(chengcheng): insert nccl ops for each subgraph
-    for (const auto& subgraph_ptr : info.ordered_subgraph) {
-      auto& ordered_op_nodes = subgraph_ptr->ordered_op_nodes;
-      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable);
+    uint32_t stream_offset = 0;
+    for (int i = 0; i < info.ordered_subgraph.size(); i++) {
+      auto& ordered_op_nodes = info.ordered_subgraph.at(i)->ordered_op_nodes;
+      InsertNcclLogicalOpsInSubGraph(op_graph, job_builder, ordered_op_nodes, IsReachable, i,
+                                     &stream_offset);
     }
 
     // NOTE(chengcheng): insert acc for all subgraph with same placement group
@@ -934,3 +962,5 @@ Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* 
 REGISTER_JOB_PASS("InsertNcclLogicalOpPass", InsertNcclLogicalOpPass);
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA

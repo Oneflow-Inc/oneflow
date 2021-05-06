@@ -81,5 +81,17 @@ class TestLinear(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestIdentity(flow.unittest.TestCase):
+    def test_identity(test_case):
+        m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+        x = flow.Tensor(np.random.rand(2, 3, 4, 5))
+        y = m(x)
+        test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+
 if __name__ == "__main__":
     unittest.main()
