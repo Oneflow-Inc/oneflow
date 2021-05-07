@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/intra_job_mem_sharing_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
@@ -114,16 +116,29 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   // Step4: put infomation from task_gph into plan.
+  const int64_t node_num = task_gph->node_num();
+  const int64_t cpu_num = std::thread::hardware_concurrency();
+  const int64_t thread_pool_size = std::min(node_num, cpu_num);
+  BlockingCounter counter(node_num);
+  std::mutex mtx;
+  ThreadPool thread_pool(thread_pool_size);
   task_gph->ForEachNode([&](TaskNode* task_node) {
-    if (task_node->IsMeaningLess()) { return; }
-    TaskProto task_proto;
-    task_node->ToProto(&task_proto);
-    if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-        || task_node->GetTaskType() == kAcc) {
-      CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
-    }
-    plan->mutable_task()->Add(std::move(task_proto));
-  });
+    thread_pool.AddWork([&]() {
+      if (task_node->IsMeaningLess()) { return; }
+      TaskProto task_proto;
+      task_node->ToProto(&task_proto);
+      {
+        std::unique_lock<std::mutex> guard(mtx);
+        if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+            || task_node->GetTaskType() == kAcc) {
+          CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+        }
+        plan->mutable_task()->Add(std::move(task_proto));
+      }  // guard(mtx)
+      counter.Decrease();
+    } /* thread_pool.AddWork */);
+  } /* task_gph->ForEachNode */);
+  counter.WaitUntilCntEqualZero();
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
 
