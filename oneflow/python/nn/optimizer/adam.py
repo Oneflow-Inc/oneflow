@@ -88,9 +88,8 @@ class Adam(Optimizer):
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
-        assert amsgrad == False, f"Not support AMSGrad now!"
+        assert amsgrad is False, f"Not support AMSGrad now!"
 
-        self._default_options = dict()
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
         self._default_options["beta"] = betas
