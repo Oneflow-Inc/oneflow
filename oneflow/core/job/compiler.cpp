@@ -123,7 +123,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   std::mutex mtx;
   ThreadPool thread_pool(thread_pool_size);
   task_gph->ForEachNode([&](TaskNode* task_node) {
-    thread_pool.AddWork([&]() {
+    thread_pool.AddWork([task_node, plan, &job_desc, &counter, &mtx]() {
       if (task_node->IsMeaningLess()) { return; }
       TaskProto task_proto;
       task_node->ToProto(&task_proto);
