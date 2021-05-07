@@ -644,7 +644,7 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 }
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
-    const std::shared_ptr<one::StatefulOpKernel>& opkernel,
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     one::EagerBlobObjectList input_eager_blob_objects,
     one::EagerBlobObjectList output_eager_blob_objects, const AttrMap& attrs,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym) {

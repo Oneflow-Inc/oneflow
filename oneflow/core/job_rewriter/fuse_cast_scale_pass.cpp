@@ -61,6 +61,7 @@ class FuseCastScalePass final : public JobPass {
 
 Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
   const auto IsSafeToDelete = MakePredicatorIsSafeToDelete(op_graph);
+  std::vector<OperatorConf> delete_ops;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     if (!IsUserOpWithTypeName(op_node->op().op_conf(), "cast")) { return; }
     if (!IsSafeToDelete(op_node)) { return; }
@@ -86,7 +87,6 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     }
     if (op_node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
     double scale = 1.0;
-    std::vector<OperatorConf> delete_ops;
     if (IsUserOpWithTypeName(sole_dst_node->op().op_conf(), "scalar_mul")) {
       const user_op::UserOpConfWrapper scalar_mul_op_conf(sole_dst_node->op().op_conf());
       if (scalar_mul_op_conf.attr<bool>("has_int_operand")) {
@@ -111,9 +111,10 @@ Maybe<void> FuseCastScalePass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
 
     OperatorConf new_op_conf = sole_dst_node->op().op_conf();
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
-    job_builder->DelOps(delete_ops);
+
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });
+  job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
 }
 
