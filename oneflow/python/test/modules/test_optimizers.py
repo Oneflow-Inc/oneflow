@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,8 +40,10 @@ def compare_with_numpy_sgd(
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = flow.sum(x * grad_tensor)
-            loss.backward()
+            loss = x * grad_tensor
+            # BUG: loss = flow.sum(x * grad_tensor)
+            grad = flow.Tensor(np.ones(list(loss.shape)))
+            loss.backward(grad)
             sgd.step()
             sgd.zero_grad()
 
@@ -63,7 +62,6 @@ def compare_with_numpy_sgd(
 
         for i in range(train_iters):
             x, vt = train_one_iter(random_grad_seq[i])
-
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -73,59 +71,61 @@ def compare_with_numpy_sgd(
     )
 
 
-# def compare_with_numpy_adam(
-#     test_case, x_shape, scale, learning_rate, train_iters,
-# ):
-#     # generate random number sequences
-#     random_grad_seq = []
-#     for _ in range(train_iters):
-#         random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
 
-#     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
-#     def train_by_oneflow():
-#         x = Parameter(flow.Tensor(init_value))
-#         param_list = list()
-#         param_list.append(x)
-#         adam = flow.optim.Adam(
-#             [{"param": param_list}], lr=learning_rate, scale=scale
-#         )
+def compare_with_numpy_adam(
+    test_case, x_shape, scale, learning_rate, train_iters,
+):
+    # generate random number sequences
+    random_grad_seq = []
+    for _ in range(train_iters):
+        random_grad_seq.append(np.random.uniform(size=x_shape).astype(np.float32))
 
-#         def train_one_iter(grad):
-#             grad_tensor = flow.Tensor(grad, requires_grad=False)
-#             loss = flow.sum(x * grad_tensor)
-#             loss.backward()
-#             adam.step()
-#             adam.zero_grad()
+    init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
-#         for i in range(train_iters):
-#             train_one_iter(random_grad_seq[i])
-#         return x
+    def train_by_oneflow():
+        x = Parameter(flow.Tensor(init_value))
+        param_list = list()
+        param_list.append(x)
+        adam = flow.optim.Adam(
+            [{"param": param_list}], lr=learning_rate, scale=scale
+        )
 
-#     def train_by_numpy():
-#         x = init_value
-#         vt = np.zeros_like(x)
-#         st = np.zeros_like(x)
-#         beta1 = 0.9
-#         beta2 = 0.99
+        def train_one_iter(grad):
+            grad_tensor = flow.Tensor(grad, requires_grad=False)
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
+            adam.step()
+            adam.zero_grad()
 
-#         def train_one_iter(grad):
-#             vt = beta1 * vt + (1 - beta1) * scale * grad
-#             st = beta2 * st + (1 - beta2) * scale * grad * grad
-#             g = learning_rate * vt / (np.sqrt(st) + 1e-8)
-#             param = x - g
-#             return param, vt, st
+        for i in range(train_iters):
+            train_one_iter(random_grad_seq[i])
+        return x
 
-#         for i in range(train_iters):
-#             x, vt, st = train_one_iter(random_grad_seq[i])
+    def train_by_numpy():
+        x = init_value
+        vt = np.zeros_like(x)
+        st = np.zeros_like(x)
+        beta1 = 0.9
+        beta2 = 0.99
 
-#         return x
+        def train_one_iter(grad):
+            vt = beta1 * vt + (1 - beta1) * scale * grad
+            st = beta2 * st + (1 - beta2) * scale * grad * grad
+            g = learning_rate * vt / (np.sqrt(st) + 1e-8)
+            param = x - g
+            return param, vt, st
 
-#     oneflow_res = train_by_oneflow().numpy()
-#     numpy_res = train_by_numpy()
-#     test_case.assertTrue(
-#         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
-#     )
+        for i in range(train_iters):
+            x, vt, st = train_one_iter(random_grad_seq[i])
+
+        return x
+
+    oneflow_res = train_by_oneflow().numpy()
+    numpy_res = train_by_numpy()
+    test_case.assertTrue(
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
+    )
 
 
 @unittest.skipIf(
