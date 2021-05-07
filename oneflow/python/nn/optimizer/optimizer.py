@@ -14,12 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from collections import OrderedDict
 from typing import List, Dict, Callable, Union, Any, Iterator, Tuple
 from types import GeneratorType
-import numpy as np
 
+import numpy as np
 import oneflow as flow
+
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
@@ -38,9 +38,9 @@ class ParamGroup(object):
             assert "param" in parameters
             self._parameters = list(parameters["param"])
             self._options = default_options
-            for key, value in default_options.items():
+            for key in self._options:
                 if key in parameters:
-                    parameters[key] = value
+                    self._options[key] = parameters[key]
 
     @property
     def options(self):
@@ -60,13 +60,16 @@ class Optimizer(object):
         self._op = None
 
     def add_param_group(self, param_group) -> None:
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def load_state_dict(self, state_dict) -> None:
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def state_dict(self):
-        TODO()
+        # TODO(wyg)
+        raise NotImplementedError()
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
         raise NotImplementedError()
@@ -95,9 +98,9 @@ class SGD(Optimizer):
         scale: float = 1.0,
     ):
         super().__init__()
-        assert lr > 0.0, f"Invalid learning rate: {lr}"
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
-        assert scale > 0.0, f"Invalid scale factor: {scale}"
+        assert scale >= 0.0, f"Invalid scale factor: {scale}"
 
         self._default_options = dict()
         self._default_options["lr"] = lr
@@ -117,8 +120,10 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if "momentum" in self._default_options:
-                    # TODO: Use flow.zeros_like instead of numpy
-                    self._state[param]["momentum_buf"] = flow.Tensor(np.zeros(param.shape))
+                    self._state[param]["momentum_buf"] = flow.tmp.zeros(
+                        # TODO: zeros module support flow.Size parameter
+                        tuple(param.shape)
+                    )
 
         if "momentum" in self._default_options.keys():
             self._op = (
@@ -148,23 +153,24 @@ class SGD(Optimizer):
             )
 
     def step(self, closure: Callable = None):
-        loss = None
-        if closure is not None:
-            loss = closure()
+        with flow.no_grad():
+            loss = None
+            if closure is not None:
+                loss = closure()
 
-        for param_group in self._param_groups:
-            lr_tensor = flow.Tensor([param_group.options["lr"]])
-            for param in param_group.parameters:
-                if param.grad is None:
-                    continue
-                if "momentum" in self._default_options:
-                    momentum_buf = self._state[param]["momentum_buf"]
-                    self._op(param, param.grad, lr_tensor, momentum_buf)
-                else:
-                    self._op(param, param.grad, lr_tensor)
+            for param_group in self._param_groups:
+                lr_tensor = flow.Tensor([param_group.options["lr"]])
+                for param in param_group.parameters:
+                    if param.grad is None:
+                        continue
+                    if "momentum" in self._default_options:
+                        momentum_buf = self._state[param]["momentum_buf"]
+                        self._op(param, param.grad, lr_tensor, momentum_buf)
+                    else:
+                        self._op(param, param.grad, lr_tensor)
 
-        self._state["step"] = self._state["step"] + 1
-        return loss
+            self._state["step"] = self._state["step"] + 1
+            return loss
 
 
 @oneflow_export("optim.Adam")
@@ -179,23 +185,29 @@ class Adam(Optimizer):
         lr: float = 1e-3,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-8,
-        weight_decay : float = 0,
-        amsgrad  : bool = False,
+        weight_decay: float = 0,
+        amsgrad: bool = False,
         scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
-        assert betas[0] >= 0.0 and betas[0] < 1.0, f"Invalid beta parameter at index 0: {betas[0]}"
-        assert betas[1] >= 0.0 and betas[1] < 1.0, f"Invalid beta parameter at index 1: {betas[1]}"
+        assert (
+            betas[0] >= 0.0 and betas[0] < 1.0
+        ), f"Invalid beta parameter at index 0: {betas[0]}"
+        assert (
+            betas[1] >= 0.0 and betas[1] < 1.0
+        ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
 
-
         self._default_options = dict()
         self._default_options["lr"] = lr
+        self._default_options["eps"] = eps
+        self._default_options["beta"] = betas
+        self._default_options["weight_decay"] = weight_decay
+        self._default_options["amsgrad"] = amsgrad
         self._default_options["scale"] = scale
-        
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
@@ -208,36 +220,23 @@ class Adam(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                if "momentum" in self._default_options:
-                    # TODO: Use flow.zeros_like instead of numpy
-                    self._state[param]["momentum_buf"] = flow.Tensor(np.zeros(param.shape))
 
-        if "momentum" in self._default_options.keys():
-            self._op = (
-                flow.builtin_op("momentum_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Input("momentum")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Attr("beta", self._default_options["momentum"])
-                .Attr("weight_decay", 0.0)
-                .Build()
-            )
-        else:
-            self._op = (
-                flow.builtin_op("sgd_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("weight_decay", 0.0)
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Build()
-            )
+        self._op = (
+            flow.builtin_op("adam_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Input("m")
+            .Input("v")
+            .Attr("scale", self._default_options["scale"])
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Attr("beta1", 0.9)
+            .Attr("beta2", 0.999)
+            .Attr("epsilon", 1e-8)
+            .Attr("weight_decay", 0.0)
+            .Build()
+        )
 
     def step(self, closure: Callable = None):
         loss = None
@@ -246,14 +245,12 @@ class Adam(Optimizer):
 
         for param_group in self._param_groups:
             lr_tensor = flow.Tensor([param_group.options["lr"]])
+            m_tensor = flow.zeros(1)
+            v_tensor = flow.zeros(1)
             for param in param_group.parameters:
                 if param.grad is None:
                     continue
-                if "momentum" in self._default_options:
-                    momentum_buf = self._state[param]["momentum_buf"]
-                    self._op(param, param.grad, lr_tensor, momentum_buf)
-                else:
-                    self._op(param, param.grad, lr_tensor)
+                self._op(param, param.grad, lr_tensor, m_tensor, v_tensor)
 
         self._state["step"] = self._state["step"] + 1
         return loss
