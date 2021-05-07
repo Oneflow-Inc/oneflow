@@ -45,13 +45,13 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape)
         tensor = flow.Tensor(np_arr)
-        test_case.assertTrue(np.allclose(tensor.numpy(), np_arr))
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.Tensor(np_int_arr)
         print("dtype: ", tensor.dtype, np_int_arr.dtype)
         test_case.assertEqual(tensor.dtype, flow.int32)
-        test_case.assertTrue(np.allclose(tensor.numpy(), np_int_arr))
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
