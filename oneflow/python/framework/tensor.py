@@ -28,6 +28,7 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow as flow
 from oneflow.python.nn.modules import *
 
@@ -523,7 +524,7 @@ class Tensor:
                 flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
             )
         else:
-            dtype = flow.convert_numpy_dtype_to_oneflow_dtype(numpy_data.dtype)
+            dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(numpy_data.dtype)
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(

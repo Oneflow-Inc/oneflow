@@ -31,7 +31,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_numpy_and_default_dtype(test_case):
         shape = (2, 3, 4, 5)
         tensor = flow.Tensor(*shape)
-        tensor.set_data_initializer(flow.ones_initializer())
+        flow.nn.init.ones_(tensor)
         test_case.assertTrue(tensor.dtype == flow.float32)
         test_case.assertTrue(
             np.array_equal(tensor.numpy(), np.ones(shape, dtype=np.float32))
@@ -50,7 +50,7 @@ class TestTensor(flow.unittest.TestCase):
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.Tensor(np_int_arr)
         print("dtype: ", tensor.dtype, np_int_arr.dtype)
-        test_case.assertTrue(tensor.dtype == flow.int32)
+        test_case.assertEqual(tensor.dtype, flow.int32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np_int_arr))
 
     @unittest.skipIf(
@@ -137,28 +137,27 @@ class TestTensor(flow.unittest.TestCase):
         y = flow.Tensor(*shape, requires_grad=True)
         x.fill_(1.0)
         y.fill_(2.0)
+        z = x + y
 
-        # TODO(Liang Depeng): change to `z = x + y`
-        add_op = flow.builtin_op("add_n").Input("in", 2).Output("out").Build()
-        z = add_op(x, y)[0]
-
-        test_case.assertTrue(x.requires_grad == False and x.is_leaf == True)
-        test_case.assertTrue(y.requires_grad == True and y.is_leaf == True)
-        test_case.assertTrue(z.requires_grad == True and z.is_leaf == False)
+        test_case.assertFalse(x.requires_grad)
+        test_case.assertTrue(x.is_leaf)
+        test_case.assertTrue(y.requires_grad)
+        test_case.assertTrue(y.is_leaf)
+        test_case.assertTrue(z.requires_grad)
+        test_case.assertFalse(z.is_leaf)
 
         v = flow.Tensor(*shape, requires_grad=True)
         # NOTE(Liang Depeng): the following setting not working
         z.retain_grad()
-        # TODO(Liang Depeng): change to `w = v + z`
-        w = add_op(v, z)[0]
+        w = v + z
 
         grad = flow.Tensor(*shape)
         grad.fill_(1.0)
         grad.determine()
         w.backward(gradient=grad, retain_graph=True)
 
-        test_case.assertTrue(v.grad != None)
-        test_case.assertTrue(y.grad != None)
+        test_case.assertNotEqual(v.grad, None)
+        test_case.assertNotEqual(y.grad, None)
         # NOTE(Liang Depeng): call z.grad or x.grad will raise Exception
         # test_case.assertTrue(z.grad == None)
         # test_case.assertTrue(x.grad == None)

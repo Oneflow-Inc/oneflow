@@ -69,7 +69,6 @@ def convert_oneflow_dtype_to_numpy_dtype(oneflow_dtype: oneflow.dtype):
     return _ONEFLOW_DTYPE_TO_NUMPY_DTYPE[oneflow_dtype]
 
 
-@oneflow_export("convert_numpy_dtype_to_oneflow_dtype")
 def convert_numpy_dtype_to_oneflow_dtype(numpy_dtype: np.dtype):
     for k, v in _ONEFLOW_DTYPE_TO_NUMPY_DTYPE.items():
         if v == numpy_dtype:
