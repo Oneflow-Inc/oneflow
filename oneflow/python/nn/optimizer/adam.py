@@ -29,8 +29,42 @@ from oneflow.python.nn.optimizer.optimizer import Optimizer
 
 @oneflow_export("optim.Adam")
 class Adam(Optimizer):
-    r"""
-    TODO
+    r"""Implements Adam algorithm.
+
+    It has been proposed in `Adam: A Method for Stochastic Optimization`_.
+    The implementation of the L2 penalty follows changes proposed in
+    `Decoupled Weight Decay Regularization`_.
+
+    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of gradient.
+
+    the equation of parameters updating is:
+
+    .. math::
+
+        & V_t = \beta_1*V_{t-1} + (1-\beta_1)*grad
+
+        & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
+
+        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
+
+        & param_{new} = param_{old} - \hat{g}
+
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 1e-3)
+        betas (Tuple[float, float], optional): coefficients used for computing
+            running averages of gradient and its square (default: (0.9, 0.999))
+        eps (float, optional): term added to the denominator to improve
+            numerical stability (default: 1e-8)
+        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        scale (float, optional): the scale factor of loss (default: 1.0)
+
+    .. _Adam\: A Method for Stochastic Optimization:
+        https://arxiv.org/abs/1412.6980
+    .. _Decoupled Weight Decay Regularization:
+        https://arxiv.org/abs/1711.05101
+    
     """
 
     def __init__(
@@ -54,6 +88,7 @@ class Adam(Optimizer):
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
+        assert amsgrad == False, f"Not support AMSGrad now!"
 
         self._default_options = dict()
         self._default_options["lr"] = lr
@@ -93,14 +128,20 @@ class Adam(Optimizer):
             .Attr("scale", self._default_options["scale"])
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
-            .Attr("beta1", 0.9)
-            .Attr("beta2", 0.999)
-            .Attr("epsilon", 1e-8)
-            .Attr("weight_decay", 0.0)
+            .Attr("beta1", self._default_options["beta"][0])
+            .Attr("beta2", self._default_options["beta"][1])
+            .Attr("epsilon", self._default_options["eps"])
+            .Attr("weight_decay", self._default_options["weight_decay"])
             .Build()
         )
 
     def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
         loss = None
         if closure is not None:
             loss = closure()
