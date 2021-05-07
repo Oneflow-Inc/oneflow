@@ -18,12 +18,12 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.python.test.modules.test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
-def compare_with_numpy_sgd(
-    test_case, x_shape, scale, momentum, learning_rate, train_iters,
+def compare_with_numpy_adam(
+    test_case, x_shape, scale, learning_rate, train_iters,
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -36,9 +36,7 @@ def compare_with_numpy_sgd(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        sgd = flow.optim.SGD(
-            [{"param": param_list}], lr=learning_rate, momentum=momentum, scale=scale
-        )
+        adam = flow.optim.Adam([{"param": param_list}], lr=learning_rate, scale=scale)
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
@@ -46,8 +44,8 @@ def compare_with_numpy_sgd(
             # BUG: loss = flow.sum(x * grad_tensor)
             grad = flow.Tensor(np.ones(list(loss.shape)))
             loss.backward(grad)
-            sgd.step()
-            sgd.zero_grad()
+            adam.step()
+            adam.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
@@ -56,14 +54,21 @@ def compare_with_numpy_sgd(
     def train_by_numpy():
         x = init_value
         vt = np.zeros_like(x)
+        st = np.zeros_like(x)
+        beta1 = 0.9
+        beta2 = 0.999
 
         def train_one_iter(grad):
-            v = momentum * vt + learning_rate * scale * grad
-            param = x - v
-            return param, v
+            grad = grad * scale
+            v = beta1 * vt + (1 - beta1) * grad
+            s = beta2 * st + (1 - beta2) * grad * grad
+            g = learning_rate / (np.sqrt(s) + 1e-8) * v
+            param = x - g
+            return param, v, s
 
         for i in range(train_iters):
-            x, vt = train_one_iter(random_grad_seq[i])
+            x, vt, st = train_one_iter(random_grad_seq[i])
+
         return x
 
     oneflow_res = train_by_oneflow().numpy()
@@ -77,16 +82,15 @@ def compare_with_numpy_sgd(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
+class TestAdam(flow.unittest.TestCase):
+    def test_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
-        arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_sgd(test_case, *arg)
+            compare_with_numpy_adam(test_case, *arg)
 
 
 if __name__ == "__main__":
