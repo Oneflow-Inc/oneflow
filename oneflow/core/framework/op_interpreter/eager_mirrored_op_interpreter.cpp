@@ -59,7 +59,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
-  if (user_op_expr.has_device_infer_fn()) {
+  if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
