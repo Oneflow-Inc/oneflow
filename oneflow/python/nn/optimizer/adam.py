@@ -14,15 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import List, Dict, Callable, Union, Any, Iterator, Tuple
+from typing import List, Dict, Callable, Union, Iterator, Tuple
 from types import GeneratorType
 
-import numpy as np
 import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.optimizer.optimizer import ParamGroup
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 
@@ -64,7 +62,7 @@ class Adam(Optimizer):
         https://arxiv.org/abs/1412.6980
     .. _Decoupled Weight Decay Regularization:
         https://arxiv.org/abs/1711.05101
-    
+
     """
 
     def __init__(
@@ -88,7 +86,7 @@ class Adam(Optimizer):
         ), f"Invalid beta parameter at index 1: {betas[1]}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
-        assert amsgrad is False, f"Not support AMSGrad now!"
+        assert amsgrad is False, "Not support AMSGrad now!"
 
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
