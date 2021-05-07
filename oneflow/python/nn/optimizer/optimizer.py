@@ -220,6 +220,14 @@ class Adam(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
+                self._state[param]["exp_avg"] = flow.tmp.zeros(
+                    # TODO: zeros module support flow.Size parameter
+                    tuple(param.shape)
+                )
+                self._state[param]["exp_avg_sq"] = flow.tmp.zeros(
+                    # TODO: zeros module support flow.Size parameter
+                    tuple(param.shape)
+                )
 
         self._op = (
             flow.builtin_op("adam_update")
@@ -243,14 +251,16 @@ class Adam(Optimizer):
         if closure is not None:
             loss = closure()
 
+        print(self._state)
         for param_group in self._param_groups:
             lr_tensor = flow.Tensor([param_group.options["lr"]])
-            m_tensor = flow.zeros(1)
-            v_tensor = flow.zeros(1)
             for param in param_group.parameters:
                 if param.grad is None:
                     continue
+                m_tensor = self._state[param]["exp_avg"]
+                v_tensor = self._state[param]["exp_avg_sq"]
                 self._op(param, param.grad, lr_tensor, m_tensor, v_tensor)
 
         self._state["step"] = self._state["step"] + 1
+
         return loss

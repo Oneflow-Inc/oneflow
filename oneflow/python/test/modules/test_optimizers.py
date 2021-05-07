@@ -1,16 +1,18 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 from collections import OrderedDict
 
@@ -71,8 +73,6 @@ def compare_with_numpy_sgd(
     )
 
 
-
-
 def compare_with_numpy_adam(
     test_case, x_shape, scale, learning_rate, train_iters,
 ):
@@ -87,14 +87,14 @@ def compare_with_numpy_adam(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        adam = flow.optim.Adam(
-            [{"param": param_list}], lr=learning_rate, scale=scale
-        )
+        adam = flow.optim.Adam([{"param": param_list}], lr=learning_rate, scale=scale)
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = flow.sum(x * grad_tensor)
-            loss.backward()
+            loss = x * grad_tensor
+            # BUG: loss = flow.sum(x * grad_tensor)
+            grad = flow.Tensor(np.ones(list(loss.shape)))
+            loss.backward(grad)
             adam.step()
             adam.zero_grad()
 
@@ -107,14 +107,14 @@ def compare_with_numpy_adam(
         vt = np.zeros_like(x)
         st = np.zeros_like(x)
         beta1 = 0.9
-        beta2 = 0.99
+        beta2 = 0.999
 
         def train_one_iter(grad):
-            vt = beta1 * vt + (1 - beta1) * scale * grad
-            st = beta2 * st + (1 - beta2) * scale * grad * grad
-            g = learning_rate * vt / (np.sqrt(st) + 1e-8)
+            v = beta1 * vt + (1 - beta1) * grad
+            s = beta2 * st + (1 - beta2) * grad * grad
+            g = learning_rate / (np.sqrt(s) + 1e-8) * v * scale 
             param = x - g
-            return param, vt, st
+            return param, v, s
 
         for i in range(train_iters):
             x, vt, st = train_one_iter(random_grad_seq[i])
@@ -123,6 +123,8 @@ def compare_with_numpy_adam(
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
+    print(oneflow_res.flatten())
+    print(numpy_res.flatten())
     test_case.assertTrue(
         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
@@ -133,16 +135,16 @@ def compare_with_numpy_adam(
     ".numpy() doesn't work in eager mode",
 )
 class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
-        arg_dict["momentum"] = [0.0, 0.9]
-        arg_dict["learning_rate"] = [1]
-        arg_dict["train_iters"] = [10]
-        for arg in GenArgList(arg_dict):
-            compare_with_numpy_sgd(test_case, *arg)
-    
+    # def test_sgd(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["x_shape"] = [(10,)]
+    #     arg_dict["scale"] = [1.0, 0.9]
+    #     arg_dict["momentum"] = [0.0, 0.9]
+    #     arg_dict["learning_rate"] = [1]
+    #     arg_dict["train_iters"] = [10]
+    #     for arg in GenArgList(arg_dict):
+    #         compare_with_numpy_sgd(test_case, *arg)
+
     def test_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["x_shape"] = [(10,)]
@@ -150,7 +152,7 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_sgd(test_case, *arg)
+            compare_with_numpy_adam(test_case, *arg)
 
 
 if __name__ == "__main__":
