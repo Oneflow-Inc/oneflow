@@ -82,7 +82,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -110,7 +109,6 @@ class Tensor:
                 dtype=dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -124,7 +122,6 @@ class Tensor:
                 dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -511,7 +508,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -533,7 +529,6 @@ class Tensor:
             dtype,
             device=device,
             requires_grad=requires_grad,
-            retain_grad=retain_grad,
             placement=placement,
             sbp=sbp,
             is_consistent=is_consistent,
@@ -549,7 +544,6 @@ class UndeterminedTensor:
         dtype,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -573,7 +567,6 @@ class UndeterminedTensor:
         self.dtype = dtype
         self.device = device
         self.requires_grad = requires_grad
-        self.retain_grad = retain_grad
         self.placement = placement
         self.sbp = sbp
         self.is_consistent = is_consistent
@@ -623,7 +616,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(
             _create_blob_object(
@@ -643,7 +635,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         _init_eager_local_tensor_by_initializer_conf(
             determined_tensor, undetermined_tensor.data_initializer
@@ -682,7 +673,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(blob.blob_object)
     else:
@@ -693,7 +683,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         _copy_from_numpy_to_eager_local_tensor(determined_tensor, numpy_data)
 
