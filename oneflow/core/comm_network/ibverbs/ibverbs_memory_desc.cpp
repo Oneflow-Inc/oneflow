@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -37,7 +36,7 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
     CHECK(cur_mr);
     mr_vec_.push_back(cur_mr);
-    ibv_sge cur_sge;
+    ibv_sge cur_sge{};
     cur_sge.addr = reinterpret_cast<uint64_t>(ch_mem_ptr);
     cur_sge.length = cur_size;
     cur_sge.lkey = cur_mr->lkey;
