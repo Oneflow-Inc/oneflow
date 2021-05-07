@@ -456,5 +456,33 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
       .Build();
 }
 
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth) {
+  return SparseSoftmaxCrossEntropyGradOp(depth, UniqueOpName("sparse_softmax_cross_entropy"));
+}
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
+                                                       const std::string& name) {
+  return one::OpBuilder("sparse_softmax_cross_entropy", name)
+      .Input("prob")
+      .Input("label")
+      .Input("dy")
+      .Output("prediction_diff")
+      .Attr<int64_t>("depth", depth)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth) {
+  return SparseSoftmaxCrossEntropyMsGradOp(depth, UniqueOpName("sparse_softmax_cross_entropy_ms"));
+}
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
+                                                         const std::string& name) {
+  return one::OpBuilder("sparse_softmax_cross_entropy_ms", name)
+      .Input("prob")
+      .Input("label")
+      .Input("dy")
+      .Output("prediction_diff")
+      .Attr<int64_t>("depth", depth)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

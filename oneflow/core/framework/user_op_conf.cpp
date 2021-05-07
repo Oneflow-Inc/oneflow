@@ -18,28 +18,18 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/framework/user_op_def.h"
+#include "oneflow/core/framework/attr_map_util.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 
 namespace oneflow {
 
 namespace user_op {
 
-namespace {
-
-AttrMap MakeAttrMap(const OperatorConf& op_conf) {
-  const auto& attrs = std::make_shared<HashMap<std::string, std::shared_ptr<const AttrVal>>>();
-  for (const auto& kv : op_conf.user_conf().attr()) {
-    attrs->emplace(kv.first, CHECK_JUST(AttrValueUtil::ToCppAttrValue(kv.second)));
-  }
-  return AttrMap(attrs);
-}
-
-}  // namespace
-
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
-    : op_conf_(op_conf), attrs_(MakeAttrMap(*op_conf)) {
+    : op_conf_(op_conf) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
+  attrs_ = MakeAttrMap(op_conf_->user_conf());
 }
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
