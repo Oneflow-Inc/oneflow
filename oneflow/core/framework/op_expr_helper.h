@@ -85,8 +85,17 @@ Maybe<one::UserOpExpr> BroadcastMulOp(const std::string& name);
 Maybe<one::UserOpExpr> BroadcastDivOp();
 Maybe<one::UserOpExpr> BroadcastDivOp(const std::string& name);
 
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis);
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastEqualOp();
+Maybe<one::UserOpExpr> BroadcastEqualOp(const std::string& name);
+
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type);
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name);
+
+Maybe<one::UserOpExpr> CastLikeOp();
+Maybe<one::UserOpExpr> CastLikeOp(const std::string& name);
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon);
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,

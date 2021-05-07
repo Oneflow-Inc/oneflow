@@ -245,6 +245,25 @@ Maybe<one::UserOpExpr> BroadcastDivOp(const std::string& name) {
   return one::OpBuilder("broadcast_div", name).Input("x").Input("y").Output("z").Build();
 }
 
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis) {
+  return BroadcastLikeOp(axis, UniqueOpName("broadcast_like"));
+}
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis, const std::string& name) {
+  return one::OpBuilder("broadcast_like", name)
+      .Input("x")
+      .Input("like")
+      .Output("y")
+      .Attr<std::vector<int32_t>>("broadcast_axes", axis)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastEqualOp() {
+  return BroadcastEqualOp(UniqueOpName("broadcast_equal"));
+}
+Maybe<one::UserOpExpr> BroadcastEqualOp(const std::string& name) {
+  return one::OpBuilder("broadcast_equal", name).Input("x").Input("y").Output("z").Build();
+}
+
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type) {
   return CastOp(to_type, UniqueOpName("cast"));
 }
@@ -254,6 +273,11 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) 
       .Output("out")
       .Attr<DataType>("dtype", to_type)
       .Build();
+}
+
+Maybe<one::UserOpExpr> CastLikeOp() { return CastLikeOp(UniqueOpName("cast_like")); }
+Maybe<one::UserOpExpr> CastLikeOp(const std::string& name) {
+  return one::OpBuilder("cast_like", name).Input("in").Input("dtype_like").Output("out").Build();
 }
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon) {
@@ -461,7 +485,7 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth) {
 }
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
                                                        const std::string& name) {
-  return one::OpBuilder("sparse_softmax_cross_entropy", name)
+  return one::OpBuilder("sparse_softmax_cross_entropy_grad", name)
       .Input("prob")
       .Input("label")
       .Input("dy")
@@ -475,7 +499,7 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth) {
 }
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
                                                          const std::string& name) {
-  return one::OpBuilder("sparse_softmax_cross_entropy_ms", name)
+  return one::OpBuilder("sparse_softmax_cross_entropy_ms_grad", name)
       .Input("prob")
       .Input("label")
       .Input("dy")
