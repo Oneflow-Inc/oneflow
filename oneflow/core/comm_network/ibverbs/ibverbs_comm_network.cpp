@@ -89,13 +89,13 @@ IBVerbsCommNet::IBVerbsCommNet()
   ibv_free_device_list(device_list);
   pd_ = ibv_alloc_pd(context_);
   CHECK(pd_);
-  ibv_device_attr device_attr;
+  ibv_device_attr device_attr{};
   CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
   cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
-  ibv_port_attr port_attr;
+  ibv_port_attr port_attr{};
   CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
-  ibv_gid gid;
+  ibv_gid gid{};
   CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
