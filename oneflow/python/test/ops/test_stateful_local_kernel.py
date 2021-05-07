@@ -22,6 +22,7 @@ import oneflow as flow
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestStatefulLocalKernel(flow.unittest.TestCase):
     def test_dynamic_attrs(test_case):
         x = (
