@@ -216,6 +216,10 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   PopulateOpAttibute(plan, op_attribute_info.job_id2op_attribute_ref_table());
 }
 
+bool IsCollectiveBoxingTaskType(TaskType task_type) {
+  return task_type == TaskType::kCollectiveBoxingGeneric;
+}
+
 bool IsCollectiveBoxingNode(const PlanTaskNode* node) {
   const TaskType task_type = node->task_proto()->task_type();
   return task_type == TaskType::kCollectiveBoxingGeneric;
@@ -257,11 +261,16 @@ void GenCollectiveBoxingPlan(Job* job, Plan* plan) {
     int64_t dependency_depth;
   };
 
+  RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
+                                   ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
+  const int64_t cb_task_count = std::count_if(
+      plan->task().cbegin(), plan->task().cend(),
+      [](const TaskProto& task) { return IsCollectiveBoxingTaskType(task.task_type()); });
+  if (cb_task_count == 0) { return; }
+
   PlanTaskGraph plan_task_graph(*plan);
   int64_t dependency_depth = 0;
   int64_t order = 0;
-  RequestSet* request_set = &(*plan->mutable_collective_boxing_plan()
-                                   ->mutable_job_id2request_set())[GlobalJobDesc().job_id()];
   HashSet<const PlanTaskNode*> all_visited;
   while (true) {
     std::list<const PlanTaskNode*> src_nodes;
