@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import oneflow as flow
+import oneflow.experimental as flow
 import numpy as np
 import os
 import random

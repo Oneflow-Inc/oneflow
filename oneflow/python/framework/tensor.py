@@ -320,16 +320,16 @@ class Tensor:
         return self.sub(other)
 
     def __rsub__(self, other):
-        return flow.sub(other, self)
+        return flow.experimental.sub(other, self)
 
     def __truediv__(self, other):
         return self.div(other)
 
     def __rtruediv__(self, other):
-        return flow.div(other, self)
+        return flow.experimental.div(other, self)
 
     def __neg__(self):
-        return flow.neg(self)
+        return flow.experimental.neg(self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
