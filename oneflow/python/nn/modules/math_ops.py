@@ -819,4 +819,3 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
-
