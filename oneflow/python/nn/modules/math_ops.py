@@ -137,12 +137,17 @@ class Pow(Module):
     exponent can be either a single float number or a single int number.
     
     For example:
+
     .. code-block:: python
+
         import oneflow as flow
-        pow = flow.pow()
+        import numpy as np
+        
         x = flow.Tensor(np.array([1,2,3,4,5,6]))
+        pow = flow.pow()
         out = pow(x,2).numpy()
         print(out) # [1,4,9,16,25,36]
+        
     """
 
     def __init__(self) -> None:
