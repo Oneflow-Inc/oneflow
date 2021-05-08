@@ -48,6 +48,10 @@ Maybe<void> Device::Init() {
   return std::shared_ptr<const Device>(device);
 }
 
+/*static*/ Maybe<const Device> Device::New(const std::string& type) {
+  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+}
+
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
   return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
 }
