@@ -118,7 +118,7 @@ def interpolate_1d_with_x(
         :return: A tuple containing the indexes of neighbor elements (the index can be smaller than 0 or higher than
         len(data)) and the value of these elements
         """
-        pad_width = np.ceil(n / 2).astype(np.int)
+        pad_width = np.ceil(n / 2).astype(np.int32)
         padded = np.pad(data, pad_width, mode="edge")
         x += pad_width
 
@@ -142,7 +142,7 @@ def interpolate_1d_with_x(
             x_ori = (x + 0.5) / scale_factor - 0.5
     else:  # scaler == 'half_pixel'
         x_ori = (x + 0.5) / scale_factor - 0.5
-    x_ori_int = np.floor(x_ori).astype(np.int).item()
+    x_ori_int = np.floor(x_ori).astype(np.int32).item()
 
     # ratio must be in (0, 1] since we prefer the pixel on the left of `x_ori`
     if x_ori.is_integer():
@@ -228,7 +228,7 @@ def interpolate_nd(
                 data.shape[2] * height_scale,
                 data.shape[3] * width_scale,
             ]
-        ).astype(np.int)
+        ).astype(np.int32)
         scale_factors = np.array([1, 1, height_scale, width_scale])
         # output_size = (scale_factors * np.array(data.shape)).astype(np.int)
     assert scale_factors is not None
@@ -301,14 +301,67 @@ def compare_with_tensorflow(
     # OneFlow
     of_out = UpsampleJob().get()
     channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
+    # TensorFlow
+    with tf.GradientTape(persistent=True) as tape:
+        x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
+        tf_out = tf.keras.layers.UpSampling2D(
+            size=size, data_format=channel_pos, interpolation=interpolation
+        )(x)
+
+    loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
+    tf_x_diff = tape.gradient(tf_out, x, loss_diff)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(
+        test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+    )
+
+
+def compare_with_numpy(
+    device_type, input_shape, dtype, size, data_format, interpolation, align_corners
+):
+    # TODO (shijie wang): numpy upsample2d backward implementation.
+    assert device_type in ["gpu"]
+    flow.clear_default_session()
+
+    func_config = flow.FunctionConfig()
+    func_config.default_data_type(flow.float)
+
+    @flow.global_function(type="predict", function_config=func_config)
+    def UpsampleJob():
+        with flow.scope.placement(device_type, "0:0"):
+            x = flow.get_variable(
+                "input",
+                shape=input_shape,
+                dtype=type_name_to_flow_type[dtype],
+                initializer=flow.random_uniform_initializer(minval=2, maxval=5),
+                trainable=False,
+            )
+
+            loss = flow.layers.upsample_2d(
+                x,
+                size=size,
+                data_format=data_format,
+                interpolation=interpolation,
+                align_corners=align_corners,
+            )
+
+            flow.watch(x, test_global_storage.Setter("x1"))
+            flow.watch(loss, test_global_storage.Setter("loss1"))
+
+            return loss
+
+    # OneFlow
+    of_out = UpsampleJob().get()
+    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
     if align_corners:
         assert interpolation == "bilinear"
-        x = test_global_storage.Get("x")
+        x = test_global_storage.Get("x1")
         if data_format == "NHWC":
             x = np.transpose(x, axes=[0, 3, 1, 2])
         coeffs_dict = {"bilinear": linear_coeffs}
         coeffs = coeffs_dict[interpolation]
         scaler = "align_corners"
+        # Numpy
         np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(
             np.float32
         )
@@ -317,19 +370,22 @@ def compare_with_tensorflow(
             of_out_np = np.transpose(of_out_np, axes=[0, 3, 1, 2])
         assert np.allclose(of_out_np, np_out, rtol=1e-5, atol=1e-5)
     else:
-        # TensorFlow
-        with tf.GradientTape(persistent=True) as tape:
-            x = tf.Variable(test_global_storage.Get("x").astype(np.float32))
-            tf_out = tf.keras.layers.UpSampling2D(
-                size=size, data_format=channel_pos, interpolation=interpolation
-            )(x)
-
-        loss_diff = test_global_storage.Get("loss_diff").astype(np.float32)
-        tf_x_diff = tape.gradient(tf_out, x, loss_diff)
-        assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
-        assert np.allclose(
-            test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
+        # Numpy
+        x = test_global_storage.Get("x1")
+        if data_format == "NHWC":
+            x = np.transpose(x, axes=[0, 3, 1, 2])
+        coeffs_dict = {"bilinear": linear_coeffs, "nearest": nearest_coeffs}
+        coeffs = coeffs_dict[interpolation]
+        scaler = "pytorch_half_pixel"
+        # Numpy
+        np_out = interpolate_nd(x, coeffs, scale_factors=size, scaler=scaler).astype(
+            np.float32
         )
+        of_out_np = of_out.numpy()
+        if data_format == "NHWC":
+            of_out_np = np.transpose(of_out_np, axes=[0, 3, 1, 2])
+
+        assert np.allclose(of_out_np, np_out, rtol=1e-5, atol=1e-5)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -354,9 +410,9 @@ class TestUpsample(flow.unittest.TestCase):
         arg_dict["size"] = [(2, 2), 3, (1, 2)]
         arg_dict["data_format"] = ["NCHW", "NHWC"]
         arg_dict["interpolation"] = ["bilinear"]
-        arg_dict["align_corners"] = [True]
+        arg_dict["align_corners"] = [True, False]
         for arg in GenArgList(arg_dict):
-            compare_with_tensorflow(*arg)
+            compare_with_numpy(*arg)
 
 
 if __name__ == "__main__":
