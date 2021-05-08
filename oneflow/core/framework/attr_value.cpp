@@ -13,24 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
 
-namespace user_op {
-
-void OpKernel::InferShape(KernelInferContext* ctx) const {
-  InferContext* op_infer_ctx = ctx->MutOpInferContext();
-  CHECK_NOTNULL(op_infer_ctx);
-  ctx->GetOpInferFn()(op_infer_ctx);
-  for (const auto& arg_pair : ctx->outputs()) {
-    const Shape& shape = *op_infer_ctx->Shape4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-    auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex(arg_pair.first, arg_pair.second);
-    if (mut_shape_view) { mut_shape_view->set_shape(shape); }
-  }
+template<typename T>
+const T& AttrValueCast(const user_op::AttrVal& attr_val) {
+  const auto* typed_attr = dynamic_cast<const user_op::TypedAttrVal<T>*>(&attr_val);
+  return CHECK_NOTNULL(typed_attr)->val();
 }
 
-}  // namespace user_op
+#define INITIALIZE_ATTR_VALUE_CAST(field, T, attr_type) \
+  template const T& AttrValueCast(const user_op::AttrVal& attr_val);
+
+OF_PP_FOR_EACH_TUPLE(INITIALIZE_ATTR_VALUE_CAST, ATTR_SEQ)
 
 }  // namespace oneflow
