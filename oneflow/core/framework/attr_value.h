@@ -104,6 +104,9 @@ class TypedAttrVal final : public AttrVal {
 
 }  // namespace user_op
 
+template<typename T>
+const T& AttrValueCast(const user_op::AttrVal& val);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_VALUE_H_

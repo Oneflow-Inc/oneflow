@@ -26,7 +26,8 @@ namespace one {
 
 class StatefulLocalOpKernel;
 
-using EagerBlobObjectList =
+using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
+using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 }  // namespace one
@@ -46,13 +47,13 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   ~LocalCallOpKernelPhyInstrOperand() override = default;
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                   const one::EagerBlobObjectList inputs,
-                                   const one::EagerBlobObjectList outputs, const AttrMap& attrs)
+                                   const one::EagerBlobObjectListPtr& inputs,
+                                   const one::EagerBlobObjectListPtr& outputs, const AttrMap& attrs)
       : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
-  const one::EagerBlobObjectList& inputs() const { return inputs_; }
-  const one::EagerBlobObjectList& outputs() const { return outputs_; }
+  const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
+  const one::EagerBlobObjectListPtr& outputs() const { return outputs_; }
   const AttrMap& attrs() const { return attrs_; }
 
   one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
@@ -81,8 +82,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
  private:
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
-  one::EagerBlobObjectList inputs_;
-  one::EagerBlobObjectList outputs_;
+  one::EagerBlobObjectListPtr inputs_;
+  one::EagerBlobObjectListPtr outputs_;
   const AttrMap attrs_;
   const user_op::OpKernel* user_opkernel_;
 };
