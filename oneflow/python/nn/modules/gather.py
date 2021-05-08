@@ -73,7 +73,7 @@ class Gather(Module):
 
 
 @oneflow_export("tmp.gather")
-@oneflow_export("register_tensor_op")
+@register_tensor_op("gather")
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.
     For a 3-D tensor the output is specified by::
