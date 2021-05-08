@@ -37,6 +37,7 @@ class TestModule(flow.unittest.TestCase):
         of_out = flow.tmp.matmul(input1, input2)
         np_out = np.matmul(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(of_out.numpy().shape, np_out.shape)
 
 
 if __name__ == "__main__":

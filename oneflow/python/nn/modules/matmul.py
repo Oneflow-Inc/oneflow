@@ -57,7 +57,7 @@ class MatMul(Module):
             # NOTE: support broadcast b to a only for now
             assert (
                 len(b.shape) == 2
-            ), "Don't support number of dimensions of a being less than number of dimensions of b"
+            ), "Not support number of dimensions of a being less than number of dimensions of b!"
             res = self._broadcast_matmul_op(a, b)[0]
 
         return res
