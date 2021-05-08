@@ -124,17 +124,18 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   ThreadPool thread_pool(thread_pool_size);
   task_gph->ForEachNode([&](TaskNode* task_node) {
     thread_pool.AddWork([task_node, plan, &job_desc, &counter, &mtx]() {
-      if (task_node->IsMeaningLess()) { return; }
-      TaskProto task_proto;
-      task_node->ToProto(&task_proto);
-      {
-        std::unique_lock<std::mutex> guard(mtx);
-        if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
-            || task_node->GetTaskType() == kAcc) {
-          CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
-        }
-        plan->mutable_task()->Add(std::move(task_proto));
-      }  // guard(mtx)
+      if (!task_node->IsMeaningLess()) {
+        TaskProto task_proto;
+        task_node->ToProto(&task_proto);
+        {
+          std::unique_lock<std::mutex> guard(mtx);
+          if (task_node->GetTaskType() == kNormalForward || task_node->GetTaskType() == kRepeat
+              || task_node->GetTaskType() == kAcc) {
+            CreateOpAttributeRef(plan, job_desc.job_id(), &task_proto);
+          }
+          plan->mutable_task()->Add(std::move(task_proto));
+        }  // guard(mtx)
+      }
       counter.Decrease();
     } /* thread_pool.AddWork */);
   } /* task_gph->ForEachNode */);
