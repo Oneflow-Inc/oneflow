@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 // 工厂模式+单例模式
-// 注册工厂类
+// 注册工厂类模板
 // 模板参数Key为派生类关键字，Base为基类
 template<typename Key, typename Base, typename... Args>
 struct AutoRegistrationFactory {
@@ -87,7 +87,7 @@ struct AutoRegistrationFactory {
 
 // REGISTER_CLASS，用于注册Derived类
 // 使用全局变量（RawRegisterType）的构造函数，从而在main之前运行
-// 示例：oneflow/core/common/actor/acc_compute_actor.cpp.i，宏展开前后：
+// 示例：oneflow/core/actor/acc_compute_actor.cpp.i，宏展开前后：
 // REGISTER_ACTOR(TaskType::kAcc, AccCompActor);
 // static AutoRegistrationFactory<int32_t, Actor>::RawRegisterType<AccCompActor> g_registry_var1(TaskType::kAcc);
 #define REGISTER_CLASS(Key, k, Base, Derived) \
@@ -95,6 +95,7 @@ struct AutoRegistrationFactory {
 #define REGISTER_CLASS_WITH_ARGS(Key, k, Base, Derived, ...)                       \
   static AutoRegistrationFactory<Key, Base, __VA_ARGS__>::RawRegisterType<Derived> \
       REGISTER_VAR_NAME(k)
+// @PROB(shiyongtao): 未提供自定义CREATOR对应的Destroy，可能存在内存泄漏等风险
 #define REGISTER_CLASS_CREATOR(Key, k, Base, f, ...)                                               \
   static AutoRegistrationFactory<Key, Base, ##__VA_ARGS__>::CreatorRegisterType REGISTER_VAR_NAME( \
       k, f)

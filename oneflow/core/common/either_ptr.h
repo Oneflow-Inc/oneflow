@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 用于管理X实例或Y实例
 template<typename X, typename Y>
 class EitherPtr final {
  public:
@@ -37,6 +38,7 @@ class EitherPtr final {
   }
   template<typename T>
   const std::shared_ptr<T>& Get() const {
+    // template 用来消除歧义，说明Has是一个模板函数
     CHECK(this->template Has<T>());
     return Cast<T>();
   }
@@ -86,6 +88,7 @@ class EitherPtr final {
       // do nothin
     }
   }
+  // 根据输入X或Y，设置union_和type_
   void Set(const std::shared_ptr<X>& ptr) {
     CHECK(union_.get() == nullptr);
     *MutCast<X>() = ptr;
@@ -98,6 +101,7 @@ class EitherPtr final {
   }
   template<typename T>
   std::shared_ptr<T>* MutCast() {
+    // 使用 __may_alias__ 明确消除编译器 Warning
     std::shared_ptr<T>* __attribute__((__may_alias__)) ptr =
         reinterpret_cast<std::shared_ptr<T>*>(&union_);
     return ptr;
@@ -109,7 +113,9 @@ class EitherPtr final {
     return *ptr;
   }
 
+  // 保存X或Y的数据
   std::shared_ptr<Void> union_;
+  // 表明当前实例保存了X还是Y
   int8_t type_;
 };
 
