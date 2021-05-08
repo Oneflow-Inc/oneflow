@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/attr_map_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -44,7 +43,7 @@ class ReduceSumOp : public OpExprGradFunction<ReduceSumOpInterpState> {
 Maybe<void> ReduceSumOp::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMap(fw_op_expr->proto());
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   grad_op_ = JUST(op_expr_helper::BroadcastLikeOp(/*axis=*/{-1}, GradientOpName(op_name)));
   return Maybe<void>::Ok();
@@ -97,7 +96,7 @@ class ReduceMaxOrMinOp : public OpExprGradFunction<ReduceMaxOrMinOpInterpState> 
 Maybe<void> ReduceMaxOrMinOp::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMap(fw_op_expr->proto());
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   bcast_like_op_ =
       JUST(op_expr_helper::BroadcastLikeOp(/*axis=*/{-1}, GradientOpName(op_name + "_bcast_like")));

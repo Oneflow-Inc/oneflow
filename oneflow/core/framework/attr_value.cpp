@@ -13,16 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_UTIL_H_
-#define ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_UTIL_H_
-
-#include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/attr_value.h"
 
 namespace oneflow {
 
-AttrMap MakeAttrMap(const UserOpConf& user_conf);
+template<typename T>
+const T& AttrValueCast(const user_op::AttrVal& attr_val) {
+  const auto* typed_attr = dynamic_cast<const user_op::TypedAttrVal<T>*>(&attr_val);
+  return CHECK_NOTNULL(typed_attr)->val();
+}
+
+#define INITIALIZE_ATTR_VALUE_CAST(field, T, attr_type) \
+  template const T& AttrValueCast(const user_op::AttrVal& attr_val);
+
+OF_PP_FOR_EACH_TUPLE(INITIALIZE_ATTR_VALUE_CAST, ATTR_SEQ)
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_ATTR_MAP_UTIL_H_
