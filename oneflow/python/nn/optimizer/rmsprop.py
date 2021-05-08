@@ -1,0 +1,121 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+from typing import List, Dict, Callable, Union, Iterator, Tuple
+from types import GeneratorType
+
+import oneflow as flow
+
+from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.nn.parameter import Parameter
+from oneflow.python.nn.optimizer.optimizer import ParamGroup
+from oneflow.python.nn.optimizer.optimizer import Optimizer
+
+
+@oneflow_export("optim.RMSprop")
+class RMSprop(Optimizer):
+    r"""
+    """
+
+    def __init__(
+        self,
+        parameters: Union[Iterator[Parameter], List[Dict]],
+        lr: float = 1e-3,
+        alpha: float = 0.99,
+        eps: float = 1e-8,
+        weight_decay: float = 0,
+        momentum: float = 0,
+        centered: bool = False,
+        scale: float = 1.0,
+    ):
+        super().__init__()
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
+        assert momentum > 0.0, f"RMSProp Not Support Momentum Now!"
+        assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
+        assert eps >= 0.0, f"Invalid epsilon value: {eps}"
+        assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
+        assert scale > 0.0, f"Invalid scale factor: {scale}"
+
+        self._default_options["lr"] = lr
+        self._default_options["alpha"] = alpha
+        self._default_options["eps"] = eps
+        self._default_options["weight_decay"] = weight_decay
+        self._default_options["centered"] = centered
+        self._default_options["scale"] = scale
+
+        # Add parameters
+        if isinstance(parameters, GeneratorType):
+            self._param_groups.append(ParamGroup(parameters, self._default_options))
+        else:  # List[Dict]
+            for param in parameters:
+                self._param_groups.append(ParamGroup(param, self._default_options))
+
+        for param_group in self._param_groups:
+            for param in param_group.parameters:
+                assert param.is_leaf, "parameters must be leaf tensor"
+                self._state[param] = dict()
+                self._state[param]["square_avg"] = flow.tmp.zeros(
+                    # TODO: zeros module support flow.Size parameter
+                    tuple(param.shape)
+                )
+                if "centered" in self._default_options:
+                    self._state[param]["grad_avg"] = flow.tmp.zeros(
+                        # TODO: zeros module support flow.Size parameter
+                        tuple(param.shape)
+                    )
+
+        
+
+        self._op = (
+            flow.builtin_op("rmsprop_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Input("mean_square")
+            .OptionalInput("mean_gradient")
+            .Attr("scale", self._default_options["scale"])
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Attr("centered", self._default_options["centered"])
+            .Attr("epsilon", self._default_options["eps"])
+            .Attr("decay_rate", self._default_options["alpha"])
+            .Attr("weight_decay", self._default_options["weight_decay"])
+            .Build()
+        )
+
+    def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        loss = None
+        if closure is not None:
+            loss = closure()
+
+        for param_group in self._param_groups:
+            lr_tensor = flow.Tensor([param_group.options["lr"]])
+            for param in param_group.parameters:
+                if param.grad is None:
+                    continue
+                ms_tensor = self._state[param]["exp_avg"]
+                mg_tensor = self._state[param]["exp_avg_sq"]
+                self._op(param, param.grad, lr_tensor, ms_tensor, mg_tensor)
+
+        self._state["step"] = self._state["step"] + 1
+
+        return loss
