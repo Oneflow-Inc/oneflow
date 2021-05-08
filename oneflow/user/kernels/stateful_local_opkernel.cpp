@@ -330,10 +330,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
                               std::make_shared<vm::TensorBuffer>()));
 
   const std::string& device_tag = op_conf->device_tag();
-  opkernel->op_infer_ctx_1_.reset(
+  opkernel->op_infer_ctx_for_thread_a_.reset(
       new LocalUserOpInferContext(opkernel->user_op_conf_.get(), input_arg_tuple, input_arg_tuple));
-  opkernel->op_infer_ctx_2_.reset(new LocalUserOpInferContext(opkernel->user_op_conf_.get(),
-                                                              input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_for_thread_b_.reset(new LocalUserOpInferContext(
+      opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple,
       opkernel->mut_temp_blob_object()));
@@ -418,8 +418,9 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-                                            LocalUserOpInferContext* op_infer_ctx) {
+Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs,
+                                                   const EagerBlobObjectListPtr& outputs,
+                                                   LocalUserOpInferContext* op_infer_ctx) {
   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
   JUST(tensor_desc_infer_fn_(op_infer_ctx));
   for (int64_t index : output_tuple_indexes4mut_obns_) {
@@ -428,8 +429,9 @@ Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr&
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-                                          LocalUserOpInferContext* op_infer_ctx) {
+Maybe<void> StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs,
+                                                 const EagerBlobObjectListPtr& outputs,
+                                                 LocalUserOpInferContext* op_infer_ctx) {
   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
   JUST(data_type_infer_fn_(op_infer_ctx));
   return Maybe<void>::Ok();

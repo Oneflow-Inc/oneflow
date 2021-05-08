@@ -279,16 +279,22 @@ class StatefulLocalOpKernel final {
     return compute_local_dep_object_;
   }
 
-  Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-                       LocalUserOpInferContext* op_infer_ctx);
-  Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
-                     LocalUserOpInferContext* op_infer_ctx);
+  Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
+                              const EagerBlobObjectListPtr& outputs,
+                              LocalUserOpInferContext* op_infer_ctx);
+  Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs,
+                            const EagerBlobObjectListPtr& outputs,
+                            LocalUserOpInferContext* op_infer_ctx);
 
   void ResetDynamicOpAttrs(const AttrMap& attrs);
 
-  LocalUserOpInferContext* op_infer_ctx_1() const { return op_infer_ctx_1_.get(); }
+  LocalUserOpInferContext* op_infer_ctx_for_thread_a() const {
+    return op_infer_ctx_for_thread_a_.get();
+  }
 
-  LocalUserOpInferContext* op_infer_ctx_2() const { return op_infer_ctx_2_.get(); }
+  LocalUserOpInferContext* op_infer_ctx_for_thread_b() const {
+    return op_infer_ctx_for_thread_b_.get();
+  }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
@@ -323,8 +329,8 @@ class StatefulLocalOpKernel final {
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_1_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_2_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_a_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_b_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
