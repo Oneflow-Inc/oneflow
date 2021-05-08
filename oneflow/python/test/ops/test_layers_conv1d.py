@@ -139,7 +139,7 @@ def compare_with_tensorflow(
         of_out_np.shape, tf_out_np.shape, max_abs_diff
     )
     test_case.assertTrue(
-        np.allclose(of_out_np, tf_out_np, rtol=1e-5, atol=1e-5), fail_info
+        np.allclose(of_out_np, tf_out_np, rtol=1e-2, atol=1e-2), fail_info
     )
 
     of_x_diff_arr = test_global_storage.Get("x_diff").transpose(0, 2, 1)
