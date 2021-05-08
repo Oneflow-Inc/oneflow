@@ -46,7 +46,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"matmul", user_op::OpArg("out", 0)},
        {"layer_norm_grad", user_op::OpArg("dx", 0)},
        {"batch_matmul", user_op::OpArg("out", 0)},
-       {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)}});
+       {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
+       {"broadcast_matmul", user_op::OpArg("out", 0)},
+       {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
   HashMap<std::string, OperatorConf> op_name2op_conf;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();
@@ -79,6 +81,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
   });
 
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
+  std::vector<OperatorConf> delete_ops;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -130,8 +133,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
       }
     }
-    job_builder->DelOps({op_conf});
+    delete_ops.push_back(op_conf);
   });
+  job_builder->DelOps(delete_ops);
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   return Maybe<void>::Ok();
 }

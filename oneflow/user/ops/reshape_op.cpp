@@ -84,8 +84,8 @@ REGISTER_USER_OP("reshape")
     .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
     .SetPhysicalTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn)
-    .SetInferParallelDistributionFn(InferParallelDistributionFn)
-    .SetInferDataTypeFn(InferDataType);
+    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {

@@ -52,19 +52,14 @@ void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
   CommNetItem item;
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-    CHECK(!actor_read_ctx->waiting_list.empty());
-    CHECK(actor_read_ctx->waiting_list.front().callback == nullptr);
-    actor_read_ctx->waiting_list.pop_front();
-  }
+  std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
+  CHECK(!actor_read_ctx->waiting_list.empty());
+  CHECK(actor_read_ctx->waiting_list.front().callback == nullptr);
+  actor_read_ctx->waiting_list.pop_front();
   while (true) {
-    {
-      std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-      if (actor_read_ctx->waiting_list.empty()) { break; }
-      item = actor_read_ctx->waiting_list.front();
-      actor_read_ctx->waiting_list.pop_front();
-    }
+    if (actor_read_ctx->waiting_list.empty()) { break; }
+    item = actor_read_ctx->waiting_list.front();
+    actor_read_ctx->waiting_list.pop_front();
     CHECK(item.callback);
     ready_cbs_.Send(item.callback);
     if (item.is_read) { break; }

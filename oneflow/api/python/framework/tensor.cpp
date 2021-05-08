@@ -39,10 +39,9 @@ struct TensorExportUtil<MirroredTensor> final {
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                     const std::shared_ptr<const DType>& dtype,
                                                     const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad, bool is_leaf,
-                                                    bool retain_grad) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf,
-                                      retain_grad);
+                                                    bool is_lazy, bool requires_grad,
+                                                    bool is_leaf) {
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf);
   }
 };
 
@@ -52,9 +51,9 @@ struct TensorExportUtil<ConsistentTensor> final {
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-      bool is_leaf, bool retain_grad) {
+      bool is_leaf) {
     return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
-                                        requires_grad, is_leaf, retain_grad);
+                                        requires_grad, is_leaf);
   }
 };
 
@@ -73,7 +72,10 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
       // Methods of pytorch
-      .def("retain_grad", [](T& t) { t.set_retain_grad(true); })
+      .def("retain_grad",
+           [](T& t) {
+             if (!t.is_leaf()) { t.set_retain_grad(true); }
+           })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("placement", &T::parallel_desc)

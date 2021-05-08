@@ -77,7 +77,7 @@ REGISTER_USER_OP("reduce_sum_like")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());

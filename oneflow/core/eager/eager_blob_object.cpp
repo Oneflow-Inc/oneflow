@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 Maybe<VmLocalDepObject> GetVmLocalDepObject(
@@ -92,5 +92,5 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

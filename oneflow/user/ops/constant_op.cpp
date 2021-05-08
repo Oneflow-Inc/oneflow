@@ -39,7 +39,7 @@ REGISTER_USER_OP("constant")
       ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto dtype = ctx->Attr<DataType>("dtype");
       *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       return Maybe<void>::Ok();

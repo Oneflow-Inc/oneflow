@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/eager/opkernel_object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 Maybe<void> OpKernelObject::ResetOpAndKernel(
     const OpNodeSignatureDesc& op_node_signature, const ParallelContext* parallel_ctx,
@@ -84,5 +84,5 @@ void SystemOpKernelObject::ResetKernel(
   kernel_ = ConstructKernel(job_desc_.get(), kernel_conf, nullptr);
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

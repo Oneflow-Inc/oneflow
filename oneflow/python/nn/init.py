@@ -70,3 +70,24 @@ def ones_(tensor):
 @oneflow_export("nn.init.zeros_")
 def zeros_(tensor):
     tensor.fill_(0)
+
+
+def _calculate_fan_in_and_fan_out(tensor):
+    dimensions = tensor.ndimension()
+    if dimensions < 2:
+        raise ValueError(
+            "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
+        )
+
+    num_input_fmaps = tensor.dim(1)
+    num_output_fmaps = tensor.dim(0)
+    receptive_field_size = 1
+    if tensor.ndimension() > 2:
+        # math.prod is not always available, accumulate the product manually
+        # we could use functools.reduce but that is not supported by TorchScript
+        for s in tensor.size()[2:]:
+            receptive_field_size *= s
+    fan_in = num_input_fmaps * receptive_field_size
+    fan_out = num_output_fmaps * receptive_field_size
+
+    return fan_in, fan_out
