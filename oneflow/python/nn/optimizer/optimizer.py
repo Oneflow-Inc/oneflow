@@ -17,7 +17,6 @@ limitations under the License.
 from typing import List, Dict, Callable, Union, Any, Iterator
 from types import GeneratorType
 
-import numpy as np
 import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
@@ -102,7 +101,6 @@ class SGD(Optimizer):
         assert momentum >= 0.0, f"Invalid momentum: {momentum}"
         assert scale >= 0.0, f"Invalid scale factor: {scale}"
 
-        self._default_options = dict()
         self._default_options["lr"] = lr
         self._default_options["scale"] = scale
         if momentum != 0.0:
