@@ -40,7 +40,7 @@ class LocalUserOpInferContext;
 
 using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-using EagerBlobObjectList =
+using EagerBlobObjectListPtr =
     std::shared_ptr<const std::vector<std::shared_ptr<vm::EagerBlobObject>>>;
 
 class EagerBlobObjectTensorView final : public user_op::Tensor {
@@ -112,7 +112,7 @@ class ZeroCopyBaseContext {
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
@@ -122,8 +122,8 @@ class ZeroCopyBaseContext {
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
-  EagerBlobObjectList input_tensors_;
-  EagerBlobObjectList output_tensors_;
+  EagerBlobObjectListPtr input_tensors_;
+  EagerBlobObjectListPtr output_tensors_;
 };
 
 class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
@@ -189,7 +189,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return 1; }
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs);
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
  private:
   user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
@@ -234,7 +234,8 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx);
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+              DeviceCtx* device_ctx);
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -278,9 +279,9 @@ class StatefulLocalOpKernel final {
     return compute_local_dep_object_;
   }
 
-  void InferTensorDesc(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+  void InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                        LocalUserOpInferContext* op_infer_ctx);
-  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+  void InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                      LocalUserOpInferContext* op_infer_ctx);
 
   void ResetDynamicOpAttrs(const AttrMap& attrs);
@@ -292,16 +293,16 @@ class StatefulLocalOpKernel final {
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
-  LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
-                                                      EagerBlobObjectList outputs,
+  LocalUserKernelComputeContext* UpdateComputeContext(const EagerBlobObjectListPtr& inputs,
+                                                      const EagerBlobObjectListPtr& outputs,
                                                       DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
   void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
-                            EagerBlobObjectList inputs, EagerBlobObjectList outputs,
-                            user_op::OpKernelState** state);
+                            const EagerBlobObjectListPtr& inputs,
+                            const EagerBlobObjectListPtr& outputs, user_op::OpKernelState** state);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -312,8 +313,8 @@ class StatefulLocalOpKernel final {
   bool need_check_mem_case() const { return need_check_mem_case_; }
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  Maybe<const user_op::OpKernel*> ChooseOpKernel(EagerBlobObjectList inputs,
-                                                 EagerBlobObjectList outputs);
+  Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
+                                                 const EagerBlobObjectListPtr& outputs);
 
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
