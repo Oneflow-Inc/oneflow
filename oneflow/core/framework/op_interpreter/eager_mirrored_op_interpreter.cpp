@@ -59,6 +59,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
+  CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
@@ -67,9 +68,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
           std::make_shared<vm::TensorBuffer>(), op_parallel_desc);
       output_eager_blob_objects->at(i) = eager_blob_object;
+      out_devices->at(i) = default_device;
     }
   } else {
-    CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
     op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
