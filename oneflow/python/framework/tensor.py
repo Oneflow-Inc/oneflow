@@ -28,6 +28,7 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow as flow
 from oneflow.python.nn.modules import *
 
@@ -72,6 +73,35 @@ def _init_eager_local_tensor_by_initializer_conf(
             initializer, shape, eager_local_tensor.dtype
         ),
     )
+
+
+@oneflow_export("tensor")
+def construct_tensor(
+    data,
+    dtype=None,
+    device=None,
+    requires_grad=False,
+    placement=None,
+    sbp=None,
+    is_consistent=False,
+    is_lazy=False,
+):
+    if _is_scalar(data) or _input_args_is_data(data):
+        data = np.array(data)
+        if dtype is None:
+            dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(data.dtype)
+        return Tensor(
+            data,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+        )
+    else:
+        raise TypeError("Construction error, invalid combination of arguments")
 
 
 @oneflow_export("Tensor")
@@ -747,3 +777,7 @@ def _convert_to_placement_scope(placement_or_device):
         return flow.scope.placement(
             device_tag, "{}:{}".format(machine_id, device.index), None
         )
+
+
+def _is_scalar(data):
+    return isinstance(data, (int, float, bool, complex))
