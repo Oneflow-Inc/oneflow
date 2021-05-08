@@ -24,11 +24,16 @@ from typing import Optional, Union
 
 class _ConstantBase(Module):
     def __init__(
-        self, size: _size_any_t, value: Union[float, int], dtype: Optional[flow.dtype]
+        self,
+        size: Union[_size_any_t, flow.Size],
+        value: Union[float, int],
+        dtype: Optional[flow.dtype],
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
-        assert isinstance(size, (int, tuple)), "shape should be int or tuple int!"
+        assert isinstance(
+            size, (int, tuple, flow.Size)
+        ), "shape should be int or tuple int!"
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
@@ -113,7 +118,7 @@ def zeros_op(size, dtype=None):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values):defining the shape of the output tensor.
+        size(an integer or tuple of integer values): defining the shape of the output tensor.
         Can be a variable number of arguments or a collection like a list or tuple.
 
     For example:
@@ -128,3 +133,13 @@ def zeros_op(size, dtype=None):
 
     """
     return Zeros(size, dtype)()
+
+
+@oneflow_export("tmp.zeros_like")
+def zeros_like_op(other):
+    return zeros_op(other.shape, other.dtype)
+
+
+@oneflow_export("tmp.ones_like")
+def ones_like_op(other):
+    return ones_op(other.shape, other.dtype)
