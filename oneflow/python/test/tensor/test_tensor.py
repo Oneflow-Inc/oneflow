@@ -147,7 +147,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertFalse(z.is_leaf)
 
         v = flow.Tensor(*shape, requires_grad=True)
-        # NOTE(Liang Depeng): the following setting not working
         z.retain_grad()
         w = v + z
 
@@ -158,8 +157,8 @@ class TestTensor(flow.unittest.TestCase):
 
         test_case.assertNotEqual(v.grad, None)
         test_case.assertNotEqual(y.grad, None)
-        # NOTE(Liang Depeng): call z.grad or x.grad will raise Exception
-        # test_case.assertTrue(z.grad == None)
+        test_case.assertNotEqual(z.grad, None)
+        # NOTE(Liang Depeng): call x.grad will raise Exception
         # test_case.assertTrue(x.grad == None)
         w.backward(gradient=grad, retain_graph=True)
 
