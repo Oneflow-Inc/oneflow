@@ -130,6 +130,7 @@ def log_op(tensor):
     """
     return Log()(tensor)
 
+
 @register_tensor_op("pow")
 @oneflow_export("pow")
 class Pow(Module):
