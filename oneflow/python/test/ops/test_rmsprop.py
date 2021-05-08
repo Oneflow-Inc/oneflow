@@ -69,32 +69,35 @@ def compare_with_numpy_rmsprop(
 
     def train_by_numpy():
         x = init_value
-        mg = np.zeros_like(x)
-        st = np.zeros_like(x)
+        r = np.zeros_like(x)
+        v = np.zeros_like(x)
+        g = np.zeros_like(x)
+
+        momentum = 0.0
 
         def train_one_iter(grad):
             grad = grad * scale
 
             if centered:
-                mg_ = mg * decay_rate + (1 - decay_rate) * grad
-                st_ = st - mg_ * mg_
+                r_ = alpha * r + (1 - alpha) * grad * grad
+                g_ = alpha * g + (1 - alpha) * grad
+                v_ = momentum * v + learning_rate / np.sqrt(r_ - g_ * g_ + eps) * grad
             else:
-                mg_ = mg
-                st_ = st
+                r_ = alpha * r + (1 - alpha) * grad * grad 
+                g_ = g
+                v_ = momentum * v + learning_rate / np.sqrt(r_ + eps) * grad
 
-            param = x - learning_rate / (np.sqrt(st_ + 1e-8)) * grad
+            param = x - v_
 
-            return param, mg_, st_
+            return param, r_, g_, v_
 
         for i in range(train_iters):
-            x, mg, st = train_one_iter(random_grad_seq[i])
+            x, r, g, v = train_one_iter(random_grad_seq[i])
 
         return x
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
-    print(oneflow_res)
-    print(numpy_res)
     test_case.assertTrue(
         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
@@ -113,8 +116,8 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["train_iters"] = [10]
         arg_dict["alpha"] = [0.9, 0.99]
         arg_dict["eps"] = [1e-8, 1e-5]
-        arg_dict["weight_decay"] = [0.1, 0.8]
-        arg_dict["centered"] = [False]
+        arg_dict["weight_decay"] = [0.1, 0.99]
+        arg_dict["centered"] = [False, True]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_rmsprop(test_case, *arg)
 
