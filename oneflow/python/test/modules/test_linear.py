@@ -44,7 +44,8 @@ class TestLinear(flow.unittest.TestCase):
                 [-0.44872912, -1.07275683, 0.06256855],
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
-            ]
+            ],
+            dtype=np.float32,
         )
         np_weight = np.ones((3, 8)).astype(np.float32)
         np_weight.fill(2.3)
@@ -66,7 +67,8 @@ class TestLinear(flow.unittest.TestCase):
                 [-0.44872912, -1.07275683, 0.06256855],
                 [-0.22556897, 0.74798368, 0.90416439],
                 [0.48339456, -2.32742195, -0.59321527],
-            ]
+            ],
+            dtype=np.float32,
         )
         np_weight = np.ones((3, 8)).astype(np.float32)
         np_weight.fill(2.068758)
