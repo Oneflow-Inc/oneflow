@@ -247,7 +247,9 @@ OpRegistry& OpRegistry::Finish() {
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
         CHECK_EQ_OR_RETURN(JUST(input_device->of_type()), "cpu");
       }
-      std::shared_ptr<const Device> default_device = JUST(Device::New("cpu", 0));
+      const auto& first_input_name = (*ctx->inputs().begin()).first;
+      const std::shared_ptr<const Device>& default_device =
+          ctx->InputTensorDevice4ArgNameAndIndex(first_input_name, 0);
       for (const auto& pair : ctx->outputs()) {
         *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
       }
