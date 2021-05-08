@@ -43,12 +43,12 @@ class TestTensor(flow.unittest.TestCase):
     )
     def test_construct_from_numpy_or_list(test_case):
         shape = (2, 3, 4, 5)
-        np_arr = np.random.rand(*shape)
+        np_arr = np.random.rand(*shape).astype(np.float32)
         tensor = flow.Tensor(np_arr)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
-        tensor = flow.Tensor(np_int_arr)
+        tensor = flow.Tensor(np_int_arr, dtype=flow.int32)
         print("dtype: ", tensor.dtype, np_int_arr.dtype)
         test_case.assertEqual(tensor.dtype, flow.int32)
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
@@ -184,7 +184,7 @@ class TestTensor(flow.unittest.TestCase):
     )
     def test_mirrored_tensor_and_op(test_case):
         x1 = flow.Tensor([[1.0, 2.0]])
-        test_case.assertEqual(x1.dtype, flow.float64)
+        test_case.assertEqual(x1.dtype, flow.float32)
         test_case.assertEqual(x1.shape, flow.Size((1, 2)))
         x2 = flow.Tensor([[1.0], [2.0]])
         # TODO(Liang Depeng): change to MatMul module
