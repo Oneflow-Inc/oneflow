@@ -23,7 +23,15 @@ from oneflow.python.nn.parameter import Parameter
 
 
 def compare_with_numpy_rmsprop(
-    test_case, x_shape, scale, learning_rate, train_iters, alpha, eps, weight_decay, centered
+    test_case,
+    x_shape,
+    scale,
+    learning_rate,
+    train_iters,
+    alpha,
+    eps,
+    weight_decay,
+    centered,
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -36,7 +44,15 @@ def compare_with_numpy_rmsprop(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        rmsprop = flow.optim.RMSProp([{"param": param_list}], lr=learning_rate, scale=scale, alpha=alpha, eps=eps, weight_decay=weight_decay, centered=centered)
+        rmsprop = flow.optim.RMSprop(
+            [{"param": param_list}],
+            lr=learning_rate,
+            scale=scale,
+            alpha=alpha,
+            eps=eps,
+            weight_decay=weight_decay,
+            centered=centered,
+        )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
@@ -44,8 +60,8 @@ def compare_with_numpy_rmsprop(
             # BUG: loss = flow.sum(x * grad_tensor)
             grad = flow.Tensor(np.ones(list(loss.shape)))
             loss.backward(grad)
-            adam.step()
-            adam.zero_grad()
+            rmsprop.step()
+            rmsprop.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
@@ -65,11 +81,10 @@ def compare_with_numpy_rmsprop(
             else:
                 mg_ = mg
                 st_ = st
-            
+
             param = x - learning_rate / (np.sqrt(st_ + 1e-8)) * grad
 
             return param, mg_, st_
-
 
         for i in range(train_iters):
             x, mg, st = train_one_iter(random_grad_seq[i])
@@ -78,6 +93,8 @@ def compare_with_numpy_rmsprop(
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
+    print(oneflow_res)
+    print(numpy_res)
     test_case.assertTrue(
         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-4, atol=1e-4)
     )
@@ -94,12 +111,12 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
-        arg_dict["alpha"] = ["0.9", "0.99"]
+        arg_dict["alpha"] = [0.9, 0.99]
         arg_dict["eps"] = [1e-8, 1e-5]
         arg_dict["weight_decay"] = [0.1, 0.8]
         arg_dict["centered"] = [False]
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adam(test_case, *arg)
+            compare_with_numpy_rmsprop(test_case, *arg)
 
 
 if __name__ == "__main__":

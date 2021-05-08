@@ -37,13 +37,12 @@ class RMSprop(Optimizer):
         alpha: float = 0.99,
         eps: float = 1e-8,
         weight_decay: float = 0,
-        momentum: float = 0,
+        momentum: float = 0.0,
         centered: bool = False,
         scale: float = 1.0,
     ):
         super().__init__()
         assert lr >= 0.0, f"Invalid learning rate: {lr}"
-        assert momentum > 0.0, f"RMSProp Not Support Momentum Now!"
         assert alpha >= 0.0, f"Invalid alpha value: {alpha}"
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
@@ -76,25 +75,39 @@ class RMSprop(Optimizer):
                         # TODO: zeros module support flow.Size parameter
                         tuple(param.shape)
                     )
-
-        
-
-        self._op = (
-            flow.builtin_op("rmsprop_update")
-            .Input("model")
-            .Input("model_diff")
-            .Input("learning_rate")
-            .Input("mean_square")
-            .OptionalInput("mean_gradient")
-            .Attr("scale", self._default_options["scale"])
-            .Attr("l1", 0.0)
-            .Attr("l2", 0.0)
-            .Attr("centered", self._default_options["centered"])
-            .Attr("epsilon", self._default_options["eps"])
-            .Attr("decay_rate", self._default_options["alpha"])
-            .Attr("weight_decay", self._default_options["weight_decay"])
-            .Build()
-        )
+        if centered:
+            self._op = (
+                flow.builtin_op("rmsprop_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("learning_rate")
+                .Input("mean_square")
+                .Input("mean_gradient")
+                .Attr("scale", self._default_options["scale"])
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Attr("centered", self._default_options["centered"])
+                .Attr("epsilon", self._default_options["eps"])
+                .Attr("decay_rate", self._default_options["alpha"])
+                .Attr("weight_decay", self._default_options["weight_decay"])
+                .Build()
+            )
+        else:
+            self._op = (
+                flow.builtin_op("rmsprop_update")
+                .Input("model")
+                .Input("model_diff")
+                .Input("learning_rate")
+                .Input("mean_square")
+                .Attr("scale", self._default_options["scale"])
+                .Attr("l1", 0.0)
+                .Attr("l2", 0.0)
+                .Attr("centered", self._default_options["centered"])
+                .Attr("epsilon", self._default_options["eps"])
+                .Attr("decay_rate", self._default_options["alpha"])
+                .Attr("weight_decay", self._default_options["weight_decay"])
+                .Build()
+            )
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -112,9 +125,12 @@ class RMSprop(Optimizer):
             for param in param_group.parameters:
                 if param.grad is None:
                     continue
-                ms_tensor = self._state[param]["exp_avg"]
-                mg_tensor = self._state[param]["exp_avg_sq"]
-                self._op(param, param.grad, lr_tensor, ms_tensor, mg_tensor)
+                ms_tensor = self._state[param]["square_avg"]
+                if self._default_options["centered"]:
+                    mg_tensor = self._state[param]["grad_avg"]
+                    self._op(param, param.grad, lr_tensor, ms_tensor, mg_tensor)
+                else:
+                    self._op(param, param.grad, lr_tensor, ms_tensor)
 
         self._state["step"] = self._state["step"] + 1
 
