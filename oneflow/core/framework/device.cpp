@@ -22,8 +22,6 @@ limitations under the License.
 
 namespace oneflow {
 
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
-
 namespace {
 
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
