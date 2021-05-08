@@ -253,7 +253,7 @@ OpRegistry& OpRegistry::Finish() {
           const auto& first_input_name = ctx->inputs().begin()->first;
           default_device = ctx->InputTensorDevice4ArgNameAndIndex(first_input_name, 0);
         } else {
-          default_device = JUST(Device::New("cpu", 0));
+          default_device = JUST(Device::New("cpu"));
         }
       }
       for (const auto& pair : ctx->outputs()) {
