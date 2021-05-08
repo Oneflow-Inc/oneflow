@@ -49,10 +49,7 @@ Maybe<void> Device::Init() {
 }
 
 /*static*/ Maybe<const Device> Device::New(const std::string& type) {
-  auto* device =
-      new Device(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
-  JUST(device->Init());
-  return std::shared_ptr<const Device>(device);
+  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
