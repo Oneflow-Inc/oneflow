@@ -86,10 +86,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->ResetDynamicOpAttrs(attrs);
-  kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
-                        kernel->op_infer_ctx_2());
-  kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
-                          kernel->op_infer_ctx_2());
+  JUST(kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
+                        kernel->op_infer_ctx_2()));
+  JUST(kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
+                          kernel->op_infer_ctx_2()));
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

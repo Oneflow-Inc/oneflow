@@ -279,9 +279,9 @@ class StatefulLocalOpKernel final {
     return compute_local_dep_object_;
   }
 
-  void InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+  Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                        LocalUserOpInferContext* op_infer_ctx);
-  void InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+  Maybe<void> InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                      LocalUserOpInferContext* op_infer_ctx);
 
   void ResetDynamicOpAttrs(const AttrMap& attrs);

@@ -418,19 +418,21 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-void StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                                             LocalUserOpInferContext* op_infer_ctx) {
   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
-  tensor_desc_infer_fn_(op_infer_ctx);
+  JUST(tensor_desc_infer_fn_(op_infer_ctx));
   for (int64_t index : output_tuple_indexes4mut_obns_) {
     outputs->at(index)->mark_shape_as_synced();
   }
+  return Maybe<void>::Ok();
 }
 
-void StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+Maybe<void> StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
                                           LocalUserOpInferContext* op_infer_ctx) {
   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
-  data_type_infer_fn_(op_infer_ctx);
+  JUST(data_type_infer_fn_(op_infer_ctx));
+  return Maybe<void>::Ok();
 }
 
 LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
