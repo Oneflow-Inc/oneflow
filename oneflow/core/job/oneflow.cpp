@@ -1153,9 +1153,9 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   }
 
   std::vector<Plan> sub_plans(jobs.size());
+  FOR_RANGE(int64_t, i, 0, jobs.size()) { AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i); }
   global::Disable();
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
-    AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
