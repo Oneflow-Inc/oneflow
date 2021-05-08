@@ -71,7 +71,7 @@ class EagerBlobObject final : public BlobObject {
 
   bool is_shape_synced() const { return is_shape_synced_; }
 
-  void mark_shape_as_synced() { is_shape_synced_ = true; }
+  void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
  private:
   std::unique_ptr<Blob> blob_;

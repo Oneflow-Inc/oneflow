@@ -575,9 +575,6 @@ struct LocalCallOpKernelUtil final {
                               operand->user_opkernel()->Compute(compute_ctx, state);
                               return Maybe<void>::Ok();
                             }));
-    for (int64_t index : operand->opkernel().output_tuple_indexes4mut2_obns()) {
-      operand->outputs()->at(index)->mark_shape_as_synced();
-    }
     return Maybe<void>::Ok();
   }
 

@@ -423,9 +423,6 @@ Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr&
                                                    LocalUserOpInferContext* op_infer_ctx) {
   InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
   JUST(tensor_desc_infer_fn_(op_infer_ctx));
-  for (int64_t index : output_tuple_indexes4mut_obns_) {
-    outputs->at(index)->mark_shape_as_synced();
-  }
   return Maybe<void>::Ok();
 }
 

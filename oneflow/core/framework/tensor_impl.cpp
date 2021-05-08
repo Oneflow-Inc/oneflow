@@ -110,6 +110,7 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
     CHECK_JUST(PhysicalRun(build_instruction));
     bc.WaitUntilCntEqualZero();
   });
+  eager_blob_object_->set_is_shape_synced(true);
   return *result;
 }
 
