@@ -36,7 +36,7 @@ class CompTaskNode : public TaskNode {
     UNIMPLEMENTED();
 #endif
   }
-  virtual void ToProto(TaskProto*) override;
+  virtual void ToProto(TaskProto*) const override;
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
