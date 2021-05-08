@@ -28,8 +28,6 @@ namespace oneflow {
 namespace global {
 
 static bool& GetIsEnabledRef() {
-  static std::mutex mutex;
-  std::unique_lock<std::mutex> lock(mutex);
   static bool is_enabled = true;
   return is_enabled;
 }
