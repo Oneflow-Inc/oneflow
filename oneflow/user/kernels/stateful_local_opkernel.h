@@ -278,18 +278,20 @@ class StatefulLocalOpKernel final {
     return compute_local_dep_object_;
   }
 
-  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
-    data_type_infer_fn_(UpdateInferContext(inputs, outputs));
-    UpdateInferContext(nullptr, nullptr);
-  }
+  void InferTensorDesc(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+                       LocalUserOpInferContext* op_infer_ctx);
+  void InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+                     LocalUserOpInferContext* op_infer_ctx);
 
   void ResetDynamicOpAttrs(const AttrMap& attrs);
+
+  LocalUserOpInferContext* op_infer_ctx_1() const { return op_infer_ctx_1_.get(); }
+
+  LocalUserOpInferContext* op_infer_ctx_2() const { return op_infer_ctx_2_.get(); }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
-  LocalUserOpInferContext* UpdateInferContext(EagerBlobObjectList inputs,
-                                              EagerBlobObjectList outputs);
   LocalUserKernelComputeContext* UpdateComputeContext(EagerBlobObjectList inputs,
                                                       EagerBlobObjectList outputs,
                                                       DeviceCtx* device_ctx);
@@ -320,7 +322,8 @@ class StatefulLocalOpKernel final {
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_1_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_2_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;

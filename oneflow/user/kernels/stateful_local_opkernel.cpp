@@ -325,8 +325,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
                               std::make_shared<vm::TensorBuffer>()));
 
   const std::string& device_tag = op_conf->device_tag();
-  opkernel->op_infer_ctx_.reset(new LocalUserOpInferContext(opkernel->user_op_conf_.get(),
-                                                            input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_1_.reset(
+      new LocalUserOpInferContext(opkernel->user_op_conf_.get(), input_arg_tuple, input_arg_tuple));
+  opkernel->op_infer_ctx_2_.reset(new LocalUserOpInferContext(opkernel->user_op_conf_.get(),
+                                                              input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple,
       opkernel->mut_temp_blob_object()));
@@ -410,10 +412,19 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-LocalUserOpInferContext* StatefulLocalOpKernel::UpdateInferContext(EagerBlobObjectList inputs,
-                                                                   EagerBlobObjectList outputs) {
-  op_infer_ctx_->Update(inputs, outputs);
-  return op_infer_ctx_.get();
+void StatefulLocalOpKernel::InferTensorDesc(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+                                            LocalUserOpInferContext* op_infer_ctx) {
+  InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
+  tensor_desc_infer_fn_(op_infer_ctx);
+  for (int64_t index : output_tuple_indexes4mut_obns_) {
+    outputs->at(index)->mark_shape_as_synced();
+  }
+}
+
+void StatefulLocalOpKernel::InferDataType(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+                                          LocalUserOpInferContext* op_infer_ctx) {
+  InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
+  data_type_infer_fn_(op_infer_ctx);
 }
 
 LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(

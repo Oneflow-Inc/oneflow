@@ -56,7 +56,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr,
         std::make_shared<vm::TensorBuffer>(), parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
   }
-  kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
+  kernel->ResetDynamicOpAttrs(attrs);
+  kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
+                        kernel->op_infer_ctx_2());
+  kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
+                          kernel->op_infer_ctx_2());
 
   auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,

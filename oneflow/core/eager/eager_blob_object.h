@@ -69,12 +69,17 @@ class EagerBlobObject final : public BlobObject {
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
 
+  bool is_shape_synced() const { return is_shape_synced_; }
+
+  void mark_shape_as_synced() { is_shape_synced_ = true; }
+
  private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
   MemoryAllocator non_pod_initer_;
+  std::atomic<bool> is_shape_synced_;
   Maybe<VmLocalDepObject> infer_local_dep_object_;
   Maybe<VmLocalDepObject> compute_local_dep_object_;
 };
