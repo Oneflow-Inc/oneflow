@@ -256,7 +256,6 @@ OpRegistry& OpRegistry::Finish() {
       return default_device;
     };
   }
-
   return *this;
 }
 
