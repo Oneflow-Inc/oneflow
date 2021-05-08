@@ -34,12 +34,12 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   ctx_ = ctx;
   pd_ = pd;
   // qp_
-  ibv_device_attr device_attr;
+  ibv_device_attr device_attr{};
   CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
   uint32_t max_recv_wr =
       Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
-  ibv_qp_init_attr qp_init_attr;
+  ibv_qp_init_attr qp_init_attr{};
   qp_init_attr.qp_context = nullptr;
   qp_init_attr.send_cq = send_cq;
   qp_init_attr.recv_cq = recv_cq;
@@ -70,9 +70,9 @@ IBVerbsQP::~IBVerbsQP() {
 }
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
-  ibv_port_attr port_attr;
+  ibv_port_attr port_attr{};
   CHECK_EQ(ibv_query_port(ctx_, 1, &port_attr), 0);
-  ibv_qp_attr qp_attr;
+  ibv_qp_attr qp_attr{};
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
   qp_attr.qp_state = IBV_QPS_INIT;
@@ -132,7 +132,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto& remote_mem,
   wr_id->outstanding_sge_cnt = local_mem.sge_vec().size();
   wr_id->read_id = read_id;
   FOR_RANGE(size_t, i, 0, local_mem.sge_vec().size()) {
-    ibv_send_wr wr;
+    ibv_send_wr wr{};
     wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
     wr.next = nullptr;
     wr.sg_list = const_cast<ibv_sge*>(&(local_mem.sge_vec().at(i)));
@@ -152,7 +152,7 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
   msg_mr->set_msg(msg);
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
-  ibv_send_wr wr;
+  ibv_send_wr wr{};
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
   wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
@@ -191,7 +191,7 @@ void IBVerbsQP::RecvDone(WorkRequestId* wr_id) {
 void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
   WorkRequestId* wr_id = NewWorkRequestId();
   wr_id->msg_mr = msg_mr;
-  ibv_recv_wr wr;
+  ibv_recv_wr wr{};
   wr.wr_id = reinterpret_cast<uint64_t>(wr_id);
   wr.next = nullptr;
   wr.sg_list = const_cast<ibv_sge*>(&(msg_mr->mem_desc().sge_vec().at(0)));
