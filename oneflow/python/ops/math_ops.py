@@ -1671,9 +1671,9 @@ def clip_by_value(
         name = id_util.UniqueStr("ClipByValue_")
 
     is_floating = values.dtype in [
-        flow._oneflow_internal.float32,
-        flow._oneflow_internal.float16,
-        flow._oneflow_internal.float64,
+        flow.float32,
+        flow.float16,
+        flow.float64,
     ]
 
     if min_value is not None:
