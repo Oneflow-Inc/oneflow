@@ -180,7 +180,7 @@ def summary_demo():
 
 @flow.unittest.skip_unless_1n1d()
 class TestSummary(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_ENABLE_EAGER"), "only test lazy cases")
     def test_summary(test_case):
         summary_demo()
 
