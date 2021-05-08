@@ -1393,7 +1393,7 @@ def tensor_scatter_nd_add(
 @oneflow_export("argwhere")
 def argwhere(
     condition: oneflow._oneflow_internal.BlobDesc,
-    dtype: Optional[flow._oneflow_internal.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator finds the indices of input Blob `condition` elements that are non-zero. It returns a List.
@@ -1583,7 +1583,7 @@ def where(
 @oneflow_export("elem_cnt")
 def elem_cnt(
     inputs: oneflow._oneflow_internal.BlobDesc,
-    dtype: Optional[flow._oneflow_internal.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator returns the amount of elements in input Blob.
@@ -2520,7 +2520,7 @@ def amp_white_identity(
 @stable_api
 def zeros(
     shape: Sequence[int],
-    dtype: Optional[flow._oneflow_internal.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `0`.
@@ -2565,7 +2565,7 @@ def zeros(
 @stable_api
 def ones(
     shape: Sequence[int],
-    dtype: Optional[flow._oneflow_internal.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Tensor filled with the scalar value `1`.

@@ -904,7 +904,7 @@ def unsorted_batch_segment_sum(
 @oneflow_export("cast")
 def cast(
     x: oneflow._oneflow_internal.BlobDesc,
-    dtype: flow._oneflow_internal.dtype,
+    dtype: flow.dtype,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The op takes input x and casts it to the output with `dtype`
@@ -1346,7 +1346,7 @@ def maximum(
 def elem_cnt(
     input_blob: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
-    dtype: Optional[flow._oneflow_internal.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """Computes the product of input_blob's dimensions along the parameter `axis`. By default, all the dimensions will be computed.

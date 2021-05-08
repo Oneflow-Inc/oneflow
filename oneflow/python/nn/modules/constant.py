@@ -24,10 +24,7 @@ from typing import Optional, Union
 
 class _ConstantBase(Module):
     def __init__(
-        self,
-        size: _size_any_t,
-        value: Union[float, int],
-        dtype: Optional[flow._oneflow_internal.dtype],
+        self, size: _size_any_t, value: Union[float, int], dtype: Optional[flow.dtype],
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
