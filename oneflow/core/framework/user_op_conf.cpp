@@ -25,9 +25,10 @@ namespace oneflow {
 namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
-    : op_conf_(op_conf), attrs_(MakeAttrMapFromUserOpConf(op_conf->user_conf())) {
+    : op_conf_(op_conf) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
+  attrs_ = MakeAttrMapFromUserOpConf(op_conf_->user_conf());
 }
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
