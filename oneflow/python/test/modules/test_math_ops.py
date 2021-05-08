@@ -147,12 +147,23 @@ class TestSquare(flow.unittest.TestCase):
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
 
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestPow(flow.unittest.TestCase):
     def test_pow(test_case):
-        pow = flow.pow()
         input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = pow(input, 2.1)
+        of_out = flow.pow(input, 2.1)
         np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_pow_tensor_function(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = input.pow(2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":
