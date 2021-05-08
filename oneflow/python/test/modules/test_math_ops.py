@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
 import unittest
+import oneflow as flow
 import numpy as np
 
 
@@ -146,6 +146,24 @@ class TestSquare(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestPow(flow.unittest.TestCase):
+    def test_pow(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = flow.pow(input, 2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_pow_tensor_function(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = input.pow(2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":
