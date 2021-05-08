@@ -60,7 +60,7 @@ class TestGather(flow.unittest.TestCase):
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=0
         )
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-    
+
     def test_gather_tensor_function(test_case):
         input = np.array([[1, 2], [3, 4]])
         index = np.array([[0, 0], [1, 0]])
