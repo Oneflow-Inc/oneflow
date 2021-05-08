@@ -1153,11 +1153,13 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   }
 
   std::vector<Plan> sub_plans(jobs.size());
+  global::Disable();
   FOR_RANGE(int64_t, i, 0, jobs.size()) {
     AddJobName2JobId(jobs.at(i)->job_conf().job_name(), i);
     auto scope = std::make_unique<GlobalJobDescScope>(jobs.at(i)->job_conf(), i);
     JUST(CompileCurJobOnMaster(jobs.at(i).get(), &sub_plans.at(i), true));
   }
+  global::Enable();
   MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
