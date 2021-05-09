@@ -76,6 +76,36 @@ class TestLinear(flow.unittest.TestCase):
         np_out += np_bias
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    
+    def test_linear_3_dimension_input(test_case):
+        input_arr = np.random.randn(2, 3, 4)
+        x = flow.Tensor(input_arr)
+        m = flow.nn.Linear(4, 5, True)
+        flow.nn.init.constant_(m.weight, 5.6)
+        flow.nn.init.constant_(m.bias, 0.78)
+        of_out = m(x)
+
+        np_weight = np.ones((4, 5)).astype(np.float32)
+        np_weight.fill(5.6)
+        np_bias = np.ones((5))
+        np_bias.fill(0.78)
+        np_out = np.matmul(input_arr, np_weight)
+        np_out += np_bias
+
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_linear_4_dimension_input(test_case):
+        input_arr = np.random.randn(4, 5, 6, 7)
+        x = flow.Tensor(input_arr)
+        m = flow.nn.Linear(7, 3, False)
+        flow.nn.init.constant_(m.weight, 11.3)
+        of_out = m(x)
+
+        np_weight = np.ones((7, 3)).astype(np.float32)
+        np_weight.fill(11.3)
+        np_out = np.matmul(input_arr, np_weight)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
