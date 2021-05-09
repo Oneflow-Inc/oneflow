@@ -26,12 +26,6 @@ import oneflow.typing as tp
     ".numpy() doesn't work in lazy mode",
 )
 class TestLinear(flow.unittest.TestCase):
-    def test_identity(test_case):
-        m = flow.nn.Identity()
-        x = flow.Tensor(np.random.rand(2, 3, 4, 5))
-        y = m(x)
-        test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
-
     def test_linear_v1(test_case):
         linear = flow.nn.Linear(3, 8, False)
         input_arr = np.array(
