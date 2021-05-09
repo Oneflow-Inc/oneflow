@@ -76,7 +76,6 @@ class TestLinear(flow.unittest.TestCase):
         np_out += np_bias
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-    
     def test_linear_3_dimension_input(test_case):
         input_arr = np.random.randn(2, 3, 4)
         x = flow.Tensor(input_arr)

@@ -157,7 +157,7 @@ class Linear(Module):
             res = self._matmul_op(x, self.weight)[0]
         else:
             res = self._broadcast_matmul_op(x, self.weight)[0]
-        
+
         if self.use_bias:
             res += self.bias
 
