@@ -200,7 +200,7 @@ std::string TaskNode::VisualStr() const {
 
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
-void TaskNode::ToProto(TaskProto* task_proto) {
+void TaskNode::ToProto(TaskProto* task_proto) const {
   // Step1: process some scalar items.
   CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());

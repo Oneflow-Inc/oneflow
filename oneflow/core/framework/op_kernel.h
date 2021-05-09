@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/device/device_context.h"
@@ -61,7 +62,9 @@ class KernelCreateContext {
   const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
   template<typename T>
-  const T& Attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
 
  protected:
   virtual const UserOpConfWrapper& user_op_conf() const = 0;
@@ -111,7 +114,9 @@ class KernelInitContext {
   const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
 
   template<typename T>
-  const T& Attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
 
   template<typename T>
   const T& attr(const std::string& attr_name) const;
@@ -164,7 +169,9 @@ class KernelInferContext {
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
-  const T& Attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
 
   virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
@@ -220,7 +227,9 @@ class KernelComputeContext {
   const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
-  const T& Attr(const std::string& attr_name) const;
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
 
  protected:
   KernelComputeContext() = default;

@@ -23,15 +23,16 @@ limitations under the License.
 namespace oneflow {
 
 class ParallelDesc;
+class MemoryCase;
 
 class Device final {
  public:
-  Device(const std::string& type, int64_t device_id);
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
+  Device& operator=(const Device&) = default;
   const std::string& type() const { return type_; }
-  std::string of_type() const;
+  Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
   size_t hash_value() const { return hash_value_; }
@@ -39,15 +40,25 @@ class Device final {
     return type_ == device.type() && device_id_ == device.device_id();
   }
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
+  const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
+
+  static Maybe<const Device> New(const std::string& type, int64_t device_id);
+  static Maybe<const Device> New(const std::string& typed);
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
+  Maybe<const std::string&> local_call_instruction_name() const;
+
  private:
+  Device(const std::string& type, int64_t device_id);
+  Maybe<void> Init();
+
   const std::string type_;
   const int64_t device_id_;
   const size_t hash_value_;
+  std::shared_ptr<MemoryCase> mem_case_;
 };
 
 }  // namespace oneflow
