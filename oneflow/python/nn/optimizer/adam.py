@@ -124,11 +124,11 @@ class Adam(Optimizer):
             .Input("v")
             .Attr("scale", self._default_options["scale"])
             .Attr("l1", 0.0)
-            .Attr("l2", 0.0)
+            .Attr("l2", self._default_options["weight_decay"])
             .Attr("beta1", self._default_options["beta"][0])
             .Attr("beta2", self._default_options["beta"][1])
             .Attr("epsilon", self._default_options["eps"])
-            .Attr("weight_decay", self._default_options["weight_decay"])
+            .Attr("weight_decay", 0.0)
             .Build()
         )
 
