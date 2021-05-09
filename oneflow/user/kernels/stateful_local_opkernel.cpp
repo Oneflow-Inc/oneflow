@@ -330,8 +330,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
                               std::make_shared<vm::TensorBuffer>()));
 
   const std::string& device_tag = op_conf->device_tag();
-  opkernel->op_infer_ctx_for_thread_a_.reset(
-      new LocalUserOpInferContext(opkernel->user_op_conf_.get(), input_arg_tuple, input_arg_tuple));
+  opkernel->op_infer_ctx_for_thread_a_.reset(new LocalUserOpInferContext(
+      opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple));
   opkernel->op_infer_ctx_for_thread_b_.reset(new LocalUserOpInferContext(
       opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
