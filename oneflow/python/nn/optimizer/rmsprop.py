@@ -27,7 +27,47 @@ from oneflow.python.nn.optimizer.optimizer import Optimizer
 
 @oneflow_export("optim.RMSprop")
 class RMSprop(Optimizer):
-    r"""
+    r"""Implements RMSprop algorithm.
+
+    oot Mean Squared Propagation (RMSProp) is an unpublished, adaptive learning
+    rate method. The original slides proposed RMSProp: Slide 29 of
+    http://www.cs.toronto.edu/~tijmen/csc321/slides/lecture_slides_lec6.pdf .
+    The original equation is as follows:
+    ..  math::
+        r(w, t) & = \\alpha r(w, t-1) + (1 - \\alpha)(\\nabla Q_{i}(w))^2
+        w & = w - \\frac{\\eta} {\\sqrt{r(w,t) + \\epsilon}} \\nabla Q_{i}(w)
+    The first equation calculates moving average of the squared gradient for
+    each weight. Then dividing the gradient by :math:`sqrt{v(w,t)}`.
+    In some cases, adding a momentum term :math: `\\beta` is beneficial.
+    In our implementation, Nesterov momentum is used:
+    ..  math::
+        r(w, t) & = \\alpha r(w, t-1) + (1 - \\alpha)(\\nabla Q_{i}(w))^2
+        v(w, t) & = \\beta v(w, t-1) + \\frac{\\eta} {\\sqrt{r(w,t) +
+            \\epsilon}} \\nabla Q_{i}(w)
+        w & = w - v(w, t)
+    if centered is True:
+    ..  math::
+        r(w, t) & = \\alpha r(w, t-1) + (1 - \\alpha)(\\nabla Q_{i}(w))^2
+        g(w, t) & = \\alpha g(w, t-1) + (1 - \\alpha)\\nabla Q_{i}(w)
+        v(w, t) & = \\beta v(w, t-1) + \\frac{\\eta} {\\sqrt{r(w,t) - (g(w, t))^2 +
+            \\epsilon}} \\nabla Q_{i}(w)
+        w & = w - v(w, t)
+    where, :math:`\\alpha` is a hyperparameter and typical values are 0.9, 0.95
+    and so on. :math: `beta` is the momentum term. :math: `\\epsilon` is a
+    smoothing term to avoid division by zero, usually set somewhere in range
+    from 1e-4 to 1e-8.
+
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 1e-2)
+        momentum (float, optional): momentum factor (default: 0, oneflow not support momenmtum > 0 now!)
+        alpha (float, optional): smoothing constant (default: 0.99)
+        eps (float, optional): term added to the denominator to improve
+            numerical stability (default: 1e-8)
+        centered (bool, optional) : if ``True``, compute the centered RMSProp,
+            the gradient is normalized by an estimation of its variance
+        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
     """
 
     def __init__(
