@@ -447,7 +447,6 @@ struct LocalCallOpKernelUtil final {
         JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
     operand->mut_opkernel()->ResetDynamicOpAttrs(operand->attrs());
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
-    JUST(InferOutputTensorDescs(operand));
     JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
     JUST(ResetTempStorageBlob(operand));
@@ -523,27 +522,17 @@ struct LocalCallOpKernelUtil final {
     const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
     auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
     CHECK_OR_RETURN(temp_blob_desc->data_type() == DataType::kChar);
-    JUST(WithOpInferContext(operand, [&](user_op::InferContext* infer_ctx) -> Maybe<void> {
-      size_t temp_size = InferTmpSizeFn(infer_ctx);
-      temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-      temp_blob_desc->set_is_dynamic(true);
-      return Maybe<void>::Ok();
-    }));
+    one::LocalUserOpInferContext* op_infer_ctx = operand->opkernel().op_infer_ctx_for_thread_a();
+    op_infer_ctx->Update(operand->inputs(), operand->outputs());
+    size_t temp_size = InferTmpSizeFn(op_infer_ctx);
+    temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_blob_desc->set_is_dynamic(true);
+    op_infer_ctx->Update(nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
   static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->mut_opkernel()->mut_temp_blob_object()->InitBlob());
-    return Maybe<void>::Ok();
-  }
-
-  template<typename CallbackT>
-  static inline Maybe<void> WithOpInferContext(LocalCallOpKernelPhyInstrOperand* operand,
-                                               const CallbackT& Callback) {
-    auto* opkernel = operand->mut_opkernel();
-    JUST(Callback(opkernel->UpdateInferContext(operand->inputs(), operand->outputs())));
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateInferContext(nullptr, nullptr);
     return Maybe<void>::Ok();
   }
 
@@ -556,10 +545,6 @@ struct LocalCallOpKernelUtil final {
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr);
     return Maybe<void>::Ok();
-  }
-
-  static inline Maybe<void> InferOutputTensorDescs(LocalCallOpKernelPhyInstrOperand* operand) {
-    return WithOpInferContext(operand, operand->opkernel().TensorDescInferFn());
   }
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
