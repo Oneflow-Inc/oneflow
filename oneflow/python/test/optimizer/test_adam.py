@@ -66,7 +66,7 @@ def compare_with_numpy_adam(
         beta2 = betas[1]
 
         def train_one_iter(grad):
-            grad = grad + weight_decay
+            grad = grad + weight_decay * x
             grad = grad * scale
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
@@ -81,10 +81,8 @@ def compare_with_numpy_adam(
 
     oneflow_res = train_by_oneflow().numpy()
     numpy_res = train_by_numpy()
-    print(oneflow_res)
-    print(numpy_res)
     test_case.assertTrue(
-        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-1, atol=1e-1)
+        np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
     )
 
 
@@ -100,8 +98,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-        arg_dict["weight_decay"] = [0.0001, 0.001, 0.1]
-        # arg_dict["weight_decay"] = [0.0]
+        arg_dict["weight_decay"] = [0.0001, 0.001]
         arg_dict["eps"] = [1e-8, 1e-7]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
