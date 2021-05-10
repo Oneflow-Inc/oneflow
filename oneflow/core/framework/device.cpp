@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -32,7 +31,6 @@ namespace {
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
-
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
