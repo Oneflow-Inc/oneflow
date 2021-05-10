@@ -32,30 +32,45 @@ class Where(Module):
         )
 
     def forward(self, condition, x, y):
-        if x.shape == condition.shape and y.shape == condition.shape:
-            broadcast_cond = condition
-            broadcast_x = x
-            broadcast_y = y
-        else:
-            broadcast_like_shape = []
-            broadcast_condition_axes = []
-            broadcast_x_axes = []
-            broadcast_y_axes = []
-            
-            for i in range(len(x.shape)):
-                max_dim = max(x.shape[i], max(y.shape[i], condition.shape[i]))
-                broadcast_like_shape.append(max_dim)
-                if max_dim != condition.shape[i]:
-                    broadcast_condition_axes.append(i)
-                if max_dim != x.shape[i]:
-                    broadcast_x_axes.append(i)
-                if max_dim != y.shape[i]:
-                    broadcast_y_axes.append(i)
+        broadcast_cond = condition
+        broadcast_x = x
+        broadcast_y = y
 
-            broadcast_like_tensor = flow.Tensor(broadcast_like_shape)
-            broadcast_cond = flow.tmp.broadcast_like(condition, broadcast_like_tensor, broadcast_condition_axes)
-            broadcast_x = flow.tmp.broadcast_like(x, broadcast_like_tensor, broadcast_x_axes)
-            broadcast_y = flow.tmp.broadcast_like(y, broadcast_like_tensor, broadcast_y_axes)
+        broadcast_like_shape = []
+        broadcast_condition_axes = []
+        broadcast_x_axes = []
+        broadcast_y_axes = []
+
+        for i in range(len(x.shape)):
+            max_dim = max(x.shape[i], max(y.shape[i], condition.shape[i]))
+            broadcast_like_shape.append(max_dim)
+            if max_dim != condition.shape[i]:
+                broadcast_condition_axes.append(i)
+            if max_dim != x.shape[i]:
+                broadcast_x_axes.append(i)
+            if max_dim != y.shape[i]:
+                broadcast_y_axes.append(i)
+
+        broadcast_like_tensor = flow.tmp.zeros(
+            tuple(broadcast_like_shape), dtype=flow.float32
+        )
+
+        if len(broadcast_condition_axes) != 0:
+            condition = flow.tmp.cast(condition, flow.float32)
+            broadcast_cond = flow.tmp.broadcast_like(
+                condition, broadcast_like_tensor, tuple(broadcast_condition_axes)
+            )
+            broadcast_cond = flow.tmp.cast(broadcast_cond, flow.int32)
+
+        if len(broadcast_x_axes) != 0:
+            broadcast_x = flow.tmp.broadcast_like(
+                x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
+            )
+
+        if len(broadcast_y_axes) != 0:
+            broadcast_y = flow.tmp.broadcast_like(
+                y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
+            )
 
         return self._where_op(broadcast_cond, broadcast_x, broadcast_y)[0]
 
