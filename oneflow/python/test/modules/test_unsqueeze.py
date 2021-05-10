@@ -16,9 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-
 import oneflow as flow
-import oneflow.typing as tp
 
 
 @unittest.skipIf(
@@ -26,25 +24,26 @@ import oneflow.typing as tp
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_sigmoid(test_case):
-        m = flow.nn.Sigmoid()
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
-        y = m(x)
-        z = x.sigmoid(x)
-        k = flow.sigmoid(x)
-        torch_out = np.array(
-            [[0.69366997, 0.60735673, 0.52585548], [0.23947647, 0.33676055, 0.56800622]]
-        )
-        print(np.allclose(y.numpy(), torch_out, rtol=1e-04))
-        print(np.allclose(z.numpy(), torch_out, rtol=1e-04))
-        print(np.allclose(k.numpy(), torch_out, rtol=1e-04))
+    def test_unsqueeze(test_case):
+        m = flow.nn.Unsqueeze()
+        x = flow.Tensor(np.random.rand(16, 20))
+        y = m(x, 1)
+        test_case.assertTrue(np.allclose(flow.Size([16, 1, 20]), y.shape))
+
+    def test_unsqueeze2(test_case):
+        x2 = flow.Tensor(np.random.rand(2, 3, 4))
+        y2 = x2.unsqueeze(2)
+        test_case.assertTrue(np.allclose(flow.Size([2, 3, 1, 4]), y2.shape))
+
+    def test_unsqueeze3(test_case):
+        x3 = flow.Tensor(np.random.rand(2, 6, 9, 3))
+        y3 = x3.unsqueeze(4)
+        test_case.assertTrue(np.allclose(flow.Size([2, 6, 9, 3, 1]), y3.shape))
+
+    def test_unsqueeze4(test_case):
+        x3 = flow.Tensor(np.random.rand(2, 6, 9, 3))
+        y3 = flow.unsqueeze(x3, 4)
+        test_case.assertTrue(np.allclose(flow.Size([2, 6, 9, 3, 1]), y3.shape))
 
 
 if __name__ == "__main__":

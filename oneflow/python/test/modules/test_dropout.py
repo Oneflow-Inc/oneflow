@@ -18,35 +18,31 @@ import unittest
 import numpy as np
 import oneflow as flow
 
-import torch
-
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_identity(test_case):
-        torch_in = np.array(
-            [[0.6898692, 0.2402668, 0.10445952], [0.7910769, 0.7279353, 0.42036182]],
-            dtype=np.float32,
-        )
-
-        torch_out = np.array(
+    def test_dropout(test_case):
+        m = flow.nn.Dropout(p=0.5)
+        input_arr = np.array(
             [
-                [2.0345955, 2.0345955, 2.0345955, 2.0345955],
-                [2.939374, 2.939374, 2.939374, 2.939374],
-            ],
-            dtype=np.float32,
+                [-0.7797, 0.2264, 0.2458, 0.4163],
+                [0.4299, 0.3626, -0.4892, 0.4141],
+                [-1.4115, 1.2183, -0.5503, 0.6520],
+            ]
         )
-
-        m = flow.nn.Linear(3, 4)
-        x = flow.Tensor(torch_in)
-        flow.nn.init.ones_(m.weight)
-        flow.nn.init.ones_(m.bias)
+        x = flow.Tensor(input_arr)
         y = m(x)
-        print(np.allclose(torch_out, y.numpy(), atol=1e-4))
-        test_case.assertTrue(np.allclose(torch_out, y.numpy(), atol=1e-4))
+        print(y.numpy())
+        test_case.assertTrue(True)
+
+        # test_dropout >> output:
+        # [[-0.      0.      0.4916  0.8326]
+        # [ 0.8598  0.     -0.      0.8282]
+        # [-2.823   2.4366 -0.      1.304 ]]
+
 
 if __name__ == "__main__":
     unittest.main()

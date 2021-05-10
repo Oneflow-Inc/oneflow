@@ -18,35 +18,29 @@ import unittest
 import numpy as np
 import oneflow as flow
 
-import torch
-
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in eager mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_identity(test_case):
-        torch_in = np.array(
-            [[0.6898692, 0.2402668, 0.10445952], [0.7910769, 0.7279353, 0.42036182]],
-            dtype=np.float32,
-        )
+    def test_ones(test_case):
+        m = flow.Ones()
+        shape1 = (1, 2, 3, 4)
+        y1 = m(shape1)
+        test_case.assertTrue(np.allclose(np.ones(shape1), y1.numpy()))
 
-        torch_out = np.array(
-            [
-                [2.0345955, 2.0345955, 2.0345955, 2.0345955],
-                [2.939374, 2.939374, 2.939374, 2.939374],
-            ],
-            dtype=np.float32,
-        )
+        m2 = flow.Ones(dtype=flow.float)
+        shape2 = 10
+        y2 = m2(shape2)
+        test_case.assertTrue(np.allclose(np.ones(shape2), y2.numpy()))
 
-        m = flow.nn.Linear(3, 4)
-        x = flow.Tensor(torch_in)
-        flow.nn.init.ones_(m.weight)
-        flow.nn.init.ones_(m.bias)
-        y = m(x)
-        print(np.allclose(torch_out, y.numpy(), atol=1e-4))
-        test_case.assertTrue(np.allclose(torch_out, y.numpy(), atol=1e-4))
+    def test_zeros(test_case):
+        m = flow.Zeros()
+        shape = (3, 2, 5, 1)
+        y = m(shape)
+        test_case.assertTrue(np.allclose(np.zeros(shape), y.numpy()))
+
 
 if __name__ == "__main__":
     unittest.main()

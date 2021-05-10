@@ -67,7 +67,41 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.Softmax")
+@register_tensor_op_by_module("softmax")
 class Softmax(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Sigmoid}(x) = \sigma(x) = \frac{1}{1 + \exp(-x)}
+
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+    
+        m = flow.nn.LogSoftmax(dim=1)
+        x = flow.Tensor(
+            np.array(
+                [[ 0.81733328,  0.43621480,  0.10351428],
+                [-1.15555191, -0.67776406,  0.27372134]]
+            )
+        )
+        y = m(x)
+
+        # y:
+        # [[0.69367    0.6073567  0.5258555 ]
+        # [0.23947646 0.33676052 0.5680063 ]]
+
+    """
+
     def __init__(
         self, axis: Optional[int] = None, name: Optional[str] = None,
     ):
@@ -80,7 +114,6 @@ class Softmax(Module):
         self._op = flow.builtin_op("softmax", name).Input("in").Output("out").Build()
 
     def forward(self, x):
-        print(x.shape)
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
             logits = flow.transpose(logits, perm=permute)
@@ -95,6 +128,32 @@ class Softmax(Module):
 @register_tensor_op_by_module("tanh")
 @register_op_by_module("tanh")
 class Tanh(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Tanh}(x) = \tanh(x) = \frac{\exp(x) - \exp(-x)} {\exp(x) + \exp(-x)}
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+   
+   For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+
+        x = np.array([-1, 0, 1]).astype(np.float32)
+        input = flow.Tensor(x)
+        tanh = flow.nn.Tanh()
+        out = tanh(input).numpy()
+
+        # out [-0.7615942  0.         0.7615942]
+        
+    """
+  
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
@@ -102,6 +161,86 @@ class Tanh(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+      
+@oneflow_export("nn.LogSoftmax")
+class LogSoftmax(Module):
+    r"""Thresholds each element of the input Tensor.
+
+    Threshold is defined as:
+
+    .. math::
+        y =
+        \begin{cases}
+        x, &\text{ if } x > \text{threshold} \\
+        \text{value}, &\text{ otherwise }
+        \end{cases}
+
+    Args:
+        threshold: The value to threshold at
+        value: The value to replace with
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow
+        import numpy as np
+    
+        m = flow.nn.LogSoftmax(dim=1)
+        x = flow.Tensor(
+            np.array(
+                [[ 0.4296, -1.1957,  2.5463],
+                [ 1.2552, -1.5747,  0.6923]]
+            )
+        )
+        y = m(x)
+
+        # y:
+        # [[-2.251349   -3.8766491  -0.13464898]
+        # [-0.48770458 -3.3176045  -1.0506046 ]]
+
+
+    """
+
+    def __init__(
+        self, dim: Optional[int] = 1,
+    ):
+        super().__init__()
+
+        self.dim = dim
+        self._softmax_op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+        self._log_op = flow.builtin_op("log").Input("x").Output("y").Build()
+        self._transpose_op = (
+            flow.builtin_op("transpose").Input("input").Output("output")
+        )
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, "dim"):
+            self.dim = None
+
+    def forward(self, x):
+        need_transpose, permute = _softmax_need_transpose(x, self.dim)
+
+        if need_transpose:
+            self._transpose_op = self._transpose_op.Attr("perm", permute).Build()
+            x = self._transpose_op(x)[0]
+        res = self._softmax_op(x)[0]
+        res = self._log_op(res)[0]
+        if need_transpose:
+            res = transpose(res, perm=permute)
+
+        return res
+
+    def extra_repr(self):
+        return "dim={dim}".format(dim=self.dim)
 
 
 if __name__ == "__main__":
