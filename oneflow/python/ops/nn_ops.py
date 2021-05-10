@@ -858,11 +858,31 @@ def group_normalization(
     if name is None:
         name = id_util.UniqueStr("GroupNorm_")
 
-    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], num_groups, -1])
-    normalized_1d_out = flow.nn.InstanceNorm1d(
-        reshape_to_1d, eps=eps, affine=affine, name=name
-    )
-    reshape_back = flow.reshape(normalized_1d_out, shape=list(x.shape))
+    channel = x.shape[1]
+    assert channel % num_groups == 0
+    group_size = channel // num_groups
+    orig_shape = x.shape
+    reshape_to_1d = flow.reshape(x, shape=[orig_shape[0], num_groups, -1])
+    (mean, variance) = flow.nn.moments(reshape_to_1d, [2], keepdims=True)
+    normalized = (reshape_to_1d - mean) / flow.math.sqrt(variance + eps)
+    normalized = flow.reshape(normalized, shape=[orig_shape[0], channel, -1])
+    if affine == True:
+        gamma = flow.get_variable(
+            name + "_gamma",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
+        beta = flow.get_variable(
+            name + "_beta",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.zeros_initializer(),
+            trainable=True,
+        )
+        normalized = gamma * normalized + beta
+    reshape_back = flow.reshape_like(normalized, like=x)
 
     return reshape_back
 
