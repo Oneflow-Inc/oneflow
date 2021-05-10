@@ -178,7 +178,12 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   DeviceCtx* device_ctx() override { return device_ctx_; }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
-  const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); }
+  const ParallelContext& parallel_ctx() const override {
+    static ParallelContext single_card;
+    single_card.set_parallel_id(0);
+    single_card.set_parallel_num(1);
+    return single_card;
+  }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
     return base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
