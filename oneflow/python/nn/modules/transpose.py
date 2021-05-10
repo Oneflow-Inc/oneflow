@@ -61,7 +61,7 @@ def transpose_op(tensor, perm: Sequence[int] = None):
         oneflow.Tensor: A transposed tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)

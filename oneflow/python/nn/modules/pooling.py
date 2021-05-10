@@ -47,7 +47,7 @@ class AvgPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
 
@@ -159,7 +159,7 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
         m = flow.nn.MaxPool2d(kernel_size, stride, padding)

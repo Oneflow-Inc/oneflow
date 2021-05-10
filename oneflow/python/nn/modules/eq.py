@@ -63,7 +63,7 @@ def eq_op(input, other):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)

@@ -85,7 +85,7 @@ def expand_op(x, expand_size):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = np.array([[[[0, 1]],

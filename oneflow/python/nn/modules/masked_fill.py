@@ -55,7 +55,7 @@ def masked_fill_op(tensor, mask, value):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         in_arr = np.array(

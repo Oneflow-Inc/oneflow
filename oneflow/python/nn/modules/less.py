@@ -50,7 +50,7 @@ def less_op(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         
         input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)

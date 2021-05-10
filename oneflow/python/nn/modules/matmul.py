@@ -93,7 +93,7 @@ def matmul_op(a, b):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         
         input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)

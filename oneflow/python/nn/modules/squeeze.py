@@ -59,7 +59,7 @@ def squeeze_op(input, axis: Optional[Sequence[int]] = None):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))

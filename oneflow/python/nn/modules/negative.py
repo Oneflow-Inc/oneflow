@@ -44,7 +44,7 @@ def negative_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(

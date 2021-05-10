@@ -99,7 +99,7 @@ def ones_op(size, dtype=None):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         y = flow.ones(5)
         # [1. 1. 1. 1. 1. ]
@@ -128,7 +128,7 @@ def zeros_op(size, dtype=None):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         y = flow.zeros(5)
         # [0. 0. 0. 0. 0. ]
@@ -137,7 +137,8 @@ def zeros_op(size, dtype=None):
     return Zeros(size, dtype)()
 
 
-@oneflow_export("tmp.zeros_like")
+@oneflow_export("zeros_like")
+@experimental_api
 def zeros_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 0, with the same size as input.
@@ -150,7 +151,7 @@ def zeros_like_op(other):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))
@@ -161,7 +162,8 @@ def zeros_like_op(other):
     return zeros_op(other.shape, other.dtype)
 
 
-@oneflow_export("tmp.ones_like")
+@oneflow_export("ones_like")
+@experimental_api
 def ones_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 1, with the same size as input.
@@ -174,7 +176,7 @@ def ones_like_op(other):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))

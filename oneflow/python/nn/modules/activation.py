@@ -58,7 +58,7 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         m = flow.nn.ReLU()
@@ -99,7 +99,7 @@ class Tanh(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = np.array([-1, 0, 1]).astype(np.float32)
@@ -176,7 +176,7 @@ class GELU(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         import oneflow.typing as tp
 
@@ -220,7 +220,7 @@ def gelu_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         import oneflow.typing as tp
 
@@ -251,7 +251,7 @@ class Sigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(
@@ -295,7 +295,7 @@ def sigmoid_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(
@@ -411,7 +411,7 @@ class LogSoftmax(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         m = flow.nn.LogSoftmax(dim=1)

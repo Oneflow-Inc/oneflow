@@ -76,7 +76,7 @@ def reshape_op(x, shape: Sequence[int] = None):
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         x = np.array(
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]

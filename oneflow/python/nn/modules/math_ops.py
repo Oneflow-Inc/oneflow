@@ -74,7 +74,7 @@ def _sum(input, dim=None, keepdims=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = flow.sum(input, dim=(2,1))
 
@@ -235,7 +235,7 @@ def _mean(input_tensor, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         out = flow.mean(input)
@@ -323,7 +323,7 @@ def _sub(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise subtract
         x = flow.Tensor(np.random.randn(2,3))
@@ -398,7 +398,7 @@ def _div(x, y):
     For example:
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise divide
         x = flow.Tensor(np.random.randn(2,3))
@@ -456,7 +456,7 @@ def _reciprocal(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         out = flow.reciprocal()(x)
         # out [[1.         0.5        0.33333334]
@@ -514,7 +514,7 @@ def _add(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise add
         x = flow.Tensor(np.random.randn(2,3))
@@ -571,7 +571,7 @@ def sin_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -602,7 +602,7 @@ def cos_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -634,7 +634,7 @@ def log_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -690,7 +690,7 @@ def sqrt_op(input):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.experimental as flow
             import numpy as np
 
             arr = np.random.randn(3, 2, 5, 7)
@@ -726,7 +726,7 @@ def square_op(input):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.experimental as flow
             import numpy as np
 
             arr = np.random.randn(3, 2, 5, 7)
@@ -793,7 +793,7 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         arr = np.random.randn(2, 3, 4, 5)
@@ -825,7 +825,7 @@ def pow_op(tensor, exponent):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         
         x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))

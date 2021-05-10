@@ -208,7 +208,7 @@ class BatchNorm1d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.randn(20, 100))
@@ -287,7 +287,7 @@ class BatchNorm2d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(np.random.randn(4, 2, 8, 3))
