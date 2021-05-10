@@ -33,15 +33,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
 
-inline Maybe<MemoryCase> MakeMemoryCase(const std::string& type, int64_t device_id) {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(type));
-  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
-}
 }  // namespace
-
-const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
-  return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
-}
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
