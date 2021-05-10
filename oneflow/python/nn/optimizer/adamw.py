@@ -66,6 +66,7 @@ class AdamW(Optimizer):
         https://arxiv.org/abs/1711.05101
 
     """
+
     def __init__(
         self,
         parameters: Union[Iterator[Parameter], List[Dict]],
