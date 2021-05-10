@@ -18,7 +18,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-from oneflow.python.test.modules.test_util import GenArgList
+
+from test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
