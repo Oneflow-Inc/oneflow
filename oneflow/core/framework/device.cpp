@@ -114,12 +114,7 @@ Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& paralle
   std::string device_id = machine_device_id.substr(pos + 1);
   CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
   CHECK_OR_RETURN(IsStrInt(device_id));
-<<<<<<< HEAD
-  std::shared_ptr<const Device> device = JUST(Device::New(type, std::stoi(device_id)));
-  return device;
-=======
   return Device::New(type, std::stoi(device_id));
->>>>>>> master
 }
 
 }  // namespace oneflow
