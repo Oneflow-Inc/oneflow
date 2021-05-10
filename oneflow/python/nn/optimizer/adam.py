@@ -19,13 +19,13 @@ from types import GeneratorType
 
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.nn.optimizer.optimizer import ParamGroup
-from oneflow.python.nn.optimizer.optimizer import Optimizer
+from oneflow.python.nn.optimizer.optimizer import Optimizer, ParamGroup
 
 
 @oneflow_export("optim.Adam")
+@experimental_api
 class Adam(Optimizer):
     r"""Implements Adam algorithm.
 
@@ -106,14 +106,8 @@ class Adam(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["exp_avg"] = flow.tmp.zeros(
-                    # TODO: zeros module support flow.Size parameter
-                    tuple(param.shape)
-                )
-                self._state[param]["exp_avg_sq"] = flow.tmp.zeros(
-                    # TODO: zeros module support flow.Size parameter
-                    tuple(param.shape)
-                )
+                self._state[param]["exp_avg"] = flow.experimental.zeros_like(param)
+                self._state[param]["exp_avg_sq"] = flow.experimental.zeros_like(param)
 
         self._op = (
             flow.builtin_op("adam_update")

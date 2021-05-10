@@ -17,8 +17,9 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
-from oneflow.python.test.modules.test_util import GenArgList
+import oneflow.experimental as flow
+
+from test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
@@ -41,9 +42,8 @@ def compare_with_numpy_adam(
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
             loss = x * grad_tensor
-            # BUG: loss = flow.sum(x * grad_tensor)
-            grad = flow.Tensor(np.ones(list(loss.shape)))
-            loss.backward(grad)
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
             adam.step()
             adam.zero_grad()
 
