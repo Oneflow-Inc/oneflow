@@ -100,7 +100,7 @@ def ones_op(size, dtype=None):
 
         import oneflow as flow
 
-        y = flow.ones(5)
+        y = flow.tmp.ones(5)
         # [1. 1. 1. 1. 1. ]
 
     """
@@ -128,7 +128,7 @@ def zeros_op(size, dtype=None):
 
         import oneflow as flow
 
-        y = flow.zeros(5)
+        y = flow.tmp.zeros(5)
         # [0. 0. 0. 0. 0. ]
 
     """
