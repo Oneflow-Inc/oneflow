@@ -122,15 +122,9 @@ class RMSprop(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                self._state[param]["square_avg"] = flow.tmp.zeros(
-                    # TODO: zeros module support flow.Size parameter
-                    tuple(param.shape)
-                )
+                self._state[param]["square_avg"] = flow.tmp.zeros_like(param)
                 if "centered" in self._default_options:
-                    self._state[param]["grad_avg"] = flow.tmp.zeros(
-                        # TODO: zeros module support flow.Size parameter
-                        tuple(param.shape)
-                    )
+                    self._state[param]["grad_avg"] = flow.tmp.zeros_like(param)
         if centered:
             self._op = (
                 flow.builtin_op("rmsprop_update")

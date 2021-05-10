@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-from oneflow.python.test.modules.test_util import GenArgList
+from test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
@@ -27,7 +27,7 @@ def compare_with_numpy_rmsprop(
     x_shape,
     scale,
     learning_rate,
-    momentum, 
+    momentum,
     train_iters,
     alpha,
     eps,
@@ -112,7 +112,7 @@ class TestRMSProp(flow.unittest.TestCase):
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
-        arg_dict["momentum"] = [0.0] # TODO: support nonzero momentum
+        arg_dict["momentum"] = [0.0]  # TODO: support nonzero momentum
         arg_dict["train_iters"] = [10]
         arg_dict["alpha"] = [0.9, 0.99]
         arg_dict["eps"] = [1e-8, 1e-5]
