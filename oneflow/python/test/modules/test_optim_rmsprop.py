@@ -18,13 +18,20 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-
-from test_util import GenArgList
+from oneflow.python.test.modules.test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
-def compare_with_numpy_adam(
-    test_case, x_shape, scale, learning_rate, train_iters,
+def compare_with_numpy_rmsprop(
+    test_case,
+    x_shape,
+    scale,
+    learning_rate,
+    train_iters,
+    alpha,
+    eps,
+    weight_decay,
+    centered,
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -37,15 +44,23 @@ def compare_with_numpy_adam(
         x = Parameter(flow.Tensor(init_value))
         param_list = list()
         param_list.append(x)
-        adam = flow.optim.Adam([{"param": param_list}], lr=learning_rate, scale=scale)
+        rmsprop = flow.optim.RMSprop(
+            [{"param": param_list}],
+            lr=learning_rate,
+            scale=scale,
+            alpha=alpha,
+            eps=eps,
+            weight_decay=weight_decay,
+            centered=centered,
+        )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
             loss = x * grad_tensor
             loss = flow.sum(x * grad_tensor)
             loss.backward()
-            adam.step()
-            adam.zero_grad()
+            rmsprop.step()
+            rmsprop.zero_grad()
 
         for i in range(train_iters):
             train_one_iter(random_grad_seq[i])
@@ -53,21 +68,30 @@ def compare_with_numpy_adam(
 
     def train_by_numpy():
         x = init_value
-        vt = np.zeros_like(x)
-        st = np.zeros_like(x)
-        beta1 = 0.9
-        beta2 = 0.999
+        r = np.zeros_like(x)
+        v = np.zeros_like(x)
+        g = np.zeros_like(x)
+
+        momentum = 0.0
 
         def train_one_iter(grad):
             grad = grad * scale
-            v = beta1 * vt + (1 - beta1) * grad
-            s = beta2 * st + (1 - beta2) * grad * grad
-            g = learning_rate / (np.sqrt(s) + 1e-8) * v
-            param = x - g
-            return param, v, s
+
+            if centered:
+                r_ = alpha * r + (1 - alpha) * grad * grad
+                g_ = alpha * g + (1 - alpha) * grad
+                v_ = momentum * v + learning_rate / np.sqrt(r_ - g_ * g_ + eps) * grad
+            else:
+                r_ = alpha * r + (1 - alpha) * grad * grad
+                g_ = g
+                v_ = momentum * v + learning_rate / np.sqrt(r_ + eps) * grad
+
+            param = x - v_
+
+            return param, r_, g_, v_
 
         for i in range(train_iters):
-            x, vt, st = train_one_iter(random_grad_seq[i])
+            x, r, g, v = train_one_iter(random_grad_seq[i])
 
         return x
 
@@ -89,8 +113,12 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
+        arg_dict["alpha"] = [0.9, 0.99]
+        arg_dict["eps"] = [1e-8, 1e-5]
+        arg_dict["weight_decay"] = [0.1, 0.99]
+        arg_dict["centered"] = [False, True]
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adam(test_case, *arg)
+            compare_with_numpy_rmsprop(test_case, *arg)
 
 
 if __name__ == "__main__":
