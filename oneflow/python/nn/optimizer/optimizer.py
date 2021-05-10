@@ -118,7 +118,7 @@ class SGD(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 if "momentum" in self._default_options:
-                    self._state[param]["momentum_buf"] = flow.tmp.zeros(
+                    self._state[param]["momentum_buf"] = flow.experimental.zeros(
                         # TODO: zeros module support flow.Size parameter
                         tuple(param.shape)
                     )
