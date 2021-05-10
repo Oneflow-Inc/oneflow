@@ -26,14 +26,37 @@ from .optimizer import Optimizer, ParamGroup
 
 @oneflow_export("optim.SGD")
 class SGD(Optimizer):
-    r"""
-    TODO
+    r"""Implements SGD algorithm.
+
+    This algorithm takes a random sample’s gradient as an approximate estimate of the overall gradient in small batch gradient descent.
+
+    When the momentum = 0, the equation of parameters updating is:
+
+        .. math::
+
+            & param_new = param_old - learning\_rate * grad
+
+    With momentum, the equation of parameters updating is:
+
+        .. math::
+
+            & V_t = \beta * V_{t-1} + learning\_rate * g_t
+
+            & param_new = param_old - V_t
+
+    Args:
+        params (iterable): iterable of parameters to optimize or dicts defining
+            parameter groups
+        lr (float, optional): learning rate (default: 1e-3)
+        momentum (float, optional): Momentum factor (default: 0.0)
+        scale (float, optional): the scale factor of loss (default: 1.0)
+
     """
 
     def __init__(
         self,
         parameters: Union[Iterator[Parameter], List[Dict]],
-        lr: float,
+        lr: float = 1e-3,
         momentum: float = 0.0,
         scale: float = 1.0,
     ):
