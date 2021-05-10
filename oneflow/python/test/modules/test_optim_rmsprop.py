@@ -106,9 +106,10 @@ def compare_with_numpy_rmsprop(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAdam(flow.unittest.TestCase):
-    def test_adam(test_case):
+class TestRMSProp(flow.unittest.TestCase):
+    def test_rmsprop(test_case):
         arg_dict = OrderedDict()
+        # TODO(BBuf) support momentum
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]

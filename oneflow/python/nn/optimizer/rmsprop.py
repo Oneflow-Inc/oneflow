@@ -21,8 +21,7 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.nn.optimizer.optimizer import ParamGroup
-from oneflow.python.nn.optimizer.optimizer import Optimizer
+from oneflow.python.nn.optimizer.optimizer import ParamGroup, Optimizer
 
 
 @oneflow_export("optim.RMSprop")
@@ -103,6 +102,7 @@ class RMSprop(Optimizer):
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
+        assert momentum == 0.0, f"Not support momentum greater than zeros now!"
 
         self._default_options["lr"] = lr
         self._default_options["alpha"] = alpha
