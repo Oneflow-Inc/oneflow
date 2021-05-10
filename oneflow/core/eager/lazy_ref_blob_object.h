@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class LazyRefBlobObject final : public BlobObject {
  public:
@@ -57,7 +57,7 @@ class LazyRefBlobObject final : public BlobObject {
   Blob* ref_blob_ = nullptr;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_LAZY_REF_BLOB_OBJECT_H_

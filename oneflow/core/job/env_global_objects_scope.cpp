@@ -42,7 +42,7 @@ namespace {
 std::string LogDir(const std::string& log_dir) {
   char hostname[255];
   CHECK_EQ(gethostname(hostname, sizeof(hostname)), 0);
-  std::string v = log_dir + "/" + std::string(hostname);
+  std::string v = JoinPath(log_dir, std::string(hostname));
   return v;
 }
 
@@ -50,7 +50,8 @@ void InitLogging(const CppLoggingConf& logging_conf, bool default_physical_env) 
   if (!default_physical_env) {
     FLAGS_log_dir = LogDir(logging_conf.log_dir());
   } else {
-    FLAGS_log_dir = LogDir(logging_conf.default_physical_env_log_dir());
+    std::string default_env_log_path = JoinPath(logging_conf.log_dir(), "default_physical_env_log");
+    FLAGS_log_dir = LogDir(default_env_log_path);
   }
   FLAGS_logtostderr = logging_conf.logtostderr();
   FLAGS_logbuflevel = logging_conf.logbuflevel();
@@ -179,7 +180,7 @@ const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDes
   std::string machine_device_id =
       "@" + std::to_string(GlobalProcessCtx::Rank()) + ":" + std::to_string(device.device_id());
   ParallelConf parallel_conf;
-  parallel_conf.set_device_tag(device.of_type());
+  parallel_conf.set_device_tag(CHECK_JUST(device.of_type()));
   parallel_conf.add_device_name(machine_device_id);
   std::shared_ptr<const ParallelDesc> parallel_desc =
       std::make_shared<const ParallelDesc>(parallel_conf);

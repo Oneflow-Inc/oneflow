@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 Maybe<VmLocalDepObject> GetVmLocalDepObject(
@@ -38,6 +38,7 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
     : BlobObject(mem_case, shape, data_type),
       tensor_buffer_(tensor_buffer),
       blob_body_bytes_(0),
+      is_shape_synced_(true),
       infer_local_dep_object_(GetVmLocalDepObject(parallel_desc)),
       compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
   CHECK(static_cast<bool>(shape));
@@ -92,5 +93,5 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

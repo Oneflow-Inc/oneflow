@@ -22,8 +22,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
 
-import test_global_storage
-
 
 def GenCartesianProduct(sets):
     assert isinstance(sets, Iterable)

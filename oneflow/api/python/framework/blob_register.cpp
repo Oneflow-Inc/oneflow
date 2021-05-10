@@ -55,7 +55,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("OpenRegisteredBlobAccess", &BlobRegister::OpenRegisteredBlobAccess)
       .def("CloseRegisteredBlobAccess", &BlobRegister::CloseRegisteredBlobAccess)
       .def("HasObject4BlobName", &BlobRegister::HasObject4BlobName)
-      .def("GetObject4BlobName", &BlobRegister::GetObject4BlobName)
+      .def("GetObject4BlobName", &BlobRegister::ApiGetObject4BlobName)
       .def("SetObject4BlobName", &BlobRegister::SetObject4BlobName)
       .def("TrySetObject4BlobName", &BlobRegister::TrySetObject4BlobName)
       .def("ClearObject4BlobName", &BlobRegister::ClearObject4BlobName)

@@ -28,6 +28,9 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name);
 Maybe<one::UserOpExpr> AddOp();
 Maybe<one::UserOpExpr> AddOp(const std::string& name);
 
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype);
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name);
+
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
@@ -38,9 +41,6 @@ Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value, const std:
 
 Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype);
 Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const std::string& name);
-
-Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype);
-Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name);
 
 Maybe<one::UserOpExpr> IdentityOp();
 Maybe<one::UserOpExpr> IdentityOp(const std::string& name);
@@ -85,8 +85,17 @@ Maybe<one::UserOpExpr> BroadcastMulOp(const std::string& name);
 Maybe<one::UserOpExpr> BroadcastDivOp();
 Maybe<one::UserOpExpr> BroadcastDivOp(const std::string& name);
 
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis);
+Maybe<one::UserOpExpr> BroadcastLikeOp(const std::vector<int32_t>& axis, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastEqualOp();
+Maybe<one::UserOpExpr> BroadcastEqualOp(const std::string& name);
+
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type);
 Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name);
+
+Maybe<one::UserOpExpr> CastLikeOp();
+Maybe<one::UserOpExpr> CastLikeOp(const std::string& name);
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon);
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,
@@ -151,6 +160,13 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
                                           const std::vector<int32_t>& dilation_rate,
                                           const int& groups, const std::string& data_format,
                                           const std::string& name);
+
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth);
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
+                                                       const std::string& name);
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth);
+Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
+                                                         const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow

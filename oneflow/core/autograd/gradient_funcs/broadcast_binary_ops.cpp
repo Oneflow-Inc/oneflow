@@ -38,7 +38,7 @@ class ReduceSumLikeModule {
     const auto& in_shape = *(input->shape());
     const auto& like_shape = *(like->shape());
     TensorTuple inputs{input};
-    AttrValueMap attrs;
+    MutableAttrMap attrs;
     std::shared_ptr<OpExpr> op = identity_op_;
     if (in_shape != like_shape) {
       const Shape& left_extended_shape =
@@ -77,7 +77,7 @@ class BroadcastBinaryGrad : public OpExprGradFunction<OpExprInterpState> {
   }
 
   Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrValueMap& attrs) const override {
+                      const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
     ctx->SaveTensorForBackward(inputs.at(0));

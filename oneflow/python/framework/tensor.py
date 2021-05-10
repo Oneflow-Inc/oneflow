@@ -82,7 +82,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -110,7 +109,6 @@ class Tensor:
                 dtype=dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -124,7 +122,6 @@ class Tensor:
                 dtype,
                 device=device,
                 requires_grad=requires_grad,
-                retain_grad=retain_grad,
                 placement=placement,
                 sbp=sbp,
                 is_consistent=is_consistent,
@@ -292,6 +289,12 @@ class Tensor:
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
+    def __gt__(self, other):
+        return self.gt(other)
+
+    def __lt__(self, other):
+        return self.lt(other)
+
     def __array__(self):
         TODO()
 
@@ -300,6 +303,33 @@ class Tensor:
 
     def __deepcopy__(self, memo):
         TODO()
+
+    def __mul__(self, other):
+        return self.mul(other)
+
+    def __rmul__(self, other):
+        return self.mul(other)
+
+    def __add__(self, other):
+        return self.add(other)
+
+    def __radd__(self, other):
+        return self.add(other)
+
+    def __sub__(self, other):
+        return self.sub(other)
+
+    def __rsub__(self, other):
+        return flow.sub(other, self)
+
+    def __truediv__(self, other):
+        return self.div(other)
+
+    def __rtruediv__(self, other):
+        return flow.div(other, self)
+
+    def __neg__(self):
+        return flow.neg(self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
@@ -478,7 +508,6 @@ class Tensor:
         dtype=None,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -486,13 +515,10 @@ class Tensor:
     ):
         numpy_data = None
         if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
+            numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
+            numpy_data = args[0]
+        numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(
@@ -500,7 +526,6 @@ class Tensor:
             dtype,
             device=device,
             requires_grad=requires_grad,
-            retain_grad=retain_grad,
             placement=placement,
             sbp=sbp,
             is_consistent=is_consistent,
@@ -516,7 +541,6 @@ class UndeterminedTensor:
         dtype,
         device=None,
         requires_grad=False,
-        retain_grad=False,
         placement=None,
         sbp=None,
         is_consistent=False,
@@ -540,7 +564,6 @@ class UndeterminedTensor:
         self.dtype = dtype
         self.device = device
         self.requires_grad = requires_grad
-        self.retain_grad = retain_grad
         self.placement = placement
         self.sbp = sbp
         self.is_consistent = is_consistent
@@ -590,7 +613,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(
             _create_blob_object(
@@ -610,7 +632,6 @@ def _default_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         _init_eager_local_tensor_by_initializer_conf(
             determined_tensor, undetermined_tensor.data_initializer
@@ -649,7 +670,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         determined_tensor._set_blob_object(blob.blob_object)
     else:
@@ -660,7 +680,6 @@ def _numpy_initializer_for_determining(tensor):
             undetermined_tensor.is_lazy,
             undetermined_tensor.requires_grad,
             True,
-            undetermined_tensor.retain_grad,
         )
         _copy_from_numpy_to_eager_local_tensor(determined_tensor, numpy_data)
 
@@ -697,34 +716,12 @@ def _input_args_is_shape(*args):
     return all(isinstance(x, int) for x in args)
 
 
-def register_tensor_op_by_module(op_name):
-    def set_method(module):
-        setattr(
-            Tensor,
-            op_name,
-            lambda self, *args, **kwargs: module(**kwargs).forward(self, *args),
-        )
-        return module
+def register_tensor_op(op_name):
+    def set_tensor_op(method):
+        setattr(Tensor, op_name, method)
+        return method
 
-    return set_method
-
-
-def register_op_by_module(op_name):
-    def set_method(module):
-        oneflow_export(op_name)(_get_module_impl(module))
-        return module
-
-    def _get_module_impl(module):
-        def module_impl(x, *args, **kwargs):
-            return module(**kwargs).forward(x, *args)
-
-        name = module.__name__ + "_op"
-        module_impl.__name__ = name
-        globals()[name] = module_impl
-
-        return module_impl
-
-    return set_method
+    return set_tensor_op
 
 
 def _convert_to_placement_scope(placement_or_device):
