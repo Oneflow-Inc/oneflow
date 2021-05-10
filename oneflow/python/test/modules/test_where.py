@@ -63,6 +63,14 @@ class TestWhere(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_where_scalar(test_case):
+        x = 0.5
+        y = 2.0
+        condition = flow.Tensor(np.array([1]), dtype=flow.int32)
+        of_out = flow.tmp.where(condition, x, y)
+        np_out = np.array([0.5])
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
 
 if __name__ == "__main__":
     unittest.main()
