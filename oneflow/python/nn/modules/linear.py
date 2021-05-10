@@ -117,16 +117,8 @@ class Linear(Module):
 
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_features))
-            self._bias_add_op = (
-                flow.builtin_op("bias_add")
-                .Input("a")
-                .Input("b")
-                .Output("out")
-                .Attr("axis", 1)
-                .Build()
-            )
 
-        self._op = (
+        self._matmul_op = (
             flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
@@ -136,6 +128,18 @@ class Linear(Module):
             .Attr("alpha", 1.0)
             .Build()
         )
+
+        self._broadcast_matmul_op = (
+            flow.builtin_op("broadcast_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", True)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -147,8 +151,14 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = self._op(x, self.weight)[0]
+        assert len(x.shape) >= 2, "Tensor x's dim should >=2"
+
+        if len(x.shape) == 2:
+            res = self._matmul_op(x, self.weight)[0]
+        else:
+            res = self._broadcast_matmul_op(x, self.weight)[0]
+
         if self.use_bias:
-            res = self._bias_add_op(res, self.bias)[0]
+            res += self.bias
 
         return res
