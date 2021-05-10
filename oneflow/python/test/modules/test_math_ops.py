@@ -15,7 +15,6 @@ limitations under the License.
 """
 import oneflow.experimental as flow
 import unittest
-import oneflow as flow
 import numpy as np
 
 

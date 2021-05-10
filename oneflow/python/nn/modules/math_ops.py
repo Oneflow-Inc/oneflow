@@ -817,6 +817,7 @@ class Pow(Module):
 
 @oneflow_export("pow")
 @register_tensor_op("pow")
+@experimental_api
 def pow_op(tensor, exponent):
     r"""Takes the power of each element in input with exponent and returns a tensor with the result.
     exponent can be either a single float number or a single int number.
