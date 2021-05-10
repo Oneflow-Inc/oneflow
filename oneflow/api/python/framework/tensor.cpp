@@ -15,6 +15,9 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/api/python/ofblob/ofblob.e.h"
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -58,8 +61,98 @@ struct TensorExportUtil<ConsistentTensor> final {
 };
 
 template<typename T>
+void SpecializedDef(py::class_<T, Tensor, std::shared_ptr<T>>* api) {
+  // do nothing
+}
+
+namespace {
+
+#define DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(direction, modifier)                         \
+  template<typename T>                                                                            \
+  Maybe<void> CopyMirroredTensor##direction##Numpy(const std::shared_ptr<MirroredTensor>& tensor, \
+                                                   py::array_t<T> array) {                        \
+    std::atomic<bool> synced(false);                                                              \
+                                                                                                  \
+    PhysicalRun([&](InstructionsBuilder* builder) {                                               \
+      builder->AccessBlobByCallback(                                                              \
+          tensor,                                                                                 \
+          [&array, &synced](uint64_t ofblob_ptr) {                                                \
+            OfBlob_Copy##direction##Buffer<T>(ofblob_ptr, array);                                 \
+            synced = true;                                                                        \
+          },                                                                                      \
+          modifier);                                                                              \
+    });                                                                                           \
+                                                                                                  \
+    Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {                             \
+      /* spin wait */                                                                             \
+      while (!synced) {}                                                                          \
+    });                                                                                           \
+                                                                                                  \
+    return Maybe<void>::Ok();                                                                     \
+  }                                                                                               \
+                                                                                                  \
+  template<typename T>                                                                            \
+  void ApiCopyMirroredTensor##direction##Numpy(const std::shared_ptr<MirroredTensor>& tensor,     \
+                                               py::array_t<T> array) {                            \
+    return CopyMirroredTensor##direction##Numpy(tensor, array).GetOrThrow();                      \
+  }
+
+DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(To, "const")
+DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(From, "mut")
+
+#undef DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY
+
+Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
+  using namespace oneflow;
+  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
+#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
+  {type_proto, std::make_shared<std::string>("_copy_to_numpy_" #type_cpp)},
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+#undef DATA_TYPE_FUNC_NAME_PAIR
+  };
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+}
+
+const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
+  return *GetCopyMirroredTensorToNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+}
+
+Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(const DType& dtype) {
+  using namespace oneflow;
+  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
+#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
+  {type_proto, std::make_shared<std::string>("_copy_from_numpy_" #type_cpp)},
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+#undef DATA_TYPE_FUNC_NAME_PAIR
+  };
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+}
+
+const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
+  return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+}
+
+}  // namespace
+
+template<>
+void SpecializedDef<MirroredTensor>(
+    py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
+#define DEFINE_TENSOR_METHOD(T, type_proto)                         \
+  api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
+  api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ);
+
+#undef DEFINE_TENSOR_METHOD
+  api->def("_get_copy_mirrored_tensor_to_numpy_func_name",
+           &ApiGetCopyMirroredTensorToNumpyFuncName);
+  api->def("_get_copy_mirrored_tensor_from_numpy_func_name",
+           &ApiGetCopyMirroredTensorFromNumpyFuncName);
+}
+
+template<typename T>
 void ExportTensor(py::module& m, const char* name) {
-  py::class_<T, Tensor, std::shared_ptr<T>>(m, name)
+  py::class_<T, Tensor, std::shared_ptr<T>> tensor_api(m, name);
+  tensor_api
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
@@ -87,6 +180,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
         t.set_blob_object(blob_object).GetOrThrow();
       });
+  SpecializedDef<T>(&tensor_api);
 }
 
 }  // namespace
