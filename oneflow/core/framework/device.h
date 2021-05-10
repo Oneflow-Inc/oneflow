@@ -45,8 +45,6 @@ class Device final {
   static Maybe<const Device> New(const std::string& type, int64_t device_id);
   static Maybe<const Device> New(const std::string& typed);
 
-  const std::shared_ptr<MemoryCase>& mem_case_ptr() const { return mem_case_; }
-
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
