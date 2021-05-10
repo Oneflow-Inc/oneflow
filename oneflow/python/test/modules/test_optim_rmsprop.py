@@ -27,6 +27,7 @@ def compare_with_numpy_rmsprop(
     x_shape,
     scale,
     learning_rate,
+    momentum, 
     train_iters,
     alpha,
     eps,
@@ -47,6 +48,7 @@ def compare_with_numpy_rmsprop(
         rmsprop = flow.optim.RMSprop(
             [{"param": param_list}],
             lr=learning_rate,
+            momentum=momentum,
             scale=scale,
             alpha=alpha,
             eps=eps,
@@ -71,8 +73,6 @@ def compare_with_numpy_rmsprop(
         r = np.zeros_like(x)
         v = np.zeros_like(x)
         g = np.zeros_like(x)
-
-        momentum = 0.0
 
         def train_one_iter(grad):
             grad = grad * scale
@@ -109,10 +109,10 @@ def compare_with_numpy_rmsprop(
 class TestRMSProp(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()
-        # TODO(BBuf) support momentum
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
+        arg_dict["momentum"] = [0.0] # TODO: support nonzero momentum
         arg_dict["train_iters"] = [10]
         arg_dict["alpha"] = [0.9, 0.99]
         arg_dict["eps"] = [1e-8, 1e-5]
