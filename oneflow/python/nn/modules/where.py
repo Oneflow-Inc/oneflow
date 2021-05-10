@@ -32,6 +32,7 @@ class Where(Module):
         )
 
     def forward(self, condition, x, y):
+        assert condition.dtype == flow.int32 or condition.dtype == flow.int8
         if isinstance(x, int) or isinstance(x, float):
             x = flow.Tensor([float(x)], dtype=flow.float32)
         if isinstance(y, int) or isinstance(y, float):

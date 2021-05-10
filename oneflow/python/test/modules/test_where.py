@@ -70,6 +70,17 @@ class TestWhere(flow.unittest.TestCase):
         of_out = flow.tmp.where(condition, x, y)
         np_out = np.array([0.5])
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    
+    def test_where_dim4(test_case):
+        x = flow.Tensor(
+            np.array([[[[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]]),
+            dtype=flow.float32,
+        )
+        y = flow.Tensor(np.ones(shape=(1, 1, 3, 2)), dtype=flow.float32)
+        condition = flow.Tensor(np.array([[[[0, 1], [1, 0], [1, 0]]]]), dtype=flow.int32)
+        of_out = flow.tmp.where(condition, x, y)
+        np_out = np.array([[[[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]]]])
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
 if __name__ == "__main__":

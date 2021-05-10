@@ -46,6 +46,16 @@ class TestBroadCastLike(flow.unittest.TestCase):
         np_out = np.ones(shape=(3, 3, 2))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    def test_broadcast_like_4dim(test_case):
+        input = flow.Tensor(
+            np.ones(shape=(1, 3, 2, 1), dtype=np.float32), dtype=flow.float32
+        )
+        like_tensor = flow.Tensor(
+            np.ones(shape=(3, 3, 2, 3), dtype=np.float32), dtype=flow.float32
+        )
+        of_out = flow.tmp.broadcast_like(input, like_tensor, broadcast_axes=(0, 3))
+        np_out = np.ones(shape=(3, 3, 2, 3))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 if __name__ == "__main__":
     unittest.main()
