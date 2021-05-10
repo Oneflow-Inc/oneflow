@@ -72,6 +72,9 @@ class AttrMap final {
   std::shared_ptr<const AttrName2AttrVal> attrs_;
 };
 
+class UserOpConf;
+AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf);
+
 class ComposedAttrMap final {
  public:
   ComposedAttrMap(const AttrMap& base) : base_(base) {}

@@ -29,7 +29,8 @@ namespace one {
 template<class T>
 class InputAndOutputListScope {
  public:
-  InputAndOutputListScope(T* ctx, EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+  InputAndOutputListScope(T* ctx, const EagerBlobObjectListPtr& inputs,
+                          const EagerBlobObjectListPtr& outputs) {
     ctx_ = ctx;
     ctx_->Update(inputs, outputs);
   }
@@ -72,7 +73,8 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
   }
 }
 
-void ZeroCopyBaseContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+void ZeroCopyBaseContext::Update(const EagerBlobObjectListPtr& inputs,
+                                 const EagerBlobObjectListPtr& outputs) {
   input_tensors_ = inputs;
   output_tensors_ = outputs;
 }
@@ -132,7 +134,7 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+  void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs) {
     base_ctx_.Update(inputs, outputs);
   }
 
@@ -164,7 +166,8 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                       const user_op::UserOpConfWrapper* user_op_conf,
                                       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                       const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                                      EagerBlobObjectList inputs, EagerBlobObjectList outputs)
+                                      const EagerBlobObjectListPtr& inputs,
+                                      const EagerBlobObjectListPtr& outputs)
       : user_op_conf_(user_op_conf),
         device_ctx_(device_ctx),
         base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {
@@ -222,7 +225,8 @@ user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
   return zero_copy_base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
 }
 
-void LocalUserOpInferContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs) {
+void LocalUserOpInferContext::Update(const EagerBlobObjectListPtr& inputs,
+                                     const EagerBlobObjectListPtr& outputs) {
   zero_copy_base_ctx_.Update(inputs, outputs);
 }
 
@@ -235,7 +239,8 @@ LocalUserKernelComputeContext::LocalUserKernelComputeContext(
       device_ctx_(device_ctx),
       base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
 
-void LocalUserKernelComputeContext::Update(EagerBlobObjectList inputs, EagerBlobObjectList outputs,
+void LocalUserKernelComputeContext::Update(const EagerBlobObjectListPtr& inputs,
+                                           const EagerBlobObjectListPtr& outputs,
                                            DeviceCtx* device_ctx) {
   device_ctx_ = device_ctx;
   base_ctx_.Update(inputs, outputs);
@@ -325,8 +330,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
                               std::make_shared<vm::TensorBuffer>()));
 
   const std::string& device_tag = op_conf->device_tag();
-  opkernel->op_infer_ctx_.reset(new LocalUserOpInferContext(opkernel->user_op_conf_.get(),
-                                                            input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_for_thread_a_.reset(new LocalUserOpInferContext(
+      opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_for_thread_b_.reset(new LocalUserOpInferContext(
+      opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
       nullptr, device_tag, opkernel->user_op_conf_.get(), input_arg_tuple, output_arg_tuple,
       opkernel->mut_temp_blob_object()));
@@ -356,8 +363,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
-Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(EagerBlobObjectList inputs,
-                                                                      EagerBlobObjectList outputs) {
+Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(
+    const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs) {
   InputAndOutputListScope<LocalUserKernelRegContext> reg_ctx_scope(reg_ctx_.get(), inputs, outputs);
   const auto& op_type_name = user_op_conf_->op_type_name();
   const auto* kernel_reg_val =
@@ -376,8 +383,9 @@ Maybe<const user_op::OpKernel*> StatefulLocalOpKernel::ChooseOpKernel(EagerBlobO
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_kernel,
-                                                 DeviceCtx* device_ctx, EagerBlobObjectList inputs,
-                                                 EagerBlobObjectList outputs,
+                                                 DeviceCtx* device_ctx,
+                                                 const EagerBlobObjectListPtr& inputs,
+                                                 const EagerBlobObjectListPtr& outputs,
                                                  user_op::OpKernelState** state) {
   auto it = op_kernel_state_map_.find(op_kernel);
   if (it != op_kernel_state_map_.end()) {
@@ -410,14 +418,25 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-LocalUserOpInferContext* StatefulLocalOpKernel::UpdateInferContext(EagerBlobObjectList inputs,
-                                                                   EagerBlobObjectList outputs) {
-  op_infer_ctx_->Update(inputs, outputs);
-  return op_infer_ctx_.get();
+Maybe<void> StatefulLocalOpKernel::InferTensorDesc(const EagerBlobObjectListPtr& inputs,
+                                                   const EagerBlobObjectListPtr& outputs,
+                                                   LocalUserOpInferContext* op_infer_ctx) {
+  InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
+  JUST(tensor_desc_infer_fn_(op_infer_ctx));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> StatefulLocalOpKernel::InferDataType(const EagerBlobObjectListPtr& inputs,
+                                                 const EagerBlobObjectListPtr& outputs,
+                                                 LocalUserOpInferContext* op_infer_ctx) {
+  InputAndOutputListScope<LocalUserOpInferContext> scope(op_infer_ctx, inputs, outputs);
+  JUST(data_type_infer_fn_(op_infer_ctx));
+  return Maybe<void>::Ok();
 }
 
 LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
-    EagerBlobObjectList inputs, EagerBlobObjectList outputs, DeviceCtx* device_ctx) {
+    const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs,
+    DeviceCtx* device_ctx) {
   compute_ctx_->Update(inputs, outputs, device_ctx);
   return compute_ctx_.get();
 }
