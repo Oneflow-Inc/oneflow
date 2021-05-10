@@ -22,9 +22,9 @@ namespace {
 
 Maybe<const Device> MakeOpDevice(const std::shared_ptr<const Device>& in_device,
                                  const std::shared_ptr<const Device>& out_device) {
-  if (in_device->type() == "cuda" && out_device->type() == "cpu") {
+  if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
     return Device::New("cuda_d2h");
-  } else if (in_device->type() == "cpu" && out_device->type() == "cuda") {
+  } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
     return Device::New("cuda_h2d");
   } else {
     return Device::New(in_device->type());
@@ -81,19 +81,19 @@ REGISTER_USER_OP("copy_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("copy").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    user_op::UserOpConfWrapper grad_op =
-        builder.Op("copy_grad")
-            .Input("out_grad", op.GetGradTensorWithOpOutput("out", 0))
-            .Input("in", op.input("in", 0))
-            .Output("in_grad")
-            .Build();
-    AddOp(grad_op);
-    op.BindGradTensorWithOpInput(grad_op.output("in_grad", 0), "in", 0);
-  }
+REGISTER_USER_OP_GRAD("copy").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+  const auto copy_grad_op_name = ctx->FwOp().op_name() + "_grad";
+  ctx->DefineOp(copy_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+    return builder.OpTypeName("copy_grad")
+        .InputBind("out_grad", ctx->FwOp().output_grad("out", 0))
+        .InputBind("in", ctx->FwOp().input("in", 0))
+        .Output("in_grad")
+        .Build();
+  });
+  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+                            [&ctx, &copy_grad_op_name]() -> const std::string& {
+                              return ctx->GetOp(copy_grad_op_name).output("in_grad", 0);
+                            });
 });
 }  // namespace
 }  // namespace oneflow

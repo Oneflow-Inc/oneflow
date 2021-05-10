@@ -40,7 +40,7 @@ class CopyKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>();
+REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>().SetIsMatchedHob(user_op::HobTrue());
 
 class CopyGradKernel final : public user_op::OpKernel {
  public:
@@ -62,7 +62,7 @@ class CopyGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("copy_grad").SetCreateFn<CopyGradKernel>();
+REGISTER_USER_KERNEL("copy_grad").SetCreateFn<CopyGradKernel>().SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace
 }  // namespace oneflow
