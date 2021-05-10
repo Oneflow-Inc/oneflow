@@ -121,11 +121,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   static std::shared_ptr<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
                                          const std::vector<std::string>& indexed_ibns,
-                                         const std::vector<std::string>& indexed_obns) {
-    AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-    return std::shared_ptr<UserOpExpr>(
-        new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
-  }
+                                         const std::vector<std::string>& indexed_obns);
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
