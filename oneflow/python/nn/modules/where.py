@@ -32,9 +32,6 @@ class Where(Module):
         )
 
     def forward(self, condition, x, y):
-        print(condition.shape)
-        print(x.shape)
-        print(y.shape)
         if x.shape == condition.shape and y.shape == condition.shape:
             broadcast_cond = condition
             broadcast_x = x
