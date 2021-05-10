@@ -23,13 +23,16 @@ import oneflow as flow
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestBroadCastLike(flow.unittest.TestCase):
-    def test_broadcast_like(test_case):
-        input = flow.Tensor(np.ones(shape=(3, 1, 1), dtype=np.float32), dtype=flow.float32)
-        like_tensor = flow.Tensor(np.ones(shape=(3, 3, 3), dtype=np.float32), dtype=flow.float32)
-        of_out = flow.tmp.broadcast_like(input, like_tensor, broadcast_axes=(1, 2))
-        np_out = np.ones(shape=(3, 3, 3))
+class TestWhere(flow.unittest.TestCase):
+    def test_where(test_case):
+        x = flow.Tensor(np.array([[-0.4620,  0.3139], [ 0.3898, -0.7197], [ 0.0478, -0.1657]]), dtype=flow.float32)
+        y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        condition = x
+        of_out = flow.tmp.where(condition, x, y)
+        np_out = np.array([[ 1.0000,  0.3139], [ 0.3898,  1.0000], [ 0.0478,  1.0000]])
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    
 
 
 if __name__ == "__main__":
