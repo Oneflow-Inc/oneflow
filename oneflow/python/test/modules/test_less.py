@@ -44,7 +44,7 @@ class TestLess(flow.unittest.TestCase):
         of_out = input1 < input2
         np_out = np.less(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-    
+
     def test_less_int_scalar(test_case):
         np_arr = np.random.randn(2, 3, 4, 5)
         input1 = flow.Tensor(np_arr, dtype=flow.float32)
@@ -52,7 +52,7 @@ class TestLess(flow.unittest.TestCase):
         of_out = input1 < input2
         np_out = np.less(np_arr, input2)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-    
+
     def test_less_float_scalar(test_case):
         np_arr = np.random.randn(3, 2, 5, 7)
         input1 = flow.Tensor(np_arr, dtype=flow.float32)
