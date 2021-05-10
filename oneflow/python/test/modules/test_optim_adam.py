@@ -41,9 +41,8 @@ def compare_with_numpy_adam(
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
             loss = x * grad_tensor
-            # BUG: loss = flow.sum(x * grad_tensor)
-            grad = flow.Tensor(np.ones(list(loss.shape)))
-            loss.backward(grad)
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
             adam.step()
             adam.zero_grad()
 
