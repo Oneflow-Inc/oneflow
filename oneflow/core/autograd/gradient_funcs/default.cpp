@@ -235,8 +235,8 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
     // Currently only user op is considered.
     if (op_conf.has_user_conf()) {
       UserOpConf user_conf(op_conf.user_conf());
-      entry->backward_op = std::make_shared<UserOpExpr>(op_conf.name(), std::move(user_conf),
-                                                        bw_indexed_ibns, bw_indexed_obns);
+      entry->backward_op =
+          UserOpExpr::New(op_conf.name(), std::move(user_conf), bw_indexed_ibns, bw_indexed_obns);
     } else {
       // TODO()
       UNIMPLEMENTED();

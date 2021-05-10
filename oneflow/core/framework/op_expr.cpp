@@ -72,8 +72,9 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(Device::MakeParallelDescByDevice(device));
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, device.mem_case(), parallel_desc,
-                                                         input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel =
+      JUST(StatefulLocalOpKernel::New(op_conf, base_attrs(), device.mem_case(), parallel_desc,
+                                      input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -150,11 +151,11 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(MakeAttrMapFromUserOpConf(proto)) {
+      base_attrs_(base_attrs) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }

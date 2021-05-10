@@ -61,7 +61,7 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
                        const std::vector<std::string>& indexed_obns) {
         typename std::decay<ProtoConfT>::type proto_op_conf;
         op_conf->ToProto(&proto_op_conf);
-        return std::make_shared<OpT>(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns);
+        return OpT::New(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns);
       }))
       .def_property_readonly("proto",
                              [](const OpT& op) { return std::make_shared<ConfT>(op.proto()); });
