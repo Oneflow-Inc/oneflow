@@ -24,7 +24,7 @@ from typing import Optional, Sequence
 class MatMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
+        self._matmul_op = (
             flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
@@ -35,10 +35,45 @@ class MatMul(Module):
             .Build()
         )
 
+        self._batch_matmul_op = (
+            flow.builtin_op("batch_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
+        self._broadcast_matmul_op = (
+            flow.builtin_op("broadcast_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
     def forward(self, a, b):
-        assert len(a.shape) == 2
-        assert len(b.shape) == 2
-        return self._op(a, b)[0]
+        assert len(a.shape) >= 2, "Tensor a's dim should >=2"
+        assert len(b.shape) >= 2, "Tensor b's dim should >=2"
+
+        if len(a.shape) == len(b.shape):
+            if len(a.shape) == 2:
+                res = self._matmul_op(a, b)[0]
+            else:
+                res = self._batch_matmul_op(a, b)[0]
+        else:
+            # NOTE: support broadcast b to a only for now
+            assert (
+                len(b.shape) == 2
+            ), "Not support number of dimensions of a being less than number of dimensions of b!"
+            res = self._broadcast_matmul_op(a, b)[0]
+
+        return res
 
 
 @oneflow_export("matmul")

@@ -804,3 +804,33 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
     """
     return Std(dim, unbiased, keepdim)(tensor)
+
+
+class Pow(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+
+    def forward(self, x, exponent: Union[int, float]):
+        return self._op(x, exponent=float(exponent))[0]
+
+
+@oneflow_export("pow")
+@register_tensor_op("pow")
+def pow_op(tensor, exponent):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        
+        x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))
+        out = flow.pow(x, 2).numpy()
+        print(out) # [1, 4, 9, 16, 25, 36]
+        
+    """
+    return Pow()(tensor, exponent)

@@ -46,6 +46,28 @@ class TestConstantModule(flow.unittest.TestCase):
         y3 = flow.zeros(10, dtype=flow.int)
         test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
 
+    def test_ones_like(test_case):
+        x = flow.Tensor(np.ones([2, 4], dtype=np.float64))
+        test_case.assertTrue(
+            np.array_equal(np.ones_like(x.numpy()), flow.tmp.ones_like(x).numpy())
+        )
+
+        x2 = flow.Tensor(np.ones([2, 4], dtype=int))
+        test_case.assertTrue(
+            np.array_equal(np.ones_like(x2.numpy()), flow.tmp.ones_like(x2).numpy())
+        )
+
+    def test_zeros_like(test_case):
+        x = flow.Tensor(np.ones([2, 4], dtype=np.float64))
+        test_case.assertTrue(
+            np.array_equal(np.zeros_like(x.numpy()), flow.tmp.zeros_like(x).numpy())
+        )
+
+        x2 = flow.Tensor(np.ones([2, 4], dtype=int))
+        test_case.assertTrue(
+            np.array_equal(np.zeros_like(x2.numpy()), flow.tmp.zeros_like(x2).numpy())
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

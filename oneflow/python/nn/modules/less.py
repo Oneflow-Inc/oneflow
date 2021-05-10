@@ -27,6 +27,8 @@ class Less(Module):
         )
 
     def forward(self, x, y):
+        if isinstance(y, int) or isinstance(y, float):
+            y = flow.Tensor([float(y)], dtype=flow.float32)
         return self._op(x, y)[0]
 
 

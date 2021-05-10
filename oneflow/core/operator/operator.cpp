@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -1200,10 +1201,19 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          (*symbol_map)[pair.first] =
-              (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                  ->MakeParallelDescSymbol(
-                      std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
+          const auto parallel_conf =
+              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
+          const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
+            int64_t symbol_id;
+            const auto BuildInstruction =
+                [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
+              return Maybe<void>::Ok();
+            };
+            LogicalRun(BuildInstruction);
+            return symbol_id;
+          };
+          (*symbol_map)[pair.first] = MakeParallelDescSymbol();
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }
