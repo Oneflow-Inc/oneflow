@@ -138,7 +138,7 @@ class Tanh(Module):
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
    
-   For example: 
+    For example: 
 
     .. code-block:: python 
 
