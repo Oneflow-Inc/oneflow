@@ -96,7 +96,7 @@ class TestAdamW(flow.unittest.TestCase):
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
-        arg_dict["weight_decay"] = [1e-3, 1e-2]
+        arg_dict["weight_decay"] = [1e-3, 0.0]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adamw(test_case, *arg)
 
