@@ -376,6 +376,13 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
   bool src_inserted = src_instruction->mut_out_edges()->Insert(edge.Mutable()).second;
   bool dst_inserted = dst_instruction->mut_in_edges()->Insert(edge.Mutable()).second;
   CHECK_EQ(src_inserted, dst_inserted);
+  if (dst_instruction->instr_msg().phy_instr_operand()) {
+    if (dst_instruction->mut_input_operand_stream() == nullptr) {
+      dst_instruction->set_input_operand_stream(src_instruction->mut_stream());
+    } else {
+      CHECK_EQ(dst_instruction->mut_input_operand_stream(), src_instruction->mut_stream());
+    }
+  }
 }
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
@@ -520,7 +527,7 @@ void VirtualMachine::DispatchAndPrescheduleInstructions(
       stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
     }
     TryMoveWaitingToReady(instruction, &prescheduled,
-                          [stream](Instruction* dst) { return &dst->stream() == stream; });
+                          [stream](Instruction* dst) { return &dst->stream().PreSchedulableFrom(stream); });
   }
   prescheduled.MoveTo(ready_instruction_list);
 }

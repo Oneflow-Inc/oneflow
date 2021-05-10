@@ -34,6 +34,8 @@ OBJECT_MSG_BEGIN(Stream);
   OF_PUBLIC int64_t global_device_id() const { return stream_id().global_device_id(); }
   OF_PUBLIC int64_t machine_id() const;
   OF_PUBLIC int64_t device_id() const;
+  OF_PUBLIC bool PreschedulableFrom(const Stream* prev_stream) const;
+
   OF_PUBLIC const StreamType& stream_type() const;
   OF_PUBLIC const StreamTypeId& stream_type_id() const;
   OF_PRIVATE void MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction);

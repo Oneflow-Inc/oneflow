@@ -28,14 +28,15 @@ namespace oneflow {
 namespace vm {
 
 void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
+  CHECK(SharingVirtualMachineThread());
   device_ctx->reset(
       new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
 }
 
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
+  static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -45,7 +46,7 @@ void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
 
 bool CudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {
@@ -59,7 +60,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  NaiveInstrStatusQuerier::MutCast(data_ptr)->set_done();
 }
 
 ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,

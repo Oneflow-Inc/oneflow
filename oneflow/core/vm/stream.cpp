@@ -34,6 +34,12 @@ int64_t Stream::machine_id() const { return global_device_id() / max_device_num_
 
 int64_t Stream::device_id() const { return global_device_id() % max_device_num_per_machine(); }
 
+bool Stream::PreschedulableFrom(const Stream* prev_stream) const {
+  if (this == prev_stream) { return true; }
+  return stream_type().PreschedulableFrom(&prev_stream->stream_type())
+    && global_device_id() == prev_stream->global_device_id();
+}
+
 const StreamType& Stream::stream_type() const {
   return thread_ctx().stream_rt_desc().stream_type();
 }

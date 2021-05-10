@@ -218,6 +218,7 @@ OBJECT_MSG_BEGIN(Instruction);
   OBJECT_MSG_DEFINE_OPTIONAL(InstructionMsg, instr_msg);
   OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<ParallelDesc>, parallel_desc);
   OBJECT_MSG_DEFINE_PTR(Stream, stream); 
+  OBJECT_MSG_DEFINE_PTR(Stream, input_operand_stream); 
 
   // links
   OBJECT_MSG_DEFINE_LIST_LINK(instruction_link);
