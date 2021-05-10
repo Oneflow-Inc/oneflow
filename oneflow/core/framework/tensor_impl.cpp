@@ -94,6 +94,8 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
 }
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+  if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
+
   const std::shared_ptr<const Shape>* result = nullptr;
   Global<ForeignLockHelper>::Get()->WithScopedRelease([this, &result]() {
     BlockingCounter bc(1);
@@ -108,6 +110,7 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
     CHECK_JUST(PhysicalRun(build_instruction));
     bc.WaitUntilCntEqualZero();
   });
+  eager_blob_object_->set_is_shape_synced(true);
   return *result;
 }
 

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 
 namespace oneflow {
@@ -110,14 +111,22 @@ class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
  public:
   UserOpExpr() = default;
   virtual ~UserOpExpr() = default;
-  explicit UserOpExpr(const std::string& op_name, UserOpConf&& proto,
-                      const std::vector<std::string>& indexed_ibns,
-                      const std::vector<std::string>& indexed_obns)
-      : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){};
+  UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+             const std::vector<std::string>& indexed_ibns,
+             const std::vector<std::string>& indexed_obns);
+
+  const AttrMap& base_attrs() const { return base_attrs_; }
 
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
+  bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
+  Maybe<const Device> InferDevices(
+      const AttrMap& attrs, const TensorTuple& inputs,
+      std::vector<std::shared_ptr<const Device>>* outputs_devices) const;
+
  private:
+  AttrMap base_attrs_;
+  user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
