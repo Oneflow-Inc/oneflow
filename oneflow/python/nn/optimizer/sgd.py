@@ -34,7 +34,7 @@ class SGD(Optimizer):
 
         .. math::
 
-            & param_new = param_old - learning\_rate * grad
+            param_{new} = param_{old} - learning\_rate * grad
 
     With momentum, the equation of parameters updating is:
 
@@ -42,7 +42,7 @@ class SGD(Optimizer):
 
             & V_t = \beta * V_{t-1} + learning\_rate * g_t
 
-            & param_new = param_old - V_t
+            & param_{new} = param_{old} - V_t
 
     Args:
         params (iterable): iterable of parameters to optimize or dicts defining
