@@ -47,7 +47,7 @@ class TestLinear(flow.unittest.TestCase):
         flow.nn.init.constant_(linear.weight, 2.3)
         of_out = linear(x)
         np_out = np.matmul(input_arr, np_weight)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     def test_linear_v2(test_case):
         linear = flow.nn.Linear(3, 8)
@@ -74,7 +74,7 @@ class TestLinear(flow.unittest.TestCase):
         of_out = linear(x)
         np_out = np.matmul(input_arr, np_weight)
         np_out += np_bias
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     def test_linear_3_dimension_input(test_case):
         input_arr = np.random.randn(2, 3, 4)
@@ -91,7 +91,7 @@ class TestLinear(flow.unittest.TestCase):
         np_out = np.matmul(input_arr, np_weight)
         np_out += np_bias
 
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     def test_linear_4_dimension_input(test_case):
         input_arr = np.random.randn(4, 5, 6, 7)
@@ -103,7 +103,7 @@ class TestLinear(flow.unittest.TestCase):
         np_weight = np.ones((7, 3)).astype(np.float32)
         np_weight.fill(11.3)
         np_out = np.matmul(input_arr, np_weight)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
