@@ -98,7 +98,7 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-        arg_dict["weight_decay"] = [0.0001, 0.001]
+        arg_dict["weight_decay"] = [0.0, 0.001]
         arg_dict["eps"] = [1e-8, 1e-7]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
