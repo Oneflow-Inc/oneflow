@@ -19,10 +19,17 @@ limitations under the License.
 namespace oneflow {
 namespace dl {
 
-static void* checkDL(void* x) {
+namespace {
+
+void* CheckDL(void* x) {
   if (!x) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
   return x;
 }
+
+}  // namespace
+
+// original implementation is from pytorch:
+// https://github.com/pytorch/pytorch/blob/259d19a7335b32c4a27a018034551ca6ae997f6b/aten/src/ATen/DynamicLibrary.cpp
 
 DynamicLibrary::DynamicLibrary(const char* name, const char* alt_name) {
   handle_ = dlopen(name, RTLD_LOCAL | RTLD_NOW);
@@ -38,7 +45,7 @@ DynamicLibrary::DynamicLibrary(const char* name, const char* alt_name) {
 
 void* DynamicLibrary::sym(const char* name) {
   CHECK(handle_);
-  return checkDL(dlsym(handle_, name));
+  return CheckDL(dlsym(handle_, name));
 }
 
 DynamicLibrary::~DynamicLibrary() {
