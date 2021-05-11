@@ -62,7 +62,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
-    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
@@ -72,11 +72,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   } else {
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
-    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& tensor_device = out_devices->at(i);
       CHECK_OR_RETURN(static_cast<bool>(tensor_device));
-      const auto& tensor_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+      const auto& tensor_parallel_desc = op_device->parallel_desc_ptr();
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           tensor_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
           std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
@@ -85,7 +85,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
-  kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects);
+
+  for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
+    output_eager_blob_objects->at(index)->set_is_shape_synced(false);
+  }
+
+  kernel->ResetDynamicOpAttrs(attrs);
+  JUST(kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
+                             kernel->op_infer_ctx_for_thread_b()));
+  JUST(kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
+                               kernel->op_infer_ctx_for_thread_b()));
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {

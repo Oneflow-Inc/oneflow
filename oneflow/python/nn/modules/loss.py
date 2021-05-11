@@ -16,11 +16,12 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
 
 @oneflow_export("nn.CrossEntropyLoss")
+@experimental_api
 class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
@@ -59,7 +60,7 @@ class CrossEntropyLoss(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         input = flow.Tensor(
             [[-0.1664078, -1.7256707, -0.14690138],
                 [-0.21474946, 0.53737473, 0.99684894],
@@ -107,21 +108,22 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = flow.tmp.transpose(input, (0, 2, 3, 1))
-            input = flow.tmp.reshape(input, shape=[-1, input.shape[3]])
-            target = flow.tmp.flatten(target)
+            input = input.transpose((0, 2, 3, 1))
+            input = input.reshape(shape=[-1, input.shape[3]])
+            target = target.flatten()
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
         if self.reduction == "mean":
-            return flow.mean(out)
+            return flow.experimental.mean(out)
         elif self.reduction == "sum":
-            return flow.sum(out)
+            return flow.experimental.sum(out)
         else:
             if input_shape_len == 4:
-                out = flow.tmp.reshape(out, (b, h, w))
+                out = out.reshape((b, h, w))
             return out
 
 
 @oneflow_export("nn.NLLLoss")
+@experimental_api
 class NLLLoss(Module):
     r""" The negative log likelihood loss. It is useful to train a classification
     problem with `C` classes.
@@ -221,24 +223,24 @@ class NLLLoss(Module):
 
     def nllloss_1d(self, input, target):
         n = input.shape[0]
-        idx = flow.unsqueeze(flow.arange(0, n, 1), dim=1)
-        target = flow.unsqueeze(target, dim=1)
-        t = flow.cat([idx, target], dim=1)
+        idx = flow.experimental.unsqueeze(flow.experimental.arange(0, n, 1), dim=1)
+        target = target.unsqueeze(dim=1)
+        t = flow.experimental.cat([idx, target], dim=1)
         res = self._gather_nd_op(input, t)[0]
         return res
 
     def forward(self, input, target):
         assert len(input.shape) == 2 or len(input.shape) == 4
-        input = flow.negative(input)
+        input = input.negative()
         if len(input.shape) == 2:
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = flow.tmp.transpose(input, (0, 2, 3, 1))
-            input = flow.tmp.reshape(input, shape=[-1, input.shape[3]])
-            target = flow.tmp.flatten(target)
+            input = input.transpose((0, 2, 3, 1))
+            input = input.reshape(shape=[-1, input.shape[3]])
+            target = target.flatten()
             res = self.nllloss_1d(input, target)
-            res = flow.tmp.reshape(res, (b, h, w))
+            res = res.reshape((b, h, w))
 
         else:
             raise NotImplemented
@@ -246,6 +248,6 @@ class NLLLoss(Module):
         if self.reduction == "none":
             return res
         elif self.reduction == "sum":
-            return flow.sum(res)
+            return res.sum()
         else:
-            return flow.mean(res)
+            return res.mean()

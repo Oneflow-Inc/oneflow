@@ -15,7 +15,7 @@ limitations under the License.
 """
 import math
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _pair
 from oneflow.python.nn.common_types import _size_2_t
@@ -23,6 +23,7 @@ from oneflow.python.nn import init
 
 
 @oneflow_export("nn.Conv2d")
+@experimental_api
 class Conv2d(Module):
     def __init__(
         self,

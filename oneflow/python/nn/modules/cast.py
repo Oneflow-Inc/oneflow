@@ -19,32 +19,33 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Less(Module):
-    def __init__(self) -> None:
+class Cast(Module):
+    def __init__(self, dtype: flow.dtype) -> None:
         super().__init__()
         self._op = (
-            flow.builtin_op("broadcast_less").Input("x").Input("y").Output("z").Build()
+            flow.builtin_op("cast")
+            .Input("in")
+            .Output("out")
+            .Attr("dtype", dtype)
+            .Build()
         )
 
-    def forward(self, x, y):
-        if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
-        return self._op(x, y)[0]
+    def forward(self, x):
+        return self._op(x)[0]
 
 
-@oneflow_export("lt")
-@register_tensor_op("lt")
+@oneflow_export("cast")
+@register_tensor_op("cast")
 @experimental_api
-def less_op(x, y):
-    r"""Returns the truth value of :math:`x < y` element-wise.
+def cast_op(x, dtype):
+    r"""The operation takes input tensor `x` and casts it to the output with `dtype`
 
     Args:
         x (oneflow.Tensor): A Tensor
-        y (oneflow.Tensor): A Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
+        dtype (flow.dtype): Data type of the output tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with specific dtype.
 
     For example:
 
@@ -52,13 +53,12 @@ def less_op(x, y):
 
         import oneflow.experimental as flow
         import numpy as np
-        
-        input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
-        
-        out = flow.gt(input1, input2).numpy
 
-        # out [0 0 1]
+        np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        input = flow.Tensor(np_arr, dtype=flow.float32)
+        output = flow.cast(input, flow.int8)
+        
+        # equal to np_arr.astype(np.int8)
 
     """
-    return Less()(x, y)
+    return Cast(dtype)(x)

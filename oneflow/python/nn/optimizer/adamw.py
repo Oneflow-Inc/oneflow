@@ -21,19 +21,22 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.nn.optimizer.optimizer import Optimizer, ParamGroup
+from oneflow.python.nn.optimizer.optimizer import ParamGroup, Optimizer
 
 
-@oneflow_export("optim.Adam")
+@oneflow_export("optim.AdamW")
 @experimental_api
-class Adam(Optimizer):
-    r"""Implements Adam algorithm.
+class AdamW(Optimizer):
+    r"""Implements AdamW algorithm.
 
-    It has been proposed in `Adam: A Method for Stochastic Optimization`_.
-    The implementation of the L2 penalty follows changes proposed in
-    `Decoupled Weight Decay Regularization`_.
+    The original Adam algorithm was proposed in `Adam: A Method for Stochastic Optimization`_.
+    The AdamW variant was proposed in `Decoupled Weight Decay Regularization`_.
 
-    This algorithm can adjust the learning rate of each parameter dynamically according to the 1st-moment estimates and the 2nd-moment estimates of gradient.
+    The optimizer of the Adam-weight-decay algorithm.
+
+    (More details please refer to `Adam-weight-decay <https://www.fast.ai/2018/07/02/adam-weight-decay/>`_).
+
+    So we use Adam-weight-decay algorithm to solve this problem.
 
     the equation of parameters updating is:
 
@@ -43,7 +46,7 @@ class Adam(Optimizer):
 
         & S_t = \beta_2*S_{t-1} + (1-\beta_2)*{grad} \odot {grad}
 
-        & \hat{g} = learning\_rate*\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}
+        & \hat{g} = learning\_rate*(\frac{{V_t}}{\sqrt{{S_t}}+\epsilon}+\lambda*param_{old})
 
         & param_{new} = param_{old} - \hat{g}
 
@@ -55,7 +58,7 @@ class Adam(Optimizer):
             running averages of gradient and its square (default: (0.9, 0.999))
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
+        weight_decay (float, optional): weight decay (L2 penalty) (In the equation is λ, default: 0)
         scale (float, optional): the scale factor of loss (default: 1.0)
 
     .. _Adam\: A Method for Stochastic Optimization:
@@ -87,7 +90,6 @@ class Adam(Optimizer):
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
         assert amsgrad is False, "Not support AMSGrad now!"
-
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
         self._default_options["beta"] = betas
@@ -118,11 +120,11 @@ class Adam(Optimizer):
             .Input("v")
             .Attr("scale", self._default_options["scale"])
             .Attr("l1", 0.0)
-            .Attr("l2", self._default_options["weight_decay"])
+            .Attr("l2", 0.0)
             .Attr("beta1", self._default_options["beta"][0])
             .Attr("beta2", self._default_options["beta"][1])
             .Attr("epsilon", self._default_options["eps"])
-            .Attr("weight_decay", 0.0)
+            .Attr("weight_decay", self._default_options["weight_decay"])
             .Build()
         )
 

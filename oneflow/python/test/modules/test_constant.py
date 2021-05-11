@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -26,46 +26,46 @@ import oneflow as flow
 class TestConstantModule(flow.unittest.TestCase):
     def test_ones(test_case):
         shape1 = (1, 2, 3, 4)
-        y = flow.tmp.ones(shape1)
+        y = flow.ones(shape1)
         test_case.assertTrue(np.array_equal(np.ones(shape1), y.numpy()))
 
-        y2 = flow.tmp.ones(10)
+        y2 = flow.ones(10)
         test_case.assertTrue(np.array_equal(np.ones(10), y2.numpy()))
 
-        y3 = flow.tmp.ones(10, dtype=flow.float64)
+        y3 = flow.ones(10, dtype=flow.float64)
         test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.float64), y3.numpy()))
 
     def test_zeros(test_case):
         shape = (3, 2, 5, 1)
-        y = flow.tmp.zeros(shape)
+        y = flow.zeros(shape)
         test_case.assertTrue(np.array_equal(np.zeros(shape), y.numpy()))
 
-        y2 = flow.tmp.zeros(10)
+        y2 = flow.zeros(10)
         test_case.assertTrue(np.array_equal(np.zeros(10), y2.numpy()))
 
-        y3 = flow.tmp.zeros(10, dtype=flow.int)
+        y3 = flow.zeros(10, dtype=flow.int)
         test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
 
     def test_ones_like(test_case):
         x = flow.Tensor(np.ones([2, 4], dtype=np.float64))
         test_case.assertTrue(
-            np.array_equal(np.ones_like(x.numpy()), flow.tmp.ones_like(x).numpy())
+            np.array_equal(np.ones_like(x.numpy()), flow.ones_like(x).numpy())
         )
 
         x2 = flow.Tensor(np.ones([2, 4], dtype=int))
         test_case.assertTrue(
-            np.array_equal(np.ones_like(x2.numpy()), flow.tmp.ones_like(x2).numpy())
+            np.array_equal(np.ones_like(x2.numpy()), flow.ones_like(x2).numpy())
         )
 
     def test_zeros_like(test_case):
         x = flow.Tensor(np.ones([2, 4], dtype=np.float64))
         test_case.assertTrue(
-            np.array_equal(np.zeros_like(x.numpy()), flow.tmp.zeros_like(x).numpy())
+            np.array_equal(np.zeros_like(x.numpy()), flow.zeros_like(x).numpy())
         )
 
         x2 = flow.Tensor(np.ones([2, 4], dtype=int))
         test_case.assertTrue(
-            np.array_equal(np.zeros_like(x2.numpy()), flow.tmp.zeros_like(x2).numpy())
+            np.array_equal(np.zeros_like(x2.numpy()), flow.zeros_like(x2).numpy())
         )
 
 
