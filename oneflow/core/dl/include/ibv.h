@@ -39,8 +39,7 @@ extern "C" typedef struct IBV {
   _(ibv_create_qp)        \
   _(ibv_dereg_mr)         \
   _(ibv_create_cq)        \
-  _(ibv_query_device)     \
-  _(ibv_reg_mr_iova2)
+  _(ibv_query_device)
 
 #define DECLARE_ONE(name) decltype(&name) name;
   IBV_APIS(DECLARE_ONE)
@@ -73,19 +72,6 @@ static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_nu
 
 #undef ibv_query_port
 #define ibv_query_port(context, port_num, port_attr) ___ibv_query_port(context, port_num, port_attr)
-
-__attribute__((__always_inline__)) static inline struct ibv_mr* __ibv_reg_mr(
-    struct ibv_pd* pd, void* addr, size_t length, unsigned int access, int is_access_const) {
-  if (is_access_const && (access & IBV_ACCESS_OPTIONAL_RANGE) == 0)
-    return wrapper.ibv_reg_mr_(pd, addr, length, access);
-  else
-    return wrapper.ibv_reg_mr_iova2(pd, addr, length, (uintptr_t)addr, access);
-}
-
-#undef ibv_reg_mr
-#define ibv_reg_mr(pd, addr, length, access) \
-  __ibv_reg_mr(pd, addr, length, access,     \
-               __builtin_constant_p(((access)&IBV_ACCESS_OPTIONAL_RANGE) == 0))
 
 }  // namespace ibv
 }  // namespace oneflow

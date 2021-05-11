@@ -32,9 +32,9 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
   while (byte_size > 0) {
     size_t cur_size =
         std::min<size_t>(byte_size, Global<ResourceDesc, ForSession>::Get()->rdma_mem_block_byte());
-    ibv_mr* cur_mr =
-        ibv::ibv_reg_mr(pd, ch_mem_ptr, cur_size,
-                        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+    ibv_mr* cur_mr = ibv::wrapper.ibv_reg_mr_(
+        pd, ch_mem_ptr, cur_size,
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
     CHECK(cur_mr);
     mr_vec_.push_back(cur_mr);
     ibv_sge cur_sge{};

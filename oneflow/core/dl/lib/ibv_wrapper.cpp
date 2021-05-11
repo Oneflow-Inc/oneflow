@@ -46,14 +46,6 @@ struct ibv_mr* ibv_reg_mr_(struct ibv_pd* pd, void* addr, size_t length, int acc
   return fn(pd, addr, length, access);
 }
 
-struct ibv_mr* ibv_reg_mr_iova2(struct ibv_pd* pd, void* addr, size_t length, uint64_t iova,
-                                unsigned int access) {
-  auto fn = reinterpret_cast<decltype(&ibv_reg_mr_iova2)>(dl::getIBVLibrary().sym(__func__));
-  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
-  wrapper.ibv_reg_mr_iova2 = fn;
-  return fn(pd, addr, length, iova, access);
-}
-
 int ibv_destroy_qp(struct ibv_qp* qp) {
   auto fn = reinterpret_cast<decltype(&ibv_destroy_qp)>(dl::getIBVLibrary().sym(__func__));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
