@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 from test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
@@ -44,9 +44,8 @@ def compare_with_numpy_sgd(
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
             loss = x * grad_tensor
-            # BUG: loss = flow.sum(x * grad_tensor)
-            grad = flow.Tensor(np.ones(list(loss.shape)))
-            loss.backward(grad)
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
             sgd.step()
             sgd.zero_grad()
 
