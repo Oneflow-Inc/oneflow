@@ -229,8 +229,8 @@ class NLLLoss(Module):
         return res
 
     def forward(self, input, target):
-        input = flow.experimental.negative(input)
         assert len(input.shape) == 2 or len(input.shape) == 4
+        input = input.negative()
         if len(input.shape) == 2:
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 4:
