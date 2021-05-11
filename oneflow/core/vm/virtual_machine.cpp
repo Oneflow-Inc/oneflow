@@ -154,15 +154,19 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
   }
 }
 
-Maybe<ParallelDesc> VirtualMachine::GetInstructionParallelDesc(const InstructionMsg& instr_msg) {
-  static const std::shared_ptr<ParallelDesc> empty_ptr;
+Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
+    const InstructionMsg& instr_msg) {
+  static const std::shared_ptr<const ParallelDesc> empty_ptr;
+  if (instr_msg.parallel_desc()) { return instr_msg.parallel_desc(); }
   if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
   auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
   CHECK_NOTNULL_OR_RETURN(logical_object) << "symbol_id: " << symbol_id;
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ_OR_RETURN(map->size(), 1);
-  return JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
+  const std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
+  return parallel_desc;
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,

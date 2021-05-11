@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 import oneflow._oneflow_internal
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional
 
@@ -40,6 +40,7 @@ def _softmax_need_transpose(x, axis):
 
 
 @oneflow_export("nn.ReLU")
+@experimental_api
 class ReLU(Module):
     r"""Applies the rectified linear unit function element-wise:
 
@@ -57,7 +58,7 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         m = flow.nn.ReLU()
@@ -78,6 +79,7 @@ class ReLU(Module):
 
 
 @oneflow_export("nn.Tanh")
+@experimental_api
 class Tanh(Module):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
@@ -97,7 +99,7 @@ class Tanh(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = np.array([-1, 0, 1]).astype(np.float32)
@@ -120,6 +122,7 @@ class Tanh(Module):
 
 @oneflow_export("tanh")
 @register_tensor_op("tanh")
+@experimental_api
 def tanh_op(x):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
@@ -154,6 +157,7 @@ def tanh_op(x):
 
 
 @oneflow_export("nn.GELU")
+@experimental_api
 class GELU(Module):
     r"""Gelu activation operator.
 
@@ -172,7 +176,7 @@ class GELU(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         import oneflow.typing as tp
 
@@ -197,6 +201,7 @@ class GELU(Module):
 
 @oneflow_export("gelu")
 @register_tensor_op("gelu")
+@experimental_api
 def gelu_op(x):
     r"""Gelu activation operator.
 
@@ -215,7 +220,7 @@ def gelu_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         import oneflow.typing as tp
 
@@ -230,6 +235,7 @@ def gelu_op(x):
 
 
 @oneflow_export("nn.Sigmoid")
+@experimental_api
 class Sigmoid(Module):
     r"""Applies the element-wise function:
 
@@ -245,7 +251,7 @@ class Sigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(
@@ -273,6 +279,7 @@ class Sigmoid(Module):
 
 @oneflow_export("sigmoid")
 @register_tensor_op("sigmoid")
+@experimental_api
 def sigmoid_op(x):
     r"""Applies the element-wise function:
 
@@ -288,7 +295,7 @@ def sigmoid_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = flow.Tensor(
@@ -308,7 +315,7 @@ def sigmoid_op(x):
 
 
 @oneflow_export("nn.Softmax")
-@oneflow_export("softmax")
+@experimental_api
 class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
@@ -327,6 +334,8 @@ class Softmax(Module):
 
 
 @oneflow_export("softmax")
+@register_tensor_op("softmax")
+@experimental_api
 def softmax_op(tensor, dim=None):
     r"""Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
@@ -381,6 +390,7 @@ def softmax_op(tensor, dim=None):
 
 
 @oneflow_export("nn.LogSoftmax")
+@experimental_api
 class LogSoftmax(Module):
     r"""Applies the :math:`\log(\text{Softmax}(x))` function to an n-dimensional
     input Tensor.
@@ -401,7 +411,7 @@ class LogSoftmax(Module):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         m = flow.nn.LogSoftmax(dim=1)
@@ -432,8 +442,8 @@ class LogSoftmax(Module):
         if need_transpose:
             x = x.transpose(perm=permute)
 
-        x = flow.softmax(x)
-        res = flow.log(x)
+        x = x.softmax()
+        res = x.log()
 
         if need_transpose:
             res = res.transpose(perm=permute)

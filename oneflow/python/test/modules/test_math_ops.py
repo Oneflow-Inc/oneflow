@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow.experimental as flow
 import unittest
-import oneflow as flow
 import numpy as np
 
 
@@ -88,7 +88,7 @@ class TestStd(flow.unittest.TestCase):
     def test_std(test_case):
         np_arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(np_arr)
-        of_out = flow.tmp.std(input, dim=2)
+        of_out = flow.std(input, dim=2)
         np_out = np.std(np_arr, axis=2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5,))
 
