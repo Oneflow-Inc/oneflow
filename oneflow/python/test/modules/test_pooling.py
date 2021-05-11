@@ -17,7 +17,7 @@ import unittest
 
 import numpy as np
 import math
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 class MaxPool2dNumpy:

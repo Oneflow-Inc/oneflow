@@ -50,8 +50,14 @@ def cast_op(x, dtype):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
+
+        np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        input = flow.Tensor(np_arr, dtype=flow.float32)
+        output = flow.cast(input, flow.int8)
+        
+        # equal to np_arr.astype(np.int8)
 
     """
     return Cast(dtype)(x)
