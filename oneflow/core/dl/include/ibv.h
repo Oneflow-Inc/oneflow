@@ -11,11 +11,9 @@ namespace ibv {
 extern "C" typedef struct IBV {
 #define IBV_APIS(_)       \
   _(ibv_free_device_list) \
-  _(ibv_reg_mr)           \
   _(ibv_destroy_qp)       \
   _(ibv_query_gid)        \
   _(ibv_fork_init)        \
-  _(ibv_query_port)       \
   _(ibv_open_device)      \
   _(ibv_destroy_cq)       \
   _(ibv_alloc_pd)         \
@@ -31,6 +29,10 @@ extern "C" typedef struct IBV {
 #define DECLARE_ONE(name) decltype(&name) name;
   IBV_APIS(DECLARE_ONE)
 #undef DECLARE_ONE
+  // ibv_reg_mr and ibv_query_port is not only a function but also a macro so we have to have an
+  // alternative name
+  decltype(&ibv_reg_mr) ibv_reg_mr_;
+  decltype(&ibv_query_port) ibv_query_port_;
 } NVRTC;
 
 extern IBV wrapper;

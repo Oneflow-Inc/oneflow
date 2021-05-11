@@ -24,10 +24,10 @@ void ibv_free_device_list(struct ibv_device** list) {
   return fn(list);
 }
 
-struct ibv_mr* ibv_reg_mr(struct ibv_pd* pd, void* addr, size_t length, int access) {
-  auto fn = reinterpret_cast<decltype(&ibv_reg_mr)>(dl::getIBVLibrary().sym(__func__));
+struct ibv_mr* ibv_reg_mr_(struct ibv_pd* pd, void* addr, size_t length, int access) {
+  auto fn = reinterpret_cast<decltype(&ibv_reg_mr)>(dl::getIBVLibrary().sym("ibv_reg_mr"));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
-  wrapper.ibv_reg_mr = fn;
+  wrapper.ibv_reg_mr_ = fn;
   return fn(pd, addr, length, access);
 }
 
@@ -52,11 +52,11 @@ int ibv_fork_init(void) {
   return fn();
 }
 
-int ibv_query_port(struct ibv_context* context, uint8_t port_num,
-                   struct _compat_ibv_port_attr* port_attr) {
-  auto fn = reinterpret_cast<decltype(&ibv_query_port)>(dl::getIBVLibrary().sym(__func__));
+int ibv_query_port_(struct ibv_context* context, uint8_t port_num,
+                    struct _compat_ibv_port_attr* port_attr) {
+  auto fn = reinterpret_cast<decltype(&ibv_query_port)>(dl::getIBVLibrary().sym("ibv_query_port"));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
-  wrapper.ibv_query_port = fn;
+  wrapper.ibv_query_port_ = fn;
   return fn(context, port_num, port_attr);
 }
 
