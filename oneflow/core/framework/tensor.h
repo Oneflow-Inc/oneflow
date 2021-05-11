@@ -338,13 +338,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
 }  // namespace one
 
-namespace one {
-
-class UserOpExpr;
-}
-
-Maybe<one::UserOpExpr> CopyOp();
-
 namespace user_op {
 
 class Tensor {
