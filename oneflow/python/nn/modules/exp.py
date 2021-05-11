@@ -15,11 +15,23 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Exp(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("exp").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("exp")
+@register_tensor_op("exp")
+@experimental_api
+def exp_op(x):
     """This operator computes the exponential of Tensor.
 
     The equation is: 
@@ -47,16 +59,4 @@ class Exp(Module):
         # y [ 2.7182817  7.389056  20.085537 ]
 
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._op = flow.builtin_op("exp").Input("x").Output("y").Build()
-
-    def forward(self, x):
-        return self._op(x)[0]
-
-
-@oneflow_export("exp")
-@register_tensor_op("exp")
-def exp_op(tensor):
-    return Exp()(tensor)
+    return Exp()(x)

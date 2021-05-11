@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
@@ -23,8 +23,13 @@ import math
 
 
 @oneflow_export("nn.Identity")
+@experimental_api
 class Identity(Module):
     """A placeholder identity operator that is argument-insensitive.
+
+    Args:
+        args: any argument (unused)
+        kwargs: any keyword argument (unused)
 
     For example: 
 
@@ -42,7 +47,7 @@ class Identity(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super().__init__()
 
     def forward(self, input: Tensor) -> Tensor:
@@ -50,6 +55,7 @@ class Identity(Module):
 
 
 @oneflow_export("nn.Linear")
+@experimental_api
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
@@ -113,16 +119,8 @@ class Linear(Module):
 
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_features))
-            self._bias_add_op = (
-                flow.builtin_op("bias_add")
-                .Input("a")
-                .Input("b")
-                .Output("out")
-                .Attr("axis", 1)
-                .Build()
-            )
 
-        self._op = (
+        self._matmul_op = (
             flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
@@ -132,6 +130,18 @@ class Linear(Module):
             .Attr("alpha", 1.0)
             .Build()
         )
+
+        self._broadcast_matmul_op = (
+            flow.builtin_op("broadcast_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", True)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -143,8 +153,14 @@ class Linear(Module):
             flow.nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = self._op(x, self.weight)[0]
+        assert len(x.shape) >= 2, "Tensor x's dim should >=2"
+
+        if len(x.shape) == 2:
+            res = self._matmul_op(x, self.weight)[0]
+        else:
+            res = self._broadcast_matmul_op(x, self.weight)[0]
+
         if self.use_bias:
-            res = self._bias_add_op(res, self.bias)[0]
+            res += self.bias
 
         return res

@@ -50,7 +50,10 @@ def build_img(
     cudnn_version = 7
     if str(cuda_version).startswith("11"):
         cudnn_version = 8
-    from_img = f"nvidia/cuda:{cuda_version}-cudnn{cudnn_version}-devel-centos7"
+    cuda_version_img = cuda_version
+    if cuda_version == "11.2":
+        cuda_version_img = "11.2.2"
+    from_img = f"nvidia/cuda:{cuda_version_img}-cudnn{cudnn_version}-devel-centos7"
     tuna_build_arg = ""
     if use_tuna:
         tuna_build_arg = '--build-arg use_tuna_yum=1 --build-arg pip_args="-i https://mirrors.aliyun.com/pypi/simple"'
@@ -210,6 +213,7 @@ def build_oneflow(
     bash_wrap,
     dry,
     use_system_proxy,
+    enter_bash,
 ):
     oneflow_build_dir = os.path.join(cache_dir, "build-oneflow")
     python_bin = get_python_bin(python_version)
@@ -236,13 +240,23 @@ def build_oneflow(
     docker_cmd = (
         f"docker run --network=host --rm {common_docker_args} {extra_docker_args}"
     )
+    if enter_bash:
+        docker_cmd += " -it"
     bash_cmd = f"""set -ex
 export LD_LIBRARY_PATH=/opt/intel/lib/intel64_lin:/opt/intel/mkl/lib/intel64:$LD_LIBRARY_PATH
 export LD_LIBRARY_PATH=/opt/intel/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/intel/oneapi/mkl/latest/lib/intel64:$LD_LIBRARY_PATH
+export ONEFLOW_SRC_DIR={oneflow_src_dir}
+export ONEFLOW_CMAKE_CMD="{cmake_cmd}"
+"""
+    if enter_bash:
+        bash_cmd += "\nbash"
+    else:
+        bash_cmd += f"""
 {cmake_cmd}
 cmake --build . -j `nproc`
 """
-    if skip_wheel:
+    if skip_wheel or enter_bash:
         pass
     else:
         bash_cmd += f"""
@@ -325,6 +339,7 @@ if __name__ == "__main__":
         "--use_aliyun_mirror", default=False, action="store_true", required=False
     )
     parser.add_argument("--cpu", default=False, action="store_true", required=False)
+    parser.add_argument("--bash", default=False, action="store_true", required=False)
     parser.add_argument("--retry", default=0, type=int)
     args = parser.parse_args()
     print("args.extra_oneflow_cmake_args", args.extra_oneflow_cmake_args)
@@ -435,7 +450,8 @@ gcc --version
                     args.dry,
                     args.use_system_proxy,
                 )
-            cuda_version_literal = "".join(cuda_version.split("."))
+            print(cuda_version.split("."))
+            cuda_version_literal = "".join(cuda_version.split(".")[:2])
             assert len(cuda_version_literal) == 3
             python_versions = args.python_version.split(",")
             python_versions = [pv.strip() for pv in python_versions]
@@ -455,6 +471,7 @@ gcc --version
                     bash_wrap,
                     args.dry,
                     args.use_system_proxy,
+                    args.bash,
                 )
 
         try:

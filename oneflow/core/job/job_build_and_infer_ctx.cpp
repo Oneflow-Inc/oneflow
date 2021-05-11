@@ -1001,6 +1001,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("FuseCastScalePass"));
     JUST(DoPass("PruneParallelCastOpsPass"));
     JUST(DoPass("FuseUpdateOpsPass"));
+    JUST(DoPass("PipelineBufferPass"));
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTrip"));
 #endif  // WITH_MLIR

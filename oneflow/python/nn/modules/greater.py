@@ -15,11 +15,31 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Greater(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = (
+            flow.builtin_op("broadcast_greater")
+            .Input("x")
+            .Input("y")
+            .Output("z")
+            .Build()
+        )
+
+    def forward(self, x, y):
+        if isinstance(y, int) or isinstance(y, float):
+            y = flow.Tensor([float(y)], dtype=flow.float32)
+        return self._op(x, y)[0]
+
+
+@oneflow_export("gt")
+@register_tensor_op("gt")
+@experimental_api
+def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
     Args:
@@ -34,7 +54,7 @@ class Greater(Module):
 
     .. code-block:: python
         
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
@@ -44,22 +64,4 @@ class Greater(Module):
         # out shape (2, 6, 5, 3)
     
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_greater")
-            .Input("x")
-            .Input("y")
-            .Output("z")
-            .Build()
-        )
-
-    def forward(self, x, y):
-        return self._op(x, y)[0]
-
-
-@oneflow_export("gt")
-@register_tensor_op("gt")
-def greater_op(tensor1, tensor2):
-    return Greater()(tensor1, tensor2)
+    return Greater()(x, y)
