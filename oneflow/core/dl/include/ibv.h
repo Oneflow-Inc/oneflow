@@ -53,6 +53,7 @@ extern "C" typedef struct IBV {
 
 extern IBV wrapper;
 
+// copy from infiniband/verbs.h
 static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_num,
                                     struct ibv_port_attr* port_attr) {
   struct verbs_context* vctx = verbs_get_ctx_op(context, query_port);
