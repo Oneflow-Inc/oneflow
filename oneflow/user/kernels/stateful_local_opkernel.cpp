@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -179,10 +180,13 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override {
-    static ParallelContext single_card;
-    single_card.set_parallel_id(0);
-    single_card.set_parallel_num(1);
-    return single_card;
+    // This is a temporary workaround and only supports single card
+    // TODO(jianhao): support multi-card
+    CHECK_EQ(GlobalProcessCtx::WorldSize(), 1);
+    static ParallelContext single_card_parallel_ctx;
+    single_card_parallel_ctx.set_parallel_id(0);
+    single_card_parallel_ctx.set_parallel_num(1);
+    return single_card_parallel_ctx;
   }
   const user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                         int32_t index) const override {
