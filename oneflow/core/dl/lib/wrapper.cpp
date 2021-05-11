@@ -1,4 +1,4 @@
-#include "oneflow/dl/include/wrapper.h"
+#include "oneflow/core/dl/include/wrapper.h"
 #include <dlfcn.h>
 
 namespace oneflow {

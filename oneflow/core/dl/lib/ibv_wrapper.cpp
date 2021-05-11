@@ -1,5 +1,4 @@
-#include "oneflow/dl/include/wrapper.h"
-#include "oneflow/dl/include/ibv.h"
+#include "oneflow/core/dl/include/ibv.h"
 #include <infiniband/verbs.h>
 
 namespace oneflow {

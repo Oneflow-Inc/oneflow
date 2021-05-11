@@ -1,6 +1,6 @@
-#ifndef ONEFLOW_DL_INCLUDE_IBV_H_
-#define ONEFLOW_DL_INCLUDE_IBV_H_
-#include "oneflow/dl/include/wrapper.h"
+#ifndef ONEFLOW_CORE_DL_INCLUDE_IBV_H_
+#define ONEFLOW_CORE_DL_INCLUDE_IBV_H_
+#include "oneflow/core/dl/include/wrapper.h"
 
 namespace oneflow {
 namespace ibv {
@@ -18,4 +18,4 @@ extern IBV wrapper;
 }  // namespace ibv
 }  // namespace oneflow
 
-#endif  // ONEFLOW_DL_INCLUDE_IBV_H_
+#endif  // ONEFLOW_CORE_DL_INCLUDE_IBV_H_
