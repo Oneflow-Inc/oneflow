@@ -60,6 +60,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
+  bool need_event_record = false;
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
@@ -72,6 +73,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   } else {
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
+    for (const auto& input_tensor : inputs) {
+      need_event_record = need_event_record || !(*op_device == *input_tensor->device());
+    }
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& tensor_device = out_devices->at(i);
@@ -98,6 +102,14 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    if (need_event_record) {
+      for (const auto& input_tensor : inputs) {
+        const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
+        CHECK_OR_RETURN(static_cast<bool>(tensor));
+        JUST(builder->AccessBlobByCallback(
+            tensor, [](uint64_t) {}, "mut"));
+      }
+    }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       attrs, op_parallel_desc, instr_type_name);
   }));
