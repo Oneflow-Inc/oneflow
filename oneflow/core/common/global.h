@@ -67,6 +67,7 @@ class Global final {
   }
 
  private:
+  // C++11后线程安全
   static T** GetPPtr() {
     CheckKind();
     static T* ptr = nullptr;
@@ -77,6 +78,7 @@ class Global final {
     static std::mutex mutex;
     static std::map<int32_t, std::unique_ptr<T>> session_id2ptr;
     std::unique_lock<std::mutex> lock(mutex);
+    // std::map使用[]访问，若key不存在则以value的默认值创建
     return &session_id2ptr[session_id];
   }
   static void CheckKind() {

@@ -28,6 +28,7 @@ namespace oneflow {
 template<typename T, typename Enabled = void>
 class Maybe;
 
+// 偏特化：当T为数组类型、函数类型、类类型
 template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
                                        && !std::is_reference<T>::value>::type>
@@ -95,9 +96,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
   }
 
  private:
+  // 用于管理实际数据或错误信息
   EitherPtr<T, cfg::ErrorProto> data_or_error_;
 };
 
+// 偏特化：当T为void
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
@@ -148,6 +151,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   SharedOrScalar<cfg::ErrorProto, void*> error_or_scalar_;
 };
 
+// 偏特化：当T为标量类型(可有 cv 限定的算术、指针、成员指针、枚举或 std::nullptr_t 类型)
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
  public:
@@ -204,6 +208,7 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
   SharedOrScalar<cfg::ErrorProto, T> error_or_scalar_;
 };
 
+// 偏特化：当T为引用类型
 template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
                                        && std::is_reference<T>::value>::type>
@@ -270,6 +275,18 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
     }                                                                          \
     maybe;                                                                     \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+  // 示例：oneflow/user/kernels/acc_kernel.cpp.i，宏展开前后：
+  // return *CHECK_JUST(DeviceTag4DeviceType(device_type));
+  // return *({
+  //   const auto& maybe = DeviceTag4DeviceType(device_type);
+  //   if (!maybe.IsOk()) {
+  //     auto* stack_frame = maybe.error()->add_stack_frame();
+  //     stack_frame->set_location("/home/shiyongtao/00.OneFlow/oneflow-zj/oneflow/core/framework/to_string.h" ":" "36");
+  //     stack_frame->set_function(__FUNCTION__);
+  //     google::LogMessageFatal( "/home/shiyongtao/00.OneFlow/oneflow-zj/oneflow/core/framework/to_string.h", 36).stream() << maybe.GetSerializedError();
+  //   }
+  //   maybe;
+  // }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
 #define CHECK_JUST(...)                                                        \
   ({                                                                           \
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
