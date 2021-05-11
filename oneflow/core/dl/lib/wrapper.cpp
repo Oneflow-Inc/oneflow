@@ -17,16 +17,14 @@ limitations under the License.
 #include <dlfcn.h>
 
 namespace oneflow {
-
 namespace dl {
 
 static void* checkDL(void* x) {
   if (!x) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
-
   return x;
 }
+
 DynamicLibrary::DynamicLibrary(const char* name, const char* alt_name) {
-  // NOLINTNEXTLINE(hicpp-signed-bitwise)
   handle_ = dlopen(name, RTLD_LOCAL | RTLD_NOW);
   if (!handle_) {
     if (alt_name) {
