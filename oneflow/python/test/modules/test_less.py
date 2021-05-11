@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -36,6 +36,29 @@ class TestLess(flow.unittest.TestCase):
         input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input1.lt(input2)
         np_out = np.less(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    def test_less_symbol(test_case):
+        input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
+        input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        of_out = input1 < input2
+        np_out = np.less(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    def test_less_int_scalar(test_case):
+        np_arr = np.random.randn(2, 3, 4, 5)
+        input1 = flow.Tensor(np_arr, dtype=flow.float32)
+        input2 = 1
+        of_out = input1 < input2
+        np_out = np.less(np_arr, input2)
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    def test_less_float_scalar(test_case):
+        np_arr = np.random.randn(3, 2, 5, 7)
+        input1 = flow.Tensor(np_arr, dtype=flow.float32)
+        input2 = 2.3
+        of_out = input1 < input2
+        np_out = np.less(np_arr, input2)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 

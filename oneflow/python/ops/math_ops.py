@@ -26,7 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.ops.math_unary_elementwise_ops as math_unary_elementwise_ops
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 from oneflow.python.ops.transpose_util import get_perm_when_transpose_axis_to_last_dim
 from oneflow.python.ops.transpose_util import get_inversed_perm
 import oneflow._oneflow_internal
@@ -198,8 +198,6 @@ def subtract(
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_sub(x, y, name)
-    elif x.shape == (1,):
-        return scalar_sub_by_tensor(y, x, name)
     elif y.shape == (1,):
         return scalar_sub_by_tensor(x, y, name)
     else:
@@ -315,8 +313,6 @@ def divide(
     elif x.shape == y.shape:
         # TODO: add element-wise op
         return broadcast_div(x, y, name)
-    elif x.shape == (1,):
-        return scalar_div_by_tensor(y, x, name)
     elif y.shape == (1,):
         return scalar_div_by_tensor(x, y, name)
     else:
@@ -907,7 +903,9 @@ def unsorted_batch_segment_sum(
 
 @oneflow_export("cast")
 def cast(
-    x: oneflow._oneflow_internal.BlobDesc, dtype: flow.dtype, name: Optional[str] = None
+    x: oneflow._oneflow_internal.BlobDesc,
+    dtype: flow.dtype,
+    name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     r"""The op takes input x and casts it to the output with `dtype`
 
@@ -2101,6 +2099,7 @@ def in_top_k(
 
 
 @oneflow_export("range")
+@stable_api
 def range(
     start, limit=None, delta=1, dtype=None, name="range"
 ) -> oneflow._oneflow_internal.BlobDesc:

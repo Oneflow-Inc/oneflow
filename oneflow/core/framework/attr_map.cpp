@@ -17,22 +17,36 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
-AttrMap::AttrMap(std::initializer_list<AttrMap::value_type> init) : attrs_(new AttrName2AttrVal) {
-  for (const auto& pair : init) { attrs_->emplace(pair.first, pair.second); }
+const std::shared_ptr<const AttrName2AttrVal>& EmptyAttrName2AttrVal() {
+  static const auto empty = std::make_shared<const AttrName2AttrVal>();
+  return empty;
 }
 
-AttrMap::AttrMap(const MutableAttrMap& other) : attrs_(new AttrName2AttrVal) {
-  for (const auto& pair : other) { attrs_->emplace(pair.first, pair.second); }
+AttrMap::AttrMap(std::initializer_list<AttrMap::value_type> init) {
+  const auto& attrs = std::make_shared<AttrName2AttrVal>();
+  for (const auto& pair : init) { attrs->emplace(pair.first, pair.second); }
+  attrs_ = attrs;
 }
 
-AttrMap::AttrMap(const MutableCfgAttrMap& other) : attrs_(new AttrName2AttrVal) {
+AttrMap::AttrMap(const MutableAttrMap& other) {
+  const auto& attrs = std::make_shared<AttrName2AttrVal>();
+  for (const auto& pair : other) { attrs->emplace(pair.first, pair.second); }
+  attrs_ = attrs;
+}
+
+AttrMap::AttrMap(const MutableCfgAttrMap& other) {
+  const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& pair : other) {
     const auto& attr_value = CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(*pair.second));
-    attrs_->emplace(pair.first, attr_value);
+    attrs->emplace(pair.first, attr_value);
   }
+  attrs_ = attrs;
 }
 
 template<typename T>
@@ -44,25 +58,39 @@ Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   return ptr->val();
 }
 
+const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
+    const std::string& attr_name) const {
+  const auto& iter = find(attr_name);
+  if (iter != end()) { return iter->second; }
+  static const std::shared_ptr<const user_op::AttrVal> none;
+  return none;
+}
+
+AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
+  const auto& attrs =
+      std::make_shared<HashMap<std::string, std::shared_ptr<const user_op::AttrVal>>>();
+  for (const auto& kv : user_op_conf.attr()) {
+    attrs->emplace(kv.first, CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second)));
+  }
+  return AttrMap(attrs);
+}
+
 template<typename T>
 Maybe<const T&> ComposedAttrMap::GetAttr(const std::string& attr_name) const {
-  {
-    const auto& it = prior_.find(attr_name);
-    if (it != prior_.end()) {
-      const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());
-      CHECK_NOTNULL_OR_RETURN(ptr);
-      return ptr->val();
-    }
-  }
-  {
-    const auto& it = base_.find(attr_name);
-    if (it != base_.end()) {
-      const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());
-      CHECK_NOTNULL_OR_RETURN(ptr);
-      return ptr->val();
-    }
-  }
-  return Error::ValueError(std::string("no attribute found. attribute name: ") + attr_name);
+  const auto& attr = Attr4Name(attr_name);
+  CHECK_NOTNULL_OR_RETURN(attr.get())
+      << Error::ValueError(std::string("no attribute found. attribute name: ") + attr_name);
+  return dynamic_cast<const user_op::TypedAttrVal<T>*>(attr.get())->val();
+}
+
+const std::shared_ptr<const user_op::AttrVal>& ComposedAttrMap::Attr4Name(
+    const std::string& attr_name) const {
+  const auto& prior_iter = prior_.find(attr_name);
+  if (prior_iter != prior_.end()) { return prior_iter->second; }
+  const auto& base_iter = base_.find(attr_name);
+  if (base_iter != base_.end()) { return base_iter->second; }
+  static const std::shared_ptr<const user_op::AttrVal> none;
+  return none;
 }
 
 #define DEFINE_ATTR_VALUE_MAP_GET_ATTR(field, T, attr_type)                         \

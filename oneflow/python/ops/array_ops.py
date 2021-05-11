@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from functools import reduce
 from typing import Iterable, List, Optional, Sequence, Union, Tuple
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 
 import numpy as np
 import operator
@@ -30,6 +30,7 @@ import oneflow._oneflow_internal
 
 
 @oneflow_export("gather")
+@stable_api
 def gather(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -157,6 +158,7 @@ def gather(
 
 
 @oneflow_export("flatten")
+@stable_api
 def flatten(
     input: oneflow._oneflow_internal.BlobDesc,
     start_dim: int = 0,
@@ -222,6 +224,7 @@ def infer_shape(x, shape):
 
 
 @oneflow_export("reshape")
+@stable_api
 def reshape(
     x: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -423,6 +426,7 @@ def dynamic_reshape(
 
 
 @oneflow_export("transpose")
+@stable_api
 def transpose(
     a: oneflow._oneflow_internal.BlobDesc,
     perm: Sequence[int] = None,
@@ -693,13 +697,37 @@ def api_slice_update(
     slice_tup_list: Sequence[Tuple[int, int, int]],
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r"""Update a slice of tensor `x`.
+    r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
     Args:
         x: A `Blob`, whose slice will be updated.
         update: A `Blob`, indicate the update content.
         slice_tup_list: A list of slice tuple, indicate each dimension slice (start, stop, step).
         name: A name for the operation (optional).
+
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow as flow 
+        import oneflow.typing as tp 
+        import numpy as np 
+
+
+        @flow.global_function()
+        def slice_update_job(x: tp.Numpy.Placeholder(shape=(5, )), 
+                            update: tp.Numpy.Placeholder(shape=(3, )))->tp.Numpy: 
+            out = flow.slice_update(x=x, 
+                                    update=update, 
+                                    slice_tup_list=[[1, 4, 1]])
+
+            return out 
+
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        update = np.array([2, 3, 4]).astype(np.float32)
+        out = slice_update_job(x, update)
+
+        # out [1. 2. 3. 4. 1.]
 
     """
     if name is None:
@@ -1423,6 +1451,7 @@ def argwhere(
 
 
 @oneflow_export("nonzero")
+@stable_api
 def nonzero(
     a: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1997,6 +2026,7 @@ def cast_to_static_shape(
 
 
 @oneflow_export("squeeze")
+@stable_api
 def squeeze(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -2080,6 +2110,7 @@ def squeeze(
 
 
 @oneflow_export("expand")
+@stable_api
 def expand(
     x: oneflow._oneflow_internal.BlobDesc,
     expand_size: Sequence[int],
@@ -2331,6 +2362,7 @@ def broadcast_like(
 
 
 @oneflow_export("masked_fill")
+@stable_api
 def masked_fill(
     x: oneflow._oneflow_internal.BlobDesc,
     mask: oneflow._oneflow_internal.BlobDesc,
@@ -2485,6 +2517,7 @@ def amp_white_identity(
 
 
 @oneflow_export("zeros")
+@stable_api
 def zeros(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
@@ -2529,6 +2562,7 @@ def zeros(
 
 
 @oneflow_export("ones")
+@stable_api
 def ones(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,

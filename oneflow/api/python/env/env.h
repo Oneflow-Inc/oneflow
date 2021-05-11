@@ -91,6 +91,9 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
 
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
+inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
+inline Maybe<size_t> GetWordSize() { return GlobalProcessCtx::WorldSize(); }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

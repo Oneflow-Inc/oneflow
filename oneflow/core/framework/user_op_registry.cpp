@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
@@ -198,6 +199,11 @@ OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
   return *this;
 }
 
+OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
+  result_.device_infer_fn = std::move(device_infer_fn);
+  return *this;
+}
+
 OpRegistry& OpRegistry::Finish() {
   CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
@@ -233,6 +239,28 @@ OpRegistry& OpRegistry::Finish() {
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
   if (result_.get_sbp_fn == nullptr) {
     result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
+  }
+  if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
+    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<const Device> {
+      for (const auto& pair : ctx->inputs()) {
+        const std::shared_ptr<const Device>& input_device =
+            ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
+        CHECK_EQ_OR_RETURN(JUST(input_device->of_type()), "cpu");
+      }
+      std::shared_ptr<const Device> default_device;
+      {
+        if (ctx->inputs().size() != 0) {
+          const auto& first_input_name = ctx->inputs().begin()->first;
+          default_device = ctx->InputTensorDevice4ArgNameAndIndex(first_input_name, 0);
+        } else {
+          default_device = JUST(Device::New("cpu"));
+        }
+      }
+      for (const auto& pair : ctx->outputs()) {
+        *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
+      }
+      return default_device;
+    };
   }
   return *this;
 }
