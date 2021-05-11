@@ -73,6 +73,7 @@ class StreamType {
   virtual void Compute(VirtualMachine* vm, InstructionMsg* instr_msg) const {
     LOG(FATAL) << "UNIMPLEMENTED";
   }
+  virtual bool PreschedulableFrom(const StreamType* stream) const { return this == stream; }
 
  protected:
   StreamType() = default;

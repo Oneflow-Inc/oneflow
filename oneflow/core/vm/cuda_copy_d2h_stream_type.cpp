@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_device_context.h"
+#include "oneflow/core/vm/cuda_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -25,6 +26,7 @@ namespace vm {
 // object, The related istructions will be handled with CudaCopyD2HDeviceCtx
 void CudaCopyD2HStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                           Stream* stream) const {
+  CHECK(SharingVirtualMachineThread());
   device_ctx->reset(new CudaCopyD2HDeviceCtx(stream->mut_callback_list()));
 }
 
@@ -48,8 +50,17 @@ bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
 
 // Launches a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
-  auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
+  auto* input_operand_stream = instruction->mut_input_operand_stream();
+  auto* stream = instruction->mut_stream();
+  if (input_operand_stream != nullptr) {
+    CHECK_EQ(stream->device_id(), input_operand_stream->device_id());
+    cudaEvent_t event;
+    OF_CUDA_CHECK(cudaEventCreateWithFlags(&event, cudaEventBlockingSync | cudaEventDisableTiming));
+    OF_CUDA_CHECK(cudaEventRecord(event, input_operand_stream->device_ctx()->cuda_stream()));
+    OF_CUDA_CHECK(cudaStreamWaitEvent(stream->device_ctx()->cuda_stream(),
+                                      event, cudaEventWaitDefault));
+  }
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
     CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
@@ -72,6 +83,12 @@ ObjectMsgPtr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(const Resource& r
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(1);
   return ret;
+}
+
+bool CudaCopyD2HStreamType::PreschedulableFrom(const StreamType* stream) const {
+  if (dynamic_cast<const CudaStreamType*>(stream) != nullptr) { return true; }
+  if (this == stream) { return true; }
+  return false;
 }
 
 }  // namespace vm
