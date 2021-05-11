@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 import numpy as np
 
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -32,7 +32,7 @@ class TestFlattenModule(flow.unittest.TestCase):
         test_case.assertTrue(y.shape == flow.Size((32, 50)))
         test_case.assertTrue(np.array_equal(y.numpy().flatten(), x.numpy().flatten()))
 
-        y2 = flow.tmp.flatten(x, start_dim=2)
+        y2 = flow.flatten(x, start_dim=2)
         test_case.assertTrue(y2.shape == flow.Size((32, 2, 25)))
         test_case.assertTrue(np.array_equal(y2.numpy().flatten(), x.numpy().flatten()))
 
@@ -44,7 +44,7 @@ class TestFlattenModule(flow.unittest.TestCase):
         test_case.assertTrue(y4.shape == flow.Size((32, 10, 5)))
         test_case.assertTrue(np.array_equal(y4.numpy().flatten(), x.numpy().flatten()))
 
-        y5 = flow.tmp.flatten(x)
+        y5 = flow.flatten(x)
         test_case.assertTrue(y5.shape == flow.Size((1600,)))
         test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
 
