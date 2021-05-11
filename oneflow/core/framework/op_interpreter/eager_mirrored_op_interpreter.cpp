@@ -35,10 +35,7 @@ namespace oneflow {
 namespace one {
 
 namespace {
-Maybe<const Device> GetDefaultDevice() {
-  // TODO: align with pytorch (default cpu) when tensor.to() is ready
-  return Device::New("cuda", 0);
-}
+Maybe<const Device> GetDefaultDevice() { return Device::New("cpu", 0); }
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
