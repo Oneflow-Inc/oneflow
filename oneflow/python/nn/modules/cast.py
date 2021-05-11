@@ -15,48 +15,49 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Exp(Module):
-    def __init__(self) -> None:
+class Cast(Module):
+    def __init__(self, dtype: flow.dtype) -> None:
         super().__init__()
-        self._op = flow.builtin_op("exp").Input("x").Output("y").Build()
+        self._op = (
+            flow.builtin_op("cast")
+            .Input("in")
+            .Output("out")
+            .Attr("dtype", dtype)
+            .Build()
+        )
 
     def forward(self, x):
         return self._op(x)[0]
 
 
-@oneflow_export("exp")
-@register_tensor_op("exp")
-@experimental_api
-def exp_op(x):
-    """This operator computes the exponential of Tensor.
-
-    The equation is: 
-
-    .. math:: 
-
-        out = e^x
+@oneflow_export("tmp.cast")
+@register_tensor_op("cast")
+def cast_op(x, dtype):
+    r"""The operation takes input tensor `x` and casts it to the output with `dtype`
 
     Args:
         x (oneflow.Tensor): A Tensor
+        dtype (flow.dtype): Data type of the output tensor
 
     Returns:
-        oneflow.Tensor: The result Tensor
+        oneflow.Tensor: A Tensor with specific dtype.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
+        import oneflow.experimental as flow
         import numpy as np
-        import oneflow as flow
 
-        x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        y = x.exp().numpy()
-
-        # y [ 2.7182817  7.389056  20.085537 ]
+        np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        input = flow.Tensor(np_arr, dtype=flow.float32)
+        output = flow.cast(input, flow.int8)
+        
+        # equal to np_arr.astype(np.int8)
 
     """
-    return Exp()(x)
+    return Cast(dtype)(x)

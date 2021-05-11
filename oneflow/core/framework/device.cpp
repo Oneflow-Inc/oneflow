@@ -82,14 +82,6 @@ std::string Device::ToString() const {
   return ss.str();
 }
 
-Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device) {
-  int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
-  int64_t device_id = device.device_id();
-  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  return std::const_pointer_cast<const ParallelDesc>(
-      JUST(ParallelDesc::New(JUST(device.of_type()), {machine_device_id}, nullptr)));
-}
-
 Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = parallel_desc.device_tag();
   if (parallel_desc.device_tag() == "gpu") { type = "cuda"; }
