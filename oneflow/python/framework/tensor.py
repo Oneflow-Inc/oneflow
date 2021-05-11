@@ -558,7 +558,7 @@ class UndeterminedTensor:
             else flow.empty_initializer(dtype=dtype)
         )
         device = (
-            device if device is not None else oneflow._oneflow_internal.device("cuda")
+            device if device is not None else oneflow._oneflow_internal.device("cpu")
         )
         self.shape = shape
         self.dtype = dtype
