@@ -27,7 +27,7 @@ Maybe<const Device> MakeOpDevice(const std::shared_ptr<const Device>& in_device,
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
     return Device::New("cuda_h2d");
   } else {
-    return Device::New(in_device->type());
+    return Device::New(out_device->type(), out_device->device_id());
   }
 }
 

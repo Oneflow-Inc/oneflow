@@ -24,10 +24,10 @@ import oneflow as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestTo(flow.unittest.TestCase):
-    def test_tensor_to(test_case):
+    def test_tensor_to_h2d(test_case):
         input = flow.Tensor(np.random.randn(2, 3, 4, 5))
-        output = input.to(device=flow.device("cpu"))
-        test_case.assertTrue(output.device, flow.device("cpu"))
+        output = input.to(device=flow.device("cuda"))
+        test_case.assertTrue(output.device, flow.device("cuda"))
         test_case.assertTrue(
             np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
         )
@@ -35,6 +35,30 @@ class TestTo(flow.unittest.TestCase):
         test_case.assertTrue(gpu_output.device, flow.device("cuda"))
         test_case.assertTrue(
             np.allclose(input.numpy(), gpu_output.numpy(), rtol=1e-04, atol=1e-04)
+        )
+
+    def test_tensor_to_d2h(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5), device=flow.device("cuda"))
+        output = input.to(device=flow.device("cpu"))
+        test_case.assertTrue(output.device, flow.device("cpu"))
+        test_case.assertTrue(
+            np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
+        )
+
+    def test_tensor_to_d2d(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5), device=flow.device("cuda"))
+        output = input.to(device=flow.device("cuda:1"))
+        test_case.assertTrue(output.device, flow.device("cuda:1"))
+        test_case.assertTrue(
+            np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
+        )
+
+    def test_tensor_to_h2h(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        output = input.to(device=flow.device("cpu"))
+        test_case.assertTrue(output.device, flow.device("cpu"))
+        test_case.assertTrue(
+            np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
         )
 
 

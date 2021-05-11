@@ -95,7 +95,7 @@ class Tensor:
             device = (
                 device
                 if device is not None
-                else oneflow._oneflow_internal.device("cuda")
+                else oneflow._oneflow_internal.device("cpu")
             )
         if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
