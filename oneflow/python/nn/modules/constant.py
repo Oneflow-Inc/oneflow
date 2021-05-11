@@ -142,7 +142,7 @@ def zeros_op(size, dtype=None):
 def zeros_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 0, with the same size as input.
-    flow.tmp.zeros_like(input) is equivalent to flow.tmp.zeros(input.shape, dtype=input.dtype)
+    flow.zeros_like(input) is equivalent to flow.zeros(input.shape, dtype=input.dtype)
 
     Args:
         other(Tensor): The size of input will determine size of the output tensor.
@@ -155,7 +155,7 @@ def zeros_like_op(other):
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))
-        y = flow.tmp.zeros_like(x)
+        y = flow.zeros_like(x)
         # [0. 0. 0. 0. 0. ]
 
     """
@@ -167,7 +167,7 @@ def zeros_like_op(other):
 def ones_like_op(other):
     r"""
     Returns a tensor filled with the scalar value 1, with the same size as input.
-    flow.tmp.ones_like(input) is equivalent to flow.tmp.ones(input.shape, dtype=input.dtype)
+    flow.ones_like(input) is equivalent to flow.ones(input.shape, dtype=input.dtype)
 
     Args:
         other(Tensor): The size of input will determine size of the output tensor.
@@ -180,7 +180,7 @@ def ones_like_op(other):
         import numpy as np
 
         x = flow.Tensor(np.random.rand([5]))
-        y = flow.tmp.ones_like(x)
+        y = flow.ones_like(x)
         # [1. 1. 1. 1. 1. ]
 
     """
