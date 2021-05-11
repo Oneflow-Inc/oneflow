@@ -40,7 +40,8 @@ void ibv_free_device_list(struct ibv_device** list) {
 }
 
 struct ibv_mr* ibv_reg_mr_(struct ibv_pd* pd, void* addr, size_t length, int access) {
-  auto fn = reinterpret_cast<decltype(&ibv_reg_mr)>(dl::getIBVLibrary().sym("ibv_reg_mr"));
+  auto fn = reinterpret_cast<struct ibv_mr* (*)(struct ibv_pd*, void*, size_t, int)>(
+      dl::getIBVLibrary().sym("ibv_reg_mr"));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
   wrapper.ibv_reg_mr_ = fn;
   return fn(pd, addr, length, access);
