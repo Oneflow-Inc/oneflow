@@ -44,16 +44,12 @@ class TestTensor(flow.unittest.TestCase):
     def test_copy_to_and_from_numpy(test_case):
         np_arr = np.array([4, 6], dtype=np.float32)
         tensor = flow.Tensor(np_arr, dtype=flow.float32)
-        test_case.assertTrue(
-            np.array_equal(tensor.numpy(), np_arr)
-        )
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
         test_case.assertEqual(np.float32, tensor.numpy().dtype)
 
         np_arr = np.array([4, 6], dtype=np.int32)
         tensor = flow.Tensor(np_arr, dtype=flow.int32)
-        test_case.assertTrue(
-            np.array_equal(tensor.numpy(), np_arr)
-        )
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
         test_case.assertEqual(np.int32, tensor.numpy().dtype)
 
     @unittest.skipIf(
