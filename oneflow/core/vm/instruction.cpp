@@ -78,6 +78,7 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
   *mutable_instr_type_name() = instr_msg.instr_type_name();
+  if (instr_msg.parallel_desc()) { *mut_parallel_desc() = instr_msg.parallel_desc(); }
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
