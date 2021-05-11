@@ -65,7 +65,7 @@ def transpose_op(tensor, perm: Sequence[int] = None):
         import numpy as np
 
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+        out = flow.transpose(input, perm=(0, 2, 3, 1))
 
         # out.shape (2, 5, 3, 6)
     """
