@@ -497,10 +497,14 @@ class Module(object):
             if param is not None:
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
+                with flow.no_grad():
+                    param_applied = fn(param)
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
 
                 if param.grad is not None:
                     assert param.grad.is_leaf
+                    with flow.no_grad():
+                        grad_applied = fn(param.grad)
                     self._parameters[key].grad = grad_applied.requires_grad_(
                         param.grad.requires_grad
                     )
@@ -516,3 +520,9 @@ class Module(object):
             module.apply(fn)
         fn(self)
         return self
+    
+    def to(self, device: flow.device = None):
+        def convert(t):
+            return t.to(device)
+
+        return self._apply(convert)
