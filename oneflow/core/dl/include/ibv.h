@@ -48,10 +48,28 @@ extern "C" typedef struct IBV {
   // we have to have alternative names
   decltype(&ibv_reg_mr) ibv_reg_mr_;
   int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
-                         struct ibv_port_attr* port_attr);
+                         struct _compat_ibv_port_attr* port_attr);
 } IBV;
 
 extern IBV wrapper;
+
+static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_num,
+                                    struct ibv_port_attr* port_attr) {
+  struct verbs_context* vctx = verbs_get_ctx_op(context, query_port);
+
+  if (!vctx) {
+    int rc;
+
+    memset(port_attr, 0, sizeof(*port_attr));
+
+    rc = wrapper.ibv_query_port_(context, port_num, (struct _compat_ibv_port_attr*)port_attr);
+    return rc;
+  }
+
+  return vctx->query_port(context, port_num, port_attr, sizeof(*port_attr));
+}
+
+#define ibv_query_port(context, port_num, port_attr) ___ibv_query_port(context, port_num, port_attr)
 
 }  // namespace ibv
 }  // namespace oneflow

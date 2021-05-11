@@ -72,7 +72,7 @@ IBVerbsQP::~IBVerbsQP() {
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   ibv_port_attr port_attr{};
-  CHECK_EQ(ibv::wrapper.ibv_query_port_(ctx_, 1, &port_attr), 0);
+  CHECK_EQ(ibv_query_port(ctx_, 1, &port_attr), 0);
   ibv_qp_attr qp_attr{};
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));

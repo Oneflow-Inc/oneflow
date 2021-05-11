@@ -68,8 +68,8 @@ int ibv_fork_init(void) {
 }
 
 int ibv_query_port_(struct ibv_context* context, uint8_t port_num,
-                    struct ibv_port_attr* port_attr) {
-  auto fn = reinterpret_cast<int (*)(struct ibv_context*, uint8_t, struct ibv_port_attr*)>(
+                    struct _compat_ibv_port_attr* port_attr) {
+  auto fn = reinterpret_cast<int (*)(struct ibv_context*, uint8_t, struct _compat_ibv_port_attr*)>(
       dl::getIBVLibrary().sym("ibv_query_port"));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
   wrapper.ibv_query_port_ = fn;
