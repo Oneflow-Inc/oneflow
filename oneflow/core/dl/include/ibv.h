@@ -71,6 +71,7 @@ static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_nu
   return vctx->query_port(context, port_num, port_attr, sizeof(*port_attr));
 }
 
+#undef ibv_query_port
 #define ibv_query_port(context, port_num, port_attr) ___ibv_query_port(context, port_num, port_attr)
 
 __attribute__((__always_inline__)) static inline struct ibv_mr* __ibv_reg_mr(
@@ -81,7 +82,6 @@ __attribute__((__always_inline__)) static inline struct ibv_mr* __ibv_reg_mr(
     return wrapper.ibv_reg_mr_iova2(pd, addr, length, (uintptr_t)addr, access);
 }
 
-// have to undefine ibv_reg_mr to prevent redefine
 #undef ibv_reg_mr
 #define ibv_reg_mr(pd, addr, length, access) \
   __ibv_reg_mr(pd, addr, length, access,     \
