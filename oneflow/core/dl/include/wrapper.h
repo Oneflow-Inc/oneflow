@@ -1,5 +1,6 @@
-#ifndef ONEFLOW_DL_IBV_INCLUDE_WRAPPER_H_
-#define ONEFLOW_DL_IBV_INCLUDE_WRAPPER_H_
+#ifndef ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
+#define ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
+
 #include "oneflow/core/common/util.h"
 #if defined(WITH_RDMA)
 
@@ -26,4 +27,4 @@ struct DynamicLibrary {
 
 #endif  // WITH_RDMA
 
-#endif  // ONEFLOW_DL_IBV_INCLUDE_WRAPPER_H_
+#endif  // ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
