@@ -118,7 +118,7 @@ class Adam(Optimizer):
             .Input("v")
             .Attr("scale", self._default_options["scale"])
             .Attr("l1", 0.0)
-            .Attr("l2", self._default_options["weight_decay"]) # Adam's weight_deacy actually does is L2 Norm
+            .Attr("l2", self._default_options["weight_decay"]) # Adam's weight_decay actually does L2 Normalize
             .Attr("beta1", self._default_options["beta"][0])
             .Attr("beta2", self._default_options["beta"][1])
             .Attr("epsilon", self._default_options["eps"])
