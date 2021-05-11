@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -34,8 +34,9 @@ class Cast(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.cast")
+@oneflow_export("cast")
 @register_tensor_op("cast")
+@experimental_api
 def cast_op(x, dtype):
     r"""The operation takes input tensor `x` and casts it to the output with `dtype`
 

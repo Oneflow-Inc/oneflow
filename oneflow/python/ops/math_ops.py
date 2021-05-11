@@ -902,6 +902,7 @@ def unsorted_batch_segment_sum(
 
 
 @oneflow_export("cast")
+@stable_api
 def cast(
     x: oneflow._oneflow_internal.BlobDesc,
     dtype: flow.dtype,
