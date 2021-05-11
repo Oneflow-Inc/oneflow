@@ -20,14 +20,31 @@ import collections
 import oneflow.python.lib.core.enable_if as enable_if_util
 import oneflow.python.lib.core.traceinfo as traceinfo
 from oneflow.python.lib.core.high_order_bool import always_true
+import oneflow._oneflow_internal
 
 
 def oneflow_export(*api_names, **kwargs):
     def Decorator(func_or_class):
-        func_or_class._ONEFLOW_API = api_names
+        new_api_names = list(api_names)
+        if hasattr(func_or_class, "_ONEFLOW_API_TAG"):
+            if func_or_class._ONEFLOW_API_TAG == "experimental_api":
+                new_api_names = ["experimental." + n for n in new_api_names]
+        else:
+            new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
+        func_or_class._ONEFLOW_API = new_api_names
         return func_or_class
 
     return Decorator
+
+
+def stable_api(func_or_class):
+    func_or_class._ONEFLOW_API_TAG = "stable_api"
+    return func_or_class
+
+
+def experimental_api(func_or_class):
+    func_or_class._ONEFLOW_API_TAG = "experimental_api"
+    return func_or_class
 
 
 _DEPRECATED = set()
@@ -46,3 +63,24 @@ def is_deprecated(func_or_class):
     return (
         isinstance(func_or_class, collections.Hashable) and func_or_class in _DEPRECATED
     )
+
+
+def export_oneflow_api_internal_symbols(internal_name, api_name):
+    names = internal_name.split(".")
+    api = oneflow._oneflow_internal
+    for n in names:
+        api = getattr(api, n)
+    globals()[api_name] = api
+    oneflow_export(api_name)(api)
+
+
+internal_names_2_api_names = {
+    "PlacementSymbol": "placement",
+    "Size": "Size",
+    "device": "device",
+    "autograd.no_grad": "no_grad",
+}
+
+
+for internal_name, api_name in internal_names_2_api_names.items():
+    export_oneflow_api_internal_symbols(internal_name, api_name)
