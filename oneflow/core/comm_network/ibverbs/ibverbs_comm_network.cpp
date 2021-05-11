@@ -87,7 +87,7 @@ IBVerbsCommNet::IBVerbsCommNet()
   ibv_device* device = device_list[0];
   context_ = ibv::wrapper.ibv_open_device(device);
   CHECK(context_);
-  ibv_free_device_list(device_list);
+  ibv::wrapper.ibv_free_device_list(device_list);
   pd_ = ibv::wrapper.ibv_alloc_pd(context_);
   CHECK(pd_);
   ibv_device_attr device_attr{};

@@ -32,8 +32,9 @@ extern "C" typedef struct IBV {
   // ibv_reg_mr and ibv_query_port is not only a function but also a macro
   // so we have to have alternative names
   decltype(&ibv_reg_mr) ibv_reg_mr_;
-  decltype(&ibv_query_port) ibv_query_port_;
-} NVRTC;
+  int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
+                         struct ibv_port_attr* port_attr);
+} IBV;
 
 extern IBV wrapper;
 
