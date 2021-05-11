@@ -118,16 +118,16 @@ class VirtualMachine;
 OBJECT_MSG_BEGIN(LogicalObject);
   // methods
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id) {
-    __Init__(logical_object_id, std::shared_ptr<ParallelDesc>());
+    __Init__(logical_object_id, std::shared_ptr<const ParallelDesc>());
   }
   OF_PUBLIC void __Init__(const ObjectId& logical_object_id,
-                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
+                       const std::shared_ptr<const ParallelDesc>& parallel_desc) {
     set_logical_object_id(logical_object_id);
     *mutable_parallel_desc() = parallel_desc;
   }
 
   // fields
-  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<ParallelDesc>, parallel_desc);
+  OBJECT_MSG_DEFINE_STRUCT(std::shared_ptr<const ParallelDesc>, parallel_desc);
 
   // links
   OBJECT_MSG_DEFINE_MAP_KEY(ObjectId, logical_object_id);

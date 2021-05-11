@@ -39,7 +39,7 @@ Maybe<void> TensorImpl::SyncBlobObject2Attributes(
 
 Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
-  parallel_desc_ = JUST(Device::MakeParallelDescByDevice(*device));
+  parallel_desc_ = device->parallel_desc_ptr();
   return Maybe<void>::Ok();
 }
 
