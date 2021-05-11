@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -55,14 +55,15 @@ class Repeat(Module):
                 expand_dim.insert(0, repeat[i])
                 out_reshape.insert(0, repeat[i])
 
-        new_tensor = flow.tmp.reshape(input, in_reshape)
-        tmp_tensor = flow.tmp.expand(new_tensor, expand_dim)
-        out = flow.tmp.reshape(tmp_tensor, out_reshape)
+        new_tensor = flow.experimental.reshape(input, in_reshape)
+        tmp_tensor = flow.experimental.expand(new_tensor, expand_dim)
+        out = flow.experimental.reshape(tmp_tensor, out_reshape)
         return out
 
 
-@oneflow_export("tmp.repeat")
+@oneflow_export("repeat")
 @register_tensor_op("repeat")
+@experimental_api
 def repeat_op(x, sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
@@ -77,7 +78,7 @@ def repeat_op(x, sizes):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = np.array([[[[0, 1]],

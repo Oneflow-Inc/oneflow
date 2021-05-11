@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -38,6 +38,7 @@ class Greater(Module):
 
 @oneflow_export("gt")
 @register_tensor_op("gt")
+@experimental_api
 def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
 
@@ -53,7 +54,7 @@ def greater_op(x, y):
 
     .. code-block:: python
         
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
