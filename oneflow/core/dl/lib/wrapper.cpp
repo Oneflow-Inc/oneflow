@@ -6,7 +6,7 @@ namespace oneflow {
 namespace dl {
 
 static void* checkDL(void* x) {
-  if (!x) { LOG(ERROR) << "Error in dlopen or dlsym: " << dlerror(); }
+  if (!x) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
 
   return x;
 }
@@ -16,9 +16,9 @@ DynamicLibrary::DynamicLibrary(const char* name, const char* alt_name) {
   if (!handle_) {
     if (alt_name) {
       handle_ = dlopen(alt_name, RTLD_LOCAL | RTLD_NOW);
-      if (!handle_) { LOG(ERROR) << "Error in dlopen for library " << name << "and " << alt_name; }
+      if (!handle_) { LOG(FATAL) << "Error in dlopen for library " << name << "and " << alt_name; }
     } else {
-      LOG(ERROR) << "Error in dlopen: " << dlerror();
+      LOG(FATAL) << "Error in dlopen: " << dlerror();
     }
   }
 }

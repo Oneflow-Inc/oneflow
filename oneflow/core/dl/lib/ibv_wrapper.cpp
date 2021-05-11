@@ -17,7 +17,7 @@ namespace ibv {
 namespace _stubs {
 int ibv_fork_init(void) {
   auto fn = reinterpret_cast<decltype(&ibv_fork_init)>(dl::getIBVLibrary().sym(__func__));
-  if (!fn) throw std::runtime_error("Can't get ibv");
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
   wrapper.ibv_fork_init = fn;
   return fn();
 }
