@@ -94,7 +94,7 @@ def expand_op(x, expand_size):
 
         input = flow.Tensor(x)
 
-        out = flow.tmp.expand(input, expand_size=[1, 3, 2, 2])
+        out = flow.expand(input, expand_size=[1, 3, 2, 2])
 
         # out shape: [1, 3, 2, 2]
         # [[[[0, 1],
