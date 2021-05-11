@@ -21,15 +21,19 @@ from typing import Optional
 
 
 class To(Module):
-    def __init__(self):
+    def __init__(self, copy):
         super().__init__()
         self._copy_op = flow.builtin_op("copy").Input("in").Output("out").Build()
+        self.copy = copy
         # TODO(liyurui): add cast op
 
     def forward(self, x, device):
+        if x.device == device and not self.copy:
+            return x
         return self._copy_op(x, device_type=device.type, device_id=device.index)[0]
 
 
+@oneflow_export("to")
 @register_tensor_op("to")
-def to_op(input, device=None):
-    return To()(input, device)
+def to_op(input, device=None, copy=False):
+    return To(copy)(input, device)
