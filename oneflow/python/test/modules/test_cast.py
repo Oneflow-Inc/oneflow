@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -27,14 +27,14 @@ class TestCast(flow.unittest.TestCase):
     def test_cast_float2int(test_case):
         np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
         input = flow.Tensor(np_arr, dtype=flow.float32)
-        output = flow.tmp.cast(input, flow.int8)
+        output = flow.cast(input, flow.int8)
         np_out = np_arr.astype(np.int8)
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
     def test_cast_int2float(test_case):
         np_arr = np.random.randn(5, 2, 3, 4).astype(np.int8)
         input = flow.Tensor(np_arr, dtype=flow.int8)
-        output = flow.tmp.cast(input, flow.float32)
+        output = flow.cast(input, flow.float32)
         np_out = np_arr.astype(np.float32)
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
