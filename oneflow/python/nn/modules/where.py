@@ -88,7 +88,7 @@ def where_op(condition, x, y):
     If the element in condition is larger than 0,
     
     it will take the `x` element, else it will take the `y` element
-    
+
     .. note::
     The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
     it will take the `x` element, else it will take the `y` element.
