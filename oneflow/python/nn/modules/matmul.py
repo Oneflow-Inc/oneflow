@@ -98,7 +98,7 @@ def matmul_op(a, b):
         
         input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
-        of_out = flow.tmp.matmul(input1, input2)
+        of_out = flow.matmul(input1, input2)
 
         # of_out.shape (2, 5)
 
