@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 def getExpandGrad(input_shape, expand_size):

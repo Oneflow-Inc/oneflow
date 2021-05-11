@@ -16,14 +16,15 @@ limitations under the License.
 import oneflow as flow
 from oneflow.python.nn import init
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from typing import Tuple, Union
 
-_shape_t = Union[int, Tuple[int], flow.Size]
+_shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
 
 @oneflow_export("nn.LayerNorm")
+@experimental_api
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
     the paper `Layer Normalization <https://arxiv.org/abs/1607.06450>`__
