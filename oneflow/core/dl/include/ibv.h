@@ -39,14 +39,15 @@ extern "C" typedef struct IBV {
   _(ibv_create_qp)        \
   _(ibv_dereg_mr)         \
   _(ibv_create_cq)        \
-  _(ibv_query_device)
+  _(ibv_query_device)     \
+  _(ibv_reg_mr_iova2)
 
 #define DECLARE_ONE(name) decltype(&name) name;
   IBV_APIS(DECLARE_ONE)
 #undef DECLARE_ONE
   // for a function is not only a function but also a macro,
-  // we have to have alternative names
-  decltype(&ibv_reg_mr) ibv_reg_mr_;
+  // it requires an alternative name
+  struct ibv_mr* (*ibv_reg_mr_)(struct ibv_pd* pd, void* addr, size_t length, int access);
   int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
                          struct _compat_ibv_port_attr* port_attr);
 } IBV;
@@ -71,6 +72,20 @@ static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_nu
 }
 
 #define ibv_query_port(context, port_num, port_attr) ___ibv_query_port(context, port_num, port_attr)
+
+__attribute__((__always_inline__)) static inline struct ibv_mr* __ibv_reg_mr(
+    struct ibv_pd* pd, void* addr, size_t length, unsigned int access, int is_access_const) {
+  if (is_access_const && (access & IBV_ACCESS_OPTIONAL_RANGE) == 0)
+    return wrapper.ibv_reg_mr_(pd, addr, length, access);
+  else
+    return wrapper.ibv_reg_mr_iova2(pd, addr, length, (uintptr_t)addr, access);
+}
+
+// have to undefine ibv_reg_mr to prevent redefine
+#undef ibv_reg_mr
+#define ibv_reg_mr(pd, addr, length, access) \
+  __ibv_reg_mr(pd, addr, length, access,     \
+               __builtin_constant_p(((access)&IBV_ACCESS_OPTIONAL_RANGE) == 0))
 
 }  // namespace ibv
 }  // namespace oneflow
