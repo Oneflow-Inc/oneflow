@@ -38,6 +38,7 @@ def render_cfg_file(dst_file_path, template_file, module):
         with open(dst_file_path, "w") as dst_file:
             dst_file.write(JinjaRender(module, template_file))
     else:
+        org_content = str()
         with open(dst_file_path, "r") as dst_file:
             org_content = dst_file.read()
         new_content = JinjaRender(module, template_file)
