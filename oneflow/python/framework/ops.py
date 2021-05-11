@@ -24,13 +24,14 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.hob as hob
 import oneflow.python.lib.core.enable_if as enable_if
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow
 import oneflow._oneflow_internal
 from typing import Union, Optional, Sequence
 
 
 @oneflow_export("repeat")
+@stable_api
 def api_repeat(
     input: oneflow._oneflow_internal.BlobDesc,
     repeat_num: int,
