@@ -44,7 +44,7 @@ extern "C" typedef struct IBV {
 #define DECLARE_ONE(name) decltype(&name) name;
   IBV_APIS(DECLARE_ONE)
 #undef DECLARE_ONE
-  // ibv_reg_mr and ibv_query_port is not only a function but also a macro
+  // ibv_reg_mr or ibv_query_port is not only a function but also a macro
   // so we have to have alternative names
   decltype(&ibv_reg_mr) ibv_reg_mr_;
   int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
