@@ -17,7 +17,7 @@ import unittest
 
 import numpy as np
 
-import oneflow as flow
+import oneflow.experimental as flow
 from oneflow.python.nn.modules.utils import (
     _single,
     _pair,
