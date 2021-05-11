@@ -54,46 +54,5 @@ REGISTER_USER_OP("copy")
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
-
-REGISTER_USER_OP("copy_grad")
-    .Input("out_grad")
-    .Input("in")
-    .Output("in_grad")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("in", 0),
-                         *ctx->Shape4ArgNameAndIndex("out_grad", 0));
-      *ctx->Shape4ArgNameAndIndex("in_grad", 0) = *ctx->Shape4ArgNameAndIndex("out_grad", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("in_grad", 0) =
-          *ctx->IsDynamic4ArgNameAndIndex("out_grad", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDeviceInferFn([](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
-      *ctx->OutputTensorDevice4ArgNameAndIndex("in_grad", 0) =
-          ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-      const auto& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-      const auto& out_grad_device = ctx->InputTensorDevice4ArgNameAndIndex("out_grad", 0);
-      return MakeOpDevice(out_grad_device, in_device);
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("in", 0),
-                         *ctx->Dtype4ArgNameAndIndex("out_grad", 0));
-      *ctx->Dtype4ArgNameAndIndex("in_grad", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP_GRAD("copy").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto copy_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(copy_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("copy_grad")
-        .InputBind("out_grad", ctx->FwOp().output_grad("out", 0))
-        .InputBind("in", ctx->FwOp().input("in", 0))
-        .Output("in_grad")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &copy_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(copy_grad_op_name).output("in_grad", 0);
-                            });
-});
 }  // namespace
 }  // namespace oneflow

@@ -42,27 +42,5 @@ class CopyKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("copy").SetCreateFn<CopyKernel>().SetIsMatchedHob(user_op::HobTrue());
 
-class CopyGradKernel final : public user_op::OpKernel {
- public:
-  CopyGradKernel() = default;
-  ~CopyGradKernel() override = default;
-
- private:
-  void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* out_grad = ctx->Tensor4ArgNameAndIndex("out_grad", 0);
-    user_op::Tensor* in_grad = ctx->Tensor4ArgNameAndIndex("in_grad", 0);
-    const ShapeView& out_grad_shape = out_grad->shape();
-    CHECK_EQ(in_grad->shape(), out_grad_shape);
-    const DataType out_grad_data_type = out_grad->data_type();
-    CHECK_EQ(in_grad->data_type(), out_grad_data_type);
-    AutoMemcpy(ctx->device_ctx(), in_grad->mut_raw_dptr(), out_grad->raw_dptr(),
-               out_grad_shape.elem_cnt() * GetSizeOfDataType(out_grad_data_type),
-               in_grad->mem_case(), out_grad->mem_case());
-  }
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-};
-
-REGISTER_USER_KERNEL("copy_grad").SetCreateFn<CopyGradKernel>().SetIsMatchedHob(user_op::HobTrue());
-
 }  // namespace
 }  // namespace oneflow

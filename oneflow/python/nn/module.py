@@ -520,7 +520,7 @@ class Module(object):
             module.apply(fn)
         fn(self)
         return self
-    
+
     def to(self, device: flow.device = None):
         def convert(t):
             return t.to(device)
