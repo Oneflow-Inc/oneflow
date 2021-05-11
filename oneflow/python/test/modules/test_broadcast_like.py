@@ -57,5 +57,6 @@ class TestBroadCastLike(flow.unittest.TestCase):
         np_out = np.ones(shape=(3, 3, 2, 3))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 if __name__ == "__main__":
     unittest.main()
