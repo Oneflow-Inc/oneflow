@@ -2,9 +2,6 @@
 #define ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
 
 #include "oneflow/core/common/util.h"
-#if defined(WITH_RDMA)
-
-#include <infiniband/verbs.h>
 
 namespace oneflow {
 
@@ -24,7 +21,5 @@ struct DynamicLibrary {
 }  // namespace dl
 
 }  // namespace oneflow
-
-#endif  // WITH_RDMA
 
 #endif  // ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_

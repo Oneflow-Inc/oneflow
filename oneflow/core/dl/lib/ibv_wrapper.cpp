@@ -1,3 +1,4 @@
+#if defined(WITH_RDMA)
 #include "oneflow/core/dl/include/ibv.h"
 #include <infiniband/verbs.h>
 
@@ -15,12 +16,128 @@ DynamicLibrary& getIBVLibrary() {
 namespace ibv {
 
 namespace _stubs {
+
+void ibv_free_device_list(struct ibv_device** list) {
+  auto fn = reinterpret_cast<decltype(&ibv_free_device_list)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_free_device_list = fn;
+  return fn(list);
+}
+
+struct ibv_mr* ibv_reg_mr(struct ibv_pd* pd, void* addr, size_t length, int access) {
+  auto fn = reinterpret_cast<decltype(&ibv_reg_mr)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_reg_mr = fn;
+  return fn(pd, addr, length, access);
+}
+
+int ibv_destroy_qp(struct ibv_qp* qp) {
+  auto fn = reinterpret_cast<decltype(&ibv_destroy_qp)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_destroy_qp = fn;
+  return fn(qp);
+}
+
+int ibv_query_gid(struct ibv_context* context, uint8_t port_num, int index, union ibv_gid* gid) {
+  auto fn = reinterpret_cast<decltype(&ibv_query_gid)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_query_gid = fn;
+  return fn(context, port_num, index, gid);
+}
+
 int ibv_fork_init(void) {
   auto fn = reinterpret_cast<decltype(&ibv_fork_init)>(dl::getIBVLibrary().sym(__func__));
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
   wrapper.ibv_fork_init = fn;
   return fn();
 }
+
+int ibv_query_port(struct ibv_context* context, uint8_t port_num,
+                   struct _compat_ibv_port_attr* port_attr) {
+  auto fn = reinterpret_cast<decltype(&ibv_query_port)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_query_port = fn;
+  return fn(context, port_num, port_attr);
+}
+
+struct ibv_context* ibv_open_device(struct ibv_device* device) {
+  auto fn = reinterpret_cast<decltype(&ibv_open_device)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_open_device = fn;
+  return fn(device);
+}
+
+int ibv_destroy_cq(struct ibv_cq* cq) {
+  auto fn = reinterpret_cast<decltype(&ibv_destroy_cq)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_destroy_cq = fn;
+  return fn(cq);
+}
+
+struct ibv_pd* ibv_alloc_pd(struct ibv_context* context) {
+  auto fn = reinterpret_cast<decltype(&ibv_alloc_pd)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_alloc_pd = fn;
+  return fn(context);
+}
+
+int ibv_modify_qp(struct ibv_qp* qp, struct ibv_qp_attr* attr, int attr_mask) {
+  auto fn = reinterpret_cast<decltype(&ibv_modify_qp)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_modify_qp = fn;
+  return fn(qp, attr, attr_mask);
+}
+
+int ibv_dealloc_pd(struct ibv_pd* pd) {
+  auto fn = reinterpret_cast<decltype(&ibv_dealloc_pd)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_dealloc_pd = fn;
+  return fn(pd);
+}
+
+struct ibv_device** ibv_get_device_list(int* num_devices) {
+  auto fn = reinterpret_cast<decltype(&ibv_get_device_list)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_get_device_list = fn;
+  return fn(num_devices);
+}
+
+int ibv_close_device(struct ibv_context* context) {
+  auto fn = reinterpret_cast<decltype(&ibv_close_device)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_close_device = fn;
+  return fn(context);
+}
+
+struct ibv_qp* ibv_create_qp(struct ibv_pd* pd, struct ibv_qp_init_attr* qp_init_attr) {
+  auto fn = reinterpret_cast<decltype(&ibv_create_qp)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_create_qp = fn;
+  return fn(pd, qp_init_attr);
+}
+
+int ibv_dereg_mr(struct ibv_mr* mr) {
+  auto fn = reinterpret_cast<decltype(&ibv_dereg_mr)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_dereg_mr = fn;
+  return fn(mr);
+}
+
+struct ibv_cq* ibv_create_cq(struct ibv_context* context, int cqe, void* cq_context,
+                             struct ibv_comp_channel* channel, int comp_vector) {
+  auto fn = reinterpret_cast<decltype(&ibv_create_cq)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_create_cq = fn;
+  return fn(context, cqe, cq_context, channel, comp_vector);
+}
+
+int ibv_query_device(struct ibv_context* context, struct ibv_device_attr* device_attr) {
+  auto fn = reinterpret_cast<decltype(&ibv_query_device)>(dl::getIBVLibrary().sym(__func__));
+  if (!fn) { LOG(FATAL) << "Can't get ibv"; };
+  wrapper.ibv_query_device = fn;
+  return fn(context, device_attr);
+}
+
 }  // namespace _stubs
 
 IBV wrapper = {
@@ -31,3 +148,4 @@ IBV wrapper = {
 
 }  // namespace ibv
 }  // namespace oneflow
+#endif  // WITH_RDMA
