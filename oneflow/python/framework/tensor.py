@@ -187,7 +187,8 @@ class Tensor:
     @property
     def grad(self):
         if self._local_or_consistent_tensor is not None:
-            return flow.Tensor(self._local_or_consistent_tensor.grad)
+            if self._local_or_consistent_tensor.grad is not None:
+                return flow.Tensor(self._local_or_consistent_tensor.grad)
         else:
             return None
 
