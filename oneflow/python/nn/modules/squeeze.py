@@ -63,7 +63,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         import numpy as np
 
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        out = flow.tmp.squeeze(input, dim=[1, 2]).numpy().shape
+        out = flow.squeeze(input, dim=[1, 2]).numpy().shape
 
         # out.shape (1, 3)
 
