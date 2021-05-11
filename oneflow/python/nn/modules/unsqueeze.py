@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -37,6 +37,7 @@ class Unsqueeze(Module):
 
 @oneflow_export("unsqueeze")
 @register_tensor_op("unsqueeze")
+@experimental_api
 def unsqueeze_op(input, dim):
     r"""Returns a new tensor with a dimension of size one inserted at the
     specified position.
