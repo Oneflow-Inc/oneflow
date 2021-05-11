@@ -36,7 +36,7 @@ from oneflow.python.nn.modules.utils import (
     _reverse_repeat_tuple,
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from typing import Optional, List, Tuple, Sequence
+from typing import Optional, List, Tuple, Sequence, Union
 import traceback
 
 class OfrecordReader(Module):
@@ -54,7 +54,8 @@ class OfrecordReader(Module):
         name: Optional[str] = None,
     ):
         super().__init__()
-        seed, has_seed = flow.random.gen_seed(random_seed)
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, True
         self._op = (
             flow.builtin_op("OFRecordReader", name)
             .Output("out")
