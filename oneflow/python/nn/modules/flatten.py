@@ -15,11 +15,12 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
 @oneflow_export("nn.Flatten")
+@experimental_api
 class Flatten(Module):
     """Flattens a contiguous range of dims into a tensor. For use with: nn.Sequential.
 
@@ -56,8 +57,9 @@ class Flatten(Module):
         return self.op_(input)[0]
 
 
-@oneflow_export("tmp.flatten")
+@oneflow_export("flatten")
 @register_tensor_op("flatten")
+@experimental_api
 def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
     """Flattens a contiguous range of dims into a tensor.
 

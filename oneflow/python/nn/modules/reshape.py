@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Sequence
 from functools import reduce
@@ -57,8 +57,9 @@ class Reshape(Module):
         return self._op(x, shape=new_shape)[0]
 
 
-@oneflow_export("tmp.reshape")
+@oneflow_export("reshape")
 @register_tensor_op("reshape")
+@experimental_api
 def reshape_op(x, shape: Sequence[int] = None):
     """This operator reshapes a Tensor.
 
@@ -75,7 +76,7 @@ def reshape_op(x, shape: Sequence[int] = None):
     .. code-block:: python
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         x = np.array(
             [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
