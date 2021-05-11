@@ -23,7 +23,12 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class Copy : public OpExprGradFunction<OpExprInterpState> {
+struct CopyOpExprInterpState : public OpExprInterpState {
+  std::string device_type;
+  int device_id;
+};
+
+class Copy : public OpExprGradFunction<CopyOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -33,19 +38,19 @@ class Copy : public OpExprGradFunction<OpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
-    ctx->SaveTensorForBackward(inputs.at(0));
+  Maybe<void> Capture(CopyOpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->device_type = inputs.at(0)->device()->type();
+    ctx->device_id = inputs.at(0)->device()->device_id();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CopyOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::string>("device_type", x->device()->type()));
-    JUST(attrs.SetAttr<int>("device_id", x->device()->device_id()));
+    JUST(attrs.SetAttr<std::string>("device_type", ctx->device_type));
+    JUST(attrs.SetAttr<int>("device_id", ctx->device_id));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }
