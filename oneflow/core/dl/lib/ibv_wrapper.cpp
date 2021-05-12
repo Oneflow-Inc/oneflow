@@ -20,9 +20,14 @@ namespace oneflow {
 
 namespace ibv {
 
-dl::DynamicLibrary& GetIBVLibrary() {
+dl::DynamicLibrary* GetIBVLibraryPtr() {
   static std::unique_ptr<dl::DynamicLibrary> lib =
       dl::DynamicLibrary::Load({"libibverbs.so.1", "libibverbs.so"});
+  return lib.get();
+}
+
+dl::DynamicLibrary& GetIBVLibrary() {
+  dl::DynamicLibrary* lib = GetIBVLibraryPtr();
   CHECK(lib != nullptr) << "fail to find libibverbs";
   return *lib;
 }
@@ -38,19 +43,7 @@ FUNC LoadSymbol(const char* name, FUNC* save) {
   return fn;
 }
 
-template<typename FUNC>
-bool LoadSymbolSafe(const char* name, FUNC* save) {
-  auto fn = reinterpret_cast<FUNC>(GetIBVLibrary().LoadSym(name));
-  if (fn) {
-    *save = fn;
-    return true;
-  } else {
-    std::cerr << "Can't load libibverbs symbol " << name << "\n";
-    return false;
-  };
-}
-
-bool IsAvailable() { return LoadSymbolSafe("ibv_fork_init", &wrapper.ibv_fork_init); }
+bool IsAvailable() { return GetIBVLibraryPtr() != nullptr; }
 
 namespace _stubs {
 
@@ -68,13 +61,7 @@ int ibv_query_gid(struct ibv_context* context, uint8_t port_num, int index, unio
   return LoadSymbol(__func__, &wrapper.ibv_query_gid)(context, port_num, index, gid);
 }
 
-int ibv_fork_init(void) {
-  if (LoadSymbolSafe(__func__, &wrapper.ibv_fork_init)) {
-    return wrapper.ibv_fork_init();
-  } else {
-    return -1;
-  }
-}
+int ibv_fork_init(void) { return LoadSymbol(__func__, &wrapper.ibv_fork_init)(); }
 
 int ibv_query_port_(struct ibv_context* context, uint8_t port_num,
                     struct ibv_port_attr* port_attr) {

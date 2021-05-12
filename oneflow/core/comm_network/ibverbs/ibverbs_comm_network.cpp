@@ -35,7 +35,11 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
 }
 
 void IBVForkInit() {
-  if (ibv::wrapper.ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
+  if (ibv::IsAvailable()) {
+    if (ibv::wrapper.ibv_fork_init() != 0) { std::cerr << "ibv_fork_init failed\n"; }
+  } else {
+    std::cerr << "libibverbs not available, ibv_fork_init skipped\n";
+  }
 }
 
 }  // namespace
