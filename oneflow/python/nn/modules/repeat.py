@@ -87,7 +87,7 @@ def repeat_op(x, sizes):
 
         input = flow.Tensor(x)
 
-        out = flow.tmp.repeat(input, sizes=[1, 1, 2, 2]).numpy()
+        out = flow.repeat(input, sizes=[1, 1, 2, 2]).numpy()
 
         # out shape: [1, 3, 2, 4]
         # [[[[0. 1. 0. 1.]

@@ -128,6 +128,7 @@ OBJECT_MSG_BEGIN(Instruction);
   OF_PUBLIC void __Init__(InstructionMsg* instr_msg, Stream* stream, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   OF_PUBLIC void __Delete__();
   OF_PUBLIC bool Done() const;
+  OF_PUBLIC void set_has_event_record(bool val);
   OF_PUBLIC const StreamType& stream_type() const;
 
   OF_PUBLIC template<OperandMemZoneModifier mem_zone_modifier>
