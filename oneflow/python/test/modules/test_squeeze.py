@@ -24,16 +24,22 @@ import oneflow.experimental as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestSqueeze(flow.unittest.TestCase):
-    def test_squeeze_v1(test_case):
+    def test_squeeze(test_case):
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        of_shape = flow.squeeze(input, axis=[1, 2]).numpy().shape
+        of_shape = flow.squeeze(input, dim=[1, 2]).numpy().shape
         np_shape = (1, 3)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
     def test_tensor_squeeze(test_case):
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        of_shape = input.squeeze(axis=[1, 2]).numpy().shape
+        of_shape = input.squeeze(dim=[1, 2]).numpy().shape
         np_shape = (1, 3)
+        test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+    def test_squeeze_int(test_case):
+        input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        of_shape = flow.squeeze(input, 1).numpy().shape
+        np_shape = (1, 1, 3)
         test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
 
