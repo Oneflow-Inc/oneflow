@@ -51,9 +51,7 @@ class Device final : public std::enable_shared_from_this<Device> {
   static const std::unordered_set<std::string> type_supported;
 
   Maybe<const std::string&> local_call_instruction_name() const;
-  VmLocalDepObject* mut_compute_local_dep_object() const {
-    return compute_local_dep_object_.get();
-  }
+  VmLocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_.get(); }
 
  private:
   Device(const std::string& type, int64_t device_id);

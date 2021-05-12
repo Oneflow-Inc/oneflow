@@ -71,8 +71,8 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   BuildOpConf(op_conf.get(), {});
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), parallel_desc,
-                                                         input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
+      op_conf, device.shared_from_this(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }

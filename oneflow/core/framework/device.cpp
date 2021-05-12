@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -43,7 +44,7 @@ Maybe<VmLocalDepObject> FindOrCreateComputeLocalDepObject(const Device& device) 
   const auto& dep_object = std::make_shared<VmLocalDepObject>(device.parallel_desc_ptr());
   {
     std::unique_lock<std::mutex> lock(mutex);
-    return device2dep_object->emplace(device, dep_object).first->second;
+    return device2dep_object.emplace(device, dep_object).first->second;
   }
 }
 
