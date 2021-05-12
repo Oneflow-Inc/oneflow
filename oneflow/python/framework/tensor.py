@@ -85,51 +85,54 @@ class Tensor:
         data_initializer=None,
         determining_initializer=None,
     ):
-        assert len(args) > 0
-        dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
-        if placement is None:
-            device = (
-                device
-                if device is not None
-                else oneflow._oneflow_internal.device("cuda")
-            )
+        # assert len(args) > 0
+        if len(args) == 0:
+            return
         if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
         elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
-        elif _input_args_is_data(*args):
-            self._local_or_consistent_tensor = None
-            self._construct_with_data(
-                *args,
-                dtype=dtype,
-                device=device,
-                requires_grad=requires_grad,
-                placement=placement,
-                sbp=sbp,
-                is_consistent=is_consistent,
-                is_lazy=is_lazy,
-            )
-        elif _input_args_is_shape(*args):
-            shape = args
-            self._local_or_consistent_tensor = None
-            self._undetermined_tensor = UndeterminedTensor(
-                shape,
-                dtype,
-                device=device,
-                requires_grad=requires_grad,
-                placement=placement,
-                sbp=sbp,
-                is_consistent=is_consistent,
-                is_lazy=is_lazy,
-                data_initializer=data_initializer,
-            )
-            if determining_initializer is None:
-                determining_initializer = _default_initializer_for_determining
-            self._determining_initializer = determining_initializer
         else:
-            # Maybe some other arguments to be supported, reported as error for now
-            raise TypeError("new() received an invalid combination of arguments")
+            dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
+            if placement is None:
+                device = (
+                    device
+                    if device is not None
+                    else oneflow._oneflow_internal.device("cuda")
+                )
+            if _input_args_is_data(*args):
+                self._local_or_consistent_tensor = None
+                self._construct_with_data(
+                    *args,
+                    dtype=dtype,
+                    device=device,
+                    requires_grad=requires_grad,
+                    placement=placement,
+                    sbp=sbp,
+                    is_consistent=is_consistent,
+                    is_lazy=is_lazy,
+                )
+            elif _input_args_is_shape(*args):
+                shape = args
+                self._local_or_consistent_tensor = None
+                self._undetermined_tensor = UndeterminedTensor(
+                    shape,
+                    dtype,
+                    device=device,
+                    requires_grad=requires_grad,
+                    placement=placement,
+                    sbp=sbp,
+                    is_consistent=is_consistent,
+                    is_lazy=is_lazy,
+                    data_initializer=data_initializer,
+                )
+                if determining_initializer is None:
+                    determining_initializer = _default_initializer_for_determining
+                self._determining_initializer = determining_initializer
+            else:
+                # Maybe some other arguments to be supported, reported as error for now
+                raise TypeError("new() received an invalid combination of arguments")
 
     @property
     def shape(self):
