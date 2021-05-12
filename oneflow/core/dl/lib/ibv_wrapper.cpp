@@ -22,7 +22,7 @@ namespace dl {
 DynamicLibrary& getIBVLibrary() {
   static std::string libname = "libibverbs.so";
   static std::string alt_libname = "libibverbs.so.1";
-  static DynamicLibrary lib(libname.c_str(), alt_libname.empty() ? nullptr : alt_libname.c_str());
+  static DynamicLibrary lib(libname.c_str(), alt_libname.c_str());
   return lib;
 }
 }  // namespace dl
