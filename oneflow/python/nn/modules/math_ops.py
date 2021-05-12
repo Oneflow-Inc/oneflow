@@ -34,12 +34,12 @@ def _check_axis(axis, shape):
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
     axis = list(axis)
     for i in range(len(axis)):
+        assert (
+            -ndim <= axis[i] <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, axis[i]
+        )
         if axis[i] < 0:
-            assert (
-                -ndim <= axis[i] <= -1
-            ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
-                ndim, ndim - 1, axis[i]
-            )
             axis[i] = axis[i] + ndim
 
     return axis
