@@ -47,8 +47,8 @@ class TestTo(flow.unittest.TestCase):
 
     def test_tensor_to_d2d(test_case):
         input = flow.Tensor(np.random.randn(2, 3, 4, 5), device=flow.device("cuda"))
-        output = input.to(device=flow.device("cuda:1"))
-        test_case.assertTrue(output.device, flow.device("cuda:1"))
+        output = input.to(device=flow.device("cuda:0"))
+        test_case.assertTrue(output.device, flow.device("cuda:0"))
         test_case.assertTrue(
             np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
         )
