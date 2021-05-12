@@ -24,18 +24,11 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 def _check_axis(axis, shape):
+    ndim = len(shape)
     # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
     if axis is None:
         axis = list(range(len(shape)))
-
-    ndim = len(shape)
-
     if isinstance(axis, int):
-        if axis >= 0:
-            assert axis < ndim, "axis should less than ndims!"
-        else:
-            assert -ndim <= axis <= -1, "axis should be in range: [-ndims,-1]"
-            axis = ndim + axis
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
@@ -777,7 +770,6 @@ class Std(Module):
 
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
-        print("self.axis >>>>>>>>>>>>>>>> ", self.axis)
         if isinstance(self.axis, list) and len(self.axis) == 0:
             return flow.experimental.zeros(size=x.shape)
         else:
