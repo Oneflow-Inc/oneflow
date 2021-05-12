@@ -28,6 +28,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.zeros
 .. autofunction:: oneflow.experimental.zeros_like
 .. autofunction:: oneflow.experimental.ones_like
+.. autofunction:: oneflow.experimental.nn.Module
+.. autofunction:: oneflow.experimental.nn.Parameter
 .. autofunction:: oneflow.experimental.nn.Sequential
 .. autofunction:: oneflow.experimental.nn.ParameterList
 .. autofunction:: oneflow.experimental.nn.ParameterDict
