@@ -19,7 +19,7 @@ import numpy as np
 import oneflow.experimental as flow
 
 # TODO: skip this test, for layernorm doesn't have cpu implementation
-@unittest.skipIf(True)
+@unittest.skipIf(True, "CPU layernorm is not supported.")
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layernorm(test_case):
         input_arr = np.array(
