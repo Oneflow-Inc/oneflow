@@ -34,14 +34,14 @@ def user_op_expr_call(self, *args, **kwargs):
             self.op_type_name, attr_name, attr_value
         )
 
-    results = list(self.apply(args, attrs))
-    for i, out in enumerate(results):
-        tensor = flow.Tensor(*out.shape)
-        tensor._local_or_consistent_tensor = out
-        tensor._undetermined_tensor = None
-        results[i] = tensor
+    results = self.apply(args, attrs)
+    tensor_list = list()
+    for i in range(len(results)):
+        out = results[i]
+        tensor = flow.Tensor(out)
+        tensor_list.append(tensor)
 
-    return results
+    return tensor_list
 
 
 def RegisterMethod4UserOpExpr():
