@@ -45,12 +45,12 @@ def register_local_tensor_op(name=None):
 
 
 @register_local_tensor_op("numpy")
-def _local_tensor_numpy(tensor):
-    method_name = tensor._get_copy_mirrored_tensor_to_numpy_func_name()
-    copy_to_numpy = getattr(tensor, method_name)
+def _local_tensor_numpy(eager_local_tensor):
+    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
+    copy_to_numpy = getattr(eager_local_tensor, method_name)
     ndarray = np.empty(
-        tuple(tensor.shape),
-        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(tensor.dtype),
+        tuple(eager_local_tensor.shape),
+        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
     )
     copy_to_numpy(ndarray)
     return ndarray
