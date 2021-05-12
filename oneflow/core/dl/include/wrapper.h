@@ -21,18 +21,20 @@ limitations under the License.
 namespace oneflow {
 
 namespace dl {
-struct DynamicLibrary {
+
+class DynamicLibrary {
+ public:
   OF_DISALLOW_COPY_AND_MOVE(DynamicLibrary);
-
-  DynamicLibrary(const char* name, const char* alt_name = nullptr);
-
-  void* sym(const char* name);
-
   ~DynamicLibrary();
 
+  static std::unique_ptr<DynamicLibrary> Load(const std::vector<std::string>& names);
+  void* LoadSym(const char* name);
+
  private:
+  DynamicLibrary(void* handle) : handle_(handle){};
   void* handle_ = nullptr;
 };
+
 }  // namespace dl
 
 }  // namespace oneflow

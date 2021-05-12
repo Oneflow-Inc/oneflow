@@ -21,9 +21,10 @@ namespace dl {
 
 namespace {
 
-void* CheckDL(void* x) {
-  if (!x) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
-  return x;
+void* OpenSymbol(void* handle, const char* name) {
+  void* ret = dlsym(handle, name);
+  if (!ret) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
+  return ret;
 }
 
 }  // namespace
@@ -31,27 +32,17 @@ void* CheckDL(void* x) {
 // original implementation is from pytorch:
 // https://github.com/pytorch/pytorch/blob/259d19a7335b32c4a27a018034551ca6ae997f6b/aten/src/ATen/DynamicLibrary.cpp
 
-DynamicLibrary::DynamicLibrary(const char* name, const char* alt_name) {
-  handle_ = dlopen(name, RTLD_LOCAL | RTLD_NOW);
-  if (!handle_) {
-    if (alt_name) {
-      handle_ = dlopen(alt_name, RTLD_LOCAL | RTLD_NOW);
-      if (!handle_) { LOG(FATAL) << "Error in dlopen for library " << name << "and " << alt_name; }
-    } else {
-      LOG(FATAL) << "Error in dlopen: " << dlerror();
-    }
+std::unique_ptr<DynamicLibrary> DynamicLibrary::Load(const std::vector<std::string>& names) {
+  for (const std::string& name : names) {
+    void* handle = dlopen(name.c_str(), RTLD_LOCAL | RTLD_NOW);
+    if (handle != nullptr) { return std::unique_ptr<DynamicLibrary>(new DynamicLibrary(handle)); }
   }
+  return std::unique_ptr<DynamicLibrary>();
 }
 
-void* DynamicLibrary::sym(const char* name) {
-  CHECK(handle_);
-  return CheckDL(dlsym(handle_, name));
-}
+void* DynamicLibrary::LoadSym(const char* name) { return OpenSymbol(handle_, name); }
 
-DynamicLibrary::~DynamicLibrary() {
-  if (!handle_) return;
-  dlclose(handle_);
-}
+DynamicLibrary::~DynamicLibrary() { dlclose(handle_); }
 
 }  // namespace dl
 }  // namespace oneflow
