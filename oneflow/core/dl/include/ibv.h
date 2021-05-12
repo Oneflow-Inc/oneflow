@@ -51,6 +51,8 @@ extern "C" typedef struct IBV {
                          struct ibv_port_attr* port_attr);
 } IBV;
 
+bool IsAvailable();
+
 extern IBV wrapper;
 
 }  // namespace ibv

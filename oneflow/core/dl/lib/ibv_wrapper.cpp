@@ -27,13 +27,11 @@ dl::DynamicLibrary& GetIBVLibrary() {
   return *lib;
 }
 
-namespace _stubs {
-
 template<typename FUNC>
 FUNC LoadSymbol(const char* name, FUNC* save) {
   auto fn = reinterpret_cast<FUNC>(GetIBVLibrary().LoadSym(name));
   if (!fn) {
-    std::cerr << "Can't load symbol " << name << "\n";
+    std::cerr << "Can't load libibverbs symbol " << name << "\n";
     abort();
   };
   *save = fn;
@@ -47,10 +45,14 @@ bool LoadSymbolSafe(const char* name, FUNC* save) {
     *save = fn;
     return true;
   } else {
-    std::cerr << "Can't load symbol " << name << "\n";
+    std::cerr << "Can't load libibverbs symbol " << name << "\n";
     return false;
   };
 }
+
+bool IsAvailable() { return LoadSymbolSafe("ibv_fork_init", &wrapper.ibv_fork_init); }
+
+namespace _stubs {
 
 void ibv_free_device_list(struct ibv_device** list) {
   return LoadSymbol(__func__, &wrapper.ibv_free_device_list)(list);
