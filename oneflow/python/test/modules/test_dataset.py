@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 from oneflow.python.nn.modules.dataset import OfrecordReader, raw_decoder
 
 
