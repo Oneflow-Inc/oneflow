@@ -23,7 +23,10 @@ namespace {
 
 void* OpenSymbol(void* handle, const char* name) {
   void* ret = dlsym(handle, name);
-  if (!ret) { LOG(FATAL) << "Error in dlopen or dlsym: " << dlerror(); }
+  if (!ret) {
+    std::cerr << "Error in dlopen or dlsym: " << dlerror() << "\n";
+    abort();
+  }
   return ret;
 }
 
