@@ -45,7 +45,10 @@ struct ShapeExportUtil final {
   static int GetItem(const Shape& shape, int idx) {
     const int len = shape.dim_vec().size();
     if (idx < -len || idx >= len) { throw py::index_error("flow.Size index out of range"); }
-    return shape.At((idx + len) % len);
+    if (idx < 0) {
+        idx += len;
+    }
+    return shape.At(idx);
   }
 
   static std::shared_ptr<Shape> Slicing(const Shape& shape, const py::slice& slice) {
