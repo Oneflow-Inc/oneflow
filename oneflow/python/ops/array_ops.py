@@ -1475,6 +1475,7 @@ def nonzero(
 
 
 @oneflow_export("where")
+@stable_api
 def where(
     condition: oneflow._oneflow_internal.BlobDesc,
     x: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -2259,6 +2260,7 @@ def expand_dims(
 
 
 @oneflow_export("broadcast_like")
+@stable_api
 def broadcast_like(
     x: oneflow._oneflow_internal.BlobDesc,
     like: oneflow._oneflow_internal.BlobDesc,
