@@ -51,8 +51,8 @@ void ibv_free_device_list(struct ibv_device** list) {
   return LoadSymbol(__func__, &wrapper.ibv_free_device_list)(list);
 }
 
-struct ibv_mr* ibv_reg_mr_(struct ibv_pd* pd, void* addr, size_t length, int access) {
-  return LoadSymbol("ibv_reg_mr", &wrapper.ibv_reg_mr_)(pd, addr, length, access);
+struct ibv_mr* ibv_reg_mr_wrap(struct ibv_pd* pd, void* addr, size_t length, int access) {
+  return LoadSymbol("ibv_reg_mr", &wrapper.ibv_reg_mr_wrap)(pd, addr, length, access);
 }
 
 int ibv_destroy_qp(struct ibv_qp* qp) { return LoadSymbol(__func__, &wrapper.ibv_destroy_qp)(qp); }
@@ -63,9 +63,9 @@ int ibv_query_gid(struct ibv_context* context, uint8_t port_num, int index, unio
 
 int ibv_fork_init(void) { return LoadSymbol(__func__, &wrapper.ibv_fork_init)(); }
 
-int ibv_query_port_(struct ibv_context* context, uint8_t port_num,
-                    struct ibv_port_attr* port_attr) {
-  return LoadSymbol("ibv_query_port", &wrapper.ibv_query_port_)(context, port_num, port_attr);
+int ibv_query_port_wrap(struct ibv_context* context, uint8_t port_num,
+                        struct ibv_port_attr* port_attr) {
+  return LoadSymbol("ibv_query_port", &wrapper.ibv_query_port_wrap)(context, port_num, port_attr);
 }
 
 struct ibv_context* ibv_open_device(struct ibv_device* device) {
@@ -114,8 +114,8 @@ IBV wrapper = {
 #define _REFERENCE_MEMBER(name) _stubs::name,
     IBV_APIS(_REFERENCE_MEMBER)
 #undef _REFERENCE_MEMBER
-        _stubs::ibv_reg_mr_,
-    _stubs::ibv_query_port_};
+        _stubs::ibv_reg_mr_wrap,
+    _stubs::ibv_query_port_wrap};
 
 }  // namespace ibv
 }  // namespace oneflow
