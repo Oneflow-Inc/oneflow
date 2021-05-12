@@ -68,7 +68,7 @@ class Argmax(Module):
             x = self._expand_op(x)[0]
             x = x.transpose(perm=get_inversed_perm(perm))
             if self.keepdim == False:
-                x = x.squeeze(axis=[axis])
+                x = x.squeeze(dim=[axis])
             return x
 
 

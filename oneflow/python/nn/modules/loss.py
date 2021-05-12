@@ -213,20 +213,19 @@ class NLLLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
-        self._gather_nd_op = (
-            flow.builtin_op("gather_nd")
-            .Input("params")
-            .Input("indices")
-            .Output("out")
+        self._dim_gather_op = (
+            flow.builtin_op("dim_gather")
+            .Input("input")
+            .Input("index")
+            .Output("output")
+            .Attr("dim", 1)
             .Build()
         )
 
     def nllloss_1d(self, input, target):
-        n = input.shape[0]
-        idx = flow.experimental.unsqueeze(flow.experimental.arange(0, n, 1), dim=1)
-        target = target.unsqueeze(dim=1)
-        t = flow.experimental.cat([idx, target], dim=1)
-        res = self._gather_nd_op(input, t)[0]
+        target = flow.experimental.reshape(target, (target.shape[0], 1))
+        res = self._dim_gather_op(input, target)[0]
+        res = flow.experimental.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
