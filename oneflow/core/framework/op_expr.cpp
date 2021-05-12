@@ -161,9 +161,9 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
   if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
 }
 
-/* static */ std::shared_ptr<UserOpExpr> UserOpExpr::New(
-    const std::string& op_name, UserOpConf&& op_proto, const std::vector<std::string>& indexed_ibns,
-    const std::vector<std::string>& indexed_obns) {
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
+                                               const std::vector<std::string>& indexed_ibns,
+                                               const std::vector<std::string>& indexed_obns) {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   return std::shared_ptr<UserOpExpr>(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));

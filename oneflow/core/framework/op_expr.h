@@ -82,9 +82,9 @@ class BuiltinOpExpr : public OpExpr {
 template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
-  static std::shared_ptr<BuiltinOpExprImpl<ProtoType>> New(
-      const std::string& op_name, ProtoType&& op_proto,
-      const std::vector<std::string>& indexed_ibns, const std::vector<std::string>& indexed_obns) {
+  static Maybe<BuiltinOpExprImpl<ProtoType>> New(const std::string& op_name, ProtoType&& op_proto,
+                                                 const std::vector<std::string>& indexed_ibns,
+                                                 const std::vector<std::string>& indexed_obns) {
     return std::shared_ptr<BuiltinOpExprImpl<ProtoType>>(
         new BuiltinOpExprImpl<ProtoType>(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
   }
@@ -119,9 +119,9 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   UserOpExpr() = default;
   virtual ~UserOpExpr() = default;
 
-  static std::shared_ptr<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
-                                         const std::vector<std::string>& indexed_ibns,
-                                         const std::vector<std::string>& indexed_obns);
+  static Maybe<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
+                               const std::vector<std::string>& indexed_ibns,
+                               const std::vector<std::string>& indexed_obns);
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
