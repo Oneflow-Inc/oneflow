@@ -225,7 +225,7 @@ class NLLLoss(Module):
     def nllloss_1d(self, input, target):
         target = flow.experimental.reshape(target, (target.shape[0], 1))
         res = self._dim_gather_op(input, target)[0]
-        res = flow.experimental.squeeze(res, axis=[1])
+        res = flow.experimental.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
