@@ -70,8 +70,7 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   BuildOpConf(op_conf.get(), {});
   op_conf->set_device_tag(JUST(device.of_type()));
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(Device::MakeParallelDescByDevice(device));
+  std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
   const auto& opkernel =
       JUST(StatefulLocalOpKernel::New(op_conf, base_attrs(), device.mem_case(), parallel_desc,
                                       input_arg_tuple(), output_arg_tuple()));

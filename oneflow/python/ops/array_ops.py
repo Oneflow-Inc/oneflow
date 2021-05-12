@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from functools import reduce
 from typing import Iterable, List, Optional, Sequence, Union, Tuple
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 
 import numpy as np
 import operator
@@ -30,6 +30,7 @@ import oneflow._oneflow_internal
 
 
 @oneflow_export("gather")
+@stable_api
 def gather(
     params: oneflow._oneflow_internal.BlobDesc,
     indices: oneflow._oneflow_internal.BlobDesc,
@@ -157,6 +158,7 @@ def gather(
 
 
 @oneflow_export("flatten")
+@stable_api
 def flatten(
     input: oneflow._oneflow_internal.BlobDesc,
     start_dim: int = 0,
@@ -222,6 +224,7 @@ def infer_shape(x, shape):
 
 
 @oneflow_export("reshape")
+@stable_api
 def reshape(
     x: oneflow._oneflow_internal.BlobDesc,
     shape: Sequence[int],
@@ -423,6 +426,7 @@ def dynamic_reshape(
 
 
 @oneflow_export("transpose")
+@stable_api
 def transpose(
     a: oneflow._oneflow_internal.BlobDesc,
     perm: Sequence[int] = None,
@@ -1447,6 +1451,7 @@ def argwhere(
 
 
 @oneflow_export("nonzero")
+@stable_api
 def nonzero(
     a: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None
 ) -> oneflow._oneflow_internal.BlobDesc:
@@ -1470,6 +1475,7 @@ def nonzero(
 
 
 @oneflow_export("where")
+@stable_api
 def where(
     condition: oneflow._oneflow_internal.BlobDesc,
     x: Optional[oneflow._oneflow_internal.BlobDesc] = None,
@@ -2021,6 +2027,7 @@ def cast_to_static_shape(
 
 
 @oneflow_export("squeeze")
+@stable_api
 def squeeze(
     input: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Sequence[int]] = None,
@@ -2104,6 +2111,7 @@ def squeeze(
 
 
 @oneflow_export("expand")
+@stable_api
 def expand(
     x: oneflow._oneflow_internal.BlobDesc,
     expand_size: Sequence[int],
@@ -2252,6 +2260,7 @@ def expand_dims(
 
 
 @oneflow_export("broadcast_like")
+@stable_api
 def broadcast_like(
     x: oneflow._oneflow_internal.BlobDesc,
     like: oneflow._oneflow_internal.BlobDesc,
@@ -2355,6 +2364,7 @@ def broadcast_like(
 
 
 @oneflow_export("masked_fill")
+@stable_api
 def masked_fill(
     x: oneflow._oneflow_internal.BlobDesc,
     mask: oneflow._oneflow_internal.BlobDesc,
@@ -2509,6 +2519,7 @@ def amp_white_identity(
 
 
 @oneflow_export("zeros")
+@stable_api
 def zeros(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,
@@ -2553,6 +2564,7 @@ def zeros(
 
 
 @oneflow_export("ones")
+@stable_api
 def ones(
     shape: Sequence[int],
     dtype: Optional[flow.dtype] = None,

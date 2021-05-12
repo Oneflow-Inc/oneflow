@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -64,7 +64,7 @@ class TestMaskedFill(flow.unittest.TestCase):
 
         input2 = flow.Tensor(input_arr, dtype=flow.float32)
         mask2 = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int)
-        of_out2 = flow.tmp.masked_fill(input2, mask, value=fill_value)
+        of_out2 = flow.masked_fill(input2, mask, value=fill_value)
         test_case.assertTrue(np.allclose(of_out2.numpy(), output))
 
 
