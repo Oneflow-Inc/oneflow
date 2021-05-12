@@ -31,6 +31,22 @@ namespace {
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
+
+Maybe<VmLocalDepObject> FindOrCreateComputeLocalDepObject(const Device& device) {
+  static std::mutex mutex;
+  static HashMap<Device, std::shared_ptr<VmLocalDepObject>> device2dep_object;
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    const auto& iter = device2dep_object.find(device);
+    if (iter != device2dep_object.end()) { return iter->second; }
+  }
+  const auto& dep_object = std::make_shared<VmLocalDepObject>(device.parallel_desc_ptr());
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    return device2dep_object->emplace(device, dep_object).first->second;
+  }
+}
+
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
@@ -39,6 +55,7 @@ Device::Device(const std::string& type, int64_t device_id)
 Maybe<void> Device::Init() {
   DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
   mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(*this));
   return Maybe<void>::Ok();
 }
 

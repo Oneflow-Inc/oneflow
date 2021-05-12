@@ -36,8 +36,9 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
+  // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the same device.
   DoEach(opkernel().infer_local_dep_object()->mut_local_dep_object()->mut_mirrored_object(),
-         opkernel().compute_local_dep_object()->mut_local_dep_object()->mut_mirrored_object());
+         opkernel().device()->mut_compute_local_dep_object()->mut_mirrored_object());
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {

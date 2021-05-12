@@ -48,8 +48,9 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   LocalCallOpKernelPhyInstrOperand(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                    const one::EagerBlobObjectListPtr& inputs,
-                                   const one::EagerBlobObjectListPtr& outputs, const AttrMap& attrs)
-      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs) {}
+                                   const one::EagerBlobObjectListPtr& outputs, const AttrMap& attrs,
+                                   bool preschedulable)
+      : opkernel_(opkernel), inputs_(inputs), outputs_(outputs), attrs_(attrs), preschedulable_(preschedulable) {}
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
   const one::EagerBlobObjectListPtr& inputs() const { return inputs_; }
@@ -86,6 +87,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   one::EagerBlobObjectListPtr outputs_;
   const AttrMap attrs_;
   const user_op::OpKernel* user_opkernel_;
+  const bool preschedulable_;
 };
 
 }  // namespace vm
