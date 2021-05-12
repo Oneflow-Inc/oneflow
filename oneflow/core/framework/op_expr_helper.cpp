@@ -106,6 +106,17 @@ Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const s
   }
 }
 
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype) {
+  return EmptyOp(shape, dtype, UniqueOpName("empty"));
+}
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  return one::OpBuilder("empty", name)
+      .Output("out")
+      .Attr<DataType>("dtype", dtype)
+      .Attr<Shape>("shape", shape)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> IdentityOp() { return IdentityOp(UniqueOpName("identity")); }
 Maybe<one::UserOpExpr> IdentityOp(const std::string& name) {
   return one::OpBuilder("identity", name).Input("in").Output("out").Build();

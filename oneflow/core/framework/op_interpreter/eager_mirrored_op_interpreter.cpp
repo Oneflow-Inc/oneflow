@@ -129,12 +129,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
 Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(
     DataType data_type, const Shape& shape, const std::shared_ptr<const Device>& device) {
-  const auto zeros_expr = JUST(op_expr_helper::ZerosOp(shape, data_type));
+  const auto empty_expr = JUST(op_expr_helper::EmptyOp(shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(1);
   std::vector<std::shared_ptr<const Device>> out_devices(1);
-  JUST(NaiveInterpret(*zeros_expr, *inputs, device, output_eager_blob_objects, AttrMap{},
+  JUST(NaiveInterpret(*empty_expr, *inputs, device, output_eager_blob_objects, AttrMap{},
                       &out_devices));
   return output_eager_blob_objects->at(0);
 }
