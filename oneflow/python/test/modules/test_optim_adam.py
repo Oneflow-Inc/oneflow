@@ -40,10 +40,10 @@ def compare_with_numpy_adam(
         adam = flow.optim.Adam(
             [{"param": param_list}],
             lr=learning_rate,
-            scale=scale,
             betas=betas,
-            weight_decay=weight_decay,
             eps=eps,
+            weight_decay=weight_decay,
+            scale=scale,
         )
 
         def train_one_iter(grad):
@@ -66,8 +66,7 @@ def compare_with_numpy_adam(
         beta2 = betas[1]
 
         def train_one_iter(grad):
-            grad = grad + weight_decay * x
-            grad = grad * scale
+            grad = grad * scale + weight_decay * x
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
             g = learning_rate / (np.sqrt(s + eps)) * v
