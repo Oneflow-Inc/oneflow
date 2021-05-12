@@ -15,7 +15,6 @@ limitations under the License.
 */
 #if defined(WITH_RDMA)
 #include "oneflow/core/dl/include/ibv.h"
-#include <infiniband/verbs.h>
 
 namespace oneflow {
 
