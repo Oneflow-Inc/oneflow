@@ -752,7 +752,7 @@ class Std(Module):
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.tmp.zeros(size=x.shape)
+            return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelemenet()

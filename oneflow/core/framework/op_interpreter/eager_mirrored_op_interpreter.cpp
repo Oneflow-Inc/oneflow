@@ -60,9 +60,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
+  bool need_event_record = false;
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
-    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
@@ -72,11 +73,14 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   } else {
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
-    op_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+    for (const auto& input_tensor : inputs) {
+      need_event_record = need_event_record || !(*op_device == *input_tensor->device());
+    }
+    op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       const auto& tensor_device = out_devices->at(i);
       CHECK_OR_RETURN(static_cast<bool>(tensor_device));
-      const auto& tensor_parallel_desc = JUST(Device::MakeParallelDescByDevice(*op_device));
+      const auto& tensor_parallel_desc = op_device->parallel_desc_ptr();
       const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
           tensor_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
           std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
@@ -98,6 +102,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    if (need_event_record) {
+      for (const auto& input_tensor : inputs) {
+        const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
+        CHECK_OR_RETURN(static_cast<bool>(tensor));
+        // Instruction `AccessBlobByCallback` records event which can be used to synchronize cuda
+        // stream.
+        JUST(builder->AccessBlobByCallback(
+            tensor, [](uint64_t) {}, "mut"));
+      }
+    }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       attrs, op_parallel_desc, instr_type_name);
   }));

@@ -53,7 +53,7 @@ class FunctionNode {
   const std::string& GetOpName() const { return op_name_; }
 
  protected:
-  FunctionNode() = default;
+  FunctionNode() : next_functions_(new std::vector<std::shared_ptr<const FunctionNode>>{}) {}
 
   const std::string op_name_;
   std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
@@ -102,7 +102,6 @@ class StackFunctionNode final : public FunctionNode {
   void set_is_in_stack(bool in_stack) { is_in_stack_ = in_stack; }
 
  private:
-  std::vector<std::shared_ptr<Tensor>> input_tensors_;
   std::vector<std::shared_ptr<AutogradMeta>> input_meta_datas_;
   std::vector<std::shared_ptr<AutogradMeta>> output_meta_datas_;
   std::vector<TensorInfo> output_tensor_infos_;
