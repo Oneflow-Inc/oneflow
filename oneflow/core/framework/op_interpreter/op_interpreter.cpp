@@ -149,7 +149,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
-    if (!JUST(op_expr.IsGradDisabled())) {
+    if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
       requires_grad = std::any_of(
           inputs.begin(), inputs.end(),
           [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
@@ -157,7 +157,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
-  if (autograd::GradMode::is_enabled() && requires_grad) {
+  if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     grad_closure->Capture(inputs, *outputs, attrs);
 
