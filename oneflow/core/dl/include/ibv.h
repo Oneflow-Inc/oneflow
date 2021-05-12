@@ -48,30 +48,10 @@ extern "C" typedef struct IBV {
   // it requires an alternative name
   struct ibv_mr* (*ibv_reg_mr_)(struct ibv_pd* pd, void* addr, size_t length, int access);
   int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
-                         struct _compat_ibv_port_attr* port_attr);
+                         struct ibv_port_attr* port_attr);
 } IBV;
 
 extern IBV wrapper;
-
-// copy from infiniband/verbs.h
-static inline int ___ibv_query_port(struct ibv_context* context, uint8_t port_num,
-                                    struct ibv_port_attr* port_attr) {
-  struct verbs_context* vctx = verbs_get_ctx_op(context, query_port);
-
-  if (!vctx) {
-    int rc;
-
-    memset(port_attr, 0, sizeof(*port_attr));
-
-    rc = wrapper.ibv_query_port_(context, port_num, (struct _compat_ibv_port_attr*)port_attr);
-    return rc;
-  }
-
-  return vctx->query_port(context, port_num, port_attr, sizeof(*port_attr));
-}
-
-#undef ibv_query_port
-#define ibv_query_port(context, port_num, port_attr) ___ibv_query_port(context, port_num, port_attr)
 
 }  // namespace ibv
 }  // namespace oneflow

@@ -95,7 +95,7 @@ IBVerbsCommNet::IBVerbsCommNet()
   cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
   ibv_port_attr port_attr{};
-  CHECK_EQ(ibv::ibv_query_port(context_, 1, &port_attr), 0);
+  CHECK_EQ(ibv::wrapper.ibv_query_port_(context_, 1, &port_attr), 0);
   ibv_gid gid{};
   CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = GlobalProcessCtx::Rank();
