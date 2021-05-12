@@ -67,40 +67,43 @@ void SpecializedDef(py::class_<T, Tensor, std::shared_ptr<T>>* api) {
 
 namespace {
 
-#define DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(direction, modifier)                         \
-  template<typename T>                                                                            \
-  Maybe<void> CopyMirroredTensor##direction##Numpy(const std::shared_ptr<MirroredTensor>& tensor, \
-                                                   py::array_t<T> array) {                        \
-    std::atomic<bool> synced(false);                                                              \
-                                                                                                  \
-    PhysicalRun([&](InstructionsBuilder* builder) {                                               \
-      builder->AccessBlobByCallback(                                                              \
-          tensor,                                                                                 \
-          [&array, &synced](uint64_t ofblob_ptr) {                                                \
-            OfBlob_Copy##direction##Buffer<T>(ofblob_ptr, array);                                 \
-            synced = true;                                                                        \
-          },                                                                                      \
-          modifier);                                                                              \
-    });                                                                                           \
-                                                                                                  \
-    Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {                             \
-      /* spin wait */                                                                             \
-      while (!synced) {}                                                                          \
-    });                                                                                           \
-                                                                                                  \
-    return Maybe<void>::Ok();                                                                     \
-  }                                                                                               \
-                                                                                                  \
-  template<typename T>                                                                            \
-  void ApiCopyMirroredTensor##direction##Numpy(const std::shared_ptr<MirroredTensor>& tensor,     \
-                                               py::array_t<T> array) {                            \
-    return CopyMirroredTensor##direction##Numpy(tensor, array).GetOrThrow();                      \
-  }
+template<typename T>
+Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTensor>& tensor,
+                                              py::array_t<T> array,
+                                              void (*Copy)(uint64_t, py::array_t<T>),
+                                              const std::string& modifier) {
+  std::atomic<bool> synced(false);
 
-DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(To, "const")
-DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY(From, "mut")
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor,
+        [&array, &synced, &Copy](uint64_t ofblob_ptr) {
+          Copy(ofblob_ptr, array);
+          synced = true;
+        },
+        modifier);
+  });
 
-#undef DEFINE_COPY_MIRRORED_TENSOR_TO_OR_FROM_NUMPY
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
+                                                                    while (!synced) {}
+  });
+
+  return Maybe<void>::Ok();
+}
+
+template<typename T>
+void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<MirroredTensor>& tensor,
+                                  py::array_t<T> array) {
+  return CopyBetweenMirroredTensorAndNumpy(tensor, array, OfBlob_CopyToBuffer, "const")
+      .GetOrThrow();
+}
+
+template<typename T>
+void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<MirroredTensor>& tensor,
+                                    py::array_t<T> array) {
+  return CopyBetweenMirroredTensorAndNumpy(tensor, array, OfBlob_CopyFromBuffer, "mut")
+      .GetOrThrow();
+}
 
 Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
   using namespace oneflow;
