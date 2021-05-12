@@ -29,7 +29,7 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow as flow
-
+import oneflow.python.nn.modules as module
 
 def _access_blob_by_callback(local_tensor, callback, modifier):
     def AsyncAccess(Yield):
