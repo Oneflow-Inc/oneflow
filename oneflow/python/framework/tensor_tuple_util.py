@@ -14,23 +14,31 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import Union, Sequence, Tuple
+import collections
+from typing import Union, Sequence, Tuple, Optional
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow._oneflow_internal import TensorTuple
+from oneflow._oneflow_internal import TensorTuple, LocalTensor
 
 
-def convert2tensor_tuple(args: Union[Tensor, Sequence[Tensor], None]):
+def convert2tensor_tuple(
+    args: Optional[Union[Tensor, Sequence[Tensor], LocalTensor, Sequence[LocalTensor]]]
+):
     if args is None:
         return TensorTuple()
-    elif isinstance(args, Tensor):
-        if not args.is_determined:
-            args.determine()
-        tensor_tuple = TensorTuple()
-        tensor_tuple.append(args._local_or_consistent_tensor)
-        return tensor_tuple
+    elif isinstance(args, collections.abc.Sequence):
+        if isinstance(args[0], Tensor):
+            for tensor in args:
+                if not tensor.is_determined:
+                    tensor.determine()
+            return TensorTuple([x._local_or_consistent_tensor for x in args])
+        return TensorTuple(args)
     else:
-        for tensor in args:
-            if not tensor.is_determined:
-                tensor.determine()
-        return TensorTuple([x._local_or_consistent_tensor for x in args])
+        tensor_tuple = TensorTuple()
+        if isinstance(args, Tensor):
+            if not args.is_determined:
+                args.determine()
+            tensor_tuple.append(args._local_or_consistent_tensor)
+        else:
+            tensor_tuple.append(args)
+        return tensor_tuple
