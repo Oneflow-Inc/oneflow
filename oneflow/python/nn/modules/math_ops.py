@@ -29,6 +29,12 @@ def _check_axis(axis, shape):
         axis = list(range(len(shape)))
 
     if isinstance(axis, int):
+        ndim = len(shape)
+        if axis >= 0:
+            assert axis < ndim, "axis should less than ndims!"
+        else:
+            assert -ndim <= axis <= -1, "axis should be in range: [-ndims,-1]"
+            axis = ndim + axis
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
@@ -209,13 +215,12 @@ class Mean(Module):
             self.axes = []
         else:
             self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
-        
 
     def forward(self, input_tensor):
         ndim = input_tensor.ndimension()
         if self.axis < 0:
             assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
-            self.axis = ndim + self.axis 
+            self.axis = ndim + self.axis
             self.axes = [self.axis]
 
         reduce_sum = flow.experimental.sum(
