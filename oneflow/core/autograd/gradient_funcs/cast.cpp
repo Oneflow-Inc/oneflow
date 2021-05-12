@@ -24,7 +24,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class Cast : public OpExprGradFunction<OpExprInterpState> {
+struct CastOpExprInterpState : public OpExprInterpState {
+  DataType data_type;
+};
+
+class Cast : public OpExprGradFunction<CastOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -34,18 +38,17 @@ class Cast : public OpExprGradFunction<OpExprInterpState> {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override {
-    ctx->SaveTensorForBackward(inputs.at(0));
+  Maybe<void> Capture(CastOpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->data_type = inputs.at(0)->dtype()->data_type();
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<DataType>("dtype", x->dtype()->data_type()));
+    JUST(attrs.SetAttr<DataType>("dtype", ctx->data_type));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }
