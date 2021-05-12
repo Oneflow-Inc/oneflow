@@ -57,12 +57,15 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
 StackFunctionNode::StackFunctionNode(
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
-    const TensorTuple& inputs, const TensorTuple& outputs) {
+    const TensorTuple& inputs, const TensorTuple& outputs)
+    : FunctionNode() {
   input_meta_datas_.resize(inputs.size());
-  input_tensors_.resize(inputs.size());
+  next_functions_->reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
-    if (input_meta_datas_.at(i)->requires_grad()) { input_tensors_.at(i) = inputs.at(i); }
+    if (input_meta_datas_.at(i)->requires_grad()) {
+      next_functions_->emplace_back(inputs.at(i)->grad_fn_node());
+    }
   }
 
   output_meta_datas_.resize(outputs.size());
@@ -101,7 +104,7 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
 void StackFunctionNode::ReleaseData() {
   // Releases backward function and makes useless tensors release as early as possible
   if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
-  input_tensors_.clear();
+  next_functions_->clear();
   is_in_stack_ = false;
 }
 
