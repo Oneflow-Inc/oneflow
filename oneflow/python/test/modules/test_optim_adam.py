@@ -69,8 +69,7 @@ def compare_with_numpy_adam(
             grad = grad * scale + weight_decay * x
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            g = learning_rate / (np.sqrt(s + eps)) * v
-            param = x - g
+            param = x - learning_rate * (v / (np.sqrt(s) + eps))
             return param, v, s
 
         for i in range(train_iters):
@@ -93,11 +92,11 @@ class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["x_shape"] = [(10,)]
-        arg_dict["scale"] = [1.0, 0.9]
+        arg_dict["scale"] = [1.0, 0.8]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
         arg_dict["betas"] = [(0.99, 0.9), (0.8, 0.7)]
-        arg_dict["weight_decay"] = [0.0, 0.001]
+        arg_dict["weight_decay"] = [0.0, 0.1]
         arg_dict["eps"] = [1e-8, 1e-7]
         for arg in GenArgList(arg_dict):
             compare_with_numpy_adam(test_case, *arg)
