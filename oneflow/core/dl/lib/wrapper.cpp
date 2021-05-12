@@ -39,9 +39,11 @@ void* OpenSymbol(void* handle, const char* name) {
 std::unique_ptr<DynamicLibrary> DynamicLibrary::Load(const std::vector<std::string>& names) {
   for (const std::string& name : names) {
     void* handle = dlopen(name.c_str(), RTLD_LOCAL | RTLD_NOW);
-    DynamicLibrary* lib = new DynamicLibrary(handle);
-    std::cout << "loading library: " << lib->AbsolutePath() << "\n";
-    if (handle != nullptr) { return std::unique_ptr<DynamicLibrary>(lib); }
+    if (handle != nullptr) {
+      DynamicLibrary* lib = new DynamicLibrary(handle);
+      std::cout << "loaded library: " << lib->AbsolutePath() << "\n";
+      return std::unique_ptr<DynamicLibrary>(lib);
+    }
   }
   return std::unique_ptr<DynamicLibrary>();
 }
