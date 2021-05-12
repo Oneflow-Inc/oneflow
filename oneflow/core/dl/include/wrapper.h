@@ -29,6 +29,7 @@ class DynamicLibrary {
 
   static std::unique_ptr<DynamicLibrary> Load(const std::vector<std::string>& names);
   void* LoadSym(const char* name);
+  std::string AbsolutePath();
 
  private:
   DynamicLibrary(void* handle) : handle_(handle){};
