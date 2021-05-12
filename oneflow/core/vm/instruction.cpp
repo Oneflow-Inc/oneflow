@@ -333,6 +333,10 @@ bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
 }
 
+void Instruction::set_has_event_record(bool val) {
+  return stream_type().set_has_event_record(mut_status_buffer(), val);
+}
+
 const StreamType& Instruction::stream_type() const { return stream().stream_type(); }
 
 }  // namespace vm
