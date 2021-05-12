@@ -31,7 +31,7 @@ namespace _stubs {
 
 template<typename FUNC>
 FUNC LoadSymbol(const char* name, FUNC* save) {
-  auto fn = reinterpret_cast<FUNC>(GetIBVLibrary().LoadSym(__func__));
+  auto fn = reinterpret_cast<FUNC>(GetIBVLibrary().LoadSym(name));
   if (!fn) {
     std::cerr << "Can't load symbol " << name << "\n";
     abort();
