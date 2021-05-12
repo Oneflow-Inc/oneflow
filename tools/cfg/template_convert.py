@@ -35,6 +35,7 @@ def JinjaRender(module, filename, **kwargs):
 
 def render_cfg_file(dst_file_path, template_file, module):
     if not os.path.isfile(dst_file_path):
+        print("\033[34mGenerating %s\033[0m" % (dst_file_path))
         with open(dst_file_path, "w") as dst_file:
             dst_file.write(JinjaRender(module, template_file))
     else:
@@ -43,6 +44,7 @@ def render_cfg_file(dst_file_path, template_file, module):
             org_content = dst_file.read()
         new_content = JinjaRender(module, template_file)
         if org_content is None or org_content != new_content:
+            print("\033[34mRegenerating %s\033[0m" % (dst_file_path))
             with open(dst_file_path, "w") as dst_file:
                 dst_file.write(new_content)
 

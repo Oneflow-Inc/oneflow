@@ -84,15 +84,12 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     set(CFG_HPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
     
-    add_custom_command(
-      OUTPUT "${CFG_HPP_FIL}"
-             "${CFG_CPP_FIL}"
+    add_custom_target(${FIL_WE}.cfg.cpp ALL
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
         --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
         --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
         --generate_file_type=cfg.cpp
       DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Generating cfg.cpp file on ${FIL}"
       VERBATIM)
 
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
@@ -130,14 +127,12 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
     
-    add_custom_command(
-      OUTPUT "${CFG_PYBIND_FIL}"
+    add_custom_target(${FIL_WE}.cfg.pybind.cpp ALL
       COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
         --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
         --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
         --generate_file_type=cfg.pybind.cpp
       DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Generating cfg.pybind.cpp file on ${FIL}"
       VERBATIM)
 
     list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
