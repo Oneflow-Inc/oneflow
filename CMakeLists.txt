@@ -17,7 +17,7 @@ if (NOT THIRD_PARTY AND NOT ONEFLOW)
 endif()
 
 option(USE_CLANG_FORMAT "" OFF)
-option(BUILD_RDMA "" ON)
+option(BUILD_RDMA "" OFF)
 option(BUILD_CUDA "" ON)
 option(BUILD_TESTING "" ON)
 option(WITH_XLA "Option to build with XLA" OFF)
