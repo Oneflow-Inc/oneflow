@@ -18,18 +18,14 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace dl {
+namespace ibv {
 
-DynamicLibrary& GetIBVLibrary() {
-  static std::unique_ptr<DynamicLibrary> lib =
-      DynamicLibrary::Load({"libibverbs.so.1", "libibverbs.so"});
+dl::DynamicLibrary& GetIBVLibrary() {
+  static std::unique_ptr<dl::DynamicLibrary> lib =
+      dl::DynamicLibrary::Load({"libibverbs.so.1", "libibverbs.so"});
   CHECK(lib != nullptr) << "fail to find libibverbs";
   return *lib;
 }
-
-}  // namespace dl
-
-namespace ibv {
 
 namespace _stubs {
 
