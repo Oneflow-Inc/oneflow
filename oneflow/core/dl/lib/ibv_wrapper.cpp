@@ -42,6 +42,7 @@ void ibv_free_device_list(struct ibv_device** list) {
 struct ibv_mr* ibv_reg_mr_(struct ibv_pd* pd, void* addr, size_t length, int access) {
   auto fn = reinterpret_cast<struct ibv_mr* (*)(struct ibv_pd*, void*, size_t, int)>(
       dl::getIBVLibrary().sym("ibv_reg_mr"));
+  LOG(ERROR) << "ibv_reg_mr_";
   if (!fn) { LOG(FATAL) << "Can't get ibv"; };
   wrapper.ibv_reg_mr_ = fn;
   return fn(pd, addr, length, access);
@@ -161,7 +162,8 @@ IBV wrapper = {
 #define _REFERENCE_MEMBER(name) _stubs::name,
     IBV_APIS(_REFERENCE_MEMBER)
 #undef _REFERENCE_MEMBER
-};
+        _stubs::ibv_reg_mr_,
+    _stubs::ibv_query_port_};
 
 }  // namespace ibv
 }  // namespace oneflow
