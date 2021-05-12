@@ -28,8 +28,9 @@ def _check_axis(axis, shape):
     if axis is None:
         axis = list(range(len(shape)))
 
+    ndim = len(shape)
+
     if isinstance(axis, int):
-        ndim = len(shape)
         if axis >= 0:
             assert axis < ndim, "axis should less than ndims!"
         else:
@@ -38,12 +39,15 @@ def _check_axis(axis, shape):
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
-    for x in axis:
-        if x < 0:
-            x += len(shape)
-        assert x >= 0 and x < len(shape), "Invalid axis {}, len(shape): {}".format(
-            axis, len(shape)
-        )
+    axis = list(axis)
+    for i in range(len(axis)):
+        if axis[i] < 0:
+            assert (
+                -ndim <= axis[i] <= -1
+            ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
+                ndim, ndim - 1, axis[i]
+            )
+            axis[i] = axis[i] + ndim
 
     return axis
 
@@ -218,10 +222,20 @@ class Mean(Module):
 
     def forward(self, input_tensor):
         ndim = input_tensor.ndimension()
-        if self.axis < 0:
+        if isinstance(self.axis, int) and self.axis < 0:
             assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
             self.axis = ndim + self.axis
             self.axes = [self.axis]
+
+        if isinstance(self.axis, collections.Sized):
+            for i in range(len(self.axes)):
+                assert (
+                    -ndim <= self.axes[i] <= ndim - 1
+                ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
+                    ndim, ndim - 1, self.axes[i]
+                )
+                if self.axes[i] < 0:
+                    self.axes[i] = self.axes[i] + ndim
 
         reduce_sum = flow.experimental.sum(
             input_tensor, dim=self.axis, keepdims=self.keepdims
@@ -763,6 +777,7 @@ class Std(Module):
 
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
+        print("self.axis >>>>>>>>>>>>>>>> ", self.axis)
         if isinstance(self.axis, list) and len(self.axis) == 0:
             return flow.experimental.zeros(size=x.shape)
         else:
