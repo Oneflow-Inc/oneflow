@@ -60,12 +60,8 @@ class TestEmbedding(flow.unittest.TestCase):
         )
 
         indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
-        print("input.shape >>>>>>>>>>>>>> \n", weight.shape)
-        print("indices.shape >>>>>>>>>>>>>> \n", indices.shape)
-        print("output.shape >>>>>>>>>>>>>> \n", output.shape)
         m = flow.nn.Embedding(10, 3, _weight=flow.Tensor(weight))
         y = m(indices)
-        print("y >>>>>>>>>>>>>> \n", y.numpy())
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 

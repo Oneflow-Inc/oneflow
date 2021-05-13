@@ -31,7 +31,7 @@ class Embedding(Module):
         embedding_dim: int,
         padding_idx: Optional[int] = None,
         max_norm: Optional[float] = None,
-        norm_type: float = 2.0,
+        norm_type: Optional[float] = None,
         scale_grad_by_freq: bool = False,
         sparse: bool = False,
         _weight: Optional[Tensor] = None,
@@ -50,10 +50,13 @@ class Embedding(Module):
                     padding_idx >= -self.num_embeddings
                 ), "Padding_idx must be within num_embeddings"
                 padding_idx = self.num_embeddings + padding_idx
+
         self.padding_idx = padding_idx
-        self.max_norm = max_norm
-        self.norm_type = norm_type
-        self.scale_grad_by_freq = scale_grad_by_freq
+        assert max_norm is None, "Not support max_norm yet!"
+        assert norm_type is None, "Not support norm_type yet!"
+        assert scale_grad_by_freq is False, "Not support scale_grad_by_freq=True yet!"
+        assert sparse is False, "Not support sparse=True yet!"
+
         if _weight is None:
             self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
             self.reset_parameters()
@@ -62,16 +65,15 @@ class Embedding(Module):
                 num_embeddings,
                 embedding_dim,
             ], "Shape of weight does not match num_embeddings and embedding_dim"
-            # TODO(Liangdepeng): unit test error
             self.weight = flow.nn.Parameter(_weight)
 
         self.sparse = sparse
         self._gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", int(0))
+            flow.builtin_op("gather")
+            .Input("in")
+            .Input("indices")
+            .Output("out")
+            .Attr("axis", int(0))
             .Build()
         )
 
@@ -81,11 +83,9 @@ class Embedding(Module):
 
     def _fill_padding_idx_with_zero(self) -> None:
         if self.padding_idx is not None:
-            # TODO:
-            # with flow.no_grad():
-            # self.weight[self.padding_idx].fill_(0)
-            self.weight[self.padding_idx].fill_(0)
+            with flow.no_grad():
+                self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = self._gather_op(self.weight, indices)
+        res = self._gather_op(self.weight, indices)[0]
         return res
