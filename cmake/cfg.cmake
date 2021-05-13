@@ -1,24 +1,24 @@
-execute_process( 
+execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=cfg_include_dir
   OUTPUT_VARIABLE CFG_INCLUDE_DIR)
 
-execute_process( 
+execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_convert_python_script
   OUTPUT_VARIABLE TEMPLATE_CONVERT_PYTHON_SCRIPT)
 
-execute_process( 
+execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=copy_pyproto_python_script
   OUTPUT_VARIABLE COPY_PYPROTO_PYTHON_SCRIPT)
 
-execute_process( 
+execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=pybind_registry_cc
   OUTPUT_VARIABLE PYBIND_REGISTRY_CC)
 
-execute_process( 
+execute_process(
   COMMAND python3 ${PROJECT_SOURCE_DIR}/tools/cfg/generate_cfg_head_dir_and_convert_src.py
     --get_message_type=template_files
   OUTPUT_VARIABLE TEMPLATE_FILES)
@@ -76,6 +76,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     DEPENDS ${Python_EXECUTABLE} of_protoobj
   )
 
+  set(CFG_ARGS "")
   foreach(FIL ${CFG_SOURCE_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
@@ -83,21 +84,21 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_HPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    
-    add_custom_command(
-      OUTPUT "${CFG_HPP_FIL}"
-             "${CFG_CPP_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-        --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
-        --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
-        --generate_file_type=cfg.cpp
-      DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Generating cfg.cpp file on ${FIL}"
-      VERBATIM)
-
+    list(APPEND CFG_ARGS "--proto_file_path=${FIL}")
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
     list(APPEND ${SRCS} ${CFG_CPP_FIL})
   endforeach()
+
+  add_custom_target(
+    generate_cfg
+    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+      ${CFG_ARGS}
+      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+      --project_build_dir=${PROJECT_BINARY_DIR}
+      --generate_file_type=cfg.cpp
+    DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
+    VERBATIM
+  )
 
   list(APPEND PYBIND11_FILE_CONVERT_PROTO
       oneflow/core/job/job_conf.proto
@@ -123,25 +124,27 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/operator/op_conf.proto
   )
 
+  set(PY_CFG_ARGS "")
   foreach(FIL ${PYBIND11_FILE_CONVERT_PROTO})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
-    
-    add_custom_command(
-      OUTPUT "${CFG_PYBIND_FIL}"
-      COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
-        --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
-        --project_build_dir=${PROJECT_BINARY_DIR} --proto_file_path=${FIL}
-        --generate_file_type=cfg.pybind.cpp
-      DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
-      COMMENT "Generating cfg.pybind.cpp file on ${FIL}"
-      VERBATIM)
-
-    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
+    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL} PARENT_SCOPE)
+    list(APPEND PY_CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
+
+  add_custom_target(
+    generate_py_cfg
+    COMMAND ${Python_EXECUTABLE} ${TEMPLATE_CONVERT_PYTHON_SCRIPT}
+      ${PY_CFG_ARGS}
+      --of_cfg_proto_python_dir=${of_cfg_proto_python_dir}
+      --project_build_dir=${PROJECT_BINARY_DIR}
+      --generate_file_type=cfg.pybind.cpp
+    DEPENDS copy_pyproto ${Python_EXECUTABLE} ${ABS_FIL} ${TEMPLATE_FILES}
+    VERBATIM
+  )
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
   set(${SRCS} ${${SRCS}} PARENT_SCOPE)
