@@ -54,6 +54,13 @@ class TestAddModule(flow.unittest.TestCase):
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    def test_add_backward(test_case):
+        x = 5
+        y = flow.Tensor(np.random.randn(1), requires_grad=True)
+        of_out = flow.add(x, y)
+        of_out.backward()
+        test_case.assertTrue(np.allclose(y.grad.numpy(), np.array([1]), 1e-4, 1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()
