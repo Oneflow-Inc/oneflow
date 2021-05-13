@@ -29,29 +29,27 @@ def ones_like(x):
     ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_ones_like_case1(test_case):
+    def test_ones_like_float_cpu(test_case):
         x = flow.Tensor(2, 3)
         y = ones_like(x)
         test_case.assertTrue(y.dtype is flow.float32)
         test_case.assertTrue(y.shape == x.shape)
-        # TODO(): Use mirrored mode
-        # test_case.assertTrue(y.device == x.device)
+        test_case.assertTrue(y.device == x.device)
 
         y_numpy = np.ones_like(x.numpy())
         test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
-    def test_ones_like_case2(test_case):
+    def test_ones_like_int_cpu(test_case):
         x = flow.Tensor(2, 3, dtype=flow.int)
         y = ones_like(x)
         test_case.assertTrue(y.dtype is flow.int)
         test_case.assertTrue(y.shape == x.shape)
-        # TODO(): Use mirrored mode
-        # test_case.assertTrue(y.device == x.device)
+        test_case.assertTrue(y.device == x.device)
 
         y_numpy = np.ones_like(x.numpy())
         test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
-    def test_ones_like_case3(test_case):
+    def test_ones_like_float_gpu(test_case):
         # TODO(): Test gpu device
         pass
 
