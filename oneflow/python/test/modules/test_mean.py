@@ -34,6 +34,12 @@ class TestMeanModule(flow.unittest.TestCase):
         np_out = np.mean(input.numpy(), axis=0)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    def test_mean_negative_dim(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5), dtype=flow.float32)
+        of_out = flow.mean(input, dim=(-2, -1, -3))
+        np_out = np.mean(input.numpy(), axis=(-2, -1, -3))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()
