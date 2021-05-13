@@ -24,20 +24,23 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 def _check_axis(axis, shape):
+    ndim = len(shape)
     # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
     if axis is None:
         axis = list(range(len(shape)))
-
     if isinstance(axis, int):
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
-    for x in axis:
-        if x < 0:
-            x += len(shape)
-        assert x >= 0 and x < len(shape), "Invalid axis {}, len(shape): {}".format(
-            axis, len(shape)
+    axis = list(axis)
+    for i in range(len(axis)):
+        assert (
+            -ndim <= axis[i] <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, axis[i]
         )
+        if axis[i] < 0:
+            axis[i] = axis[i] + ndim
 
     return axis
 
@@ -211,6 +214,22 @@ class Mean(Module):
             self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
 
     def forward(self, input_tensor):
+        ndim = input_tensor.ndimension()
+        if isinstance(self.axis, int) and self.axis < 0:
+            assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
+            self.axis = ndim + self.axis
+            self.axes = [self.axis]
+
+        if isinstance(self.axis, collections.Sized):
+            for i in range(len(self.axes)):
+                assert (
+                    -ndim <= self.axes[i] <= ndim - 1
+                ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
+                    ndim, ndim - 1, self.axes[i]
+                )
+                if self.axes[i] < 0:
+                    self.axes[i] = self.axes[i] + ndim
+
         reduce_sum = flow.experimental.sum(
             input_tensor, dim=self.axis, keepdims=self.keepdims
         )
