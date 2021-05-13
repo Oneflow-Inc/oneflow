@@ -45,7 +45,8 @@ Maybe<void> ReduceSumOp::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::BroadcastLikeOp(/*axis=*/{-1}, GradientOpName(op_name)));
+  grad_op_ =
+      JUST(op_expr_helper::BroadcastLikeOp(/*broadcast_axes=*/{-1}, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -62,7 +63,7 @@ Maybe<void> ReduceSumOp::Apply(const ReduceSumOpInterpState* ctx, const TensorTu
   const auto& input = ctx->SavedTensors().at(0);
   const auto& dy = out_grads.at(0);
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<std::vector<int32_t>>("axis", ctx->axis));
+  JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", ctx->axis));
   in_grads->resize(1);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {dy, input}, attrs));
   return Maybe<void>::Ok();
