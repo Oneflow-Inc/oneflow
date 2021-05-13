@@ -25,7 +25,7 @@ namespace one {
 
 struct CopyOpExprInterpState : public OpExprInterpState {
   std::string device_type;
-  int device_id;
+  int64_t device_id;
 };
 
 class Copy : public OpExprGradFunction<CopyOpExprInterpState> {

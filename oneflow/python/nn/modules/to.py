@@ -17,7 +17,7 @@ import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.oneflow_export import oneflow_export
-from typing import Optional
+from typing import Optional, Union
 
 
 class To(Module):
@@ -35,5 +35,7 @@ class To(Module):
 
 @oneflow_export("to")
 @register_tensor_op("to")
-def to_op(input, device=None, copy=False):
+def to_op(input, device: Optional[Union[str, flow.device]] = None, copy=False):
+    if isinstance(device) is str:
+        device = flow.device(device)
     return To(copy)(input, device)

@@ -35,7 +35,7 @@ REGISTER_USER_OP("copy")
     .Input("in")
     .Output("out")
     .Attr<std::string>("device_type")
-    .Attr<int>("device_id")
+    .Attr<int64_t>("device_id")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
@@ -43,8 +43,7 @@ REGISTER_USER_OP("copy")
     })
     .SetDeviceInferFn([](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
       std::shared_ptr<const Device> out_device =
-          Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id"))
-              .GetPtrOrThrow();
+          Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id")).GetPtrOrThrow();
       *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
       const std::shared_ptr<const Device>& in_device =
           ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
