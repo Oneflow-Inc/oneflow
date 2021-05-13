@@ -35,7 +35,7 @@ class TestTranspose(flow.unittest.TestCase):
         of_out = input.transpose(0, 1)
         np_out = input.numpy().transpose((1, 0, 2, 3))
         test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
-    
+
     def test_tranpose_negative_dim(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = flow.transpose(input, -4, -3)

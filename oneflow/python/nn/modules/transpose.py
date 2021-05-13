@@ -70,7 +70,10 @@ class Transpose(Module):
 @register_tensor_op("transpose")
 @experimental_api
 def transpose_op(tensor, dim0, dim1):
-    r"""This operator transposes the specified axis of input Tensor.
+    r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+
+    The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
+
     Args:
         tensor (oneflow.Tensor): The input tensor.
         dim0 (int) – the first dimension to be transposed.
