@@ -586,10 +586,12 @@ struct LocalCallOpKernelUtil final {
 };
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
+  // CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
+  UNIMPLEMENTED();
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
+  CHECK_OK(LocalCallOpKernelUtil::Infer(instruction));
   CHECK_OK(LocalCallOpKernelUtil::Compute(instruction));
 }
 

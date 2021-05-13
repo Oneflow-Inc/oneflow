@@ -25,37 +25,31 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(
-        CHECK_JUST(input->infer_local_dep_object())->mut_local_dep_object()->mut_mirrored_object(),
-        CHECK_JUST(input->compute_local_dep_object())
-            ->mut_local_dep_object()
-            ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
+                        ->mut_local_dep_object()
+                        ->mut_mirrored_object());
   }
 }
 
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  DoEach(opkernel().infer_local_dep_object()->mut_local_dep_object()->mut_mirrored_object(),
+  DoEach(nullptr,
          opkernel().compute_local_dep_object()->mut_local_dep_object()->mut_mirrored_object());
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(
-        CHECK_JUST(input->infer_local_dep_object())->mut_local_dep_object()->mut_mirrored_object(),
-        CHECK_JUST(input->compute_local_dep_object())
-            ->mut_local_dep_object()
-            ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())
+                        ->mut_local_dep_object()
+                        ->mut_mirrored_object());
   }
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(
-        CHECK_JUST(output->infer_local_dep_object())->mut_local_dep_object()->mut_mirrored_object(),
-        CHECK_JUST(output->compute_local_dep_object())
-            ->mut_local_dep_object()
-            ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
+                        ->mut_local_dep_object()
+                        ->mut_mirrored_object());
   }
 }
 
@@ -65,11 +59,9 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(
-        CHECK_JUST(output->infer_local_dep_object())->mut_local_dep_object()->mut_mirrored_object(),
-        CHECK_JUST(output->compute_local_dep_object())
-            ->mut_local_dep_object()
-            ->mut_mirrored_object());
+    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())
+                        ->mut_local_dep_object()
+                        ->mut_mirrored_object());
   }
 }
 

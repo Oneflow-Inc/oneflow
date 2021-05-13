@@ -63,9 +63,8 @@ class InferRankFrontSeqCallbackInstructionType final : public RankFrontSeqCallba
 
   using stream_type = HostStreamType;
 
-  void Infer(Instruction* instruction) const override { Run(instruction->instr_msg()); }
-  void Compute(Instruction* instruction) const override { /* do nothing */
-  }
+  void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
+  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
 };
 COMMAND(
     RegisterInstructionType<InferRankFrontSeqCallbackInstructionType>("InferRankFrontSeqCallback"));
@@ -93,10 +92,8 @@ class CtrlInferRankFrontSeqCallbackInstructionType final
 
   using stream_type = ControlStreamType;
 
-  void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
-  void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { /* do nothing */
-    ;
-  }
+  void Infer(VirtualMachine*, InstructionMsg* instr_msg) const override { UNIMPLEMENTED(); }
+  void Compute(VirtualMachine*, InstructionMsg* instr_msg) const override { Run(*instr_msg); }
   void Infer(Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
