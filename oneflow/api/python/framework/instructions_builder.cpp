@@ -213,10 +213,7 @@ void NoBoxingCudaD2HStatelessCall(
     InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
-                                                      const std::shared_ptr<ParallelDesc>&,
-                                                      const std::string&)>& TryReplaceDeviceTag) {
+        bn_in_op2blob_object) {
   return x->NoBoxingCudaD2HStatelessCall(op_attribute, in_parallel_conf, bn_in_op2blob_object)
       .GetOrThrow();
 }
