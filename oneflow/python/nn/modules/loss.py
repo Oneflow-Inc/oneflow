@@ -103,6 +103,13 @@ class CrossEntropyLoss(Module):
             .Output("out")
             .Build()
         )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
@@ -110,12 +117,12 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = input.transpose((0, 2, 1))
+            input = self._transpose_op(input, perm=(0, 2, 1))[0]
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = input.transpose((0, 2, 3, 1))
+            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
