@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 @unittest.skipIf(
@@ -26,7 +26,7 @@ import oneflow as flow
 class TestTranspose(flow.unittest.TestCase):
     def test_transpose_v1(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        of_out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+        of_out = flow.transpose(input, perm=(0, 2, 3, 1))
         np_out = input.numpy().transpose((0, 2, 3, 1))
         test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 

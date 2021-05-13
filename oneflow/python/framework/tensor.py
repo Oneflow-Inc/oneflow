@@ -32,29 +32,25 @@ import oneflow as flow
 from oneflow.python.nn.modules import *
 
 
-def _access_blob_by_callback(local_tensor, callback, modifier):
-    def AsyncAccess(Yield):
-        def MakeAccessor(Yield):
-            def AccessOfBlobPtr(ofblob_ptr):
-                ofblob = ofblob_util.OfBlob(ofblob_ptr)
-                Yield(callback(ofblob))
-
-            return AccessOfBlobPtr
-
-        accessor = MakeAccessor(Yield)
-
-        def BuildInstruction(builder):
-            builder.AccessBlobByCallback(local_tensor, accessor, modifier)
-
-        flow._oneflow_internal.deprecated.PhysicalRun(BuildInstruction)
-
-    return async_util.Await(1, AsyncAccess)[0]
+def _local_tensor_numpy(eager_local_tensor):
+    method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
+    copy_to_numpy = getattr(eager_local_tensor, method_name)
+    ndarray = np.empty(
+        tuple(eager_local_tensor.shape),
+        dtype=flow.convert_oneflow_dtype_to_numpy_dtype(eager_local_tensor.dtype),
+    )
+    copy_to_numpy(ndarray)
+    return ndarray
 
 
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
-    _access_blob_by_callback(
-        eager_local_tensor, lambda ofblob: ofblob.CopyFromNdarray(np_arr), "mut"
+    method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()
+    copy_from_numpy = getattr(eager_local_tensor, method_name)
+    assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
+        eager_local_tensor.dtype
     )
+    assert np_arr.shape == tuple(eager_local_tensor.shape)
+    copy_from_numpy(np_arr)
 
 
 def _init_eager_local_tensor_by_initializer_conf(
@@ -270,9 +266,7 @@ class Tensor:
     def numpy(self):
         internal_tensor = self._local_or_consistent_tensor
         if not internal_tensor.is_lazy and not internal_tensor.is_consistent:
-            return _access_blob_by_callback(
-                internal_tensor, lambda ofblob: ofblob.CopyToNdarray(), "const"
-            )
+            return _local_tensor_numpy(internal_tensor)
 
         return remote_blob_util.BlobObjectNumpy(internal_tensor._blob_object)
 
@@ -320,16 +314,16 @@ class Tensor:
         return self.sub(other)
 
     def __rsub__(self, other):
-        return flow.sub(other, self)
+        return flow.experimental.sub(other, self)
 
     def __truediv__(self, other):
         return self.div(other)
 
     def __rtruediv__(self, other):
-        return flow.div(other, self)
+        return flow.experimental.div(other, self)
 
     def __neg__(self):
-        return flow.neg(self)
+        return flow.experimental.neg(self)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
@@ -515,13 +509,10 @@ class Tensor:
     ):
         numpy_data = None
         if _input_args_is_tuple_or_list(*args):
-            numpy_data = np.array(args[0]).astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
+            numpy_data = np.array(args[0])
         elif _input_args_is_numpy(*args):
-            numpy_data = args[0].astype(
-                flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
-            )
+            numpy_data = args[0]
+        numpy_data = numpy_data.astype(flow.convert_oneflow_dtype_to_numpy_dtype(dtype))
         shape = oneflow._oneflow_internal.Size(tuple(numpy_data.shape))
         self._determining_initializer = _numpy_initializer_for_determining
         self._undetermined_tensor = UndeterminedTensor(

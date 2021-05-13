@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
@@ -27,11 +27,14 @@ class Less(Module):
         )
 
     def forward(self, x, y):
+        if isinstance(y, int) or isinstance(y, float):
+            y = flow.Tensor([float(y)], dtype=flow.float32)
         return self._op(x, y)[0]
 
 
 @oneflow_export("lt")
 @register_tensor_op("lt")
+@experimental_api
 def less_op(x, y):
     r"""Returns the truth value of :math:`x < y` element-wise.
 
@@ -47,7 +50,7 @@ def less_op(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         
         input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)

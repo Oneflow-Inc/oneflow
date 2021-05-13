@@ -28,7 +28,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.distribute as distribute_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow._oneflow_internal
 
 IntPair = Tuple[int, int]
@@ -858,16 +858,37 @@ def group_normalization(
     if name is None:
         name = id_util.UniqueStr("GroupNorm_")
 
-    reshape_to_1d = flow.reshape(x, shape=[x.shape[0], num_groups, -1])
-    normalized_1d_out = flow.nn.InstanceNorm1d(
-        reshape_to_1d, eps=eps, affine=affine, name=name
-    )
-    reshape_back = flow.reshape(normalized_1d_out, shape=list(x.shape))
+    channel = x.shape[1]
+    assert channel % num_groups == 0
+    group_size = channel // num_groups
+    orig_shape = x.shape
+    reshape_to_1d = flow.reshape(x, shape=[orig_shape[0], num_groups, -1])
+    (mean, variance) = flow.nn.moments(reshape_to_1d, [2], keepdims=True)
+    normalized = (reshape_to_1d - mean) / flow.math.sqrt(variance + eps)
+    normalized = flow.reshape(normalized, shape=[orig_shape[0], channel, -1])
+    if affine == True:
+        gamma = flow.get_variable(
+            name + "_gamma",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.ones_initializer(),
+            trainable=True,
+        )
+        beta = flow.get_variable(
+            name + "_beta",
+            shape=(1, channel, 1),
+            dtype=x.dtype,
+            initializer=flow.zeros_initializer(),
+            trainable=True,
+        )
+        normalized = gamma * normalized + beta
+    reshape_back = flow.reshape_like(normalized, like=x)
 
     return reshape_back
 
 
 @oneflow_export("nn.InstanceNorm1d")
+@stable_api
 def instance_normalization1d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,
@@ -937,6 +958,7 @@ def instance_normalization1d(
 
 
 @oneflow_export("nn.InstanceNorm2d")
+@stable_api
 def instance_normalization2d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,
@@ -992,6 +1014,7 @@ def instance_normalization2d(
 
 
 @oneflow_export("nn.InstanceNorm3d")
+@stable_api
 def instance_normalization3d(
     x: oneflow._oneflow_internal.BlobDesc,
     eps: float = 1e-05,

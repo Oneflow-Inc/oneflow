@@ -15,10 +15,13 @@ limitations under the License.
 */
 #include <sstream>
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -29,21 +32,62 @@ namespace {
 inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
+
+Maybe<VmLocalDepObject> FindOrCreateComputeLocalDepObject(const Device& device) {
+  static std::mutex mutex;
+  static HashMap<Device, std::shared_ptr<VmLocalDepObject>> device2dep_object;
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    const auto& iter = device2dep_object.find(device);
+    if (iter != device2dep_object.end()) { return iter->second; }
+  }
+  const auto& dep_object = std::make_shared<VmLocalDepObject>(device.parallel_desc_ptr());
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    return device2dep_object.emplace(device, dep_object).first->second;
+  }
+}
+
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type), device_id_(device_id), hash_value_(HashDevice(type, device_id)) {}
 
+Maybe<void> Device::Init() {
+  DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
+  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  compute_local_dep_object_ = JUST(FindOrCreateComputeLocalDepObject(*this));
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<const Device> Device::New(const std::string& type, int64_t device_id) {
+  auto* device = new Device(type, device_id);
+  JUST(device->Init());
+  return std::shared_ptr<const Device>(device);
+}
+
+/*static*/ Maybe<const Device> Device::New(const std::string& type) {
+  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
+}
+
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
   return Global<EnvGlobalObjectsScope>::Get()->MutParallelDesc4Device(*this);
 }
 
-std::string Device::of_type() const {
-  if (type_ == "cuda") {
-    return "gpu";
-  } else {
-    return type_;
-  }
+Maybe<const std::string&> Device::of_type() const {
+  static const HashMap<std::string, std::string> type2device_tag{
+      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}, {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"},
+  };
+  return MapAt(type2device_tag, type());
+}
+
+Maybe<const std::string&> Device::local_call_instruction_name() const {
+  static const HashMap<std::string, std::string> type2instr_name{
+      {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
+      {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
+      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
+  };
+  return MapAt(type2instr_name, type());
 }
 
 std::string Device::ToString() const {
@@ -54,14 +98,6 @@ std::string Device::ToString() const {
   ss << device_id_;
   ss << ")";
   return ss.str();
-}
-
-Maybe<const ParallelDesc> Device::MakeParallelDescByDevice(const Device& device) {
-  int64_t machine_id = GlobalProcessCtx::Rank() / GlobalProcessCtx::NumOfProcessPerNode();
-  int64_t device_id = device.device_id();
-  std::string machine_device_id = std::to_string(machine_id) + ":" + std::to_string(device_id);
-  return std::const_pointer_cast<const ParallelDesc>(
-      JUST(ParallelDesc::New(device.of_type(), {machine_device_id}, nullptr)));
 }
 
 Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
@@ -78,7 +114,7 @@ Maybe<const Device> Device::MakeDeviceByParallelDesc(const ParallelDesc& paralle
   std::string device_id = machine_device_id.substr(pos + 1);
   CHECK_EQ_OR_RETURN(device_id.find('-'), std::string::npos);
   CHECK_OR_RETURN(IsStrInt(device_id));
-  return std::make_shared<const Device>(type, std::stoi(device_id));
+  return Device::New(type, std::stoi(device_id));
 }
 
 }  // namespace oneflow

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 
 namespace oneflow {
@@ -81,10 +82,12 @@ class BuiltinOpExpr : public OpExpr {
 template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
-  explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
-                             const std::vector<std::string>& indexed_ibns,
-                             const std::vector<std::string>& indexed_obns)
-      : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), op_proto_(std::move(op_proto)) {}
+  static Maybe<BuiltinOpExprImpl<ProtoType>> New(const std::string& op_name, ProtoType&& op_proto,
+                                                 const std::vector<std::string>& indexed_ibns,
+                                                 const std::vector<std::string>& indexed_obns) {
+    return std::shared_ptr<BuiltinOpExprImpl<ProtoType>>(
+        new BuiltinOpExprImpl<ProtoType>(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
+  }
 
   virtual ~BuiltinOpExprImpl() = default;
 
@@ -100,24 +103,41 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
+  explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
+                             const std::vector<std::string>& indexed_ibns,
+                             const std::vector<std::string>& indexed_obns)
+      : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), op_proto_(std::move(op_proto)) {}
+
   ProtoType op_proto_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 
 class StatefulLocalOpKernel;
 
-class UserOpExpr : public BuiltinOpExprImpl<UserOpConf> {
+class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
  public:
   UserOpExpr() = default;
   virtual ~UserOpExpr() = default;
-  explicit UserOpExpr(const std::string& op_name, UserOpConf&& proto,
-                      const std::vector<std::string>& indexed_ibns,
-                      const std::vector<std::string>& indexed_obns)
-      : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns){};
+
+  static Maybe<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
+                               const std::vector<std::string>& indexed_ibns,
+                               const std::vector<std::string>& indexed_obns);
+
+  const AttrMap& base_attrs() const { return base_attrs_; }
 
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
+  bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
+  Maybe<const Device> InferDevices(
+      const AttrMap& attrs, const TensorTuple& inputs,
+      std::vector<std::shared_ptr<const Device>>* outputs_devices) const;
+
  private:
+  UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+             const std::vector<std::string>& indexed_ibns,
+             const std::vector<std::string>& indexed_obns);
+  AttrMap base_attrs_;
+  user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 

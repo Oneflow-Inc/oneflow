@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 import oneflow.python.framework.id_util as id_util
 from typing import Optional, Sequence
@@ -24,7 +24,7 @@ from typing import Optional, Sequence
 class MatMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
+        self._matmul_op = (
             flow.builtin_op("matmul")
             .Input("a")
             .Input("b")
@@ -35,14 +35,50 @@ class MatMul(Module):
             .Build()
         )
 
+        self._batch_matmul_op = (
+            flow.builtin_op("batch_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
+        self._broadcast_matmul_op = (
+            flow.builtin_op("broadcast_matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
     def forward(self, a, b):
-        assert len(a.shape) == 2
-        assert len(b.shape) == 2
-        return self._op(a, b)[0]
+        assert len(a.shape) >= 2, "Tensor a's dim should >=2"
+        assert len(b.shape) >= 2, "Tensor b's dim should >=2"
+
+        if len(a.shape) == len(b.shape):
+            if len(a.shape) == 2:
+                res = self._matmul_op(a, b)[0]
+            else:
+                res = self._batch_matmul_op(a, b)[0]
+        else:
+            # NOTE: support broadcast b to a only for now
+            assert (
+                len(b.shape) == 2
+            ), "Not support number of dimensions of a being less than number of dimensions of b!"
+            res = self._broadcast_matmul_op(a, b)[0]
+
+        return res
 
 
-@oneflow_export("tmp.matmul")
+@oneflow_export("matmul")
 @register_tensor_op("matmul")
+@experimental_api
 def matmul_op(a, b):
     r"""This operator applies matrix multiplication to two Tensor.
 
@@ -57,12 +93,12 @@ def matmul_op(a, b):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         
         input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
         input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
-        of_out = flow.tmp.matmul(input1, input2)
+        of_out = flow.matmul(input1, input2)
 
         # of_out.shape (2, 5)
 
