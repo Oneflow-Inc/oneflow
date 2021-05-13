@@ -521,7 +521,7 @@ class Module(object):
         fn(self)
         return self
 
-    def to(self, device: flow.device = None):
+    def to(self, device: Optional[Union[str, flow.device]] = None):
         def convert(t):
             return t.to(device)
 
