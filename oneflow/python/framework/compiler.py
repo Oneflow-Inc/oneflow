@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 
-import inspect
+import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.input_blob_def as input_blob_util
@@ -36,6 +36,7 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
+from oneflow.python.framework.tensor import Tensor
 import oneflow._oneflow_internal
 import inspect
 
@@ -208,6 +209,14 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
         return None
     if isinstance(remote_blobs, oneflow._oneflow_internal.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
+    if isinstance(remote_blobs, Tensor):
+        cfg_lbi = oneflow._oneflow_internal.GetTensorLbi(
+            remote_blobs._local_or_consistent_tensor
+        )
+        lbi = logical_blob_id_util.LogicalBlobId()
+        lbi.op_name = cfg_lbi.op_name()
+        lbi.blob_name = cfg_lbi.blob_name()
+        return ops.ReturnRemoteBlob(remote_blob_util.RemoteBlob(lbi), **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(
             _RecursiveMakeRetRemoteBlobs(x, **kwarg) for x in remote_blobs

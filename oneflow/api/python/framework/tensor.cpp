@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
@@ -192,6 +194,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
   ExportTensor<MirroredTensor>(m, "LocalTensor");
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
+  m.def("GetTensorLbi",
+        [](const std::shared_ptr<Tensor>& t) { return GetTensorLbi(t).GetOrThrow(); });
+  m.def("RecordTensorName", [](const std::shared_ptr<Tensor>& t, const std::string& name) {
+    return RecordTensorName(t, name).GetOrThrow();
+  });
 }
 
 }  // namespace one

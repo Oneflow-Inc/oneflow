@@ -1249,8 +1249,8 @@ Maybe<bool> GetSbpParallelInLbnOrNothing(const std::string& lbn, SbpParallel* sb
   } else if (split_hint[0] == 'B') {
     sbp->mutable_broadcast_parallel();
   } else {
-    return Error::CheckFailedError()
-           << "split hint only support 'S' or 'B', but get:" << split_hint[0];
+    return Error::CheckFailedError() << "split hint only support 'S' or 'B', but lbn " << lbn
+                                     << " get split hint: " << split_hint[0];
   }
   return true;
 }
