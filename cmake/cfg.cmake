@@ -84,9 +84,9 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_HPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.h)
     set(CFG_CPP_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.cpp)
-    list(APPEND CFG_ARGS "--proto_file_path=${FIL}")
     list(APPEND ${HDRS} ${CFG_HPP_FIL})
     list(APPEND ${SRCS} ${CFG_CPP_FIL})
+    list(APPEND CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
 
   add_custom_target(
