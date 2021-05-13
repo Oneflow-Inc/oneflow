@@ -147,9 +147,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                                        TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
   {
+    bool op_expr_grad_enabled = autograd::GradMode::is_enabled();
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
-    if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
+    if (op_expr_grad_enabled && !JUST(op_expr.IsGradDisabled())) {
       requires_grad = std::any_of(
           inputs.begin(), inputs.end(),
           [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
