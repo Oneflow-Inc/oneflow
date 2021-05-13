@@ -29,10 +29,9 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow as flow
-from oneflow.python.nn.modules import *
 
 
-def register_local_tensor_op(name=None):
+def register_local_tensor_method(name=None):
     def decorator(method):
         if name is None:
             op_name = method.__name__
@@ -44,7 +43,7 @@ def register_local_tensor_op(name=None):
     return decorator
 
 
-@register_local_tensor_op("numpy")
+@register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
@@ -56,7 +55,7 @@ def _local_tensor_numpy(eager_local_tensor):
     return ndarray
 
 
-@register_local_tensor_op("copy_")
+@register_local_tensor_method("copy_")
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()
     copy_from_numpy = getattr(eager_local_tensor, method_name)
@@ -67,7 +66,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     copy_from_numpy(np_arr)
 
 
-@register_local_tensor_op("_init_by_initializer_conf")
+@register_local_tensor_method("_init_by_initializer_conf")
 def _init_eager_local_tensor_by_initializer_conf(
     eager_local_tensor, initializer_conf, random_seed=0
 ):
@@ -160,7 +159,7 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    @register_local_tensor_op("ndim")
+    @register_local_tensor_method("ndim")
     @property
     def ndim(self):
         return len(self.shape)
@@ -237,15 +236,15 @@ class Tensor:
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def size(self):
         return self.shape
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def dim(self, idx):
         return self.shape[idx]
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def ndimension(self):
         return self.ndim
 
@@ -293,7 +292,7 @@ class Tensor:
         TODO()
 
     @_auto_determine
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
@@ -303,11 +302,11 @@ class Tensor:
     def __repr__(self):
         return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __gt__(self, other):
         return self.gt(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __lt__(self, other):
         return self.lt(other)
 
@@ -320,39 +319,39 @@ class Tensor:
     def __deepcopy__(self, memo):
         TODO()
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __mul__(self, other):
         return self.mul(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __rmul__(self, other):
         return self.mul(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __add__(self, other):
         return self.add(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __radd__(self, other):
         return self.add(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __sub__(self, other):
         return self.sub(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __rsub__(self, other):
         return flow.experimental.sub(other, self)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __truediv__(self, other):
         return self.div(other)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __rtruediv__(self, other):
         return flow.experimental.div(other, self)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def __neg__(self):
         return flow.experimental.neg(self)
 
@@ -435,14 +434,14 @@ class Tensor:
         else:
             return self._undetermined_tensor.sbp
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def uniform_(self, a=0, b=1):
         initializer_conf = flow.random_uniform_initializer(
             minval=a, maxval=b, dtype=self.dtype
         )
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def kaiming_uniform_(
         self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
     ):
@@ -456,7 +455,7 @@ class Tensor:
         )
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def kaiming_normal_(
         self, a=0, mode="fan_in", nonlinearity="leaky_relu", *, data_format="NCHW"
     ):
@@ -470,24 +469,24 @@ class Tensor:
         )
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def xavier_normal_(self, gain=1.0, *, data_format="NCHW"):
         assert gain == 1.0, "Only gain == 1.0 is supported now"
         initializer_conf = flow.xavier_normal_initializer(data_format=data_format)
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def xavier_uniform_(self, gain=1.0, *, data_format="NCHW"):
         assert gain == 1.0, "Only gain == 1.0 is supported now"
         initializer_conf = flow.xavier_uniform_initializer(data_format=data_format)
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def normal_(self, mean=0, std=1):
         initializer_conf = flow.random_normal_initializer(mean=mean, stddev=std)
         return self._init_by_initializer_conf(initializer_conf)
 
-    @register_local_tensor_op()
+    @register_local_tensor_method()
     def fill_(self, value):
         initializer_conf = flow.constant_initializer(value=value, dtype=self.dtype)
         return self._init_by_initializer_conf(initializer_conf)

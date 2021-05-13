@@ -21,7 +21,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow._oneflow_internal import TensorTuple, LocalTensor
 
 
-def convert2tensor_tuple(
+def convert_to_tensor_tuple(
     args: Optional[Union[Tensor, Sequence[Tensor], LocalTensor, Sequence[LocalTensor]]]
 ):
     if args is None:
