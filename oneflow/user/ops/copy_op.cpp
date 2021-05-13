@@ -31,6 +31,19 @@ Maybe<const Device> MakeOpDevice(const std::shared_ptr<const Device>& in_device,
   }
 }
 
+std::function<Maybe<const Device>(user_op::DeviceInferContext* ctx)> GetDeviceInferFn() {
+  std::function<Maybe<const Device>(user_op::DeviceInferContext * ctx)> fn =
+      [](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
+    std::shared_ptr<const Device> out_device =
+        JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id")));
+    *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
+    const std::shared_ptr<const Device>& in_device =
+        ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+    return MakeOpDevice(in_device, out_device);
+  };
+  return fn;
+}
+
 REGISTER_USER_OP("copy")
     .Input("in")
     .Output("out")
@@ -41,15 +54,7 @@ REGISTER_USER_OP("copy")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn([](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
-      std::shared_ptr<const Device> out_device =
-          Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id"))
-              .GetPtrOrThrow();
-      *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
-      const std::shared_ptr<const Device>& in_device =
-          ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-      return MakeOpDevice(in_device, out_device);
-    })
+    .SetDeviceInferFn(GetDeviceInferFn())
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();

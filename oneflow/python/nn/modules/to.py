@@ -36,6 +36,6 @@ class To(Module):
 @oneflow_export("to")
 @register_tensor_op("to")
 def to_op(input, device: Optional[Union[str, flow.device]] = None, copy=False):
-    if isinstance(device) is str:
+    if isinstance(device, str):
         device = flow.device(device)
     return To(copy)(input, device)
