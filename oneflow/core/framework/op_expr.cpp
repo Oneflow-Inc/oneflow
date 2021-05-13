@@ -122,7 +122,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
   std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
-                                                                    int32_t index) override {
+                                                                    int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
@@ -130,7 +130,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
   const std::shared_ptr<const Device>& InputTensorDevice4ArgNameAndIndex(
-      const std::string& name, int32_t index) const override {
+      const std::string& name, int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
