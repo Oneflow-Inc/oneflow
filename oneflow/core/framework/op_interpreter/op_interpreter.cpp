@@ -146,15 +146,14 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
+  if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
+    requires_grad = std::any_of(
+        inputs.begin(), inputs.end(),
+        [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
+  }
   {
-    bool op_expr_grad_enabled = autograd::GradMode::is_enabled();
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
-    if (op_expr_grad_enabled && !JUST(op_expr.IsGradDisabled())) {
-      requires_grad = std::any_of(
-          inputs.begin(), inputs.end(),
-          [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
-    }
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
