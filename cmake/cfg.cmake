@@ -131,7 +131,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
     set(CFG_PYBIND_FIL ${PROJECT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.cfg.pybind.cpp)
-    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL} PARENT_SCOPE)
+    list(APPEND ${PYBIND_SRCS} ${CFG_PYBIND_FIL})
     list(APPEND PY_CFG_ARGS "--proto_file_path=${FIL}")
   endforeach()
 
