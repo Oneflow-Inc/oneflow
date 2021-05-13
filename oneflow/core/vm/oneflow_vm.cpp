@@ -40,13 +40,6 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
                              const std::function<void()>& InferCallback,
                              const std::function<void()>& ComputeCallback) {
   {
-    auto instruction = vm::NewInstruction("CtrlInferRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
-    *instruction->mutable_phy_instr_operand() =
-        std::make_shared<vm::NoArgCbPhyInstrOperand>(InferCallback);
-    list->EmplaceBack(std::move(instruction));
-  }
-  {
     auto instruction = vm::NewInstruction("CtrlComputeRankFrontSeqCallback");
     instruction->add_int64_operand(GlobalProcessCtx::Rank());
     *instruction->mutable_phy_instr_operand() =

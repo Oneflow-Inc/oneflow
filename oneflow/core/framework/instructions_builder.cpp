@@ -905,29 +905,13 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
     const one::EagerMirroredTensorImpl* tensor, const std::function<void(uint64_t)>& callback,
     const std::string& modifier);
 
-Maybe<void> InstructionsBuilder::RankFrontSeqCallback(const std::string& instruction_name,
-                                                      const std::function<void()>& callback) {
+Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
+    const std::function<void()>& callback) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New(instruction_name);
+      ObjectMsgPtr<vm::InstructionMsg>::New("ComputeRankFrontSeqCallback");
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::NoArgCbPhyInstrOperand>(callback);
-  instruction_list_->PushBack(instruction.Mutable());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InstructionsBuilder::InferRankFrontSeqCallback(const std::function<void()>& callback) {
-  return RankFrontSeqCallback("InferRankFrontSeqCallback", callback);
-}
-
-Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
-    const std::function<void()>& callback) {
-  return RankFrontSeqCallback("ComputeRankFrontSeqCallback", callback);
-}
-
-Maybe<void> InstructionsBuilder::InferGlobalFrontSeqBarrier() {
-  ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("InferGlobalFrontSeqBarrier");
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }

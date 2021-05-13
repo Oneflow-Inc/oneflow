@@ -68,7 +68,6 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
-  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
   auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   while (true) {
@@ -76,10 +75,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
     const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
-    if (interpret_type == kInfer) {
-      CHECK(!instruction_ptr->is_front_seq_infer_instr_link_empty());
-      front_seq_infer_list->Erase(instruction_ptr);
-    } else if (interpret_type == kCompute) {
+    if (interpret_type == kCompute) {
       CHECK(!instruction_ptr->is_front_seq_compute_instr_link_empty());
       front_seq_compute_list->Erase(instruction_ptr);
     } else {
@@ -125,7 +121,6 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
-  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
   auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
@@ -141,9 +136,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-      if (stream_type_id.interpret_type() == kInfer) {
-        front_seq_infer_list->PushBack(instr.Mutable());
-      } else if (stream_type_id.interpret_type() == kCompute) {
+      if (stream_type_id.interpret_type() == kCompute) {
         front_seq_compute_list->PushBack(instr.Mutable());
       } else {
         UNIMPLEMENTED();
@@ -613,7 +606,6 @@ void VirtualMachine::TryRunFrontSeqInstruction(
 }
 
 void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
-  TryRunFrontSeqInstruction(mutable_front_seq_infer_instr_list(), ready_instruction_list);
   TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
 }
 
@@ -664,8 +656,7 @@ void VirtualMachine::Schedule() {
 
 bool VirtualMachine::Empty() const {
   return pending_msg_list().empty() && waiting_instruction_list().empty()
-         && active_stream_list().empty() && front_seq_infer_instr_list().empty()
-         && front_seq_compute_instr_list().empty();
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty();
 }
 
 }  // namespace vm

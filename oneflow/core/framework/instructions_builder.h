@@ -125,11 +125,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
-  Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
 
   Maybe<void> ComputeGlobalFrontSeqBarrier();
-  Maybe<void> InferGlobalFrontSeqBarrier();
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
