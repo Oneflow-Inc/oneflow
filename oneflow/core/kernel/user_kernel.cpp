@@ -511,6 +511,11 @@ class UserKernelRegContext final : public user_op::KernelRegContext {
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
 
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return user_op_conf().Attr4Name(attr_name);
+  }
+
  private:
   user_op::UserOpConfWrapper user_op_conf_;
   UserKernelBaseContext base_ctx_;
