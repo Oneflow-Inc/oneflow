@@ -221,11 +221,14 @@ class Tensor:
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
-    def size(self):
-        return self.shape
+    def size(self, idx=None):
+        if idx is None:
+            return self.shape
+        else:
+            return self.shape[idx]
 
-    def dim(self, idx):
-        return self.shape[idx]
+    def dim(self):
+        return self.ndim
 
     def ndimension(self):
         return self.ndim
