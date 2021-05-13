@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/attr_value.h"
+#include <string>
+#include <vector>
 
 namespace oneflow {
 
@@ -23,8 +25,14 @@ const T& AttrValueCast(const user_op::AttrVal& attr_val) {
   return CHECK_NOTNULL(typed_attr)->val();
 }
 
-#define INITIALIZE_ATTR_VALUE_CAST(field, T, attr_type) \
-  template const T& AttrValueCast(const user_op::AttrVal& attr_val);
+template<typename T>
+size_t HashTypedAttrVal(const T& val) {
+  return std::hash<T>()(val);
+}
+
+#define INITIALIZE_ATTR_VALUE_CAST(field, T, attr_type)              \
+  template const T& AttrValueCast(const user_op::AttrVal& attr_val); \
+  template size_t HashTypedAttrVal(const T& attr_val);
 
 OF_PP_FOR_EACH_TUPLE(INITIALIZE_ATTR_VALUE_CAST, ATTR_SEQ)
 
