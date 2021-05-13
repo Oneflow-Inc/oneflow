@@ -230,12 +230,12 @@ class NLLLoss(Module):
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
+        assert len(target.shape) == len(input.shape) - 1
         input = input.negative()
         if len(input.shape) == 2:
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            print(b, c, h)
             input = input.transpose((0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
