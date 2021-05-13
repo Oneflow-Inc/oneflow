@@ -275,10 +275,10 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) 
       .Build();
 }
 
-Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int device_id) {
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id) {
   return CopyOp(device_type, device_id, UniqueOpName("copy"));
 }
-Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int device_id,
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id,
                               const std::string& name) {
   return one::OpBuilder("copy", name)
       .Input("in")
