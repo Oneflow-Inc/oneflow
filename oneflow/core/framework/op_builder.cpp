@@ -119,7 +119,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_OP_BUILDER_ATTR_FUNC, ATTR_SEQ)
 #undef DEFINE_OP_BUILDER_ATTR_FUNC
 
 Maybe<UserOpExpr> OpBuilder::Build() {
-  return std::make_shared<UserOpExpr>(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
+  return UserOpExpr::New(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
 }
 
 }  // namespace one
