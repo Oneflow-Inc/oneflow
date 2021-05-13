@@ -71,8 +71,9 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   BuildOpConf(op_conf.get(), {});
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, device.shared_from_this(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel =
+      JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), base_attrs(),
+                                      parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -149,14 +150,22 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(MakeAttrMapFromUserOpConf(proto)) {
+      base_attrs_(base_attrs) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+}
+
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
+                                               const std::vector<std::string>& indexed_ibns,
+                                               const std::vector<std::string>& indexed_obns) {
+  AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
+  return std::shared_ptr<UserOpExpr>(
+      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
 }
 
 Maybe<const Device> UserOpExpr::InferDevices(
