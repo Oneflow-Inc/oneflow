@@ -30,6 +30,7 @@ namespace oneflow {
 ThreadMgr::~ThreadMgr() {
   for (auto& thread_pair : threads_) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
+    // 向Thread中的轮询线程actor_thread_发送结束消息
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
     thread_pair.second.reset();
     LOG(INFO) << "actor thread " << thread_pair.first << " finish";
@@ -42,6 +43,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   return iter->second.get();
 }
 
+// 根据Plan中的TaskProto信息创建Thread
 ThreadMgr::ThreadMgr(const Plan& plan) {
   const int64_t this_rank = GlobalProcessCtx::Rank();
   for (const TaskProto& task : plan.task()) {
@@ -57,13 +59,16 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   }
 }
 
+// 单线程执行num个Callback任务
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   FOR_RANGE(size_t, i, 0, num) { Callback(i); }
 }
 
+// 使用线程池执行num个Callback任务
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback) {
   size_t thread_num = Global<ThreadPool>::Get()->thread_num();
   thread_num = std::min(num, thread_num);
+  // bs用于设置各个线程执行任务的个数
   BalancedSplitter bs(num, thread_num);
   BlockingCounter bc(thread_num);
   FOR_RANGE(size_t, range_id, 0, thread_num) {

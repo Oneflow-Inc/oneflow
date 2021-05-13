@@ -26,6 +26,7 @@ namespace oneflow {
 
 class Plan;
 
+// 负责创建和管理所有的Thread
 class ThreadMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
@@ -38,12 +39,14 @@ class ThreadMgr final {
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
 
+  // 保存多个Thread
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 void MultiThreadLoop(size_t num, std::function<void(size_t i)> Callback);
 
+// 使用自定义creator，注册对应device和stream的Thread
 #define REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(device, creator) \
   REGISTER_CLASS_CREATOR(int, device, Thread, creator, const StreamId&)
 

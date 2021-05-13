@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 线程池，创建有限个线程执行多个任务
 class ThreadPool final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadPool);
@@ -32,9 +33,12 @@ class ThreadPool final {
   void AddWork(const std::function<void()>& work);
 
  private:
+  // 多个待完成任务的队列，与threads_中的工作线程对应
   std::vector<Channel<std::function<void()>>> work_chans_;
+  // 多个工作线程
   std::vector<std::thread> threads_;
 
+  // 任务的总数
   std::atomic<size_t> work_cnt_;
 };
 

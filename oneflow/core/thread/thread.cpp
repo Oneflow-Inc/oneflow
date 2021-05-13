@@ -32,7 +32,9 @@ void Thread::AddTask(const TaskProto& task) {
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
+// 把输入ActorMsg加入到消息队列
 void Thread::EnqueueActorMsg(const ActorMsg& msg) {
+  // 判断接收者Actor是否是本线程内
   if (Global<ResourceDesc, ForSession>::Get()->thread_enable_local_message_queue()
       && std::this_thread::get_id() == actor_thread_.get_id()) {
     local_msg_queue_.push(msg);
@@ -41,6 +43,7 @@ void Thread::EnqueueActorMsg(const ActorMsg& msg) {
   }
 }
 
+// 轮询消息队列并调用Actor进行处理
 void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   while (true) {
     if (local_msg_queue_.empty()) {
@@ -48,6 +51,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     ActorMsg msg = std::move(local_msg_queue_.front());
     local_msg_queue_.pop();
+    // 解析ActorMsg
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
         CHECK(id2actor_ptr_.empty());
@@ -59,11 +63,13 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
         // do nothing
       }
     }
+    // 调用接收者Actor处理ActorMsg
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
     CHECK(actor_it != id2actor_ptr_.end());
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
+      // 销毁已结束的Actor
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;
       id2actor_ptr_.erase(actor_it);
       Global<RuntimeCtx>::Get()->DecreaseCounter("running_actor_cnt");
@@ -73,6 +79,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
   }
 }
 
+// 根据id2task_中的TaskProto信息创建Actor
 void Thread::ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx) {
   LOG(INFO) << "thread " << thrd_id_ << " construct actor " << actor_id;
   std::unique_lock<std::mutex> lck(id2task_mtx_);
