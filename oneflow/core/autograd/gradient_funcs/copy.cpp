@@ -50,7 +50,7 @@ class Copy : public OpExprGradFunction<CopyOpExprInterpState> {
     in_grads->resize(1);
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("device_type", ctx->device_type));
-    JUST(attrs.SetAttr<int>("device_id", ctx->device_id));
+    JUST(attrs.SetAttr<int64_t>("device_id", ctx->device_id));
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }

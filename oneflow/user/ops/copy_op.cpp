@@ -43,7 +43,8 @@ REGISTER_USER_OP("copy")
     })
     .SetDeviceInferFn([](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
       std::shared_ptr<const Device> out_device =
-          Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id")).GetPtrOrThrow();
+          Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int>("device_id"))
+              .GetPtrOrThrow();
       *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
       const std::shared_ptr<const Device>& in_device =
           ctx->InputTensorDevice4ArgNameAndIndex("in", 0);

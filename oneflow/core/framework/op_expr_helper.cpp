@@ -284,7 +284,7 @@ Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int device_i
       .Input("in")
       .Output("out")
       .Attr<std::string>("device_type", device_type)
-      .Attr<int>("device_id", device_id)
+      .Attr<int64_t>("device_id", device_id)
       .Build();
 }
 
