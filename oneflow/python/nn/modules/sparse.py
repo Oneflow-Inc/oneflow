@@ -17,7 +17,6 @@ import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
 from typing import Optional, List, Tuple
@@ -25,6 +24,34 @@ from typing import Optional, List, Tuple
 
 @oneflow_export("nn.Embedding")
 class Embedding(Module):
+    r"""A simple lookup table that stores embeddings of a fixed dictionary and size.
+
+    This module is often used to store word embeddings and retrieve them using indices.
+    The input to the module is a list of indices, and the output is the corresponding
+    word embeddings.
+
+    Args:
+        num_embeddings (int): size of the dictionary of embeddings
+        embedding_dim (int): the size of each embedding vector
+        padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
+        therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+        i.e. it remains as a fixed "pad". For a newly constructed Embedding,
+        the embedding vector at :attr:`padding_idx` will default to all zeros,
+        but can be updated to another value to be used as the padding vector.
+    
+    For example:
+
+    .. code-block:: python
+        
+        import oneflow as flow
+        import numpy as np
+
+        indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+        m = flow.nn.Embedding(10, 3)
+        y = m(indices)
+
+    """
+
     def __init__(
         self,
         num_embeddings: int,

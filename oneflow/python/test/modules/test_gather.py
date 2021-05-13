@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-import oneflow as flow
+import oneflow.experimental as flow
 
 
 def gather_numpy(input, index, dim):
@@ -56,7 +56,7 @@ class TestGather(flow.unittest.TestCase):
         input = np.array([[1, 2], [3, 4]])
         index = np.array([[0, 0], [1, 0]])
         np_out = gather_numpy(input, index, dim=0)
-        output = flow.tmp.gather(
+        output = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=0
         )
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
@@ -77,19 +77,19 @@ class TestGather(flow.unittest.TestCase):
             (3, 4, 3, 5)
         )
         np_out = gather_numpy(input, index, dim=1)
-        output = flow.tmp.gather(
+        output = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1
         )
         test_case.assertTrue(np.allclose(output.numpy(), np_out))
 
         np_out2 = gather_numpy(input, index, dim=2)
-        output2 = flow.tmp.gather(
+        output2 = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=2
         )
         test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
 
         np_out3 = gather_numpy(input, index, dim=3)
-        output3 = flow.tmp.gather(
+        output3 = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=3
         )
         test_case.assertTrue(np.allclose(output3.numpy(), np_out3))

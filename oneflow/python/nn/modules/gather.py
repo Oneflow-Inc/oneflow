@@ -16,7 +16,7 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
@@ -60,8 +60,9 @@ class Gather(Module):
         return res
 
 
-@oneflow_export("tmp.gather")
+@oneflow_export("gather")
 @register_tensor_op("gather")
+@experimental_api
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.
     For a 3-D tensor the output is specified by::
