@@ -81,7 +81,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
 #undef DEFINE_INTEGER_CONSTATNT_OP
 
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype) {
-  return OnesOp(shape, dtype, UniqueOpName("constant"));
+  return ZerosOp(shape, dtype, UniqueOpName("constant"));
 }
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name) {
   switch (dtype) {
