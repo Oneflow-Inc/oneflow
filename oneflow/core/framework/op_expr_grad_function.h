@@ -27,18 +27,48 @@ static constexpr char kGradientOpSuffix[] = ".grad";
 
 // Stateless container base of the backward op exprs.
 // The backward op exprs should be contained in the derived class.
-class OpExprGradFunction {
+class OpExprGradFunctionIf {
  public:
-  OpExprGradFunction() = default;
-  virtual ~OpExprGradFunction() = default;
+  virtual ~OpExprGradFunctionIf() = default;
+
+  virtual std::shared_ptr<OpExprInterpState> MakeCustomState() const = 0;
 
   virtual Maybe<void> Init(const OpExpr& op) = 0;
 
   // Capture forward inputs and outputs for backward.
-  virtual Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                              const TensorTuple& outputs) const = 0;
+  virtual Maybe<void> CaptureIf(OpExprInterpState* ctx, const TensorTuple& inputs,
+                                const TensorTuple& outputs, const AttrValueMap& attrs) const = 0;
 
-  virtual Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  virtual Maybe<void> ApplyIf(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                              TensorTuple* in_grads) const = 0;
+};
+
+template<typename StateT>
+class OpExprGradFunction : public OpExprGradFunctionIf {
+ public:
+  std::shared_ptr<OpExprInterpState> MakeCustomState() const override {
+    return std::make_shared<StateT>();
+  }
+
+  Maybe<void> CaptureIf(OpExprInterpState* ctx, const TensorTuple& inputs,
+                        const TensorTuple& outputs, const AttrValueMap& attrs) const override {
+    StateT* state = dynamic_cast<StateT*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(state);
+    TensorTuple detach_outputs(outputs.size());
+    for (int i = 0; i < outputs.size(); ++i) { detach_outputs.at(i) = outputs.at(i)->detach(); }
+    return Capture(state, inputs, detach_outputs, attrs);
+  }
+
+  Maybe<void> ApplyIf(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+                      TensorTuple* in_grads) const override {
+    const StateT* state = dynamic_cast<const StateT*>(ctx);
+    CHECK_NOTNULL_OR_RETURN(state);
+    return Apply(state, out_grads, in_grads);
+  }
+
+  virtual Maybe<void> Capture(StateT* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                              const AttrValueMap& attrs) const = 0;
+  virtual Maybe<void> Apply(const StateT* ctx, const TensorTuple& out_grads,
                             TensorTuple* in_grads) const = 0;
 
  protected:
@@ -51,29 +81,30 @@ class OpExprGradFunction {
 class OpExprGradClosure {
  public:
   // Use `shared_ptr` in order to keep `impl` alive even if the forward op has been released.
-  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl)
-      : impl_(impl), state_(new OpExprInterpState) {}
-  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunction>& impl,
+  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl)
+      : impl_(impl), state_(impl->MakeCustomState()) {}
+  explicit OpExprGradClosure(const std::shared_ptr<OpExprGradFunctionIf>& impl,
                              const std::shared_ptr<OpExprInterpState>& state)
       : impl_(impl), state_(state) {}
 
   virtual ~OpExprGradClosure() = default;
 
-  Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs) const {
-    return impl_->Capture(state_.get(), inputs, outputs);
+  Maybe<void> Capture(const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const {
+    return impl_->CaptureIf(state_.get(), inputs, outputs, attrs);
   }
 
   Maybe<void> Apply(const TensorTuple& out_grads, TensorTuple* in_grads) const {
-    return impl_->Apply(state_.get(), out_grads, in_grads);
+    return impl_->ApplyIf(state_.get(), out_grads, in_grads);
   }
 
  private:
-  std::shared_ptr<OpExprGradFunction> impl_;
+  std::shared_ptr<OpExprGradFunctionIf> impl_;
   std::shared_ptr<OpExprInterpState> state_;
 };
 
 #define REGISTER_OP_EXPR_GRAD_FUNCTION(op_type, op_grad) \
-  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGradFunction, ([]() { return new op_grad; }))
+  REGISTER_CLASS_CREATOR(std::string, op_type, OpExprGradFunctionIf, ([]() { return new op_grad; }))
 
 }  // namespace one
 }  // namespace oneflow

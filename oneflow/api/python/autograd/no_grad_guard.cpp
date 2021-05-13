@@ -14,23 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/op_dispatch.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include <memory>
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/autograd/autograd_mode.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
-namespace one {
 
-template<>
-Maybe<TensorTuple> Dispatch<TensorTuple>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  auto outputs = std::make_shared<TensorTuple>(op_expr.output_num());
-  JUST(OpInterpUtil::GetInterpreter())->Apply(op_expr, inputs, outputs.get());
-  return outputs;
+namespace autograd {
+
+ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
+  py::class_<NoGradGuard, std::shared_ptr<NoGradGuard>>(m, "no_grad")
+      .def(py::init([]() { return std::make_shared<NoGradGuard>(); }))
+      .def("__enter__", [](const NoGradGuard& no_grad_obj) {})
+      .def("__exit__", [](const NoGradGuard& no_grad_obj, const py::object& type,
+                          const py::object& value, const py::object& traceback) {});
 }
 
-template<>
-Maybe<Tensor> Dispatch<Tensor>(const OpExpr& op_expr, const TensorTuple& inputs) {
-  return JUST(Dispatch<TensorTuple>(op_expr, inputs))->at(0);
-}
+}  // namespace autograd
 
-}  // namespace one
 }  // namespace oneflow

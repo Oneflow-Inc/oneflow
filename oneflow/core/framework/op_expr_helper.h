@@ -17,15 +17,9 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
-
-namespace one {
-
-class UserOpExpr;
-
-}  // namespace one
-
 namespace op_expr_helper {
 
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
@@ -33,6 +27,9 @@ Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name);
 
 Maybe<one::UserOpExpr> AddOp();
 Maybe<one::UserOpExpr> AddOp(const std::string& name);
+
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype);
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name);
 
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
@@ -155,6 +152,10 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
                                           const int& groups, const std::string& data_format,
                                           const std::string& name);
 
-}  // namespace op_expr_helper
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha);
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha, const std::string& name);
 
+}  // namespace op_expr_helper
 }  // namespace oneflow

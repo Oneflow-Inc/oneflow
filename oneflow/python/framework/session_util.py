@@ -46,7 +46,7 @@ from contextlib import contextmanager
 from typing import Callable
 import inspect
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 from google.protobuf import text_format
 
@@ -79,8 +79,8 @@ class Session(object):
         self._UpdateFunctionFlagName2DefaultVal()
         self.scope_attr_name2default_val_ = {}
         self._UpdateScopeAttrName2DefaultVal()
-        self.sess_ = oneflow_api.RegsiterSession(sess_id)
-        self.backward_blob_register_ = oneflow_api.BlobRegister()
+        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
+        self.backward_blob_register_ = oneflow._oneflow_internal.BlobRegister()
         self.snapshot_mgr_ = SnapshotManager()
         self.eager_config_proto_ctx_ = None
 
@@ -190,18 +190,18 @@ class Session(object):
     def Init(self):
         assert self.status_ is SessionStatus.OPEN
         self.status_ = SessionStatus.RUNNING
-        if not oneflow_api.IsEnvInited():
+        if not oneflow._oneflow_internal.IsEnvInited():
             oneflow.env.init()
         _TryCompleteConfigProto(self.config_proto)
         self.resource_ = self.config_proto.resource
-        if not oneflow_api.EagerExecutionEnabled():
+        if not oneflow._oneflow_internal.EagerExecutionEnabled():
             c_api_util.InitLazyGlobalSession(self.config_proto)
             for job_name, func_desc in self.job_name2function_desc_.items():
                 compiler.Compile(self, func_desc, self.config_proto)
                 self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
-            oneflow_api.StartLazyGlobalSession()
+            oneflow._oneflow_internal.StartLazyGlobalSession()
             self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
             # Get latest op_attr and job_name after compiler.Compile
             self.UpdateInfo4InterfaceOp()
@@ -214,7 +214,7 @@ class Session(object):
                     ) in func_desc.job_func.__oneflow_var_initializer_list__:
                         initializer()
         else:
-            self.eager_config_proto_ctx_ = oneflow_api.LogicalConfigProtoContext(
+            self.eager_config_proto_ctx_ = oneflow._oneflow_internal.LogicalConfigProtoContext(
                 str(self.config_proto)
             )
         return self
@@ -236,13 +236,13 @@ class Session(object):
         del self.job_name2module_name2module_
         self.ReleaseLazyRefBlob()
         self.ForceReleaseEagerBlobs()
-        oneflow_api.StopLazyGlobalSession()
-        oneflow_api.DestroyLazyGlobalSession()
+        oneflow._oneflow_internal.StopLazyGlobalSession()
+        oneflow._oneflow_internal.DestroyLazyGlobalSession()
         self.status_ = SessionStatus.CLOSED
         self.resource_ = None
         if self.eager_config_proto_ctx_:
             del self.eager_config_proto_ctx_
-        oneflow_api.ClearSessionById(self.id)
+        oneflow._oneflow_internal.ClearSessionById(self.id)
 
     def AddJob(self, function_desc):
         assert self.status_ is SessionStatus.OPEN
@@ -280,7 +280,7 @@ class Session(object):
         self.op_name2lazy_blob_cache_.clear()
 
     def ForceReleaseEagerBlobs(self):
-        oneflow_api.GetDefaultBlobRegister().ForceReleaseAll()
+        oneflow._oneflow_internal.GetDefaultBlobRegister().ForceReleaseAll()
         self.backward_blob_register_.ForceReleaseAll()
 
     def LazyRun(self, job_func, *arg):
@@ -315,7 +315,7 @@ class Session(object):
         assert self.status_ is SessionStatus.RUNNING
         self._IncRunningJobCnt()
         job_instance.AddPostFinishCallback(lambda _: self._DecRunningJobCnt())
-        oneflow_api.LaunchJob(job_instance)
+        oneflow._oneflow_internal.LaunchJob(job_instance)
 
     def AsyncPush(self, op_name, push_data_cb):
         assert self.status_ is SessionStatus.RUNNING
@@ -351,7 +351,7 @@ class Session(object):
             self.interface_op_name2op_attr_[interface_op_name] = op_attribute
             self.interface_op_name2job_name_[
                 interface_op_name
-            ] = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+            ] = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
         else:
             # In lazy mode, we update fields with
             # the latest info in another function after compiler.Compile
@@ -475,7 +475,7 @@ def api_eager_execution_enabled() -> bool:
     Returns:
         bool: [description]
     """
-    return oneflow_api.EagerExecutionEnabled()
+    return oneflow._oneflow_internal.EagerExecutionEnabled()
 
 
 @oneflow_export("clear_default_session")
@@ -489,7 +489,7 @@ def api_clear_default_session() -> None:
 @enable_if.condition(hob.in_normal_mode)
 def clear_default_session():
     session_ctx.TryCloseDefaultSession()
-    session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
+    session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))
 
 
 @oneflow_export("sync_default_session")
@@ -539,7 +539,7 @@ def _TryCompleteConfigProto(config_proto):
 def _GetDefaultConfigProto():
     config_proto = job_set_util.ConfigProto()
     config_proto.resource.machine_num = 0
-    if oneflow_api.flags.with_cuda():
+    if oneflow._oneflow_internal.flags.with_cuda():
         config_proto.resource.gpu_device_num = 1
     else:
         config_proto.resource.cpu_device_num = 1
@@ -550,11 +550,4 @@ def _GetDefaultConfigProto():
     return config_proto
 
 
-session_ctx.OpenDefaultSession(Session(oneflow_api.NewSessionId()))
-
-
-@oneflow_export("InitEagerGlobalSession")
-def TmpInitEagerGlobalSession():
-    config_pb = _GetDefaultConfigProto()
-    config_proto_str = text_format.MessageToString(config_pb)
-    oneflow_api.InitEagerGlobalSession(config_proto_str)
+session_ctx.OpenDefaultSession(Session(oneflow._oneflow_internal.NewSessionId()))

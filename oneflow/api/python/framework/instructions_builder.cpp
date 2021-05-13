@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/tensor.h"
 
 namespace py = pybind11;
 
@@ -272,6 +273,13 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
+void AccessBlobByCallback(const std::shared_ptr<InstructionsBuilder>& x,
+                          const std::shared_ptr<one::MirroredTensor>& tensor,
+                          const std::function<void(uint64_t)>& callback,
+                          const std::string& modifier) {
+  return x->AccessBlobByCallback(tensor, callback, modifier).GetOrThrow();
+}
+
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -346,6 +354,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("GetSharedOpKernelObject4ParallelConfSymbol",
            &GetSharedOpKernelObject4ParallelConfSymbol)
       .def("DeleteObject", &DeleteObject)
+      .def("AccessBlobByCallback", &AccessBlobByCallback)
       .def("StatefulCall", &StatefulCall)
       .def("InsertRemoveForeignCallbackInstruction", &InsertRemoveForeignCallbackInstruction)
       .def("FetchBlobHeader", &FetchBlobHeader)

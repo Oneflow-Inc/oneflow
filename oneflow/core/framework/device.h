@@ -26,7 +26,7 @@ class ParallelDesc;
 
 class Device final {
  public:
-  Device(const std::string& type, int64_t device_id) : type_(type), device_id_(device_id) {}
+  Device(const std::string& type, int64_t device_id);
   Device(const Device&) = default;
   Device(Device&&) = default;
   ~Device() = default;
@@ -34,12 +34,14 @@ class Device final {
   std::string of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
+  const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const { return parallel_desc_; }
 
   static Maybe<const ParallelDesc> MakeParallelDescByDevice(const Device& device);
   static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
  private:
+  std::shared_ptr<const ParallelDesc> parallel_desc_;
   const std::string type_;
   const int64_t device_id_;
 };

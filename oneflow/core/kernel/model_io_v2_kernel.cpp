@@ -51,17 +51,15 @@ class OnDemandHostBlob final {
   explicit OnDemandHostBlob(const Blob* like) {
     Shape shape;
     like->shape().ToShape(&shape);
-    blob_desc_.reset(new RtBlobDesc(BlobDesc(shape, like->data_type())));
+    blob_desc_.reset(new BlobDesc(shape, like->data_type()));
     Init();
   }
-  explicit OnDemandHostBlob(const RtBlobDesc& blob_desc) {
-    blob_desc_.reset(new RtBlobDesc(BlobDesc(blob_desc.body_shape(), blob_desc.data_type())));
+  explicit OnDemandHostBlob(const BlobDesc& blob_desc) {
+    blob_desc_.reset(new BlobDesc(blob_desc));
     Init();
   }
   explicit OnDemandHostBlob(const Shape& shape, DataType data_type) {
-    BlobDesc blob_desc(data_type);
-    blob_desc.mut_shape() = shape;
-    blob_desc_.reset(new RtBlobDesc(blob_desc));
+    blob_desc_.reset(new BlobDesc(shape, data_type));
     Init();
   }
   ~OnDemandHostBlob() = default;
@@ -80,7 +78,7 @@ class OnDemandHostBlob final {
   std::vector<char> header;
   std::vector<char> data;
   std::unique_ptr<Blob> blob_;
-  std::unique_ptr<RtBlobDesc> blob_desc_;
+  std::unique_ptr<const BlobDesc> blob_desc_;
 };
 
 template<DeviceType device_type>

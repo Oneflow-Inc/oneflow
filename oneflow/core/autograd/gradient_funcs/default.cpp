@@ -27,7 +27,11 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class DefaultOpExprGradFunction : public OpExprGradFunction {
+struct DefaultOpExprInterpState : public OpExprInterpState {
+  std::vector<bool> requires_grads;
+};
+
+class DefaultOpExprGradFunction : public OpExprGradFunction<DefaultOpExprInterpState> {
  public:
   // The snapshot indicates the indices of the required forward inputs and outputs
   // by each backward operator.
@@ -39,16 +43,17 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
 
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(DefaultOpExprInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
 
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const DefaultOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
   Maybe<void> GenerateOpGradConf(const Operator& op, std::vector<OperatorConf>* bw_op_confs);
 
-  Maybe<void> UpdateRequiresBackward(const TensorTuple& inputs) const;
+  Maybe<void> UpdateRequiresBackward(DefaultOpExprInterpState* ctx,
+                                     const TensorTuple& inputs) const;
 
  private:
   struct BackwardEntry {
@@ -59,11 +64,10 @@ class DefaultOpExprGradFunction : public OpExprGradFunction {
 
     // Snapshot information for each backward op.
     Snapshot snapshot;
-
-    // Whether each backward operator needs to do backward or not.
-    mutable bool requires_backward;
   };
   std::vector<BackwardEntry> backward_entries_;
+
+  int input_size_;
 
   // The input gradient logical blob id for each forward input blob name which
   // needs backward.
@@ -129,8 +133,10 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
     const auto& input_bns = op.input_bns();
     const auto& output_bns = op.output_bns();
     if (std::find(input_bns.begin(), input_bns.end(), bn) != input_bns.end()) {
+      if (!op.InputBlobModifier4Ibn(bn).requires_grad()) { return nullptr; }
       return &ibn_to_grad_lbi_map_[bn];
     } else if (std::find(output_bns.begin(), output_bns.end(), bn) != output_bns.end()) {
+      if (!op.OutputBlobModifier4Obn(bn).requires_grad()) { return nullptr; }
       auto it = obn_to_grad_lbi_map_.find(bn);
       if (it == obn_to_grad_lbi_map_.end()) {
         LogicalBlobId lbi;
@@ -153,11 +159,14 @@ Maybe<void> DefaultOpExprGradFunction::GenerateOpGradConf(const Operator& op,
 }
 
 Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
-  if (op.input_num() == 0) { return Maybe<void>::Ok(); }
+  if (op.input_size() == 0) { return Maybe<void>::Ok(); }
   const auto* fw_op_expr = dynamic_cast<const BuiltinOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+
+  input_size_ = fw_op_expr->indexed_ibns().size();
+
   OperatorConf fw_op_conf;
-  fw_op_expr->BuildOpConf(&fw_op_conf);
+  fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{});
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.
@@ -165,9 +174,6 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   std::shared_ptr<Operator> op_adapter = ConstructOp(fw_op_conf, DeviceType::kCPU);
   JUST(GenerateOpGradConf(*op_adapter, &bw_op_confs));
 
-  CHECK_EQ_OR_RETURN(op.input_num(), ibn_to_grad_lbi_map_.size())
-      << "All inputs are considered to require gradients since the `requires_grad` "
-         "has been unknown to us here.";
   backward_entries_.resize(bw_op_confs.size());
 
   HashMap<std::string, int> input_lbn_to_index_map;
@@ -241,11 +247,13 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   for (const auto& it : ibn_to_index_map) {
     const int& in_grad_idx = it.second;
     if (reached_in_grad_indices_for_each_output.count(in_grad_idx)) { continue; }
-    std::string lbn = GenLogicalBlobName(ibn_to_grad_lbi_map_.at(/*in_grad_bn=*/it.first));
+    const auto& grad_it = ibn_to_grad_lbi_map_.find(/*in_grad_bn=*/it.first);
+    // Skip the input that does not require grad.
+    if (grad_it == ibn_to_grad_lbi_map_.end()) { continue; }
+    std::string lbn = GenLogicalBlobName(grad_it->second);
     std::vector<std::vector<std::string>> typed_ibns(3);
     backward_entries_.emplace_back();
     BackwardEntry* entry = &(backward_entries_.back());
-    entry->requires_backward = false;
     entry->snapshot.count = 0;
     JUST(ProcessInput(it.first, lbn, input_lbn_to_index_map, output_lbn_to_index_map,
                       out_grad_lbn_to_obn_map, obn_to_index_map, &entry->snapshot,
@@ -256,14 +264,16 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple& inputs) const {
+Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(DefaultOpExprInterpState* ctx,
+                                                              const TensorTuple& inputs) const {
+  ctx->requires_grads.resize(backward_entries_.size());
   for (int i = 0; i < backward_entries_.size(); ++i) {
+    ctx->requires_grads[i] = false;
     const auto& entry = backward_entries_.at(i);
-    entry.requires_backward = false;
     for (const auto& indices : entry.in_grad_indices_for_each_output) {
       for (const int& j : indices) {
         if (inputs.at(j)->requires_grad()) {
-          entry.requires_backward = true;
+          ctx->requires_grads[i] = true;
           break;
         }
       }
@@ -272,11 +282,16 @@ Maybe<void> DefaultOpExprGradFunction::UpdateRequiresBackward(const TensorTuple&
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                                               const TensorTuple& outputs) const {
-  JUST(UpdateRequiresBackward(inputs));
-  for (const auto& entry : backward_entries_) {
-    if (!entry.requires_backward) { continue; }
+Maybe<void> DefaultOpExprGradFunction::Capture(DefaultOpExprInterpState* ctx,
+                                               const TensorTuple& inputs,
+                                               const TensorTuple& outputs,
+                                               const AttrValueMap& attrs) const {
+  CHECK_OR_RETURN(attrs.empty())
+      << "The default op expr gradient func does not support dynamic attributes.";
+  JUST(UpdateRequiresBackward(ctx, inputs));
+  for (int i = 0; i < backward_entries_.size(); ++i) {
+    if (!ctx->requires_grads.at(i)) { continue; }
+    const auto& entry = backward_entries_.at(i);
     for (const int& idx : entry.snapshot.input_indices) {
       ctx->SaveTensorForBackward(inputs.at(idx));
     }
@@ -287,15 +302,15 @@ Maybe<void> DefaultOpExprGradFunction::Capture(OpExprInterpState* ctx, const Ten
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DefaultOpExprGradFunction::Apply(const OpExprInterpState* ctx,
+Maybe<void> DefaultOpExprGradFunction::Apply(const DefaultOpExprInterpState* ctx,
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
-  int input_size = ibn_to_grad_lbi_map_.size();
-  in_grads->resize(input_size);
+  in_grads->resize(input_size_);
   const auto& saved_tensors = ctx->SavedTensors();
   int offset = 0;
-  for (const auto& entry : backward_entries_) {
-    if (!entry.requires_backward) { continue; }
+  for (int i = 0; i < backward_entries_.size(); ++i) {
+    if (!ctx->requires_grads.at(i)) { continue; }
+    const auto& entry = backward_entries_.at(i);
     TensorTuple inputs;
     for (int j = 0; j < entry.snapshot.count; ++j) {
       inputs.emplace_back(saved_tensors.at(offset + j));

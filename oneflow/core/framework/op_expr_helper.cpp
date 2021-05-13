@@ -80,6 +80,19 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CONSTATNT_OP, FLOATING_DATA_TYPE_SEQ);
 OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
 #undef DEFINE_INTEGER_CONSTATNT_OP
 
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype) {
+  return OnesOp(shape, dtype, UniqueOpName("constant"));
+}
+Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  switch (dtype) {
+#define CONSTANT_DATA_TYPE_CASE(cpp_type, data_type) \
+  case data_type: return ConstantOp(shape, (cpp_type)0, name);
+    OF_PP_FOR_EACH_TUPLE(CONSTANT_DATA_TYPE_CASE, FLOATING_DATA_TYPE_SEQ INT_DATA_TYPE_SEQ);
+#undef CONSTANT_DATA_TYPE_CASE
+    default: UNIMPLEMENTED_THEN_RETURN();
+  }
+}
+
 Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype) {
   return OnesOp(shape, dtype, UniqueOpName("constant"));
 }
@@ -440,6 +453,22 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
       .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
       .Attr<int32_t>("groups", groups)
       .Attr<std::string>("data_format", data_format)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha) {
+  return MatMulOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
+}
+Maybe<one::UserOpExpr> MatMulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha, const std::string& name) {
+  return one::OpBuilder("matmul", name)
+      .Input("a")
+      .Input("b")
+      .Output("out")
+      .Attr<bool>("transpose_a", transpose_a)
+      .Attr<bool>("transpose_b", transpose_b)
+      .Attr<double>("alpha", alpha)
       .Build();
 }
 

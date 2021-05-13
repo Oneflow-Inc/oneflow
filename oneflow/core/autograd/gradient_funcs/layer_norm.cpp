@@ -13,68 +13,74 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/autograd/gradient_funcs/utility.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
 
+struct LayerNormInterpState : public OpExprInterpState {
+  bool x_requires_grad;
+  bool has_beta_diff;
+  bool has_gamma_diff;
+  bool has_normalized_diff;
+};
+
 // y, mean, inv_variance, [normalized] =
 //   layer_norm(x, [beta], [gamma], center=False, scale=False, begin_norm_axis=1,
 //              begin_params_axis=-1, epsilon=1e-5)
-class LayerNorm : public OpExprGradFunction {
+class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override;
+  Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrValueMap& attrs) const override;
 
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
-  std::string op_name_;
+  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   bool center_;
   bool scale_;
   int64_t begin_norm_axis_;
   int64_t begin_params_axis_;
-  double epsilon_;
-  mutable bool has_beta_diff_;
-  mutable bool has_gamma_diff_;
-  mutable bool has_normalized_diff_;
-  mutable bool x_requires_grad_;
+  std::shared_ptr<OpExpr> x_grad_op_;
 };
 
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  op_name_ = fw_op_expr->op_name();
-  center_ = GetAttr<bool>(fw_op_expr->proto(), "center");
-  scale_ = GetAttr<bool>(fw_op_expr->proto(), "scale");
-  begin_norm_axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "begin_norm_axis");
-  begin_params_axis_ = GetAttr<int64_t>(fw_op_expr->proto(), "begin_params_axis");
-  epsilon_ = GetAttr<double>(fw_op_expr->proto(), "epsilon");
+  const std::string& op_name = fw_op_expr->op_name();
+  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
+  center_ = JUST(op_trait_->GetAttr<bool>("center"));
+  scale_ = JUST(op_trait_->GetAttr<bool>("scale"));
+  begin_norm_axis_ = JUST(op_trait_->GetAttr<int64_t>("begin_norm_axis"));
+  begin_params_axis_ = JUST(op_trait_->GetAttr<int64_t>("begin_params_axis"));
+  double epsilon = JUST(op_trait_->GetAttr<double>("epsilon"));
+  x_grad_op_ =
+      JUST(op_expr_helper::LayerNormGradOp(begin_norm_axis_, epsilon, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs) const {
+Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
+                               const TensorTuple& outputs, const AttrValueMap& attrs) const {
   CHECK_EQ_OR_RETURN(inputs.size(), center_ + scale_ + 1);
   CHECK_EQ_OR_RETURN(inputs.size(), scale_ + 3);
-  has_beta_diff_ = center_ && inputs.at(1)->requires_grad();
+  ctx->has_beta_diff = center_ && inputs.at(1)->requires_grad();
   const int gamma_index = center_ + 1;
-  has_gamma_diff_ = scale_ && inputs.at(gamma_index)->requires_grad();
-  has_normalized_diff_ = scale_ && inputs.at(0)->requires_grad();
-  if (has_gamma_diff_ || has_normalized_diff_) {
+  ctx->has_gamma_diff = scale_ && inputs.at(gamma_index)->requires_grad();
+  ctx->has_normalized_diff = scale_ && inputs.at(0)->requires_grad();
+  if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
     ctx->SaveTensorForBackward(inputs.at(gamma_index));
   }
-  if (has_gamma_diff_) { ctx->SaveTensorForBackward(outputs.at(3)); }
-  x_requires_grad_ = inputs.at(0)->requires_grad();
-  if (x_requires_grad_) {
+  if (ctx->has_gamma_diff) { ctx->SaveTensorForBackward(outputs.at(3)); }
+  ctx->x_requires_grad = inputs.at(0)->requires_grad();
+  if (ctx->x_requires_grad) {
     ctx->SaveTensorForBackward(inputs.at(0));
     ctx->SaveTensorForBackward(outputs.at(0));
     ctx->SaveTensorForBackward(outputs.at(1));
@@ -82,40 +88,44 @@ Maybe<void> LayerNorm::Capture(OpExprInterpState* ctx, const TensorTuple& inputs
   return Maybe<void>::Ok();
 }
 
-Maybe<void> LayerNorm::Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
-  in_grads->resize(center_ + scale_ + 1);
   const auto& saved_tensors = ctx->SavedTensors();
+  in_grads->resize(center_ + scale_ + 1);
   std::shared_ptr<Tensor> dy = out_grads.at(0);
   int64_t begin_params_axis = begin_params_axis_;
   if (begin_params_axis < 0) { begin_params_axis += dy->shape()->NumAxes(); }
   int64_t begin_norm_axis = begin_norm_axis_;
   if (begin_norm_axis < 0) { begin_norm_axis += dy->shape()->NumAxes(); }
   int offset = 0;
-  if (has_beta_diff_ || has_gamma_diff_ || has_normalized_diff_) {
+  if (ctx->has_beta_diff || ctx->has_gamma_diff || ctx->has_normalized_diff) {
     const auto& param_grad_op = JUST(op_expr_helper::LayerNormParamGradOp(
-        begin_params_axis, has_beta_diff_, has_gamma_diff_, has_normalized_diff_,
-        GradientOpName(op_name_ + "_param")));
+        begin_params_axis, ctx->has_beta_diff, ctx->has_gamma_diff, ctx->has_normalized_diff,
+        GradientOpName(op_trait_->op_name() + "_param")));
     TensorTuple inputs{dy};
-    if (has_gamma_diff_ || has_normalized_diff_) {
+    if (ctx->has_gamma_diff || ctx->has_normalized_diff) {
       inputs.push_back(saved_tensors.at(offset++));  // gamma
     }
-    if (has_gamma_diff_) {
+    if (ctx->has_gamma_diff) {
       inputs.push_back(saved_tensors.at(offset++));  // normalized
     }
-    const auto& results = JUST(Dispatch<TensorTuple>(*param_grad_op, inputs));
-    if (has_beta_diff_) { in_grads->at(1) = results->at(0); }
-    if (has_gamma_diff_) { in_grads->at(has_beta_diff_ + 1) = results->at(has_beta_diff_); }
-    if (has_normalized_diff_) { dy = results->at(has_beta_diff_ + has_gamma_diff_); }
+    const auto& results =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*param_grad_op, inputs, /*attrs=*/{}));
+    if (ctx->has_beta_diff) { in_grads->at(1) = results->at(0); }
+    if (ctx->has_gamma_diff) {
+      in_grads->at(ctx->has_beta_diff + 1) = results->at(ctx->has_beta_diff);
+    }
+    if (ctx->has_normalized_diff) { dy = results->at(ctx->has_beta_diff + ctx->has_gamma_diff); }
   }
-  if (x_requires_grad_) {
-    const auto& grad_op =
-        JUST(op_expr_helper::LayerNormGradOp(begin_norm_axis, epsilon_, GradientOpName(op_name_)));
+  if (ctx->x_requires_grad) {
     CHECK_EQ_OR_RETURN(saved_tensors.size(), offset + 3);
     const auto& x = saved_tensors.at(offset);
     const auto& mean = saved_tensors.at(offset + 1);
     const auto& inv_variance = saved_tensors.at(offset + 2);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*grad_op, {x, mean, inv_variance, dy}));
+    AttrValueMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, mean, inv_variance, dy}, attrs));
   }
   return Maybe<void>::Ok();
 }

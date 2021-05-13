@@ -17,39 +17,41 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_dispatch.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 
 namespace oneflow {
 namespace one {
 
-class Cast : public OpExprGradFunction {
+class Cast : public OpExprGradFunction<OpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-    op_name_ = fw_op_expr->op_name();
+    const std::string& op_name = fw_op_expr->op_name();
+    grad_op_ = JUST(op_expr_helper::CastOp(DataType::kInvalidDataType, GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs) const override {
-    dtype_ = inputs.at(0)->dtype()->data_type();
+  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrValueMap& attrs) const override {
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& backward_op = JUST(op_expr_helper::CastOp(dtype_, GradientOpName(op_name_)));
+    const auto& x = ctx->SavedTensors().at(0);
     in_grads->resize(1);
-    in_grads->at(0) = JUST(Dispatch<Tensor>(*backward_op, {out_grads.at(0)}));
+    AttrValueMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", x->dtype()->data_type()));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
     return Maybe<void>::Ok();
   }
 
  private:
-  std::string op_name_;
-  mutable DataType dtype_;
+  std::shared_ptr<OpExpr> grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cast", Cast);

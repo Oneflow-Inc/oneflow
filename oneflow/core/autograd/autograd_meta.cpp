@@ -13,20 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
-#define ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
 
-#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
+
 namespace one {
 
-template<typename T>
-Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs);
+TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(tensor.dtype()) {}
+
+Maybe<Tensor> TensorInfo::zeros() const {
+  const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
+  const auto& zeros_op = JUST(op_expr_helper::ZerosOp(*shape_.get(), dtype_->data_type()));
+  TensorTuple outputs(1);
+  JUST(interpreter->Apply(*zeros_op, {}, &outputs));
+  return outputs.at(0);
+}
 
 }  // namespace one
-}  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_OP_DISPATCH_H_
+}  // namespace oneflow

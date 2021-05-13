@@ -290,6 +290,7 @@ jobs:
         run: |
           set -x
           extra_docker_args=""
+          extra_docker_args+=" --cap-add sys_ptrace"
 
           # load shared environment variables
           cat ${{ matrix.build_env }} >> $GITHUB_ENV

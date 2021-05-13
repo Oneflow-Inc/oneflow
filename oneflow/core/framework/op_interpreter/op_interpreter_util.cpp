@@ -60,6 +60,22 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   return g_lazy_interpreter;
 }
 
+template<>
+/*static*/ Maybe<TensorTuple> OpInterpUtil::Dispatch<TensorTuple>(const OpExpr& op_expr,
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
+  auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
+  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  return outputs;
+}
+
+template<>
+/*static*/ Maybe<Tensor> OpInterpUtil::Dispatch<Tensor>(const OpExpr& op_expr,
+                                                        const TensorTuple& inputs,
+                                                        const AttrValueMap& attrs) {
+  return JUST(Dispatch<TensorTuple>(op_expr, inputs, attrs))->at(0);
+}
+
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::AddOpAndInferOpAttribute(
     const OperatorConf& op_conf, const bool is_mirrored_strategy_enabled) {
   std::shared_ptr<OpAttribute> op_attribute = JUST([&]() -> Maybe<OpAttribute> {
@@ -74,9 +90,10 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
 }
 
 /*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                                  const TensorTuple& inputs) {
+                                                                  const TensorTuple& inputs,
+                                                                  const AttrValueMap& attrs) {
   const auto& scope = JUST(GetCurrentScope());
-  auto op_conf = JUST(GenBuiltinOpConf(op_expr));
+  auto op_conf = JUST(GenBuiltinOpConf(op_expr, attrs));
   int64_t symbol_id = JUST(scope->symbol_id());
   op_conf->set_scope_symbol_id(symbol_id);
   if (!op_conf->has_device_tag()) {
@@ -112,9 +129,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   return bn2blob_object;
 }
 
-/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr) {
+/*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
+                                                              const AttrValueMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
-  op_expr.BuildOpConf(op_conf.get());
+  op_expr.BuildOpConf(op_conf.get(), attrs);
   return op_conf;
 }
 
@@ -139,14 +157,13 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false,
-        /*retain_grad=*/false));
+        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
   } else {
     const auto& distribute =
         compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())).GetPtrOrThrow();
     return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
         blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/false, /*retain_grad=*/false));
+        /*requires_grad=*/false, /*is_leaf=*/false));
   }
 }
 
