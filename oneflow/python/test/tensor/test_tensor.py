@@ -160,6 +160,11 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(z.requires_grad)
         test_case.assertFalse(z.is_leaf)
 
+        with flow.no_grad():
+            m = x + y
+        test_case.assertTrue(m.is_leaf)
+        test_case.assertFalse(m.requires_grad)
+
         v = flow.Tensor(*shape, requires_grad=True)
         z.retain_grad()
         w = v + z
