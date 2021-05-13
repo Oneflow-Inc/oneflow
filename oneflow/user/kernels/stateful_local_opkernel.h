@@ -150,6 +150,7 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
+                          const ComposedAttrMap* composed_attrs,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
@@ -201,10 +202,11 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+    return composed_attrs_->Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -212,6 +214,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
+                                         const ComposedAttrMap* composed_attrs,
                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer);
@@ -241,10 +244,11 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+    return composed_attrs_->Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -253,6 +257,7 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
+                                          const AttrMap& base_attrs,
                                           const std::shared_ptr<MemoryCase>& mem_case,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
@@ -325,6 +330,7 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   std::shared_ptr<MemoryCase> mem_case_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
