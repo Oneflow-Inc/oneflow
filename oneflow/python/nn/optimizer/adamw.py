@@ -137,27 +137,21 @@ class AdamW(Optimizer):
                 loss = closure()
 
             for param_group in self._param_groups:
+                kwargs = {
+                    "scale": param_group.options["scale"],
+                    "weight_decay": param_group.options["weight_decay"],
+                    "beta1": param_group.options["betas"][0],
+                    "beta2": param_group.options["betas"][1],
+                    "epsilon": param_group.options["eps"],
+                }
                 lr_tensor = flow.Tensor([param_group.options["lr"]])
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    scale = param_group.options["scale"]
-                    weight_decay = param_group.options["weight_decay"]
-                    betas = param_group.options["betas"]
-                    epsilon = param_group.options["eps"]
                     self._op(
-                        param,
-                        param.grad,
-                        lr_tensor,
-                        m_tensor,
-                        v_tensor,
-                        scale=scale,
-                        beta1=betas[0],
-                        beta2=betas[1],
-                        epsilon=epsilon,
-                        weight_decay=weight_decay,
+                        param, param.grad, lr_tensor, m_tensor, v_tensor, **kwargs,
                     )
 
             self._state["step"] = self._state["step"] + 1
