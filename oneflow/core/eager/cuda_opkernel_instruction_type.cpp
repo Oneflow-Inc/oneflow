@@ -44,6 +44,32 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
+class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CudaH2DLocalCallOpKernelInstructionType() = default;
+  ~CudaH2DLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaCopyH2DStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaH2DLocalCallOpKernelInstructionType>(
+    "cuda_h2d.LocalCallOpKernel"));
+
+class CudaD2HLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CudaD2HLocalCallOpKernelInstructionType() = default;
+  ~CudaD2HLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CudaCopyD2HStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CudaD2HLocalCallOpKernelInstructionType>(
+    "cuda_d2h.LocalCallOpKernel"));
+
 class CudaCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
   CudaCallOpKernelInstructionType() = default;
