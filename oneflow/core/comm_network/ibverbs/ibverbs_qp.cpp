@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/actor/actor_message_bus.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/dl/include/ibv.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -35,7 +36,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   pd_ = pd;
   // qp_
   ibv_device_attr device_attr{};
-  CHECK_EQ(ibv_query_device(ctx, &device_attr), 0);
+  CHECK_EQ(ibv::wrapper.ibv_query_device(ctx, &device_attr), 0);
   uint32_t max_recv_wr =
       Global<ResourceDesc, ForSession>::Get()->rdma_recv_msg_buf_byte() / sizeof(ActorMsg);
   max_recv_wr = std::min<uint32_t>(max_recv_wr, device_attr.max_qp_wr);
@@ -51,7 +52,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
   qp_init_attr.cap.max_inline_data = 0;
   qp_init_attr.qp_type = IBV_QPT_RC;
   qp_init_attr.sq_sig_all = 1;
-  qp_ = ibv_create_qp(pd, &qp_init_attr);
+  qp_ = ibv::wrapper.ibv_create_qp(pd, &qp_init_attr);
   CHECK(qp_);
   // recv_msg_buf_
   recv_msg_buf_.assign(max_recv_wr, nullptr);
@@ -61,7 +62,7 @@ IBVerbsQP::IBVerbsQP(ibv_context* ctx, ibv_pd* pd, ibv_cq* send_cq, ibv_cq* recv
 }
 
 IBVerbsQP::~IBVerbsQP() {
-  CHECK_EQ(ibv_destroy_qp(qp_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_destroy_qp(qp_), 0);
   while (send_msg_buf_.empty() == false) {
     delete send_msg_buf_.front();
     send_msg_buf_.pop();
@@ -71,7 +72,7 @@ IBVerbsQP::~IBVerbsQP() {
 
 void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   ibv_port_attr port_attr{};
-  CHECK_EQ(ibv_query_port(ctx_, 1, &port_attr), 0);
+  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(ctx_, 1, &port_attr), 0);
   ibv_qp_attr qp_attr{};
   // IBV_QPS_INIT
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -80,8 +81,8 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.port_num = 1;
   qp_attr.qp_access_flags =
       IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(
+               qp_, &qp_attr, IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS),
            0);
   // IBV_QPS_RTR
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -102,9 +103,10 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.rq_psn = 0;
   qp_attr.max_dest_rd_atomic = 1;
   qp_attr.min_rnr_timer = 12;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
-                             | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
+                                      IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN
+                                          | IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC
+                                          | IBV_QP_MIN_RNR_TIMER),
            0);
   // IBV_QPS_RTS
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
@@ -114,9 +116,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.retry_cnt = 7;
   qp_attr.rnr_retry = 7;
   qp_attr.timeout = 14;
-  CHECK_EQ(ibv_modify_qp(qp_, &qp_attr,
-                         IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC | IBV_QP_RETRY_CNT
-                             | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
+  CHECK_EQ(ibv::wrapper.ibv_modify_qp(qp_, &qp_attr,
+                                      IBV_QP_STATE | IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC
+                                          | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
 
            0);
 }
