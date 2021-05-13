@@ -20,9 +20,17 @@ namespace oneflow {
 
 namespace ibv {
 
+std::vector<std::string> GetLibPaths() {
+  char* custom_path = std::getenv("ONEFLOW_LIBIBVERBS_PATH");
+  if (custom_path == nullptr) {
+    return {"libibverbs.so.1", "libibverbs.so"};
+  } else {
+    return {custom_path};
+  }
+}
+
 dl::DynamicLibrary* GetIBVLibraryPtr() {
-  static std::unique_ptr<dl::DynamicLibrary> lib =
-      dl::DynamicLibrary::Load({"libibverbs.so.1", "libibverbs.so"});
+  static std::unique_ptr<dl::DynamicLibrary> lib = dl::DynamicLibrary::Load(GetLibPaths());
   return lib.get();
 }
 
