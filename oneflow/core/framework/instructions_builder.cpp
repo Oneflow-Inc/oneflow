@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/eager/foreign_boxing_util.h"
 
 namespace oneflow {
 
@@ -1120,10 +1121,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+        bn_in_op2blob_object) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = opkernel_object->parallel_desc_symbol();
   const auto& parallel_sig = op_attribute->parallel_signature();
   CHECK_OR_RETURN(parallel_sig.has_op_parallel_desc_symbol_id());
@@ -1131,11 +1129,11 @@ Maybe<void> InstructionsBuilder::StatefulCall(
                   == parallel_sig.op_parallel_desc_symbol_id());
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
   const auto FetchDelegateBlobObject =
-      [this, &BoxingTo](
-          const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
+      [this](const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
+             const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
-    return BoxingTo(this, x_blob_object, op_arg_parallel_attr);
+    return (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+        ->BoxingTo(this, x_blob_object, op_arg_parallel_attr);
   };
 
   const auto GetDelegateBlobObject =
@@ -1155,20 +1153,17 @@ Maybe<void> InstructionsBuilder::StatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
+        bn_in_op2blob_object) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym = JUST(GetParallelDescSymbol(parallel_conf));
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
 
   const auto FetchDelegateBlobObject =
-      [this, &BoxingTo](
-          const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
+      [this](const std::shared_ptr<compatible_py::BlobObject>& x_blob_object,
+             const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> std::shared_ptr<compatible_py::BlobObject> {
     // TODO(hanbinbin): use Maybe as return after blobcache is migrated
-    return BoxingTo(this, x_blob_object, op_arg_parallel_attr);
+    return (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+        ->BoxingTo(this, x_blob_object, op_arg_parallel_attr);
   };
 
   const auto GetDelegateBlobObject =
@@ -1231,14 +1226,12 @@ Maybe<void> InstructionsBuilder::NoBoxingCudaD2HStatelessCall(
     const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
-                                                      const std::shared_ptr<ParallelDesc>&,
-                                                      const std::string&)>& TryReplaceDeviceTag) {
+        bn_in_op2blob_object) {
   std::shared_ptr<ParallelDesc> op_parallel_desc_sym =
       JUST(GetParallelDescSymbol(in_parallel_conf));
   std::shared_ptr<ParallelDesc> blob_parallel_desc_sym =
-      TryReplaceDeviceTag(this, op_parallel_desc_sym, "cpu");
+      (*Global<std::shared_ptr<ForeignBoxingUtil>>::Get())
+          ->TryReplaceDeviceTag(this, op_parallel_desc_sym, "cpu");
   JUST(CheckRefInBlobObjectParallelDesc(op_attribute, op_parallel_desc_sym, bn_in_op2blob_object));
   const auto GetDirectBlobObject =
       [](const std::shared_ptr<compatible_py::BlobObject>& blob_object,

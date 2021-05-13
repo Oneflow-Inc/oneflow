@@ -387,7 +387,7 @@ def CreateEagerVariableBlob(op_attribute, job_name=""):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object,
         )
 
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)

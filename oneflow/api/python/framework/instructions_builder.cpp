@@ -189,23 +189,16 @@ void StatefulCall(
     InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
-  return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, BoxingTo)
-      .GetOrThrow();
+        bn_in_op2blob_object) {
+  return x->StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object).GetOrThrow();
 }
 
 void StatelessCall(
     InstructionsBuilder* x, const std::shared_ptr<cfg::OpAttribute>& op_attribute,
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
     const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-        bn_in_op2blob_object,
-    const std::function<std::shared_ptr<compatible_py::BlobObject>(
-        InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-        const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo) {
-  return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object, BoxingTo).GetOrThrow();
+        bn_in_op2blob_object) {
+  return x->StatelessCall(op_attribute, parallel_conf, bn_in_op2blob_object).GetOrThrow();
 }
 
 void NoBoxingStatelessCall(
@@ -224,9 +217,7 @@ void NoBoxingCudaD2HStatelessCall(
     const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
                                                       const std::shared_ptr<ParallelDesc>&,
                                                       const std::string&)>& TryReplaceDeviceTag) {
-  return x
-      ->NoBoxingCudaD2HStatelessCall(op_attribute, in_parallel_conf, bn_in_op2blob_object,
-                                     TryReplaceDeviceTag)
+  return x->NoBoxingCudaD2HStatelessCall(op_attribute, in_parallel_conf, bn_in_op2blob_object)
       .GetOrThrow();
 }
 

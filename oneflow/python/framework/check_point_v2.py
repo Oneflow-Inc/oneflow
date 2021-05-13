@@ -340,10 +340,7 @@ def _LogicalSlice(
                 str(op_attribute)
             )
             builder.StatelessCall(
-                cfg_op_attribute,
-                parallel_conf,
-                bn_in_op2blob_object,
-                boxing_util.BoxingTo,
+                cfg_op_attribute, parallel_conf, bn_in_op2blob_object,
             )
             Yield(bn_in_op2blob_object["y_0"])
 
@@ -435,7 +432,7 @@ def _LogicalSliceAssign(
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
+            cfg_op_attribute, parallel_conf, bn_in_op2blob_object,
         )
 
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildAssignInstruction)

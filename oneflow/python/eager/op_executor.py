@@ -72,10 +72,7 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
                 str(op_attribute)
             )
             builder.StatefulCall(
-                cfg_op_attribute,
-                opkernel_object,
-                bn_in_op2blob_object,
-                boxing_util.BoxingTo,
+                cfg_op_attribute, opkernel_object, bn_in_op2blob_object
             )
 
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
@@ -218,12 +215,7 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
             cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
                 str(op_attribute)
             )
-            builder.StatelessCall(
-                cfg_op_attribute,
-                parallel_conf,
-                bn_in_op2blob_object,
-                boxing_util.BoxingTo,
-            )
+            builder.StatelessCall(cfg_op_attribute, parallel_conf, bn_in_op2blob_object)
 
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
@@ -302,9 +294,7 @@ def _EagerRunModelInit(var_op_conf):
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
-        builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo
-        )
+        builder.StatelessCall(cfg_op_attribute, parallel_conf, bn_in_op2blob_object)
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
@@ -322,9 +312,7 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
-        builder.StatelessCall(
-            cfg_op_attribute, parallel_conf, bn_in_op2blob_object, boxing_util.BoxingTo,
-        )
+        builder.StatelessCall(cfg_op_attribute, parallel_conf, bn_in_op2blob_object)
 
     def FeedPath(ofblob):
         ofblob.CopyFromNdarray(np.frombuffer(path.encode("ascii"), dtype=np.int8))
@@ -370,12 +358,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
         cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
-        builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            model_load_blob_objects,
-            boxing_util.BoxingTo,
-        )
+        builder.StatelessCall(cfg_op_attribute, parallel_conf, model_load_blob_objects)
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
@@ -415,10 +398,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
             str(op_attribute)
         )
         builder.StatelessCall(
-            cfg_op_attribute,
-            parallel_conf,
-            model_save_blob_objects,
-            boxing_util.BoxingTo,
+            cfg_op_attribute, parallel_conf, model_save_blob_objects,
         )
 
     sess = session_ctx.GetDefaultSession()

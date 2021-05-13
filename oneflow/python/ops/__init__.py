@@ -94,7 +94,6 @@ def EagerReturnRemoteBlob(remote_blob, allow_cpu_return_op=True):
                 cfg_op_attribute,
                 remote_blob.blob_object.parallel_desc_symbol.parallel_conf,
                 bn_in_op2blob_object,
-                boxing_util.BoxingTo,
             )
 
     oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
