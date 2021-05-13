@@ -253,10 +253,18 @@ class NLLLoss(Module):
         return res
 
     def forward(self, input, target):
-        assert len(input.shape) == 2 or len(input.shape) == 4
+        assert len(input.shape) <= 4
+        assert len(target.shape) == len(input.shape) - 1
         input = input.negative()
         if len(input.shape) == 2:
             res = self.nllloss_1d(input, target)
+        elif len(input.shape) == 3:
+            b, c, h = input.shape[0], input.shape[1], input.shape[2]
+            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = input.reshape(shape=[-1, input.shape[2]])
+            target = target.flatten()
+            res = self.nllloss_1d(input, target)
+            res = res.reshape((b, h))
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
             input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
@@ -264,7 +272,6 @@ class NLLLoss(Module):
             target = target.flatten()
             res = self.nllloss_1d(input, target)
             res = res.reshape((b, h, w))
-
         else:
             raise NotImplemented
 
