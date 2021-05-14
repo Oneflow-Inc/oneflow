@@ -693,6 +693,43 @@ class Sqrt(Module):
         return self.sqrt_op(input)[0]
 
 
+@oneflow_export("rsqrt")
+@register_tensor_op("rsqrt")
+@experimental_api
+def rsqrt_op(input):
+    r"""Returns a new tensor with the reciprocal of the square-root of each of
+        the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \frac{1}{\sqrt{\text{input}_{i}}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow.experimental as flow
+            import numpy as np
+
+            a = flow.Tensor(np.random.randn(4))
+            # tensor([-0.0370,  0.2970,  1.5420, -0.9105])
+            flow.rsqrt(a)
+            # tensor([    nan,  1.8351,  0.8053,     nan])
+
+    """
+    return Rsqrt()(input)
+
+class Rsqrt(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.rsqrt_op = flow.builtin_op("rsqrt").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.rsqrt_op(input)[0]
+
+
 @oneflow_export("sqrt")
 @register_tensor_op("sqrt")
 @experimental_api

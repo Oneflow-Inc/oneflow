@@ -135,6 +135,21 @@ class TestSqrt(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestRsqrt(flow.unittest.TestCase):
+    def test_rsqrt(test_case):
+        input_arr = np.random.randn(3, 2, 5, 7)
+        np_out = 1 / np.sqrt(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = flow.rsqrt(input=x)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSquare(flow.unittest.TestCase):
     def test_square(test_case):
         input_arr = np.random.randn(9, 4, 5, 6)
