@@ -42,7 +42,9 @@ class AsyncCudaStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const override;
+  void set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const override {
+    // do nothing
+  }
   void Compute(Instruction* instruction) const override;
   ObjectMsgPtr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                           int64_t this_machine_id) const override;

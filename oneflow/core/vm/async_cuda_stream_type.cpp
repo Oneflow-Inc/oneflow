@@ -16,24 +16,28 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 #include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/vm/instruction_type.h"
+#include "oneflow/core/vm/stream.msg.h"
+#include "oneflow/core/vm/cuda_stream_handle_device_context.h"
+#include "oneflow/core/vm/cuda_instruction_status_querier.h"
 
 namespace oneflow {
 namespace vm {
 
 void AsyncCudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
-                                          Stream* stream) const {
+                                        Stream* stream) const {
   device_ctx->reset(
       new CudaStreamHandleDeviceCtx(stream->mut_callback_list(), stream->device_id()));
 }
 
 void AsyncCudaStreamType::InitInstructionStatus(const Stream& stream,
-                                                  InstructionStatusBuffer* status_buffer) const {
+                                                InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
   CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
 }
 
 void AsyncCudaStreamType::DeleteInstructionStatus(const Stream& stream,
-                                                    InstructionStatusBuffer* status_buffer) const {
+                                                  InstructionStatusBuffer* status_buffer) const {
   // do nothing
 }
 
@@ -57,7 +61,7 @@ void AsyncCudaStreamType::Compute(Instruction* instruction) const {
 }
 
 ObjectMsgPtr<StreamDesc> AsyncCudaStreamType::MakeStreamDesc(const Resource& resource,
-                                                               int64_t this_machine_id) const {
+                                                             int64_t this_machine_id) const {
   if (!resource.has_gpu_device_num()) { return ObjectMsgPtr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
   auto ret = ObjectMsgPtr<StreamDesc>::New();
