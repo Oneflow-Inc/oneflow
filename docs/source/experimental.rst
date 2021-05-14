@@ -105,3 +105,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.unsqueeze
 .. autofunction:: oneflow.experimental.where
 .. autofunction:: oneflow.experimental.Tensor.where
+.. autofunction:: oneflow.experimental.gather
+.. autofunction:: oneflow.experimental.Tensor.gather
+

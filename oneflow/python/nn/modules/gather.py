@@ -85,12 +85,14 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 
     .. code-block:: python
         
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = np.random.randn(3, 4, 3, 5)
         index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
         output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
+
+        # output.shape (3, 4, 3, 5)
 
     """
     return Gather(dim, sparse_grad)(input, index)
