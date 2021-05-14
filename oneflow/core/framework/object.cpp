@@ -48,6 +48,7 @@ void BlobObject::ForceReleaseAll() {
   for (const auto& release : release_) { release(this); }
   release_.clear();
 }
+
 }  // namespace compatible_py
 
 }  // namespace oneflow
