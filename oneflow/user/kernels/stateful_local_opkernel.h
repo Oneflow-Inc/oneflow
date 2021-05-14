@@ -300,6 +300,8 @@ class StatefulLocalOpKernel final {
     return op_infer_ctx_for_thread_b_.get();
   }
 
+  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
+
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
@@ -321,7 +323,6 @@ class StatefulLocalOpKernel final {
   }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
-  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
   Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
                                                  const EagerBlobObjectListPtr& outputs);
