@@ -1483,6 +1483,7 @@ Raises:
 def upsample(
     x: oneflow._oneflow_internal.BlobDesc,
     size: Sequence[int] = (2, 2),
+    align_corners: bool = False,
     data_format: str = "NCHW",
     interpolation: str = "nearest",
     name: str = "Upsample2D",
@@ -1492,6 +1493,7 @@ def upsample(
     Args:
         x ([type]): Input `Blob`.
         size (tuple, optional): (height_scale, width_scale)  Defaults to (2, 2).
+        align_corners (bool, optional): Defaults to False.
         data_format (str, optional): A string specifies the format of the input `Blob`, one of "NCHW" or "NHWC" (default: "NCHW"). "NCHW" cooresponds to channels_first, i.e. the input `Blob` with shape (batch_size, channels, height, width).
                         "NHWC" cooresponds to channels_last, i.e. the input `Blob` with shape (batch_size, height, width, channels).. Defaults to "NCHW".
         interpolation (str, optional): Image interpolation algorithm to enlarge the image size. Defaults to "nearest". "nearest" and "bilinear" are available now.
@@ -1542,6 +1544,9 @@ def upsample(
     if interpolation != "nearest" and interpolation != "bilinear":
         raise ValueError('interpolation must be "nearest" or "bilinear".')
 
+    if interpolation == "nearest" and align_corners:
+        raise ValueError('interpolation "nearest" does not support align_corners.')
+
     if data_format.upper() != "NCHW" and data_format.upper() != "NHWC":
         raise ValueError('data_format must be "NHWC" or "NCHW".')
 
@@ -1559,6 +1564,7 @@ def upsample(
         .Output("y")
         .Attr("height_scale", float(height_scale))
         .Attr("width_scale", float(width_scale))
+        .Attr("align_corners", align_corners)
         .Attr("data_format", "channels_first")
         .Attr("interpolation", interpolation)
         .Build()

@@ -17,6 +17,7 @@ limitations under the License.
 
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
@@ -67,17 +68,12 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
-  // attrs will be filled when op is being executing
   BuildOpConf(op_conf.get(), {});
-  op_conf->set_device_tag(device.of_type());
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(device.of_type()));
-  // TODO(jianhao): replace them with device.mem_case_ptr() and device.parallel_desc_ptr() after
-  // #4670 is merged
-  std::shared_ptr<MemoryCase> mem_case = MemoryCaseUtil::MakeMemCase(dev_type, device.device_id());
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      JUST(Device::MakeParallelDescByDevice(device));
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, mem_case, parallel_desc,
-                                                         input_arg_tuple(), output_arg_tuple()));
+  op_conf->set_device_tag(JUST(device.of_type()));
+  std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
+  const auto& opkernel =
+      JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), base_attrs(),
+                                      parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -103,6 +99,81 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+namespace {
+
+class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
+ public:
+  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
+                               const TensorTuple& input_tensors,
+                               std::vector<std::shared_ptr<const Device>>* output_devices)
+      : user_op_expr_(user_op_expr),
+        composed_attrs_(attrs, user_op_expr->base_attrs()),
+        input_tensors_(&input_tensors),
+        output_devices_(output_devices) {}
+
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    return user_op_expr_->indexed_input_pairs();
+  }
+
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    return user_op_expr_->indexed_output_pairs();
+  }
+
+  std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                                    int64_t index) override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return &output_devices_->at(tuple_index);
+  }
+
+  const std::shared_ptr<const Device>& InputTensorDevice4ArgNameAndIndex(
+      const std::string& name, int64_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    CHECK_GE(tuple_index, 0);
+    return input_tensors_->at(tuple_index)->device();
+  }
+
+ private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_.Attr4Name(attr_name);
+  }
+  const UserOpExpr* user_op_expr_;
+  const ComposedAttrMap composed_attrs_;
+  const TensorTuple* input_tensors_;
+  std::vector<std::shared_ptr<const Device>>* output_devices_;
+};
+
+}  // namespace
+
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+                       const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns)
+    : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
+      base_attrs_(base_attrs) {
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+  if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+}
+
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
+                                               const std::vector<std::string>& indexed_ibns,
+                                               const std::vector<std::string>& indexed_obns) {
+  AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
+  return std::shared_ptr<UserOpExpr>(
+      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+}
+
+Maybe<const Device> UserOpExpr::InferDevices(
+    const AttrMap& attrs, const TensorTuple& input_tensors,
+    std::vector<std::shared_ptr<const Device>>* output_devices) const {
+  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
+  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_devices);
+  return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
 template<>

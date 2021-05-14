@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.experimental as flow
 import unittest
 import numpy as np
 
@@ -43,7 +43,7 @@ class TestAddModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
-        y = flow.Tensor(np.array([5]))
+        y = flow.Tensor(np.array([5.0]))
         of_out = flow.add(x, y)
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))

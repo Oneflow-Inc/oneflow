@@ -41,34 +41,27 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
 
     def test_stateful_local_kernel(test_case):
-        func_config = flow.FunctionConfig()
-        func_config.default_logical_view(flow.scope.mirrored_view())
-
-        @flow.global_function(function_config=func_config)
-        def job():
-            op1 = (
-                flow.builtin_op("constant")
-                .Output("out")
-                .Attr("is_floating_value", True)
-                .Attr("floating_value", 3.0)
-                .Attr("dtype", flow.float32)
-                .Attr("shape", [1, 1])
-                .Build()
-            )
-            op2 = (
-                flow.builtin_op("matmul")
-                .Input("a")
-                .Input("b")
-                .Attr("transpose_a", False)
-                .Attr("transpose_b", False)
-                .Attr("alpha", float(1.0))
-                .Output("out")
-                .Build()
-            )
-            x = op1()[0]
-            x = op2(x, x)[0]
-
-        job()
+        op1 = (
+            flow.builtin_op("constant")
+            .Output("out")
+            .Attr("is_floating_value", True)
+            .Attr("floating_value", 3.0)
+            .Attr("dtype", flow.float32)
+            .Attr("shape", [1, 1])
+            .Build()
+        )
+        op2 = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", float(1.0))
+            .Output("out")
+            .Build()
+        )
+        x = op1()[0]
+        x = op2(x, x)[0]
 
 
 if __name__ == "__main__":

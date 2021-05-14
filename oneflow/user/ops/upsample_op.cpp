@@ -22,6 +22,7 @@ REGISTER_USER_OP("upsample")
     .Output("y")
     .Attr<float>("height_scale")
     .Attr<float>("width_scale")
+    .Attr<bool>("align_corners")
     .Attr<std::string>("data_format")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -34,8 +35,8 @@ REGISTER_USER_OP("upsample")
         LOG(FATAL) << "upsample only supports NCHW";
       }
       *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                    static_cast<int32_t>(height_scale) * x_desc->shape().At(2),
-                                    static_cast<int32_t>(width_scale) * x_desc->shape().At(3)});
+                                    static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
+                                    static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -52,6 +53,7 @@ REGISTER_USER_OP("upsample_grad")
     .Output("dx")
     .Attr<float>("height_scale")
     .Attr<float>("width_scale")
+    .Attr<bool>("align_corners")
     .Attr<std::string>("data_format")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -63,8 +65,8 @@ REGISTER_USER_OP("upsample_grad")
         LOG(FATAL) << "upsample_nearest only supports NCHW";
       }
       *dx_shape = Shape({dy_shape->At(0), dy_shape->At(1),
-                         dy_shape->At(2) / static_cast<int32_t>(height_scale),
-                         dy_shape->At(3) / static_cast<int32_t>(width_scale)});
+                         static_cast<int32_t>(dy_shape->At(2) / height_scale),
+                         static_cast<int32_t>(dy_shape->At(3) / width_scale)});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -86,6 +88,7 @@ REGISTER_USER_OP_GRAD("upsample")
                 .Output("dx")
                 .Attr("height_scale", op.attr<float>("height_scale"))
                 .Attr("width_scale", op.attr<float>("width_scale"))
+                .Attr("align_corners", op.attr<bool>("align_corners"))
                 .Attr("data_format", op.attr<std::string>("data_format"))
                 .Attr("interpolation", op.attr<std::string>("interpolation"))
                 .Build();

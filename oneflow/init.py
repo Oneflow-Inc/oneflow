@@ -68,10 +68,10 @@ import oneflow.python.framework.env_util as env_util
 env_util.init_default_physical_env()
 del env_util
 
-atexit.register(oneflow._oneflow_internal.DestroyEnv)
-atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.SetIsPythonShuttingDown)
+atexit.register(oneflow._oneflow_internal.DestroyEnv)
+atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 del atexit
 
 import sys

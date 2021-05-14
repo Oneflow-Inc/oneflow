@@ -15,7 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.ops.transpose_util import (
     get_perm_when_transpose_axis_to_last_dim,
@@ -44,6 +44,13 @@ class Argmax(Module):
             .Attr("end_dim", -1)
             .Build()
         )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
         self.dim = dim
         self.keepdim = keepdim
@@ -63,17 +70,18 @@ class Argmax(Module):
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = flow.tmp.transpose(input, perm=perm)
+            x = self._transpose_op(input, perm=perm)[0]
             x = self._op_softmax_last_dim(x)[0]
             x = self._expand_op(x)[0]
-            x = flow.tmp.transpose(x, perm=get_inversed_perm(perm))
+            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
             if self.keepdim == False:
-                x = flow.tmp.squeeze(x, axis=[axis])
+                x = x.squeeze(dim=[axis])
             return x
 
 
 @oneflow_export("argmax")
 @register_tensor_op("argmax")
+@experimental_api
 def argmax_op(input, dim: int = None, keepdim: bool = False):
     """The op computes the index with the largest value of a Tensor at specified axis.
 

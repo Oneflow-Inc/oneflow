@@ -15,21 +15,21 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 import oneflow.python.framework.id_util as id_util
 from typing import Optional, Sequence
 
 
 class Squeeze(Module):
-    def __init__(self, axis: Optional[Sequence[int]] = None) -> None:
+    def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
 
         self._op = (
             flow.builtin_op("squeeze")
             .Input("in")
             .Output("out")
-            .Attr("axes", axis)
+            .Attr("axes", dim)
             .Build()
         )
 
@@ -37,17 +37,18 @@ class Squeeze(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.squeeze")
+@oneflow_export("squeeze")
 @register_tensor_op("squeeze")
-def squeeze_op(input, axis: Optional[Sequence[int]] = None):
+@experimental_api
+def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     """This operator removes the specified dimention which size is 1 of the input Tensor.
-    If the `axis` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
+    If the `dim` is not specified, this operator will remove all the dimention which size is 1 of the input Tensor.
 
     The amount of element in return value is the same as Tensor `input`.
 
     Args:
         input (oneflow.Tensor): The input Tensor.
-        axis (Optional[Sequence[int]], optional): The axis. Defaults to None.
+        dim (Optional[Sequence[int]]): The dim. Defaults to None.
 
     Returns:
         oneflow.Tensor: The result Tensor.
@@ -58,13 +59,15 @@ def squeeze_op(input, axis: Optional[Sequence[int]] = None):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        out = flow.tmp.squeeze(input, axis=[1, 2]).numpy().shape
+        out = flow.squeeze(input, dim=[1, 2]).numpy().shape
 
         # out.shape (1, 3)
 
     """
-    return Squeeze(axis=axis)(input)
+    if type(dim) == int:
+        dim = [dim]
+    return Squeeze(dim=dim)(input)

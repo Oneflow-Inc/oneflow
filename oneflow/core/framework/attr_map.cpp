@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -51,7 +52,7 @@ AttrMap::AttrMap(const MutableCfgAttrMap& other) {
 template<typename T>
 Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   const auto& it = this->find(attr_name);
-  CHECK_OR_RETURN(it != this->end());
+  CHECK_OR_RETURN(it != this->end()) << attr_name << " not found";
   const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
   return ptr->val();
@@ -63,6 +64,15 @@ const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
   if (iter != end()) { return iter->second; }
   static const std::shared_ptr<const user_op::AttrVal> none;
   return none;
+}
+
+AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
+  const auto& attrs =
+      std::make_shared<HashMap<std::string, std::shared_ptr<const user_op::AttrVal>>>();
+  for (const auto& kv : user_op_conf.attr()) {
+    attrs->emplace(kv.first, CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second)));
+  }
+  return AttrMap(attrs);
 }
 
 template<typename T>
