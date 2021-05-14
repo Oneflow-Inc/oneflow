@@ -41,9 +41,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
-    CHECK_JUST(builder->StatelessCall(
-        op_attribute, parallel_conf, bn2blob_object,
-        std::bind(&ForeignBoxingUtil::BoxingTo, boxing_util.get(), _1, _2, _3)));
+    CHECK_JUST(builder->StatelessCall(op_attribute, parallel_conf, bn2blob_object));
     for (int i = 0; i < outputs->size(); ++i) {
       const std::string& obn = op_expr.indexed_obns().at(i);
       outputs->at(i) = CHECK_JUST(OpInterpUtil::BuildTensorFromBlobObject(bn2blob_object->at(obn)));

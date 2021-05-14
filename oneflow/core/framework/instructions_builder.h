@@ -195,19 +195,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<compatible_py::OpKernelObject>& opkernel_object,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
+          bn_in_op2blob_object);
 
   Maybe<void> StatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<cfg::ParallelConf>& parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const std::function<std::shared_ptr<compatible_py::BlobObject>(
-          InstructionsBuilder*, const std::shared_ptr<compatible_py::BlobObject>&,
-          const std::shared_ptr<compatible_py::OpArgParallelAttribute>&)>& BoxingTo);
+          bn_in_op2blob_object);
 
   Maybe<void> NoBoxingStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
@@ -219,10 +213,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,
       const std::shared_ptr<cfg::ParallelConf>& in_parallel_conf,
       const std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>&
-          bn_in_op2blob_object,
-      const std::function<std::shared_ptr<ParallelDesc>(InstructionsBuilder*,
-                                                        const std::shared_ptr<ParallelDesc>&,
-                                                        const std::string&)>& TryReplaceDeviceTag);
+          bn_in_op2blob_object);
 
   Maybe<void> NoBoxingCudaH2DStatelessCall(
       const std::shared_ptr<cfg::OpAttribute>& op_attribute,

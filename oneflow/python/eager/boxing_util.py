@@ -716,7 +716,7 @@ def _BuildCopyInstruction(builder, produced_blob_object, op_conf, to_device_tag)
     if to_device_tag == "cpu" and x_device_tag == "gpu":
         x_parallel_conf = produced_blob_object.parallel_desc_symbol.parallel_conf
         builder.NoBoxingCudaD2HStatelessCall(
-            cfg_op_attribute, x_parallel_conf, bn_in_op2blob_object, TryReplaceDeviceTag
+            cfg_op_attribute, x_parallel_conf, bn_in_op2blob_object
         )
     elif to_device_tag == "gpu" and x_device_tag == "cpu":
         out_parallel_desc_symbol = TryReplaceDeviceTag(
@@ -771,10 +771,7 @@ def BuildAssignInstruction(builder, ref_blob_object, value_blob_object, op_conf)
     elif ref_device_tag == "cpu" and value_device_tag == "gpu":
         value_parallel_conf = value_blob_object.parallel_desc_symbol.parallel_conf
         builder.NoBoxingCudaD2HStatelessCall(
-            cfg_op_attribute,
-            value_parallel_conf,
-            bn_in_op2blob_object,
-            TryReplaceDeviceTag,
+            cfg_op_attribute, value_parallel_conf, bn_in_op2blob_object,
         )
     elif ref_device_tag == "gpu" and value_device_tag == "cpu":
         with _CudaHostPinBlob(builder, value_blob_object):
