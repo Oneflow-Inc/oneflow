@@ -498,13 +498,13 @@ class Module(object):
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
                 with flow.no_grad():
-                    param_applied = fn(param)
+                    param_applied = Tensor(fn(param))
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
 
                 if param.grad is not None:
                     assert param.grad.is_leaf
                     with flow.no_grad():
-                        grad_applied = fn(param.grad)
+                        grad_applied = Tensor(fn(param.grad))
                     self._parameters[key].grad = grad_applied.requires_grad_(
                         param.grad.requires_grad
                     )
