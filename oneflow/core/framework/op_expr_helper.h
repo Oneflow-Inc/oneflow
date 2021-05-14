@@ -34,6 +34,9 @@ Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const 
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
+Maybe<one::UserOpExpr> OnesLikeOp();
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+
 template<typename T>
 Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value);
 template<typename T>
@@ -96,6 +99,10 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name);
 
 Maybe<one::UserOpExpr> CastLikeOp();
 Maybe<one::UserOpExpr> CastLikeOp(const std::string& name);
+
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id);
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id,
+                              const std::string& name);
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon);
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,
