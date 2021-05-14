@@ -90,7 +90,7 @@ class Slice(Module):
 
 @oneflow_export("Slice")
 @experimental_api
-def slice_op(x, slice_tup_list:Sequence[Tuple[int, int, int]]):
+def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
     The operator will slice the tensor according to the `slice_top_list`.
@@ -130,7 +130,7 @@ class SliceUpdate(Module):
 
 @oneflow_export("sliceUpdate")
 @experimental_api
-def slice_update_op(x, update, slice_tup_list:Sequence[Tuple[int, int, int]]):
+def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
     Args:
@@ -147,4 +147,3 @@ def slice_update_op(x, update, slice_tup_list:Sequence[Tuple[int, int, int]]):
     """
     start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
-
