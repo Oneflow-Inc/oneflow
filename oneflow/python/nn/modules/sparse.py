@@ -109,6 +109,7 @@ class Embedding(Module):
         self._fill_padding_idx_with_zero()
 
     def _fill_padding_idx_with_zero(self) -> None:
+        # TODO padding_idx rely on tensor slice
         if self.padding_idx is not None:
             with flow.no_grad():
                 self.weight[self.padding_idx].fill_(0)
