@@ -136,18 +136,16 @@ class _BatchNorm(_NormBase):
         self._check_input_dim(x)
 
         if x.device == flow.device("cpu"):
+            gamma = self.weight
+            beta = self.bias
             params_shape = [x.shape[1]]
             if len(self.running_mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
                 nd_params_shape[1] = params_shape[0]
                 mean = self.running_mean.reshape(shape=nd_params_shape)
                 variance = self.running_var.reshape(shape=nd_params_shape)
-                if self.affine:
-                    gamma = self.weight.reshape(shape=nd_params_shape)
-                    beta = self.bias.reshape(shape=nd_params_shape)
 
             elif len(self.running_mean.shape) == len(x.shape):
-                print("len(self.running_mean.shape) == x.shape >>>>>>>> ", x.shape)
                 pass
             else:
                 raise ValueError(
@@ -162,7 +160,6 @@ class _BatchNorm(_NormBase):
             if self.affine:
                 affined = affined * gamma
                 affined = affined + beta
-
             return affined
 
         else:
