@@ -54,12 +54,17 @@ class TestAddModule(flow.unittest.TestCase):
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    def test_add_backward(test_case):
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestAddBackwardModule(flow.unittest.TestCase):
+    def test_backward_cpu(test_case):
         x = 5
-        y = flow.Tensor(np.random.randn(1), requires_grad=True)
-        of_out = flow.add(x, y)
+        y = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
+        of_out = flow.add(x, y).sum()
         of_out.backward()
-        test_case.assertTrue(np.allclose(y.grad.numpy(), np.array([1]), 1e-4, 1e-4))
+        test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2,3)), 1e-4, 1e-4))
 
 
 if __name__ == "__main__":
