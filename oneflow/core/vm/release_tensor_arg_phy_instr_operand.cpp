@@ -27,10 +27,8 @@ void ReleaseTensorArgPhyInstrOperand::ForEachConstMirroredObject(
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  auto* infer_local_dep_object = infer_local_dep_object_->mut_local_dep_object();
   auto* compute_local_dep_object = compute_local_dep_object_->mut_local_dep_object();
-  DoEach(infer_local_dep_object->mut_mirrored_object(),
-         compute_local_dep_object->mut_mirrored_object());
+  DoEach(nullptr, compute_local_dep_object->mut_mirrored_object());
 }
 
 void ReleaseTensorArgPhyInstrOperand::ForEachMut2MirroredObject(

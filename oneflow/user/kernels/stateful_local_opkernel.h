@@ -279,8 +279,8 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
-    return infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
+    return compute_local_dep_object_;
   }
 
   Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
@@ -299,6 +299,8 @@ class StatefulLocalOpKernel final {
   LocalUserOpInferContext* op_infer_ctx_for_thread_b() const {
     return op_infer_ctx_for_thread_b_.get();
   }
+
+  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
@@ -321,7 +323,6 @@ class StatefulLocalOpKernel final {
   }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
-  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
   Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
                                                  const EagerBlobObjectListPtr& outputs);
@@ -351,7 +352,7 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
