@@ -159,6 +159,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--build_docker_img", action="store_true", required=False, default=False
     )
+    parser.add_argument("--debug", action="store_true", required=False, default=False)
     parser.add_argument("--bash_script", type=str, required=False)
     default_this_host = socket.gethostname()
     parser.add_argument(
@@ -187,10 +188,20 @@ if __name__ == "__main__":
         remote_host = socket.gethostbyname(remote_host)
 
     print(f"this_host: {this_host}, remote_host: {remote_host}", flush=True)
+    sub_dir = str(uuid.uuid4())
+    if args.debug:
+        sub_dir = "debug"
     workspace_dir = os.path.join(
-        os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
+        os.path.expanduser("~"), "distributed_run_workspace", sub_dir
     )
+    print("workspace_dir", workspace_dir)
     create_remote_workspace_dir(remote_host, workspace_dir)
+    if args.oneflow_build_path:
+        print("copying python_scripts dir")
+        subprocess.check_call(
+            f"rsync -azP --omit-dir-times --no-perms --no-group --include='*.py' --include='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
+            shell=True,
+        )
     if args.build_docker_img:
         build_docker_img(remote_host, workspace_dir)
     assert args.bash_script
