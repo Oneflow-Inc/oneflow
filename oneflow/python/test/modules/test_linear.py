@@ -118,5 +118,65 @@ class TestIdentity(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLinearCuda(flow.unittest.TestCase):
+    def test_linear_no_bias(test_case):
+        linear = flow.nn.Linear(3, 8, False)
+        linear = linear.to("cuda")
+        input_arr = np.array(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=np.float32,
+        )
+        np_weight = np.ones((3, 8)).astype(np.float32)
+        np_weight.fill(2.3)
+        x = flow.Tensor(input_arr)
+        x = x.to("cuda")
+        flow.nn.init.constant_(linear.weight, 2.3)
+        of_out = linear(x)
+        np_out = np.matmul(input_arr, np_weight)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_linear_bias(test_case):
+        linear = flow.nn.Linear(3, 8)
+        linear = linear.to("cuda")
+        input_arr = np.array(
+            [
+                [-0.94630778, -0.83378579, -0.87060891],
+                [2.0289922, -0.28708987, -2.18369248],
+                [0.35217619, -0.67095644, -1.58943879],
+                [0.08086036, -1.81075924, 1.20752494],
+                [0.8901075, -0.49976737, -1.07153746],
+                [-0.44872912, -1.07275683, 0.06256855],
+                [-0.22556897, 0.74798368, 0.90416439],
+                [0.48339456, -2.32742195, -0.59321527],
+            ],
+            dtype=np.float32,
+        )
+        np_weight = np.ones((3, 8)).astype(np.float32)
+        np_weight.fill(2.068758)
+        np_bias = np.ones((8))
+        np_bias.fill(0.23)
+        x = flow.Tensor(input_arr)
+        x = x.to("cuda")
+        flow.nn.init.constant_(linear.weight, 2.068758)
+        flow.nn.init.constant_(linear.bias, 0.23)
+        of_out = linear(x)
+        np_out = np.matmul(input_arr, np_weight)
+        np_out += np_bias
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
 if __name__ == "__main__":
     unittest.main()
