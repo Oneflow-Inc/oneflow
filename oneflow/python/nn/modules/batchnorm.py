@@ -38,17 +38,17 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features).normal_(mean=0.0, std=1.0))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features).normal_(mean=0.0, std=1.0))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features),
+                "running_mean", flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features),
+                "running_var", flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
             )
         else:
             self.register_parameter("running_mean", None)
@@ -147,6 +147,8 @@ class _BatchNorm(_NormBase):
                 nd_params_shape[1] = params_shape[0]
                 mean = self.running_mean.reshape(shape=nd_params_shape)
                 variance = self.running_var.reshape(shape=nd_params_shape)
+                gamma = self.weight.reshape(shape=nd_params_shape)
+                beta = self.bias.reshape(shape=nd_params_shape)
 
             elif len(self.running_mean.shape) == len(x.shape):
                 pass
