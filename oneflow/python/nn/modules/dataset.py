@@ -27,7 +27,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import (
     _single,
@@ -36,9 +36,12 @@ from oneflow.python.nn.modules.utils import (
     _reverse_repeat_tuple,
 )
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
-from typing import Optional, List, Tuple, Sequence
+from typing import Optional, List, Tuple, Sequence, Union
 import traceback
 
+
+@oneflow_export("nn.OfrecordReader")
+@experimental_api
 class OfrecordReader(Module):
     def __init__(
         self,
@@ -54,7 +57,8 @@ class OfrecordReader(Module):
         name: Optional[str] = None,
     ):
         super().__init__()
-        seed, has_seed = flow.random.gen_seed(random_seed)
+        # seed, has_seed = flow.random.gen_seed(random_seed)
+        seed, has_seed = 1, True
         self._op = (
             flow.builtin_op("OFRecordReader", name)
             .Output("out")
@@ -75,6 +79,8 @@ class OfrecordReader(Module):
         return res
 
 
+@oneflow_export("nn.OfrecordRawDecoder")
+@experimental_api
 class OfrecordRawDecoder(Module):
     def __init__(
         self,
@@ -105,6 +111,7 @@ class OfrecordRawDecoder(Module):
 
 
 @oneflow_export("nn.CoinFlip")
+@experimental_api
 class CoinFlip(Module):
     def __init__(
         self,
@@ -131,6 +138,7 @@ class CoinFlip(Module):
 
 
 @oneflow_export("nn.CropMirrorNormalize")
+@experimental_api
 class CropMirrorNormalize(Module):
     def __init__(
         self,
@@ -168,6 +176,7 @@ class CropMirrorNormalize(Module):
 
 
 @oneflow_export("nn.OFRecordImageDecoderRandomCrop")
+@experimental_api
 class OFRecordImageDecoderRandomCrop(Module):
     def __init__(
         self,
@@ -201,6 +210,7 @@ class OFRecordImageDecoderRandomCrop(Module):
 
 
 @oneflow_export("nn.image.Resize")
+@experimental_api
 class ImageResize(Module):
     def __init__(
         self,
@@ -307,6 +317,7 @@ class ImageResize(Module):
 
 
 @oneflow_export("tmp.RawDecoder")
+@experimental_api
 def raw_decoder(
     input_record,
     blob_name: str,
@@ -322,6 +333,7 @@ def raw_decoder(
 
 
 @oneflow_export("tmp.OfrecordReader")
+@experimental_api
 def get_ofrecord_handle(
     ofrecord_dir: str,
     batch_size: int = 1,
