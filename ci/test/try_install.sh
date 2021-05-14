@@ -1,20 +1,15 @@
 #!/bin/bash
 set -xe
 
-src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-wheel_path=${ONEFLOW_WHEEL_PATH:-"$PWD/wheelhouse"}
-index=${ONEFLOW_PIP_INDEX}
-pkg_name=${ONEFLOW_PACKAGE_NAME}
+build_dir=${ONEFLOW_BUILD_DIR:-"$PWD"}
 
-if [ -n "$index" ]; then
-    python3 -m pip install --find-links ${index} ${pkg_name}
-elif [ -d "$wheel_path" ]; then
-    ls -la $wheel_path
-    python3 -m pip install --user $wheel_path/*.whl
-elif [ -e "$wheel_path" ]; then
-    python3 -m pip install --user "$wheel_path"
-elif [ -d "$src_dir" ]; then
-    python3 -m pip install -e "$src_dir" --user
+if [ ! -z "$ONEFLOW_WHEEL_PATH" ] && [ compgen -G "${wheel_path}/*.whl" > /dev/null ]; then
+    ls -la $ONEFLOW_WHEEL_PATH
+    python3 -m pip install --user $ONEFLOW_WHEEL_PATH/*.whl
+elif [ ! -z "$ONEFLOW_WHEEL_PATH" ] && [ -f "$ONEFLOW_WHEEL_PATH" ]; then
+    python3 -m pip install --user "$ONEFLOW_WHEEL_PATH"
+elif [ -d "$build_dir" ]; then
+    source "${build_dir}/source.sh"
 else
-    echo "wheel not found: $wheel_path, src dir not found: $src_dir, continue anyway..."
+    echo "wheel not found: $ONEFLOW_WHEEL_PATH, src dir not found: $src_dir, continue anyway..."
 fi

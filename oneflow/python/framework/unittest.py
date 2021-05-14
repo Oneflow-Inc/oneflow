@@ -17,9 +17,7 @@ from __future__ import absolute_import
 
 import os
 import sys
-import getpass
 import imp
-import inspect
 import socket
 from contextlib import closing
 import uuid
@@ -33,7 +31,6 @@ from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 import subprocess
-import platform
 
 
 class _ClearDefaultSession(object):
@@ -169,6 +166,36 @@ _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
 
+def worker_agent_port():
+    port_txt = os.getenv("ONEFLOW_TEST_WORKER_AGENT_PORT")
+    if port_txt:
+        return int(port_txt)
+    else:
+        return None
+
+
+def use_worker_agent():
+    return worker_agent_port() is not None
+
+
+def launch_workers_via_agent():
+    print("launching workers via agent")
+    from multiprocessing.connection import Client
+
+    env_proto = env_util.default_env_proto
+
+    address = ("localhost", worker_agent_port())
+    authkey = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
+    assert authkey
+    conn = Client(address, authkey=authkey.encode())
+    print("[unittest]", "sending env_proto to agent")
+    conn.send(pbtxt.MessageToString(env_proto).encode())
+    print("[unittest]", "blocking until agent send ok")
+    assert conn.recv().decode() == "ok"
+    conn.close()
+    print("[unittest]", "workers launched")
+
+
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
@@ -180,18 +207,14 @@ class TestCase(unittest.TestCase):
                 master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
                 assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
                 oneflow.env.ctrl_port(int(master_port))
+                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                if data_port:
+                    oneflow.env.data_port(int(data_port))
                 if enable_init_by_host_list():
                     oneflow.env.machine(node_list())
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                    if data_port:
-                        oneflow.env.data_port(int(data_port))
-                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
                     print("initializing worker...")
-                    oneflow.deprecated.init_worker(
-                        scp_binary=True, use_uuid=True, ssh_port=int(ssh_port)
-                    )
-                    atexit.register(oneflow.deprecated.delete_worker, ssh_port=ssh_port)
-                    _unittest_worker_initilized = True
+                    # maybe we could move this inside env.init ?
                 else:
                     ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
                     config_rank_ctrl_port = -1
@@ -215,23 +238,8 @@ class TestCase(unittest.TestCase):
                         config_rank_ctrl_port,
                         config_node_size,
                     )
-
-                    data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                    if data_port:
-                        oneflow.env.data_port(int(data_port))
-
-                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
-                    print("initializing worker...")
-                    oneflow.deprecated.init_worker(
-                        scp_binary=True,
-                        use_uuid=True,
-                        ssh_port=int(ssh_port),
-                        bootstrap_conf_list=bootstrap_conf_list,
-                    )
-                    atexit.register(
-                        oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
-                    )
-                    _unittest_worker_initilized = True
+                launch_workers_via_agent()
+                _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()
             oneflow.env.ctrl_port(master_port)
