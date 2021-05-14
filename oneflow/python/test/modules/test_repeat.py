@@ -42,6 +42,13 @@ class TestModule(flow.unittest.TestCase):
         np_out = np_repeat(input.numpy(), sizes)
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+    def test_repeat_same_dim_int(test_case):
+        input = flow.Tensor(np.random.randn(1, 2, 5, 3), dtype=flow.int32)
+        sizes = (4, 2, 3, 19)
+        of_out = input.repeat(sizes=sizes)
+        np_out = np_repeat(input.numpy(), sizes)
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
+
 
 if __name__ == "__main__":
     unittest.main()
