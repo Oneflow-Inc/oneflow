@@ -25,25 +25,10 @@ namespace oneflow {
 namespace user_op {
 
 UserOpConfWrapper::UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf)
-    : op_conf_(std::move(op_conf)) {
+    : op_conf_(op_conf) {
   CHECK(op_conf_);
   CHECK(op_conf_->has_user_conf());
-  for (const auto& kv : op_conf_->user_conf().attr()) {
-    AttrValue::ValueCase value_case = kv.second.value_case();
-    switch (value_case) {
-#define CASE_ENTRY(field, cpp_type, attr_type)                                      \
-  /* AttrValue::ValueCase has the same order and naming convention as AttrType */   \
-  case (static_cast<AttrValue::ValueCase>(attr_type)):                              \
-    CHECK(attrs_                                                                    \
-              .emplace(kv.first, std::make_shared<TypedAttrVal<cpp_type>>(          \
-                                     AttrValueAccessor<cpp_type>::Attr(kv.second))) \
-              .second);                                                             \
-    break;
-      OF_PP_FOR_EACH_TUPLE(CASE_ENTRY, ATTR_SEQ)
-#undef CASE_ENTRY
-      default: LOG(FATAL) << "Wrong attr value type: " << static_cast<int32_t>(value_case);
-    };
-  }
+  attrs_ = MakeAttrMapFromUserOpConf(op_conf_->user_conf());
 }
 
 UserOpConfWrapper::UserOpConfWrapper(const OperatorConf& op_conf)
@@ -95,18 +80,14 @@ int32_t UserOpConfWrapper::output_size(const std::string& arg_name) const {
   return it->second.s_size();
 }
 
+const std::shared_ptr<const AttrVal>& UserOpConfWrapper::Attr4Name(
+    const std::string& attr_name) const {
+  const auto& attr = attrs_.Attr4Name(attr_name);
+  CHECK_NOTNULL(attr.get());
+  return attr;
+}
+
 #define OP_WRAPPER_ATTR_MEMBER_FUNC(field, cpp_type, attr_type)                                    \
-  template<>                                                                                       \
-  const cpp_type& UserOpConfWrapper::attr<cpp_type>(const std::string& attr_name) const {          \
-    auto it = attrs_.find(attr_name);                                                              \
-    if (it != attrs_.end()) {                                                                      \
-      return std::dynamic_pointer_cast<TypedAttrVal<cpp_type>>(it->second)->val();                 \
-    } else {                                                                                       \
-      LOG(FATAL) << "Cannot find the attr: " << attr_name                                          \
-                 << " with AttrType: " << static_cast<int32_t>(attr_type);                         \
-    }                                                                                              \
-  }                                                                                                \
-                                                                                                   \
   template<>                                                                                       \
   UserOpConfWrapperBuilder& UserOpConfWrapperBuilder::Attr<cpp_type>(const std::string& attr_name, \
                                                                      const cpp_type& val) {        \

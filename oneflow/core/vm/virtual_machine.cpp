@@ -27,7 +27,7 @@ namespace vm {
 
 namespace {
 
-bool IsSourceInstruction(const InstructionMsg& instr_msg) {
+bool HasImmediateOperandsOnly(const InstructionMsg& instr_msg) {
   for (const auto& instr_operand : instr_msg.operand()) {
     if (instr_operand->has_const_operand()) { return false; }
     if (instr_operand->has_mut_operand()) { return false; }
@@ -90,12 +90,13 @@ void VirtualMachine::TryReleaseFinishedInstructions(
   }
 }
 
-void VirtualMachine::FilterAndRunSourceInstructions(TmpPendingInstrMsgList* instr_msg_list) {
+void VirtualMachine::FilterAndRunInstructionsInAdvance(TmpPendingInstrMsgList* instr_msg_list) {
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const auto& instr_type_id = instr_msg->instr_type_id();
-    const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
-    if (stream_type.IsControlStreamType() && !instr_type_id.instruction_type().IsSequential()
-        && IsSourceInstruction(*instr_msg)) {
+    if (instr_type_id.instruction_type().ResettingIdToObjectMap()) {
+      const StreamType& stream_type = instr_type_id.stream_type_id().stream_type();
+      CHECK(stream_type.IsControlStreamType());
+      CHECK(HasImmediateOperandsOnly(*instr_msg));
       const auto& parallel_desc = CHECK_JUST(GetInstructionParallelDesc(*instr_msg));
       if (!parallel_desc || parallel_desc->ContainingMachineId(this_machine_id())) {
         stream_type.Run(this, instr_msg);
@@ -153,15 +154,19 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
   }
 }
 
-Maybe<ParallelDesc> VirtualMachine::GetInstructionParallelDesc(const InstructionMsg& instr_msg) {
-  static const std::shared_ptr<ParallelDesc> empty_ptr;
+Maybe<const ParallelDesc> VirtualMachine::GetInstructionParallelDesc(
+    const InstructionMsg& instr_msg) {
+  static const std::shared_ptr<const ParallelDesc> empty_ptr;
+  if (instr_msg.parallel_desc()) { return instr_msg.parallel_desc(); }
   if (!instr_msg.has_parallel_desc_symbol_id()) { return empty_ptr; }
   int64_t symbol_id = instr_msg.parallel_desc_symbol_id();
   auto* logical_object = mut_id2logical_object()->FindPtr(symbol_id);
   CHECK_NOTNULL_OR_RETURN(logical_object) << "symbol_id: " << symbol_id;
   auto* map = logical_object->mut_global_device_id2mirrored_object();
   CHECK_EQ_OR_RETURN(map->size(), 1);
-  return JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
+  const std::shared_ptr<const ParallelDesc> parallel_desc =
+      JUST(map->Begin()->rw_mutexed_object().Get<ObjectWrapper<ParallelDesc>>()).GetPtr();
+  return parallel_desc;
 }
 
 MirroredObject* VirtualMachine::MutMirroredObject(int64_t logical_object_id,
@@ -220,7 +225,7 @@ void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_typ
     phy_instr_operand.ForEachConstMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) {
           Callback(infer);
-          Callback(compute);
+          if (compute != nullptr) { Callback(compute); }
         });
   } else if (interpret_type == InterpretType::kInfer) {
     phy_instr_operand.ForEachConstMirroredObject(
@@ -291,7 +296,7 @@ void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
     phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
   } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMut2MirroredObject(
+    phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
   } else {
     UNIMPLEMENTED();
@@ -639,7 +644,7 @@ void VirtualMachine::Schedule() {
   if (pending_msg_list().size() > 0) {
     TmpPendingInstrMsgList tmp_pending_msg_list;
     mut_pending_msg_list()->MoveTo(&tmp_pending_msg_list);
-    FilterAndRunSourceInstructions(&tmp_pending_msg_list);
+    FilterAndRunInstructionsInAdvance(&tmp_pending_msg_list);
     NewInstructionList new_instruction_list;
     MakeInstructions(&tmp_pending_msg_list, /*out*/ &new_instruction_list);
     ConsumeMirroredObjects(mut_id2logical_object(), &new_instruction_list);

@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/device/device_context.h"
@@ -39,11 +40,35 @@ class KernelCreateContext {
  public:
   virtual ~KernelCreateContext() = default;
 
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf().attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
+
+ protected:
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInitContext {
@@ -65,18 +90,43 @@ class KernelInitContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+  const OperatorConf& op_conf() const { return user_op_conf().op_conf(); }
+
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
+
+  template<typename T>
+  const T& attr(const std::string& attr_name) const;
 
  protected:
-  KernelInitContext(UserOpConfWrapper&& conf) : user_op_conf_(std::move(conf)) {}
+  KernelInitContext() = default;
   KernelInitContext(const KernelInitContext&) = delete;
 
- private:
-  UserOpConfWrapper user_op_conf_;
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class KernelInferContext {
@@ -96,11 +146,32 @@ class KernelInferContext {
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
 
-  template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
 
   virtual InferContext* MutOpInferContext() {
     UNIMPLEMENTED();
@@ -109,11 +180,11 @@ class KernelInferContext {
   virtual const TensorDescInferFn& GetOpInferFn() const { UNIMPLEMENTED(); }
 
  protected:
-  KernelInferContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelInferContext() = default;
   KernelInferContext(const KernelInferContext&) = delete;
 
- private:
-  UserOpConfWrapper user_op_conf_;
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class Tensor;
@@ -133,19 +204,40 @@ class KernelComputeContext {
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+  const std::string& input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
 
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
 
  protected:
-  KernelComputeContext(UserOpConfWrapper&& conf) : user_op_conf_(conf) {}
+  KernelComputeContext() = default;
   KernelComputeContext(const KernelComputeContext&) = delete;
 
- private:
-  UserOpConfWrapper user_op_conf_;
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
+
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 class OpKernelState {

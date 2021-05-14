@@ -60,7 +60,7 @@ REGISTER_USER_OP("where")
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
       cond_arg_modifier->set_requires_grad(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType cond_dtype = *ctx->Dtype4ArgNameAndIndex("condition", 0);
       CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
       DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);

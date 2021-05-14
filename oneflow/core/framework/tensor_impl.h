@@ -19,11 +19,10 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/shape.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/framework/object.h"
-#include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_storage.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 
 namespace oneflow {
 
@@ -35,12 +34,13 @@ namespace compatible_py {
 class Distribute;
 }
 
+class Shape;
 class Device;
 class DType;
 
-namespace eager {
+namespace vm {
 class EagerBlobObject;
-}
+}  // namespace vm
 
 namespace one {
 
@@ -58,16 +58,16 @@ class TensorImpl {
   virtual bool is_lazy() const = 0;
 
   // Getters valid only for EagerMirroredTensorImpl
-  virtual Maybe<eager::EagerBlobObject> eager_blob_object() const = 0;
+  virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const { return now_grad_arg_; }
-  bool requires_grad() const { return requires_grad_; }
-  bool is_leaf() const { return is_leaf_; }
-  bool retain_grad() const { return retain_grad_; }
+  const std::shared_ptr<Tensor>& acc_grad() const { return autograd_meta_->acc_grad(); }
+  const std::shared_ptr<TensorArg>& now_grad_arg() const { return autograd_meta_->now_grad_arg(); }
+  bool requires_grad() const { return autograd_meta_->requires_grad(); }
+  bool is_leaf() const { return autograd_meta_->is_leaf(); }
+  bool retain_grad() const { return autograd_meta_->retain_grad(); }
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
@@ -76,10 +76,12 @@ class TensorImpl {
       const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
-  void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
-  void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
-  void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
+  void set_acc_grad(const std::shared_ptr<Tensor>& grad) { autograd_meta_->set_acc_grad(grad); }
+  std::shared_ptr<Tensor> mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
+  void set_requires_grad(bool requires_grad) { autograd_meta_->set_requires_grad(requires_grad); }
+  void set_retain_grad(bool retain_grad) { autograd_meta_->set_retain_grad(retain_grad); }
+  void set_is_leaf(bool is_leaf) { autograd_meta_->set_is_leaf(is_leaf); }
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
 
   // Getters to be deprecated
   virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
@@ -89,20 +91,13 @@ class TensorImpl {
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
 
  protected:
-  TensorImpl(bool requires_grad, bool is_leaf, bool retain_grad)
-      : requires_grad_(requires_grad),
-        is_leaf_(is_leaf),
-        retain_grad_(retain_grad),
-        now_grad_arg_(new TensorArg) {}
+  TensorImpl(bool requires_grad, bool is_leaf)
+      : autograd_meta_(new AutogradMeta(requires_grad, is_leaf)) {}
   Maybe<void> SyncBlobObject2Attributes(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
-  // For autograd
-  bool requires_grad_;
-  bool is_leaf_;
-  bool retain_grad_;
-  std::shared_ptr<Tensor> acc_grad_;
-  std::shared_ptr<TensorArg> now_grad_arg_;
+ protected:
+  std::shared_ptr<AutogradMeta> autograd_meta_;
 };
 
 class MirroredTensorImpl : public TensorImpl {
@@ -118,11 +113,12 @@ class MirroredTensorImpl : public TensorImpl {
   // Setters
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override;
   Maybe<void> set_device(const std::shared_ptr<const Device>& device);
+  virtual Maybe<void> set_eager_blob_object(
+      std::shared_ptr<vm::EagerBlobObject> eager_blob_object) = 0;
 
  protected:
-  MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf,
-                     bool retain_grad)
-      : TensorImpl(requires_grad, is_leaf, retain_grad) {
+  MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
+      : TensorImpl(requires_grad, is_leaf) {
     set_device(device);
   }
 
@@ -149,8 +145,8 @@ class ConsistentTensorImpl : public TensorImpl {
 
  protected:
   ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
-                       bool is_leaf, bool retain_grad)
-      : TensorImpl(requires_grad, is_leaf, retain_grad), parallel_desc_(parallel_desc) {}
+                       bool is_leaf)
+      : TensorImpl(requires_grad, is_leaf), parallel_desc_(parallel_desc) {}
 
   const std::shared_ptr<const Device> device_;  // always nullptr
   std::shared_ptr<const ParallelDesc> parallel_desc_;
@@ -162,10 +158,8 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
                          const std::shared_ptr<const DType>& dtype,
                          const std::shared_ptr<const Device>& device, bool requires_grad,
-                         bool is_leaf, bool retain_grad)
-      : MirroredTensorImpl(device, requires_grad, is_leaf, retain_grad),
-        shape_(shape),
-        dtype_(dtype) {}
+                         bool is_leaf)
+      : MirroredTensorImpl(device, requires_grad, is_leaf), shape_(shape), dtype_(dtype) {}
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
@@ -175,13 +169,17 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   bool is_lazy() const override { return true; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  Maybe<void> set_eager_blob_object(
+      std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override {
+    return Error::Unimplemented();
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
@@ -202,55 +200,50 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                          const std::shared_ptr<const DType>& dtype,
+  EagerMirroredTensorImpl(const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
                           const std::shared_ptr<const Device>& device, bool requires_grad,
-                          bool is_leaf, bool retain_grad);
+                          bool is_leaf);
   EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
                           const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device,
                           const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
-                          bool is_leaf, bool retain_grad);
+                          bool is_leaf);
   ~EagerMirroredTensorImpl() override;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  const std::shared_ptr<const Shape>& shape() const override;
   const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
-    return infer_local_dep_object_;
-  }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override {
-    return tensor_storage_->compute_local_dep_object();
-  }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
+  Maybe<VmLocalDepObject> infer_local_dep_object() const override;
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override;
 
   // Setters
-  void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) override { UNIMPLEMENTED(); }
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
+  Maybe<void> set_eager_blob_object(
+      std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override {
+    eager_blob_object_ = eager_blob_object;
+    return Maybe<void>::Ok();
+  }
 
   // Getters to be deprecated
   const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    return blob_object_;
+    UNIMPLEMENTED();
   }
 
   // Setters to be deprecated
   Maybe<void> set_blob_object(
       const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
 
-  // other methods
-  Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
-
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<compatible_py::BlobObject> blob_object_;
   std::shared_ptr<TensorStorage> tensor_storage_;
-  std::shared_ptr<eager::EagerBlobObject> eager_blob_object_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
+  std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };
 
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
@@ -260,8 +253,8 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
                            const std::shared_ptr<const DType>& dtype,
                            const std::shared_ptr<const compatible_py::Distribute>& distribute,
                            const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                           bool requires_grad, bool is_leaf, bool retain_grad)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
+                           bool requires_grad, bool is_leaf)
+      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf),
         shape_(shape),
         dtype_(dtype),
         distribute_(distribute) {}
@@ -276,7 +269,7 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return true; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
@@ -311,8 +304,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                             const std::shared_ptr<const DType>& dtype,
                             const std::shared_ptr<const compatible_py::Distribute>& distribute,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                            bool requires_grad, bool is_leaf, bool retain_grad)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf, retain_grad),
+                            bool requires_grad, bool is_leaf)
+      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf),
         shape_(shape),
         dtype_(dtype),
         distribute_(distribute) {}
@@ -327,7 +320,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<eager::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 

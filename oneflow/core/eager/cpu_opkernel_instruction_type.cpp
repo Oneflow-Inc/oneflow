@@ -26,7 +26,19 @@ limitations under the License.
 #include "oneflow/core/vm/object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
+
+class CpuLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  CpuLocalCallOpKernelInstructionType() = default;
+  ~CpuLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<CpuLocalCallOpKernelInstructionType>("cpu.LocalCallOpKernel"));
 
 class CpuCallOpKernelInstructionType final : public CallOpKernelInstructionType {
  public:
@@ -104,5 +116,5 @@ class CpuFeedBlobInstructionType final : public FeedBlobInstructionType {
 };
 COMMAND(vm::RegisterInstructionType<CpuFeedBlobInstructionType>("cpu.FeedBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

@@ -40,7 +40,7 @@ REGISTER_USER_OP("unsorted_segment_sum")
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("data", 0);
       return Maybe<void>::Ok();
@@ -122,7 +122,7 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
       const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());

@@ -29,7 +29,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
@@ -45,7 +45,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
@@ -59,7 +59,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferParallelDistributionFn([](user_op::InferParallelDistributionFnContext* ctx)
+    .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
                                         -> Maybe<void> {
       ParallelDistribution* in_distribution = ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       ParallelDistribution* out_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
@@ -72,7 +72,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       *like_distribution = hint_distribution;
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });

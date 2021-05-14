@@ -52,19 +52,14 @@ void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
   CommNetItem item;
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-    CHECK(!actor_read_ctx->waiting_list.empty());
-    CHECK(actor_read_ctx->waiting_list.front().callback == nullptr);
-    actor_read_ctx->waiting_list.pop_front();
-  }
+  std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
+  CHECK(!actor_read_ctx->waiting_list.empty());
+  CHECK(actor_read_ctx->waiting_list.front().callback == nullptr);
+  actor_read_ctx->waiting_list.pop_front();
   while (true) {
-    {
-      std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-      if (actor_read_ctx->waiting_list.empty()) { break; }
-      item = actor_read_ctx->waiting_list.front();
-      actor_read_ctx->waiting_list.pop_front();
-    }
+    if (actor_read_ctx->waiting_list.empty()) { break; }
+    item = actor_read_ctx->waiting_list.front();
+    actor_read_ctx->waiting_list.pop_front();
     CHECK(item.callback);
     ready_cbs_.Send(item.callback);
     if (item.is_read) { break; }
@@ -85,21 +80,6 @@ void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& 
     CommNetItem empty_cb;
     actor_read_ctx->waiting_list.push_back(empty_cb);
   }
-}
-
-CommNet::CommNet(const Plan& plan) {
-  int64_t this_machine_id = GlobalProcessCtx::Rank();
-  HashMap<int64_t, MachineIds> net_topo;
-  net_topo = PbMap2HashMap(plan.net_topo().peer_machine_ids());
-  auto machine_ids_it = net_topo.find(this_machine_id);
-  CHECK(machine_ids_it != net_topo.end());
-  std::vector<int64_t> peer_machine_ids = PbRf2StdVec(machine_ids_it->second.machine_id());
-  peer_machine_id_.insert(peer_machine_ids.begin(), peer_machine_ids.end());
-
-  ready_cb_poller_ = std::thread([this]() {
-    std::function<void()> cb;
-    while (ready_cbs_.Receive(&cb) == kChannelStatusSuccess) { cb(); }
-  });
 }
 
 CommNet::CommNet() {

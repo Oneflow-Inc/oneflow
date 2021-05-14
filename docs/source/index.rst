@@ -34,6 +34,7 @@ OneFlow API Reference
     regularizers  
     image
     train
+    optim
 
 
 Indices and tables
