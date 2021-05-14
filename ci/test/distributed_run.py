@@ -87,17 +87,21 @@ class DockerAgent:
         remote_hosts=None,
         container_name=None,
         timeout=None,
+        workspace_dir=None,
     ) -> None:
         # info
         self.this_host = this_host
         self.remote_hosts = remote_hosts
         self.container_name = container_name
         self.timeout = timeout
+        self.common_docker_args = "--privileged --rm --network host --shm-size=8g -v $HOME:$HOME -v /dataset:/dataset -v /model_zoo:/model_zoo"
+        self.workspace_dir = workspace_dir
         # impl
         self.listener = Listener(("localhost", port), authkey=authkey)
         self.env_proto_txt = None
         self.bash_tmp_file = None
         self.bash_proc = None
+        self.remote_docker_proc = {}
         print("[docker agent]", "initializing", {"port": port, "authkey": authkey})
 
     def __enter__(self):
@@ -135,7 +139,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             f_name = f.name
             f.write(cmd)
             f.flush()
-            return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp:ro -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER bash /host{f_name}"
+            return f"docker run {self.common_docker_args} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {container_name} oneflow-test:$USER bash /host{f_name}"
 
         f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
@@ -146,13 +150,31 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         self.conn = self.listener.accept()
         self.env_proto_txt = self.conn.recv()
         print("[docker agent]", "[env proto]", self.env_proto_txt)
+        f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
+        f.write(self.env_proto_txt)
+        f.flush()
         # do_launch_workers
+        for remote_host in self.remote_hosts:
+            subprocess.check_call(
+                f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
+                shell=True,
+            )
+            run_docker_cmd = f"ssh {remote_host} docker run {self.common_docker_args} --env PYTHONPATH={workspace_dir}/python_scripts oneflow-test:$USER"
+            run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
+            print("[docker agent]", run_docker_cmd)
+            self.remote_docker_proc[remote_host] = self.bash_proc = subprocess.Popen(
+                run_docker_cmd, shell=True
+            )
+        self.container_name
         print("[docker agent]", "sending ok")
         self.conn.send(b"ok")
 
     def block(self):
         self.bash_proc.communicate(timeout=self.timeout)
         assert self.bash_proc.returncode == 0
+        for k, v in self.remote_docker_proc:
+            # TODO: refine here
+            v.communicate(timeout=10)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -236,6 +258,7 @@ if __name__ == "__main__":
         this_host=this_host,
         remote_hosts=[remote_host],
         container_name=container_name,
+        workspace_dir=workspace_dir,
     ) as agent:
         agent.run_bash_script_async(
             bash_script=args.bash_script,
