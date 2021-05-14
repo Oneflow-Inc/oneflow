@@ -382,7 +382,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
       &opkernel->input_tuple_indexes4mut_ibns_, &opkernel->output_tuple_indexes4mut_obns_,
       &opkernel->output_tuple_indexes4mut2_obns_));
 
-  opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
+  opkernel->compute_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
 }
 

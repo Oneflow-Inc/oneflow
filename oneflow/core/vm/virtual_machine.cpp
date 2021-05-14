@@ -68,7 +68,6 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     Stream* stream,
     /*out*/ ReadyInstructionList* ready_instruction_list) {
   auto* running_instruction_list = stream->mut_running_instruction_list();
-  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
   auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
   auto* vm_stat_running_list = mut_vm_stat_running_instruction_list();
   while (true) {
@@ -77,8 +76,7 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
     const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
     if (interpret_type == kInfer) {
-      CHECK(!instruction_ptr->is_front_seq_infer_instr_link_empty());
-      front_seq_infer_list->Erase(instruction_ptr);
+      // do nothing
     } else if (interpret_type == kCompute) {
       CHECK(!instruction_ptr->is_front_seq_compute_instr_link_empty());
       front_seq_compute_list->Erase(instruction_ptr);
@@ -125,7 +123,6 @@ bool IsStreamInParallelDesc(const ParallelDesc* parallel_desc, const Stream& str
 
 void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
                                       /*out*/ NewInstructionList* new_instruction_list) {
-  auto* front_seq_infer_list = mutable_front_seq_infer_instr_list();
   auto* front_seq_compute_list = mutable_front_seq_compute_instr_list();
   OBJECT_MSG_LIST_FOR_EACH_PTR(instr_msg_list, instr_msg) {
     const StreamTypeId& stream_type_id = instr_msg->instr_type_id().stream_type_id();
@@ -142,7 +139,7 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
       if (stream_type_id.interpret_type() == kInfer) {
-        front_seq_infer_list->PushBack(instr.Mutable());
+        // do nothing
       } else if (stream_type_id.interpret_type() == kCompute) {
         front_seq_compute_list->PushBack(instr.Mutable());
       } else {
@@ -224,12 +221,14 @@ void ForEachConstMirroredObject4ConstPhyInstrOperand(InterpretType interpret_typ
   if (interpret_type == InterpretType::kCompute) {
     phy_instr_operand.ForEachConstMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) {
-          Callback(infer);
+          if (infer != nullptr) { Callback(infer); }
           if (compute != nullptr) { Callback(compute); }
         });
   } else if (interpret_type == InterpretType::kInfer) {
     phy_instr_operand.ForEachConstMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+        [&](MirroredObject* infer, MirroredObject* compute) {
+          if (infer != nullptr) { Callback(infer); }
+        });
   } else {
     UNIMPLEMENTED();
   }
@@ -259,8 +258,9 @@ void ForEachConstMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
                                                    const PhyInstrOperand& phy_instr_operand,
                                                    const CallbackT& Callback) {
   if (interpret_type == InterpretType::kCompute) {
-    phy_instr_operand.ForEachMutMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
+      if (infer != nullptr) { Callback(infer); }
+    });
   } else if (interpret_type == InterpretType::kInfer) {
     // Do nothing
   } else {
@@ -296,8 +296,9 @@ void ForEachMutMirroredObject4MutPhyInstrOperand(InterpretType interpret_type,
     phy_instr_operand.ForEachMutMirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) { Callback(compute); });
   } else if (interpret_type == InterpretType::kInfer) {
-    phy_instr_operand.ForEachMutMirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+    phy_instr_operand.ForEachMutMirroredObject([&](MirroredObject* infer, MirroredObject* compute) {
+      if (infer != nullptr) { Callback(infer); }
+    });
   } else {
     UNIMPLEMENTED();
   }
@@ -331,12 +332,14 @@ void ForEachMutMirroredObject4Mut2PhyInstrOperand(InterpretType interpret_type,
   if (interpret_type == InterpretType::kCompute) {
     phy_instr_operand.ForEachMut2MirroredObject(
         [&](MirroredObject* infer, MirroredObject* compute) {
-          Callback(infer);
+          if (infer != nullptr) { Callback(infer); }
           Callback(compute);
         });
   } else if (interpret_type == InterpretType::kInfer) {
     phy_instr_operand.ForEachMut2MirroredObject(
-        [&](MirroredObject* infer, MirroredObject* compute) { Callback(infer); });
+        [&](MirroredObject* infer, MirroredObject* compute) {
+          if (infer != nullptr) { Callback(infer); }
+        });
   } else {
     UNIMPLEMENTED();
   }
@@ -574,7 +577,9 @@ void VirtualMachine::__Init__(const VmDesc& vm_desc, ObjectMsgAllocator* allocat
 void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
   InstructionMsgList new_instr_msg_list;
   OBJECT_MSG_LIST_FOR_EACH_PTR(compute_instr_msg_list, compute_instr_msg) {
-    new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
+    if (!compute_instr_msg->phy_instr_operand()) {
+      new_instr_msg_list.EmplaceBack(compute_instr_msg->MakeInferInstrMsg());
+    }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
@@ -605,7 +610,6 @@ void VirtualMachine::TryRunFrontSeqInstruction(
 }
 
 void VirtualMachine::TryRunFrontSeqInstruction(ReadyInstructionList* ready_instruction_list) {
-  TryRunFrontSeqInstruction(mutable_front_seq_infer_instr_list(), ready_instruction_list);
   TryRunFrontSeqInstruction(mutable_front_seq_compute_instr_list(), ready_instruction_list);
 }
 
@@ -656,8 +660,7 @@ void VirtualMachine::Schedule() {
 
 bool VirtualMachine::Empty() const {
   return pending_msg_list().empty() && waiting_instruction_list().empty()
-         && active_stream_list().empty() && front_seq_infer_instr_list().empty()
-         && front_seq_compute_instr_list().empty();
+         && active_stream_list().empty() && front_seq_compute_instr_list().empty();
 }
 
 }  // namespace vm
