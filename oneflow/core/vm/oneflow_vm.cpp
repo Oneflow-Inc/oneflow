@@ -37,7 +37,6 @@ OneflowVM::OneflowVM(const Resource& resource, int64_t this_machine_id)
 namespace {
 
 void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
-                             const std::function<void()>& InferCallback,
                              const std::function<void()>& ComputeCallback) {
   auto instruction = vm::NewInstruction("CtrlComputeRankFrontSeqCallback");
   instruction->add_int64_operand(GlobalProcessCtx::Rank());
@@ -49,8 +48,7 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
 void ControlSync(vm::VirtualMachine* vm) {
   BlockingCounter bc(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(
-      &list, [&] { bc.Decrease(); }, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(&list, [&] { bc.Decrease(); });
   vm->Receive(&list);
   bc.WaitUntilCntEqualZero();
 }

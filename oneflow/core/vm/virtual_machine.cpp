@@ -75,7 +75,9 @@ void VirtualMachine::TryReleaseFinishedInstructions(
     if (instruction_ptr == nullptr || !instruction_ptr->Done()) { break; }
     ReleaseInstruction(instruction_ptr, /*out*/ ready_instruction_list);
     const auto interpret_type = instruction_ptr->stream().stream_type_id().interpret_type();
-    if (interpret_type == kCompute) {
+    if (interpret_type == kInfer) {
+      // do nothing
+    } else if (interpret_type == kCompute) {
       CHECK(!instruction_ptr->is_front_seq_compute_instr_link_empty());
       front_seq_compute_list->Erase(instruction_ptr);
     } else {
@@ -136,7 +138,9 @@ void VirtualMachine::MakeInstructions(TmpPendingInstrMsgList* instr_msg_list,
     OBJECT_MSG_SKIPLIST_UNSAFE_FOR_EACH_PTR(stream_rt_desc->mut_stream_id2stream(), stream) {
       if (!IsStreamInParallelDesc(parallel_desc.get(), *stream)) { continue; }
       ObjectMsgPtr<Instruction> instr = stream->NewInstruction(instr_msg, parallel_desc);
-      if (stream_type_id.interpret_type() == kCompute) {
+      if (stream_type_id.interpret_type() == kInfer) {
+        // do nothing
+      } else if (stream_type_id.interpret_type() == kCompute) {
         front_seq_compute_list->PushBack(instr.Mutable());
       } else {
         UNIMPLEMENTED();
