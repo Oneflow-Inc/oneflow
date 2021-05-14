@@ -48,8 +48,6 @@ void BlobObject::ForceReleaseAll() {
   for (const auto& release : release_) { release(this); }
   release_.clear();
 }
-
-bool BlobObject::is_python_shutting_down_ = false;
 }  // namespace compatible_py
 
 }  // namespace oneflow

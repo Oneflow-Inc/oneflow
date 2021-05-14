@@ -56,7 +56,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("parallel_desc_symbol", &OpKernelObject::parallel_desc_symbol)
       .def_property_readonly("op_conf", &OpKernelObject::op_conf)
       .def_property_readonly("scope_symbol", &OpKernelObject::scope_symbol);
-  m.def("SetIsPythonShuttingDown", []() { BlobObject::SetIsPythonShuttingDown(); });
 }
 
 }  // namespace compatible_py

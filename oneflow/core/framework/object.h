@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {
 
@@ -41,7 +42,7 @@ class BlobObject : public Object {
   BlobObject(int64_t object_id, const std::shared_ptr<OpArgParallelAttribute>& op_arg_parallel_attr,
              const std::shared_ptr<OpArgBlobAttribute>& op_arg_blob_attr);
   ~BlobObject() override {
-    if (!is_python_shutting_down_) { ForceReleaseAll(); }
+    if (!IsShuttingDown()) { ForceReleaseAll(); }
   }
 
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr() const;
@@ -52,17 +53,10 @@ class BlobObject : public Object {
 
   void ForceReleaseAll();
 
-  static void SetIsPythonShuttingDown() {
-    // is_python_shutting_down_ is only set onece
-    CHECK_EQ(is_python_shutting_down_, false);
-    is_python_shutting_down_ = true;
-  }
-
  private:
   std::shared_ptr<OpArgParallelAttribute> op_arg_parallel_attr_;
   std::shared_ptr<OpArgBlobAttribute> op_arg_blob_attr_;
   std::vector<std::function<void(Object*)>> release_;
-  static bool is_python_shutting_down_;
 };
 
 }  // namespace compatible_py
