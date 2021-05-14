@@ -136,8 +136,8 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
         test_case.assertTrue(not x.is_cuda)
-        # x = flow.Tensor(*shape, device=flow.device("cuda"))
-        # test_case.assertTrue(x.is_cuda)
+        x = flow.Tensor(*shape, device=flow.device("cuda"))
+        test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
 
