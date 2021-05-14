@@ -85,7 +85,7 @@ class Conv2d(Module):
             .Attr("strides", stride)
             .Attr("kernel_size", kernel_size)
             .Attr("dilation_rate", dilation)
-            .Attr("groups", 1)
+            .Attr("groups", groups)
             .Attr("data_format", "channels_first")
             .Output("out")
             .Build()
