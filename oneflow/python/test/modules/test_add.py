@@ -132,6 +132,13 @@ class TestAddBackwardModule(flow.unittest.TestCase):
         of_out.backward()
         test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2,3)), 1e-4, 1e-4))
 
+    def test_backward_gpu(test_case):
+        x = 5
+        y = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
+        y = y.to("cuda")
+        of_out = flow.add(x, y).sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2,3)), 1e-4, 1e-4))
 
 if __name__ == "__main__":
     unittest.main()
