@@ -138,6 +138,7 @@ class TestAddBackwardModule(flow.unittest.TestCase):
         x = 5
         y = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         y = y.to("cuda")
+        y.retain_grad()
         of_out = flow.add(x, y).sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 3)), 1e-4, 1e-4))
