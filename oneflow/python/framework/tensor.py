@@ -30,6 +30,8 @@ import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow as flow
 
+# from oneflow.python.nn.modules.slice import SliceModule, Slice
+
 
 def register_local_tensor_method(name=None):
     def decorator(method):
@@ -299,7 +301,7 @@ class Tensor:
     @register_local_tensor_method()
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
-    
+
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -347,22 +349,24 @@ class Tensor:
 
     @_auto_determine
     def __setitem__(self, key, value):
-        starts, stops, steps, shape = self._get_slice_obj(key)
+        start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
+        # return SliceUpdate(start, stop, step)(self, value)
         @global_function_or_identity()
         def job():
             with self._placement_scope():
-                op = (
-                    flow.builtin_op("logical_slice_assign")
-                    .Input("ref")
-                    .Input("value")
-                    .Attr("start", starts)
-                    .Attr("stop", stops)
-                    .Attr("step", steps)
+                self._op = (
+                    flow.builtin_op("slice_update")
+                    .Input("x")
+                    .Input("update")
+                    .Output("y")
+                    .Attr("start", start)
+                    .Attr("stop", stop)
+                    .Attr("step", step)
                     .Build()
                 )
                 op(self, value)
@@ -372,19 +376,20 @@ class Tensor:
 
     @_auto_determine
     def __getitem__(self, key):
-        starts, stops, steps, _ = self._get_slice_obj(key)
+        start, stop, step, _ = self._get_slice_obj(key)
         result = None
 
+        # result = Slice(start, stop, step)(self)
         @global_function_or_identity()
         def job():
             with self._placement_scope():
                 op = (
-                    flow.builtin_op("logical_slice")
+                    flow.builtin_op("slice")
                     .Input("x")
                     .Output("y")
-                    .Attr("start", starts)
-                    .Attr("stop", stops)
-                    .Attr("step", steps)
+                    .Attr("start", start)
+                    .Attr("stop", stop)
+                    .Attr("step", step)
                     .Build()
                 )
                 nonlocal result
