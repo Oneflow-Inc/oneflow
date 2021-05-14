@@ -63,7 +63,10 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
-    assert np_arr.shape == tuple(eager_local_tensor.shape)
+    if np_arr.shape == ():
+        assert tuple(eager_local_tensor.shape) == (1,)
+    else:
+        assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
 
 
