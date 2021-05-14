@@ -57,38 +57,38 @@ class TestAddModule(flow.unittest.TestCase):
     def test_add_cuda(test_case):
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.random.randn(2, 3))
-        x.to("cuda")
-        y.to("cuda")
+        x = x.to("cuda")
+        y = y.to("cuda")
         of_out = flow.add(x, y)
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = 5
         y = flow.Tensor(np.random.randn(2, 3))
-        y.to("cuda")
+        y = y.to("cuda")
         of_out = flow.add(x, y)
         np_out = np.add(x, y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = 5
-        x.to("cuda")
+        x = x.to("cuda")
         of_out = flow.add(x, y)
         np_out = np.add(x.numpy(), y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(2, 3))
         y = flow.Tensor(np.array([5.0]))
-        x.to("cuda")
-        y.to("cuda")
+        x = x.to("cuda")
+        y = y.to("cuda")
         of_out = flow.add(x, y)
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         x = flow.Tensor(np.random.randn(1, 1))
         y = flow.Tensor(np.random.randn(2, 3))
-        x.to("cuda")
-        y.to("cuda")
+        x = x.to("cuda")
+        y = y.to("cuda")
         of_out = flow.add(x, y)
         np_out = np.add(x.numpy(), y.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
@@ -137,9 +137,8 @@ class TestAddBackwardModule(flow.unittest.TestCase):
     def test_backward_gpu(test_case):
         x = 5
         y = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
-        y = y.to("cuda")
-        y.retain_grad()
-        of_out = flow.add(x, y).sum()
+        y_gpu = y.to("cuda")
+        of_out = flow.add(x, y_gpu).sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 3)), 1e-4, 1e-4))
 
