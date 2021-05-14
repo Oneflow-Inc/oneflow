@@ -90,9 +90,10 @@ class AdamW(Optimizer):
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
         assert amsgrad is False, "Not support AMSGrad now!"
+
         self._default_options["lr"] = lr
         self._default_options["eps"] = eps
-        self._default_options["beta"] = betas
+        self._default_options["betas"] = betas
         self._default_options["weight_decay"] = weight_decay
         self._default_options["amsgrad"] = amsgrad
         self._default_options["scale"] = scale
@@ -118,13 +119,8 @@ class AdamW(Optimizer):
             .Input("learning_rate")
             .Input("m")
             .Input("v")
-            .Attr("scale", self._default_options["scale"])
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
-            .Attr("beta1", self._default_options["beta"][0])
-            .Attr("beta2", self._default_options["beta"][1])
-            .Attr("epsilon", self._default_options["eps"])
-            .Attr("weight_decay", self._default_options["weight_decay"])
             .Build()
         )
 
@@ -135,19 +131,29 @@ class AdamW(Optimizer):
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        loss = None
-        if closure is not None:
-            loss = closure()
+        with flow.no_grad():
+            loss = None
+            if closure is not None:
+                loss = closure()
 
-        for param_group in self._param_groups:
-            lr_tensor = flow.Tensor([param_group.options["lr"]])
-            for param in param_group.parameters:
-                if param.grad is None:
-                    continue
-                m_tensor = self._state[param]["exp_avg"]
-                v_tensor = self._state[param]["exp_avg_sq"]
-                self._op(param, param.grad, lr_tensor, m_tensor, v_tensor)
+            for param_group in self._param_groups:
+                kwargs = {
+                    "scale": param_group.options["scale"],
+                    "weight_decay": param_group.options["weight_decay"],
+                    "beta1": param_group.options["betas"][0],
+                    "beta2": param_group.options["betas"][1],
+                    "epsilon": param_group.options["eps"],
+                }
+                lr_tensor = flow.Tensor([param_group.options["lr"]])
+                for param in param_group.parameters:
+                    if param.grad is None:
+                        continue
+                    m_tensor = self._state[param]["exp_avg"]
+                    v_tensor = self._state[param]["exp_avg_sq"]
+                    self._op(
+                        param, param.grad, lr_tensor, m_tensor, v_tensor, **kwargs,
+                    )
 
-        self._state["step"] = self._state["step"] + 1
+            self._state["step"] = self._state["step"] + 1
 
-        return loss
+            return loss
