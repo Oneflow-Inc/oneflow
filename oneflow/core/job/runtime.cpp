@@ -31,6 +31,9 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+#ifdef WITH_RDMA
+#include "oneflow/core/dl/include/ibv.h"
+#endif  // WITH_RDMA
 
 namespace oneflow {
 
@@ -108,8 +111,13 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
     //   The Global<CommNet> is set allocated by Global<EpollCommNet>
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
-      Global<IBVerbsCommNet>::New();
-      Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      if (ibv::IsAvailable()) {
+        Global<IBVerbsCommNet>::New();
+        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      } else {
+        LOG(ERROR) << "libibverbs not available, falling back to epoll";
+        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+      }
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif
