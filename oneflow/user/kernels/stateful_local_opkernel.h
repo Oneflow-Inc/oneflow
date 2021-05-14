@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 
@@ -150,6 +151,7 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
+                          const ComposedAttrMap* composed_attrs,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
@@ -201,10 +203,11 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+    return composed_attrs_->Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -212,6 +215,7 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
+                                         const ComposedAttrMap* composed_attrs,
                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer);
@@ -241,10 +245,11 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+    return composed_attrs_->Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
+  const ComposedAttrMap* composed_attrs_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -253,12 +258,14 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const std::shared_ptr<MemoryCase>& mem_case,
+                                          const std::shared_ptr<const Device>& device,
+                                          const AttrMap& base_attrs,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
+  const std::shared_ptr<const Device>& device() const { return device_; }
+  const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
@@ -274,9 +281,6 @@ class StatefulLocalOpKernel final {
 
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
     return infer_local_dep_object_;
-  }
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
-    return compute_local_dep_object_;
   }
 
   Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
@@ -325,8 +329,9 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::shared_ptr<MemoryCase> mem_case_;
+  std::shared_ptr<const Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_a_;
@@ -347,7 +352,6 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
   std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
