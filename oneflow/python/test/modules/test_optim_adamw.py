@@ -17,13 +17,13 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
-from oneflow.python.test.modules.test_util import GenArgList
+import oneflow.experimental as flow
+from test_util import GenArgList
 from oneflow.python.nn.parameter import Parameter
 
 
-def compare_with_numpy_adam(
-    test_case, x_shape, scale, learning_rate, train_iters,
+def compare_with_numpy_adamw(
+    test_case, x_shape, scale, learning_rate, train_iters, weight_decay
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -34,16 +34,21 @@ def compare_with_numpy_adam(
 
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value))
-        param_list = list()
-        param_list.append(x)
-        adam = flow.optim.Adam([{"param": param_list}], lr=learning_rate, scale=scale)
+        adam = flow.optim.AdamW(
+            [
+                {
+                    "params": [x],
+                    "lr": learning_rate,
+                    "weight_decay": weight_decay,
+                    "scale": scale,
+                }
+            ]
+        )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = x * grad_tensor
-            # BUG: loss = flow.sum(x * grad_tensor)
-            grad = flow.Tensor(np.ones(list(loss.shape)))
-            loss.backward(grad)
+            loss = flow.sum(x * grad_tensor)
+            loss.backward()
             adam.step()
             adam.zero_grad()
 
@@ -62,7 +67,10 @@ def compare_with_numpy_adam(
             grad = grad * scale
             v = beta1 * vt + (1 - beta1) * grad
             s = beta2 * st + (1 - beta2) * grad * grad
-            g = learning_rate / (np.sqrt(s) + 1e-8) * v
+            g = (
+                learning_rate / (np.sqrt(s) + 1e-8) * v
+                + learning_rate * weight_decay * x
+            )
             param = x - g
             return param, v, s
 
@@ -82,15 +90,16 @@ def compare_with_numpy_adam(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAdam(flow.unittest.TestCase):
-    def test_adam(test_case):
+class TestAdamW(flow.unittest.TestCase):
+    def test_adamw(test_case):
         arg_dict = OrderedDict()
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
+        arg_dict["weight_decay"] = [1e-3, 0.0]
         for arg in GenArgList(arg_dict):
-            compare_with_numpy_adam(test_case, *arg)
+            compare_with_numpy_adamw(test_case, *arg)
 
 
 if __name__ == "__main__":

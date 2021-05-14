@@ -15,21 +15,16 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from typing import Optional, Sequence
 
 
 class Transpose(Module):
     def __init__(
-        self,
-        perm: Sequence[int] = None,
-        conjugate: bool = False,
-        batch_axis_non_change: bool = False,
+        self, dim0, dim1, conjugate: bool = False, batch_axis_non_change: bool = False,
     ) -> None:
         super().__init__()
-
-        assert isinstance(perm, (tuple, list))
 
         if conjugate:
             raise NotImplementedError
@@ -41,31 +36,58 @@ class Transpose(Module):
             flow.builtin_op("transpose")
             .Input("input")
             .Output("output")
-            .Attr("perm", perm)
+            .Attr("perm", [])
             .Build()
         )
 
+        self.dim0 = dim0
+        self.dim1 = dim1
+
     def forward(self, x):
-        return self._op(x)[0]
+        x_shape = x.shape
+        dim0 = self.dim0
+        dim1 = self.dim1
+        if dim0 < 0:
+            dim0 += len(x_shape)
+        if dim1 < 0:
+            dim1 += len(x_shape)
+        assert dim0 >= 0 and dim0 < len(
+            x_shape
+        ), "Invalid dim0 {}, len(shape): {}".format(dim0, len(x_shape))
+        assert dim1 >= 0 and dim1 < len(
+            x_shape
+        ), "Invalid dim1 {}, len(shape): {}".format(dim1, len(x_shape))
+
+        perm = []
+        for i in range(len(x_shape)):
+            perm.append(i)
+        perm[dim0], perm[dim1] = perm[dim1], perm[dim0]
+
+        return self._op(x, perm=perm)[0]
 
 
-@oneflow_export("tmp.transpose")
+@oneflow_export("transpose")
 @register_tensor_op("transpose")
-def transpose_op(a, perm: Sequence[int] = None):
-    r"""This operator transposes the specified axis of input Tensor.
+@experimental_api
+def transpose_op(tensor, dim0, dim1):
+    r"""Returns a tensor that is a transposed version of input. The given dimensions dim0 and dim1 are swapped.
+
+    The resulting out tensor shares its underlying storage with the input tensor, so changing the content of one would change the content of the other.
+
     Args:
-        a (oneflow.Tensor): The input tensor.
-        perm (Sequence[int], optional): The list of dimension permutation. Defaults to None.
+        tensor (oneflow.Tensor): The input tensor.
+        dim0 (int) – the first dimension to be transposed.
+        dim1 (int) – the second dimension to be transposed.
     Returns:
         oneflow.Tensor: A transposed tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        out = flow.tmp.transpose(input, perm=(0, 2, 3, 1))
+        out = flow.transpose(input, 0, 1)
 
-        # out.shape (2, 5, 3, 6)
+        # out.shape (6, 2, 5, 3)
     """
-    return Transpose(perm=perm)(a)
+    return Transpose(dim0=dim0, dim1=dim1)(tensor)

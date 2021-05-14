@@ -27,6 +27,11 @@ class GILForeignLockHelper final : public ForeignLockHelper {
     py::gil_scoped_release release;
     callback();
   }
+
+  void WithScopedAcquire(const std::function<void()>& callback) const override {
+    py::gil_scoped_acquire acquire;
+    callback();
+  }
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {

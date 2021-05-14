@@ -645,14 +645,15 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-    one::EagerBlobObjectList input_eager_blob_objects,
-    one::EagerBlobObjectList output_eager_blob_objects, const AttrMap& attrs,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym) {
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc_sym->device_tag() + ".LocalCallOpKernel");
+      ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
-  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc_sym->symbol_id()));
+  *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
@@ -878,7 +879,7 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, infer_local_dep_object, compute_local_dep_object);
-  instruction->set_parallel_desc_symbol_id(JUST(parallel_desc->symbol_id()));
+  *instruction->mut_parallel_desc() = parallel_desc;
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }
@@ -895,7 +896,7 @@ Maybe<void> InstructionsBuilder::AccessBlobByCallback(
       JUST(tensor->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
       eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
-  instruction->set_parallel_desc_symbol_id(JUST(tensor->parallel_desc()->symbol_id()));
+  *instruction->mut_parallel_desc() = tensor->parallel_desc();
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }

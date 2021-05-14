@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
+import oneflow.experimental as flow
 import unittest
 import numpy as np
 
@@ -88,7 +88,7 @@ class TestStd(flow.unittest.TestCase):
     def test_std(test_case):
         np_arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(np_arr)
-        of_out = flow.tmp.std(input, dim=2)
+        of_out = flow.std(input, dim=2)
         np_out = np.std(np_arr, axis=2)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5,))
 
@@ -97,6 +97,13 @@ class TestStd(flow.unittest.TestCase):
         input = flow.Tensor(np_arr)
         of_out = input.std(dim=1, keepdim=False)
         np_out = np.std(np_arr, axis=1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_std_negative_dim(test_case):
+        np_arr = np.random.randn(4, 2, 3, 5)
+        input = flow.Tensor(np_arr)
+        of_out = input.std(dim=(-2, -1, -3), keepdim=False)
+        np_out = np.std(np_arr, axis=(-2, -1, -3))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
@@ -146,6 +153,24 @@ class TestSquare(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestPow(flow.unittest.TestCase):
+    def test_pow(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = flow.pow(input, 2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_pow_tensor_function(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = input.pow(2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":

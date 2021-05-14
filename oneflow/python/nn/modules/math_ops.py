@@ -18,26 +18,29 @@ import collections
 from typing import Optional, Sequence, Union
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 
 def _check_axis(axis, shape):
+    ndim = len(shape)
     # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
     if axis is None:
         axis = list(range(len(shape)))
-
     if isinstance(axis, int):
         axis = [axis]
 
     assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
-    for x in axis:
-        if x < 0:
-            x += len(shape)
-        assert x >= 0 and x < len(shape), "Invalid axis {}, len(shape): {}".format(
-            axis, len(shape)
+    axis = list(axis)
+    for i in range(len(axis)):
+        assert (
+            -ndim <= axis[i] <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, axis[i]
         )
+        if axis[i] < 0:
+            axis[i] = axis[i] + ndim
 
     return axis
 
@@ -67,13 +70,14 @@ class Sum(Module):
 
 @oneflow_export("sum")
 @register_tensor_op("sum")
+@experimental_api
 def _sum(input, dim=None, keepdims=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     For example:
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = flow.sum(input, dim=(2,1))
 
@@ -148,6 +152,7 @@ class BroadcastMul(Module):
 
 @oneflow_export("mul")
 @register_tensor_op("mul")
+@experimental_api
 def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -157,7 +162,7 @@ def _mul(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise multiply
         x = flow.Tensor(np.random.randn(2,3))
@@ -209,7 +214,25 @@ class Mean(Module):
             self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
 
     def forward(self, input_tensor):
-        reduce_sum = flow.sum(input_tensor, dim=self.axis, keepdims=self.keepdims)
+        ndim = input_tensor.ndimension()
+        if isinstance(self.axis, int) and self.axis < 0:
+            assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
+            self.axis = ndim + self.axis
+            self.axes = [self.axis]
+
+        if isinstance(self.axis, collections.Sized):
+            for i in range(len(self.axes)):
+                assert (
+                    -ndim <= self.axes[i] <= ndim - 1
+                ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
+                    ndim, ndim - 1, self.axes[i]
+                )
+                if self.axes[i] < 0:
+                    self.axes[i] = self.axes[i] + ndim
+
+        reduce_sum = flow.experimental.sum(
+            input_tensor, dim=self.axis, keepdims=self.keepdims
+        )
         reduce_count = 1
         if len(self.axes) == 0:
             for dim in input_tensor.shape:
@@ -217,11 +240,12 @@ class Mean(Module):
         else:
             for i in self.axes:
                 reduce_count *= input_tensor.shape[i]
-        return flow.mul(reduce_sum, 1.0 / reduce_count)
+        return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
 
 
 @oneflow_export("mean")
 @register_tensor_op("mean")
+@experimental_api
 def _mean(input_tensor, dim=None, keepdim=False):
     r"""Computes the mean of row of elements in a tensor in the given axis,
     if the axis is None, mean of all elements will be caculated.
@@ -230,7 +254,7 @@ def _mean(input_tensor, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
         out = flow.mean(input)
@@ -308,6 +332,7 @@ class ScalarAdd(Module):
 
 @oneflow_export("sub")
 @register_tensor_op("sub")
+@experimental_api
 def _sub(x, y):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -317,7 +342,7 @@ def _sub(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise subtract
         x = flow.Tensor(np.random.randn(2,3))
@@ -380,6 +405,7 @@ class ScalarDivByTensor(Module):
 
 @oneflow_export("div")
 @register_tensor_op("div")
+@experimental_api
 def _div(x, y):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -391,7 +417,7 @@ def _div(x, y):
     For example:
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise divide
         x = flow.Tensor(np.random.randn(2,3))
@@ -414,7 +440,7 @@ def _div(x, y):
     """
 
     if isinstance(x, (int, float)):
-        return ScalarMul(x)(flow.reciprocal(y))
+        return ScalarMul(x)(flow.experimental.reciprocal(y))
     elif isinstance(y, (int, float)):
         if y == 0 or y == 0.0:
             y = 0.0
@@ -440,6 +466,7 @@ class Reciprocal(Module):
 
 @oneflow_export("reciprocal")
 @register_tensor_op("reciprocal")
+@experimental_api
 def _reciprocal(x):
     r"""Computes the safe reciprocal of x. If x is zero, the reciprocal will
     be also set to zero.
@@ -448,7 +475,7 @@ def _reciprocal(x):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
         out = flow.reciprocal()(x)
         # out [[1.         0.5        0.33333334]
@@ -496,6 +523,7 @@ class BroadcastAdd(Module):
 
 @oneflow_export("add")
 @register_tensor_op("add")
+@experimental_api
 def _add(x, y):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
@@ -505,7 +533,7 @@ def _add(x, y):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         # element-wise add
         x = flow.Tensor(np.random.randn(2,3))
@@ -552,6 +580,7 @@ class Sin(Module):
 
 @oneflow_export("sin")
 @register_tensor_op("sin")
+@experimental_api
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
@@ -561,7 +590,7 @@ def sin_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -582,6 +611,7 @@ class Cos(Module):
 
 @oneflow_export("cos")
 @register_tensor_op("cos")
+@experimental_api
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
@@ -591,7 +621,7 @@ def cos_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -613,6 +643,7 @@ class Log(Module):
 
 @oneflow_export("log")
 @register_tensor_op("log")
+@experimental_api
 def log_op(tensor):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
@@ -622,7 +653,7 @@ def log_op(tensor):
         input (Tensor) – the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
         arr = np.random.randn(2, 3, 4, 5)
         input = flow.Tensor(arr, dtype=flow.float32)
@@ -664,6 +695,7 @@ class Sqrt(Module):
 
 @oneflow_export("sqrt")
 @register_tensor_op("sqrt")
+@experimental_api
 def sqrt_op(input):
     r"""Returns a new tensor with the square-root of the elements of :attr:`input`.
 
@@ -677,7 +709,7 @@ def sqrt_op(input):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.experimental as flow
             import numpy as np
 
             arr = np.random.randn(3, 2, 5, 7)
@@ -699,6 +731,7 @@ class Square(Module):
 
 @oneflow_export("square")
 @register_tensor_op("square")
+@experimental_api
 def square_op(input):
     r"""Returns a new tensor with the square of the elements of :attr:`input`.
 
@@ -712,7 +745,7 @@ def square_op(input):
 
         .. code-block:: python
 
-            import oneflow as flow
+            import oneflow.experimental as flow
             import numpy as np
 
             arr = np.random.randn(3, 2, 5, 7)
@@ -738,7 +771,7 @@ class Std(Module):
     def forward(self, x):
         self.axis = _check_axis(self.dim, x.shape)
         if isinstance(self.axis, list) and len(self.axis) == 0:
-            return flow.tmp.zeros(size=x.shape)
+            return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
                 self.reduce_count = x.nelemenet()
@@ -753,8 +786,9 @@ class Std(Module):
             return res
 
 
-@oneflow_export("tmp.std")
+@oneflow_export("std")
 @register_tensor_op("std")
+@experimental_api
 def std_op(tensor, dim, unbiased=True, keepdim=False):
     r"""
     Returns the standard-deviation of each row of the :attr:`input` tensor in the
@@ -778,7 +812,7 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         arr = np.random.randn(2, 3, 4, 5)
@@ -789,3 +823,34 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 
     """
     return Std(dim, unbiased, keepdim)(tensor)
+
+
+class Pow(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+
+    def forward(self, x, exponent: Union[int, float]):
+        return self._op(x, exponent=float(exponent))[0]
+
+
+@oneflow_export("pow")
+@register_tensor_op("pow")
+@experimental_api
+def pow_op(tensor, exponent):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        
+        x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))
+        out = flow.pow(x, 2).numpy()
+        print(out) # [1, 4, 9, 16, 25, 36]
+        
+    """
+    return Pow()(tensor, exponent)

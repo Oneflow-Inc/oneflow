@@ -202,4 +202,4 @@ def get_world_size():
         The world size of the process group.
 
     """
-    return oneflow._oneflow_internal.GetWordSize()
+    return oneflow._oneflow_internal.GetWorldSize()
