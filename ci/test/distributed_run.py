@@ -133,11 +133,6 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             f.flush()
             return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp:ro -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER bash /host{f_name}"
 
-        def exit_handler():
-            print("removing docker container:", container_name)
-            subprocess.check_call(f"docker rm -f {container_name} || true", shell=True)
-
-        atexit.register(exit_handler)
         f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
         self.bash_tmp_file = f
@@ -202,6 +197,24 @@ if __name__ == "__main__":
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
     container_name = getpass.getuser() + "-distributed-run"
+    remote_hosts = [remote_host]
+
+    def exit_handler():
+        print("removing local docker container:", container_name)
+        subprocess.check_call(f"docker rm -f {container_name} || true", shell=True)
+        for remote_host in remote_hosts:
+            print(f"removing local docker container at {remote_host}:", container_name)
+            subprocess.check_call(
+                f"ssh {remote_host} docker rm -f {container_name} || true", shell=True,
+            )
+
+    atexit.register(exit_handler)
+    launch_remote_container(
+        hostname=remote_host,
+        survival_time=args.timeout,
+        workspace_dir=workspace_dir,
+        container_name=container_name,
+    )
     with DockerAgent(port=agent_port, authkey=agent_authkey.encode()) as agent:
         agent.run_bash_script_async(
             bash_script=args.bash_script,
