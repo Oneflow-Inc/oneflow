@@ -128,6 +128,5 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
 
-
 if __name__ == "__main__":
     unittest.main()
