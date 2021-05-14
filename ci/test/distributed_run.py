@@ -4,7 +4,6 @@ import subprocess
 import socket
 import tempfile
 from contextlib import closing
-from subprocess import TimeoutExpired
 import argparse
 import uuid
 import getpass
@@ -80,7 +79,21 @@ def launch_remote_container(
 
 
 class DockerAgent:
-    def __init__(self, port=None, authkey=None) -> None:
+    def __init__(
+        self,
+        port=None,
+        authkey=None,
+        this_host=None,
+        remote_hosts=None,
+        container_name=None,
+        timeout=None,
+    ) -> None:
+        # info
+        self.this_host = this_host
+        self.remote_hosts = remote_hosts
+        self.container_name = container_name
+        self.timeout = timeout
+        # impl
         self.listener = Listener(("localhost", port), authkey=authkey)
         self.env_proto_txt = None
         self.bash_tmp_file = None
@@ -91,18 +104,9 @@ class DockerAgent:
         return self
 
     def run_bash_script_async(
-        self,
-        bash_script=None,
-        timeout=None,
-        this_host=None,
-        remote_hosts=None,
-        oneflow_wheel_path=None,
-        oneflow_build_path=None,
-        agent_port=None,
-        agent_authkey=None,
-        container_name=None,
+        self, bash_script=None, oneflow_wheel_path=None, oneflow_build_path=None,
     ):
-        remote_hosts_str = ",".join(remote_hosts)
+        remote_hosts_str = ",".join(self.remote_hosts)
         assert os.path.exists(bash_script)
         log_dir = "./unittest-log-" + str(uuid.uuid4())
         ctrl_port = find_free_port()
@@ -111,7 +115,7 @@ class DockerAgent:
 export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
-export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_hosts_str}"
+export ONEFLOW_TEST_NODE_LIST="{self.this_host},{remote_hosts_str}"
 export ONEFLOW_WORKER_KEEP_LOG=1
 export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
@@ -146,8 +150,8 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         print("[docker agent]", "sending ok")
         self.conn.send(b"ok")
 
-    def block(self, timeout=None):
-        self.bash_proc.communicate(timeout=timeout)
+    def block(self):
+        self.bash_proc.communicate(timeout=self.timeout)
         assert self.bash_proc.returncode == 0
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -226,20 +230,20 @@ if __name__ == "__main__":
         workspace_dir=workspace_dir,
         container_name=container_name,
     )
-    with DockerAgent(port=agent_port, authkey=agent_authkey.encode()) as agent:
+    with DockerAgent(
+        port=agent_port,
+        authkey=agent_authkey.encode(),
+        this_host=this_host,
+        remote_hosts=[remote_host],
+        container_name=container_name,
+    ) as agent:
         agent.run_bash_script_async(
             bash_script=args.bash_script,
-            timeout=args.timeout,
-            this_host=this_host,
-            remote_hosts=[remote_host],
             oneflow_wheel_path=args.oneflow_wheel_path,
             oneflow_build_path=args.oneflow_build_path,
-            agent_port=agent_port,
-            agent_authkey=agent_authkey,
-            container_name=container_name,
         )
         agent.launch_workers()
-        agent.block(args.timeout)
+        agent.block()
         # TODO: remove container when exit
     # copy artifacts
     exit(0)
