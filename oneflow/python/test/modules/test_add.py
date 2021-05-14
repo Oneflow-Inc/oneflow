@@ -94,9 +94,6 @@ class TestAddModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
-import time
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -117,7 +114,7 @@ class TestAddCudaBigTensorModule(flow.unittest.TestCase):
     ".numpy() doesn't work in lazy mode",
 )
 class TestAddCpuBigTensorModule(flow.unittest.TestCase):
-    def test_add_cuda(test_case):
+    def test_add_cpu(test_case):
         x = flow.Tensor(np.random.randn(10000, 10000))
         y = flow.Tensor(np.random.randn(10000, 10000))
         of_out = flow.add(x, y)
