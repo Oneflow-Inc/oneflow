@@ -19,8 +19,12 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-# TODO: skip this test, for batchnorm doesn't have cpu implementation
-@unittest.skipIf(True, "CPU batchnorm is not supported.")
+# # TODO: skip this test, for batchnorm doesn't have cpu implementation
+# @unittest.skipIf(True, "CPU batchnorm is not supported.")
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestBatchNormModule(flow.unittest.TestCase):
     def test_batchnorm1d_2D_input(test_case):
         input_arr = np.array(

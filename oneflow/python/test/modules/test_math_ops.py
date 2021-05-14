@@ -137,6 +137,15 @@ class TestSqrt(flow.unittest.TestCase):
 )
 class TestRsqrt(flow.unittest.TestCase):
     def test_rsqrt(test_case):
+        input_arr = np.random.randn(2, 3, 4, 5)
+        np_out = 1 / np.sqrt(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = x.rsqrt()
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    def test_rsqrt_tensor_function(test_case):
         input_arr = np.random.randn(3, 2, 5, 7)
         np_out = 1 / np.sqrt(input_arr)
         x = flow.Tensor(input_arr)

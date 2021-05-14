@@ -134,15 +134,47 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        if self.training:
-            res = self._training_op(
-                x, self.running_mean, self.running_var, self.weight, self.bias
-            )[0]
+
+        if x.device == flow.device("cpu"):
+            params_shape = [x.shape[1]]
+            if len(self.running_mean.shape) == 1:
+                nd_params_shape = [1] * len(x.shape)
+                nd_params_shape[1] = params_shape[0]
+                mean = self.running_mean.reshape(shape=nd_params_shape)
+                variance = self.running_var.reshape(shape=nd_params_shape)
+                if self.affine:
+                    gamma = self.weight.reshape(shape=nd_params_shape)
+                    beta = self.bias.reshape(shape=nd_params_shape)
+
+            elif len(self.running_mean.shape) == len(x.shape):
+                print("len(self.running_mean.shape) == x.shape >>>>>>>> ", x.shape)
+                pass
+            else:
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
+
+            running_var = self.running_var + self.eps
+            std_inv = running_var.rsqrt()
+            normalized = (x - mean) * std_inv
+            affined = normalized
+
+            if self.affine:
+                affined = affined * gamma
+                affined = affined + beta
+
+            return affined
+
         else:
-            res = self._testing_op(
-                x, self.running_mean, self.running_var, self.weight, self.bias
-            )[0]
-        return res
+            if self.training:
+                res = self._training_op(
+                    x, self.running_mean, self.running_var, self.weight, self.bias
+                )[0]
+            else:
+                res = self._testing_op(
+                    x, self.running_mean, self.running_var, self.weight, self.bias
+                )[0]
+            return res
 
 
 @oneflow_export("nn.BatchNorm1d")

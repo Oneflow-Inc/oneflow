@@ -721,6 +721,7 @@ def rsqrt_op(input):
     """
     return Rsqrt()(input)
 
+
 class Rsqrt(Module):
     def __init__(self) -> None:
         super().__init__()
