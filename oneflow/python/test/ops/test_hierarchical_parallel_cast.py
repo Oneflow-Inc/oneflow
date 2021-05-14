@@ -353,6 +353,9 @@ def _test_reshape_like(test_case):
 
 
 @flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(
+    flow.unittest.env.eager_execution_enabled(), "2-D SBP doesn't work in eager mode",
+)
 class TestHierarchicalParallelCast(flow.unittest.TestCase):
     def test_change_axis1(test_case):
         arg_dict = OrderedDict()
