@@ -35,7 +35,7 @@ def user_op_expr_call(self, *args, **kwargs):
         )
 
     results = self.apply(args, attrs)
-
+    results = [flow.Tensor(x) for x in results]
     return results
 
 
