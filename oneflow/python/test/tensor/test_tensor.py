@@ -162,7 +162,6 @@ class TestTensor(flow.unittest.TestCase):
 
         with flow.no_grad():
             m = x + y
-        # TODO: fix this autograd test case
         test_case.assertTrue(m.is_leaf)
         test_case.assertFalse(m.requires_grad)
 
