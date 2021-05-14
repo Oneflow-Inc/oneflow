@@ -108,6 +108,24 @@ class TestModule(flow.unittest.TestCase):
         of_out = of_input.expand(expand_size=expand_dim)
 
         test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
+    
+    def test_expand_same_int(test_case):
+        input_shape = (2, 4, 1, 32)
+        expand_dim = [2, 4, 2, 32]
+        input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+        of_input = flow.Tensor(input, dtype=flow.int)
+        of_out = of_input.expand(expand_size=expand_dim)
+
+        test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
+
+    def test_expand_same_int(test_case):
+        input_shape = (2, 4, 1, 32)
+        expand_dim = [2, 4, 2, 32]
+        input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+        of_input = flow.Tensor(input, dtype=flow.int)
+        of_out = of_input.expand(expand_size=expand_dim)
+
+        test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
 
 if __name__ == "__main__":

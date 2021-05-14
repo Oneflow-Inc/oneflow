@@ -112,12 +112,22 @@ class CrossEntropyLoss(Module):
         )
 
     def forward(self, input, target):
+        assert len(input.shape) <= 4
+        assert len(target.shape) == len(input.shape) - 1
         input_shape_len = len(input.shape)
-        if input_shape_len == 4:
+        if input_shape_len == 3:
+            b, c, h = input.shape[0], input.shape[1], input.shape[2]
+            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = input.reshape(shape=[-1, input.shape[2]])
+            target = target.flatten()
+        elif input_shape_len == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
             input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
+        elif input_shape_len >= 5:
+            raise NotImplemented
+
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
         if self.reduction == "mean":
             return flow.experimental.mean(out)
@@ -243,10 +253,18 @@ class NLLLoss(Module):
         return res
 
     def forward(self, input, target):
-        assert len(input.shape) == 2 or len(input.shape) == 4
+        assert len(input.shape) <= 4
+        assert len(target.shape) == len(input.shape) - 1
         input = input.negative()
         if len(input.shape) == 2:
             res = self.nllloss_1d(input, target)
+        elif len(input.shape) == 3:
+            b, c, h = input.shape[0], input.shape[1], input.shape[2]
+            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = input.reshape(shape=[-1, input.shape[2]])
+            target = target.flatten()
+            res = self.nllloss_1d(input, target)
+            res = res.reshape((b, h))
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
             input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
@@ -254,7 +272,6 @@ class NLLLoss(Module):
             target = target.flatten()
             res = self.nllloss_1d(input, target)
             res = res.reshape((b, h, w))
-
         else:
             raise NotImplemented
 
