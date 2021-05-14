@@ -54,6 +54,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init(&DeviceExportUtil::MakeDevice))
       .def_property_readonly("type", &Device::type)
       .def_property_readonly("index", &Device::device_id)
+      .def("__eq__", [](const Device& d1, const Device& d2) { return d1 == d2; })
       .def("__str__", &Device::ToString)
       .def("__repr__", &Device::ToString);
 }

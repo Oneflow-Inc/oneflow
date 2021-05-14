@@ -81,7 +81,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
 #undef DEFINE_INTEGER_CONSTATNT_OP
 
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype) {
-  return OnesOp(shape, dtype, UniqueOpName("constant"));
+  return ZerosOp(shape, dtype, UniqueOpName("constant"));
 }
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name) {
   switch (dtype) {
@@ -272,6 +272,19 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) 
       .Input("in")
       .Output("out")
       .Attr<DataType>("dtype", to_type)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id) {
+  return CopyOp(device_type, device_id, UniqueOpName("copy"));
+}
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id,
+                              const std::string& name) {
+  return one::OpBuilder("copy", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("device_type", device_type)
+      .Attr<int64_t>("device_id", device_id)
       .Build();
 }
 

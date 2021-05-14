@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_H_
 
+#include <memory>
 #include <string>
 #include <unordered_set>
 #include "oneflow/core/common/maybe.h"
@@ -24,8 +25,9 @@ namespace oneflow {
 
 class ParallelDesc;
 class MemoryCase;
+class VmLocalDepObject;
 
-class Device final {
+class Device final : public std::enable_shared_from_this<Device> {
  public:
   Device(const Device&) = default;
   Device(Device&&) = default;
@@ -49,6 +51,7 @@ class Device final {
   static const std::unordered_set<std::string> type_supported;
 
   Maybe<const std::string&> local_call_instruction_name() const;
+  VmLocalDepObject* mut_compute_local_dep_object() const { return compute_local_dep_object_.get(); }
 
  private:
   Device(const std::string& type, int64_t device_id);
@@ -58,6 +61,7 @@ class Device final {
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;
+  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace oneflow
