@@ -48,9 +48,7 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
 
   void Compute(vm::Instruction* instruction) const override;
 
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
 };
 
 }  // namespace vm
