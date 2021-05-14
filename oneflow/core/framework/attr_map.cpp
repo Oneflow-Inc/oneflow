@@ -52,7 +52,7 @@ AttrMap::AttrMap(const MutableCfgAttrMap& other) {
 template<typename T>
 Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
   const auto& it = this->find(attr_name);
-  CHECK_OR_RETURN(it != this->end());
+  CHECK_OR_RETURN(it != this->end()) << attr_name << " not found";
   const auto* ptr = dynamic_cast<const user_op::TypedAttrVal<T>*>(it->second.get());
   CHECK_NOTNULL_OR_RETURN(ptr);
   return ptr->val();
