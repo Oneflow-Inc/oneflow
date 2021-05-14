@@ -22,6 +22,21 @@ from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
 
 
+class ConvUtil(object):
+    @classmethod
+    def split(cls, x, axis, split_num):
+        split_len = x.shape[axis] // split_num
+        result_list = []
+        slice_begin = [0] * len(x.shape)
+        slice_size = [-1] * len(x.shape)
+        slice_size[axis] = split_len
+        for i in range(split_num):
+            slice_begin[axis] = i * split_len
+            result = flow.slice(x, slice_begin, slice_size)
+            result_list.append(result)
+        return result_list
+
+
 @oneflow_export("nn.Conv2d")
 @experimental_api
 class Conv2d(Module):
@@ -44,6 +59,7 @@ class Conv2d(Module):
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
+        self.groups = groups
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *kernel_size)
         )
@@ -69,7 +85,7 @@ class Conv2d(Module):
             .Attr("strides", stride)
             .Attr("kernel_size", kernel_size)
             .Attr("dilation_rate", dilation)
-            .Attr("groups", groups)
+            .Attr("groups", 1)
             .Attr("data_format", "channels_first")
             .Output("out")
             .Build()
@@ -84,7 +100,34 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        res = self._op(x, self.weight)[0]
+        if x.device == flow.device("cpu") and self.groups > 1:
+            in_channel_axis = 1
+            filter_out_axis = 0
+            in_split_list = ConvUtil.split(
+                inputs, axis=in_channel_axis, split_num=groups
+            )
+            filter_split_list = ConvUtil.split(
+                filters, axis=filter_out_axis, split_num=groups
+            )
+            out_list = []
+            for i in range(len(in_split_list)):
+                out_list.append(
+                    self._op(
+                        in_split_list[i],
+                        filter_split_list[i],
+                        padding_before,
+                        channel_pos,
+                        kernel_size_list,
+                        strides,
+                        dilations,
+                        groups=1,
+                        name=name + str(i),
+                    )[0]
+                )
+            res = flow.cat(out_list, axis=in_channel_axis)
+        else:
+            res = self._op(x, self.weight)[0]
+
         if self._bias_add_op is not None:
             res = self._bias_add_op(res, self.bias)[0]
         return res
