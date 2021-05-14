@@ -74,7 +74,6 @@ class Tensor {
 
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
 
   // Setters
@@ -189,9 +188,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
   }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
-    return impl_->infer_local_dep_object();
-  }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
@@ -279,9 +275,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return impl_->eager_blob_object();
-  }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override {
-    return impl_->infer_local_dep_object();
   }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
