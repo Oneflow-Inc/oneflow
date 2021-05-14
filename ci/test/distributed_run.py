@@ -133,9 +133,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp:ro -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER bash /host{f_name}"
 
         def exit_handler():
-            subprocess.check_call(
-                f"docker rm -f {container_name} || true", shell=True
-            )
+            subprocess.check_call(f"docker rm -f {container_name} || true", shell=True)
 
         atexit.register(exit_handler)
         f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
@@ -150,14 +148,13 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         # do_launch_workers
         print("[docker agent]", "sending ok")
         self.conn.send(b"ok")
-        self.conn.close()
 
     def block(self, timeout=None):
         self.bash_proc.communicate(timeout=timeout)
         assert self.bash_proc.returncode == 0
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.listener.close()
+        pass
 
 
 if __name__ == "__main__":
