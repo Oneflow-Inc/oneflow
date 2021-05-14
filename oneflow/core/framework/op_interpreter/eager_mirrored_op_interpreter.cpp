@@ -131,7 +131,7 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   std::vector<std::shared_ptr<const Device>> out_devices(outputs->size());
-  NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices);
+  JUST(NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices));
   for (int i = 0; i < outputs->size(); ++i) {
     outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         output_eager_blob_objects->at(i), out_devices.at(i)));
