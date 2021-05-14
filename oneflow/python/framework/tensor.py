@@ -238,12 +238,15 @@ class Tensor:
             self._undetermined_tensor.requires_grad = requires_grad
 
     @register_local_tensor_method()
-    def size(self):
-        return self.shape
+    def size(self, idx=None):
+        if idx is None:
+            return self.shape
+        else:
+            return self.shape[idx]
 
     @register_local_tensor_method()
-    def dim(self, idx):
-        return self.shape[idx]
+    def dim(self):
+        return self.ndim
 
     @register_local_tensor_method()
     def ndimension(self):
