@@ -74,7 +74,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
+  PhysicalRun([&](PhysicalInstructionsBuilder* builder) {
     builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {

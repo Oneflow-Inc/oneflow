@@ -148,7 +148,7 @@ Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
 }
 
 Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
-  JUST(PhysicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(PhysicalRun([&obj](PhysicalInstructionsBuilder* build) { build->DeleteObject(obj); }));
   return Maybe<void>::Ok();
 }
 
@@ -643,22 +643,6 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InstructionsBuilder::LocalCallOpKernel(
-    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-    const std::string& instr_type_name) {
-  ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
-  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
-  *instruction->mut_parallel_desc() = parallel_desc_sym;
-  *instruction->mutable_phy_instr_operand() = phy_instr_operand;
-  instruction_list_->EmplaceBack(std::move(instruction));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> InstructionsBuilder::CudaHostRegisterBlob(
     const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
@@ -865,50 +849,6 @@ Maybe<void> InstructionsBuilder::FeedBlob(
   instruction->add_mut2_operand(blob_object->object_id());
   instruction->add_int64_operand(callback_id);
   instruction_list_->PushBack(instruction.Mutable());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InstructionsBuilder::ReleaseTensor(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
-  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
-      JUST(eager_blob_object->infer_local_dep_object());
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(eager_blob_object->compute_local_dep_object());
-  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
-      eager_blob_object, infer_local_dep_object, compute_local_dep_object);
-  *instruction->mut_parallel_desc() = parallel_desc;
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InstructionsBuilder::AccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor>& tensor,
-    const std::function<void(uint64_t)>& callback, const std::string& modifier) {
-  std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
-  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
-  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
-      JUST(tensor->infer_local_dep_object());
-  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
-      JUST(tensor->compute_local_dep_object());
-  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
-      eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
-  *instruction->mut_parallel_desc() = tensor->parallel_desc();
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InstructionsBuilder::ReadTensorShapeByCallback(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::function<void(const std::shared_ptr<const Shape>&)>& callback) {
-  std::string instr_name = "ReadTensorShapeByCallback";
-  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
-  *instruction->mutable_phy_instr_operand() =
-      std::make_shared<vm::ReadTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
-  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();
 }
 
@@ -1551,6 +1491,66 @@ InstructionsBuilder::GetMut2OperandBlobObjects(
   return mut2_operand_blob_objects;
 }
 
+Maybe<void> PhysicalInstructionsBuilder::LocalCallOpKernel(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+    const std::string& instr_type_name) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
+  auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
+  *instruction->mut_parallel_desc() = parallel_desc_sym;
+  *instruction->mutable_phy_instr_operand() = phy_instr_operand;
+  instruction_list_->EmplaceBack(std::move(instruction));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> PhysicalInstructionsBuilder::ReleaseTensor(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  std::string instr_name = parallel_desc->device_tag() + ".ReleaseTensor";
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
+      JUST(eager_blob_object->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
+      JUST(eager_blob_object->compute_local_dep_object());
+  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
+      eager_blob_object, infer_local_dep_object, compute_local_dep_object);
+  *instruction->mut_parallel_desc() = parallel_desc;
+  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> PhysicalInstructionsBuilder::AccessBlobByCallback(
+    const std::shared_ptr<one::MirroredTensor>& tensor,
+    const std::function<void(uint64_t)>& callback, const std::string& modifier) {
+  std::string instr_name = tensor->parallel_desc()->device_tag() + ".AccessBlobByCallback";
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object = JUST(tensor->eager_blob_object());
+  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object =
+      JUST(tensor->infer_local_dep_object());
+  const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object =
+      JUST(tensor->compute_local_dep_object());
+  *instruction->mutable_phy_instr_operand() = std::make_shared<vm::AccessBlobArgCbPhyInstrOperand>(
+      eager_blob_object, infer_local_dep_object, compute_local_dep_object, callback, modifier);
+  *instruction->mut_parallel_desc() = tensor->parallel_desc();
+  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> PhysicalInstructionsBuilder::ReadTensorShapeByCallback(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::function<void(const std::shared_ptr<const Shape>&)>& callback) {
+  std::string instr_name = "ReadTensorShapeByCallback";
+  ObjectMsgPtr<vm::InstructionMsg> instruction = ObjectMsgPtr<vm::InstructionMsg>::New(instr_name);
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::ReadTensorShapeArgCbPhyInstrOperand>(eager_blob_object, callback);
+  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   const std::shared_ptr<vm::LogicalIdGenerator> id_generator =
       std::make_shared<vm::LogicalIdGenerator>();
@@ -1565,10 +1565,10 @@ Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) {
+Maybe<void> PhysicalRun(const std::function<void(PhysicalInstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
   vm::cfg::EagerSymbolList eager_symbol_list;
-  InstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
+  PhysicalInstructionsBuilder instructions_builder(std::shared_ptr<vm::PhysicalIdGenerator>(),
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   Build(&instructions_builder);

@@ -118,16 +118,16 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr);
 
-  Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+//   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+//                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
-  Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
-                                   const std::function<void(uint64_t)>& callback,
-                                   const std::string& modifier);
+//   Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
+//                                    const std::function<void(uint64_t)>& callback,
+//                                    const std::string& modifier);
 
-  Maybe<void> ReadTensorShapeByCallback(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
+//   Maybe<void> ReadTensorShapeByCallback(
+//       const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+//       const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
 
   Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
@@ -246,12 +246,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     return id_cache->FindOrCreate(conf, [&] { return CreateSymbolId<T>(conf); });
   }
 
-  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                                const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const AttrMap& attrs,
-                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-                                const std::string& instr_type_name);
+//   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+//                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+//                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+//                                 const AttrMap& attrs,
+//                                 const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+//                                 const std::string& instr_type_name);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,
@@ -440,14 +440,52 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
-  vm::InstructionMsgList* instruction_list_;
+//   vm::InstructionMsgList* instruction_list_;
   vm::cfg::EagerSymbolList* eager_symbol_list_;
   std::function<void(compatible_py::Object*)> release_object_;
+  public:
+  vm::InstructionMsgList* instruction_list_;
+};
+
+class PhysicalInstructionsBuilder : public InstructionsBuilder{
+    public:
+    PhysicalInstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
+                      vm::InstructionMsgList* instruction_list,
+                      vm::cfg::EagerSymbolList* eager_symbol_list,
+                      const std::function<void(compatible_py::Object*)>& release_object) 
+     : InstructionsBuilder(id_generator, 
+                      instruction_list, 
+                      eager_symbol_list,
+                      release_object){}
+    
+    Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
+                                   const std::function<void(uint64_t)>& callback,
+                                   const std::string& modifier);
+
+    // Maybe<void> DeleteObject(compatible_py::Object* blob_object);
+
+    Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+                            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
+    Maybe<void> ReadTensorShapeByCallback(
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
+
+    Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+                                const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+                                const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                                const AttrMap& attrs,
+                                const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
+                                const std::string& instr_type_name);
+
+
 };
 
 Maybe<void> LogicalRun(const std::function<void(InstructionsBuilder*)>& Build);
 
-Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build);
+Maybe<void> PhysicalRun(const std::function<void(PhysicalInstructionsBuilder*)>& Build);
+
+
 
 }  // namespace oneflow
 

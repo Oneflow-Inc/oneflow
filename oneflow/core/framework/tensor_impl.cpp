@@ -79,7 +79,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
   const auto& parallel_desc = this->parallel_desc();
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
-        PhysicalRun([&](InstructionsBuilder* builder) {
+        PhysicalRun([&](PhysicalInstructionsBuilder* builder) {
           builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
       });
@@ -103,7 +103,7 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
       result = &shape;
       bc.Decrease();
     };
-    auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
+    auto build_instruction = [&](PhysicalInstructionsBuilder* builder) -> Maybe<void> {
       JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
       return Maybe<void>::Ok();
     };

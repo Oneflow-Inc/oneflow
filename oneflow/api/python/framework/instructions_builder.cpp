@@ -253,7 +253,7 @@ std::shared_ptr<compatible_py::BlobObject> Build121To(
   return x->Build121To(blob_object, parallel_desc_symbol).GetPtrOrThrow();
 }
 
-void AccessBlobByCallback(InstructionsBuilder* x,
+void AccessBlobByCallback(PhysicalInstructionsBuilder* x,
                           const std::shared_ptr<one::MirroredTensor>& tensor,
                           const std::function<void(uint64_t)>& callback,
                           const std::string& modifier) {
@@ -349,7 +349,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
 
   m.def(
       "PhysicalRun",
-      [](const std::function<void(InstructionsBuilder*)>& Build) {
+      [](const std::function<void(PhysicalInstructionsBuilder*)>& Build) {
         return PhysicalRun(Build).GetOrThrow();
       },
       py::call_guard<py::gil_scoped_release>());
