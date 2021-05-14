@@ -101,7 +101,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                                kernel->op_infer_ctx_for_thread_b()));
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
-  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&](PhysicalInstructionsBuilder* builder) -> Maybe<void> {
     if (need_event_record) {
       for (const auto& input_tensor : inputs) {
         const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
