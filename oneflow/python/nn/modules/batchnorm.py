@@ -138,6 +138,9 @@ class _BatchNorm(_NormBase):
         if x.device == flow.device("cpu"):
             gamma = self.weight
             beta = self.bias
+            mean = self.running_mean
+            variance = self.running_var
+
             params_shape = [x.shape[1]]
             if len(self.running_mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
@@ -152,8 +155,8 @@ class _BatchNorm(_NormBase):
                     "shape of mean and variance should be 1D or has number of axes and x's"
                 )
 
-            running_var = self.running_var + self.eps
-            std_inv = running_var.rsqrt()
+            variance = variance + self.eps
+            std_inv = variance.rsqrt()
             normalized = (x - mean) * std_inv
             affined = normalized
 
