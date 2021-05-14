@@ -321,15 +321,22 @@ class Softmax(Module):
         super().__init__()
         self.axis = -1 if dim is None else dim
         self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = x.transpose(perm=permute)
+            x = self._transpose_op(x, perm=permute)[0]
 
         res = self._op(x)[0]
         if need_transpose:
-            res = res.transpose(perm=permute)
+            res = self._transpose_op(res, perm=permute)[0]
         return res
 
 
@@ -431,6 +438,13 @@ class LogSoftmax(Module):
     ):
         super().__init__()
         self.dim = dim
+        self._op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -440,13 +454,13 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = x.transpose(perm=permute)
+            x = self._op(x, perm=permute)[0]
 
         x = x.softmax()
         res = x.log()
 
         if need_transpose:
-            res = res.transpose(perm=permute)
+            res = self._op(res, perm=permute)[0]
 
         return res
 
