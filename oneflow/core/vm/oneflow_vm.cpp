@@ -47,7 +47,7 @@ void MakeCtrlSeqInstructions(vm::InstructionMsgList* list,
 }
 
 void ControlSync(vm::VirtualMachine* vm) {
-  BlockingCounter bc(2);
+  BlockingCounter bc(1);
   vm::InstructionMsgList list;
   MakeCtrlSeqInstructions(
       &list, [&] { bc.Decrease(); }, [&] { bc.Decrease(); });
