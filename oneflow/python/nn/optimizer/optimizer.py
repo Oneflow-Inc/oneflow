@@ -31,8 +31,8 @@ class ParamGroup(object):
             self._parameters = list(parameters)
             self._options = default_options
         else:  # Dict
-            assert "param" in parameters
-            self._parameters = list(parameters["param"])
+            assert "params" in parameters
+            self._parameters = list(parameters["params"])
             self._options = default_options
             for key in self._options:
                 if key in parameters:

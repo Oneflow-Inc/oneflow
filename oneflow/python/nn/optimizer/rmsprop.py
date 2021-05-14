@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from typing import List, Dict, Callable, Union, Iterator, Tuple
+from typing import List, Dict, Callable, Union, Iterator
 from types import GeneratorType
 
 import oneflow as flow
@@ -52,7 +52,7 @@ class RMSprop(Optimizer):
 
         v(w, t) = \beta v(w, t-1) + \frac{\eta} {\\sqrt{r(w,t) +
             \epsilon}} \nabla Q_{i}(w)
-  
+
         w = w - v(w, t)
 
     if centered is True:
@@ -65,9 +65,9 @@ class RMSprop(Optimizer):
 
         v(w, t) = \beta v(w, t-1) + \frac{\eta} {\\sqrt{r(w,t) - (g(w, t))^2 +
             \epsilon}} \nabla Q_{i}(w)
-        
+
         w = w - v(w, t)
-    
+
     where, :math:`\alpha` is a hyperparameter and typical values are 0.99, 0.95
     and so on. :math:`\beta` is the momentum term. :math:`\epsilon` is a
     smoothing term to avoid division by zero, usually set somewhere in range
@@ -103,7 +103,7 @@ class RMSprop(Optimizer):
         assert eps >= 0.0, f"Invalid epsilon value: {eps}"
         assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
         assert scale > 0.0, f"Invalid scale factor: {scale}"
-        assert momentum == 0.0, f"Not support momentum greater than zeros now!"
+        assert momentum == 0.0, "Not support momentum greater than zeros now!"
 
         self._default_options["lr"] = lr
         self._default_options["alpha"] = alpha
@@ -124,41 +124,32 @@ class RMSprop(Optimizer):
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 self._state[param]["square_avg"] = flow.experimental.zeros_like(param)
-                if "centered" in self._default_options:
+                if param_group.options["centered"]:
                     self._state[param]["grad_avg"] = flow.experimental.zeros_like(param)
-        if centered:
-            self._op = (
-                flow.builtin_op("rmsprop_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Input("mean_square")
-                .Input("mean_gradient")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Attr("centered", self._default_options["centered"])
-                .Attr("epsilon", self._default_options["eps"])
-                .Attr("decay_rate", self._default_options["alpha"])
-                .Attr("weight_decay", self._default_options["weight_decay"])
-                .Build()
-            )
-        else:
-            self._op = (
-                flow.builtin_op("rmsprop_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Input("mean_square")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Attr("centered", self._default_options["centered"])
-                .Attr("epsilon", self._default_options["eps"])
-                .Attr("decay_rate", self._default_options["alpha"])
-                .Attr("weight_decay", self._default_options["weight_decay"])
-                .Build()
-            )
+
+        self._centered_rmsprop = (
+            flow.builtin_op("rmsprop_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Input("mean_square")
+            .Input("mean_gradient")
+            .Attr("centered", True)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Build()
+        )
+        self._rmsprop = (
+            flow.builtin_op("rmsprop_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Input("mean_square")
+            .Attr("centered", False)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Build()
+        )
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
@@ -167,22 +158,31 @@ class RMSprop(Optimizer):
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        loss = None
-        if closure is not None:
-            loss = closure()
+        with flow.no_grad():
+            loss = None
+            if closure is not None:
+                loss = closure()
 
-        for param_group in self._param_groups:
-            lr_tensor = flow.Tensor([param_group.options["lr"]])
-            for param in param_group.parameters:
-                if param.grad is None:
-                    continue
-                ms_tensor = self._state[param]["square_avg"]
-                if self._default_options["centered"]:
-                    mg_tensor = self._state[param]["grad_avg"]
-                    self._op(param, param.grad, lr_tensor, ms_tensor, mg_tensor)
-                else:
-                    self._op(param, param.grad, lr_tensor, ms_tensor)
+            for param_group in self._param_groups:
+                lr_tensor = flow.Tensor([param_group.options["lr"]])
+                kwargs = {
+                    "scale": param_group.options["scale"],
+                    "epsilon": param_group.options["eps"],
+                    "decay_rate": param_group.options["alpha"],
+                    "weight_decay": param_group.options["weight_decay"],
+                }
+                for param in param_group.parameters:
+                    if param.grad is None:
+                        continue
+                    ms_tensor = self._state[param]["square_avg"]
+                    if param_group.options["centered"]:
+                        mg_tensor = self._state[param]["grad_avg"]
+                        self._centered_rmsprop(
+                            param, param.grad, lr_tensor, ms_tensor, mg_tensor, **kwargs
+                        )
+                    else:
+                        self._rmsprop(param, param.grad, lr_tensor, ms_tensor, **kwargs)
 
-        self._state["step"] = self._state["step"] + 1
+            self._state["step"] = self._state["step"] + 1
 
-        return loss
+            return loss
