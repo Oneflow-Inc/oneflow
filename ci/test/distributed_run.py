@@ -134,6 +134,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp:ro -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER bash /host{f_name}"
 
         def exit_handler():
+            print("removing docker container:", container_name)
             subprocess.check_call(f"docker rm -f {container_name} || true", shell=True)
 
         atexit.register(exit_handler)
