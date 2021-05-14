@@ -95,13 +95,14 @@ class DockerAgent:
         bash_script=None,
         timeout=None,
         this_host=None,
-        remote_host=None,
+        remote_hosts=None,
         oneflow_wheel_path=None,
         oneflow_build_path=None,
         agent_port=None,
         agent_authkey=None,
         container_name=None,
     ):
+        remote_hosts_str = ",".join(remote_hosts)
         assert os.path.exists(bash_script)
         log_dir = "./unittest-log-" + str(uuid.uuid4())
         ctrl_port = find_free_port()
@@ -110,7 +111,7 @@ class DockerAgent:
 export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
 export ONEFLOW_TEST_LOG_DIR={log_dir}
-export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_hosts_str}"
 export ONEFLOW_WORKER_KEEP_LOG=1
 export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
 export NCCL_DEBUG=INFO
@@ -205,7 +206,7 @@ if __name__ == "__main__":
             bash_script=args.bash_script,
             timeout=args.timeout,
             this_host=this_host,
-            remote_host=remote_host,
+            remote_hosts=[remote_host],
             oneflow_wheel_path=args.oneflow_wheel_path,
             oneflow_build_path=args.oneflow_build_path,
             agent_port=agent_port,
