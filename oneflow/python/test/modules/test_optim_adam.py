@@ -35,20 +35,21 @@ def compare_with_numpy_adam(
 
     def train_by_oneflow():
         x = Parameter(flow.Tensor(init_value))
-        param_list = list()
-        param_list.append(x)
         adam = flow.optim.Adam(
-            [{"param": param_list}],
-            lr=learning_rate,
-            betas=betas,
-            eps=eps,
-            weight_decay=weight_decay,
-            scale=scale,
+            [
+                {
+                    "params": [x],
+                    "lr": learning_rate,
+                    "betas": betas,
+                    "eps": eps,
+                    "weight_decay": weight_decay,
+                    "scale": scale,
+                }
+            ]
         )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = x * grad_tensor
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.step()
