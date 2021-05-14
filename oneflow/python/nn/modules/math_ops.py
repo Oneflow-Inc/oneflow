@@ -527,6 +527,7 @@ class BroadcastAdd(Module):
 def _add(x, y):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
+
     .. math::
         out = x + y
     For example:
@@ -584,10 +585,11 @@ class Sin(Module):
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
+
     .. math::
         \text{out}_{i} = \sin(\text{input}_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
     For example:
     .. code-block:: python
         import oneflow.experimental as flow
@@ -615,10 +617,11 @@ class Cos(Module):
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
+    
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
     For example:
     .. code-block:: python
         import oneflow.experimental as flow
@@ -650,7 +653,7 @@ def log_op(tensor):
     .. math::
         y_{i} = \log_{e} (x_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
     For example:
     .. code-block:: python
         import oneflow.experimental as flow
@@ -703,7 +706,7 @@ def sqrt_op(input):
             \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -739,7 +742,7 @@ def square_op(input):
             \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -803,10 +806,10 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     via the biased estimator. Otherwise, Bessel's correction will be used.
 
     Args:
-        input (Tensor) – the input tensor.
-        dim (int or tuple of python:ints) – the dimension or dimensions to reduce.
-        unbiased (bool) – whether to use the unbiased estimation or not
-        keepdim (bool) – whether the output tensor has `dim` retained or not.
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        unbiased (bool): whether to use the unbiased estimation or not
+        keepdim (bool): whether the output tensor has `dim` retained or not.
 
     For example:
 
