@@ -79,8 +79,8 @@ def _calculate_fan_in_and_fan_out(tensor):
             "Fan in and fan out can not be computed for tensor with fewer than 2 dimensions"
         )
 
-    num_input_fmaps = tensor.dim(1)
-    num_output_fmaps = tensor.dim(0)
+    num_input_fmaps = tensor.size(1)
+    num_output_fmaps = tensor.size(0)
     receptive_field_size = 1
     if tensor.ndimension() > 2:
         # math.prod is not always available, accumulate the product manually

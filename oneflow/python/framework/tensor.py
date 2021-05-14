@@ -91,7 +91,7 @@ class Tensor:
             device = (
                 device
                 if device is not None
-                else oneflow._oneflow_internal.device("cuda")
+                else oneflow._oneflow_internal.device("cpu")
             )
         if _input_args_is_tensor(*args):
             TODO()  # liyurui, construct using another tensor
@@ -184,7 +184,8 @@ class Tensor:
     @property
     def grad(self):
         if self._local_or_consistent_tensor is not None:
-            return flow.Tensor(self._local_or_consistent_tensor.grad)
+            if self._local_or_consistent_tensor.grad is not None:
+                return flow.Tensor(self._local_or_consistent_tensor.grad)
         else:
             return None
 
@@ -221,11 +222,14 @@ class Tensor:
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
-    def size(self):
-        return self.shape
+    def size(self, idx=None):
+        if idx is None:
+            return self.shape
+        else:
+            return self.shape[idx]
 
-    def dim(self, idx):
-        return self.shape[idx]
+    def dim(self):
+        return self.ndim
 
     def ndimension(self):
         return self.ndim
@@ -552,7 +556,7 @@ class UndeterminedTensor:
             else flow.empty_initializer(dtype=dtype)
         )
         device = (
-            device if device is not None else oneflow._oneflow_internal.device("cuda")
+            device if device is not None else oneflow._oneflow_internal.device("cpu")
         )
         self.shape = shape
         self.dtype = dtype
