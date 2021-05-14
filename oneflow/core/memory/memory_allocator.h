@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 内存管理类，会保存待释放的内存信息
 class MemoryAllocator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
@@ -35,12 +36,14 @@ class MemoryAllocator final {
   void Deallocate(char* dptr, MemoryCase mem_case);
 
   std::mutex deleters_mutex_;
+  // 双向链表，保存所有释放内存的函数
   std::list<std::function<void()>> deleters_;
 };
 
 class Blob;
 void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr);
 
+// 在mem_ptr地址初始化T实例，并保存析构函数
 template<typename T>
 T* MemoryAllocator::PlacementNew(T* mem_ptr) {
   T* obj = new (mem_ptr) T();

@@ -19,6 +19,7 @@ namespace oneflow {
 
 bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b,
                                          MemoryCase* common) {
+  // 返回描述同一个device的MemoryCase
   if (a.has_device_cuda_mem() && b.has_device_cuda_mem()) {
     if (a.device_cuda_mem().device_id() == b.device_cuda_mem().device_id()) {
       *common = a;
@@ -26,11 +27,14 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
     } else {
       return false;
     }
+  // 返回描述host的MemoryCase
   } else if (a.has_host_mem() && b.has_host_mem()) {
     *common = a;
+    // 对是否为host与device的交换区取并集
     if (b.host_mem().has_cuda_pinned_mem()) {
       *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
     }
+    // 对是否用于CommNet取并集
     if (b.host_mem().has_used_by_network()) {
       common->mutable_host_mem()->set_used_by_network(true);
     }
@@ -40,6 +44,7 @@ bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& 
   }
 }
 
+// 根据输入mem_case，设置host与device的交换区信息
 MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
     const MemoryCase& mem_case) {
   CHECK(mem_case.has_device_cuda_mem());
@@ -49,6 +54,7 @@ MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
   return ret;
 }
 
+// 获取MemoryCase所描述区域（host/同一个device/主机与同一个device的交换区）对应的id
 int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
   // [0, 127] = GPU device mem
   // [128] = CPU host mem
@@ -67,6 +73,7 @@ int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
   return -1;
 }
 
+// 获取带节点信息的MemoryCase所描述的区域对应的id
 int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
   return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
 }
@@ -76,6 +83,7 @@ bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
          && !mem_case.host_mem().used_by_network();
 }
 
+// 待删除（from chengcheng）
 int64_t MemoryCaseUtil::MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& mem_case) {
   return (thrd_id << 21) | (MemoryCaseUtil::GenMemZoneId(mem_case));
 }

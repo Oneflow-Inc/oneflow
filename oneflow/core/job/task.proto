@@ -49,6 +49,7 @@ message TaskSetInfo {
   required int64 order_in_graph = 5;
 }
 
+// 每个TaskProto描述运行时的一个Actor所需的所有信息
 message TaskProto {
   // common
   required TaskType task_type = 1;

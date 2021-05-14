@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 多线程计数工具类，可配合线程池等使用
 class BlockingCounter final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlockingCounter);
@@ -34,6 +35,7 @@ class BlockingCounter final {
     if (cnt_val_ == 0) { cond_.notify_all(); }
     return cnt_val_;
   }
+  // 此线程等待至其他线程将cnt_val_消费至 0
   void WaitUntilCntEqualZero() {
     std::unique_lock<std::mutex> lck(mtx_);
     cond_.wait(lck, [this]() { return cnt_val_ == 0; });

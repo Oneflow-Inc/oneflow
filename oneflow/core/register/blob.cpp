@@ -44,6 +44,7 @@ void Blob::Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* h
   MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
 }
 
+// 从rhs拷贝张量数据
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   this->blob_access_checker()->CheckBodyMutable();
@@ -51,6 +52,7 @@ void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
              rhs->mem_case());
 }
 
+// 检查张量数据size，然后从rhs拷贝张量数据
 void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   this->blob_access_checker()->CheckBodyMutable();
@@ -59,6 +61,7 @@ void Blob::CopyValidDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), body_byte_size, mem_case(), rhs->mem_case());
 }
 
+// 从rhs拷贝张量shape信息
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   size_t header_size = blob_desc().ByteSizeOfBlobHeader();
   CHECK_EQ(header_size, rhs->blob_desc().ByteSizeOfBlobHeader());

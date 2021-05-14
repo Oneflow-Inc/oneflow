@@ -36,6 +36,7 @@ int64_t ShapeViewBase<DimT>::Count(int64_t begin_axis) const {
   return this->Count(begin_axis, NumAxes());
 }
 
+// 计算[begin_axis, end_axis)维度范围的元素个数
 template<typename DimT>
 int64_t ShapeViewBase<DimT>::Count(int64_t begin_axis, int64_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= this->NumAxes())

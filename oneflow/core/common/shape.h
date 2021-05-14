@@ -24,6 +24,7 @@ namespace oneflow {
 
 class ShapeView;
 
+// 保存张量的shape信息
 class Shape final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(Shape);
@@ -66,7 +67,9 @@ class Shape final {
  private:
   void UpdateElemCnt();
 
+  // shape数据
   DimVector dim_vec_;
+  // shape对应的张量的元素总数
   int64_t elem_cnt_;
 };
 
@@ -86,6 +89,7 @@ std::ostream& operator<<(std::ostream& out, const Shape& shape);
 
 namespace std {
 
+// 特化Shape的hash函数对象
 template<>
 struct hash<oneflow::Shape> {
   size_t operator()(const oneflow::Shape& shape) const {

@@ -24,6 +24,7 @@ namespace oneflow {
 class ShapeProto;
 class Shape;
 
+// 保存张量的shape信息
 template<typename DimT>
 class ShapeViewBase {
  public:
@@ -50,10 +51,13 @@ class ShapeViewBase {
   DimType* dim_ptr() const { return ptr_; }
 
  private:
+  // shape数据指针
   DimType* ptr_;
+  // shape维度
   int64_t num_axes_;
 };
 
+// 基于ShapeViewBase<int64_t>，增加了构造函数
 class ShapeView final : public ShapeViewBase<const int64_t> {
  public:
   ShapeView() : ShapeViewBase<const int64_t>(nullptr, 0) {}
@@ -66,6 +70,7 @@ class ShapeView final : public ShapeViewBase<const int64_t> {
 
 std::ostream& operator<<(std::ostream& out, const ShapeView& shape);
 
+// 基于ShapeViewBase<int64_t>，可修改shape信息
 class MutShapeView final : public ShapeViewBase<int64_t> {
  public:
   MutShapeView() : ShapeViewBase<int64_t>(nullptr, 0) {}

@@ -46,12 +46,17 @@ class Thread {
  private:
   void ConstructActor(int64_t actor_id, const ThreadCtx& thread_ctx);
 
+  // 保存本线程的多个TaskProto
   HashMap<int64_t, TaskProto> id2task_;
   std::mutex id2task_mtx_;
 
+  // 轮询消息队列的线程
   std::thread actor_thread_;
+  // 消息队列，接收跨线程的ActorMsg
   Channel<ActorMsg> msg_channel_;
+  // 保存本线程的多个Actor，与id2task_中的TaskProto对应
   HashMap<int64_t, std::unique_ptr<Actor>> id2actor_ptr_;
+  // 消息队列，接收本线程内的消息通信
   std::queue<ActorMsg> local_msg_queue_;
 
   int64_t thrd_id_;

@@ -41,6 +41,7 @@ class SharedOrScalar final {
   ScalarT operator*() const { return scalar_value(); }
 
  private:
+  // 位域，显式指定成员的内存大小，压缩空间
   struct ScalarStruct final {
     uint64_t _ : 62, is_scalar_value : 2;
     ScalarT scalar_value;
@@ -80,6 +81,7 @@ SharedOrScalar<StructT, ScalarT>::CastToScalarStruct() const {
 }
 
 template<typename StructT, typename ScalarT>
+// 此处typename用以说明模板内部的标识符（即ScalarStruct）是一个类型，而不是静态变量
 typename SharedOrScalar<StructT, ScalarT>::ScalarStruct*
 SharedOrScalar<StructT, ScalarT>::MutCastToScalarStruct() {
   ScalarStruct* __attribute__((__may_alias__)) ptr = reinterpret_cast<ScalarStruct*>(&shared_ptr_);

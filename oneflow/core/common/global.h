@@ -25,6 +25,8 @@ limitations under the License.
 
 namespace oneflow {
 
+// 单例模式
+// 实现全局单例的工具类
 template<typename T, typename Kind = void>
 class Global final {
  public:
@@ -65,6 +67,7 @@ class Global final {
   }
 
  private:
+  // C++11后线程安全
   static T** GetPPtr() {
     CheckKind();
     static T* ptr = nullptr;
@@ -75,9 +78,11 @@ class Global final {
     static std::mutex mutex;
     static std::map<int32_t, std::unique_ptr<T>> session_id2ptr;
     std::unique_lock<std::mutex> lock(mutex);
+    // std::map使用[]访问，若key不存在则以value的默认值创建
     return &session_id2ptr[session_id];
   }
   static void CheckKind() {
+    // CheckKind()，若本实例Kind不是void则不允许存在Global<T, void>实例，以免误用
     if (!std::is_same<Kind, void>::value) {
       CHECK(Global<T>::Get() == nullptr)
           << typeid(Global<T>).name() << " are disable for avoiding misuse";

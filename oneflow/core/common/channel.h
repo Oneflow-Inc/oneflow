@@ -22,6 +22,7 @@ namespace oneflow {
 
 enum ChannelStatus { kChannelStatusSuccess = 0, kChannelStatusErrorClosed };
 
+// 多线程同步队列
 template<typename T>
 class Channel final {
  public:
@@ -35,12 +36,17 @@ class Channel final {
   void Close();
 
  private:
+  // 保存数据的队列
   std::queue<T> queue_;
+  // 互斥量，通过lock阻塞线程直到获取，限定mutable是因为const函数也需改变mutex_
   mutable std::mutex mutex_;
+  // 是否结束
   bool is_closed_;
+  // 条件变量，通过lock阻塞线程直到被唤醒
   std::condition_variable cond_;
 };
 
+// 把item保存到队列中
 template<typename T>
 ChannelStatus Channel<T>::Send(const T& item) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -50,6 +56,7 @@ ChannelStatus Channel<T>::Send(const T& item) {
   return kChannelStatusSuccess;
 }
 
+// 从队列中取数据赋值给item
 template<typename T>
 ChannelStatus Channel<T>::Receive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -60,6 +67,7 @@ ChannelStatus Channel<T>::Receive(T* item) {
   return kChannelStatusSuccess;
 }
 
+// 从队列中取出所有数据，赋值给items队列
 template<typename T>
 ChannelStatus Channel<T>::ReceiveMany(std::queue<T>* items) {
   std::unique_lock<std::mutex> lock(mutex_);
@@ -72,6 +80,7 @@ ChannelStatus Channel<T>::ReceiveMany(std::queue<T>* items) {
   return kChannelStatusSuccess;
 }
 
+// 关闭队列
 template<typename T>
 void Channel<T>::Close() {
   std::unique_lock<std::mutex> lock(mutex_);

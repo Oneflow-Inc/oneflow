@@ -26,6 +26,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 编译期的Blob描述类
 class BlobDesc final {
  public:
   BlobDesc() = delete;

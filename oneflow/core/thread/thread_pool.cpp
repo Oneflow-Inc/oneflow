@@ -20,6 +20,7 @@ namespace oneflow {
 ThreadPool::ThreadPool(int32_t thread_num)
     : work_chans_(thread_num), threads_(thread_num), work_cnt_(0) {
   FOR_RANGE(int32_t, i, 0, thread_num) {
+    // 创建工作线程，线程内容为从对应的队列中取任务并执行
     Channel<std::function<void()>>* chan = &(work_chans_.at(i));
     threads_[i] = std::thread([chan]() {
       std::function<void()> work;
@@ -35,6 +36,7 @@ ThreadPool::~ThreadPool() {
   }
 }
 
+// 输入待完成任务，按顺序分配给工作线程
 void ThreadPool::AddWork(const std::function<void()>& work) {
   const size_t cur_chan_idx =
       work_cnt_.fetch_add(1, std::memory_order_relaxed) % work_chans_.size();

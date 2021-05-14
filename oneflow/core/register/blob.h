@@ -32,6 +32,7 @@ class BlobAccessChecker {
   virtual void CheckBodyMutable() const = 0;
 };
 
+// 用于保存张量的属性：数据和shape信息是否可修改
 template<bool is_header_mutable, bool is_body_mutable>
 class BlobAccessCheckerIf final : public BlobAccessChecker {
  public:
@@ -46,6 +47,7 @@ class BlobAccessCheckerIf final : public BlobAccessChecker {
   }
 };
 
+// 保存张量相关信息
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
@@ -115,7 +117,9 @@ class Blob final {
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
   const RtBlobDesc* blob_desc_;
+  // 张量数据指针
   void* dptr_;
+  // 张量shape数据指针
   char* header_ptr_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
@@ -123,6 +127,7 @@ class Blob final {
   int32_t record_num_;
 };
 
+// 待删除
 template<typename RecordType>
 class RecordBlob final {
  public:
