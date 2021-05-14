@@ -94,16 +94,6 @@ class TestGather(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
 
-    def test(test_case):
-        input = np.random.randn(3, 4, 3, 5)
-        index = np.random.choice(np.arange(3), size=180, replace=True).reshape(
-            (3, 4, 3, 5)
-        )
-        output = flow.gather(
-            flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1
-        )
-        print(output.numpy().shape)
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -43,12 +43,12 @@ class Embedding(Module):
 
     .. code-block:: python
         
-        import oneflow as flow
-        import numpy as np
+        import oneflow.experimental as flow
 
         indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
         m = flow.nn.Embedding(10, 3)
         y = m(indices)
+
 
     """
 
