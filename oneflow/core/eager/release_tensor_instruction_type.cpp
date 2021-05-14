@@ -25,9 +25,7 @@ namespace oneflow {
 
 namespace vm {
 
-void ReleaseTensorInstructionType::Infer(vm::Instruction* instruction) const {
-  // do nothing
-}
+void ReleaseTensorInstructionType::Infer(vm::Instruction* instruction) const { UNIMPLEMENTED(); }
 
 void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
