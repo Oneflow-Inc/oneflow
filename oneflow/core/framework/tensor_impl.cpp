@@ -85,10 +85,6 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       });
 }
 
-Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
-  return eager_blob_object_->infer_local_dep_object();
-}
-
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return eager_blob_object_->compute_local_dep_object();
 }
@@ -96,22 +92,20 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
-  const std::shared_ptr<const Shape>* result = nullptr;
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([this, &result]() {
-    BlockingCounter bc(1);
-    auto callback = [&bc, &result](const std::shared_ptr<const Shape>& shape) -> void {
-      result = &shape;
-      bc.Decrease();
-    };
-    auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
-      JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
-      return Maybe<void>::Ok();
-    };
-    CHECK_JUST(PhysicalRun(build_instruction));
-    bc.WaitUntilCntEqualZero();
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        this, [&synced](uint64_t) { synced = true; }, "const");
   });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    // spin wait
+    while (!synced) {}
+  });
+
   eager_blob_object_->set_is_shape_synced(true);
-  return *result;
+  return eager_blob_object_->blob_desc().shape_ptr();
 }
 
 }  // namespace one
