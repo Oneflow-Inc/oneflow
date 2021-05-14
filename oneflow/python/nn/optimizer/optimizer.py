@@ -83,6 +83,7 @@ class Optimizer(object):
                         param.grad.fill_(0)
                         # param.grad.zeros_()
         if all_grad_is_none:
+            # TODO: delete this after implementing Tensor.data
             warnings.warn(
                 "\nParameters in optimizer do not have gradient.\n"
                 "Please check `loss.backward()` is called or not,\n"
