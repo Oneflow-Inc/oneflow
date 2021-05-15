@@ -51,11 +51,9 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         dim (Optional[Sequence[int]]): The dim. Defaults to None.
 
     Returns:
-        oneflow.Tensor: The result Tensor.
+        Tensor: The result Tensor.
 
     For example:
-
-    Example:
 
     .. code-block:: python
 

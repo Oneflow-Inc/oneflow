@@ -121,19 +121,13 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
-  Maybe<void> AccessBlobByCallback(const std::shared_ptr<one::MirroredTensor>& tensor,
-                                   const std::function<void(uint64_t)>& callback,
+  template<typename T>
+  Maybe<void> AccessBlobByCallback(const T tensor, const std::function<void(uint64_t)>& callback,
                                    const std::string& modifier);
 
-  Maybe<void> ReadTensorShapeByCallback(
-      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-      const std::function<void(const std::shared_ptr<const Shape>&)>& callback);
-
-  Maybe<void> InferRankFrontSeqCallback(const std::function<void()>& callback);
   Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
 
   Maybe<void> ComputeGlobalFrontSeqBarrier();
-  Maybe<void> InferGlobalFrontSeqBarrier();
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
