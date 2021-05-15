@@ -498,20 +498,23 @@ class Module(object):
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
                 with flow.no_grad():
-                    param_applied = fn(param)
+                    # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                    param_applied = Tensor(fn(param))
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
 
                 if param.grad is not None:
                     assert param.grad.is_leaf
                     with flow.no_grad():
-                        grad_applied = fn(param.grad)
+                        # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                        grad_applied = Tensor(fn(param.grad))
                     self._parameters[key].grad = grad_applied.requires_grad_(
                         param.grad.requires_grad
                     )
 
         for key, buf in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                self._buffers[key] = Tensor(fn(buf))
 
         return self
 

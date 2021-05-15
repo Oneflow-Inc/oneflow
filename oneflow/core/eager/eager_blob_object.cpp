@@ -39,7 +39,6 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       tensor_buffer_(tensor_buffer),
       blob_body_bytes_(0),
       is_shape_synced_(true),
-      infer_local_dep_object_(GetVmLocalDepObject(parallel_desc)),
       compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
