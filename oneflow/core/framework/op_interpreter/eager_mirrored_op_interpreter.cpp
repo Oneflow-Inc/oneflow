@@ -52,6 +52,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
+  bool need_check_mem_case = true;
   bool need_event_record = false;
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
@@ -64,6 +65,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       out_devices->at(i) = default_device;
     }
   } else {
+    need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
     for (const auto& input_tensor : inputs) {
       need_event_record = need_event_record || !(*op_device == *input_tensor->device());
@@ -81,6 +83,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
@@ -141,7 +144,7 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   std::vector<std::shared_ptr<const Device>> out_devices(outputs->size());
-  NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices);
+  JUST(NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices));
   for (int i = 0; i < outputs->size(); ++i) {
     outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         output_eager_blob_objects->at(i), out_devices.at(i)));

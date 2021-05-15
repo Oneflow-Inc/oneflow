@@ -40,6 +40,11 @@ Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
   return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
+Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("ones_like")); }
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name) {
+  return one::OpBuilder("ones_like", name).Input("like").Output("out").Build();
+}
+
 #define DEFINE_FLOATING_CONSTATNT_OP(cpp_type, data_type)                        \
   template<>                                                                     \
   Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \

@@ -37,6 +37,9 @@ Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype);
 Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype, const std::string& name);
 
+Maybe<one::UserOpExpr> OnesLikeOp();
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+
 template<typename T>
 Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value);
 template<typename T>
