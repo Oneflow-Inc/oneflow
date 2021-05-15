@@ -49,7 +49,7 @@ def unsqueeze_op(input, dim):
     applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
 
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
         dim (int): the index at which to insert the singleton dimension
 
     For example: 
