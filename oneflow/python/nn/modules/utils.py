@@ -53,3 +53,24 @@ def _list_with_default(out_size, defaults):
     return [
         v if v is not None else d for v, d in zip(out_size, defaults[-len(out_size) :])
     ]
+
+
+def _check_axis(axis, shape):
+    ndim = len(shape)
+    if axis is None:
+        axis = list(range(len(shape)))
+    if isinstance(axis, int):
+        axis = [axis]
+
+    assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
+    axis = list(axis)
+    for i in range(len(axis)):
+        assert (
+            -ndim <= axis[i] <= ndim - 1
+        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
+            -ndim, ndim - 1, axis[i]
+        )
+        if axis[i] < 0:
+            axis[i] = axis[i] + ndim
+
+    return axis
