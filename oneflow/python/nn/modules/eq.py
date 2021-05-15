@@ -53,11 +53,12 @@ def eq_op(input, other):
     The second argument can be a number or a tensor whose shape is broadcastable with the first argument.
 
     Args:
-    input (Tensor): the tensor to compare
-    other (Tensor): the tensor to compare
+        input (oneflow.Tensor): the tensor to compare
+        other (oneflow.Tensor): the tensor to compare
 
     Returns:
-    A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
+        
+        - A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
 
     For example:
 
