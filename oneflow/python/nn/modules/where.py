@@ -90,8 +90,11 @@ def where_op(condition, x, y):
     it will take the `x` element, else it will take the `y` element
 
     .. note::
+
     The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
+
     it will take the `x` element, else it will take the `y` element.
+
     Args:
         condition (IntTensor): When 1 (nonzero), yield x, otherwise yield y
         x (Tensor or Scalar): value (if :attr:x is a scalar) or values selected at indices
@@ -100,8 +103,11 @@ def where_op(condition, x, y):
                             where :attr:`condition` is False
     Returns:
         Tensor: A tensor of shape equal to the broadcasted shape of :attr:`condition`, :attr:`x`, :attr:`y`
+    
     For example:
+
     .. code-block:: python
+
         import flow.experimental as flow
 
         x = flow.Tensor(
@@ -115,5 +121,6 @@ def where_op(condition, x, y):
         # [[1.     0.3139]
         # [0.3898 1.    ]
         # [0.0478 1.    ]]
+    
     """
     return Where()(condition, x, y)
