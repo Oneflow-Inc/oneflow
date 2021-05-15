@@ -18,8 +18,12 @@ import unittest
 import numpy as np
 import oneflow.experimental as flow
 
-# TODO: skip this test, for layernorm doesn't have cpu implementation
-@unittest.skipIf(True, "CPU layernorm is not supported.")
+# # TODO: skip this test, for layernorm doesn't have cpu implementation
+# @unittest.skipIf(True, "CPU layernorm is not supported.")
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layernorm(test_case):
         input_arr = np.array(

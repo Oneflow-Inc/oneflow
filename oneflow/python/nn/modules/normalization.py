@@ -31,13 +31,13 @@ class LayerNorm(Module):
     
     .. math::
         y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
+    
     The mean and standard-deviation are calculated separately over the last
     certain number dimensions which have to be of the shape specified by
     :attr:`normalized_shape`.
     :math:`\gamma` and :math:`\beta` are learnable affine transform parameters of
     :attr:`normalized_shape` if :attr:`elementwise_affine` is ``True``.
-    The standard-deviation is calculated via the biased estimator, equivalent to
-    `torch.var(input, unbiased=False)`.
+    The standard-deviation is calculated via the biased estimator.
     
     .. note::
         Unlike Batch Normalization and Instance Normalization, which applies
@@ -157,8 +157,46 @@ class LayerNorm(Module):
             self.normalized_shape
         ), "Input tensor dim must greater than normalized dim!"
         self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
-        res = self._op(x, begin_norm_axis=self.begin_norm_axis)[0]
-        return res
+
+        if x.device == flow.device("cpu"):
+            reduce_axis = []
+            for dim in range(len(x.shape)):
+                if dim >= self.begin_norm_axis:
+                    reduce_axis.append(dim)
+            mean = flow.experimental.reduce_mean(x, axis=reduce_axis, keepdims=True)
+            variance = flow.experimental.reduce_variance(
+                x, axis=reduce_axis, keepdims=True
+            )
+            normalized = flow.experimental.batch_normalization(
+                x=x,
+                mean=mean,
+                variance=variance,
+                weight=self.weight,
+                bias=self.bias,
+                axis=self.begin_norm_axis,
+                epsilon=self.epsilon,
+            )
+
+            affined = normalized
+            if self.elementwise_affine:
+                param_shape = x.shape[self.begin_params_axis :]
+                nd_params_shape = [1] * (len(x.shape) - len(param_shape)) + list(
+                    param_shape
+                )
+                affined = affined * self.weight
+                affined = affined + self.bias
+            return affined
+        else:
+            if self.elementwise_affine:
+                res = self._op(
+                    x,
+                    gamma=self.weight,
+                    beta=self.bias,
+                    begin_norm_axis=self.begin_norm_axis,
+                )[0]
+            else:
+                res = self._op(x, begin_norm_axis=self.begin_norm_axis)[0]
+            return res
 
     def extra_repr(self) -> str:
         return (

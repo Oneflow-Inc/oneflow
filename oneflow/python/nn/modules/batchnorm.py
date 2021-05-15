@@ -20,6 +20,78 @@ from oneflow.python.nn.module import Module
 import oneflow._oneflow_internal as oneflow_api
 
 
+class BatchNormalization(Module):
+    def __init__(
+        self, axis: int = -1, epsilon: float = 1e-5,
+    ):
+        super(BatchNormalization, self).__init__()
+        self.axis = axis
+        self.epsilon = epsilon
+        self._op = (
+            flow.builtin_op("normalization")
+            .Input("x")
+            .Input("moving_mean")
+            .Input("moving_variance")
+            .Input("gamma")
+            .Input("beta")
+            .Output("y")
+            .Attr("axis", axis)
+            .Attr("epsilon", epsilon)
+            .Attr("momentum", 0.0)  # momentum is not used here
+            .Attr("training", False)
+            .Build()
+        )
+
+    def forward(self, x, mean, variance, weight=None, bias=None):
+        assert self.axis >= -len(x.shape) and self.axis < len(x.shape)
+        if self.axis < 0:
+            self.axis += len(x.shape)
+
+        params_shape = [x.shape[self.axis]]
+        if x.device == flow.device("cpu"):
+            if len(mean.shape) == 1:
+                nd_params_shape = [1] * len(x.shape)
+                nd_params_shape[self.axis] = params_shape[0]
+                mean = mean.reshape(shape=nd_params_shape)
+                variance = variance.reshape(shape=nd_params_shape)
+
+                if weight and params_shape[0] == weight.nelemenet():
+                    weight = weight.reshape(shape=nd_params_shape)
+                if bias and params_shape[0] == bias.nelemenet():
+                    bias = bias.reshape(shape=nd_params_shape)
+            elif len(mean.shape) == len(x.shape):
+                pass
+            else:
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
+
+            variance += self.epsilon
+            normalized = (x - mean) * variance.rsqrt()
+            affined = normalized
+
+            if weight:
+                affined = affined * weight
+            if bias:
+                affined = affined + bias
+            return affined
+        else:
+            if weight is None:
+                weight = flow.experimental.ones(size=params_shape, dtype=params_dtype)
+            if bias is None:
+                bias = flow.experimental.zeros(size=params_shape, dtype=params_dtype)
+            res = self._op(x, mean, variance, weight, bias)[0]
+            return res
+
+
+@oneflow_export("batch_normalization")
+@experimental_api
+def batch_normalization_op(
+    x, mean, variance, weight=None, bias=None, axis=1, epsilon=1e-5
+):
+    return BatchNormalization(axis, epsilon)(x, mean, variance, weight, bias)
+
+
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm"""
 
@@ -38,18 +110,18 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features).normal_(mean=0.0, std=1.0))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features).normal_(mean=0.0, std=1.0))
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
+            )
+            self.bias = flow.nn.Parameter(
+                flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
+            )
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer(
-                "running_mean", flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
-            )
-            self.register_buffer(
-                "running_var", flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
-            )
+            self.register_buffer("running_mean", flow.Tensor(num_features).fill_(0.0))
+            self.register_buffer("running_var", flow.Tensor(num_features).fill_(1.0))
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
@@ -136,36 +208,59 @@ class _BatchNorm(_NormBase):
         self._check_input_dim(x)
 
         if x.device == flow.device("cpu"):
-            gamma = self.weight
-            beta = self.bias
-            mean = self.running_mean
-            variance = self.running_var
-
-            params_shape = [x.shape[1]]
-            if len(self.running_mean.shape) == 1:
-                nd_params_shape = [1] * len(x.shape)
-                nd_params_shape[1] = params_shape[0]
-                mean = self.running_mean.reshape(shape=nd_params_shape)
-                variance = self.running_var.reshape(shape=nd_params_shape)
-                gamma = self.weight.reshape(shape=nd_params_shape)
-                beta = self.bias.reshape(shape=nd_params_shape)
-
-            elif len(self.running_mean.shape) == len(x.shape):
-                pass
-            else:
-                raise ValueError(
-                    "shape of mean and variance should be 1D or has number of axes and x's"
+            if self.training:
+                reduce_axis = []
+                for dim in range(len(x.shape)):
+                    if dim != 1:
+                        reduce_axis.append(dim)
+                mean = flow.experimental.reduce_mean(
+                    x, axis=reduce_axis, keepdims=False
+                )
+                variance = flow.experimental.reduce_variance(
+                    x, axis=reduce_axis, keepdims=False
                 )
 
-            variance = variance + self.eps
-            std_inv = variance.rsqrt()
-            normalized = (x - mean) * std_inv
-            affined = normalized
+                running_mean = (
+                    self.momentum * self.running_mean + (1 - self.momentum) * mean
+                )
+                running_var = (
+                    self.momentum * self.running_var + (1 - self.momentum) * variance
+                )
 
-            if self.affine:
-                affined = affined * gamma
-                affined = affined + beta
-            return affined
+                if self.track_running_stats:
+                    self.__dict__.get("_buffers")["running_mean"] = running_mean
+                    self.__dict__.get("_buffers")["running_var"] = running_var
+                else:
+                    del self.__dict__["running_mean"]
+                    del self.__dict__["running_var"]
+                    self.register_parameter("running_mean", running_mean)
+                    self.register_parameter("running_var", running_var)
+
+                # TODO: update running_mean and running_var should use below codes(rather than upper), but raise exception:
+                # TypeError: cannot assign '<class 'oneflow._oneflow_internal.LocalTensor'>' as buffer 'running_mean' (Tensor or None expected)
+                # self.__setattr__("running_mean", running_mean)
+                # self.__setattr__("running_var", running_var)
+
+                return flow.experimental.batch_normalization(
+                    x=x,
+                    mean=mean,
+                    variance=variance,
+                    weight=self.weight,
+                    bias=self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                )
+
+            else:
+                return flow.experimental.batch_normalization(
+                    x=x,
+                    mean=self.running_mean,
+                    variance=self.running_var,
+                    weight=self.weight,
+                    bias=self.bias,
+                    axis=1,
+                    epsilon=self.eps,
+                )
 
         else:
             if self.training:
