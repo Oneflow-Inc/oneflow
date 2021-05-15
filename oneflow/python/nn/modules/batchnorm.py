@@ -236,7 +236,7 @@ class _BatchNorm(_NormBase):
                     self.register_parameter("running_mean", running_mean)
                     self.register_parameter("running_var", running_var)
 
-                # TODO: update running_mean and running_var should use below codes(rather than upper), but raise exception:
+                # TODO: (zhaoluyang)update running_mean and running_var should use below codes(rather than upper), but raise exception:
                 # TypeError: cannot assign '<class 'oneflow._oneflow_internal.LocalTensor'>' as buffer 'running_mean' (Tensor or None expected)
                 # self.__setattr__("running_mean", running_mean)
                 # self.__setattr__("running_var", running_var)

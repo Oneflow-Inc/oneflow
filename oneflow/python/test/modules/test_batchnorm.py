@@ -19,76 +19,74 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-# # TODO: skip this test, for batchnorm doesn't have cpu implementation
-# @unittest.skipIf(True, "CPU batchnorm is not supported.")
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestBatchNormModule(flow.unittest.TestCase):
-    # def test_batchnorm1d_2D_input(test_case):
-    #     input_arr = np.array(
-    #         [
-    #             [0.1438, 1.1229, -0.0480, -1.6834, -0.8262],
-    #             [0.5836, 0.1350, -0.8860, -1.7878, 1.0592],
-    #             [0.7252, -1.1488, -0.0274, 1.4051, 0.1018],
-    #             [-0.3595, -0.1801, 0.1146, -1.5712, -1.9291],
-    #         ],
-    #         dtype=np.float32,
-    #     )
+    def test_batchnorm1d_2D_input(test_case):
+        input_arr = np.array(
+            [
+                [0.1438, 1.1229, -0.0480, -1.6834, -0.8262],
+                [0.5836, 0.1350, -0.8860, -1.7878, 1.0592],
+                [0.7252, -1.1488, -0.0274, 1.4051, 0.1018],
+                [-0.3595, -0.1801, 0.1146, -1.5712, -1.9291],
+            ],
+            dtype=np.float32,
+        )
 
-    #     output_arr = np.array(
-    #         [
-    #             [-0.3056, 1.4066, 0.4151, -0.5783, -0.3864],
-    #             [0.7326, 0.1884, -1.7100, -0.6563, 1.3170],
-    #             [1.0668, -1.3949, 0.4674, 1.7292, 0.4521],
-    #             [-1.4938, -0.2002, 0.8275, -0.4945, -1.3827],
-    #         ],
-    #         dtype=np.float32,
-    #     )
+        output_arr = np.array(
+            [
+                [-0.3056, 1.4066, 0.4151, -0.5783, -0.3864],
+                [0.7326, 0.1884, -1.7100, -0.6563, 1.3170],
+                [1.0668, -1.3949, 0.4674, 1.7292, 0.4521],
+                [-1.4938, -0.2002, 0.8275, -0.4945, -1.3827],
+            ],
+            dtype=np.float32,
+        )
 
-    #     m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1)
-    #     x = flow.Tensor(input_arr)
-    #     y = m(x)
-    #     test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
+        m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1)
+        x = flow.Tensor(input_arr)
+        y = m(x)
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
 
-    # def test_batchnorm1d_3D_input(test_case):
-    #     input_arr = np.array(
-    #         [
-    #             [
-    #                 [-0.1091, 2.0041, 0.8850, -0.0412],
-    #                 [-1.2055, 0.7442, 2.3300, 1.2411],
-    #                 [-1.2466, 0.3667, 1.2267, 0.3043],
-    #             ],
-    #             [
-    #                 [-0.2484, -1.1407, 0.3352, 0.6687],
-    #                 [-0.2975, -0.0227, -0.2302, -0.3762],
-    #                 [-0.7759, -0.6789, 1.1444, 1.8077],
-    #             ],
-    #         ],
-    #         dtype=np.float32,
-    #     )
+    def test_batchnorm1d_3D_input(test_case):
+        input_arr = np.array(
+            [
+                [
+                    [-0.1091, 2.0041, 0.8850, -0.0412],
+                    [-1.2055, 0.7442, 2.3300, 1.2411],
+                    [-1.2466, 0.3667, 1.2267, 0.3043],
+                ],
+                [
+                    [-0.2484, -1.1407, 0.3352, 0.6687],
+                    [-0.2975, -0.0227, -0.2302, -0.3762],
+                    [-0.7759, -0.6789, 1.1444, 1.8077],
+                ],
+            ],
+            dtype=np.float32,
+        )
 
-    #     output_arr = np.array(
-    #         [
-    #             [
-    #                 [-0.4640, 1.9673, 0.6798, -0.3859],
-    #                 [-1.4207, 0.4529, 1.9767, 0.9303],
-    #                 [-1.4831, 0.0960, 0.9379, 0.0350],
-    #             ],
-    #             [
-    #                 [-0.6243, -1.6510, 0.0471, 0.4309],
-    #                 [-0.5481, -0.2840, -0.4834, -0.6237],
-    #                 [-1.0224, -0.9274, 0.8573, 1.5066],
-    #             ],
-    #         ],
-    #         dtype=np.float32,
-    #     )
+        output_arr = np.array(
+            [
+                [
+                    [-0.4640, 1.9673, 0.6798, -0.3859],
+                    [-1.4207, 0.4529, 1.9767, 0.9303],
+                    [-1.4831, 0.0960, 0.9379, 0.0350],
+                ],
+                [
+                    [-0.6243, -1.6510, 0.0471, 0.4309],
+                    [-0.5481, -0.2840, -0.4834, -0.6237],
+                    [-1.0224, -0.9274, 0.8573, 1.5066],
+                ],
+            ],
+            dtype=np.float32,
+        )
 
-    #     m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1)
-    #     x = flow.Tensor(input_arr)
-    #     y = m(x)
-    #     test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
+        m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1)
+        x = flow.Tensor(input_arr)
+        y = m(x)
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
 
     def test_batchnorm2d(test_case):
         input_arr = np.array(
