@@ -48,14 +48,15 @@ class LayerNorm(Module):
     evaluation modes.
     
     Args:
-        normalized_shape (int or list or flow.Size): input shape from an expected input
-            of size
+        normalized_shape (int or list or oneflow.Size): input shape from an expected input of size
 
             .. math::
-                [* \times \text{normalized\_shape}[0] \times \text{normalized\_shape}[1]
-                    \times \ldots \times \text{normalized\_shape}[-1]]
+                [* \times \text{normalized_shape}[0] \times \text{normalized_shape}[1] \times \ldots \times \text{normalized_shape}[-1]] 
+            
             If a single integer is used, it is treated as a singleton list, and this module will
+            
             normalize over the last dimension which is expected to be of that specific size.
+        
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         elementwise_affine: a boolean value that when set to ``True``, this module
             has learnable per-element affine parameters initialized to ones (for weights)
