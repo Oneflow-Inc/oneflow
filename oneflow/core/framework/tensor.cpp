@@ -32,7 +32,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
     impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
   } else {
     const auto eager_blob_object =
-        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape));
+        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape, device));
     impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
                                                      is_leaf);
   }
