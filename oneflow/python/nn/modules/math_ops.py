@@ -73,6 +73,7 @@ class Sum(Module):
 @experimental_api
 def _sum(input, dim=None, keepdims=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    
     For example:
 
     .. code-block:: python
@@ -155,9 +156,12 @@ class BroadcastMul(Module):
 @experimental_api
 def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
+    
     The formula is:
+
     .. math::
         out = x \times y
+    
     For example:
 
     .. code-block:: python
@@ -336,8 +340,10 @@ class ScalarAdd(Module):
 def _sub(x, y):
     r"""Computes the subtraction of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
+
     .. math::
         out = x - y
+    
     For example:
 
     .. code-block:: python
@@ -409,12 +415,16 @@ class ScalarDivByTensor(Module):
 def _div(x, y):
     r"""Computes the division of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
+
     .. math::
         out = \frac{X}{Y}
+    
     Args:
         x (Union[int, float, flow.Tensor]): X.
         y (Union[int, float, flow.Tensor]): Y.
+    
     For example:
+
     .. code-block:: python
 
         import oneflow.experimental as flow
@@ -527,6 +537,7 @@ class BroadcastAdd(Module):
 def _add(x, y):
     r"""Computes the addition of x by y for each element, scalar and broadcast promotation are supported.
     The formula is:
+
     .. math::
         out = x + y
     For example:
@@ -584,12 +595,15 @@ class Sin(Module):
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
+
     .. math::
         \text{out}_{i} = \sin(\text{input}_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
         arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
@@ -615,12 +629,16 @@ class Cos(Module):
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
+    
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
+
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
         arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
@@ -647,12 +665,16 @@ class Log(Module):
 def log_op(tensor):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
+    
     .. math::
         y_{i} = \log_{e} (x_{i})
     Args:
-        input (Tensor) – the input tensor.
+        input (Tensor): the input tensor.
+    
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
         arr = np.random.randn(2, 3, 4, 5)
@@ -741,7 +763,7 @@ def sqrt_op(input):
             \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -777,7 +799,7 @@ def square_op(input):
             \text{out}_{i} = \sqrt{\text{input}_{i}}
 
         Args:
-            input (Tensor) – the input tensor.
+            input (Tensor): the input tensor.
 
          For example:
 
@@ -841,10 +863,10 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     via the biased estimator. Otherwise, Bessel's correction will be used.
 
     Args:
-        input (Tensor) – the input tensor.
-        dim (int or tuple of python:ints) – the dimension or dimensions to reduce.
-        unbiased (bool) – whether to use the unbiased estimation or not
-        keepdim (bool) – whether the output tensor has `dim` retained or not.
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce.
+        unbiased (bool): whether to use the unbiased estimation or not
+        keepdim (bool): whether the output tensor has `dim` retained or not.
 
     For example:
 
