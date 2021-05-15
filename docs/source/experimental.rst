@@ -108,4 +108,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.gather
 .. autofunction:: oneflow.experimental.Tensor.gather
 .. autofunction:: oneflow.experimental.nn.Embedding
-
+.. autofunction:: oneflow.experimental.Tensor.permute
