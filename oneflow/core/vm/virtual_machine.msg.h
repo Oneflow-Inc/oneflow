@@ -69,7 +69,6 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_link,
                               vm_stat_running_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_infer_instr_link, front_seq_infer_instr_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_link, front_seq_compute_instr_list);
 
   // methods

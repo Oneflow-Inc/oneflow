@@ -69,8 +69,6 @@ class EagerBlobObject final : public BlobObject {
     return Maybe<void>::Ok();
   }
 
-  Maybe<VmLocalDepObject> infer_local_dep_object() const { return infer_local_dep_object_; }
-
   Maybe<VmLocalDepObject> compute_local_dep_object() const { return compute_local_dep_object_; }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
@@ -86,7 +84,6 @@ class EagerBlobObject final : public BlobObject {
   std::size_t blob_body_bytes_;
   std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
-  Maybe<VmLocalDepObject> infer_local_dep_object_;
   Maybe<VmLocalDepObject> compute_local_dep_object_;
 };
 

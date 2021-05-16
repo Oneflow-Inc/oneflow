@@ -46,19 +46,22 @@ def compare_with_numpy_rmsprop(
         param_list = list()
         param_list.append(x)
         rmsprop = flow.optim.RMSprop(
-            [{"param": param_list}],
-            lr=learning_rate,
-            momentum=momentum,
-            scale=scale,
-            alpha=alpha,
-            eps=eps,
-            weight_decay=weight_decay,
-            centered=centered,
+            [
+                {
+                    "params": param_list,
+                    "lr": learning_rate,
+                    "alpha": alpha,
+                    "eps": eps,
+                    "weight_decay": weight_decay,
+                    "momentum": momentum,
+                    "centered": centered,
+                    "scale": scale,
+                }
+            ]
         )
 
         def train_one_iter(grad):
             grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = x * grad_tensor
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             rmsprop.step()
