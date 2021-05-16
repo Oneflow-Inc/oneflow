@@ -40,6 +40,16 @@ from typing import Optional, List, Tuple, Sequence, Union
 import traceback
 
 
+def mirrored_gen_random_seed(seed=None):
+    if seed is None:
+        seed = -1
+        has_seed = False
+    else:
+        has_seed = True
+
+    return seed, has_seed
+
+
 @oneflow_export("nn.OfrecordReader")
 @experimental_api
 class OfrecordReader(Module):
@@ -57,8 +67,7 @@ class OfrecordReader(Module):
         name: Optional[str] = None,
     ):
         super().__init__()
-        # seed, has_seed = flow.random.gen_seed(random_seed)
-        seed, has_seed = 1, True
+        seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("OFRecordReader", name)
             .Output("out")
@@ -120,8 +129,7 @@ class CoinFlip(Module):
         probability: float = 0.5,
     ):
         super().__init__()
-        # seed, has_seed = flow.random.gen_seed(random_seed)
-        seed, has_seed = 1, True
+        seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("coin_flip")
             .Output("out")
@@ -188,8 +196,7 @@ class OFRecordImageDecoderRandomCrop(Module):
         random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     ):
         super().__init__()
-        # seed, has_seed = flow.random.gen_seed(random_seed)
-        seed, has_seed = 1, False
+        seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("ofrecord_image_decoder_random_crop")
             .Input("in")
