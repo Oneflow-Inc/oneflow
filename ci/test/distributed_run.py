@@ -232,7 +232,6 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
     def block(self):
         from multiprocessing import Process, Queue
 
-        queue = Queue()
         p = None
         kwargs = {
             "agent_port": self.agent_port,
