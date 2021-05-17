@@ -170,7 +170,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         self.conn = self.listener.accept()
         # do_launch_workers
         for remote_host in self.remote_hosts:
-            handle_cast(conn=self.conn, cmd="host")
+            assert handle_cast(conn=self.conn, cmd="host"), remote_host
             self.env_proto_txt = handle_cast(conn=self.conn, cmd="env_proto")
             print("[docker agent]", f"[{remote_host}]", self.env_proto_txt)
             f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
