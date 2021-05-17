@@ -95,14 +95,14 @@ def launch_remote_container(
 ):
     print("launching remote container at", hostname)
     assert img_tag
-    install_args = None
+    pythonpath_args = None
     if oneflow_wheel_path:
-        install_args = ""
+        pythonpath_args = ""
     elif oneflow_build_path:
-        install_args = "--env PYTHONPATH={workspace_dir}/python_scripts"
+        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/python_scripts"
     else:
         raise ValueError("must have oneflow_wheel_path or oneflow_build_path")
-    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {install_args} {img_tag} sleep {survival_time}
+    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     subprocess.check_call(ssh_cmd, shell=True)
@@ -110,6 +110,10 @@ def launch_remote_container(
         whl_basename = os.path.basename(oneflow_wheel_path)
         run_docker_cmd = f"ssh {hostname} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
         subprocess.check_call(run_docker_cmd, shell=True)
+    subprocess.check_call(
+        f"ssh {hostname} docker exec {container_name} python3 -m oneflow --doctor",
+        shell=True,
+    )
 
 
 def handle_cast(conn=None, cmd=None):
@@ -394,10 +398,10 @@ if __name__ == "__main__":
     def exit_handler():
         print("removing local docker container:", container_name)
         rm_cmd = f"docker rm -f {container_name}"
-        subprocess.check_call(f"{rm_cmd}", shell=True)
+        subprocess.call(f"{rm_cmd}", shell=True)
         for remote_host in remote_hosts:
             print(f"removing local docker container at {remote_host}:", container_name)
-            subprocess.check_call(
+            subprocess.call(
                 f"ssh {remote_host} {rm_cmd}", shell=True,
             )
 
