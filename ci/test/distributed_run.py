@@ -189,6 +189,8 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             handle_call(conn=self.conn, cmd="start_worker", response="ok")
 
     def block(self):
+        while self.bash_proc.poll() is None:
+            self.launch_workers()
         print("blocking")
         assert self.bash_proc.wait() == 0
         print("bash exe done")
@@ -351,7 +353,6 @@ if __name__ == "__main__":
             oneflow_wheel_path=args.oneflow_wheel_path,
             oneflow_build_path=args.oneflow_build_path,
         )
-        agent.launch_workers()
         agent.block()
         # TODO: remove container when exit
     # copy artifacts
