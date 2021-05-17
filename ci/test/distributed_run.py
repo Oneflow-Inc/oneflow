@@ -241,12 +241,11 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         p = Process(target=launch_workers, kwargs=kwargs,)
         p.start()
         print("[docker agent]", "blocking")
-        while self.bash_proc.poll() is not None:
-            if p.is_alive() == False:
-                break
-        returncode = self.bash_proc.wait()
+        # TODO: it is too easy to deadlock here, refactor with async await
+        while self.bash_proc.poll() is None and p.is_alive() == True:
+            pass
         p.terminate()
-        assert returncode == 0
+        assert self.bash_proc.returncode == 0
         print("[docker agent]", "bash execution done")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
