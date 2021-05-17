@@ -42,7 +42,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.Tensor(x)
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        y = flow.sliceUpdate(input, update, slice_tup_list=[[1, 4, 1]])
+        y = flow.SliceUpdate(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 

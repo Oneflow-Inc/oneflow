@@ -348,6 +348,11 @@ class Tensor:
         return starts, stops, steps, shape
 
     @_auto_determine
+    def __getitem__(self, key):
+        start, stop, step, _ = self._get_slice_obj(key)
+        return flow.experimental.Slice(self, list(zip(start, stop, step)))
+
+    @_auto_determine
     def __setitem__(self, key, value):
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
@@ -355,48 +360,7 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        # return SliceUpdate(start, stop, step)(self, value)
-        @global_function_or_identity()
-        def job():
-            with self._placement_scope():
-                self._op = (
-                    flow.builtin_op("slice_update")
-                    .Input("x")
-                    .Input("update")
-                    .Output("y")
-                    .Attr("start", start)
-                    .Attr("stop", stop)
-                    .Attr("step", step)
-                    .Build()
-                )
-                op(self, value)
-
-        job()
-        return self
-
-    @_auto_determine
-    def __getitem__(self, key):
-        start, stop, step, _ = self._get_slice_obj(key)
-        result = None
-
-        # result = Slice(start, stop, step)(self)
-        @global_function_or_identity()
-        def job():
-            with self._placement_scope():
-                op = (
-                    flow.builtin_op("slice")
-                    .Input("x")
-                    .Output("y")
-                    .Attr("start", start)
-                    .Attr("stop", stop)
-                    .Attr("step", step)
-                    .Build()
-                )
-                nonlocal result
-                result = op(self)[0]
-
-        job()
-        return result
+        return flow.experimental.sliceUpdate(self, value, list(zip(start, stop, step)))
 
     def __str__(self):
         return self.__repr__()

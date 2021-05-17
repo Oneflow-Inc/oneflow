@@ -105,6 +105,12 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         import oneflow as flow 
         import oneflow.typing as tp 
+
+        input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
+        tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
+        y = flow.nn.Slice(input, slice_tup_list=tup_list)
+
+        # y.shape >> flow.Size([3, 3, 2]
     """
     start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
     return Slice(start, stop, step)(x)
@@ -128,7 +134,7 @@ class SliceUpdate(Module):
         return self._op(x, update)[0]
 
 
-@oneflow_export("sliceUpdate")
+@oneflow_export("SliceUpdate")
 @experimental_api
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
@@ -143,7 +149,13 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     .. code-block:: python 
 
         import oneflow as flow 
-        import oneflow.typing as tp 
+        import oneflow.typing as tp
+
+        input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
+        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        y = flow.nn.SliceUpdate(input, update, slice_tup_list=[[1, 4, 1]])
+
+        # [1. 2. 3. 4. 1.] 
     """
     start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
