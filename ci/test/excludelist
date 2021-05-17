@@ -156,7 +156,6 @@ libSM.so.6
 libusb-1.0.so.0
 libuuid.so.1
 # libwind.so.0 # Missing on openSUSE LEAP 42.0
-libz.so.1
 
 # Potentially dangerous libraries
 libgobject-2.0.so.0
