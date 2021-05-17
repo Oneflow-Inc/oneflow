@@ -89,14 +89,27 @@ class TestGather(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
 
         np_out3 = gather_numpy(input, index, dim=3)
-        x = flow.Tensor(input, requires_grad=True)
-        output3 = flow.gather(x, flow.Tensor(index, dtype=flow.int), dim=3)
+        output3 = flow.gather(
+            flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=3
+        )
         test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
 
-        o4 = flow.sum(output3)
-        o4.backward()
-        print(x)
-        print(x.grad.numpy())
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestGatherBackward(flow.unittest.TestCase):
+    def test_gather_backward(test_case):
+        input = np.array([[1, 2], [3, 4]])
+        index = np.array([[0, 0], [1, 0]])
+        np_out = gather_numpy(input, index, dim=0)
+        of_input = flow.Tensor(input, requires_grad=True)
+        output = flow.gather(of_input, flow.Tensor(index, dtype=flow.int), dim=0)
+        out_sum = output.sum()
+        out_sum.backward()
+        print(of_input.grad.numpy())
+        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
 if __name__ == "__main__":
