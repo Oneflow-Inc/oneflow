@@ -230,7 +230,13 @@ class TestCase(unittest.TestCase):
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                     print("initializing worker...")
                     # maybe we could move this inside env.init ?
-                    raise ValueError("launch_worker_via_agent")
+                    for machine in env_util.default_env_proto.machine:
+                        if machine.id == 0:
+                            pass
+                        else:
+                            launch_worker_via_agent(
+                                host=machine.addr, env_proto=env_util.default_env_proto
+                            )
                 else:
                     ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
                     config_rank_ctrl_port = -1
