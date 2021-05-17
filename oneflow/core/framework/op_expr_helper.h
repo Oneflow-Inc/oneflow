@@ -177,6 +177,7 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth);
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
                                                          const std::string& name);
+Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow

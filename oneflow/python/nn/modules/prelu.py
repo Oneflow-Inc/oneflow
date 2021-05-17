@@ -29,7 +29,6 @@ class PReLU(Module):
         super().__init__()
         self.num_parameters = num_parameters
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
-        print(self.weight)
         self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
