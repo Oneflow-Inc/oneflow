@@ -212,7 +212,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         if self.oneflow_wheel_path:
             exports += f"python3 -m pip install {self.oneflow_wheel_path}"
         if self.oneflow_build_path:
-            exports += f"export ONEFLOW_BUILD_DIR={self.oneflow_build_path}\n"
+            exports += f"export PYTHONPATH={self.oneflow_build_path}/python_scripts:$PYTHONPATH\n"
         bash_cmd = f"""set -ex
     {exports}
     bash {bash_script}
