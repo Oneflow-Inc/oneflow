@@ -87,7 +87,6 @@ def _init_eager_local_tensor_by_initializer_conf(
         ),
     )
 
-
 @oneflow_export("tensor")
 def construct_tensor(
     data,
@@ -100,6 +99,8 @@ def construct_tensor(
     is_lazy=False,
 ):
     if _is_scalar(data) or _input_args_is_data(data):
+        if not _input_args_is_numpy(data) and dtype is None and _input_dtype_is_float(data):
+            dtype = flow.float32
         data = np.array(data)
         if dtype is None:
             dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(data.dtype)
@@ -817,3 +818,11 @@ def _convert_to_placement_scope(placement_or_device):
 
 def _is_scalar(data):
     return isinstance(data, (int, float, bool, complex))
+
+def _input_dtype_is_float(data):
+    if _is_scalar(data):
+        return isinstance(data, float)
+    elif isinstance(data, (list, tuple)):
+        return isinstance(data[0], float)
+    return False
+
