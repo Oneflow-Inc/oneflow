@@ -223,6 +223,23 @@ if __name__ == "__main__":
     print("workspace_dir", workspace_dir)
     create_remote_workspace_dir(remote_host, workspace_dir)
     if args.oneflow_build_path:
+        oneflow_internal_path = (
+            "python_scripts/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so"
+        )
+        oneflow_internal_path = os.path.join(
+            args.oneflow_build_path, oneflow_internal_path
+        )
+        print("copying .so")
+        tmp_lib_dir = tempfile.TemporaryDirectory()
+        subprocess.check_call(
+            """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
+                "file", oneflow_internal_path
+            ).replace(
+                "destination", tmp_lib_dir.name
+            ),
+            shell=True,
+        )
+        assert len(os.listdir(tmp_lib_dir.name)) > 0
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --include='*.py' --include='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
