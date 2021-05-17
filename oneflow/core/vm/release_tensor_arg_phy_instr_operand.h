@@ -29,10 +29,8 @@ class EagerBlobObject;
 class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
  public:
   ReleaseTensorArgPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                  const std::shared_ptr<VmLocalDepObject>& infer_local_dep_object,
                                   const std::shared_ptr<VmLocalDepObject>& compute_local_dep_object)
       : eager_blob_object_(eager_blob_object),
-        infer_local_dep_object_(infer_local_dep_object),
         compute_local_dep_object_(compute_local_dep_object) {}
   ~ReleaseTensorArgPhyInstrOperand() override = default;
 
@@ -51,7 +49,6 @@ class ReleaseTensorArgPhyInstrOperand : public PhyInstrOperand {
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 

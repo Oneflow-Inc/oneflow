@@ -76,12 +76,15 @@ def transpose_op(tensor, dim0, dim1):
 
     Args:
         tensor (oneflow.Tensor): The input tensor.
-        dim0 (int) – the first dimension to be transposed.
-        dim1 (int) – the second dimension to be transposed.
+        dim0 (int): the first dimension to be transposed.
+        dim1 (int): the second dimension to be transposed.
     Returns:
-        oneflow.Tensor: A transposed tensor.
+        Tensor: A transposed tensor.
+    
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
 
@@ -89,5 +92,6 @@ def transpose_op(tensor, dim0, dim1):
         out = flow.transpose(input, 0, 1)
 
         # out.shape (6, 2, 5, 3)
+    
     """
     return Transpose(dim0=dim0, dim1=dim1)(tensor)

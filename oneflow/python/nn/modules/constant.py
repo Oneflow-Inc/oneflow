@@ -92,8 +92,8 @@ def ones_op(size, dtype=None):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor.
-        Can be a variable number of arguments or a collection like a list or tuple.
+        size(an integer or tuple of integer values): defining the shape of the output tensor. Can be \
+         a variable number of arguments or a collection like a list or tuple.
 
     For example:
 
@@ -121,8 +121,8 @@ def zeros_op(size, dtype=None):
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor.
-        Can be a variable number of arguments or a collection like a list or tuple.
+        size(an integer or tuple of integer values): defining the shape of the output tensor. Can be \
+         a variable number of arguments or a collection like a list or tuple.
 
     For example:
 

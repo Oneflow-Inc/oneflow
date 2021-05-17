@@ -44,7 +44,6 @@ def greater_op(x, y):
     Args:
         x (oneflow.Tensor): A Tensor
         y (oneflow.Tensor): A Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: A Tensor with int8 type.
