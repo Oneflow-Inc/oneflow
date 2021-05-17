@@ -53,5 +53,15 @@ class TestPReLU(flow.unittest.TestCase):
         of_out = prelu(input)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    def test_prelu_grad(test_case):
+        np_input = np.random.randn(2, 6, 5, 3)
+        input = flow.Tensor(np_input, dtype=flow.float32)
+        np_alpha = np.random.randn(1)
+        prelu = flow.nn.PReLU(init=np_alpha)
+        of_out = prelu(input).sum()
+        flow.add()
+        of_out.backward()
+
+
 if __name__ == "__main__":
     unittest.main()
