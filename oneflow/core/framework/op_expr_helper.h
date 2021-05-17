@@ -178,5 +178,7 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth);
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
                                                          const std::string& name);
 
+Maybe<one::UserOpExpr> DimGatherGradOp(const int32_t dim);
+Maybe<one::UserOpExpr> DimGatherGradOp(const int32_t dim, const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow

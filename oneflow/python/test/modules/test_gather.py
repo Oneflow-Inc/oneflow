@@ -89,10 +89,14 @@ class TestGather(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
 
         np_out3 = gather_numpy(input, index, dim=3)
-        output3 = flow.gather(
-            flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=3
-        )
+        x = flow.Tensor(input, requires_grad=True)
+        output3 = flow.gather(x, flow.Tensor(index, dtype=flow.int), dim=3)
         test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
+
+        o4 = flow.sum(output3)
+        o4.backward()
+        print(x)
+        # print(x.grad.numpy())
 
 
 if __name__ == "__main__":
