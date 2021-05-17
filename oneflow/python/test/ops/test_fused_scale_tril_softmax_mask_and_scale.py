@@ -130,9 +130,6 @@ def compare_with_not_fused(
 class TestFusedScaleTrilSoftmaxDropout(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_fused_scale_tril_softmax_dropout(test_case):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
