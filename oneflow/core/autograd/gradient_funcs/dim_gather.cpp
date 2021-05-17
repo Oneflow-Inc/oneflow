@@ -58,8 +58,8 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
   printf("yaochi:Capture");
   ctx->requires_grad = inputs.at(1)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->SaveTensorForBackward(inputs.at(2));
   return Maybe<void>::Ok();
 }
 
@@ -68,11 +68,11 @@ Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple&
   printf("yaochi:Apply");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& index = ctx->SavedTensors().at(0);
-  const auto& like = ctx->SavedTensors().at(2);
+  const auto& like = ctx->SavedTensors().at(1);
 
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int32_t>("dim", dim_));
-  in_grads->at(1) = JUST(
+  in_grads->at(0) = JUST(
       OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {index, out_grads.at(0), like}, attrs));
   return Maybe<void>::Ok();
 }

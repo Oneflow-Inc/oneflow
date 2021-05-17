@@ -96,7 +96,7 @@ class TestGather(flow.unittest.TestCase):
         o4 = flow.sum(output3)
         o4.backward()
         print(x)
-        # print(x.grad.numpy())
+        print(x.grad.numpy())
 
 
 if __name__ == "__main__":
