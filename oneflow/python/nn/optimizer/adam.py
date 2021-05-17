@@ -141,12 +141,14 @@ class Adam(Optimizer):
                     "beta2": param_group.options["betas"][1],
                     "epsilon": param_group.options["eps"],
                 }
-                lr_tensor = flow.Tensor([param_group.options["lr"]])
                 for param in param_group.parameters:
-                    m_tensor = self._state[param]["exp_avg"]
-                    v_tensor = self._state[param]["exp_avg_sq"]
                     if param.grad is None:
                         continue
+                    lr_tensor = flow.Tensor(
+                        [param_group.options["lr"]], device=param.device
+                    )
+                    m_tensor = self._state[param]["exp_avg"]
+                    v_tensor = self._state[param]["exp_avg_sq"]
                     self._op(
                         param, param.grad, lr_tensor, m_tensor, v_tensor, **kwargs,
                     )
