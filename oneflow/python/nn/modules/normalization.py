@@ -19,7 +19,6 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from typing import Tuple, Union
-from oneflow.python.nn.modules.batchnorm import BatchNormalization
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
@@ -167,9 +166,38 @@ class LayerNorm(Module):
 
             mean = x.mean(dim=reduce_axis, keepdim=True)
             variance = x.var(dim=reduce_axis, keepdim=True)
-            normalized = BatchNormalization(
-                axis=self.begin_norm_axis, epsilon=self.epsilon
-            )(x, mean, variance, self.weight, self.bias)
+            # normalized = BatchNormalization(
+            #     axis=self.begin_norm_axis, epsilon=self.epsilon
+            # )(x, mean, variance, self.weight, self.bias)
+
+            axis = self.begin_norm_axis
+            params_shape = [x.shape[axis]]
+            weight = self.weight
+            bias = self.bias
+            if len(mean.shape) == 1:
+                nd_params_shape = [1] * len(x.shape)
+                nd_params_shape[axis] = params_shape[0]
+                mean = mean.reshape(shape=nd_params_shape)
+                variance = variance.reshape(shape=nd_params_shape)
+
+                if self.weight and params_shape[0] == self.weight.nelemenet():
+                    weight = self.weight.reshape(shape=nd_params_shape)
+                if self.bias and params_shape[0] == self.bias.nelemenet():
+                    bias = self.bias.reshape(shape=nd_params_shape)
+            elif len(mean.shape) == len(x.shape):
+                pass
+            else:
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
+
+            variance += self.epsilon
+            normalized = (x - mean) * variance.rsqrt()
+
+            if self.weight:
+                normalized = normalized * self.weight
+            if self.bias:
+                normalized = normalized + self.bias
 
             affined = normalized
             if self.elementwise_affine:
