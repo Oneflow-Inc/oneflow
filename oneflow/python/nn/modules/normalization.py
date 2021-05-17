@@ -242,15 +242,3 @@ class LayerNorm(Module):
             "{normalized_shape}, eps={eps}, "
             "elementwise_affine={elementwise_affine}".format(**self.__dict__)
         )
-
-
-# @oneflow_export("nn.LayerNorm")
-# @experimental_api
-# def layernorm_op(
-#     x,
-#     normalized_shape: _shape_t,
-#     eps: float = 1e-5,
-#     elementwise_affine: bool = True
-# ):
-#     begin_norm_axis = len(x.shape) - len(self.normalized_shape)
-#     return LayerNorm(normalized_shape, eps, elementwise_affine, begin_norm_axis)(x)
