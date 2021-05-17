@@ -115,10 +115,10 @@ class SGD(Optimizer):
                 loss = closure()
 
             for param_group in self._param_groups:
-                lr_tensor = flow.Tensor([param_group.options["lr"]])
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
+                    lr_tensor = flow.Tensor([param_group.options["lr"]], device=param.device)
                     if param_group.options["momentum"] == 0.0:
                         scale = param_group.options["scale"]
                         self._sgd(param, param.grad, lr_tensor, scale=scale)
