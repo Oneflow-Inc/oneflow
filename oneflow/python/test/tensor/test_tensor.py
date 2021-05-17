@@ -387,6 +387,35 @@ class TestTensor(flow.unittest.TestCase):
         np_out = -input.numpy()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_construct_small_tensor(test_case):
+        shape = (2, 3, 4, 5)
+        np_arr = np.random.rand(*shape).astype(np.float32)
+        tensor = flow.tensor(np_arr)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertEqual(tensor.dtype, flow.float32)
+
+        np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
+        tensor = flow.tensor(np_int_arr, dtype=flow.int32)
+        test_case.assertEqual(tensor.dtype, flow.int32)
+
+        list_data = [[1, 2.0], [5, 3]]
+        tensor = flow.tensor(list_data)
+        test_case.assertEqual(tensor.dtype, flow.float32)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array(list_data), 1e-4, 1e-4))
+
+        tuple_data = ((1, 2, 5), (4, 3, 10))
+        tensor = flow.tensor(tuple_data)
+        test_case.assertEqual(tensor.dtype, flow.int64)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np.array(tuple_data)))
+
+        scalar = 5.5
+        tensor = flow.tensor(scalar)
+        test_case.assertEqual(tensor.dtype, flow.float32)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
 
 if __name__ == "__main__":
     unittest.main()
