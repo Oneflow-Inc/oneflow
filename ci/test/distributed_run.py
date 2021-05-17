@@ -242,8 +242,9 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         p = Process(target=launch_workers, kwargs=kwargs,)
         p.start()
         print("[docker agent]", "blocking")
-        assert self.bash_proc.wait() == 0
+        returncode = self.bash_proc.wait()
         p.terminate()
+        assert returncode == 0
         print("[docker agent]", "bash execution done")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -391,15 +392,13 @@ if __name__ == "__main__":
 
     def exit_handler():
         print("removing local docker container:", container_name)
-        tmux_prefix = f"tmux new-session -d -s rm_{container_name}"
-        subprocess.check_call(
-            f"{tmux_prefix} docker rm -f {container_name}", shell=True
-        )
+        tmux_prefix = f"tmux new-session -d -s rm-{container_name}"
+        rm_cmd = f"docker\ rm\ -f\ {container_name}"
+        subprocess.check_call(f"{tmux_prefix} '{rm_cmd}'", shell=True)
         for remote_host in remote_hosts:
             print(f"removing local docker container at {remote_host}:", container_name)
             subprocess.check_call(
-                f"ssh {remote_host} {tmux_prefix} docker rm -f {container_name}",
-                shell=True,
+                f"ssh {remote_host} {tmux_prefix} '{rm_cmd}'", shell=True,
             )
 
     atexit.register(exit_handler)
@@ -426,5 +425,6 @@ if __name__ == "__main__":
     ) as agent:
         agent.run_bash_script_async(bash_script=args.bash_script,)
         agent.block()
+
     # copy artifacts
     exit(0)
