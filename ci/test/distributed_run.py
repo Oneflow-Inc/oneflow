@@ -85,13 +85,31 @@ def create_remote_workspace_dir(hostname, workspace_dir):
 
 
 def launch_remote_container(
-    hostname=None, survival_time=None, workspace_dir=None, container_name=None
+    hostname=None,
+    survival_time=None,
+    workspace_dir=None,
+    container_name=None,
+    img_tag=None,
+    oneflow_wheel_path=None,
+    oneflow_build_path=None,
 ):
     print("launching remote container at", hostname)
-    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER sleep {survival_time}
+    assert img_tag
+    install_args = None
+    if oneflow_wheel_path:
+        install_args = ""
+    elif oneflow_build_path:
+        install_args = "--env PYTHONPATH={workspace_dir}/python_scripts"
+    else:
+        raise ValueError("must have oneflow_wheel_path or oneflow_build_path")
+    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {install_args} {img_tag} sleep {survival_time}
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
     subprocess.check_call(ssh_cmd, shell=True)
+    if oneflow_wheel_path:
+        whl_basename = os.path.basename(oneflow_wheel_path)
+        run_docker_cmd = f"ssh {hostname} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
+        subprocess.check_call(run_docker_cmd, shell=True)
 
 
 def handle_cast(conn=None, cmd=None):
@@ -128,7 +146,7 @@ def launch_workers(agent_port=None, agent_authkey=None, remote_hosts=None):
                 f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
                 shell=True,
             )
-            run_docker_cmd = f"ssh {remote_host} docker exec --env PYTHONPATH={workspace_dir}/python_scripts {container_name}"
+            run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
             run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
             print("[docker agent]", run_docker_cmd)
             remote_docker_proc[remote_host] = subprocess.Popen(
@@ -149,6 +167,9 @@ class DockerAgent:
         container_name=None,
         timeout=None,
         workspace_dir=None,
+        img_tag=None,
+        oneflow_wheel_path=None,
+        oneflow_build_path=None,
     ) -> None:
         # info
         self.this_host = this_host
@@ -157,6 +178,9 @@ class DockerAgent:
         self.timeout = timeout
         self.common_docker_args = "--privileged --rm --network host --shm-size=8g -v $HOME:$HOME -v /dataset:/dataset -v /model_zoo:/model_zoo"
         self.workspace_dir = workspace_dir
+        self.img_tag = img_tag
+        self.oneflow_wheel_path = oneflow_wheel_path
+        self.oneflow_build_path = oneflow_build_path
         # impl
         self.env_proto_txt = None
         self.bash_tmp_file = None
@@ -168,9 +192,7 @@ class DockerAgent:
     def __enter__(self):
         return self
 
-    def run_bash_script_async(
-        self, bash_script=None, oneflow_wheel_path=None, oneflow_build_path=None,
-    ):
+    def run_bash_script_async(self, bash_script=None):
         remote_hosts_str = ",".join(self.remote_hosts)
         assert os.path.exists(bash_script)
         log_dir = "./unittest-log-" + str(uuid.uuid4())
@@ -187,10 +209,10 @@ export NCCL_DEBUG=INFO
 export ONEFLOW_TEST_WORKER_AGENT_PORT={agent_port}
 export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
 """
-        if oneflow_wheel_path:
-            exports += f"export ONEFLOW_WHEEL_PATH={oneflow_wheel_path}\n"
-        if oneflow_build_path:
-            exports += f"export ONEFLOW_BUILD_DIR={oneflow_build_path}\n"
+        if self.oneflow_wheel_path:
+            exports += f"python3 -m pip install {self.oneflow_wheel_path}"
+        if self.oneflow_build_path:
+            exports += f"export ONEFLOW_BUILD_DIR={self.oneflow_build_path}\n"
         bash_cmd = f"""set -ex
     {exports}
     bash {bash_script}
@@ -200,7 +222,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             f_name = f.name
             f.write(cmd)
             f.flush()
-            return f"docker run {self.common_docker_args} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {container_name} oneflow-test:$USER bash /host{f_name}"
+            return f"docker run {self.common_docker_args} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {self.container_name} {self.img_tag} bash /host{f_name}"
 
         f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
@@ -228,6 +250,54 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         pass
 
 
+def fix_and_sync_libs():
+    tmp_dir = tempfile.TemporaryDirectory()
+    tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
+    os.mkdir(tmp_lib_dir)
+    subprocess.check_call(
+        """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
+            "file", oneflow_internal_path
+        ).replace(
+            "destination", tmp_lib_dir
+        ),
+        shell=True,
+    )
+    libs = os.listdir(tmp_lib_dir)
+    assert len(libs) > 0
+    excludelist_path = os.path.join(
+        pathlib.Path(__file__).parent.absolute(), "excludelist"
+    )
+    excludelist = open(excludelist_path).read().split("\n")
+    subprocess.check_call(
+        f"cp {oneflow_internal_path} {tmp_dir.name}", shell=True,
+    )
+    for lib in libs:
+        if lib in excludelist or "libpython" in lib:
+            print("excluding", lib)
+            subprocess.check_call(
+                f"rm {tmp_lib_dir}/{lib}", shell=True,
+            )
+        else:
+            print("keeping", lib)
+            subprocess.check_call(
+                f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}", shell=True,
+            )
+    tmp_oneflow_internal_path = os.path.join(
+        tmp_dir.name, pathlib.Path(oneflow_internal_path).name
+    )
+    print("before fixing .so")
+    subprocess.check_call(
+        f"ldd {tmp_oneflow_internal_path}", shell=True,
+    )
+    print("fixing .so")
+    subprocess.check_call(
+        f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}", shell=True,
+    )
+    subprocess.check_call(
+        f"ldd {tmp_oneflow_internal_path}", shell=True,
+    )
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", required=False, default=False)
@@ -239,7 +309,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--this_host", type=str, required=False, default=default_this_host
     )
-    parser.add_argument("--remote_host", type=str, required=False)
+    parser.add_argument("--remote_host", action="append", default=[])
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
@@ -250,19 +320,21 @@ if __name__ == "__main__":
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
 
-    remote_host = None
-    if args.remote_host:
-        assert len(args.remote_host.split(",")) == 1, "only support 2-nodes run for now"
-        remote_host = args.remote_host
-    else:
+    remote_hosts = []
+    if len(args.remote_host) == 1:
+        remote_hosts = args.remote_host.split(",")
+    elif len(args.remote_host) == 0:
         affiliations = get_affiliations(this_host)
         assert (
             affiliations
         ), f"no affiliated node found for {this_host}, you should specify one"
         remote_host = affiliations[0]
         remote_host = socket.gethostbyname(remote_host)
+        remote_hosts = [remote_host]
+    else:
+        remote_hosts = args.remote_host
 
-    print(f"this_host: {this_host}, remote_host: {remote_host}", flush=True)
+    print(f"this_host: {this_host}, remote_hosts: {remote_hosts}", flush=True)
     sub_dir = str(uuid.uuid4())
     if args.debug:
         sub_dir = "debug"
@@ -282,53 +354,7 @@ if __name__ == "__main__":
         tmp_dir = None
         if args.skip_libs == False:
             print("copying .so")
-            tmp_dir = tempfile.TemporaryDirectory()
-            tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
-            os.mkdir(tmp_lib_dir)
-            subprocess.check_call(
-                """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
-                    "file", oneflow_internal_path
-                ).replace(
-                    "destination", tmp_lib_dir
-                ),
-                shell=True,
-            )
-            libs = os.listdir(tmp_lib_dir)
-            assert len(libs) > 0
-            excludelist_path = os.path.join(
-                pathlib.Path(__file__).parent.absolute(), "excludelist"
-            )
-            excludelist = open(excludelist_path).read().split("\n")
-            subprocess.check_call(
-                f"cp {oneflow_internal_path} {tmp_dir.name}", shell=True,
-            )
-            for lib in libs:
-                if lib in excludelist or "libpython" in lib:
-                    print("excluding", lib)
-                    subprocess.check_call(
-                        f"rm {tmp_lib_dir}/{lib}", shell=True,
-                    )
-                else:
-                    print("keeping", lib)
-                    subprocess.check_call(
-                        f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}",
-                        shell=True,
-                    )
-            tmp_oneflow_internal_path = os.path.join(
-                tmp_dir.name, pathlib.Path(oneflow_internal_path).name
-            )
-            print("before fixing .so")
-            subprocess.check_call(
-                f"ldd {tmp_oneflow_internal_path}", shell=True,
-            )
-            print("fixing .so")
-            subprocess.check_call(
-                f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}",
-                shell=True,
-            )
-            subprocess.check_call(
-                f"ldd {tmp_oneflow_internal_path}", shell=True,
-            )
+            fix_and_sync_libs()
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
@@ -339,6 +365,11 @@ if __name__ == "__main__":
                 f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
                 shell=True,
             )
+    elif args.oneflow_wheel_path:
+        subprocess.check_call(
+            f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}",
+            shell=True,
+        )
     default_docker_image = "oneflow-test:$USER"
     ci_user_docker_image = "oneflow-test:ci-user"
     img_tag = None
@@ -357,24 +388,31 @@ if __name__ == "__main__":
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
     container_name = getpass.getuser() + "-distributed-run"
-    remote_hosts = [remote_host]
 
     def exit_handler():
         print("removing local docker container:", container_name)
-        subprocess.check_call(f"docker rm -f {container_name} || true", shell=True)
+        tmux_prefix = f"tmux new-session -d -s rm_{container_name}"
+        subprocess.check_call(
+            f"{tmux_prefix} docker rm -f {container_name}", shell=True
+        )
         for remote_host in remote_hosts:
             print(f"removing local docker container at {remote_host}:", container_name)
             subprocess.check_call(
-                f"ssh {remote_host} docker rm -f {container_name} || true", shell=True,
+                f"ssh {remote_host} {tmux_prefix} docker rm -f {container_name}",
+                shell=True,
             )
 
     atexit.register(exit_handler)
-    launch_remote_container(
-        hostname=remote_host,
-        survival_time=args.timeout,
-        workspace_dir=workspace_dir,
-        container_name=container_name,
-    )
+    for remote_host in remote_hosts:
+        launch_remote_container(
+            hostname=remote_host,
+            survival_time=args.timeout,
+            workspace_dir=workspace_dir,
+            container_name=container_name,
+            oneflow_wheel_path=args.oneflow_wheel_path,
+            oneflow_build_path=args.oneflow_build_path,
+            img_tag=img_tag,
+        )
     with DockerAgent(
         port=agent_port,
         authkey=agent_authkey.encode(),
@@ -382,12 +420,11 @@ if __name__ == "__main__":
         remote_hosts=[remote_host],
         container_name=container_name,
         workspace_dir=workspace_dir,
+        oneflow_wheel_path=args.oneflow_wheel_path,
+        oneflow_build_path=args.oneflow_build_path,
+        img_tag=img_tag,
     ) as agent:
-        agent.run_bash_script_async(
-            bash_script=args.bash_script,
-            oneflow_wheel_path=args.oneflow_wheel_path,
-            oneflow_build_path=args.oneflow_build_path,
-        )
+        agent.run_bash_script_async(bash_script=args.bash_script,)
         agent.block()
     # copy artifacts
     exit(0)

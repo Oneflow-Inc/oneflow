@@ -3,8 +3,6 @@ set -xe
 
 export PYTHONUNBUFFERED=1
 
-source ci/test/try_install.sh
-
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"/test_tmp_dir"}
 
