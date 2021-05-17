@@ -49,7 +49,7 @@ def arange_op(start=1, end=1, step=1):
     the gap between two values in the tensor.
 
     .. math::
-    \text{out}_{i+1} = \text{out}_i + \text{step}.
+        \text{out}_{i+1} = \text{out}_i + \text{step}.
 
     Args:
     start (float): the starting value for the set of points. Default: ``0``.
