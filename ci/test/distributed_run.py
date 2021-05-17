@@ -100,27 +100,29 @@ def handle_call(conn=None, cmd=None, response=None):
 
 def launch_workers(agent_port=None, agent_authkey=None, remote_hosts=None):
     listener = Listener(("localhost", agent_port), authkey=agent_authkey)
-    conn = listener.accept()
-    # do_launch_workers
-    remote_docker_proc = {}
-    for remote_host in remote_hosts:
-        assert handle_cast(conn=conn, cmd="host"), remote_host
-        env_proto_txt = handle_cast(conn=conn, cmd="env_proto")
-        print("[docker agent]", f"[{remote_host}]", env_proto_txt)
-        f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
-        f.write(env_proto_txt.encode())
-        f.flush()
-        subprocess.check_call(
-            f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
-            shell=True,
-        )
-        run_docker_cmd = f"ssh {remote_host} docker exec --env PYTHONPATH={workspace_dir}/python_scripts {container_name}"
-        run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
-        print("[docker agent]", run_docker_cmd)
-        remote_docker_proc[remote_host] = subprocess.Popen(run_docker_cmd, shell=True)
-        handle_call(conn=conn, cmd="start_worker", response="ok")
-    for k, v in remote_docker_proc.items():
-        assert v.wait() == 0
+    while True:
+        conn = listener.accept()
+        remote_docker_proc = {}
+        for remote_host in remote_hosts:
+            assert handle_cast(conn=conn, cmd="host"), remote_host
+            env_proto_txt = handle_cast(conn=conn, cmd="env_proto")
+            print("[docker agent]", f"[{remote_host}]", env_proto_txt)
+            f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
+            f.write(env_proto_txt.encode())
+            f.flush()
+            subprocess.check_call(
+                f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
+                shell=True,
+            )
+            run_docker_cmd = f"ssh {remote_host} docker exec --env PYTHONPATH={workspace_dir}/python_scripts {container_name}"
+            run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
+            print("[docker agent]", run_docker_cmd)
+            remote_docker_proc[remote_host] = subprocess.Popen(
+                run_docker_cmd, shell=True
+            )
+            handle_call(conn=conn, cmd="start_worker", response="ok")
+        for k, v in remote_docker_proc.items():
+            assert v.wait() == 0
 
 
 class DockerAgent:
@@ -201,18 +203,12 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             "agent_authkey": self.agent_authkey,
             "remote_hosts": self.remote_hosts,
         }
-        while self.bash_proc.poll() is None:
-            if p is None:
-                p = Process(target=launch_workers, kwargs=kwargs,)
-                p.start()
-            else:
-                if p.is_alive() == False:
-                    assert p.exitcode == 0
-                    p = Process(target=launch_workers, kwargs=kwargs,)
-                    p.start()
-        print("blocking")
+        p = Process(target=launch_workers, kwargs=kwargs,)
+        p.start()
+        print("[docker agent]", "blocking")
         assert self.bash_proc.wait() == 0
-        print("bash exe done")
+        p.terminate()
+        print("[docker agent]", "bash execution done")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
