@@ -24,18 +24,27 @@ class To(Module):
     def __init__(self, copy):
         super().__init__()
         self._copy_op = flow.builtin_op("copy").Input("in").Output("out").Build()
+        self._cast_op = flow.builtin_op("cast").Input("in").Output("out").Build()
         self.copy = copy
-        # TODO(liyurui): add cast op
 
-    def forward(self, x, device):
-        if x.device == device and not self.copy:
-            return x
-        return self._copy_op(x, device_type=device.type, device_id=device.index)[0]
+    def forward(self, x, device, dtype):
+        result = x
+        if device is not None:
+            if x.device != device or self.copy:
+                result = self._copy_op(
+                    x, device_type=device.type, device_id=device.index
+                )[0]
+        if dtype is not None:
+            if x.dtype != dtype or self.copy:
+                result = self._cast_op(result, dtype=dtype)[0]
+        return result
 
 
 @oneflow_export("to")
 @register_tensor_op("to")
-def to_op(input, device: Optional[Union[str, flow.device]] = None, copy=False):
+def to_op(
+    input, device: Optional[Union[str, flow.device]] = None, dtype=None, copy=False
+):
     if isinstance(device, str):
         device = flow.device(device)
-    return To(copy)(input, device)
+    return To(copy)(input, device, dtype)
