@@ -69,8 +69,6 @@ def compare_with_tensorflow(device_type, data_type, shape):
     )
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = SigmoidCrossEntropyWithLogitsJob(labels).get()
 
     # TensorFlow
@@ -95,9 +93,6 @@ def compare_with_tensorflow(device_type, data_type, shape):
 @flow.unittest.skip_unless_1n1d()
 class TestSigmoidCrossEntropy(flow.unittest.TestCase):
     def test_sigmoid_cross_entropy_with_logits(test_case):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
         arg_dict["data_type"] = ["double", "float32"]

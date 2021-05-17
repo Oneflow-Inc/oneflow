@@ -14,31 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from typing import Tuple
 
+import numpy as np
 import oneflow.experimental as flow
-import oneflow.typing as tp
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
-    "module doesn't work in lazy mode now",
+    ".numpy() doesn't work in lazy mode",
 )
-class TestContainer(flow.unittest.TestCase):
-    def test_module_forward(test_case):
-        class CustomModule(flow.nn.Module):
-            def __init__(self, w):
-                super().__init__()
-                self.w = w
+class TestPermute(flow.unittest.TestCase):
+    def test_tensor_permute(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = input.permute(1, 0, 2, 3)
+        np_out = input.numpy().transpose((1, 0, 2, 3))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
-            def forward(self, x):
-                return x + self.w
-
-        m1 = CustomModule(5)
-        m2 = CustomModule(4)
-        s = flow.nn.Sequential(m1, m2)
-
-        test_case.assertEqual(s(1), 10)
+    def test_permute_negative_dim(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = flow.permute(input, -3, -4, 2, 3)
+        np_out = input.numpy().transpose((1, 0, 2, 3))
+        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
 if __name__ == "__main__":
