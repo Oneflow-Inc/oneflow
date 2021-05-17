@@ -42,6 +42,8 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
     ctx->alpha_requires_grad = inputs.at(1)->requires_grad();  // alpha
+    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(1));
 
     return Maybe<void>::Ok();
   }
