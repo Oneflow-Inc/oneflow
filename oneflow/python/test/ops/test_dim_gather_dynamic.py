@@ -41,7 +41,13 @@ def gen_gather_test_sample(input_shape, index_shape, dim, is_float=True):
     output = np.take_along_axis(input, index, dim)
     grad = _np_dim_scatter_add(np.ones_like(output), dim, index, input_shape)
 
-    ret = {"input": input, "index": index, "dim": dim, "output": output, "grad": grad}
+    ret = {
+        "input": input.astype(np.float32),
+        "index": index.astype(np.int32),
+        "dim": dim,
+        "output": output.astype(np.float32),
+        "grad": grad.astype(np.float32),
+    }
     return ret
 
 
@@ -94,9 +100,6 @@ def _compare_dim_gather_with_samples(test_case, inputshape, indexshape, dim, max
 class TestDynamicDimGather(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_dynamic_dim_gather(test_case):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         _compare_dim_gather_with_samples(
             test_case, inputshape=(2, 2), indexshape=(2, 2), dim=1, maxshape=(10, 10)
         )
