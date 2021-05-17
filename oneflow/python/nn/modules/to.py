@@ -42,9 +42,51 @@ class To(Module):
 
 @oneflow_export("to")
 @register_tensor_op("to")
-def to_op(
-    input, device: Optional[Union[str, flow.device]] = None, dtype=None, copy=False
-):
-    if isinstance(device, str):
-        device = flow.device(device)
-    return To(copy)(input, device, dtype)
+def to_op(input, *args, **kwargs):
+    r"""Performs Tensor dtype and/or device conversion. 
+        A flow.dtype and flow.device are inferred from the arguments of `self.to(*args, **kwargs)`.
+    
+    .. note::
+    If the ``self`` Tensor already
+    has the correct :class:`flow.dtype` and :class:`flow.device`, then ``self`` is returned.
+    Otherwise, the returned tensor is a copy of ``self`` with the desired
+    :class:`flow.dtype` and :class:`flow.device`.
+    Args:
+        input (flow.Tensor): A input tensor.
+        *args (flow.Tensor or flow.device or flow.dtype): Positional arguments
+        **kwargs (flow.Tensor or flow.device or flow.dtype) : Key-value arguments
+    
+    For example:
+    .. code-block:: python
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
+        input = flow.Tensor(arr)
+        output = input.to(dtype=flow.float32)
+        print(np.array_equal(arr.astype(np.float32), output.numpy()))
+        # True
+    """
+    copy = kwargs["copy"] if "copy" in kwargs else False
+    device = kwargs["device"] if "device" in kwargs else None
+    dtype = kwargs["dtype"] if "dtype" in kwargs else None
+    if len(args) > 0:
+        if isinstance(args[0], flow.Tensor):
+            if len(args) == 2:
+                copy = args[1]
+            return To(copy)(args[0].device, args[0].dtype)
+        elif isinstance(args[0], flow.dtype):
+            if len(args) == 2:
+                copy = args[1]
+            return To(copy)(input, None, args[0])
+        else:
+            device = flow.device(args[0]) if isinstance(args[0], str) else args[0]
+            if len(args) > 1:
+                dtype = args[1]
+                assert isinstance(dtype, flow.dtype)
+            if len(args) > 2:
+                copy = args[2]
+            assert isinstance(device, flow.device)
+            return To(copy)(input, device, dtype)
+    if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
+        return To(copy)(input, device, dtype)
+    raise TypeError("to() received an invalid combination of arguments")
