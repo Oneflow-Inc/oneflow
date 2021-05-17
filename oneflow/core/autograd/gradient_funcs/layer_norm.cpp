@@ -13,50 +13,47 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/attr_map.h"
+
 namespace oneflow {
 namespace one {
+
 struct LayerNormInterpState : public OpExprInterpState {
   bool center;
   bool scale;
+
   int64_t begin_norm_axis;
   int64_t begin_params_axis;
+
   double epsilon;
+
   bool x_requires_grad;
   bool has_beta_diff;
   bool has_gamma_diff;
   bool has_normalized_diff;
+
   size_t gamma_index;
   size_t normalized_index;
   size_t x_index;
   size_t mean_index;
   size_t inv_variance_index;
 };
+
 // y, mean, inv_variance, [normalized] =
 //   layer_norm(x, [beta], [gamma], center=False, scale=False, begin_norm_axis=1,
 //              begin_params_axis=-1, epsilon=1e-5)
 class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
+
   Maybe<void> Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
+
   Maybe<void> Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -65,6 +62,7 @@ class LayerNorm : public OpExprGradFunction<LayerNormInterpState> {
   std::string op_name_;
   std::shared_ptr<OpExpr> x_grad_op_;
 };
+
 Maybe<void> LayerNorm::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
@@ -74,6 +72,7 @@ Maybe<void> LayerNorm::Init(const OpExpr& op) {
                                                     GradientOpName(op_name_)));
   return Maybe<void>::Ok();
 }
+
 Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -82,6 +81,7 @@ Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inp
   ctx->begin_norm_axis = JUST(composed_attrs.GetAttr<int64_t>("begin_norm_axis"));
   ctx->begin_params_axis = JUST(composed_attrs.GetAttr<int64_t>("begin_params_axis"));
   ctx->epsilon = JUST(composed_attrs.GetAttr<double>("epsilon"));
+
   CHECK_EQ_OR_RETURN(inputs.size(), ctx->center + ctx->scale + 1);
   CHECK_EQ_OR_RETURN(outputs.size(), ctx->scale + 3);
   ctx->has_beta_diff = ctx->center && inputs.at(1)->requires_grad();
@@ -100,6 +100,7 @@ Maybe<void> LayerNorm::Capture(LayerNormInterpState* ctx, const TensorTuple& inp
   }
   return Maybe<void>::Ok();
 }
+
 Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
@@ -139,6 +140,8 @@ Maybe<void> LayerNorm::Apply(const LayerNormInterpState* ctx, const TensorTuple&
   }
   return Maybe<void>::Ok();
 }
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("layer_norm", LayerNorm);
+
 }  // namespace one
 }  // namespace oneflow
