@@ -197,7 +197,7 @@ def call(conn=None, cmd=None, msg=None):
 
 
 def launch_worker_via_agent(host=None, env_proto=None):
-    print("launching worker via agent")
+    print("launching worker via agent", flush=True)
     from multiprocessing.connection import Client
 
     address = ("localhost", worker_agent_port())
@@ -207,8 +207,8 @@ def launch_worker_via_agent(host=None, env_proto=None):
     cast(conn=conn, cmd="host", msg=host)
     cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
     assert call(conn=conn, cmd="start_worker") == "ok"
+    print("[unittest]", "worker launched via agent at", host)
     conn.close()
-    print("[unittest]", "agent received env proto")
 
 
 @oneflow_export("unittest.TestCase")
