@@ -22,6 +22,9 @@ import oneflow.typing as tp
 
 
 def _prelu(input, alpha):
+    alpha = np.expand_dims(alpha, 0)
+    alpha = np.expand_dims(alpha, 2)
+    alpha = np.expand_dims(alpha, 3)
     return np.where(input > 0, input, input * alpha)
 
 
@@ -39,6 +42,16 @@ class TestPReLU(flow.unittest.TestCase):
         of_out = prelu(input)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    def test_prelu_ndims(test_case):
+        np_input = np.random.randn(2, 6, 5, 3)
+        input = flow.Tensor(np_input, dtype=flow.float32)
+        np_alpha = np.random.randn(6)
+        prelu = flow.nn.PReLU(init=1.0, num_parameters=6)
+        prelu_alpha = np.expand_dims(np_alpha, (1, 2))
+        prelu.weight = flow.nn.Parameter(flow.Tensor(prelu_alpha, dtype=flow.float32))
+        np_out = _prelu(np_input, np_alpha)
+        of_out = prelu(input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 if __name__ == "__main__":
     unittest.main()

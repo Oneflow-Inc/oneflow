@@ -22,7 +22,45 @@ from oneflow.python.nn.module import Module
 @oneflow_export("nn.PReLU")
 @experimental_api
 class PReLU(Module):
-    """
+    """Applies the element-wise function:
+
+    .. math::
+        PReLU(x) = \max(0,x) + a * \min(0,x)
+
+    Here :math:`a` is a learnable parameter. When called without arguments, `nn.PReLU()` uses a single
+    parameter :math:`a` across all input channels. If called with `nn.PReLU(nChannels)`,
+    a separate :math:`a` is used for each input channel.
+
+
+    .. note::
+        weight decay should not be used when learning :math:`a` for good performance.
+
+    .. note::
+        Channel dim is the 2nd dim of input. When input has dims < 2, then there is
+        no channel dim and the number of channels = 1.
+
+    Args:
+        num_parameters (int): number of :math:`a` to learn.
+            Although it takes an int as input, there is only two values are legitimate:
+            1, or the number of channels at input. Default: 1
+        init (float): the initial value of :math:`a`. Default: 0.25
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    Attr:
+        - weight (Tensor): the learnable weights of shape (:attr:`num_parameters`).
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+
+        m = nn.PReLU()
+        input = flow.randn(2)
+        output = m(input)
+
     """
 
     def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
@@ -32,5 +70,7 @@ class PReLU(Module):
         self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
-        assert self.num_parameters == 1 or self.num_parameters == x.shape[1]
+        assert (
+            self.num_parameters == 1 or self.num_parameters == x.shape[1]
+        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
         return self.op(x, self.weight)[0]

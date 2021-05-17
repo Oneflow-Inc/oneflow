@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -35,7 +34,6 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
     grad_op = JUST(op_expr_helper::PReLUGradOp(GradientOpName(op_name + "_input")));
-    alpha_op = JUST(op_expr_helper::IdentityOp(GradientOpName(op_name + "_alpha")));
     return Maybe<void>::Ok();
   }
 
@@ -44,28 +42,29 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
     ctx->alpha_requires_grad = inputs.at(1)->requires_grad();  // alpha
+
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const PReLUInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-    const auto& dy = out_grads.at(1);
-    const auto& alpha_diff = out_grads.at(0);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    const auto& dy = out_grads.at(0);
     const auto& x = ctx->SavedTensors().at(0);
     const auto& alpha = ctx->SavedTensors().at(1);
 
+    in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
-      in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {x, dy, alpha}, /*attrs=*/{}));
-      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*alpha_op, {alpha_diff}, /*attrs=*/{}));
+      const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op, {x, dy, alpha}));
+      if (ctx->input_requires_grad) { in_grads->at(0) = grads->at(0); }
+      if (ctx->alpha_requires_grad) { in_grads->at(1) = grads->at(1); }
     }
+
     return Maybe<void>::Ok();
   }
 
  private:
   std::shared_ptr<OpExpr> grad_op;
-  std::shared_ptr<OpExpr> alpha_op;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
