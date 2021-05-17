@@ -193,7 +193,7 @@ def launch_workers_via_agent():
     print("[unittest]", "blocking until agent send ok")
     assert conn.recv().decode() == "ok"
     conn.close()
-    print("[unittest]", "workers launched")
+    print("[unittest]", "agent received env proto")
 
 
 @oneflow_export("unittest.TestCase")

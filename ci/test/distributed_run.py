@@ -281,7 +281,7 @@ if __name__ == "__main__":
         )
         print("copying python_scripts dir")
         subprocess.check_call(
-            f"rsync -azP --omit-dir-times --no-perms --no-group --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
+            f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
             shell=True,
         )
         subprocess.check_call(
