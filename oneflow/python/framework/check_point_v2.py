@@ -135,7 +135,7 @@ ValueContainer = Union[
 
 
 def _ElemCnt(shape):
-    return np.prod(shape).astype(np.int).item()
+    return np.prod(shape).astype(int).item()
 
 
 @oneflow_export("get_all_variables")

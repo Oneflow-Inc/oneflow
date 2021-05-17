@@ -68,8 +68,7 @@ class SGD(Optimizer):
 
         self._default_options["lr"] = lr
         self._default_options["scale"] = scale
-        if momentum != 0.0:
-            self._default_options["momentum"] = momentum
+        self._default_options["momentum"] = momentum
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
@@ -82,37 +81,32 @@ class SGD(Optimizer):
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                if "momentum" in self._default_options:
+                if param_group.options["momentum"] != 0.0:
                     self._state[param]["momentum_buf"] = flow.experimental.zeros_like(
                         param
                     )
 
-        if "momentum" in self._default_options.keys():
-            self._op = (
-                flow.builtin_op("momentum_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Input("momentum")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Attr("beta", self._default_options["momentum"])
-                .Attr("weight_decay", 0.0)
-                .Build()
-            )
-        else:
-            self._op = (
-                flow.builtin_op("sgd_update")
-                .Input("model")
-                .Input("model_diff")
-                .Input("learning_rate")
-                .Attr("scale", self._default_options["scale"])
-                .Attr("weight_decay", 0.0)
-                .Attr("l1", 0.0)
-                .Attr("l2", 0.0)
-                .Build()
-            )
+        self._momentum_sgd = (
+            flow.builtin_op("momentum_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Input("momentum")
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Attr("weight_decay", 0.0)
+            .Build()
+        )
+        self._sgd = (
+            flow.builtin_op("sgd_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("learning_rate")
+            .Attr("weight_decay", 0.0)
+            .Attr("l1", 0.0)
+            .Attr("l2", 0.0)
+            .Build()
+        )
 
     def step(self, closure: Callable = None):
         with flow.no_grad():
@@ -121,15 +115,27 @@ class SGD(Optimizer):
                 loss = closure()
 
             for param_group in self._param_groups:
-                lr_tensor = flow.Tensor([param_group.options["lr"]])
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    if "momentum" in self._default_options:
-                        momentum_buf = self._state[param]["momentum_buf"]
-                        self._op(param, param.grad, lr_tensor, momentum_buf)
+                    lr_tensor = flow.Tensor(
+                        [param_group.options["lr"]], device=param.device
+                    )
+                    if param_group.options["momentum"] == 0.0:
+                        scale = param_group.options["scale"]
+                        self._sgd(param, param.grad, lr_tensor, scale=scale)
                     else:
-                        self._op(param, param.grad, lr_tensor)
+                        momentum_buf = self._state[param]["momentum_buf"]
+                        scale = param_group.options["scale"]
+                        beta = param_group.options["momentum"]
+                        self._momentum_sgd(
+                            param,
+                            param.grad,
+                            lr_tensor,
+                            momentum_buf,
+                            scale=scale,
+                            beta=beta,
+                        )
 
             self._state["step"] = self._state["step"] + 1
             return loss

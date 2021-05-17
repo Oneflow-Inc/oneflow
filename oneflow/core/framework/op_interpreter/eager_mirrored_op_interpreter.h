@@ -16,7 +16,11 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
+
+class Device;
+
 namespace one {
-Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type, const Shape& shape);
+Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(
+    DataType data_type, const Shape& shape, const std::shared_ptr<const Device>& device);
 }
 }  // namespace oneflow
