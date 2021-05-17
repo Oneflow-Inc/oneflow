@@ -131,8 +131,8 @@ class LayerNorm(Module):
         self.reset_parameters()
         # An integer specifies which axis to normalize at first, defaults to 1.
         self.begin_norm_axis = 1
-        # An integer specifies which axis params at, defaults to -1 in 'NCHW' format,-2 in 'NHWC' format
-        self.begin_params_axis = -1
+        # An integer specifies which axis params at, defaults to 1 in 'NCHW' format
+        self.begin_params_axis = 1
 
         self._op = (
             flow.builtin_op("layer_norm")
@@ -142,6 +142,7 @@ class LayerNorm(Module):
             .Output("y")
             .Output("mean")
             .Output("inv_variance")
+            .Output("normalized")
             .Build()
         )
 
@@ -164,6 +165,7 @@ class LayerNorm(Module):
             self.normalized_shape
         ), "Input tensor dim must greater than normalized dim!"
         self.begin_norm_axis = len(x.shape) - len(self.normalized_shape)
+        self.begin_params_axis = len(x.shape) - len(self.normalized_shape)
 
         if x.device == flow.device("cpu"):
             reduce_axis = []
@@ -175,12 +177,13 @@ class LayerNorm(Module):
             variance = x.var(dim=reduce_axis, keepdim=True)
 
             axis = self.begin_norm_axis
-            params_shape = [x.shape[axis]]
+
+            params_shape = x.shape[self.begin_params_axis :]
             weight = self.weight
             bias = self.bias
             if len(mean.shape) == 1:
                 nd_params_shape = [1] * len(x.shape)
-                nd_params_shape[axis] = params_shape[0]
+                nd_params_shape[self.begin_norm_axis] = params_shape[0]
                 mean = mean.reshape(shape=nd_params_shape)
                 variance = variance.reshape(shape=nd_params_shape)
 
@@ -199,16 +202,15 @@ class LayerNorm(Module):
             normalized = (x - mean) * variance.rsqrt()
 
             if self.weight:
-                normalized = normalized * self.weight
+                normalized = normalized * weight
             if self.bias:
-                normalized = normalized + self.bias
-
+                normalized = normalized + bias
             affined = normalized
+
+            nd_params_shape = [1] * (len(x.shape) - len(params_shape)) + list(
+                params_shape
+            )
             if self.elementwise_affine:
-                param_shape = x.shape[self.begin_params_axis :]
-                nd_params_shape = [1] * (len(x.shape) - len(param_shape)) + list(
-                    param_shape
-                )
                 affined = affined * self.weight
                 affined = affined + self.bias
             return affined
@@ -218,11 +220,11 @@ class LayerNorm(Module):
                     x,
                     self.weight,
                     self.bias,
-                    center=False,
-                    scale=False,
+                    center=True,
+                    scale=True,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon
+                    epsilon=self.epsilon,
                 )[0]
             else:
                 res = self._op2(
@@ -231,7 +233,7 @@ class LayerNorm(Module):
                     scale=False,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
-                    epsilon=self.epsilon
+                    epsilon=self.epsilon,
                 )[0]
             return res
 
