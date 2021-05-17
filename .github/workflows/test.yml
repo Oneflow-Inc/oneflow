@@ -348,7 +348,6 @@ jobs:
         if: matrix.test_suite == 'cuda'
         run: |
           python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
-            --build_docker_img \
             --oneflow_wheel_path=${wheelhouse_dir}
       - name: Print backtrace (distributed test)
         if: always() && matrix.test_suite == 'cuda'

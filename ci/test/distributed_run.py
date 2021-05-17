@@ -19,6 +19,20 @@ HARD_CODED_AFFILIATIONS = {
 }
 
 
+def is_img_existing(tag):
+    returncode = subprocess.run(
+        "docker image inspect {}".format(tag),
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode
+    if returncode == 0:
+        print("[OK]", tag)
+        return True
+    else:
+        return False
+
+
 def get_affiliations(host):
     # TODO(tsai): Implement a HTTP endpoint to retrieve affiliations
     if host in HARD_CODED_AFFILIATIONS:
@@ -216,9 +230,6 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--build_docker_img", action="store_true", required=False, default=False
-    )
     parser.add_argument("--debug", action="store_true", required=False, default=False)
     parser.add_argument(
         "--skip_libs", action="store_true", required=False, default=False
@@ -231,6 +242,7 @@ if __name__ == "__main__":
     parser.add_argument("--remote_host", type=str, required=False)
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
+    parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
     parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
     args = parser.parse_args()
 
@@ -260,7 +272,7 @@ if __name__ == "__main__":
     print("workspace_dir", workspace_dir)
     create_remote_workspace_dir(remote_host, workspace_dir)
     if args.oneflow_build_path:
-        # FIXME: infer a proper path and check there is only one
+        # TODO: infer a proper path and check there is only one
         oneflow_internal_path = (
             "python_scripts/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so"
         )
@@ -327,9 +339,20 @@ if __name__ == "__main__":
                 f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
                 shell=True,
             )
-    # TODO: fall back to ci-user image if user's image not found
-    if args.build_docker_img:
-        build_docker_img(remote_host, workspace_dir)
+    default_docker_image = "oneflow-test:$USER"
+    ci_user_docker_image = "oneflow-test:ci-user"
+    img_tag = None
+    if args.custom_img_tag == None:
+        if is_img_existing(default_docker_image):
+            img_tag = default_docker_image
+        elif is_img_existing(ci_user_docker_image):
+            img_tag = ci_user_docker_image
+        else:
+            build_docker_img(remote_host, workspace_dir)
+            img_tag = default_docker_image
+    else:
+        img_tag = args.custom_img_tag
+    assert img_tag
     assert args.bash_script
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
@@ -366,6 +389,5 @@ if __name__ == "__main__":
             oneflow_build_path=args.oneflow_build_path,
         )
         agent.block()
-        # TODO: remove container when exit
     # copy artifacts
     exit(0)
