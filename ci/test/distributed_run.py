@@ -245,7 +245,6 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         p = Process(target=launch_workers, kwargs=kwargs,)
         p.start()
         print("[docker agent]", "blocking")
-        # TODO: it is too easy to deadlock here, refactor polling with async await
         while self.bash_proc.poll() is None and p.is_alive() == True:
             pass
         p.terminate()
