@@ -24,6 +24,7 @@ from oneflow.python.nn.parameter import Parameter
 
 def compare_with_numpy_rmsprop(
     test_case,
+    device,
     x_shape,
     scale,
     learning_rate,
@@ -42,7 +43,7 @@ def compare_with_numpy_rmsprop(
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value))
+        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         param_list = list()
         param_list.append(x)
         rmsprop = flow.optim.RMSprop(
@@ -61,7 +62,9 @@ def compare_with_numpy_rmsprop(
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(grad, requires_grad=False)
+            grad_tensor = flow.Tensor(
+                grad, requires_grad=False, device=flow.device(device)
+            )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             rmsprop.step()
@@ -112,6 +115,7 @@ def compare_with_numpy_rmsprop(
 class TestRMSProp(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.9]
         arg_dict["learning_rate"] = [1]
