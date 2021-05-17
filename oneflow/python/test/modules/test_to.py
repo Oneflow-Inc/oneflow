@@ -61,6 +61,21 @@ class TestTo(flow.unittest.TestCase):
             np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
         )
 
+    def test_tensor_dtype_cast(test_case):
+        input = flow.Tensor(np.random.randint(1, 9, size=(1, 2, 3, 4)))
+        output = input.to(dtype=flow.float32)
+        test_case.assertEqual(output.device, flow.device("cpu"))
+        test_case.assertTrue(
+            np.array_equal(input.numpy().astype(np.float32), output.numpy())
+        )
+
+        input2 = flow.Tensor(np.random.randint(1, 9, size=(3, 2, 5, 7)))
+        output2 = input2.to(device=flow.device("cuda"), dtype=flow.float32)
+        test_case.assertEqual(output2.device, flow.device("cuda"))
+        test_case.assertTrue(
+            np.array_equal(input2.numpy().astype(np.float32), output2.numpy())
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
