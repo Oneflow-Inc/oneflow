@@ -823,6 +823,5 @@ def _input_dtype_is_float(data):
     if _is_scalar(data):
         return isinstance(data, float)
     elif isinstance(data, (list, tuple)):
-        return isinstance(data[0], float)
+        return any(isinstance(x, float) for x in data)
     return False
-
