@@ -44,6 +44,13 @@ class Argmax(Module):
             .Attr("end_dim", -1)
             .Build()
         )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
         self.dim = dim
         self.keepdim = keepdim
@@ -63,10 +70,10 @@ class Argmax(Module):
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = input.transpose(perm=perm)
+            x = self._transpose_op(input, perm=perm)[0]
             x = self._op_softmax_last_dim(x)[0]
             x = self._expand_op(x)[0]
-            x = x.transpose(perm=get_inversed_perm(perm))
+            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
             if self.keepdim == False:
                 x = x.squeeze(dim=[axis])
             return x

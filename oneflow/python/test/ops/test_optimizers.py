@@ -1040,6 +1040,10 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_numpy_indexed_slices_sgd(*arg)
 
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "indexed slices sgdw doesn't work in eager mode",
+    )
     def test_indexed_slices_sgdw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
@@ -1069,6 +1073,10 @@ class TestOptimizers(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_numpy_indexed_slices_adam(*arg)
 
+    @unittest.skipIf(
+        flow.unittest.env.eager_execution_enabled(),
+        "indexed slices adamw doesn't work in eager mode",
+    )
     def test_indexed_slices_adamw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu", "cpu"]
