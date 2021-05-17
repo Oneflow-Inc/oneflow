@@ -1040,7 +1040,7 @@ void JobBuildAndInferCtx::InferBlobBackwardSignature(Operator* op) {
 void JobBuildAndInferCtx::InferBlobBackwardSignature(
     const Operator& op, std::function<bool(const LogicalBlobId&)>* IsLbiBackwardUsed) {
   const bool is_train = job().job_conf().has_train_conf();
-  if (is_train) {
+  if (!is_train) {
     *IsLbiBackwardUsed = [](const LogicalBlobId&) { return false; };
     return;
   }
