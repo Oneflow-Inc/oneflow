@@ -80,6 +80,24 @@ def launch_remote_container(
     subprocess.check_call(ssh_cmd, shell=True)
 
 
+def handle_cast(conn=None, cmd=None):
+    received_cmd: str = conn.recv().decode()
+    assert received_cmd.startswith("cast/")
+    received_cmd = received_cmd.replace("cast/", "")
+    assert received_cmd == cmd, (received_cmd, cmd)
+    return conn.recv().decode()
+
+
+def handle_call(conn=None, cmd=None, response=None):
+    received_cmd: str = conn.recv().decode()
+    assert received_cmd.startswith("call/")
+    received_cmd = received_cmd.replace("call/", "")
+    assert received_cmd == cmd, (received_cmd, cmd)
+    msg = conn.recv().decode()
+    conn.send(response.encode())
+    return msg
+
+
 class DockerAgent:
     def __init__(
         self,
@@ -152,10 +170,11 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         self.conn = self.listener.accept()
         # do_launch_workers
         for remote_host in self.remote_hosts:
-            self.env_proto_txt = self.conn.recv()
+            handle_cast(conn=self.conn, cmd="host")
+            self.env_proto_txt = handle_cast(conn=self.conn, cmd="env_proto")
             print("[docker agent]", f"[{remote_host}]", self.env_proto_txt)
             f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
-            f.write(self.env_proto_txt)
+            f.write(self.env_proto_txt.encode())
             f.flush()
             subprocess.check_call(
                 f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
@@ -167,8 +186,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             self.remote_docker_proc[remote_host] = self.bash_proc = subprocess.Popen(
                 run_docker_cmd, shell=True
             )
-        print("[docker agent]", "sending ok")
-        self.conn.send(b"ok")
+            handle_call(conn=self.conn, cmd="start_worker", response="ok")
 
     def block(self):
         print("blocking")

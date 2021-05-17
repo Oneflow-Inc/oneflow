@@ -178,7 +178,25 @@ def use_worker_agent():
     return worker_agent_port() is not None
 
 
-def launch_workers_via_agent(env_proto=None):
+def cast(conn=None, cmd=None, msg=None):
+    cmd = "cast/" + cmd
+    print("[unittest]", f"[{cmd}]", msg)
+    conn.send(cmd.encode())
+    conn.send(msg.encode())
+
+
+def call(conn=None, cmd=None, msg=None):
+    cmd = "call/" + cmd
+    print("[unittest]", f"[{cmd}]", msg)
+    conn.send(cmd.encode())
+    msg_ = ""
+    if msg is not None:
+        msg_ = msg
+    conn.send(msg_.encode())
+    return conn.recv().decode()
+
+
+def launch_worker_via_agent(host=None, env_proto=None):
     print("launching worker via agent")
     from multiprocessing.connection import Client
 
@@ -186,10 +204,9 @@ def launch_workers_via_agent(env_proto=None):
     authkey = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
     assert authkey
     conn = Client(address, authkey=authkey.encode())
-    print("[unittest]", "sending env_proto to agent")
-    conn.send(pbtxt.MessageToString(env_proto).encode())
-    print("[unittest]", "blocking until agent send ok")
-    assert conn.recv().decode() == "ok"
+    cast(conn=conn, cmd="host", msg=host)
+    cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
+    assert call(conn=conn, cmd="start_worker") == "ok"
     conn.close()
     print("[unittest]", "agent received env proto")
 
@@ -213,7 +230,7 @@ class TestCase(unittest.TestCase):
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                     print("initializing worker...")
                     # maybe we could move this inside env.init ?
-                    raise ValueError("launch_workers_via_agent")
+                    raise ValueError("launch_worker_via_agent")
                 else:
                     ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
                     config_rank_ctrl_port = -1
@@ -246,7 +263,9 @@ class TestCase(unittest.TestCase):
                         # set ctrl_bootstrap_conf of worker
                         assert bootstrap_conf.HasField("host")
                         worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
-                        launch_workers_via_agent(env_proto=worker_env_proto)
+                        launch_worker_via_agent(
+                            host=bootstrap_conf.host, env_proto=worker_env_proto
+                        )
                 _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()
