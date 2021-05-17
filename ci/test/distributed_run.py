@@ -241,6 +241,9 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         p = Process(target=launch_workers, kwargs=kwargs,)
         p.start()
         print("[docker agent]", "blocking")
+        while self.bash_proc.poll() is not None:
+            if p.is_alive() == False:
+                break
         returncode = self.bash_proc.wait()
         p.terminate()
         assert returncode == 0
@@ -391,13 +394,12 @@ if __name__ == "__main__":
 
     def exit_handler():
         print("removing local docker container:", container_name)
-        tmux_prefix = f"tmux new-session -d -s rm-{container_name}"
-        rm_cmd = f"docker\ rm\ -f\ {container_name}"
-        subprocess.check_call(f"{tmux_prefix} '{rm_cmd}'", shell=True)
+        rm_cmd = f"docker rm -f {container_name}"
+        subprocess.check_call(f"{rm_cmd}", shell=True)
         for remote_host in remote_hosts:
             print(f"removing local docker container at {remote_host}:", container_name)
             subprocess.check_call(
-                f"ssh {remote_host} {tmux_prefix} '{rm_cmd}'", shell=True,
+                f"ssh {remote_host} {rm_cmd}", shell=True,
             )
 
     atexit.register(exit_handler)
