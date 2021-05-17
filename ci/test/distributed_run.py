@@ -171,11 +171,12 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         self.conn.send(b"ok")
 
     def block(self):
-        self.bash_proc.communicate(timeout=self.timeout)
-        assert self.bash_proc.returncode == 0
+        print("blocking")
+        assert self.bash_proc.wait() == 0
+        print("bash exe done")
         for k, v in self.remote_docker_proc.items():
             # TODO: refine here
-            v.communicate(timeout=10)
+            assert v.wait() == 0
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
