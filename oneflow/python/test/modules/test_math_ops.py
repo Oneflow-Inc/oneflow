@@ -22,6 +22,24 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestVariance(flow.unittest.TestCase):
+    def test_variance(test_case):
+        input_arr = np.random.randn(2, 3, 4, 5)
+        of_out = flow.Tensor(input_arr).var(1, True)
+        np_out = np.var(input_arr, 1, keepdims=True)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_variance_v2(test_case):
+        input_arr = np.random.randn(4, 1, 3, 2)
+        of_out = flow.var(flow.Tensor(input_arr), 2, False)
+        np_out = np.var(input_arr, 2, keepdims=False)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSin(flow.unittest.TestCase):
     def test_sin(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3))

@@ -55,7 +55,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         m = flow.nn.LayerNorm(x.size()[1:])
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output))
+        test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
 
     def test_layernorm_v2(test_case):
         input_arr = np.array(
@@ -87,7 +87,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         m = flow.nn.LayerNorm([2, 2], eps=1e-5)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output))
+        test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
 
     def test_layernorm_v3(test_case):
         input_arr = np.array(
@@ -119,7 +119,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         m = flow.nn.LayerNorm(2, elementwise_affine=True)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output))
+        test_case.assertTrue(np.allclose(y.numpy(), output, 1e-05, 1e-05))
 
 
 if __name__ == "__main__":

@@ -152,7 +152,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         x = flow.Tensor(input_arr)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), output, 1e-04, 1e-04))
 
     def test_batchnorm2d_infer(test_case):
         input_arr = np.array(
@@ -219,7 +219,7 @@ class TestBatchNormModule(flow.unittest.TestCase):
         m.eval()
         x = flow.Tensor(input_arr)
         y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output_arr, atol=1e-04))
+        test_case.assertTrue(np.allclose(y.numpy(), output_arr, 1e-04, 1e-04))
 
 
 if __name__ == "__main__":

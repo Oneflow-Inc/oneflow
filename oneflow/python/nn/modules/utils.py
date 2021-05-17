@@ -57,6 +57,7 @@ def _list_with_default(out_size, defaults):
 
 def _check_axis(axis, shape):
     ndim = len(shape)
+    # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
     if axis is None:
         axis = list(range(len(shape)))
     if isinstance(axis, int):

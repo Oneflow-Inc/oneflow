@@ -21,28 +21,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-
-
-def _check_axis(axis, shape):
-    ndim = len(shape)
-    # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
-    if axis is None:
-        axis = list(range(len(shape)))
-    if isinstance(axis, int):
-        axis = [axis]
-
-    assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
-    axis = list(axis)
-    for i in range(len(axis)):
-        assert (
-            -ndim <= axis[i] <= ndim - 1
-        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-            -ndim, ndim - 1, axis[i]
-        )
-        if axis[i] < 0:
-            axis[i] = axis[i] + ndim
-
-    return axis
+from oneflow.python.nn.modules.utils import _check_axis
 
 
 class Sum(Module):
@@ -278,6 +257,61 @@ def _mean(input_tensor, dim=None, keepdim=False):
     """
 
     return Mean(axis=dim, keepdims=keepdim)(input_tensor)
+
+
+class Variance(Module):
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
+        super().__init__()
+        self.dim = dim
+        self.keepdim = keepdim
+
+    def forward(self, input):
+        axis = _check_axis(self.dim, input.shape)
+        if isinstance(axis, list) and len(axis) == 0:
+            return flow.experimental.zeros(size=input.shape)
+        else:
+            return flow.experimental.sub(
+                flow.experimental.mean(
+                    flow.experimental.square(input), axis, self.keepdim
+                ),
+                flow.experimental.square(
+                    flow.experimental.mean(input, axis, self.keepdim)
+                ),
+            )
+
+
+@oneflow_export("var")
+@register_tensor_op("var")
+@experimental_api
+def variance_op(input, dim=None, keepdim=False):
+    r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
+
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    tensor having 1 (or `len(dim)`) fewer dimension(s).
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        np_arr = np.random.randn(2,3,4,5)
+        input = flow.Tensor(np_arr)
+        output = flow.var(input, 1, True)
+        # equal to np.var(input_arr, 1, keepdim=True)
+
+    """
+    return Variance(dim, keepdim)(input)
 
 
 class ScalarSubByTensor(Module):

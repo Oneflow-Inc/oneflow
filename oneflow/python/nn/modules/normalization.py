@@ -19,6 +19,7 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 from typing import Tuple, Union
+from oneflow.python.nn.modules.batchnorm import BatchNormalization
 
 _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 
@@ -163,19 +164,12 @@ class LayerNorm(Module):
             for dim in range(len(x.shape)):
                 if dim >= self.begin_norm_axis:
                     reduce_axis.append(dim)
-            mean = flow.experimental.reduce_mean(x, axis=reduce_axis, keepdims=True)
-            variance = flow.experimental.reduce_variance(
-                x, axis=reduce_axis, keepdims=True
-            )
-            normalized = flow.experimental.batch_normalization(
-                x=x,
-                mean=mean,
-                variance=variance,
-                weight=self.weight,
-                bias=self.bias,
-                axis=self.begin_norm_axis,
-                epsilon=self.epsilon,
-            )
+
+            mean = x.mean(dim=reduce_axis, keepdim=True)
+            variance = x.var(dim=reduce_axis, keepdim=True)
+            normalized = BatchNormalization(
+                axis=self.begin_norm_axis, epsilon=self.epsilon
+            )(x, mean, variance, self.weight, self.bias)
 
             affined = normalized
             if self.elementwise_affine:

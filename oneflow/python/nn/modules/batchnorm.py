@@ -84,14 +84,6 @@ class BatchNormalization(Module):
             return res
 
 
-@oneflow_export("batch_normalization")
-@experimental_api
-def batch_normalization_op(
-    x, mean, variance, weight=None, bias=None, axis=1, epsilon=1e-5
-):
-    return BatchNormalization(axis, epsilon)(x, mean, variance, weight, bias)
-
-
 class _NormBase(Module):
     """Common base of _InstanceNorm and _BatchNorm"""
 
@@ -110,18 +102,18 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(
-                flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
-            )
-            self.bias = flow.nn.Parameter(
-                flow.Tensor(num_features).normal_(mean=0.0, std=1.0)
-            )
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer("running_mean", flow.Tensor(num_features).fill_(0.0))
-            self.register_buffer("running_var", flow.Tensor(num_features).fill_(1.0))
+            self.register_buffer(
+                "running_mean", flow.Tensor(num_features),
+            )
+            self.register_buffer(
+                "running_var", flow.Tensor(num_features),
+            )
         else:
             self.register_parameter("running_mean", None)
             self.register_parameter("running_var", None)
@@ -213,12 +205,8 @@ class _BatchNorm(_NormBase):
                 for dim in range(len(x.shape)):
                     if dim != 1:
                         reduce_axis.append(dim)
-                mean = flow.experimental.reduce_mean(
-                    x, axis=reduce_axis, keepdims=False
-                )
-                variance = flow.experimental.reduce_variance(
-                    x, axis=reduce_axis, keepdims=False
-                )
+                mean = x.mean(dim=reduce_axis, keepdim=False)
+                variance = x.var(dim=reduce_axis, keepdim=False)
 
                 running_mean = (
                     self.momentum * self.running_mean + (1 - self.momentum) * mean
@@ -241,25 +229,13 @@ class _BatchNorm(_NormBase):
                 # self.__setattr__("running_mean", running_mean)
                 # self.__setattr__("running_var", running_var)
 
-                return flow.experimental.batch_normalization(
-                    x=x,
-                    mean=mean,
-                    variance=variance,
-                    weight=self.weight,
-                    bias=self.bias,
-                    axis=1,
-                    epsilon=self.eps,
+                return BatchNormalization(axis=1, epsilon=self.eps)(
+                    x, mean, variance, self.weight, self.bias
                 )
 
             else:
-                return flow.experimental.batch_normalization(
-                    x=x,
-                    mean=self.running_mean,
-                    variance=self.running_var,
-                    weight=self.weight,
-                    bias=self.bias,
-                    axis=1,
-                    epsilon=self.eps,
+                return BatchNormalization(axis=1, epsilon=self.eps)(
+                    x, self.running_mean, self.running_var, self.weight, self.bias
                 )
 
         else:
