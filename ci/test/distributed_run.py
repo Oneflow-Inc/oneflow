@@ -234,7 +234,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         self.bash_proc = subprocess.Popen(run_docker_cmd, shell=True)
 
     def block(self):
-        from multiprocessing import Process, Queue
+        from multiprocessing import Process
 
         p = None
         kwargs = {
