@@ -27,6 +27,8 @@ def _prelu(input, alpha):
     alpha = np.expand_dims(alpha, 3)
     return np.where(input > 0, input, input * alpha)
 
+def _prelu_grad(input, alpha):
+    return alpha * (input <= 0) + (input > 0)
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -55,13 +57,13 @@ class TestPReLU(flow.unittest.TestCase):
 
     def test_prelu_grad(test_case):
         np_input = np.random.randn(2, 6, 5, 3)
-        input = flow.Tensor(np_input, dtype=flow.float32)
-        np_alpha = np.random.randn(1)
+        input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        np_alpha = 0.2
         prelu = flow.nn.PReLU(init=np_alpha)
         of_out = prelu(input).sum()
-        flow.add()
         of_out.backward()
-
+        np_grad = _prelu_grad(np_input, np_alpha)
+        test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 if __name__ == "__main__":
     unittest.main()

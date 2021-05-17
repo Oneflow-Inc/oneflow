@@ -33,7 +33,7 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    grad_op = JUST(op_expr_helper::PReLUGradOp(GradientOpName(op_name + "_input")));
+    _grad_op = JUST(op_expr_helper::PReLUGradOp(GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
@@ -57,7 +57,7 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
 
     in_grads->resize(2);
     if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
-      const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op, {x, dy, alpha}));
+      const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*_grad_op, {x, dy, alpha}));
       if (ctx->input_requires_grad) { in_grads->at(0) = grads->at(0); }
       if (ctx->alpha_requires_grad) { in_grads->at(1) = grads->at(1); }
     }
@@ -66,7 +66,7 @@ class PReLU : public OpExprGradFunction<PReLUInterpState> {
   }
 
  private:
-  std::shared_ptr<OpExpr> grad_op;
+  std::shared_ptr<OpExpr> _grad_op;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
