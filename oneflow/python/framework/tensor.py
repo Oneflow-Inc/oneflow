@@ -828,8 +828,7 @@ def _is_scalar(data):
 def _flatten_list_or_tuple(list_or_tuple):
     for item in list_or_tuple:
         if isinstance(item, (list, tuple)):
-            for sub_item in _flatten_list_or_tuple(item):
-                yield sub_item
+            yield from _flatten_list_or_tuple(item)
         else:
             yield item
 
