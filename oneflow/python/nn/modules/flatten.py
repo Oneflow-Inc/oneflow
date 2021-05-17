@@ -67,7 +67,6 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
         start_dim: first dim to flatten (default = 0).
         end_dim: last dim to flatten (default = -1).
     
-
     For example: 
 
     .. code-block:: python 
