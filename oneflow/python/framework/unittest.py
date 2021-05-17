@@ -174,6 +174,12 @@ def worker_agent_port():
         return None
 
 
+def worker_agent_authkey():
+    key = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
+    assert key
+    return key
+
+
 def use_worker_agent():
     return worker_agent_port() is not None
 
@@ -201,9 +207,7 @@ def launch_worker_via_agent(host=None, env_proto=None):
     from multiprocessing.connection import Client
 
     address = ("localhost", worker_agent_port())
-    authkey = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
-    assert authkey
-    conn = Client(address, authkey=authkey.encode())
+    conn = Client(address, authkey=worker_agent_authkey().encode())
     cast(conn=conn, cmd="host", msg=host)
     cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
     assert call(conn=conn, cmd="start_worker") == "ok"
