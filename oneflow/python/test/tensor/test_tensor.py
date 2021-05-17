@@ -405,7 +405,9 @@ class TestTensor(flow.unittest.TestCase):
         list_data = [[1, 2.0], [5, 3]]
         tensor = flow.tensor(list_data)
         test_case.assertEqual(tensor.dtype, flow.float32)
-        test_case.assertTrue(np.allclose(tensor.numpy(), np.array(list_data), 1e-4, 1e-4))
+        test_case.assertTrue(
+            np.allclose(tensor.numpy(), np.array(list_data), 1e-4, 1e-4)
+        )
 
         tuple_data = ((1, 2, 5), (4, 3, 10))
         tensor = flow.tensor(tuple_data)
@@ -416,6 +418,7 @@ class TestTensor(flow.unittest.TestCase):
         tensor = flow.tensor(scalar)
         test_case.assertEqual(tensor.dtype, flow.float32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
+
 
 if __name__ == "__main__":
     unittest.main()
