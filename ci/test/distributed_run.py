@@ -228,6 +228,7 @@ if __name__ == "__main__":
             f"rsync -azP --omit-dir-times --no-perms --no-group --include='*.py' --include='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
             shell=True,
         )
+    # TODO: fall back to ci-user image if user's image not found
     if args.build_docker_img:
         build_docker_img(remote_host, workspace_dir)
     assert args.bash_script
