@@ -144,7 +144,9 @@ class Adam(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    lr_tensor = flow.Tensor([param_group.options["lr"]], device=param.device)
+                    lr_tensor = flow.Tensor(
+                        [param_group.options["lr"]], device=param.device
+                    )
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
                     self._op(

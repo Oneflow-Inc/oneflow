@@ -173,7 +173,9 @@ class RMSprop(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    lr_tensor = flow.Tensor([param_group.options["lr"]], device=param.device)
+                    lr_tensor = flow.Tensor(
+                        [param_group.options["lr"]], device=param.device
+                    )
                     ms_tensor = self._state[param]["square_avg"]
                     if param_group.options["centered"]:
                         mg_tensor = self._state[param]["grad_avg"]
