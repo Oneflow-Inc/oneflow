@@ -161,13 +161,12 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
                 f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
                 shell=True,
             )
-            run_docker_cmd = f"ssh {remote_host} docker run {self.common_docker_args} --env PYTHONPATH={workspace_dir}/python_scripts oneflow-test:$USER"
+            run_docker_cmd = f"ssh {remote_host} docker exec --env PYTHONPATH={workspace_dir}/python_scripts {self.container_name}"
             run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
             print("[docker agent]", run_docker_cmd)
             self.remote_docker_proc[remote_host] = self.bash_proc = subprocess.Popen(
                 run_docker_cmd, shell=True
             )
-        self.container_name
         print("[docker agent]", "sending ok")
         self.conn.send(b"ok")
 
