@@ -197,7 +197,7 @@ def call(conn=None, cmd=None, msg=None):
 
 
 def launch_worker_via_agent(host=None, env_proto=None):
-    print("launching worker via agent", flush=True)
+    print("[unittest]", "launching worker via agent at", host)
     from multiprocessing.connection import Client
 
     address = ("localhost", worker_agent_port())
