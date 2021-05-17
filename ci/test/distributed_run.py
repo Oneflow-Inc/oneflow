@@ -8,6 +8,7 @@ import argparse
 import uuid
 import getpass
 import atexit
+import pathlib
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -72,6 +73,7 @@ def create_remote_workspace_dir(hostname, workspace_dir):
 def launch_remote_container(
     hostname=None, survival_time=None, workspace_dir=None, container_name=None
 ):
+    print("launching remote container at", hostname)
     docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} oneflow-test:$USER sleep {survival_time}
 """
     ssh_cmd = f"ssh {hostname} {docker_cmd}"
@@ -239,7 +241,15 @@ if __name__ == "__main__":
             ),
             shell=True,
         )
-        assert len(os.listdir(tmp_lib_dir.name)) > 0
+        libs = os.listdir(tmp_lib_dir.name)
+        assert len(libs) > 0
+        excludelist_path = os.path.join(
+            pathlib.Path(__file__).parent.absolute(), "excludelist"
+        )
+        excludelist = open(excludelist_path).read()
+        for lib in libs:
+            if lib in excludelist:
+                print("excluding", lib)
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --include='*.py' --include='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
