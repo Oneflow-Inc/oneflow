@@ -178,8 +178,27 @@ class CropMirrorNormalize(Module):
             .Build()
         )
 
-    def forward(self, input, mirror):
-        res = self._op(input, mirror)[0]
+        self._val_op = (
+            flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("output_layout", output_layout)
+            .Attr("mean", mean)
+            .Attr("std", std)
+            .Attr("crop_h", crop_h)
+            .Attr("crop_w", crop_w)
+            .Attr("crop_pos_y", crop_pos_y)
+            .Attr("crop_pos_x", crop_pos_x)
+            .Attr("output_dtype", output_dtype)
+            .Build()
+        )
+
+    def forward(self, input, mirror=None):
+        if mirror != None:
+            res = self._op(input, mirror)[0]
+        else:
+            res = self._val_op(input)[0]
         return res
 
 
@@ -208,6 +227,27 @@ class OFRecordImageDecoderRandomCrop(Module):
             .Attr("random_aspect_ratio", random_aspect_ratio)
             .Attr("has_seed", has_seed)
             .Attr("seed", seed)
+            .Build()
+        )
+
+    def forward(self, input):
+        res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.OFRecordImageDecoder")
+@experimental_api
+class OFRecordImageDecoder(Module):
+    def __init__(
+        self, blob_name: str, color_space: str = "BGR",
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("ofrecord_image_decoder")
+            .Input("in")
+            .Output("out")
+            .Attr("name", blob_name)
+            .Attr("color_space", color_space)
             .Build()
         )
 
@@ -289,8 +329,44 @@ class ImageResize(Module):
             resize_side = "shorter"
 
         if keep_aspect_ratio:
-            #  TODO(Liang Depeng)
-            assert False
+            if not isinstance(target_size, int):
+                raise ValueError(
+                    "target_size must be an int when keep_aspect_ratio is True"
+                )
+
+            if min_size is None:
+                min_size = 0
+
+            if max_size is None:
+                max_size = 0
+
+            if resize_side == "shorter":
+                resize_longer = False
+            elif resize_side == "longer":
+                resize_longer = True
+            else:
+                raise ValueError('resize_side must be "shorter" or "longer"')
+
+            self._op = (
+                flow.builtin_op("image_resize_keep_aspect_ratio")
+                .Input("in")
+                .Output("out")
+                .Output("size")
+                .Output("scale")
+                .Attr("target_size", target_size)
+                .Attr("min_size", min_size)
+                .Attr("max_size", max_size)
+                .Attr("resize_longer", resize_longer)
+                .Attr("interpolation_type", interpolation_type)
+                .Build()
+            )
+            # TODO(Liang Depeng)
+            # scale = flow.tensor_buffer_to_tensor(
+            #     scale, dtype=flow.float32, instance_shape=(2,)
+            # )
+            # new_size = flow.tensor_buffer_to_tensor(
+            #     new_size, dtype=flow.int32, instance_shape=(2,)
+            # )
         else:
             if (
                 not isinstance(target_size, (list, tuple))
