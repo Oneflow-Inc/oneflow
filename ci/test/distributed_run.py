@@ -150,13 +150,13 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
 
     def launch_workers(self):
         self.conn = self.listener.accept()
-        self.env_proto_txt = self.conn.recv()
-        print("[docker agent]", "[env proto]", self.env_proto_txt)
-        f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
-        f.write(self.env_proto_txt)
-        f.flush()
         # do_launch_workers
         for remote_host in self.remote_hosts:
+            self.env_proto_txt = self.conn.recv()
+            print("[docker agent]", f"[{remote_host}]", self.env_proto_txt)
+            f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
+            f.write(self.env_proto_txt)
+            f.flush()
             subprocess.check_call(
                 f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
                 shell=True,
@@ -187,6 +187,9 @@ if __name__ == "__main__":
         "--build_docker_img", action="store_true", required=False, default=False
     )
     parser.add_argument("--debug", action="store_true", required=False, default=False)
+    parser.add_argument(
+        "--skip_libs", action="store_true", required=False, default=False
+    )
     parser.add_argument("--bash_script", type=str, required=False)
     default_this_host = socket.gethostname()
     parser.add_argument(
@@ -231,62 +234,66 @@ if __name__ == "__main__":
         oneflow_internal_path = os.path.join(
             args.oneflow_build_path, oneflow_internal_path
         )
-        print("copying .so")
-        tmp_dir = tempfile.TemporaryDirectory()
-        tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
-        os.mkdir(tmp_lib_dir)
-        subprocess.check_call(
-            """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
-                "file", oneflow_internal_path
-            ).replace(
-                "destination", tmp_lib_dir
-            ),
-            shell=True,
-        )
-        libs = os.listdir(tmp_lib_dir)
-        assert len(libs) > 0
-        excludelist_path = os.path.join(
-            pathlib.Path(__file__).parent.absolute(), "excludelist"
-        )
-        excludelist = open(excludelist_path).read().split("\n")
-        subprocess.check_call(
-            f"cp {oneflow_internal_path} {tmp_dir.name}", shell=True,
-        )
-        for lib in libs:
-            if lib in excludelist or "libpython" in lib:
-                print("excluding", lib)
-                subprocess.check_call(
-                    f"rm {tmp_lib_dir}/{lib}", shell=True,
-                )
-            else:
-                print("keeping", lib)
-                subprocess.check_call(
-                    f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}", shell=True,
-                )
-        tmp_oneflow_internal_path = os.path.join(
-            tmp_dir.name, pathlib.Path(oneflow_internal_path).name
-        )
-        print("before fixing .so")
-        subprocess.check_call(
-            f"ldd {tmp_oneflow_internal_path}", shell=True,
-        )
-        print("fixing .so")
-        subprocess.check_call(
-            f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}",
-            shell=True,
-        )
-        subprocess.check_call(
-            f"ldd {tmp_oneflow_internal_path}", shell=True,
-        )
+        tmp_dir = None
+        if args.skip_libs == False:
+            print("copying .so")
+            tmp_dir = tempfile.TemporaryDirectory()
+            tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
+            os.mkdir(tmp_lib_dir)
+            subprocess.check_call(
+                """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
+                    "file", oneflow_internal_path
+                ).replace(
+                    "destination", tmp_lib_dir
+                ),
+                shell=True,
+            )
+            libs = os.listdir(tmp_lib_dir)
+            assert len(libs) > 0
+            excludelist_path = os.path.join(
+                pathlib.Path(__file__).parent.absolute(), "excludelist"
+            )
+            excludelist = open(excludelist_path).read().split("\n")
+            subprocess.check_call(
+                f"cp {oneflow_internal_path} {tmp_dir.name}", shell=True,
+            )
+            for lib in libs:
+                if lib in excludelist or "libpython" in lib:
+                    print("excluding", lib)
+                    subprocess.check_call(
+                        f"rm {tmp_lib_dir}/{lib}", shell=True,
+                    )
+                else:
+                    print("keeping", lib)
+                    subprocess.check_call(
+                        f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}",
+                        shell=True,
+                    )
+            tmp_oneflow_internal_path = os.path.join(
+                tmp_dir.name, pathlib.Path(oneflow_internal_path).name
+            )
+            print("before fixing .so")
+            subprocess.check_call(
+                f"ldd {tmp_oneflow_internal_path}", shell=True,
+            )
+            print("fixing .so")
+            subprocess.check_call(
+                f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}",
+                shell=True,
+            )
+            subprocess.check_call(
+                f"ldd {tmp_oneflow_internal_path}", shell=True,
+            )
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
             shell=True,
         )
-        subprocess.check_call(
-            f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
-            shell=True,
-        )
+        if args.skip_libs == False:
+            subprocess.check_call(
+                f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
+                shell=True,
+            )
     # TODO: fall back to ci-user image if user's image not found
     if args.build_docker_img:
         build_docker_img(remote_host, workspace_dir)

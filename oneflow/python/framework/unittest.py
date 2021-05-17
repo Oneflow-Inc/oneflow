@@ -178,11 +178,9 @@ def use_worker_agent():
     return worker_agent_port() is not None
 
 
-def launch_workers_via_agent():
-    print("launching workers via agent")
+def launch_workers_via_agent(env_proto=None):
+    print("launching worker via agent")
     from multiprocessing.connection import Client
-
-    env_proto = env_util.default_env_proto
 
     address = ("localhost", worker_agent_port())
     authkey = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
@@ -215,6 +213,7 @@ class TestCase(unittest.TestCase):
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                     print("initializing worker...")
                     # maybe we could move this inside env.init ?
+                    raise ValueError("launch_workers_via_agent")
                 else:
                     ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
                     config_rank_ctrl_port = -1
@@ -238,7 +237,16 @@ class TestCase(unittest.TestCase):
                         config_rank_ctrl_port,
                         config_node_size,
                     )
-                launch_workers_via_agent()
+                    worker_env_proto = EnvProto()
+                    worker_env_proto.CopyFrom(env_util.default_env_proto)
+                    worker_env_proto.ClearField("ctrl_bootstrap_conf")
+                    for bootstrap_conf in bootstrap_conf_list:
+                        if bootstrap_conf.rank == 0:
+                            continue
+                        # set ctrl_bootstrap_conf of worker
+                        assert bootstrap_conf.HasField("host")
+                        worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
+                        launch_workers_via_agent(env_proto=worker_env_proto)
                 _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()
