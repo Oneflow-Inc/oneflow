@@ -49,9 +49,8 @@ class Tensor {
 };
 
 namespace compatible_py {
-
 class Distribute;
-}
+}  // namespace compatible_py
 
 class Device;
 class DType;

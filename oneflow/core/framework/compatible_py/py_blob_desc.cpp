@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/py_blob_desc.h"
+#include "oneflow/core/framework/compatible_py/py_blob_desc.h"
 
 namespace oneflow {
 

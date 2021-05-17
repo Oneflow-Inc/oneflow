@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/framework/object.h"
-#include "oneflow/core/framework/blob_register.h"
-#include "oneflow/core/framework/blob_trait.h"
+#include "oneflow/core/framework/compatible_py/object.h"
+#include "oneflow/core/framework/compatible_py/blob_register.h"
+#include "oneflow/core/framework/compatible_py/blob_trait.h"
 
 namespace oneflow {
 

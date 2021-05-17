@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_BLOB_REGISTER_H_
 
 #include <map>
-#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/compatible_py/object.h"
 
 namespace oneflow {
 

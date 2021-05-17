@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OPKERNEL_OBJECT_H_
 
 #include <functional>
-#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/compatible_py/object.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"

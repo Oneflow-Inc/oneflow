@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/instructions_builder.h"
-#include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/compatible_py/op_arg_util.h"
 
 namespace oneflow {
 

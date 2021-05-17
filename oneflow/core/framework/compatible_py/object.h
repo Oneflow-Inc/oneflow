@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OBJECT_H_
 
 #include <functional>
-#include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/compatible_py/op_arg_util.h"
 #include "oneflow/core/framework/shut_down_util.h"
 
 namespace oneflow {

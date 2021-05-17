@@ -16,7 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/op_arg_util.h"
+#include "oneflow/core/framework/compatible_py/op_arg_util.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/mirrored_parallel.pb.h"
 #include "oneflow/core/common/data_type.cfg.h"

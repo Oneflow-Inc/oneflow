@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/framework/compatible_py/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
