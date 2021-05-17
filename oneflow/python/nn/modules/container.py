@@ -46,7 +46,9 @@ class Sequential(Module):
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
-    To make it easier to understand, here is a small example::
+    To make it easier to understand, here is a small 
+    
+    For example::
 
         # Example of using Sequential
         model = nn.Sequential(
