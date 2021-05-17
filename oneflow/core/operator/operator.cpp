@@ -1206,7 +1206,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
             int64_t symbol_id;
             const auto BuildInstruction =
-                [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+                [&symbol_id, &parallel_conf](LogicalInstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
               return Maybe<void>::Ok();
             };

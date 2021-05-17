@@ -37,7 +37,7 @@ static Maybe<void> NaiveInterpret(const BuiltinOpExpr& op_expr, const TensorTupl
   auto parallel_conf =
       std::make_shared<cfg::ParallelConf>(scope->device_parallel_desc_symbol()->parallel_conf());
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
+  auto build_instruction = [&](LogicalInstructionsBuilder* builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& boxing_util = *Global<std::shared_ptr<ForeignBoxingUtil>>::Get();
@@ -73,7 +73,7 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
+  auto build_instruction = [&](LogicalInstructionsBuilder* builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& in_blob_object = (*bn2blob_object)["in"];
@@ -120,7 +120,7 @@ static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpE
   OpAttribute proto_op_attribute;
   op_attribute->ToProto(&proto_op_attribute);
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
+  auto build_instruction = [&](LogicalInstructionsBuilder* builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     const auto& logical_in_blob_object =
@@ -160,7 +160,7 @@ static Maybe<void> BuildAndRunDistributeConcatAndAddInstruction(const BuiltinOpE
   const auto& op_arg_blob_attr =
       JUST(compatible_py::GetOpArgBlobAttribute(proto_op_attribute, "out"));
 
-  auto build_instruction = [&](InstructionsBuilder* builder) {
+  auto build_instruction = [&](LogicalInstructionsBuilder* builder) {
     const auto& bn2blob_object =
         CHECK_JUST(OpInterpUtil::MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
     int input_size = op_expr.indexed_ibns().size();

@@ -43,7 +43,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 
 Maybe<void> SingleClientSync() {
   BlockingCounter bc(1);
-  LogicalRun([&bc](InstructionsBuilder* builder) {
+  LogicalRun([&bc](LogicalInstructionsBuilder* builder) {
     builder->ComputeGlobalFrontSeqBarrier();
     builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
   });
