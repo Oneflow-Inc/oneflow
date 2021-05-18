@@ -24,6 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct DimGatherInterpState : public OpExprInterpState {
+  int32_t dim;
   bool requires_grad;
 };
 
@@ -58,18 +59,18 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(0));
-  dim_ = JUST(op_trait_->GetAttr<int32_t>("dim"));
+  ctx->dim = JUST(op_trait_->GetAttr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  const auto& index = ctx->SavedTensors().at(0);
-  const auto& like = ctx->SavedTensors().at(1);
+  const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
+  const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(1);
 
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("dim", dim_));
+  JUST(attrs.SetAttr<int32_t>("dim", ctx->dim));
   in_grads->at(0) = JUST(
       OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {like, out_grads.at(0), index}, attrs));
   return Maybe<void>::Ok();
