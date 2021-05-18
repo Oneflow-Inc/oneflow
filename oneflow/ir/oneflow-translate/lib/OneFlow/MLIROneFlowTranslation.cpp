@@ -938,17 +938,18 @@ void RoundTripOneFlowJob(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   Importer imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
-  const bool is_strict = true;
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
+    // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
-      std::cerr << "fail to update job with IR, job will stay intact, job_name: "
-                << job->job_conf().job_name() << "\n";
-      if (is_strict) { exit(EXIT_FAILURE); }
+      llvm::errs() << "fail to update job with IR, job will stay intact, job_name: "
+                   << job->job_conf().job_name();
+      exit(EXIT_FAILURE);
     }
+
   } else {
-    std::cerr << "fail to convert job to IR, job_name: " << job->job_conf().job_name() << "\n";
-    if (is_strict) { exit(EXIT_FAILURE); }
+    llvm::errs() << "fail to convert job to IR, job_name: " << job->job_conf().job_name();
+    exit(EXIT_FAILURE);
   }
 }
 
