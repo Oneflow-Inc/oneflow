@@ -136,8 +136,8 @@ class TestTensor(flow.unittest.TestCase):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
         test_case.assertTrue(not x.is_cuda)
-        # x = flow.Tensor(*shape, device=flow.device("cuda"))
-        # test_case.assertTrue(x.is_cuda)
+        x = flow.Tensor(*shape, device=flow.device("cuda"))
+        test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
         test_case.assertTrue(not x.is_cuda)
 
@@ -162,9 +162,8 @@ class TestTensor(flow.unittest.TestCase):
 
         with flow.no_grad():
             m = x + y
-        # TODO: fix this autograd test case
-        # test_case.assertTrue(m.is_leaf)
-        # test_case.assertFalse(m.requires_grad)
+        test_case.assertTrue(m.is_leaf)
+        test_case.assertFalse(m.requires_grad)
 
         v = flow.Tensor(*shape, requires_grad=True)
         z.retain_grad()
