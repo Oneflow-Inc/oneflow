@@ -932,7 +932,6 @@ void RoundTripOneFlowJob(
     std::function<bool(::oneflow::Job* job, std::string& reason)> is_legit_job) {
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
-  // Load our Dialect in this MLIR Context.
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
   context.loadDialect<StandardOpsDialect>();
   OwningModuleRef module(
