@@ -27,7 +27,9 @@ from oneflow.python.nn.parameter import Parameter
 )
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
-    optimizer = flow.optim.SGD([{"params": [Parameter(flow.Tensor([1.0]))]}], lr=base_lr)
+    optimizer = flow.optim.SGD(
+        [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=base_lr
+    )
 
     def test_cosine_scheduler(test_case):
         def cosine_scheduler_step(base_lr, current_step, steps, alpha):
@@ -47,7 +49,9 @@ class TestLrScheduler(flow.unittest.TestCase):
         for i in range(1, 21):
             cosine_scheduler.step()
             new_lr = cosine_scheduler_step(TestLrScheduler.base_lr, i, steps, alpha)
-            test_case.assertAlmostEqual(cosine_scheduler.get_last_lr()[0], new_lr, places=4)
+            test_case.assertAlmostEqual(
+                cosine_scheduler.get_last_lr()[0], new_lr, places=4
+            )
 
 
 if __name__ == "__main__":

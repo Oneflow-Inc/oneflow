@@ -43,7 +43,9 @@ class LrScheduler(object):
         self.step()
 
     def state_dict(self):
-        return {key: value for key, value in self.__dict__.items() if key != '_optimizer'}
+        return {
+            key: value for key, value in self.__dict__.items() if key != "_optimizer"
+        }
 
     def load_state_dict(self, state_dict):
         self.__dict__.update(state_dict)
