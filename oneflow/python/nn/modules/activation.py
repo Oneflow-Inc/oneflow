@@ -485,9 +485,8 @@ class LeakyReLU(Module):
         \end{cases}
 
     Args:
-
-        - negative_slope: Controls the angle of the negative slope. Default: 1e-2
-        - inplace: can optionally do the operation in-place. Default: ``False``
+        negative_slope: Controls the angle of the negative slope. Default: 1e-2
+        inplace: can optionally do the operation in-place. Default: ``False``
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
