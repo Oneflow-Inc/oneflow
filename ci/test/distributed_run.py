@@ -321,6 +321,23 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     )
 
 
+def get_remote_hosts(args):
+    remote_hosts = None
+    if len(args.remote_host) == 1:
+        remote_hosts = args.remote_host.split(",")
+    elif len(args.remote_host) == 0:
+        affiliations = get_affiliations(this_host)
+        assert (
+            affiliations
+        ), f"no affiliated node found for {this_host}, you should specify one"
+        remote_host = affiliations[0]
+        remote_host = socket.gethostbyname(remote_host)
+        remote_hosts = [remote_host]
+    else:
+        remote_hosts = args.remote_host
+    return remote_hosts
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--debug", action="store_true", required=False, default=False)
@@ -343,19 +360,7 @@ if __name__ == "__main__":
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
 
-    remote_hosts = []
-    if len(args.remote_host) == 1:
-        remote_hosts = args.remote_host.split(",")
-    elif len(args.remote_host) == 0:
-        affiliations = get_affiliations(this_host)
-        assert (
-            affiliations
-        ), f"no affiliated node found for {this_host}, you should specify one"
-        remote_host = affiliations[0]
-        remote_host = socket.gethostbyname(remote_host)
-        remote_hosts = [remote_host]
-    else:
-        remote_hosts = args.remote_host
+    remote_hosts = get_remote_hosts(args)
 
     print(f"this_host: {this_host}, remote_hosts: {remote_hosts}", flush=True)
     sub_dir = str(uuid.uuid4())
@@ -366,7 +371,16 @@ if __name__ == "__main__":
     )
     print("workspace_dir", workspace_dir)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(create_remote_workspace_dir(remote_host, workspace_dir))
+    loop.run_until_complete(
+        asyncio.gather(
+            *[
+                create_remote_workspace_dir(
+                    remote_host=remote_host, workspace_dir=workspace_dir
+                )
+                for remote_host in remote_hosts
+            ]
+        )
+    )
     if args.oneflow_build_path:
         # TODO: infer a proper path and check there is only one
         oneflow_internal_path = (
@@ -377,9 +391,15 @@ if __name__ == "__main__":
         )
         tmp_dir = None
         print("copying python_scripts dir")
-        subprocess.check_call(
-            f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
-            shell=True,
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell_and_check(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
         )
         if args.skip_libs == False:
             print("copying .so")
