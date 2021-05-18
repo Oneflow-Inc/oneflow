@@ -474,7 +474,9 @@ if __name__ == "__main__":
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
     container_name = (
-        getpass.getuser() + "-distributed-run--" + this_host.replace(".", "-")
+        getpass.getuser()
+        + "-distributed-run-main-node-at-"
+        + this_host.replace(".", "-")
     )
 
     def exit_handler():
