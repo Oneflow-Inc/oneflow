@@ -110,3 +110,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Embedding
 .. autofunction:: oneflow.experimental.Tensor.permute
 .. autofunction:: oneflow.experimental.nn.PReLU
+.. autofunction:: oneflow.experimental.nn.Hardsigmoid
+
