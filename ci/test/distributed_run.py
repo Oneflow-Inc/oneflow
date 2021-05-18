@@ -376,6 +376,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
+    oneflow_wheel_path = args.oneflow_wheel_path
+    if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
+        whl_paths = [
+            name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
+        ]
+        assert len(whl_paths) == 1
+        oneflow_wheel_path = whl_paths[0]
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
 
@@ -435,12 +442,12 @@ if __name__ == "__main__":
                     remote_hosts=remote_hosts,
                 )
             )
-    elif args.oneflow_wheel_path:
+    elif oneflow_wheel_path:
         loop.run_until_complete(
             asyncio.gather(
                 *[
                     spawn_shell_and_check(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}"
+                        f"rsync -azP --omit-dir-times --no-perms --no-group {oneflow_wheel_path} {remote_host}:{workspace_dir}"
                     )
                     for remote_host in remote_hosts
                 ]
@@ -541,7 +548,7 @@ if __name__ == "__main__":
                     survival_time=args.timeout,
                     workspace_dir=workspace_dir,
                     container_name=container_name,
-                    oneflow_wheel_path=args.oneflow_wheel_path,
+                    oneflow_wheel_path=oneflow_wheel_path,
                     oneflow_build_path=args.oneflow_build_path,
                     img_tag=img_tag,
                 )
@@ -557,7 +564,7 @@ if __name__ == "__main__":
         remote_hosts=remote_hosts,
         container_name=container_name,
         workspace_dir=workspace_dir,
-        oneflow_wheel_path=args.oneflow_wheel_path,
+        oneflow_wheel_path=oneflow_wheel_path,
         oneflow_build_path=args.oneflow_build_path,
         img_tag=img_tag,
         oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
