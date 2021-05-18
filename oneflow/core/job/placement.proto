@@ -29,7 +29,7 @@ message BlobPlacementGroup {
   required ParallelConf parallel_conf = 2;
 }
 
-message Placement {
+message PlacementConf {
   repeated PlacementGroup placement_group = 1;
   repeated BlobPlacementGroup blob_placement_group = 2;
 }

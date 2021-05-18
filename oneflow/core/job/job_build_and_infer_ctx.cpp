@@ -122,7 +122,7 @@ Maybe<void> JobBuildAndInferCtx::AddOpNameParallelConf2Placement(
   ParallelDesc parallel_desc(parallel_conf);
   PlacementGroup* pg = nullptr;
   if (parallel_desc2placement_group_.find(parallel_desc) == parallel_desc2placement_group_.end()) {
-    pg = job_->mutable_placement()->add_placement_group();
+    pg = job_->mutable_placement_conf()->add_placement_group();
     parallel_desc2placement_group_.emplace(parallel_desc, pg);
     *(pg->mutable_parallel_conf()) = parallel_conf;
   } else {
@@ -138,7 +138,7 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
     const auto& parallel_desc = *ParallelDesc4Obn(obn);
     auto iter = parallel_desc2blob_placement_group_.find(parallel_desc);
     if (iter == parallel_desc2blob_placement_group_.end()) {
-      auto* blob_pg = job_->mutable_placement()->add_blob_placement_group();
+      auto* blob_pg = job_->mutable_placement_conf()->add_blob_placement_group();
       *blob_pg->mutable_parallel_conf() = parallel_desc.parallel_conf();
       iter = parallel_desc2blob_placement_group_.emplace(parallel_desc, blob_pg).first;
     }
@@ -787,7 +787,7 @@ Maybe<void> JobBuildAndInferCtx::CheckPlacement() const {
         << Error::OpNameExistError() << "op_name: " << op_conf.name()
         << " already exist in job: " << job_->job_conf().job_name() << " net";
   }
-  for (const PlacementGroup& placement_group : job_->placement().placement_group()) {
+  for (const PlacementGroup& placement_group : job_->placement_conf().placement_group()) {
     for (const std::string& op_name : placement_group.op_set().op_name()) {
       CHECK_OR_RETURN(op_names_in_placement.insert(op_name).second)
           << Error::OpNameExistError() << "op_name: " << op_name
@@ -1267,7 +1267,7 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   }
   // clear old job except job_conf
   job_->mutable_net()->Clear();
-  job_->mutable_placement()->Clear();
+  job_->mutable_placement_conf()->Clear();
   job_->mutable_job_parallel_view_conf()->Clear();
   job_->mutable_helper()->Clear();
   // topo traverse op_graph to AddAndInferOp
