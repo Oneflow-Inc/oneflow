@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/user_op_conf_trait.h"
 
 namespace oneflow {
 namespace one {
@@ -37,19 +36,15 @@ class DimGather : public OpExprGradFunction<DimGatherInterpState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
+  AttrMap base_attrs_;
   std::shared_ptr<OpExpr> bw_dim_gather_op_;
-  int32_t dim_;
 };
 
 Maybe<void> DimGather::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
-  op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-
-  dim_ = JUST(op_trait_->GetAttr<int32_t>("dim"));
-  bw_dim_gather_op_ = JUST(op_expr_helper::DimScatterAddLikeOp(dim_, GradientOpName(op_name)));
+  bw_dim_gather_op_ = JUST(op_expr_helper::DimScatterAddLikeOp(0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -57,9 +52,12 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
   ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->dim = JUST(op_trait_->GetAttr<int32_t>("dim"));
+
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->dim = JUST(composed_attrs.GetAttr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
