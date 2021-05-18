@@ -544,3 +544,46 @@ class Hardtanh(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+@oneflow_export("nn.LeakyReLU")
+@experimental_api
+class LeakyReLU(Module):
+    r"""Applies the element-wise function:
+    .. math::
+        \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
+    or 
+    .. math::
+        \text{LeakyRELU}(x) = \begin{cases}
+            x, & \text{ if } x \geq 0 \\
+            \text{negative_slope} \times x, & \text{ otherwise }
+        \end{cases}
+    Args:
+        negative_slope: Controls the angle of the negative slope. Default: 1e-2
+        inplace: can optionally do the operation in-place. Default: ``False``
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    For example: 
+    .. code-block:: python
+        import oneflow.experimental as flow
+        m = flow.nn.LeakyReLU(0.1)
+        input = flow.randn(2)
+        output = m(input)
+    """
+
+    def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
+        super().__init__()
+        assert inplace == False, f"LeakyReLU not support inplace mode now"
+        self._op = (
+            flow.builtin_op("leaky_relu")
+            .Input("x")
+            .Attr("alpha", negative_slope)
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res

@@ -4,6 +4,7 @@ Experimental features
 ----------------------------------
 .. currentmodule:: oneflow.experimental
 .. autofunction:: oneflow.experimental.nn.ReLU
+.. autofunction:: oneflow.experimental.nn.LeakyReLU
 .. autofunction:: oneflow.experimental.nn.Tanh
 .. autofunction:: oneflow.experimental.tanh
 .. autofunction:: oneflow.experimental.Tensor.tanh
