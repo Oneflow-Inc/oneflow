@@ -462,7 +462,7 @@ if __name__ == "__main__":
         port=agent_port,
         authkey=agent_authkey.encode(),
         this_host=this_host,
-        remote_hosts=[remote_host],
+        remote_hosts=remote_hosts,
         container_name=container_name,
         workspace_dir=workspace_dir,
         oneflow_wheel_path=args.oneflow_wheel_path,
