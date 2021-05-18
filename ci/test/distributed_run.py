@@ -262,7 +262,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         pass
 
 
-async def fix_and_sync_libs():
+async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     tmp_dir = tempfile.TemporaryDirectory()
     tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
     os.mkdir(tmp_lib_dir)
@@ -305,7 +305,7 @@ async def fix_and_sync_libs():
 
     spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
 
-    def copy_file(path):
+    def copy_file(path=None, remote_host=None):
         relpath = os.path.relpath(path, tmp_dir.name)
         return spawn_shell_and_check(
             f"rsync -azP --omit-dir-times --no-perms --no-group {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
@@ -316,7 +316,13 @@ async def fix_and_sync_libs():
         for root, dirs, files in os.walk(tmp_dir.name, topdown=True)
         for name in files
     ]
-    await asyncio.gather(*[copy_file(f,) for f in files],)
+    await asyncio.gather(
+        *[
+            copy_file(path=f, remote_host=remote_host)
+            for remote_host in remote_hosts
+            for f in files
+        ],
+    )
 
 
 if __name__ == "__main__":
@@ -381,7 +387,7 @@ if __name__ == "__main__":
         )
         if args.skip_libs == False:
             print("copying .so")
-            loop.run_until_complete(fix_and_sync_libs())
+            loop.run_until_complete(fix_and_sync_libs(oneflow_internal_path=oneflow_internal_path, remote_hosts=remote_hosts))
     elif args.oneflow_wheel_path:
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}",
