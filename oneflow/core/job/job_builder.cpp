@@ -247,7 +247,9 @@ void JobBuilder::RemoveOpByName(const std::unordered_set<std::string>& removing_
     }
 
     *(p.mutable_parallel_conf()) = place.parallel_conf();
-    if (op_set->op_name().size() > 0) { *(job_->mutable_placement_conf()->add_placement_group()) = p; }
+    if (op_set->op_name().size() > 0) {
+      *(job_->mutable_placement_conf()->add_placement_group()) = p;
+    }
   }
 
   auto* op_name2sbp_signature_conf =
