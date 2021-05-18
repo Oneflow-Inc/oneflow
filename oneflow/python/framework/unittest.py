@@ -233,7 +233,6 @@ class TestCase(unittest.TestCase):
                     oneflow.env.machine(node_list())
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
                     print("initializing worker...")
-                    # maybe we could move this inside env.init ?
                     for machine in env_util.default_env_proto.machine:
                         if machine.id == 0:
                             pass
