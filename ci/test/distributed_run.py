@@ -255,8 +255,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         pass
 
 
-def fix_and_sync_libs():
-    tmp_dir = tempfile.TemporaryDirectory()
+def fix_and_sync_libs(tmp_dir=None):
     tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
     os.mkdir(tmp_lib_dir)
     subprocess.check_call(
@@ -358,8 +357,9 @@ if __name__ == "__main__":
         )
         tmp_dir = None
         if args.skip_libs == False:
+            tmp_dir = tempfile.TemporaryDirectory()
             print("copying .so")
-            fix_and_sync_libs()
+            fix_and_sync_libs(tmp_dir)
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
