@@ -42,21 +42,19 @@ class DimGather : public OpExprGradFunction<DimGatherInterpState> {
 };
 
 Maybe<void> DimGather::Init(const OpExpr& op) {
-  printf("yaochi:Init");
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
 
   dim_ = JUST(op_trait_->GetAttr<int32_t>("dim"));
-  bw_dim_gather_op_ = JUST(op_expr_helper::DimGatherGradOp(dim_, GradientOpName(op_name)));
+  bw_dim_gather_op_ = JUST(op_expr_helper::DimScatterAddLikeOp(dim_, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
-  printf("yaochi:Capture");
-  ctx->requires_grad = inputs.at(1)->requires_grad();
+  ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(0));
@@ -65,7 +63,6 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
 
 Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
-  printf("yaochi:Apply");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& index = ctx->SavedTensors().at(0);
   const auto& like = ctx->SavedTensors().at(1);

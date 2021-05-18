@@ -537,10 +537,10 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Build();
 }
 
-Maybe<one::UserOpExpr> DimGatherGradOp(const int32_t dim) {
-  return DimGatherGradOp(dim, UniqueOpName("dim_gather_grad"));
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
+  return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
 }
-Maybe<one::UserOpExpr> DimGatherGradOp(const int32_t dim, const std::string& name) {
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
   return one::OpBuilder("dim_scatter_add_like", name)
       .Input("index")
       .Input("input")
