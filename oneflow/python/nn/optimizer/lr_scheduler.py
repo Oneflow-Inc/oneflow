@@ -43,20 +43,37 @@ class LrScheduler(object):
         self.step()
 
     def state_dict(self):
+        """Returns the state of the scheduler as a :class:`dict`.
+
+        It contains an entry for every variable in self.__dict__ which
+        is not the optimizer.
+        """
         return {
             key: value for key, value in self.__dict__.items() if key != "_optimizer"
         }
 
     def load_state_dict(self, state_dict):
+        """Loads the schedulers state.
+
+        Arguments:
+            state_dict (dict): scheduler state. Should be an object returned
+                from a call to :meth:`state_dict`.
+        """
         self.__dict__.update(state_dict)
 
     def get_lr(self):
+        """Compute learning rate using chainable form of the scheduler
+        """
         raise NotImplementedError
 
     def get_last_lr(self):
+        """ Return last computed learning rate by current scheduler.
+        """
         return self.last_lr
 
     def print_lr(self, group_idx, lr):
+        """Display the current learning rate.
+        """
         print(f"Adjusting learning rate of param_groups[{group_idx}] to {lr}")
 
     def step(self):

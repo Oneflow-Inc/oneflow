@@ -23,6 +23,42 @@ from .lr_scheduler import LrScheduler
 @oneflow_export("optim.lr_scheduler.CosineScheduler")
 @experimental_api
 class CosineScheduler(LrScheduler):
+    r"""This operator creates a Cosine decayed learning rate scheduler.
+
+    Before the steps are specified by user, the learning rate will be updated as:
+
+    .. math::
+
+        & cos\_decay = 0.5*(1+cos(\pi*\frac{current\_step}{steps}))
+
+        & decay\_factor = (1-\alpha)*cos\_decay+\alpha
+
+        & learning\_rate = base\_learning\_rate*decay\_factor
+
+    After the steps specified by user, the learning rate will be :
+
+    .. math::
+
+        learning\_rate = {base\_learning\_rate}*{\alpha}
+
+    Args:
+        steps (int): The decay steps in the scheduler
+        alpha (float, optional): The learning rate scale factor (:math:`\alpha`). Defaults to 0.0.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+
+        ...
+        cosine_scheduler = flow.optim.lr_scheduler.CosineScheduler(optimizer, steps=100, alpha=0.0)
+        for epoch in range(num_epoch):
+            train(...)
+            cosine_scheduler.step()
+
+    """
+
     def __init__(
         self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
     ):
