@@ -510,6 +510,16 @@ if __name__ == "__main__":
                 ]
             )
         )
+        assert workspace_dir
+        if args.debug == False:
+            loop.run_until_complete(
+                asyncio.gather(
+                    *[
+                        spawn_shell(f"ssh {remote_host} rm -rf {workspace_dir}",)
+                        for remote_host in remote_hosts
+                    ],
+                )
+            )
         print("removing docker container:", container_name)
         rm_cmd = f"docker rm -f {container_name}"
         loop.run_until_complete(
