@@ -489,15 +489,11 @@ if __name__ == "__main__":
                 f"docker run --rm -v {args.oneflow_build_path}:/p -w /p busybox chmod -R o+w .",
                 shell=True,
             )
-        subprocess.call(
-            f"docker run --rm -v {args.oneflow_test_tmp_dir}:/p -w /p busybox chmod -R o+w .",
-            shell=True,
-        )
         loop.run_until_complete(
             asyncio.gather(
                 *[
                     spawn_shell(
-                        f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R o+w .",
+                        f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R 777 .",
                     )
                     for remote_host in remote_hosts
                 ],
@@ -508,7 +504,7 @@ if __name__ == "__main__":
             asyncio.gather(
                 *[
                     spawn_shell(
-                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl'  --exclude='python_scripts' {remote_host}:{workspace_dir} {args.oneflow_test_tmp_dir}/{remote_host}"
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='python_scripts' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
                     )
                     for remote_host in remote_hosts
                 ]
