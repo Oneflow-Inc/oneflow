@@ -476,6 +476,14 @@ class LeakyReLU(Module):
     .. math::
         \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
 
+    or 
+
+    .. math::
+        \text{LeakyRELU}(x) = \begin{cases}
+            x, & \text{ if } x \geq 0 \\
+            \text{negative_slope} \times x, & \text{ otherwise }
+        \end{cases}
+
     Args:
 
         - negative_slope: Controls the angle of the negative slope. Default: 1e-2
