@@ -23,7 +23,63 @@ from typing import Optional, Union, Tuple
 @oneflow_export("nn.Upsample")
 @experimental_api
 class Upsample(Module):
-    r"""
+    r"""Upsamples a given multi-channel 2D (spatial) data.
+
+    The input data is assumed to be of the form
+    `minibatch x channels x height x width`.
+    Hence, for spatial inputs, we expect a 4D Tensor.
+
+    The algorithms available for upsampling are nearest neighbor,
+    bilinear, 4D input Tensor, respectively.
+
+    One can either give a :attr:`scale_factor` or the target output :attr:`size` to
+    calculate the output size. (You cannot give both, as it is ambiguous)
+
+    Args:
+        size (int or Tuple[int, int] optional):
+            output spatial sizes
+        scale_factor (float or Tuple[float, float], optional):
+            multiplier for spatial size. Has to match input size if it is a tuple.
+        mode (str, optional): the upsampling algorithm: one of ``'nearest'``,
+            ``'bilinear'``.
+            Default: ``'nearest'``
+        align_corners (bool, optional): if ``True``, the corner pixels of the input
+            and output tensors are aligned, and thus preserving the values at
+            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``. 
+            Default: ``False``
+
+    Shape:
+        - Input: : :math:`(N, C, H_{in}, W_{in})` 
+        - Output: :math:`(N, C, H_{out}, W_{out})` , where
+
+    .. math::
+        D_{out} = \left\lfloor D_{in} \times \text{scale_factor} \right\rfloor
+
+    .. math::
+        H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
+
+    .. math::
+        W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
+
+    .. note::
+        If you want downsampling/general resizing, you should use :func:`~nn.functional.interpolate`.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+        output = m(input)
+
+        # output.numpy()
+        [[[[1.0, 1.0, 2.0, 2.0],
+        [1.0, 1.0, 2.0, 2.0],
+        [3.0, 3.0, 4.0, 4.0],
+        [3.0, 3.0, 4.0, 4.0],]]]
     
     """
 

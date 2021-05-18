@@ -111,3 +111,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.permute
 .. autofunction:: oneflow.experimental.nn.PReLU
 .. autofunction:: oneflow.experimental.nn.Hardtanh
+.. autofunction:: oneflow.experimental.nn.Upsample
