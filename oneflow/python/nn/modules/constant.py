@@ -137,6 +137,15 @@ def zeros_op(size, dtype=None):
     return Zeros(size, dtype)()
 
 
+class ZerosLike(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("zero_like").Input("like").Output("out").Build()
+
+    def forward(self, other):
+        return self._op(other)[0]
+
+
 @oneflow_export("zeros_like")
 @experimental_api
 def zeros_like_op(other):
@@ -159,7 +168,16 @@ def zeros_like_op(other):
         # [0. 0. 0. 0. 0. ]
 
     """
-    return zeros_op(other.shape, other.dtype)
+    return ZerosLike()(other)
+
+
+class OnesLike(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("ones_like").Input("like").Output("out").Build()
+
+    def forward(self, other):
+        return self._op(other)[0]
 
 
 @oneflow_export("ones_like")
@@ -184,4 +202,4 @@ def ones_like_op(other):
         # [1. 1. 1. 1. 1. ]
 
     """
-    return ones_op(other.shape, other.dtype)
+    return OnesLike()(other)
