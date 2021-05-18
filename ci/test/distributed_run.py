@@ -60,7 +60,7 @@ def find_free_port():
 async def spawn_shell_and_check(cmd: str = None):
     p = await asyncio.create_subprocess_shell(cmd,)
     await p.wait()
-    assert p.returncode == 0
+    assert p.returncode == 0, cmd
 
 
 async def build_docker_img(remote_host=None, workspace_dir=None):
