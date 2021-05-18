@@ -428,7 +428,9 @@ if __name__ == "__main__":
     assert args.bash_script
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
-    container_name = getpass.getuser() + "-distributed-run"
+    container_name = (
+        getpass.getuser() + "-distributed-run--" + this_host.replace(".", "-")
+    )
 
     def exit_handler():
         print(
