@@ -110,7 +110,8 @@ class Tensor:
                 else oneflow._oneflow_internal.device("cpu")
             )
         if _input_args_is_tensor(*args):
-            self = flow.to(*args, device=args[0].device, dtype=args[0].dtype, copy=True)
+            self._local_or_consistent_tensor = flow.to(*args, device=args[0].device, dtype=args[0].dtype, copy=True)
+            self._undetermined_tensor = None
         elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
