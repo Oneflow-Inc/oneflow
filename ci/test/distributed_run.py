@@ -306,13 +306,19 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
         f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}"
     )
 
+    await asyncio.gather(
+        *[
+            spawn_shell_and_check(
+                f"ssh {remote_host} 'mkdir -p {workspace_dir}/python_scripts/oneflow/libs'",
+            )
+            for remote_host in remote_hosts
+        ]
+    )
+
     async def copy_file(path=None, remote_host=None):
         relpath = os.path.relpath(path, tmp_dir.name)
         await spawn_shell_and_check(
-            f"ssh {remote_host} 'mkdir -p {workspace_dir}/python_scripts/oneflow/libs'",
-        )
-        await spawn_shell_and_check(
-            f"rsync -azP --omit-dir-times --no-perms --no-group {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
+            f"scp {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
         )
 
     files = [
@@ -320,6 +326,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
         for root, dirs, files in os.walk(tmp_dir.name, topdown=True)
         for name in files
     ]
+
     await asyncio.gather(
         *[
             copy_file(path=f, remote_host=remote_host)
