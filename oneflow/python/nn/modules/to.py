@@ -49,22 +49,29 @@ def to_op(input, *args, **kwargs):
     .. note::
     If the ``input`` Tensor already
     has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
-    Otherwise, the returned tensor is a copy of ``input`` with the desired
-    :class:`flow.dtype` and :class:`flow.device`.
+    Otherwise, the returned tensor is a copy of ``input`` with the desired.
+
     Args:
-        input (flow.Tensor): A input tensor.
-        *args (flow.Tensor or flow.device or flow.dtype): Positional arguments
-        **kwargs (flow.Tensor or flow.device or flow.dtype) : Key-value arguments
+        input (oneflow.Tensor): An input tensor.
+        *args (oneflow.Tensor or oneflow.device or oneflow.dtype): Positional arguments
+        **kwargs (oneflow.device or oneflow.dtype) : Key-value arguments
+
+    Returns:
+        oneflow.Tensor: A Tensor.
     
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
+
         arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         input = flow.Tensor(arr)
         output = input.to(dtype=flow.float32)
         print(np.array_equal(arr.astype(np.float32), output.numpy()))
         # True
+
     """
     copy = kwargs["copy"] if "copy" in kwargs else False
     device = kwargs["device"] if "device" in kwargs else None
