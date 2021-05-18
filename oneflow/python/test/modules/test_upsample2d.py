@@ -29,7 +29,6 @@ class TestUpsample2d(flow.unittest.TestCase):
         input = input.to("cuda")
         m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
         of_out = m(input)
-        print(of_out.numpy())
         np_out = np.array(
             [
                 [
@@ -42,7 +41,45 @@ class TestUpsample2d(flow.unittest.TestCase):
                 ]
             ]
         )
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_upsample2d_bilinear(test_case):
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
+        of_out = m(input)
+        np_out = np.array(
+            [
+                [
+                    [
+                        [1.0000,  1.2500,  1.7500,  2.0000],
+                        [1.5000,  1.7500,  2.2500,  2.5000],
+                        [2.5000,  2.7500,  3.2500,  3.5000],
+                        [3.0000,  3.2500,  3.7500,  4.0000],
+                    ]
+                ]
+            ]
+        )
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    
+    def test_upsample2d_bilinear_aligncorner(test_case):
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
+        of_out = m(input)
+        np_out = np.array(
+            [
+                [
+                    [
+                        [1.0000,  1.3333,  1.6667,  2.0000],
+                        [1.6667,  2.0000,  2.3333,  2.6667],
+                        [2.3333,  2.6667,  3.0000,  3.3333],
+                        [3.0000,  3.3333,  3.6667,  4.0000],
+                    ]
+                ]
+            ]
+        )
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
 
 
 if __name__ == "__main__":
