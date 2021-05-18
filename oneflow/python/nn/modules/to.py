@@ -44,12 +44,12 @@ class To(Module):
 @register_tensor_op("to")
 def to_op(input, *args, **kwargs):
     r"""Performs Tensor dtype and/or device conversion. 
-        A flow.dtype and flow.device are inferred from the arguments of `self.to(*args, **kwargs)`.
+        A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
     
     .. note::
-    If the ``self`` Tensor already
-    has the correct :class:`flow.dtype` and :class:`flow.device`, then ``self`` is returned.
-    Otherwise, the returned tensor is a copy of ``self`` with the desired
+    If the ``input`` Tensor already
+    has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
+    Otherwise, the returned tensor is a copy of ``input`` with the desired
     :class:`flow.dtype` and :class:`flow.device`.
     Args:
         input (flow.Tensor): A input tensor.
