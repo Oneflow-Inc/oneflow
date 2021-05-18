@@ -432,6 +432,9 @@ if __name__ == "__main__":
     container_name = getpass.getuser() + "-distributed-run"
 
     def exit_handler():
+        print(
+            "---------start cleanup, you should ignore errors below and check the errors above---------"
+        )
         if args.oneflow_build_path:
             print("fixing permission of", args.oneflow_build_path)
             subprocess.call(
