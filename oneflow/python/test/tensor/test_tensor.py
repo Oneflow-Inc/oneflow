@@ -135,7 +135,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_device(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
-        test_case.assertTrue(x.is_cuda)
+        test_case.assertTrue(not x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cuda"))
         test_case.assertTrue(x.is_cuda)
         x = flow.Tensor(*shape, device=flow.device("cpu"))
@@ -159,6 +159,11 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(y.is_leaf)
         test_case.assertTrue(z.requires_grad)
         test_case.assertFalse(z.is_leaf)
+
+        with flow.no_grad():
+            m = x + y
+        test_case.assertTrue(m.is_leaf)
+        test_case.assertFalse(m.requires_grad)
 
         v = flow.Tensor(*shape, requires_grad=True)
         z.retain_grad()

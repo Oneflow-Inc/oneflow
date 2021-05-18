@@ -18,7 +18,7 @@ from typing import Union, Sequence, Tuple
 
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
-from oneflow.python.framework.tensor_tuple_util import convert2tensor_tuple
+from oneflow.python.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow._oneflow_internal import TensorTuple
 from oneflow._oneflow_internal.autograd import grad as grad_api
 from oneflow._oneflow_internal.autograd import backward as backward_api
@@ -33,9 +33,9 @@ def grad(
     create_graph: bool = False,
 ) -> Tuple[Tensor]:
     in_grads = grad_api(
-        convert2tensor_tuple(outputs),
-        convert2tensor_tuple(inputs),
-        convert2tensor_tuple(out_grads),
+        convert_to_tensor_tuple(outputs),
+        convert_to_tensor_tuple(inputs),
+        convert_to_tensor_tuple(out_grads),
         retain_graph,
         create_graph,
     )
@@ -50,8 +50,8 @@ def backward(
     create_graph: bool = False,
 ) -> None:
     backward_api(
-        convert2tensor_tuple(outputs),
-        convert2tensor_tuple(out_grads),
+        convert_to_tensor_tuple(outputs),
+        convert_to_tensor_tuple(out_grads),
         retain_graph,
         create_graph,
     )

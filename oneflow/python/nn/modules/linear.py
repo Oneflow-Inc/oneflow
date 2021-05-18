@@ -76,11 +76,10 @@ class Linear(Module):
         - Output: :math:`(N, *, H_{out})` where all but the last dimension
           are the same shape as the input and :math:`H_{out} = {out\_features}`.
 
-    Attributes:
-
-        - weight: the learnable weights of the module of shape :math:`({out\_features}, {in\_features})`. The values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where :math:`(k = 1 / {in\_features})`
+    Attr:
+        - :attr:`weight`: the learnable weights of the module of shape :math:`({out\_features}, {in\_features})`. The values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where :math:`(k = 1 / {in\_features})`
         
-        - bias: the learnable bias of the module of shape :math:`({out\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where :math:`(k = 1 / {in\_features})`
+        - :attr:`bias`: the learnable bias of the module of shape :math:`({out\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where :math:`(k = 1 / {in\_features})`
 
     
     For example: 

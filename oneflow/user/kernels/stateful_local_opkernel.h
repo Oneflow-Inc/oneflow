@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 
@@ -257,13 +258,14 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
+                                          const std::shared_ptr<const Device>& device,
                                           const AttrMap& base_attrs,
-                                          const std::shared_ptr<MemoryCase>& mem_case,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const std::shared_ptr<MemoryCase> mem_case() const { return mem_case_; };
+  const std::shared_ptr<const Device>& device() const { return device_; }
+  const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
   }
@@ -277,9 +279,6 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object() const {
-    return infer_local_dep_object_;
-  }
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
     return compute_local_dep_object_;
   }
@@ -300,6 +299,8 @@ class StatefulLocalOpKernel final {
   LocalUserOpInferContext* op_infer_ctx_for_thread_b() const {
     return op_infer_ctx_for_thread_b_.get();
   }
+
+  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
@@ -322,7 +323,6 @@ class StatefulLocalOpKernel final {
   }
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
-  void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
   Maybe<const user_op::OpKernel*> ChooseOpKernel(const EagerBlobObjectListPtr& inputs,
                                                  const EagerBlobObjectListPtr& outputs);
@@ -332,7 +332,7 @@ class StatefulLocalOpKernel final {
   std::shared_ptr<OperatorConf> op_conf_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::shared_ptr<MemoryCase> mem_case_;
+  std::shared_ptr<const Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_a_;
@@ -352,7 +352,6 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  std::shared_ptr<VmLocalDepObject> infer_local_dep_object_;
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 

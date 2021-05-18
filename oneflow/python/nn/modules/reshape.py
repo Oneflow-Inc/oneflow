@@ -66,10 +66,10 @@ def reshape_op(x, shape: Sequence[int] = None):
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
 
     Args:
-        x: A `Tensor`.
+        x: A Tensor.
         shape: Shape of the output tensor.
     Returns:
-        A `Tensor`, has the same type as `x`.
+        A Tensor has the same type as `x`.
 
     For example:
 
