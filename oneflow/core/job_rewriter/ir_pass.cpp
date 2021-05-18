@@ -38,7 +38,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     job_->Swap(new_job);
     is_updated_ = true;
   }
-  void DumpMLIR(const std::string& filename, const std::string& content) {
+  void DumpLog(const std::string& filename, const std::string& content) {
     TeePersistentLogStream::Create(filename)->Write(content);
   }
 

@@ -28,7 +28,7 @@ class RoundTripOneFlowJobWrapperInterface {
   virtual ~RoundTripOneFlowJobWrapperInterface() {}
   virtual const ::oneflow::Job* job() const = 0;
   virtual void UpdateJob(::oneflow::Job* new_job) = 0;
-  virtual void DumpMLIR(const std::string& filename, const std::string& content) = 0;
+  virtual void DumpLog(const std::string& filename, const std::string& content) = 0;
   virtual const ::oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const = 0;
   virtual const ::oneflow::OperatorConf& OpConf4OpName(const std::string& op_name) const = 0;
   virtual std::pair<std::vector<std::string>, std::vector<std::string>> InputBns4OpName(
