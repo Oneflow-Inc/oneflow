@@ -28,6 +28,7 @@ MemoryCase MakeHostMemCase();
 
 class TaskNode;
 
+// 编译期的Regst描述类
 class RegstDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstDesc);
@@ -105,7 +106,9 @@ class RegstDesc final {
 
  private:
   int64_t regst_desc_id_;
+  // 关联的生产者Actor
   const TaskNode* producer_;
+  // （可能多个）关联的消费者Actor
   HashSet<const TaskNode*> consumers_;
   int32_t min_register_num_;
   int32_t max_register_num_;
@@ -115,7 +118,9 @@ class RegstDesc final {
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
   bool enable_reuse_mem_;
+  // Regst所属MemBlock的id
   int32_t mem_block_id_;
+  // Regst在所属MemBlock的偏移
   int64_t mem_block_offset_;
   int32_t hint_inplace_consumed_regst_desc_id_;
   int32_t force_inplace_consumed_regst_desc_id_;

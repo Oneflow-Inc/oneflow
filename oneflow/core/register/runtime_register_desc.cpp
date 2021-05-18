@@ -18,6 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 根据RegstDescProto信息构造RtRegstDesc
 RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   regst_desc_id_ = proto.regst_desc_id();
   producer_actor_id_ = proto.producer_task_id();
@@ -25,10 +26,12 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
   regst_desc_type_ = proto.regst_desc_type();
+  // 1. 若为数据型Regst，则根据data_regst_desc信息初始化成员变量
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     std::vector<LbiBlobDescPair> lbi_pairs(
         {data_regst_desc.lbi2blob_desc().cbegin(), data_regst_desc.lbi2blob_desc().cend()});
+    // 按LogicalBlobId值进行排序
     std::sort(lbi_pairs.begin(), lbi_pairs.end(), &CompareLbiBlobDescPair);
     CHECK_EQ(lbi_pairs.size(), 1);
     sorted_blob_desc_vec_.reserve(lbi_pairs.size());
@@ -41,6 +44,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     }
     CHECK(data_regst_desc.has_time_shape());
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
+  // 2. 若为控制型Regst，创建一个包含信息较少的RtBlobDesc
   } else {
     sorted_blob_desc_vec_.push_back(std::make_unique<RtBlobDesc>(BlobDesc(DataType::kChar)));
   }
@@ -111,6 +115,7 @@ const Shape& RtRegstDesc::data_regst_time_shape() const {
   return *data_regst_time_shape_;
 }
 
+// 计算每个Blob的内存偏移，执行回调函数
 void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
     const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,
                              int64_t body_offset, int64_t header_offset)>& Handler) const {

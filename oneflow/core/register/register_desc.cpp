@@ -56,6 +56,7 @@ void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
   max_register_num_ = std::min(max_register_num_, val);
 }
 
+// 拷贝rhs中的lbi2blob_desc_
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK(lbi2blob_desc_.empty());
   for (const auto& pair : rhs->lbi2blob_desc_) {
@@ -71,6 +72,7 @@ void RegstDesc::CopyMemBlockInfoFrom(const RegstDesc* rhs) {
   mem_block_offset_ = rhs->mem_block_offset_;
 }
 
+// 找到rhs的lbi2blob_desc_和本实例的lbi2blob_desc_的LogicalBlobId的交集，拷贝对应的BlobDesc
 void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   for (const auto& pair : lbi2blob_desc_) {
     auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
@@ -78,6 +80,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   }
 }
 
+// 添加LogicalBlobId到lbi2blob_desc_
 BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
   BlobDesc* blob_desc = new BlobDesc(GlobalJobDesc().DefaultDataType());
@@ -120,6 +123,7 @@ void RegstDesc::EraseZeroSizeBlob() {
       });
 }
 
+// 把本实例的描述信息保存到RegstDescProto
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
@@ -163,6 +167,7 @@ bool RegstDesc::HasSameMemSize(const RegstDesc* rhs) {
          == RtBlobDesc(*(rhs->SoleBlobDesc())).AlignedTotalByteSize();
 }
 
+// 比较rhs的lbi2blob_desc_和本实例的lbi2blob_desc_是否完全相同
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   if (rhs->lbi2blob_desc_.size() != lbi2blob_desc_.size()) { return false; }
   for (const auto& pair : rhs->lbi2blob_desc_) {

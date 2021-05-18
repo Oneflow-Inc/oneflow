@@ -54,7 +54,7 @@ MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
   return ret;
 }
 
-// 获取MemoryCase所描述区域（host/同一个device/主机与同一个device的交换区）对应的id
+// 获取MemoryCase对应分区（host/某一个device/主机与某一个device的交换区）的id
 int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
   // [0, 127] = GPU device mem
   // [128] = CPU host mem

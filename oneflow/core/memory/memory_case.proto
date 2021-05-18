@@ -6,9 +6,8 @@ message CudaPinnedMemory {
 }
 
 message HostMemory {
-  // 用于CopyHD
+  // 锁页内存，用于CopyHD
   optional CudaPinnedMemory cuda_pinned_mem = 1;
-  // 用于CommNet
   optional bool used_by_network = 2 [default = false];
 }
 

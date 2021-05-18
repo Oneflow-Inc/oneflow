@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+// 运行时的Regst描述类，构建之后即为只读
+// 关联Actor，提供计算Size的接口
 class RtRegstDesc {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RtRegstDesc);
@@ -56,12 +58,17 @@ class RtRegstDesc {
 
  private:
   int64_t regst_desc_id_;
+  // 关联的生产者Actor id
   int64_t producer_actor_id_;
+  // 关联的（可能多个）消费者Actor id
   std::vector<int64_t> consumers_actor_id_;
+  // 对应Regst的个数
   int64_t register_num_;
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;
+  // 若为数据型Regst，保存sorted_blob_desc_vec_和sorted_lbi_vec_中元素的对应关系
   HashMap<LogicalBlobId, int64_t> lbi2blob_desc_ordinal_;
+  // 若为数据型Regst，保存Shape信息
   std::unique_ptr<Shape> data_regst_time_shape_;
   std::vector<std::unique_ptr<RtBlobDesc>> sorted_blob_desc_vec_;
   std::vector<LogicalBlobId> sorted_lbi_vec_;

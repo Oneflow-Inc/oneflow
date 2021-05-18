@@ -9,13 +9,17 @@ message MemBlockProto {
   required int64 machine_id = 3;
   required MemoryCase mem_case = 4;
   required bool enable_reuse_mem = 5;
+  // 若参与内存复用，则存在chunk_id和chunk_offset
+  // MemBlock所属Chunk的id
   optional int64 chunk_id = 6 [default = -1];
+  // MemBlock在所属Chunk的偏移
   optional int64 chunk_offset = 7 [default = -1];
   required int64 mem_size = 8;
   // NOTE(chengcheng): thrd id hint is used by packed separated block group order.
   optional int64 thrd_id_hint = 9 [default = -1];
 }
 
+// 一个Job在同一个Device上的MemBlock的合集称为一个Chunk
 message ChunkProto {
   required int64 chunk_id = 1;
   repeated int64 job_id = 2;

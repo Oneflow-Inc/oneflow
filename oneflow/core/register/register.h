@@ -27,6 +27,7 @@ struct RegstStatus {
   int64_t act_id;
 };
 
+// 运行时的Regst，被Actor管理
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
@@ -56,15 +57,18 @@ class Regst final {
   void set_act_id(int64_t val) { status_.act_id = val; }
 
  private:
+  // 构造函数私有，只有RegstMgr能够创建Regst实例
   friend class RegstMgr;
   Regst();
 
   void set_regst_desc(const RtRegstDesc* regst_desc);
   void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
+  // 在CommNet注册内存后的返回值，用于调用CommNet::Read()
   void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
+  // 管理真正的Blob内存
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
 };
 

@@ -29,6 +29,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 负责管理本机所有的Regst
 class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
@@ -43,6 +44,7 @@ class RegstMgr final {
   Blob* Blob4LbiAndParallelId(const LogicalBlobId& lbi, const int64_t parallel_id);
 
  private:
+  // 构造函数私有，只有Global<RegstMgr>能够创建RegstMgr实例
   friend class Global<RegstMgr>;
 
   explicit RegstMgr(const Plan& plan);

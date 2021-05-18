@@ -36,6 +36,7 @@ Regst::~Regst() {
 
 Blob* Regst::GetBlobByOrdinal(int64_t ordinal) { return sorted_blob_vec_.at(ordinal).get(); }
 
+// 根据regst_desc_信息，获取LogicalBlobId对应的Blob
 Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   const int64_t ordinal = regst_desc_->GetOrdinalForLbi(lbi);
   if (ordinal >= 0) {

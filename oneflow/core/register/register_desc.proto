@@ -20,12 +20,14 @@ message CtrlRegstDesc {
 }
 
 message RegstDescTypeProto {
+  // Regst类型：数据或控制
   oneof type {
     DataRegstDesc data_regst_desc = 1;
     CtrlRegstDesc ctrl_regst_desc = 3;
   }
 }
 
+// 描述Regst配置信息，参考RegstDesc类
 message RegstDescProto {
   required int64 regst_desc_id = 1;
   required int64 producer_task_id = 2;

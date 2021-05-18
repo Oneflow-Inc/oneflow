@@ -117,7 +117,7 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   MemoryAllocatorImpl::Deallocate(static_cast<void*>(dptr), mem_case);
 }
 
-// 调用MemoryAllocator::PlacementNew()初始化Blob
+// 调用MemoryAllocator::PlacementNew()，将Blob按指定的数据类型进行初始化
 void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
   const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
   if (blob_desc.data_type() == kOFRecord) {
