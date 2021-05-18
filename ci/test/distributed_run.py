@@ -397,6 +397,7 @@ if __name__ == "__main__":
     def exit_handler():
         print("removing local docker container:", container_name)
         if args.oneflow_build_path:
+            print("fixing permission of", args.oneflow_build_path)
             subprocess.call(
                 f"docker exec {container_name} chmod -R o+w {args.oneflow_build_path}",
                 shell=True,
