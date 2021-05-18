@@ -240,7 +240,7 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
     ".numpy() doesn't work in lazy mode",
 )
 class TestHardswishModule(flow.unittest.TestCase):
-    def test_relu(test_case):
+    def test_hardswish(test_case):
         m = flow.nn.Hardswish()
         arr = np.random.randn(2, 3, 4, 5)
 
