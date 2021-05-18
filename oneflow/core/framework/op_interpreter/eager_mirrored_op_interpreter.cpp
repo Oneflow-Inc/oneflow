@@ -48,10 +48,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   if (inputs.empty()) {
     default_device = JUST(GetDefaultDevice());
   } else {
-    default_device = inputs.at(0)->device();
+    default_device = JUST(inputs.at(0)->device());
   }
   for (int i = 0; i < inputs.size(); i++) {
-    if (i > 0) { CHECK_OR_RETURN(*default_device == *inputs.at(i)->device()); }
+    const auto& input_device = JUST(inputs.at(i)->device());
+    if (i > 0) { CHECK_OR_RETURN(*default_device == *input_device); }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
   std::shared_ptr<const Device> op_device;
@@ -73,7 +74,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
     for (const auto& input_tensor : inputs) {
-      need_event_record = need_event_record || !(*op_device == *input_tensor->device());
+      const auto& input_device = JUST(input_tensor->device());
+      need_event_record = need_event_record || !(*op_device == *input_device);
     }
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {

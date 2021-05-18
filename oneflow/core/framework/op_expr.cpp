@@ -134,7 +134,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return input_tensors_->at(tuple_index)->device();
+    return CHECK_JUST(input_tensors_->at(tuple_index)->device());
   }
 
  private:
