@@ -48,7 +48,12 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorBuffer>& tensor_buffer,
                   const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  ~EagerBlobObject() override = default;
+  ~EagerBlobObject() override {
+    non_pod_initer_.reset();
+    tensor_buffer_.reset();
+    header_buffer_.reset();
+    blob_.reset();
+  }
 
   BlobDesc* mut_blob_desc() override { return &blob_desc_; }
 
@@ -59,6 +64,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
+    non_pod_initer_.reset();
     tensor_buffer_->reset();
     return Maybe<void>::Ok();
   }
@@ -76,7 +82,7 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<char, std::function<void(char*)>> header_buffer_;
   std::shared_ptr<TensorBuffer> tensor_buffer_;
   std::size_t blob_body_bytes_;
-  MemoryAllocator non_pod_initer_;
+  std::unique_ptr<MemoryAllocator> non_pod_initer_;
   std::atomic<bool> is_shape_synced_;
   Maybe<VmLocalDepObject> compute_local_dep_object_;
 };
