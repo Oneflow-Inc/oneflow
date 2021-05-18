@@ -466,3 +466,49 @@ class LogSoftmax(Module):
 
     def extra_repr(self):
         return "dim={dim}".format(dim=self.dim)
+
+
+@oneflow_export("nn.Hardswish")
+@experimental_api
+class Hardswish(Module):
+    r"""Applies the hardswish function, element-wise, as described in the paper:
+
+    `Searching for MobileNetV3`_.
+
+    .. math::
+
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            x & \text{ if } x \ge +3 \\
+            x*(x+3)/6 & \text{ otherwise } \\
+        \end{cases}
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        
+        m = flow.nn.Hardswish()
+        input = flow.randn(2)
+        output = m(input)
+
+
+    .. _`Searching for MobileNetV3`:
+        https://arxiv.org/abs/1905.02244
+
+    """
+
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
