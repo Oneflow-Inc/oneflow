@@ -63,6 +63,11 @@ async def spawn_shell_and_check(cmd: str = None):
     assert p.returncode == 0, cmd
 
 
+async def spawn_shell(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
+
+
 async def build_docker_img(remote_host=None, workspace_dir=None):
     if remote_host:
         assert workspace_dir
@@ -466,10 +471,10 @@ if __name__ == "__main__":
         loop.run_until_complete(
             asyncio.gather(
                 *[
-                    spawn_shell_and_check(f"ssh {remote_host} {rm_cmd}")
+                    spawn_shell(f"ssh {remote_host} {rm_cmd}")
                     for remote_host in remote_hosts
                 ],
-                spawn_shell_and_check(rm_cmd),
+                spawn_shell(rm_cmd),
             )
         )
 
