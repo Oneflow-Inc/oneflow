@@ -136,7 +136,6 @@ def handle_call(conn=None, cmd=None, response=None):
     return msg
 
 
-# this function must be asynchronous otherwise due to the blocking nature of multiprocessing.connection.Listener
 def wait_for_env_proto_and_launch_workers(
     agent_port=None, agent_authkey=None, remote_hosts=None
 ):
