@@ -42,7 +42,7 @@ class DimGather : public OpExprGradFunction<DimGatherInterpState> {
 };
 
 Maybe<void> DimGather::Init(const OpExpr& op) {
-  const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
@@ -58,6 +58,7 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->SaveTensorForBackward(inputs.at(1));
   ctx->SaveTensorForBackward(inputs.at(0));
+  dim_ = JUST(op_trait_->GetAttr<int32_t>("dim"));
   return Maybe<void>::Ok();
 }
 
@@ -70,7 +71,7 @@ Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple&
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int32_t>("dim", dim_));
   in_grads->at(0) = JUST(
-      OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {index, out_grads.at(0), like}, attrs));
+      OpInterpUtil::Dispatch<Tensor>(*bw_dim_gather_op_, {like, out_grads.at(0), index}, attrs));
   return Maybe<void>::Ok();
 }
 
