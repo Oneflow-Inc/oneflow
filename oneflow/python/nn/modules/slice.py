@@ -16,7 +16,7 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Tuple
 
 
@@ -88,8 +88,7 @@ class Slice(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("Slice")
-@experimental_api
+@oneflow_export("tmp.slice")
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
@@ -108,7 +107,7 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
         tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
-        y = flow.nn.Slice(input, slice_tup_list=tup_list)
+        y = flow.tmp.slice(input, slice_tup_list=tup_list)
 
         # y.shape >> flow.Size([3, 3, 2]
     """
@@ -134,8 +133,7 @@ class SliceUpdate(Module):
         return self._op(x, update)[0]
 
 
-@oneflow_export("SliceUpdate")
-@experimental_api
+@oneflow_export("tmp.slice_update")
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
@@ -153,7 +151,7 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        y = flow.nn.SliceUpdate(input, update, slice_tup_list=[[1, 4, 1]])
+        y = flow.tmp.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
 
         # [1. 2. 3. 4. 1.] 
     """

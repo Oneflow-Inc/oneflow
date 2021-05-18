@@ -30,8 +30,6 @@ import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow as flow
 
-# from oneflow.python.nn.modules.slice import SliceModule, Slice
-
 
 def register_local_tensor_method(name=None):
     def decorator(method):
@@ -350,7 +348,8 @@ class Tensor:
     @_auto_determine
     def __getitem__(self, key):
         start, stop, step, _ = self._get_slice_obj(key)
-        return flow.experimental.Slice(self, list(zip(start, stop, step)))
+        res = flow.tmp.slice(self, list(zip(start, stop, step)))
+        return res
 
     @_auto_determine
     def __setitem__(self, key, value):
@@ -360,7 +359,8 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        return flow.experimental.sliceUpdate(self, value, list(zip(start, stop, step)))
+        self = flow.tmp.slice_update(self, value, list(zip(start, stop, step)))
+        return self
 
     def __str__(self):
         return self.__repr__()
