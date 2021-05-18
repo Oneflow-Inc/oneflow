@@ -57,37 +57,32 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-def build_docker_img(hostname=None, workspace_dir=None):
-    if hostname:
-        assert workspace_dir
-        subprocess.check_call("rm -f > oneflow-src.zip", shell=True)
-        subprocess.check_call(
-            "git archive --format zip HEAD > oneflow-src.zip", shell=True
-        )
-        subprocess.check_call(
-            f"scp oneflow-src.zip {hostname}:{workspace_dir}/oneflow-src.zip",
-            shell=True,
-        )
-        subprocess.check_call(
-            f"ssh  {hostname} unzip {workspace_dir}/oneflow-src.zip -d {workspace_dir}/oneflow-src",
-            shell=True,
-        )
-        subprocess.check_call(
-            f"ssh  {hostname} bash {workspace_dir}/oneflow-src/docker/ci/test/build.sh",
-            shell=True,
-        )
-    else:
-        subprocess.check_call(f"bash docker/ci/test/build.sh", shell=True)
-
-
 async def spawn_shell_and_check(cmd: str = None):
     p = await asyncio.create_subprocess_shell(cmd,)
     await p.wait()
     assert p.returncode == 0
 
 
-async def create_remote_workspace_dir(hostname, workspace_dir):
-    await spawn_shell_and_check(f"ssh {hostname} mkdir -p {workspace_dir}")
+async def build_docker_img(remote_host=None, workspace_dir=None):
+    if remote_host:
+        assert workspace_dir
+        await spawn_shell_and_check("rm -f > oneflow-src.zip")
+        await spawn_shell_and_check("git archive --format zip HEAD > oneflow-src.zip")
+        await spawn_shell_and_check(
+            f"scp oneflow-src.zip {remote_host}:{workspace_dir}/oneflow-src.zip",
+        )
+        await spawn_shell_and_check(
+            f"ssh  {remote_host} unzip {workspace_dir}/oneflow-src.zip -d {workspace_dir}/oneflow-src",
+        )
+        await spawn_shell_and_check(
+            f"ssh  {remote_host} bash {workspace_dir}/oneflow-src/docker/ci/test/build.sh",
+        )
+    else:
+        await spawn_shell_and_check(f"bash docker/ci/test/build.sh")
+
+
+async def create_remote_workspace_dir(remote_host=None, workspace_dir=None):
+    await spawn_shell_and_check(f"ssh {remote_host} mkdir -p {workspace_dir}")
     print("create_remote_workspace_dir done")
 
 
@@ -413,7 +408,17 @@ if __name__ == "__main__":
         elif is_img_existing(ci_user_docker_image):
             img_tag = ci_user_docker_image
         else:
-            build_docker_img(remote_host, workspace_dir)
+            loop.run_until_complete(
+                asyncio.gather(
+                    *[
+                        build_docker_img(
+                            remote_host=remote_host, workspace_dir=workspace_dir
+                        )
+                        for remote_host in remote_hosts
+                    ],
+                    build_docker_img(workspace_dir=workspace_dir),
+                )
+            )
             img_tag = default_docker_image
     else:
         img_tag = args.custom_img_tag
