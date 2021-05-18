@@ -15,6 +15,8 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 
+#include <unordered_map>
+
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
@@ -25,6 +27,26 @@ namespace {
 
 #if (CUDNN_VERSION >= 7401)
 #define BN_ENABLE_EX_API
+class CudnnHandleWrapper {
+ public:
+  CudnnHandleWrapper() { OF_CUDNN_CHECK(cudnnCreate(&handle_)); }
+  ~CudnnHandleWrapper() { OF_CUDNN_CHECK(cudnnDestroy(handle_)); }
+
+  cudnnHandle_t handle() const { return handle_; }
+
+ private:
+  cudnnHandle_t handle_;
+};
+
+cudnnHandle_t GetOrCreateCudnnHandle() {
+  static std::unordered_map<int, CudnnHandleWrapper> device_id2handle;
+  int device_id;
+  OF_CUDA_CHECK(cudaGetDevice(&device_id));
+
+  // operator [] will create and insert a CudnnHandleWrapper
+  // if key `device_id` does not exist
+  return device_id2handle[device_id].handle();
+}
 #endif
 
 void InferDimSizeAndDataFormat(const ShapeView& x_shape, const int32_t axis, int32_t* n, int32_t* c,
@@ -105,12 +127,10 @@ size_t InferTrainWorkspaceSize(const ShapeView& x_shape, const DataType data_typ
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle;
-  OF_CUDNN_CHECK(cudnnCreate(&handle));
+  cudnnHandle_t handle = GetOrCreateCudnnHandle();
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
       handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(),
       nullptr, desc_helper.xy_desc(), desc_helper.param_desc(), nullptr, &size_in_bytes));
-  OF_CUDNN_CHECK(cudnnDestroy(handle));
   return std::max(size_in_bytes, static_cast<size_t>(1));
 #else
   return 1;
@@ -129,13 +149,11 @@ size_t InferGradWorkspaceSize(const ShapeView& x_shape, const DataType data_type
   const CudnnTensorDescHelper desc_helper(x_shape, data_type, axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle;
-  OF_CUDNN_CHECK(cudnnCreate(&handle));
+  cudnnHandle_t handle = GetOrCreateCudnnHandle();
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationBackwardExWorkspaceSize(
       handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, CUDNN_BATCHNORM_OPS_BN, desc_helper.xy_desc(),
       nullptr, desc_helper.xy_desc(), nullptr, desc_helper.xy_desc(), desc_helper.param_desc(),
       nullptr, &size_in_bytes));
-  OF_CUDNN_CHECK(cudnnDestroy(handle));
   return std::max(size_in_bytes, static_cast<size_t>(1));
 #else
   return 1;
@@ -604,8 +622,7 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
   const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle;
-  OF_CUDNN_CHECK(cudnnCreate(&handle));
+  cudnnHandle_t handle = GetOrCreateCudnnHandle();
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
@@ -619,7 +636,6 @@ size_t InferFusedNormalizationAddReluTmpSize(user_op::InferContext* ctx) {
   OF_CUDNN_CHECK(cudnnGetBatchNormalizationForwardTrainingExWorkspaceSize(
       handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, desc_helper.xy_desc(), z_desc,
       desc_helper.xy_desc(), desc_helper.param_desc(), activation_desc.Get(), &size_in_bytes));
-  OF_CUDNN_CHECK(cudnnDestroy(handle));
   return std::max(size_in_bytes, static_cast<size_t>(1));
 }
 
@@ -629,8 +645,7 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
   const CudnnTensorDescHelper desc_helper(x->shape(), x->data_type(), axis,
                                           CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
   size_t size_in_bytes;
-  cudnnHandle_t handle;
-  OF_CUDNN_CHECK(cudnnCreate(&handle));
+  cudnnHandle_t handle = GetOrCreateCudnnHandle();
   CudnnActivationDesc activation_desc(CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0);
   cudnnBatchNormOps_t ops;
   cudnnTensorDescriptor_t z_desc;
@@ -645,7 +660,6 @@ size_t InferFusedNormalizationAddReluGradTmpSize(user_op::InferContext* ctx) {
       handle, CUDNN_BATCHNORM_SPATIAL_PERSISTENT, ops, desc_helper.xy_desc(), desc_helper.xy_desc(),
       desc_helper.xy_desc(), z_desc, desc_helper.xy_desc(), desc_helper.param_desc(),
       activation_desc.Get(), &size_in_bytes));
-  OF_CUDNN_CHECK(cudnnDestroy(handle));
   return std::max(size_in_bytes, static_cast<size_t>(1));
 }
 

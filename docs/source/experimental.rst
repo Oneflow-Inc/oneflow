@@ -21,6 +21,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
+.. autofunction:: oneflow.experimental.nn.LayerNorm
 .. autofunction:: oneflow.experimental.cast
 .. autofunction:: oneflow.experimental.Tensor.cast
 .. autofunction:: oneflow.experimental.cat
@@ -64,6 +65,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.mean
 .. autofunction:: oneflow.experimental.Tensor.mean
 .. autofunction:: oneflow.experimental.sub
+.. autofunction:: oneflow.experimental.var
+.. autofunction:: oneflow.experimental.Tensor.var
 .. autofunction:: oneflow.experimental.Tensor.sub
 .. autofunction:: oneflow.experimental.div
 .. autofunction:: oneflow.experimental.Tensor.div
@@ -109,3 +112,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.gather
 .. autofunction:: oneflow.experimental.nn.Embedding
 .. autofunction:: oneflow.experimental.Tensor.permute
+.. autofunction:: oneflow.experimental.nn.PReLU
+.. autofunction:: oneflow.experimental.nn.Hardtanh
