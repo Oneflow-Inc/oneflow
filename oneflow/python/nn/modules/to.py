@@ -80,7 +80,7 @@ def to_op(input, *args, **kwargs):
         if isinstance(args[0], flow.Tensor):
             if len(args) == 2:
                 copy = args[1]
-            return To(copy)(args[0].device, args[0].dtype)
+            return To(copy)(input, args[0].device, args[0].dtype)
         elif isinstance(args[0], flow.dtype):
             if len(args) == 2:
                 copy = args[1]
