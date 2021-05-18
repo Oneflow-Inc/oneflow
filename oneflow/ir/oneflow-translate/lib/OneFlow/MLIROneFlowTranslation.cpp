@@ -921,7 +921,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
 }
 
 // Move this into another cpp which will be another target
-OwningModuleRef translateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
+OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
@@ -963,7 +963,7 @@ void RoundTripOneFlowJob(
 void registerFromOneFlowJobTranslation() {
   TranslateToMLIRRegistration fromOneFlowJob("import-oneflow-job",
                                              [](llvm::StringRef str, MLIRContext* context) {
-                                               return translateOneFlowJobToModule(str, context);
+                                               return TranslateOneFlowJobToModule(str, context);
                                              });
 }
 
