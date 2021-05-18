@@ -73,9 +73,9 @@ def to_op(input, *args, **kwargs):
         # True
 
     """
-    copy = kwargs["copy"] if "copy" in kwargs else False
-    device = kwargs["device"] if "device" in kwargs else None
-    dtype = kwargs["dtype"] if "dtype" in kwargs else None
+    copy = kwargs.get("copy", False)
+    device = kwargs.get("device", None)
+    dtype = kwargs.get("dtype", None)
     if len(args) > 0:
         if isinstance(args[0], flow.Tensor):
             if len(args) == 2:
