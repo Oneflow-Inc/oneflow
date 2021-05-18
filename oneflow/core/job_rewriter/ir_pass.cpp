@@ -39,7 +39,7 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     is_updated_ = true;
   }
   void DumpLog(const std::string& filename, const std::string& content) {
-    TeePersistentLogStream::Create(filename)->Write(content);
+    TeePersistentLogStream::Create(JoinPath(LogDir(), filename))->Write(content);
   }
 
   const oneflow::ParallelConf& ParallelConf4OpName(const std::string& op_name) const {
@@ -91,6 +91,8 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
+  std::string LogDir() { return JoinPath("ir_pass", job_->job_conf().job_name()); }
+
  private:
   Job* job_;
   const OpGraph op_graph_;
@@ -111,15 +113,13 @@ class IRRoundTrip final : public JobPass {
     if (!IsEnabled(*ctx)) { return Maybe<void>::Ok(); }
     const OpGraph op_graph(*job);
     RoundTripOneFlowJobWrapper w(job);
-    TeePersistentLogStream::Create(
-        ("ir/" + job->job_conf().job_name() + ".job_before_ir_round_trip.prototxt"))
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_before_ir_round_trip.prototxt"))
         ->Write(*job);
     mlir::RoundTripOneFlowJob(w, [](::oneflow::Job* job, std::string& reason) {
       TODO();
       return true;
     });
-    TeePersistentLogStream::Create(
-        ("ir/" + job->job_conf().job_name() + ".job_after_ir_round_trip.prototxt"))
+    TeePersistentLogStream::Create(JoinPath(w.LogDir(), "job_after_ir_round_trip.prototxt"))
         ->Write(*job);
     return Maybe<void>::Ok();
   }
