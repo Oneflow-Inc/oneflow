@@ -255,7 +255,8 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         pass
 
 
-def fix_and_sync_libs(tmp_dir=None):
+def fix_and_sync_libs():
+    tmp_dir = tempfile.TemporaryDirectory()
     tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
     os.mkdir(tmp_lib_dir)
     subprocess.check_call(
@@ -299,6 +300,10 @@ def fix_and_sync_libs(tmp_dir=None):
     )
     subprocess.check_call(
         f"ldd {tmp_oneflow_internal_path}", shell=True,
+    )
+    subprocess.check_call(
+        f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
+        shell=True,
     )
 
 
@@ -356,20 +361,14 @@ if __name__ == "__main__":
             args.oneflow_build_path, oneflow_internal_path
         )
         tmp_dir = None
-        if args.skip_libs == False:
-            tmp_dir = tempfile.TemporaryDirectory()
-            print("copying .so")
-            fix_and_sync_libs(tmp_dir)
         print("copying python_scripts dir")
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}",
             shell=True,
         )
         if args.skip_libs == False:
-            subprocess.check_call(
-                f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
-                shell=True,
-            )
+            print("copying .so")
+            fix_and_sync_libs()
     elif args.oneflow_wheel_path:
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}",
