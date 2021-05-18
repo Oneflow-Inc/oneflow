@@ -10,6 +10,7 @@ import getpass
 import atexit
 import pathlib
 import asyncio
+import glob
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -387,10 +388,17 @@ if __name__ == "__main__":
         )
     )
     if args.oneflow_build_path:
-        # TODO: infer a proper path and check there is only one
-        oneflow_internal_path = (
-            "python_scripts/oneflow/_oneflow_internal.cpython-36m-x86_64-linux-gnu.so"
-        )
+        so_paths = [
+            name
+            for name in glob.glob(
+                os.path.join(
+                    args.oneflow_build_path,
+                    f"python_scripts/oneflow/_oneflow_internal.*.so",
+                )
+            )
+        ]
+        assert len(so_paths) == 1, so_paths
+        oneflow_internal_path = so_paths[0]
         oneflow_internal_path = os.path.join(
             args.oneflow_build_path, oneflow_internal_path
         )
