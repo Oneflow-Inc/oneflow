@@ -387,11 +387,22 @@ if __name__ == "__main__":
         )
         if args.skip_libs == False:
             print("copying .so")
-            loop.run_until_complete(fix_and_sync_libs(oneflow_internal_path=oneflow_internal_path, remote_hosts=remote_hosts))
+            loop.run_until_complete(
+                fix_and_sync_libs(
+                    oneflow_internal_path=oneflow_internal_path,
+                    remote_hosts=remote_hosts,
+                )
+            )
     elif args.oneflow_wheel_path:
-        subprocess.check_call(
-            f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}",
-            shell=True,
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell_and_check(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
         )
     default_docker_image = "oneflow-test:$USER"
     ci_user_docker_image = "oneflow-test:ci-user"
