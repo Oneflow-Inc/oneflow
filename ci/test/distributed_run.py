@@ -136,7 +136,9 @@ def handle_call(conn=None, cmd=None, response=None):
     return msg
 
 
-def launch_workers(agent_port=None, agent_authkey=None, remote_hosts=None):
+def wait_for_env_proto_and_launch_workers(
+    agent_port=None, agent_authkey=None, remote_hosts=None
+):
     listener = Listener(("localhost", agent_port), authkey=agent_authkey)
     while True:
         conn = listener.accept()
@@ -244,7 +246,7 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             "agent_authkey": self.agent_authkey,
             "remote_hosts": self.remote_hosts,
         }
-        p = Process(target=launch_workers, kwargs=kwargs,)
+        p = Process(target=wait_for_env_proto_and_launch_workers, kwargs=kwargs,)
         p.start()
         print("[docker agent]", "blocking")
         while self.bash_proc.poll() is None and p.is_alive() == True:
