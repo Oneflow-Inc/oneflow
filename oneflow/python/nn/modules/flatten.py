@@ -67,7 +67,6 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
         start_dim: first dim to flatten (default = 0).
         end_dim: last dim to flatten (default = -1).
     
-
     For example: 
 
     .. code-block:: python 
@@ -75,7 +74,7 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
         import oneflow as flow
         input = flow.Tensor(32, 1, 5, 5)
         output = input.flatten(start_dim=1)
-        # output = flow.tmp.flatten(input, start_dim=1)
+        # output = flow.flatten(input, start_dim=1)
         output.size()
         # out flow.Size([32, 25])
 

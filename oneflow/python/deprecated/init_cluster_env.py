@@ -193,10 +193,15 @@ def _SendBinaryAndConfig2Worker(
         + run_dir
         + "/env.proto"
     )
+    oneflow_libibverbs_path = os.getenv("ONEFLOW_LIBIBVERBS_PATH")
+    libibverbs_env_str = ""
+    if oneflow_libibverbs_path:
+        libibverbs_env_str = "ONEFLOW_LIBIBVERBS_PATH=" + oneflow_libibverbs_path + " "
     oneflow_cmd = (
         '"cd '
         + run_dir
         + "; "
+        + libibverbs_env_str
         + "nohup ./oneflow_worker -logtostderr=0 -log_dir=./log -v=0 -logbuflevel=-1 "
         + "-env_proto=./env.proto "
         + ' 1>/dev/null 2>&1 </dev/null & "'

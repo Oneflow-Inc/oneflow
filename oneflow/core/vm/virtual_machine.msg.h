@@ -57,19 +57,19 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
   OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, vm_thread_only_allocator);
 
-  //links
-  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_link,
-                              vm_stat_running_instruction_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_infer_instr_link, front_seq_infer_instr_list);
-  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_link, front_seq_compute_instr_list);
+  // heads
   OBJECT_MSG_DEFINE_LIST_HEAD(Stream, active_stream_link, active_stream_list);
   OBJECT_MSG_DEFINE_LIST_HEAD(ThreadCtx, thread_ctx_link, thread_ctx_list);
   OBJECT_MSG_DEFINE_SKIPLIST_HEAD(StreamRtDesc, stream_type_id, stream_type_id2stream_rt_desc);
   OBJECT_MSG_DEFINE_MAP_HEAD(LogicalObject, logical_object_id, id2logical_object);
   OBJECT_MSG_DEFINE_LIST_HEAD(LogicalObject, delete_link, delete_logical_object_list);
+
+  OBJECT_MSG_DEFINE_MUTEXED_LIST_HEAD(InstructionMsg, instr_msg_link, pending_msg_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, waiting_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, instruction_link, ready_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, vm_stat_running_instruction_link,
+                              vm_stat_running_instruction_list);
+  OBJECT_MSG_DEFINE_LIST_HEAD(Instruction, front_seq_compute_instr_link, front_seq_compute_instr_list);
 
   // methods
  private:

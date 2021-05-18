@@ -32,5 +32,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentMachineId", &CurrentMachineId);
 
   m.def("GetRank", &GetRank);
-  m.def("GetWordSize", &GetWordSize);
+  m.def("GetWorldSize", &GetWorldSize);
 }

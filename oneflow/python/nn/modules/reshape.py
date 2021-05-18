@@ -66,10 +66,10 @@ def reshape_op(x, shape: Sequence[int] = None):
     We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
 
     Args:
-        x: A `Tensor`.
+        x: A Tensor.
         shape: Shape of the output tensor.
     Returns:
-        A `Tensor`, has the same type as `x`.
+        A Tensor has the same type as `x`.
 
     For example:
 
@@ -83,7 +83,7 @@ def reshape_op(x, shape: Sequence[int] = None):
         ).astype(np.float32)
         input = flow.Tensor(x)
 
-        y = flow.tmp.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
+        y = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
 
         # y (2, 2, 2, 2)
 

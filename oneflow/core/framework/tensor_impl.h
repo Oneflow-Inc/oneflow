@@ -59,7 +59,6 @@ class TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
-  virtual Maybe<VmLocalDepObject> infer_local_dep_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
 
   // Getters for autograd
@@ -170,7 +169,6 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
@@ -217,7 +215,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override;
   Maybe<VmLocalDepObject> compute_local_dep_object() const override;
 
   // Setters
@@ -270,7 +267,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
@@ -321,7 +317,6 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> infer_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
