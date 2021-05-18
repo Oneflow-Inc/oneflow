@@ -314,6 +314,41 @@ def sigmoid_op(x):
     return Sigmoid()(x)
 
 
+@oneflow_export("nn.Hardsigmoid")
+@experimental_api
+class Hardsigmoid(Module):
+    r"""
+    Applies the element-wise function:
+    .. math::
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \end{cases}
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    For example:
+    .. code-block:: python
+        import oneflow.experimental as flow
+        m = flow.nn.Hardsigmoid()
+        input = flow.randn(2)
+        output = m(input)
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        assert inplace == False, f"Hardsigmoid not support inplace equal true now!"
+        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
 @oneflow_export("nn.Softmax")
 @experimental_api
 class Softmax(Module):
@@ -468,22 +503,31 @@ class LogSoftmax(Module):
         return "dim={dim}".format(dim=self.dim)
 
 
-@oneflow_export("nn.Hardsigmoid")
+@oneflow_export("nn.Hardtanh")
 @experimental_api
-class Hardsigmoid(Module):
+class Hardtanh(Module):
     r"""
-    Applies the element-wise function:
+    Applies the HardTanh function element-wise
+
+    HardTanh is defined as:
 
     .. math::
-
-        \text{Hardsigmoid}(x) = \begin{cases}
-            0 & \text{ if } x \le -3  \\
-            1 & \text{ if } x \ge +3 \\
-            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \text{HardTanh}(x) = \begin{cases}
+            1 & \text{ if } x > 1 \\
+            -1 & \text{ if } x < -1 \\
+            x & \text{ otherwise } \\
         \end{cases}
 
+    The range of the linear region :math:`[-1, 1]` can be adjusted using
+    :attr:`min_val` and :attr:`max_val`.
+
     Args:
+        min_val: minimum value of the linear region range. Default: -1
+        max_val: maximum value of the linear region range. Default: 1
         inplace: can optionally do the operation in-place. Default: ``False``
+
+    Keyword arguments :attr:`min_value` and :attr:`max_value`
+    have been deprecated in favor of :attr:`min_val` and :attr:`max_val`.
 
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
@@ -495,16 +539,42 @@ class Hardsigmoid(Module):
     .. code-block:: python
 
         import oneflow.experimental as flow
-
-        m = flow.nn.Hardsigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        
+        m = flow.nn.Hardtanh()
+        arr = np.random.randn(2, 3, 4, 5)
+        x = flow.Tensor(arr)
+        out = m(x)
+    
     """
 
-    def __init__(self, inplace: bool = False):
+    def __init__(
+        self,
+        min_val: float = -1,
+        max_val: float = 1,
+        inplace: bool = False,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+    ):
         super().__init__()
-        assert inplace == False, f"Hardsigmoid not support inplace equal true now!"
-        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
+        if min_value is not None:
+            warnings.warn(
+                "keyword argument min_value is deprecated and rename to min_val"
+            )
+            min_val = min_value
+        if max_value is not None:
+            warnings.warn(
+                "keyword argument max_value is deprecated and rename to max_val"
+            )
+            max_val = max_value
+        assert inplace == False, f"Hardtanh not support inplace equal true now!"
+        self._op = (
+            flow.builtin_op("hardtanh")
+            .Input("in")
+            .Attr("min_val", min_val)
+            .Attr("max_val", max_val)
+            .Output("out")
+            .Build()
+        )
 
     def forward(self, x):
         res = self._op(x)[0]
