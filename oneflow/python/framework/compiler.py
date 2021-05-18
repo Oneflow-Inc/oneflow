@@ -209,10 +209,12 @@ def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
         return None
     if isinstance(remote_blobs, oneflow._oneflow_internal.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
-    if isinstance(remote_blobs, Tensor):
-        cfg_lbi = oneflow._oneflow_internal.GetTensorLbi(
-            remote_blobs._local_or_consistent_tensor
-        )
+    if isinstance(remote_blobs, (Tensor, oneflow._oneflow_internal.ConsistentTensor, oneflow._oneflow_internal.LocalTensor)):
+        if isinstance(remote_blobs, Tensor):
+            internal_tensor = remote_blobs._local_or_consistent_tensor
+        else:
+            internal_tensor = remote_blobs
+        cfg_lbi = oneflow._oneflow_internal.GetTensorLbi(internal_tensor)
         lbi = logical_blob_id_util.LogicalBlobId()
         lbi.op_name = cfg_lbi.op_name()
         lbi.blob_name = cfg_lbi.blob_name()

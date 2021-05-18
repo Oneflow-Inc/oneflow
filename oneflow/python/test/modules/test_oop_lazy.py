@@ -33,7 +33,7 @@ from typing import Optional, Tuple
 
 
 class TestModule(flow.unittest.TestCase):
-    def _test_add_case1(test_case):
+    def test_add_case1(test_case):
         flow.clear_default_session()
         init_val = np.random.randn(2, 3)
 
