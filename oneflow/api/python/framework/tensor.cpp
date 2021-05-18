@@ -136,7 +136,6 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   using T = MirroredTensor;
   api->def_property_readonly("device", &T::device);
   api->def_property_readonly("data", &T::data);
-  api->def_property_readonly("is_cuda", &T::is_cuda);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
@@ -166,6 +165,7 @@ void ExportTensor(py::module& m, const char* name) {
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("dtype", &T::dtype)
+      .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)

@@ -123,7 +123,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   if (inputs.empty()) {
     default_device = JUST(GetDefaultDevice());
   } else {
-    default_device = inputs.at(0)->device();
+    default_device = JUST(inputs.at(0)->device());
   }
   return NaiveInterpret(user_op_expr, inputs, default_device, output_eager_blob_objects, attrs,
                         out_devices);
