@@ -29,10 +29,10 @@ class Upsample(Module):
 
     def __init__(
         self,
-        size: Optional[Union[int, Tuple[int, ...]]] = None, 
+        size: Optional[Union[int, Tuple[int, ...]]] = None,
         scale_factor: Optional[Union[float, Tuple[float, ...]]] = None,
-        mode: str = 'nearest', 
-        align_corners: Optional[bool] = None
+        mode: str = "nearest",
+        align_corners: Optional[bool] = None,
     ):
         super().__init__()
         self.size = size
@@ -40,7 +40,12 @@ class Upsample(Module):
             self.scale_factor = tuple(float(factor) for factor in scale_factor)
         else:
             self.scale_factor = float(scale_factor) if scale_factor else None
-        
+
+        self.mode = mode
+        if align_corners == None:
+            align_corners = False
+
+        self.align_corners = align_corners
         self.height_scale = None
         self.width_scale = None
 
@@ -52,38 +57,42 @@ class Upsample(Module):
             self.width_scale = self.scale_factor[1]
         else:
             pass
-        
+
         if self.mode != "nearest" and self.mode != "bilinear":
             raise ValueError('interpolation must be "nearest" or "bilinear".')
 
         if self.mode == "nearest" and self.align_corners:
             raise ValueError('interpolation "nearest" does not support align_corners.')
-        
-        self.op = (
+
+        self._op = (
             flow.builtin_op("upsample")
-                .Input("x")
-                .Output("y")
-                .Attr("height_scale")
-                .Attr("width_scale")
-                .Attr("align_corners", align_corners)
-                .Attr("data_format", "channels_first")
-                .Attr("interpolation", mode)
-                .Build()
+            .Input("x")
+            .Output("y")
+            .Attr("height_scale", float(1.0))
+            .Attr("width_scale", float(1.0))
+            .Attr("align_corners", self.align_corners)
+            .Attr("data_format", "channels_first")
+            .Attr("interpolation", self.mode)
+            .Build()
         )
 
     def forward(self, x):
-        assert self.size != None or self.scale_factor != None, f"size and scale_factor can not be none at the same time!"
+        assert (
+            self.size != None or self.scale_factor != None
+        ), f"size and scale_factor can not be none at the same time!"
         h, w = x.shape[2], x.shape[3]
         if self.height_scale == None:
             if isinstance(self.size, int):
-                self.height_scale = self.size / h
+                self.height_scale = 1.0 * self.size / h
             else:
-                self.height_scale = self.size[0] / h
+                self.height_scale = 1.0 * self.size[0] / h
         if self.width_scale == None:
             if isinstance(self.size, int):
-                self.width_scale = self.size / w
+                self.width_scale = 1.0 * self.size / w
             else:
-                self.width_scale = self.size[1] / w
+                self.width_scale = 1.0 * self.size[1] / w
 
-        res = self._op(x, height_scale=height_scale, width_scale=width_scale)[0]
+        res = self._op(x, height_scale=self.height_scale, width_scale=self.width_scale)[
+            0
+        ]
         return res
