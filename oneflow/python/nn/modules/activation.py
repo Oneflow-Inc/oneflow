@@ -466,3 +466,81 @@ class LogSoftmax(Module):
 
     def extra_repr(self):
         return "dim={dim}".format(dim=self.dim)
+
+
+@oneflow_export("nn.Hardtanh")
+@experimental_api
+class Hardtanh(Module):
+    r"""
+    Applies the HardTanh function element-wise
+
+    HardTanh is defined as:
+
+    .. math::
+        \text{HardTanh}(x) = \begin{cases}
+            1 & \text{ if } x > 1 \\
+            -1 & \text{ if } x < -1 \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    The range of the linear region :math:`[-1, 1]` can be adjusted using
+    :attr:`min_val` and :attr:`max_val`.
+
+    Args:
+        min_val: minimum value of the linear region range. Default: -1
+        max_val: maximum value of the linear region range. Default: 1
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Keyword arguments :attr:`min_value` and :attr:`max_value`
+    have been deprecated in favor of :attr:`min_val` and :attr:`max_val`.
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        
+        m = flow.nn.Hardtanh()
+        arr = np.random.randn(2, 3, 4, 5)
+        x = flow.Tensor(arr)
+        out = m(x)
+    
+    """
+
+    def __init__(
+        self,
+        min_val: float = -1,
+        max_val: float = 1,
+        inplace: bool = False,
+        min_value: Optional[float] = None,
+        max_value: Optional[float] = None,
+    ):
+        super().__init__()
+        if min_value is not None:
+            warnings.warn(
+                "keyword argument min_value is deprecated and rename to min_val"
+            )
+            min_val = min_value
+        if max_value is not None:
+            warnings.warn(
+                "keyword argument max_value is deprecated and rename to max_val"
+            )
+            max_val = max_value
+        assert inplace == False, f"Hardtanh not support inplace equal true now!"
+        self._op = (
+            flow.builtin_op("hardtanh")
+            .Input("in")
+            .Attr("min_val", min_val)
+            .Attr("max_val", max_val)
+            .Output("out")
+            .Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
