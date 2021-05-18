@@ -495,7 +495,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     auto out_types = llvm::SmallVector<Type, 8>();
     for (auto kv : op.user_conf().output()) {
       for (int i = 0; i < kv.second.s_size(); i++) {
-        // TODO: add real types
+        // TODO: add real types and shapes
         out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
       }
     }
