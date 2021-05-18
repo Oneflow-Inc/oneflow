@@ -505,5 +505,5 @@ if __name__ == "__main__":
         agent.run_bash_script_async(bash_script=args.bash_script,)
         agent.block()
 
-    # copy artifacts
+    # TODO: copy and remove artifacts, if not debug, remove all
     exit(0)
