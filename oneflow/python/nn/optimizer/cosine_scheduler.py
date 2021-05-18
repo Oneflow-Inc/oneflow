@@ -16,10 +16,13 @@ limitations under the License.
 
 import math
 
+from oneflow.python.oneflow_export import experimental_api, oneflow_export
 from .lr_scheduler import LrScheduler
 
 
-class ConsineScheduler(LrScheduler):
+@oneflow_export("optim.lr_scheduler.CosineScheduler")
+@experimental_api
+class CosineScheduler(LrScheduler):
     def __init__(
         self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
     ):
@@ -31,7 +34,7 @@ class ConsineScheduler(LrScheduler):
 
     def get_lr(self):
         if self.last_step < self.steps:
-            cos_decay = 0.5 * (1 + math.cos(math.pi * self.step / self.steps))
+            cos_decay = 0.5 * (1 + math.cos(math.pi * self.last_step / self.steps))
             decay_factor = (1 - self.alpha) * cos_decay + self.alpha
             return [base_lr * decay_factor for base_lr in self.base_lr]
         else:

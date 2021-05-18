@@ -64,6 +64,6 @@ class LrScheduler(object):
         self.last_lr = self.get_lr()
 
         for i, group in enumerate(self._optimizer._param_groups):
-            group["lr"] = self.last_lr[i]
+            group.options["lr"] = self.last_lr[i]
             if self.verbose:
                 self.print_lr(i, self.last_lr[i])
