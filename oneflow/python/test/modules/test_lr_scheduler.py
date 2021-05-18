@@ -47,7 +47,7 @@ class TestLrScheduler(flow.unittest.TestCase):
         for i in range(1, 21):
             cosine_scheduler.step()
             new_lr = cosine_scheduler_step(TestLrScheduler.base_lr, i, steps, alpha)
-            test_case.assertEqual(cosine_scheduler.get_last_lr()[0], new_lr)
+            test_case.assertAlmostEqual(cosine_scheduler.get_last_lr()[0], new_lr, places=4)
 
 
 if __name__ == "__main__":
