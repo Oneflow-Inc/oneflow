@@ -912,7 +912,7 @@ LogicalResult applyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     module->emitError("Failed to run canonicalizer pass");
     return failure();
   }
-  job_wrapper.DumpMLIR("ir/" + job_wrapper.job()->job_conf().job_name() + ".mlir.dot", graphviz);
+  job_wrapper.DumpLog("ir/" + job_wrapper.job()->job_conf().job_name() + ".mlir.dot", graphviz);
   return success();
 }
 
@@ -948,7 +948,7 @@ void RoundTripOneFlowJob(
     std::string mlir;
     llvm::raw_string_ostream os(mlir);
     module->print(os);
-    job_wrapper.DumpMLIR("ir/" + job->job_conf().job_name() + ".RoundTripOneFlowJob.mlir", mlir);
+    job_wrapper.DumpLog("ir/" + job->job_conf().job_name() + ".RoundTripOneFlowJob.mlir", mlir);
 
     if (failed(imp.TryToUpdateJob())) {
       std::cerr << "fail to update job with IR, job will stay intact, job_name: "
