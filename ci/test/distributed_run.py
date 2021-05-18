@@ -86,8 +86,8 @@ async def create_remote_workspace_dir(remote_host=None, workspace_dir=None):
     print("create_remote_workspace_dir done")
 
 
-def launch_remote_container(
-    hostname=None,
+async def launch_remote_container(
+    remote_host=None,
     survival_time=None,
     workspace_dir=None,
     container_name=None,
@@ -95,7 +95,7 @@ def launch_remote_container(
     oneflow_wheel_path=None,
     oneflow_build_path=None,
 ):
-    print("launching remote container at", hostname)
+    print("launching remote container at", remote_host)
     assert img_tag
     pythonpath_args = None
     if oneflow_wheel_path:
@@ -106,15 +106,14 @@ def launch_remote_container(
         raise ValueError("must have oneflow_wheel_path or oneflow_build_path")
     docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
 """
-    ssh_cmd = f"ssh {hostname} {docker_cmd}"
-    subprocess.check_call(ssh_cmd, shell=True)
+    await spawn_shell_and_check(f"ssh {remote_host} {docker_cmd}")
     if oneflow_wheel_path:
         whl_basename = os.path.basename(oneflow_wheel_path)
-        run_docker_cmd = f"ssh {hostname} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
-        subprocess.check_call(run_docker_cmd, shell=True)
-    subprocess.check_call(
-        f"ssh {hostname} docker exec {container_name} python3 -m oneflow --doctor",
-        shell=True,
+        await spawn_shell_and_check(
+            f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
+        )
+    await spawn_shell_and_check(
+        f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
 
 
@@ -455,16 +454,23 @@ if __name__ == "__main__":
         )
 
     atexit.register(exit_handler)
-    for remote_host in remote_hosts:
-        launch_remote_container(
-            hostname=remote_host,
-            survival_time=args.timeout,
-            workspace_dir=workspace_dir,
-            container_name=container_name,
-            oneflow_wheel_path=args.oneflow_wheel_path,
-            oneflow_build_path=args.oneflow_build_path,
-            img_tag=img_tag,
+    loop.run_until_complete(
+        asyncio.gather(
+            *[
+                launch_remote_container(
+                    hostname=remote_host,
+                    survival_time=args.timeout,
+                    workspace_dir=workspace_dir,
+                    container_name=container_name,
+                    oneflow_wheel_path=args.oneflow_wheel_path,
+                    oneflow_build_path=args.oneflow_build_path,
+                    img_tag=img_tag,
+                )
+                for remote_host in remote_hosts
+            ],
         )
+    )
+
     with DockerAgent(
         port=agent_port,
         authkey=agent_authkey.encode(),
