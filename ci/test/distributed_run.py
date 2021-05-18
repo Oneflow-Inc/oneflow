@@ -478,7 +478,7 @@ if __name__ == "__main__":
         asyncio.gather(
             *[
                 launch_remote_container(
-                    hostname=remote_host,
+                    remote_host=remote_host,
                     survival_time=args.timeout,
                     workspace_dir=workspace_dir,
                     container_name=container_name,
