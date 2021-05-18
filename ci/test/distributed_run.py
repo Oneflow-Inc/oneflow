@@ -11,6 +11,7 @@ import atexit
 import pathlib
 import asyncio
 import glob
+from datetime import date
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -183,6 +184,7 @@ class DockerAgent:
         img_tag=None,
         oneflow_wheel_path=None,
         oneflow_build_path=None,
+        oneflow_test_tmp_dir=None,
     ) -> None:
         # info
         self.this_host = this_host
@@ -194,6 +196,7 @@ class DockerAgent:
         self.img_tag = img_tag
         self.oneflow_wheel_path = oneflow_wheel_path
         self.oneflow_build_path = oneflow_build_path
+        self.oneflow_test_tmp_dir = oneflow_test_tmp_dir
         # impl
         self.env_proto_txt = None
         self.bash_tmp_file = None
@@ -208,16 +211,14 @@ class DockerAgent:
     def run_bash_script_async(self, bash_script=None):
         remote_hosts_str = ",".join(self.remote_hosts)
         assert os.path.exists(bash_script)
-        log_dir = "./unittest-log-" + str(uuid.uuid4())
         ctrl_port = find_free_port()
         data_port = find_free_port()
         exports = f"""
 export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
-export ONEFLOW_TEST_LOG_DIR={log_dir}
 export ONEFLOW_TEST_NODE_LIST="{self.this_host},{remote_hosts_str}"
 export ONEFLOW_WORKER_KEEP_LOG=1
-export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
+export ONEFLOW_TEST_TMP_DIR="{self.oneflow_test_tmp_dir}"
 export NCCL_DEBUG=INFO
 export ONEFLOW_TEST_WORKER_AGENT_PORT={agent_port}
 export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
@@ -305,11 +306,12 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
         f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}"
     )
 
-    spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
-
-    def copy_file(path=None, remote_host=None):
+    async def copy_file(path=None, remote_host=None):
         relpath = os.path.relpath(path, tmp_dir.name)
-        return spawn_shell_and_check(
+        await spawn_shell_and_check(
+            f"ssh {remote_host} 'mkdir -p {workspace_dir}/python_scripts/oneflow/libs'",
+        )
+        await spawn_shell_and_check(
             f"rsync -azP --omit-dir-times --no-perms --no-group {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
         )
 
@@ -324,6 +326,7 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
             for remote_host in remote_hosts
             for f in files
         ],
+        spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
     )
 
 
@@ -359,6 +362,9 @@ if __name__ == "__main__":
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
+    parser.add_argument(
+        "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
+    )
     parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
     args = parser.parse_args()
 
@@ -471,9 +477,34 @@ if __name__ == "__main__":
         if args.oneflow_build_path:
             print("fixing permission of", args.oneflow_build_path)
             subprocess.call(
-                f"docker exec {container_name} chmod -R o+w {args.oneflow_build_path}",
+                f"docker run --rm -v {args.oneflow_build_path}:/p -w /p busybox chmod -R o+w .",
                 shell=True,
             )
+        subprocess.call(
+            f"docker run --rm -v {args.oneflow_test_tmp_dir}:/p -w /p busybox chmod -R o+w .",
+            shell=True,
+        )
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell(
+                        f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R o+w .",
+                    )
+                    for remote_host in remote_hosts
+                ],
+            )
+        )
+        print("copying artifacts")
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl'  --exclude='python_scripts' {remote_host}:{workspace_dir} {args.oneflow_test_tmp_dir}/{remote_host}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
+        )
         print("removing docker container:", container_name)
         rm_cmd = f"docker rm -f {container_name}"
         loop.run_until_complete(
@@ -514,9 +545,7 @@ if __name__ == "__main__":
         oneflow_wheel_path=args.oneflow_wheel_path,
         oneflow_build_path=args.oneflow_build_path,
         img_tag=img_tag,
+        oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
     ) as agent:
         agent.run_bash_script_async(bash_script=args.bash_script,)
         agent.block()
-
-    # TODO: copy and remove artifacts, if not debug, remove all
-    exit(0)
