@@ -302,12 +302,21 @@ async def fix_and_sync_libs():
     await spawn_shell_and_check(
         f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}"
     )
-    await asyncio.gather(
-        spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
-        spawn_shell_and_check(
-            f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
-        ),
-    )
+
+    spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
+
+    def copy_file(path):
+        relpath = os.path.relpath(path, tmp_dir.name)
+        return spawn_shell_and_check(
+            f"rsync -azP --omit-dir-times --no-perms --no-group {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
+        )
+
+    files = [
+        os.path.join(root, name)
+        for root, dirs, files in os.walk(tmp_dir.name, topdown=True)
+        for name in files
+    ]
+    await asyncio.gather(*[copy_file(f,) for f in files],)
 
 
 if __name__ == "__main__":
