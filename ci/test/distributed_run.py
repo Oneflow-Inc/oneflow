@@ -9,6 +9,7 @@ import uuid
 import getpass
 import atexit
 import pathlib
+import asyncio
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -79,8 +80,14 @@ def build_docker_img(hostname=None, workspace_dir=None):
         subprocess.check_call(f"bash docker/ci/test/build.sh", shell=True)
 
 
-def create_remote_workspace_dir(hostname, workspace_dir):
-    subprocess.check_call(f"ssh {hostname} mkdir -p {workspace_dir}", shell=True)
+async def spawn_shell_and_check(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
+    assert p.returncode == 0
+
+
+async def create_remote_workspace_dir(hostname, workspace_dir):
+    await spawn_shell_and_check(f"ssh {hostname} mkdir -p {workspace_dir}")
     print("create_remote_workspace_dir done")
 
 
@@ -255,17 +262,16 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
         pass
 
 
-def fix_and_sync_libs():
+async def fix_and_sync_libs():
     tmp_dir = tempfile.TemporaryDirectory()
     tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
     os.mkdir(tmp_lib_dir)
-    subprocess.check_call(
+    await spawn_shell_and_check(
         """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
             "file", oneflow_internal_path
         ).replace(
             "destination", tmp_lib_dir
         ),
-        shell=True,
     )
     libs = os.listdir(tmp_lib_dir)
     assert len(libs) > 0
@@ -273,37 +279,34 @@ def fix_and_sync_libs():
         pathlib.Path(__file__).parent.absolute(), "excludelist"
     )
     excludelist = open(excludelist_path).read().split("\n")
-    subprocess.check_call(
-        f"cp {oneflow_internal_path} {tmp_dir.name}", shell=True,
-    )
-    for lib in libs:
+    await spawn_shell_and_check(f"cp {oneflow_internal_path} {tmp_dir.name}")
+
+    def handle_lib(lib):
         if lib in excludelist or "libpython" in lib:
             print("excluding", lib)
-            subprocess.check_call(
-                f"rm {tmp_lib_dir}/{lib}", shell=True,
-            )
+            return spawn_shell_and_check(f"rm {tmp_lib_dir}/{lib}")
         else:
             print("keeping", lib)
-            subprocess.check_call(
-                f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}", shell=True,
+            return spawn_shell_and_check(
+                f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}"
             )
+
+    await asyncio.gather(*(handle_lib(lib) for lib in libs))
+
     tmp_oneflow_internal_path = os.path.join(
         tmp_dir.name, pathlib.Path(oneflow_internal_path).name
     )
     print("before fixing .so")
-    subprocess.check_call(
-        f"ldd {tmp_oneflow_internal_path}", shell=True,
-    )
+    await spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}")
     print("fixing .so")
-    subprocess.check_call(
-        f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}", shell=True,
+    await spawn_shell_and_check(
+        f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}"
     )
-    subprocess.check_call(
-        f"ldd {tmp_oneflow_internal_path}", shell=True,
-    )
-    subprocess.check_call(
-        f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
-        shell=True,
+    await asyncio.gather(
+        spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
+        spawn_shell_and_check(
+            f"rsync -azP --omit-dir-times --no-perms --no-group {tmp_dir.name}/ {remote_host}:{workspace_dir}/python_scripts/oneflow",
+        ),
     )
 
 
@@ -351,7 +354,8 @@ if __name__ == "__main__":
         os.path.expanduser("~"), "distributed_run_workspace", sub_dir
     )
     print("workspace_dir", workspace_dir)
-    create_remote_workspace_dir(remote_host, workspace_dir)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_remote_workspace_dir(remote_host, workspace_dir))
     if args.oneflow_build_path:
         # TODO: infer a proper path and check there is only one
         oneflow_internal_path = (
@@ -368,7 +372,7 @@ if __name__ == "__main__":
         )
         if args.skip_libs == False:
             print("copying .so")
-            fix_and_sync_libs()
+            loop.run_until_complete(fix_and_sync_libs())
     elif args.oneflow_wheel_path:
         subprocess.check_call(
             f"rsync -azP --omit-dir-times --no-perms --no-group {args.oneflow_wheel_path} {remote_host}:{workspace_dir}",
