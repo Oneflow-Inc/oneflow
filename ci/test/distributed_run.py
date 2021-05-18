@@ -435,14 +435,17 @@ if __name__ == "__main__":
                 f"docker exec {container_name} chmod -R o+w {args.oneflow_build_path}",
                 shell=True,
             )
-        print("removing local docker container:", container_name)
+        print("removing docker container:", container_name)
         rm_cmd = f"docker rm -f {container_name}"
-        subprocess.call(f"{rm_cmd}", shell=True)
-        for remote_host in remote_hosts:
-            print(f"removing local docker container at {remote_host}:", container_name)
-            subprocess.call(
-                f"ssh {remote_host} {rm_cmd}", shell=True,
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell_and_check(f"ssh {remote_host} {rm_cmd}")
+                    for remote_host in remote_hosts
+                ],
+                spawn_shell_and_check(rm_cmd),
             )
+        )
 
     atexit.register(exit_handler)
     for remote_host in remote_hosts:
