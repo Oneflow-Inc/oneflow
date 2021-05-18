@@ -505,8 +505,9 @@ class Hardswish(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, inplace: bool = False):
         super().__init__()
+        assert inplace == False, f"Hardswish no support inplace equal true now!"
         self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
 
     def forward(self, x):
