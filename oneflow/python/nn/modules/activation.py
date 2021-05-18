@@ -500,7 +500,13 @@ class LeakyReLU(Module):
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
         assert inplace == False, f"LeakyReLU not support inplace mode now"
-        self._op = flow.builtin_op("leaky_relu").Input("x").Attr("alpha", negative_slope).Output("y").Build()
+        self._op = (
+            flow.builtin_op("leaky_relu")
+            .Input("x")
+            .Attr("alpha", negative_slope)
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         res = self._op(x)[0]
