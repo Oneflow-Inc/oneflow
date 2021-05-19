@@ -54,8 +54,8 @@ class Transpose : public OpExprGradFunction<TransposeInterpState> {
 
 Maybe<void> Transpose::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   std::vector<int32_t> perm;
   grad_op_ = JUST(op_expr_helper::TransposeOp(/*perm=*/perm, GradientOpName(op_name));
@@ -68,7 +68,7 @@ Maybe<void> Transpose::Capture(TransposeInterpState* ctx, const TensorTuple& inp
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->perm = JUST(composed_attrs.GetAttr<int32_t>("perm"));
+  ctx->perm = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("perm"));
   CHECK_EQ_OR_RETURN(inputs.size(), 1);
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
@@ -81,7 +81,7 @@ Maybe<void> Transpose::Apply(const TransposeInterpState* ctx, const TensorTuple&
   const auto& dy = out_grads.at(0);
   const auto& inputs = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("perm", ctx->perm));
+  JUST(attrs.SetAttr<std::vector<int32_t>>("perm", ctx->perm));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
   return Maybe<void>::Ok();
 }
