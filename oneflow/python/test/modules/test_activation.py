@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from test_util import GenArgList
+from collections import OrderedDict
 import numpy as np
 import oneflow.experimental as flow
 
@@ -154,52 +156,81 @@ class TestSigmoidModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
 
 
+def _test_softmax(test_case, device):
+        axis = 0
+        m = flow.nn.Softmax(dim=axis)
+        arr = np.random.randn(2, 3, 4, 5)
+        x = flow.Tensor(arr, device=flow.device(device))
+        y = m(x)
+        output = numpy_softmax(arr, axis)
+        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+def _test_softmax_dim_1(test_case, device):
+    axis = 1
+    m = flow.nn.Softmax(dim=axis)
+    arr = np.random.randn(9, 7, 8, 16)
+    x = flow.Tensor(arr, device=flow.device(device))
+    y = m(x)
+    output = numpy_softmax(arr, axis)
+    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+def _test_softmax_dim_2(test_case, device):
+    axis = 2
+    m = flow.nn.Softmax(dim=axis)
+    arr = np.random.randn(2, 5, 6, 3)
+    x = flow.Tensor(arr, device=flow.device(device))
+    y = m(x)
+    output = numpy_softmax(arr, axis)
+    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+def _test_softmax_dim_3(test_case, device):
+    axis = 3
+    m = flow.nn.Softmax(dim=axis)
+    arr = np.random.randn(1, 3, 4, 7)
+    x = flow.Tensor(arr, device=flow.device(device))
+    y = m(x)
+    output = numpy_softmax(arr, axis)
+    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+    axis2 = -1
+    m2 = flow.nn.Softmax(dim=axis)
+    y2 = m(x)
+    output2 = numpy_softmax(arr, axis)
+    test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
+
+def _test_softmax_backward(test_case, device):
+    axis = 0
+    m = flow.nn.Softmax(dim=axis)
+    arr = np.random.randn(2, 3, 4, 5)
+    x = flow.Tensor(arr, requires_grad=True, device=flow.device(device))
+    y = m(x)
+    y.retain_grad()
+    z = y.sum()
+    z.backward()
+    output = numpy_softmax(arr, axis)
+    print("x.grad >>>>>>>>>>>>> ", x.grad)
+    print("y.grad >>>>>>>>>>>>> ", y.grad)
+    print("z.grad >>>>>>>>>>>>> ", z.grad)
+    # test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestSoftmaxModule(flow.unittest.TestCase):
+class TestSoftmax(flow.unittest.TestCase):
     def test_softmax(test_case):
-        axis = 0
-        m = flow.nn.Softmax(dim=axis)
-        arr = np.random.randn(2, 3, 4, 5)
-        x = flow.Tensor(arr)
-        y = m(x)
-        output = numpy_softmax(arr, axis)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
-    def test_softmax_dim_1(test_case):
-        axis = 1
-        m = flow.nn.Softmax(dim=axis)
-        arr = np.random.randn(9, 7, 8, 16)
-        x = flow.Tensor(arr)
-        y = m(x)
-        output = numpy_softmax(arr, axis)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
-    def test_softmax_dim_2(test_case):
-        axis = 2
-        m = flow.nn.Softmax(dim=axis)
-        arr = np.random.randn(2, 5, 6, 3)
-        x = flow.Tensor(arr)
-        y = m(x)
-        output = numpy_softmax(arr, axis)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
-    def test_softmax_dim_3(test_case):
-        axis = 3
-        m = flow.nn.Softmax(dim=axis)
-        arr = np.random.randn(1, 3, 4, 7)
-        x = flow.Tensor(arr)
-        y = m(x)
-        output = numpy_softmax(arr, axis)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-
-        axis2 = -1
-        m2 = flow.nn.Softmax(dim=axis)
-        y2 = m(x)
-        output2 = numpy_softmax(arr, axis)
-        test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_softmax, 
+            _test_softmax_dim_1,
+            _test_softmax_dim_2,
+            _test_softmax_dim_3,
+            _test_softmax_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 @unittest.skipIf(
