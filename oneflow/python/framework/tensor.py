@@ -28,6 +28,7 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
+import oneflow.python.framework.dtype as dtype_util
 import oneflow as flow
 
 
@@ -62,7 +63,10 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     assert np_arr.dtype == flow.convert_oneflow_dtype_to_numpy_dtype(
         eager_local_tensor.dtype
     )
-    assert np_arr.shape == tuple(eager_local_tensor.shape)
+    if np_arr.shape == ():
+        assert tuple(eager_local_tensor.shape) == (1,)
+    else:
+        assert np_arr.shape == tuple(eager_local_tensor.shape)
     copy_from_numpy(np_arr)
 
 
@@ -84,6 +88,41 @@ def _init_eager_local_tensor_by_initializer_conf(
     )
 
 
+@oneflow_export("tensor")
+def construct_tensor(
+    data,
+    dtype=None,
+    device=None,
+    requires_grad=False,
+    placement=None,
+    sbp=None,
+    is_consistent=False,
+    is_lazy=False,
+):
+    if _is_scalar(data) or _input_args_is_data(data):
+        if (
+            not _input_args_is_numpy(data)
+            and dtype is None
+            and _input_dtype_is_float(data)
+        ):
+            dtype = flow.float32
+        data = np.array(data)
+        if dtype is None:
+            dtype = dtype_util.convert_numpy_dtype_to_oneflow_dtype(data.dtype)
+        return Tensor(
+            data,
+            dtype=dtype,
+            device=device,
+            requires_grad=requires_grad,
+            placement=placement,
+            sbp=sbp,
+            is_consistent=is_consistent,
+            is_lazy=is_lazy,
+        )
+    else:
+        raise TypeError("Construction error, invalid combination of arguments")
+
+
 @oneflow_export("Tensor")
 class Tensor:
     def __init__(
@@ -101,6 +140,8 @@ class Tensor:
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
+        if isinstance(device, str):
+            device = flow.device(device)
         if placement is None:
             device = (
                 device
@@ -108,7 +149,10 @@ class Tensor:
                 else oneflow._oneflow_internal.device("cpu")
             )
         if _input_args_is_tensor(*args):
-            TODO()  # liyurui, construct using another tensor
+            self._local_or_consistent_tensor = flow.to(
+                *args, device=args[0].device, dtype=args[0].dtype, copy=True
+            )
+            self._undetermined_tensor = None
         elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
@@ -789,3 +833,23 @@ def _convert_to_placement_scope(placement_or_device):
         return flow.scope.placement(
             device_tag, "{}:{}".format(machine_id, device.index), None
         )
+
+
+def _is_scalar(data):
+    return isinstance(data, (int, float, bool, complex))
+
+
+def _flatten_list_or_tuple(list_or_tuple):
+    for item in list_or_tuple:
+        if isinstance(item, (list, tuple)):
+            yield from _flatten_list_or_tuple(item)
+        else:
+            yield item
+
+
+def _input_dtype_is_float(data):
+    if _is_scalar(data):
+        return isinstance(data, float)
+    elif isinstance(data, (list, tuple)):
+        return any(isinstance(x, float) for x in _flatten_list_or_tuple(data))
+    return False

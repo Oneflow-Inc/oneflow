@@ -29,7 +29,7 @@ class TestModule(flow.unittest.TestCase):
         input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
         of_out = flow.matmul(input1, input2)
         np_out = np.matmul(input1.numpy(), input2.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     def test_broadcast_matmul(test_case):
         input1 = flow.Tensor(np.random.randn(3, 4, 5), dtype=flow.float32)
