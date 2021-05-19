@@ -235,7 +235,7 @@ class LogicalSliceAssign(Module):
         )
 
     def forward(self, x, update):
-        return self._op(x, update)[0]
+        return self._op(x, update)
 
 
 @oneflow_export("tmp.logical_slice_assign")

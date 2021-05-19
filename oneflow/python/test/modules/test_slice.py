@@ -66,9 +66,8 @@ class TestLogicalSliceAssigne(flow.unittest.TestCase):
         input = flow.Tensor(x)
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        # BUG:F0519 15:41:59.977648 3981323 stateful_local_opkernel.cpp:212] UNIMPLEMENTED
-        y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
-        test_case.assertTrue(np.array_equal(y.numpy(), output))
+        flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+        test_case.assertTrue(np.array_equal(input.numpy(), output))
 
     def test_tensor_logical_slice_assign(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
