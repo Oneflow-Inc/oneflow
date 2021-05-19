@@ -285,6 +285,33 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
+void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                const MemoryCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.has_host_mem()) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
+}
+
+void SyncAutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                    const MemoryCase& dst_mem_case) {
+  AutoMemset(ctx, dst, value, sz, dst_mem_case);
+  if (dst_mem_case.has_device_cuda_mem()) {
+#ifdef WITH_CUDA
+    OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+}
+
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::

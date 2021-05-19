@@ -101,10 +101,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       for (const auto& input_tensor : inputs) {
         const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
         CHECK_OR_RETURN(static_cast<bool>(tensor));
-        // Instruction `AccessBlobByCallback` records event which can be used to synchronize cuda
+        // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
         // stream.
-        JUST(builder->AccessBlobByCallback(
-            tensor, [](uint64_t) {}, "mut"));
+        JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
+                                     tensor->parallel_desc()));
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,

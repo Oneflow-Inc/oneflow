@@ -387,6 +387,16 @@ class TestTensor(flow.unittest.TestCase):
         np_out = -input.numpy()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_zeros_(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(np.random.randn(*shape), dtype=flow.float32)
+        x.zeros_()
+        test_case.assertTrue(np.array_equal(x.numpy(), np.zeros(shape)))
+
 
 if __name__ == "__main__":
     unittest.main()
