@@ -390,7 +390,9 @@ if __name__ == "__main__":
     assert bool(args.bash_script) != bool(args.cmd)
     if args.skip_libs:
         assert args.debug, "--skip_libs only works with --debug"
-        assert args.oneflow_build_path, "--skip_libs only works with --oneflow_build_path"
+        assert (
+            args.oneflow_build_path
+        ), "--skip_libs only works with --oneflow_build_path"
     oneflow_wheel_path = args.oneflow_wheel_path
     if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
         whl_paths = [
