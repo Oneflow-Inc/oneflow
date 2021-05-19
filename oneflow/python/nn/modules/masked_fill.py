@@ -34,7 +34,7 @@ class MaskedFill(Module):
 
     def forward(self, input, mask):
         in_shape = tuple(input.shape)
-        value_like_x = flow.Tensor(*in_shape, device=input.device)
+        value_like_x = flow.Tensor(*in_shape)
         value_like_x.fill_(self.value)
         return self._where_op(mask, value_like_x, input)[0]
 
