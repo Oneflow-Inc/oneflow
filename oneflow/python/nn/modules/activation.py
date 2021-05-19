@@ -366,6 +366,47 @@ def sigmoid_op(x):
     return Sigmoid()(x)
 
 
+@oneflow_export("nn.Hardsigmoid")
+@experimental_api
+class Hardsigmoid(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \end{cases}
+    
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+    
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example:
+    
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        m = flow.nn.Hardsigmoid()
+        input = flow.randn(2)
+        output = m(input)
+    
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        assert inplace == False, f"Hardsigmoid not support inplace equal true now!"
+        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
 @oneflow_export("nn.Softmax")
 @experimental_api
 class Softmax(Module):
