@@ -69,8 +69,6 @@ Maybe<void> Transpose::Capture(TransposeInterpState* ctx, const TensorTuple& inp
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->perm = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("perm"));
-  CHECK_EQ_OR_RETURN(inputs.size(), 1);
-  ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
@@ -78,8 +76,6 @@ Maybe<void> Transpose::Apply(const TransposeInterpState* ctx, const TensorTuple&
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  const auto& dy = out_grads.at(0);
-  const auto& inputs = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("perm", ctx->perm));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
