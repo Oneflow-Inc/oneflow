@@ -31,6 +31,7 @@ from typing import Optional, Any, Union, Tuple, List
 import inspect
 import numpy as np
 
+import oneflow._oneflow_internal
 from oneflow.python.framework.check_point_v2 import (
     LoadVariables,
     SaveVarDict,
@@ -39,11 +40,12 @@ from oneflow.python.framework.check_point_v2 import (
 from oneflow.python.framework.function_util import api_oneflow_function
 from oneflow.python.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.python.framework.local_blob import LocalBlob
-from oneflow.python.nn.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
+from oneflow.python.nn.optimizer.optimizer import Optimizer as OOPOptimizer
 import oneflow.python.framework.typing as oneflow_typing
 import oneflow.python.framework.dtype as dtype_util
 
@@ -53,7 +55,7 @@ class DataModule(Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    def forward(self):
+    def forward(self, step_idx: int = 0, optimizer_idx: int = 0):
         # Do nothing, to be overrided by subclass.
         pass
 
@@ -192,7 +194,7 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
+        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
@@ -201,7 +203,7 @@ class Callback(ABC):
 
     def on_validation_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
+        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]],
         step_idx: int = 0,
     ):
         # Do nothing, to be overrided by subclass.
@@ -290,7 +292,9 @@ class Model(
     ):
         sub_models = []
 
-        self._train_model = TrainModel(training_config, self, callbacks)
+        self._train_model = (TrainModel(training_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else TrainModelOOPStyle(training_config, self, callbacks))
         if self._train_model.is_valid:
             sub_models.append(self._train_model)
         else:
@@ -318,7 +322,9 @@ class Model(
             print("{}'s fit() will do nothing because there has no valid configuration.".format(self.__class__.__name__))
             return sub_models
 
-        self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
+        self._checkpoint_model = (CheckpointModel(checkpoint_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else CheckpointModelOOPStyle(checkpoint_config, self, callbacks))
         if self._checkpoint_model.is_valid:
             sub_models.append(self._checkpoint_model)
         else:
@@ -633,6 +639,76 @@ class CheckpointModel(SubModel):
         """
         SaveVarDict(path=dirpath)
 
+class TrainModelOOPStyle(SubModel):
+    def __init__(
+        self,
+        cfg: TrainingConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("training", cfg, model, callbacks)
+
+        if not self._get_and_check_step():
+            self.is_valid = False
+
+        if not self._get_and_check_opts():
+            self.is_valid = False
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid, self.error_msg
+        for optimizer_idx in range(0, len(self._opts)):
+            batch = self._cfg.data(step_idx, optimizer_idx)
+            outputs = self._model.training_step(
+                batch=batch, optimizer_idx=optimizer_idx
+            )
+            loss = None
+            if isinstance(outputs, tuple) and len(outputs) > 0:
+                loss = outputs[0]
+            else:
+                loss = outputs
+
+            loss.backward()
+            opt = self._opts[optimizer_idx]
+            opt.step()
+            opt.zero_grad()
+
+            self._method_callback(
+                "on_training_step_end",
+                outputs=outputs,
+                step_idx=step_idx,
+                optimizer_idx=optimizer_idx,
+            )
+
+    def _get_and_check_step(self):
+        if not self._model.method_overrided("training_step"):
+            self.error_msg += "model.training_step() is empty;"
+            return False
+        else:
+            return True
+
+    def _get_and_check_opts(self):
+        self._opts = []
+        if not self._model.method_overrided("configure_optimizers"):
+            self.error_msg += "model.configure_optimizers() is empty;"
+            return False
+
+        opt_conf = self._model.configure_optimizers()
+        if isinstance(opt_conf, OOPOptimizer):
+            self._opts = [opt_conf]
+        elif isinstance(opt_conf, (list, tuple)):
+            for opt in opt_conf:
+                assert isinstance(
+                    opt, OOPOptimizer
+                ), "model.configure_optimizers() must return Optimizer \
+                    or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+            self._opts = opt_conf
+        else:
+            assert (
+                False
+            ), "model.configure_optimizers() must return Optimizer \
+                or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+
+        return True
 
 class ValidateModelOOPStyle(SubModel):
     def __init__(
@@ -650,8 +726,12 @@ class ValidateModelOOPStyle(SubModel):
         assert self.is_valid
         if (step_idx + 1) % self._cfg.step_interval == 0:
             outputs = None
-            inputs = self._cfg.data()
-            outputs = self._model.validation_step(inputs)
+            with oneflw._oneflow_internal.autograd.no_grad():
+                inputs = self._cfg.data(step_idx=step_idx)
+                model_previous_mode = self._model.training
+                self._model.train()
+                outputs = self._model.validation_step(inputs)
+                self._model.train(model_previous_mode)
             self._method_callback(
                 "on_validation_step_end", step_idx=step_idx, outputs=outputs,
             )
@@ -662,6 +742,17 @@ class ValidateModelOOPStyle(SubModel):
             return False
         else:
             return True
+
+class CheckpointModelOOPStyle(SubModel):
+    def __init__(
+        self,
+        cfg: CheckpointConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("checkpointing", cfg, model, callbacks)
+        self.is_valid = False
+        self.error_msg = "checkpointing has not been implemented yet."
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):
