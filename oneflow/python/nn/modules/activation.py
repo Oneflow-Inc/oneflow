@@ -331,6 +331,7 @@ class Softmax(Module):
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
+        print("need_transpose, permute >>>>>>>>>>>>>> ", need_transpose, permute)
         if need_transpose:
             x = self._transpose_op(x, perm=permute)[0]
 
