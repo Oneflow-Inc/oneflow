@@ -59,7 +59,7 @@ def _test_transpose_backward(test_case, device):
     y.retain_grad()
     z = y.sum()
     z.backward()
-    test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
 
 
 @unittest.skipIf(

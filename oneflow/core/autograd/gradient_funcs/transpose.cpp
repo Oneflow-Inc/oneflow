@@ -58,7 +58,7 @@ Maybe<void> Transpose::Init(const OpExpr& op) {
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   std::vector<int32_t> perm;
-  grad_op_ = JUST(op_expr_helper::TransposeOp(/*perm=*/perm, GradientOpName(op_name));
+  grad_op_ = JUST(op_expr_helper::TransposeOp(/*perm=*/perm, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
