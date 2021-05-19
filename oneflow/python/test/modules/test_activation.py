@@ -257,5 +257,21 @@ class TestHardtanhModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLeakyReLUModule(flow.unittest.TestCase):
+    def test_leaky_relu(test_case):
+        negative_slope = 0.2
+        m = flow.nn.LeakyReLU(negative_slope=negative_slope)
+        arr = np.random.randn(2, 3, 4, 5)
+
+        np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
 if __name__ == "__main__":
     unittest.main()
