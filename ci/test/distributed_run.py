@@ -1,22 +1,17 @@
+from multiprocessing.connection import Listener
 import os
 import subprocess
 import socket
 import tempfile
 from contextlib import closing
-from subprocess import TimeoutExpired
 import argparse
 import uuid
-
-FIX_SSH_PERMISSION = """
-mkdir -p /run/sshd
-chown root ~/.ssh
-chmod 700 ~/.ssh
-chown root ~/.ssh/*
-chmod 600 ~/.ssh/*
-chmod 400 ~/.ssh/id_rsa
-chmod 400 ~/.ssh/id_rsa.pub
-chmod 600 ~/.ssh/config
-"""
+import getpass
+import atexit
+import pathlib
+import asyncio
+import glob
+from datetime import date
 
 HARD_CODED_AFFILIATIONS = {
     "192.168.1.11": ["192.168.1.12",],
@@ -25,6 +20,20 @@ HARD_CODED_AFFILIATIONS = {
     "192.168.1.15": ["192.168.1.16",],
     "192.168.1.16": ["192.168.1.15",],
 }
+
+
+def is_img_existing(tag):
+    returncode = subprocess.run(
+        "docker image inspect {}".format(tag),
+        shell=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    ).returncode
+    if returncode == 0:
+        print("[OK]", tag)
+        return True
+    else:
+        return False
 
 
 def get_affiliations(host):
@@ -50,239 +59,534 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-def make_dotssh(dotssh_dir):
-    bash_cmd = f"""set -ex
-rm -rf /root/.ssh
-ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
-cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys && \
-    chmod 600 /root/.ssh/authorized_keys
-/etc/init.d/ssh start && \
-    ssh-keyscan -H localhost >> /root/.ssh/known_hosts
-
-cp -r /root/.ssh/* {dotssh_dir}
-chmod 777 {dotssh_dir}
-chmod 777 {dotssh_dir}/*
-"""
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        f_name = f.name
-        f.write(bash_cmd)
-        f.flush()
-        subprocess.check_call(
-            f"docker run --rm -v /tmp:/host/tmp -v {dotssh_dir}:{dotssh_dir} -w $PWD oneflow-test:$USER bash /host/{f_name}",
-            shell=True,
-        )
-    config_content = """Host *
-	StrictHostKeyChecking no
-"""
-    with open(os.path.join(dotssh_dir, "config"), "w") as f:
-        f.write(config_content)
+async def spawn_shell_and_check(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
+    assert p.returncode == 0, cmd
 
 
-def build_docker_img(hostname=None, workspace_dir=None):
-    if hostname:
+async def spawn_shell(cmd: str = None):
+    p = await asyncio.create_subprocess_shell(cmd,)
+    await p.wait()
+
+
+async def build_docker_img(remote_host=None, workspace_dir=None):
+    if remote_host:
         assert workspace_dir
-        subprocess.check_call("rm -f > oneflow-src.zip", shell=True)
-        subprocess.check_call(
-            "git archive --format zip HEAD > oneflow-src.zip", shell=True
+        await spawn_shell_and_check("rm -f > oneflow-src.zip")
+        await spawn_shell_and_check("git archive --format zip HEAD > oneflow-src.zip")
+        await spawn_shell_and_check(
+            f"scp oneflow-src.zip {remote_host}:{workspace_dir}/oneflow-src.zip",
         )
-        subprocess.check_call(
-            f"scp oneflow-src.zip {hostname}:{workspace_dir}/oneflow-src.zip",
-            shell=True,
+        await spawn_shell_and_check(
+            f"ssh  {remote_host} unzip {workspace_dir}/oneflow-src.zip -d {workspace_dir}/oneflow-src",
         )
-        subprocess.check_call(
-            f"ssh  {hostname} unzip {workspace_dir}/oneflow-src.zip -d {workspace_dir}/oneflow-src",
-            shell=True,
-        )
-        subprocess.check_call(
-            f"ssh  {hostname} bash {workspace_dir}/oneflow-src/docker/ci/test/build.sh",
-            shell=True,
+        await spawn_shell_and_check(
+            f"ssh  {remote_host} bash {workspace_dir}/oneflow-src/docker/ci/test/build.sh",
         )
     else:
-        subprocess.check_call(f"bash docker/ci/test/build.sh", shell=True)
+        await spawn_shell_and_check(f"bash docker/ci/test/build.sh")
 
 
-def create_remote_workspace_dir(hostname, workspace_dir):
-    subprocess.check_call(f"ssh {hostname} mkdir -p {workspace_dir}", shell=True)
+async def create_remote_workspace_dir(remote_host=None, workspace_dir=None):
+    await spawn_shell_and_check(f"ssh {remote_host} mkdir -p {workspace_dir}")
+    print("create_remote_workspace_dir done")
 
 
-def launch_remote_container(
-    hostname, docker_ssh_port, survival_time, dotssh_dir, workspace_dir
+async def launch_remote_container(
+    remote_host=None,
+    survival_time=None,
+    workspace_dir=None,
+    container_name=None,
+    img_tag=None,
+    oneflow_wheel_path=None,
+    oneflow_build_path=None,
 ):
-    subprocess.check_call(
-        f"scp -r {dotssh_dir} {hostname}:{workspace_dir}/dotssh", shell=True
+    print("launching remote container at", remote_host)
+    assert img_tag
+    pythonpath_args = None
+    if oneflow_wheel_path:
+        pythonpath_args = ""
+    elif oneflow_build_path:
+        pythonpath_args = f"--env PYTHONPATH={workspace_dir}/python_scripts"
+    else:
+        raise ValueError("must have oneflow_wheel_path or oneflow_build_path")
+    docker_cmd = f"""docker run --privileged -d --network host --shm-size=8g --rm -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo --name {container_name} {pythonpath_args} {img_tag} sleep {survival_time}
+"""
+    await spawn_shell_and_check(f"ssh {remote_host} {docker_cmd}")
+    if oneflow_wheel_path:
+        whl_basename = os.path.basename(oneflow_wheel_path)
+        await spawn_shell_and_check(
+            f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
+        )
+    await spawn_shell(
+        f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
-    bash_cmd = f"""set -ex
-{FIX_SSH_PERMISSION}
-/usr/sbin/sshd -p {docker_ssh_port}
-sleep {survival_time}
-"""
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        f_name = f.name
-        f.write(bash_cmd)
-        f.flush()
-        subprocess.check_call(
-            f"scp {f_name} {hostname}:{workspace_dir}/launch_ssh_server.sh", shell=True,
-        )
-    docker_cmd = f"""docker run --privileged --cidfile {workspace_dir}/worker.cid --network host --shm-size=8g --rm -v {workspace_dir}/dotssh:/root/.ssh -v {workspace_dir}:{workspace_dir} -w {workspace_dir} -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash launch_ssh_server.sh
-"""
-    ssh_cmd = f"ssh {hostname} {docker_cmd}"
-    print(ssh_cmd, flush=True)
-    proc = subprocess.Popen(ssh_cmd, shell=True,)
-    try:
-        proc.wait(timeout=10)
-        raise ValueError("sshd quit early, returncode:", proc.returncode)
-    except TimeoutExpired:
-        survival_time_min = survival_time / 60
-        survival_time_min = int(survival_time_min)
-        print(
-            f"remote container launched, host: {hostname}, ssh port: {docker_ssh_port}, .ssh dir: {dotssh_dir}, survival: {survival_time_min} mins",
-            flush=True,
-        )
 
 
-def run_bash_script(
-    bash_script,
-    timeout,
-    ssh_port,
-    dotssh_dir,
-    this_host,
-    remote_host,
-    oneflow_worker_bin,
-    oneflow_wheel_path,
+def handle_cast(conn=None, cmd=None):
+    received_cmd: str = conn.recv().decode()
+    assert received_cmd.startswith("cast/")
+    received_cmd = received_cmd.replace("cast/", "")
+    assert received_cmd == cmd, (received_cmd, cmd)
+    return conn.recv().decode()
+
+
+def handle_call(conn=None, cmd=None, response=None):
+    received_cmd: str = conn.recv().decode()
+    assert received_cmd.startswith("call/")
+    received_cmd = received_cmd.replace("call/", "")
+    assert received_cmd == cmd, (received_cmd, cmd)
+    msg = conn.recv().decode()
+    conn.send(response.encode())
+    return msg
+
+
+def wait_for_env_proto_and_launch_workers(
+    agent_port=None, agent_authkey=None, remote_hosts=None
 ):
-    assert os.path.exists(bash_script)
-    log_dir = "./unittest-log-" + str(uuid.uuid4())
-    ctrl_port = find_free_port()
-    data_port = find_free_port()
-    exports = f"""
+    listener = Listener(("localhost", agent_port), authkey=agent_authkey)
+    while True:
+        conn = listener.accept()
+        remote_docker_proc = {}
+        for remote_host in remote_hosts:
+            assert handle_cast(conn=conn, cmd="host"), remote_host
+            env_proto_txt = handle_cast(conn=conn, cmd="env_proto")
+            print("[docker agent]", f"[{remote_host}]", env_proto_txt)
+            f = tempfile.NamedTemporaryFile(mode="wb+", delete=True)
+            f.write(env_proto_txt.encode())
+            f.flush()
+            subprocess.check_call(
+                f"rsync -azP --omit-dir-times --no-perms --no-group {f.name} {remote_host}:{workspace_dir}/env.prototxt",
+                shell=True,
+            )
+            run_docker_cmd = f"ssh {remote_host} docker exec {container_name}"
+            run_docker_cmd += f" python3 -m oneflow --start_worker --env_proto={workspace_dir}/env.prototxt"
+            print("[docker agent]", run_docker_cmd)
+            remote_docker_proc[remote_host] = subprocess.Popen(
+                run_docker_cmd, shell=True
+            )
+            handle_call(conn=conn, cmd="start_worker", response="ok")
+        for k, v in remote_docker_proc.items():
+            assert v.wait() == 0
+
+
+class DockerAgent:
+    def __init__(
+        self,
+        port=None,
+        authkey=None,
+        this_host=None,
+        remote_hosts=None,
+        container_name=None,
+        timeout=None,
+        workspace_dir=None,
+        img_tag=None,
+        oneflow_wheel_path=None,
+        oneflow_build_path=None,
+        oneflow_test_tmp_dir=None,
+    ) -> None:
+        # info
+        self.this_host = this_host
+        self.remote_hosts = remote_hosts
+        self.container_name = container_name
+        self.timeout = timeout
+        self.common_docker_args = "--privileged --rm --network host --shm-size=8g -v $HOME:$HOME -v /dataset:/dataset -v /model_zoo:/model_zoo"
+        self.workspace_dir = workspace_dir
+        self.img_tag = img_tag
+        self.oneflow_wheel_path = oneflow_wheel_path
+        self.oneflow_build_path = oneflow_build_path
+        self.oneflow_test_tmp_dir = oneflow_test_tmp_dir
+        # impl
+        self.env_proto_txt = None
+        self.bash_tmp_file = None
+        self.bash_proc = None
+        self.remote_docker_proc = {}
+        self.agent_port = port
+        self.agent_authkey = authkey
+
+    def __enter__(self):
+        return self
+
+    def run_bash_script_async(self, bash_script=None, cmd=None):
+        remote_hosts_str = ",".join(self.remote_hosts)
+        ctrl_port = find_free_port()
+        data_port = find_free_port()
+        exports = f"""
 export ONEFLOW_TEST_MASTER_PORT={ctrl_port}
 export ONEFLOW_TEST_DATA_PORT={data_port}
-export ONEFLOW_TEST_SSH_PORT={ssh_port}
-export ONEFLOW_TEST_LOG_DIR={log_dir}
-export ONEFLOW_TEST_NODE_LIST="{this_host},{remote_host}"
+export ONEFLOW_TEST_NODE_LIST="{self.this_host},{remote_hosts_str}"
 export ONEFLOW_WORKER_KEEP_LOG=1
-export ONEFLOW_TEST_TMP_DIR="./distributed-tmp"
+export ONEFLOW_TEST_TMP_DIR="{self.oneflow_test_tmp_dir}"
 export NCCL_DEBUG=INFO
+export ONEFLOW_TEST_WORKER_AGENT_PORT={agent_port}
+export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
 """
-    if oneflow_worker_bin:
-        exports += f"export ONEFLOW_WORKER_BIN={oneflow_worker_bin}\n"
-    if oneflow_wheel_path:
-        exports += f"export ONEFLOW_WHEEL_PATH={oneflow_wheel_path}\n"
-    bash_cmd = f"""set -ex
+        if self.oneflow_wheel_path:
+            exports += f"python3 -m pip install {self.oneflow_wheel_path}"
+        if self.oneflow_build_path:
+            exports += f"export PYTHONPATH={self.oneflow_build_path}/python_scripts:$PYTHONPATH\n"
+        bash_cmd = None
+        if bash_script:
+            assert os.path.exists(bash_script)
+            bash_cmd = f"""set -ex
 {exports}
-rm -rf ~/.ssh
-cp -r /dotssh ~/.ssh
-{FIX_SSH_PERMISSION}
 bash {bash_script}
 """
-    artifact_cmd = f"""set -ex
+        elif cmd:
+            bash_cmd = f"""set -ex
 {exports}
-rm -rf ~/.ssh
-cp -r /dotssh ~/.ssh
-{FIX_SSH_PERMISSION}
-mkdir -p oneflow_temp
-rm -rf oneflow_temp/{remote_host}
-scp -P {ssh_port} -r {remote_host}:~/oneflow_temp oneflow_temp/{remote_host}
-rm -f oneflow_temp/{remote_host}/*/oneflow_worker
-chmod -R o+w oneflow_temp
-chmod -R o+r oneflow_temp
+{cmd}
 """
-    returncode = None
+        else:
+            raise ValueError("not impl")
+        assert bash_cmd
 
-    def get_docker_cmd(f, cmd):
-        f_name = f.name
-        print(cmd, flush=True)
-        f.write(cmd)
-        f.flush()
-        return f"docker run --privileged --network host --shm-size=8g --rm -v /tmp:/host/tmp -v $PWD:$PWD -v $HOME:$HOME -w $PWD -v {dotssh_dir}:/dotssh -v /dataset:/dataset -v /model_zoo:/model_zoo oneflow-test:$USER bash /host{f_name}"
+        def get_docker_cmd(f, cmd):
+            f_name = f.name
+            f.write(cmd)
+            f.flush()
+            return f"docker run {self.common_docker_args} -v /tmp:/host/tmp:ro -v $PWD:$PWD -w $PWD --name {self.container_name} {self.img_tag} bash /host{f_name}"
 
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
+        f = tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8", delete=True)
         run_docker_cmd = get_docker_cmd(f, bash_cmd)
-        returncode = subprocess.call(run_docker_cmd, shell=True, timeout=timeout)
+        self.bash_tmp_file = f
+        self.bash_proc = subprocess.Popen(run_docker_cmd, shell=True)
 
-    with tempfile.NamedTemporaryFile(mode="w+", encoding="utf-8") as f:
-        artifact_docker_cmd = get_docker_cmd(f, artifact_cmd)
-        subprocess.check_call(artifact_docker_cmd, shell=True, timeout=timeout)
+    def block(self):
+        from multiprocessing import Process
 
-    if returncode != 0:
-        raise ValueError(run_docker_cmd)
+        p = None
+        kwargs = {
+            "agent_port": self.agent_port,
+            "agent_authkey": self.agent_authkey,
+            "remote_hosts": self.remote_hosts,
+        }
+        p = Process(target=wait_for_env_proto_and_launch_workers, kwargs=kwargs,)
+        p.start()
+        print("[docker agent]", "blocking")
+        while self.bash_proc.poll() is None and p.is_alive() == True:
+            pass
+        p.terminate()
+        assert self.bash_proc.returncode == 0
+        print("[docker agent]", "bash execution done")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--launch_remote_container", action="store_true", required=False, default=False
+async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
+    tmp_dir = tempfile.TemporaryDirectory()
+    tmp_lib_dir = os.path.join(tmp_dir.name, "libs")
+    os.mkdir(tmp_lib_dir)
+    await spawn_shell_and_check(
+        """ldd file | grep "=> /" | awk '{print $3}' | xargs -I '{}' cp -v '{}' destination""".replace(
+            "file", oneflow_internal_path
+        ).replace(
+            "destination", tmp_lib_dir
+        ),
     )
-    parser.add_argument(
-        "--make_dotssh", action="store_true", required=False, default=False
+    libs = os.listdir(tmp_lib_dir)
+    assert len(libs) > 0
+    excludelist_path = os.path.join(
+        pathlib.Path(__file__).parent.absolute(), "excludelist"
     )
-    parser.add_argument("--run", action="store_true", required=False, default=False)
-    parser.add_argument(
-        "--build_docker_img", action="store_true", required=False, default=False
-    )
-    parser.add_argument("--bash_script", type=str, required=False)
-    default_this_host = socket.gethostname()
-    parser.add_argument(
-        "--this_host", type=str, required=False, default=default_this_host
-    )
-    parser.add_argument("--remote_host", type=str, required=False)
-    default_dotssh_dir = os.path.expanduser("~/distributed_run_dotssh")
-    parser.add_argument(
-        "--dotssh_dir", type=str, required=False, default=default_dotssh_dir
-    )
-    parser.add_argument("--oneflow_worker_bin", type=str, required=False, default=None)
-    parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
-    parser.add_argument("--ssh_port", type=int, required=False, default=None)
-    parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
-    args = parser.parse_args()
+    excludelist = open(excludelist_path).read().split("\n")
+    await spawn_shell_and_check(f"cp {oneflow_internal_path} {tmp_dir.name}")
 
-    ssh_port = None
-    if args.ssh_port:
-        ssh_port = args.ssh_port
-    else:
-        ssh_port = find_free_port()
-    assert ssh_port
-    if args.make_dotssh:
-        make_dotssh(args.dotssh_dir)
+    def handle_lib(lib):
+        if lib in excludelist or "libpython" in lib:
+            print("excluding", lib)
+            return spawn_shell_and_check(f"rm {tmp_lib_dir}/{lib}")
+        else:
+            print("keeping", lib)
+            return spawn_shell_and_check(
+                f"patchelf --set-rpath '$ORIGIN' {tmp_lib_dir}/{lib}"
+            )
 
-    this_host = args.this_host
-    this_host = resolve_hostname_hardcoded(this_host)
+    await asyncio.gather(*(handle_lib(lib) for lib in libs))
 
-    remote_host = None
-    if args.remote_host:
-        assert len(args.remote_host.split(",")) == 1, "only support 2-nodes run for now"
-        remote_host = args.remote_host
-    else:
+    tmp_oneflow_internal_path = os.path.join(
+        tmp_dir.name, pathlib.Path(oneflow_internal_path).name
+    )
+    print("before fixing .so")
+    await spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}")
+    print("fixing .so")
+    await spawn_shell_and_check(
+        f"patchelf --set-rpath '$ORIGIN/libs' {tmp_oneflow_internal_path}"
+    )
+
+    await asyncio.gather(
+        *[
+            spawn_shell_and_check(
+                f"ssh {remote_host} 'mkdir -p {workspace_dir}/python_scripts/oneflow/libs'",
+            )
+            for remote_host in remote_hosts
+        ]
+    )
+
+    async def copy_file(path=None, remote_host=None):
+        relpath = os.path.relpath(path, tmp_dir.name)
+        await spawn_shell_and_check(
+            f"scp {path} {remote_host}:{workspace_dir}/python_scripts/oneflow/{relpath}",
+        )
+
+    files = [
+        os.path.join(root, name)
+        for root, dirs, files in os.walk(tmp_dir.name, topdown=True)
+        for name in files
+    ]
+
+    await asyncio.gather(
+        *[
+            copy_file(path=f, remote_host=remote_host)
+            for remote_host in remote_hosts
+            for f in files
+        ],
+        spawn_shell_and_check(f"ldd {tmp_oneflow_internal_path}"),
+    )
+
+
+def get_remote_hosts(args):
+    remote_hosts = None
+    if len(args.remote_host) == 1:
+        remote_hosts = args.remote_host.split(",")
+    elif len(args.remote_host) == 0:
         affiliations = get_affiliations(this_host)
         assert (
             affiliations
         ), f"no affiliated node found for {this_host}, you should specify one"
         remote_host = affiliations[0]
         remote_host = socket.gethostbyname(remote_host)
+        remote_hosts = [remote_host]
+    else:
+        remote_hosts = args.remote_host
+    return remote_hosts
 
-    print(f"this_host: {this_host}, remote_host: {remote_host}", flush=True)
-    workspace_dir = os.path.join(
-        os.path.expanduser("~"), "distributed_run_workspace", str(uuid.uuid4())
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", action="store_true", required=False, default=False)
+    parser.add_argument(
+        "--skip_libs", action="store_true", required=False, default=False
     )
-    create_remote_workspace_dir(remote_host, workspace_dir)
-    if args.launch_remote_container:
-        launch_remote_container(remote_host, ssh_port, args.timeout, args.dotssh_dir)
-    if args.build_docker_img:
-        build_docker_img()
-        build_docker_img(remote_host, workspace_dir)
-    if args.run:
-        launch_remote_container(
-            remote_host, ssh_port, args.timeout, args.dotssh_dir, workspace_dir,
+    parser.add_argument("--bash_script", type=str, required=False)
+    default_this_host = socket.gethostname()
+    parser.add_argument(
+        "--this_host", type=str, required=False, default=default_this_host
+    )
+    parser.add_argument("--remote_host", action="append", default=[])
+    parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
+    parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
+    parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
+    parser.add_argument("--cmd", type=str, required=False, default=None)
+    parser.add_argument(
+        "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
+    )
+    parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
+    args = parser.parse_args()
+
+    assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
+    assert bool(args.bash_script) != bool(args.cmd)
+    if args.skip_libs:
+        assert args.debug, "--skip_libs only works with --debug"
+        assert (
+            args.oneflow_build_path
+        ), "--skip_libs only works with --oneflow_build_path"
+    oneflow_wheel_path = args.oneflow_wheel_path
+    if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
+        whl_paths = [
+            name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
+        ]
+        assert len(whl_paths) == 1
+        oneflow_wheel_path = whl_paths[0]
+    this_host = args.this_host
+    this_host = resolve_hostname_hardcoded(this_host)
+
+    remote_hosts = get_remote_hosts(args)
+
+    print(f"this_host: {this_host}, remote_hosts: {remote_hosts}", flush=True)
+    sub_dir = str(uuid.uuid4())
+    if args.debug:
+        sub_dir = "debug"
+    workspace_dir = os.path.join(
+        os.path.expanduser("~"), "distributed_run_workspace", sub_dir
+    )
+    print("workspace_dir", workspace_dir)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(
+        asyncio.gather(
+            *[
+                create_remote_workspace_dir(
+                    remote_host=remote_host, workspace_dir=workspace_dir
+                )
+                for remote_host in remote_hosts
+            ]
         )
-        assert args.bash_script
-        run_bash_script(
-            args.bash_script,
-            args.timeout,
-            ssh_port,
-            args.dotssh_dir,
-            this_host,
-            remote_host,
-            args.oneflow_worker_bin,
-            args.oneflow_wheel_path,
+    )
+    if args.oneflow_build_path:
+        so_paths = [
+            name
+            for name in glob.glob(
+                os.path.join(
+                    args.oneflow_build_path,
+                    f"python_scripts/oneflow/_oneflow_internal.*.so",
+                )
+            )
+        ]
+        assert len(so_paths) == 1, so_paths
+        oneflow_internal_path = so_paths[0]
+        oneflow_internal_path = os.path.join(
+            args.oneflow_build_path, oneflow_internal_path
         )
-        exit(0)
+        tmp_dir = None
+        print("copying python_scripts dir")
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell_and_check(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --copy-links --include='*.py' --exclude='*.so' --exclude='__pycache__' --exclude='python_scripts/oneflow/include' --include='*/' --exclude='*' {args.oneflow_build_path}/python_scripts {remote_host}:{workspace_dir}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
+        )
+        if args.skip_libs == False:
+            print("copying .so")
+            loop.run_until_complete(
+                fix_and_sync_libs(
+                    oneflow_internal_path=oneflow_internal_path,
+                    remote_hosts=remote_hosts,
+                )
+            )
+    elif oneflow_wheel_path:
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell_and_check(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group {oneflow_wheel_path} {remote_host}:{workspace_dir}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
+        )
+    default_docker_image = "oneflow-test:$USER"
+    ci_user_docker_image = "oneflow-test:ci-user"
+    img_tag = None
+    if args.custom_img_tag == None:
+        if is_img_existing(default_docker_image):
+            img_tag = default_docker_image
+        elif is_img_existing(ci_user_docker_image):
+            img_tag = ci_user_docker_image
+        else:
+            loop.run_until_complete(
+                asyncio.gather(
+                    *[
+                        build_docker_img(
+                            remote_host=remote_host, workspace_dir=workspace_dir
+                        )
+                        for remote_host in remote_hosts
+                    ],
+                    build_docker_img(workspace_dir=workspace_dir),
+                )
+            )
+            img_tag = default_docker_image
+    else:
+        img_tag = args.custom_img_tag
+    assert img_tag
+    agent_port = find_free_port()
+    agent_authkey = str(uuid.uuid4())
+    container_name = (
+        getpass.getuser()
+        + "-distributed-run-main-node-at-"
+        + this_host.replace(".", "-")
+    )
+
+    def exit_handler():
+        print(
+            "---------start cleanup, you should ignore errors below and check the errors above---------"
+        )
+        if args.oneflow_build_path:
+            print("fixing permission of", args.oneflow_build_path)
+            subprocess.call(
+                f"docker run --rm -v {args.oneflow_build_path}:/p -w /p busybox chmod -R o+w .",
+                shell=True,
+            )
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell(
+                        f"ssh {remote_host} docker run --rm -v {workspace_dir}:/p -w /p busybox chmod -R 777 .",
+                    )
+                    for remote_host in remote_hosts
+                ],
+            )
+        )
+        print("copying artifacts")
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell(
+                        f"rsync -azP --omit-dir-times --no-perms --no-group --exclude='*.whl' --exclude='python_scripts' {remote_host}:{workspace_dir}/ {args.oneflow_test_tmp_dir}/{remote_host}"
+                    )
+                    for remote_host in remote_hosts
+                ]
+            )
+        )
+        assert workspace_dir
+        if args.debug == False:
+            loop.run_until_complete(
+                asyncio.gather(
+                    *[
+                        spawn_shell(f"ssh {remote_host} rm -rf {workspace_dir}",)
+                        for remote_host in remote_hosts
+                    ],
+                )
+            )
+        print("removing docker container:", container_name)
+        rm_cmd = f"docker rm -f {container_name}"
+        loop.run_until_complete(
+            asyncio.gather(
+                *[
+                    spawn_shell(f"ssh {remote_host} {rm_cmd}")
+                    for remote_host in remote_hosts
+                ],
+                spawn_shell(rm_cmd),
+            )
+        )
+
+    atexit.register(exit_handler)
+    loop.run_until_complete(
+        asyncio.gather(
+            *[
+                launch_remote_container(
+                    remote_host=remote_host,
+                    survival_time=args.timeout,
+                    workspace_dir=workspace_dir,
+                    container_name=container_name,
+                    oneflow_wheel_path=oneflow_wheel_path,
+                    oneflow_build_path=args.oneflow_build_path,
+                    img_tag=img_tag,
+                )
+                for remote_host in remote_hosts
+            ],
+        )
+    )
+
+    with DockerAgent(
+        port=agent_port,
+        authkey=agent_authkey.encode(),
+        this_host=this_host,
+        remote_hosts=remote_hosts,
+        container_name=container_name,
+        workspace_dir=workspace_dir,
+        oneflow_wheel_path=oneflow_wheel_path,
+        oneflow_build_path=args.oneflow_build_path,
+        img_tag=img_tag,
+        oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
+    ) as agent:
+        if args.bash_script:
+            agent.run_bash_script_async(bash_script=args.bash_script,)
+        elif args.cmd:
+            agent.run_bash_script_async(cmd=args.cmd,)
+        agent.block()
