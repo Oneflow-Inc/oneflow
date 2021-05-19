@@ -256,10 +256,15 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     return cur_rank_phy_tensor_impl_;
   }
 
-  Maybe<EagerConsistentTensorImpl> New(
+  static Maybe<EagerConsistentTensorImpl> New(
       const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl,
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
+  static Maybe<EagerConsistentTensorImpl> New(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf);
 
  private:
   EagerConsistentTensorImpl(

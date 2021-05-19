@@ -212,10 +212,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                    const std::shared_ptr<const DType>& dtype,
-                                                    const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad, bool is_leaf);
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                          const std::shared_ptr<const DType>& dtype,
+                                          const std::shared_ptr<const Device>& device, bool is_lazy,
+                                          bool requires_grad, bool is_leaf);
 
   static std::shared_ptr<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
@@ -286,7 +286,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  static std::shared_ptr<ConsistentTensor> MakeTensor(
+  static Maybe<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,

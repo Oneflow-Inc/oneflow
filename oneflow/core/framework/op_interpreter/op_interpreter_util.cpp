@@ -107,13 +107,17 @@ template<>
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
+    const auto& tensor = JUST(MirroredTensor::MakeTensor(
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
-    const auto& distribute = JUST(compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())));
-    return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
-        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/false));
+    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
+    const auto& tensor =
+        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, parallel_distribution,
+                                          parallel_attr->parallel_desc_symbol(), is_lazy,
+                                          /*requires_grad=*/false, /*is_leaf=*/false));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
 

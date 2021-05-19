@@ -33,12 +33,6 @@ Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ConsistentTensorImpl::set_parallel_desc(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  parallel_desc_ = parallel_desc;
-  return Maybe<void>::Ok();
-}
-
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
@@ -57,6 +51,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 }
 
 void EagerMirroredTensorImpl::Init() {
+  const auto& eager_blob_object = eager_blob_object_;
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
@@ -89,6 +84,20 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   eager_blob_object_->set_is_shape_synced(true);
   return eager_blob_object_->blob_desc().shape_ptr();
+}
+
+/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
+    const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl,
+    const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  OF_TODO();
+}
+
+/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
+    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+    const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf) {
+  OF_TODO();
 }
 
 }  // namespace one
