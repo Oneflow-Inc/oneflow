@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import numpy as np
-import cv2
-import oneflow.experimental as flow
 
+import cv2
+import numpy as np
+
+import oneflow.experimental as flow
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -31,8 +32,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
         color_space = "RGB"
         height = 224
         width = 224
-        channel_last = False
-        output_layout = "NHWC" if channel_last else "NCHW"
+        output_layout = "NCHW"
         rgb_mean = [123.68, 116.779, 103.939]
         rgb_std = [58.393, 57.12, 57.375]
 
