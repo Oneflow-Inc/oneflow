@@ -87,11 +87,11 @@ def _test_linear_with_bias(test_case, device):
 def _test_linear_3_dimension_input(test_case, device):
     input_arr = np.random.randn(2, 3, 4)
     x = flow.Tensor(input_arr, device=flow.device(device))
-    m = flow.nn.Linear(4, 5, True)
-    m = _to_device[device](m, device)
-    flow.nn.init.constant_(m.weight, 5.6)
-    flow.nn.init.constant_(m.bias, 0.78)
-    of_out = m(x)
+    linear = flow.nn.Linear(4, 5, True)
+    linear = _to_device[device](linear, device)
+    flow.nn.init.constant_(linear.weight, 5.6)
+    flow.nn.init.constant_(linear.bias, 0.78)
+    of_out = linear(x)
 
     np_weight = np.ones((4, 5)).astype(np.float32)
     np_weight.fill(5.6)
@@ -106,10 +106,10 @@ def _test_linear_3_dimension_input(test_case, device):
 def _test_linear_4_dimension_input(test_case, device):
     input_arr = np.random.randn(4, 5, 6, 7)
     x = flow.Tensor(input_arr, device=flow.device(device))
-    m = flow.nn.Linear(7, 3, False)
-    m = _to_device[device](m, device)
-    flow.nn.init.constant_(m.weight, 11.3)
-    of_out = m(x)
+    linear = flow.nn.Linear(7, 3, False)
+    linear = _to_device[device](linear, device)
+    flow.nn.init.constant_(linear.weight, 11.3)
+    of_out = linear(x)
 
     np_weight = np.ones((7, 3)).astype(np.float32)
     np_weight.fill(11.3)
@@ -118,11 +118,49 @@ def _test_linear_4_dimension_input(test_case, device):
 
 
 def _test_identity(test_case, device):
-    m = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-    m = _to_device[device](m, device)
+    linear = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
+    linear = _to_device[device](linear, device)
     x = flow.Tensor(np.random.rand(2, 3, 4, 5), device=flow.device(device))
-    y = m(x)
+    y = linear(x)
     test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
+
+
+def _test_linear_backward_with_bias(test_case, device):
+    linear = flow.nn.Linear(3, 8)
+    linear = _to_device[device](linear, device)
+    x = flow.Tensor(
+        [
+            [-0.94630778, -0.83378579, -0.87060891],
+            [2.0289922, -0.28708987, -2.18369248],
+            [0.35217619, -0.67095644, -1.58943879],
+            [0.08086036, -1.81075924, 1.20752494],
+            [0.8901075, -0.49976737, -1.07153746],
+            [-0.44872912, -1.07275683, 0.06256855],
+            [-0.22556897, 0.74798368, 0.90416439],
+            [0.48339456, -2.32742195, -0.59321527],
+        ],
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    flow.nn.init.constant_(linear.weight, 2.068758)
+    flow.nn.init.constant_(linear.bias, 0.23)
+    of_out = linear(x)
+    of_out = of_out.sum()
+    of_out.backward()
+
+    np_grad = np.array(
+        [
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+            [16.5501, 16.5501, 16.5501],
+        ]
+    )
+    test_case.assertTrue(np.allclose(np_grad, x.grad.numpy(), 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -132,12 +170,21 @@ def _test_identity(test_case, device):
 class TestLinear(flow.unittest.TestCase):
     def test_linear_forward(test_case):
         arg_dict = OrderedDict()
-        arg_dict["fun"] = [
+        arg_dict["test_fun"] = [
             _test_linear_no_bias,
             _test_linear_with_bias,
             _test_linear_3_dimension_input,
             _test_linear_4_dimension_input,
             _test_identity,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+    def test_linear_backward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_linear_backward_with_bias,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

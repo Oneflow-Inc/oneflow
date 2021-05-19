@@ -71,7 +71,7 @@ def _test_add_backward(test_case, device):
 class TestAddModule(flow.unittest.TestCase):
     def test_add(test_case):
         arg_dict = OrderedDict()
-        arg_dict["fun"] = [_test_add_forward, _test_add_backward]
+        arg_dict["test_fun"] = [_test_add_forward, _test_add_backward]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
