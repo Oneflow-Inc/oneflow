@@ -141,13 +141,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
 
 /*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::GetTensorBlobObject(
     const std::shared_ptr<Tensor>& tensor) {
-  if (auto* mirrored_tensor = dynamic_cast<MirroredTensor*>(tensor.get())) {
-    return mirrored_tensor->blob_object();
-  } else if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
+  if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
     return consistent_tensor->blob_object();
   } else {
-    UNIMPLEMENTED_THEN_RETURN()
-        << "The tensor should be either Mirrored Tensor or Consistent Tensor.";
+    UNIMPLEMENTED_THEN_RETURN() << "The tensor should be Consistent Tensor.";
   }
 }
 
@@ -182,10 +179,10 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   const auto& blob_attr = blob_object->op_arg_blob_attr();
   const auto& parallel_attr = blob_object->op_arg_parallel_attr();
   const auto& tensor = JUST(BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/false));
-  if (parallel_attr->is_mirrored()) {
-    dynamic_cast<MirroredTensor*>(tensor.get())->set_blob_object(blob_object);
-  } else {
+  if (!parallel_attr->is_mirrored()) {
     dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "only ConsistentTensor can be build from blob_object";
   }
   return tensor;
 }
