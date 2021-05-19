@@ -359,7 +359,25 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        self = flow.tmp.slice_update(self, value, list(zip(start, stop, step)))
+        # BUG:F0519 15:39:02.922506 3976370 tensor_impl.h:232] UNIMPLEMENTED
+        # @global_function_or_identity()
+        # def job():
+        #     with self._placement_scope():
+        #         op = (
+        #             flow.builtin_op("logical_slice_assign")
+        #             .Input("ref")
+        #             .Input("value")
+        #             .Attr("start", start)
+        #             .Attr("stop", stop)
+        #             .Attr("step", step)
+        #             .Build()
+        #         )
+        #         op(self, value)
+
+        # job()
+        # return self
+
+        flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
         return self
 
     def __str__(self):

@@ -55,12 +55,27 @@ class TestSliceUpdate(flow.unittest.TestCase):
         y = flow.tmp.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
-    def test_tensor_slice_update(test_case):
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLogicalSliceAssigne(flow.unittest.TestCase):
+    def test_logical_slice_assign(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        input = flow.Tensor(x)
+        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+        # BUG:F0519 15:41:59.977648 3981323 stateful_local_opkernel.cpp:212] UNIMPLEMENTED
+        y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
+        test_case.assertTrue(np.array_equal(y.numpy(), output))
+
+    def test_tensor_logical_slice_assign(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
         input = flow.Tensor(x)
-        input[0] = 3.1415
-        x[0] = 3.1415
-        # TODO：False,input seem not set value success!
+        input[0] = 3.1415926
+        x[0] = 3.1415926
+        # TODO：test case false
         test_case.assertTrue(np.allclose(input[0].numpy(), x[0], 1e-5, 1e-5))
 
 
