@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from test_util import GenArgList
 from collections import OrderedDict
 
 import numpy as np
 
 import oneflow.experimental as flow
 import oneflow.typing as tp
+from oneflow.python.test.modules.test_util import GenArgList
 
 
 def _to_device(self, device):
