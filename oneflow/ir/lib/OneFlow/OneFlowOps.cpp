@@ -75,7 +75,6 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
                || op_type_name.equals("relu") || op_type_name.equals("rint")
                || op_type_name.equals("round") || op_type_name.equals("sign")
                || op_type_name.equals("negative") || op_type_name.equals("reciprocal")) {
-      op->dump();
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
