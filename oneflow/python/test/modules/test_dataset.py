@@ -64,12 +64,11 @@ class TestOFRecordModule(flow.unittest.TestCase):
             output_dtype=flow.float,
         )
 
-        with flow.no_grad():
-            val_record = record_reader()
-            label = record_label_decoder(val_record)
-            image_raw_buffer = record_image_decoder(val_record)
-            image = resize(image_raw_buffer)
-            image = crop_mirror_normal(image)
+        val_record = record_reader()
+        label = record_label_decoder(val_record)
+        image_raw_buffer = record_image_decoder(val_record)
+        image = resize(image_raw_buffer)
+        image = crop_mirror_normal(image)
 
         # recover image
         image_np = image.numpy()
