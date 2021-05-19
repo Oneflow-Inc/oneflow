@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef WITH_CUDA
+
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/memory/memory_case_registry.h"
 
 namespace oneflow {
-
-#ifdef WITH_CUDA
 
 const char* CublasGetErrorString(cublasStatus_t error) {
   switch (error) {
@@ -233,6 +234,109 @@ CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&
 
 CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
 
-#endif  // WITH_CUDA
+namespace {
+
+bool MatchCudaMemoryCase(const MemoryCase& mem_case) {
+  if (mem_case.has_device_cuda_mem()) { return true; }
+  return false;
+}
+
+bool MatchCudaOrCudaPinnedHostMemoryCase(const MemoryCase& mem_case) {
+  if (mem_case.has_host_mem() && mem_case.host_mem().has_cuda_pinned_mem()) {
+    return true;
+  } else if (mem_case.has_device_cuda_mem()) {
+    return true;
+  }
+  return false;
+}
+
+bool MatchCudaOrCudaPinnedHostMemCaseId(const MemCaseId& mem_case_id) {
+  if (mem_case_id.device_type() == DeviceType::kCPU
+      && mem_case_id.host_mem_page_locked_device_type() == DeviceType::kGPU) {
+    return true;
+  } else if (mem_case_id.device_type() == DeviceType::kGPU) {
+    return true;
+  }
+  return false;
+}
+
+}  // namespace
+
+REGISTER_MEM_CASE_ID_GENERATOR(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
+    .SetGenerator([](const MemoryCase& mem_case) -> MemCaseId {
+      DeviceType device_type = DeviceType::kInvalidDevice;
+      MemCaseId::device_index_t device_index = 0;
+      DeviceType page_locked_device_type = DeviceType::kInvalidDevice;
+      bool used_by_network = false;
+      if (mem_case.has_host_mem()) {
+        CHECK(mem_case.host_mem().has_cuda_pinned_mem());
+        device_type = DeviceType::kCPU;
+        page_locked_device_type = DeviceType::kGPU;
+        device_index = mem_case.host_mem().cuda_pinned_mem().device_id();
+        if (mem_case.host_mem().has_used_by_network() && mem_case.host_mem().used_by_network()) {
+          used_by_network = true;
+        }
+      } else {
+        CHECK(mem_case.has_device_cuda_mem());
+        device_type = DeviceType::kGPU;
+        device_index = mem_case.device_cuda_mem().device_id();
+      }
+      return MemCaseId{device_type, device_index, page_locked_device_type, used_by_network};
+    });
+
+REGISTER_MEM_CASE_ID_TO_PROTO(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemCaseId)
+    .SetToProto([](const MemCaseId& mem_case_id, MemoryCase* mem_case) -> void {
+      if (mem_case_id.device_type() == DeviceType::kCPU) {
+        CHECK_EQ(mem_case_id.host_mem_page_locked_device_type(), DeviceType::kGPU);
+        auto* host_mem = mem_case->mutable_host_mem();
+        host_mem->mutable_cuda_pinned_mem()->set_device_id(mem_case_id.device_index());
+        if (mem_case_id.is_host_mem_registered_by_network()) {
+          host_mem->set_used_by_network(true);
+        }
+      } else if (mem_case_id.device_type() == DeviceType::kGPU) {
+        mem_case->mutable_device_cuda_mem()->set_device_id(mem_case_id.device_index());
+      } else {
+        UNIMPLEMENTED();
+      }
+    });
+
+REGISTER_PAGE_LOCKED_MEM_CASE(DeviceType::kGPU)
+    .SetMatcher(MatchCudaMemoryCase)
+    .SetPageLocker([](const MemoryCase& mem_case, MemoryCase* page_locked_mem_case) -> void {
+      CHECK(mem_case.has_device_cuda_mem());
+      page_locked_mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
+          mem_case.device_cuda_mem().device_id());
+    });
+
+REGISTER_PATCH_MEM_CASE(DeviceType::kGPU)
+    .SetMatcher(MatchCudaOrCudaPinnedHostMemoryCase)
+    .SetPatcher([](const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) -> bool {
+      if (src_mem_case.has_host_mem()) {
+        CHECK(src_mem_case.host_mem().has_cuda_pinned_mem());
+        if (!dst_mem_case->has_host_mem()) { return false; }
+        if (dst_mem_case->host_mem().page_lock_case_case() == HostMemory::PAGE_LOCK_CASE_NOT_SET) {
+          *(dst_mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()) =
+              src_mem_case.host_mem().cuda_pinned_mem();
+        } else {
+          return false;
+        }
+        if (src_mem_case.host_mem().has_used_by_network()
+            && src_mem_case.host_mem().used_by_network()) {
+          dst_mem_case->mutable_host_mem()->set_used_by_network(true);
+        }
+      } else {
+        CHECK(src_mem_case.has_device_cuda_mem());
+        if (!dst_mem_case->has_device_cuda_mem()) { return false; }
+        if (src_mem_case.device_cuda_mem().device_id()
+            != dst_mem_case->device_cuda_mem().device_id()) {
+          return false;
+        }
+      }
+      return true;
+    });
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA

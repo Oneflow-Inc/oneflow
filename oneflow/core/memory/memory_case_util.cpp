@@ -14,66 +14,76 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/memory/memory_case_util.h"
+#include "oneflow/core/memory/memory_case_registry.h"
+#include "oneflow/core/common/id_util.h"
 
 namespace oneflow {
 
-bool MemoryCaseUtil::GetCommonMemoryCase(const MemoryCase& a, const MemoryCase& b,
-                                         MemoryCase* common) {
-  if (a.has_device_cuda_mem() && b.has_device_cuda_mem()) {
-    if (a.device_cuda_mem().device_id() == b.device_cuda_mem().device_id()) {
-      *common = a;
-      return true;
-    } else {
-      return false;
-    }
-  } else if (a.has_host_mem() && b.has_host_mem()) {
-    *common = a;
-    if (b.host_mem().has_cuda_pinned_mem()) {
-      *common->mutable_host_mem()->mutable_cuda_pinned_mem() = b.host_mem().cuda_pinned_mem();
-    }
-    if (b.host_mem().has_used_by_network()) {
-      common->mutable_host_mem()->set_used_by_network(true);
-    }
-    return true;
-  } else {
-    return false;
-  }
+namespace {
+
+// MemCaseId int64_t encode
+// |              | device_type | device_index  |                         |
+// |              | ---- 5 ---- | ----- 7 ----- |                         |
+// |              |         MemZoneId           |   pglck   | reg_by_net  |
+// |              | ----------- 12 ------------ | --- 5 --- | ---- 1 ---- |
+// |   reserved   |                       MemCaseId                       |
+// | ---- 46 ---- | ------------------------ 18 ------------------------- |
+// | ----------------------------- 64 bit ------------------------------- |
+
+// GlobalMemCaseId int64_t encode
+// |          |   rank   | MemCaseId  |
+// |          | -- 19 -- | --- 18 --- |
+// | reserved |    GlobalMemCaseId    |
+// | -- 27 -- | -------- 37 --------- |
+// | ------------ 64 bit ------------ |
+
+constexpr size_t kRegByNetBits = 1;
+constexpr size_t kPageLockedTypeBits = 5;
+constexpr size_t kDeviceIndexBits = 7;
+constexpr size_t kDeviceTypeBits = 5;
+constexpr size_t kPageLockedTypeShift = kRegByNetBits;
+constexpr size_t kDeviceIndexShift = kPageLockedTypeShift + kPageLockedTypeBits;
+constexpr size_t kDeviceTypeShift = kDeviceIndexShift + kDeviceIndexBits;
+constexpr size_t kRankShift = kDeviceTypeShift + kDeviceTypeBits;
+
+}  // namespace
+
+MemCaseId::MemCaseId(const MemoryCase& mem_case) {
+  *this = MemCaseRegistryMgr<MemCaseIdGeneratorRegistry>::Get().LookupRegistry(mem_case).Generate(
+      mem_case);
 }
 
-MemoryCase MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(
-    const MemoryCase& mem_case) {
-  CHECK(mem_case.has_device_cuda_mem());
-  MemoryCase ret;
-  ret.mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-      mem_case.device_cuda_mem().device_id());
-  return ret;
+void MemCaseId::ToProto(MemoryCase* mem_case) const {
+  MemCaseRegistryMgr<MemCaseIdToProtoRegistry>::Get().LookupRegistry(*this).ToProto(*this,
+                                                                                    mem_case);
 }
 
-int64_t MemoryCaseUtil::GenMemZoneId(const MemoryCase& mem_case) {
-  // [0, 127] = GPU device mem
-  // [128] = CPU host mem
-  // [129, 256] = CPU host mem used by CUDA with device id
-  // [257, ...] Other Device
-  if (mem_case.has_device_cuda_mem()) {
-    return mem_case.device_cuda_mem().device_id();  // GPU device mem
-  }
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().has_cuda_pinned_mem()) {
-      return 129 + mem_case.host_mem().cuda_pinned_mem().device_id();  // Host mem used by GPU
-    }
-    return 128;  // CPU host mem
-  }
-  UNIMPLEMENTED();
-  return -1;
+int64_t EncodeMemCaseIdToInt64(const MemCaseId& mem_case_id) {
+  int64_t id = static_cast<int64_t>(mem_case_id.is_host_mem_registered_by_network());
+  id |= static_cast<int64_t>(mem_case_id.host_mem_page_locked_device_type())
+        << kPageLockedTypeShift;
+  id |= static_cast<int64_t>(mem_case_id.device_index()) << kDeviceIndexShift;
+  id |= static_cast<int64_t>(mem_case_id.device_type()) << kDeviceTypeShift;
+  return id;
 }
 
-int64_t MemoryCaseUtil::GenMemZoneUniqueId(int64_t machine_id, const MemoryCase& mem_case) {
-  return (machine_id << 32) | (MemoryCaseUtil::GenMemZoneId(mem_case));
+int64_t EncodeGlobalMemCaseIdToInt64(const GlobalMemCaseId& global_mem_case_id) {
+  int64_t id = EncodeMemCaseIdToInt64(global_mem_case_id.mem_case_id());
+  id |= static_cast<int64_t>(global_mem_case_id.node_index()) << kRankShift;
+  return id;
 }
 
-bool MemoryCaseUtil::IsHostUnPinnedMemoryCase(const MemoryCase& mem_case) {
-  return mem_case.has_host_mem() && !mem_case.host_mem().has_cuda_pinned_mem()
-         && !mem_case.host_mem().used_by_network();
+bool PatchMemCase(const MemoryCase& src_mem_case, MemoryCase* dst_mem_case) {
+  return MemCaseRegistryMgr<PatchMemCaseRegistry>::Get()
+      .LookupRegistry(src_mem_case)
+      .Patch(src_mem_case, dst_mem_case);
+}
+
+MemoryCase GenerateCorrespondingPageLockedHostMemoryCase(const MemoryCase& mem_case) {
+  MemoryCase page_locked_mem_case;
+  MemCaseRegistryMgr<PageLockedMemCaseRegistry>::Get().LookupRegistry(mem_case).PageLock(
+      mem_case, &page_locked_mem_case);
+  return page_locked_mem_case;
 }
 
 std::shared_ptr<MemoryCase> MemoryCaseUtil::MakeMemCase(const DeviceType device_type,

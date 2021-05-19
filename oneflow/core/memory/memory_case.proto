@@ -5,8 +5,15 @@ message CudaPinnedMemory {
   required int64 device_id = 1;
 }
 
+message DummyDevicePinnedMemory {
+  optional int64 device_id = 1;
+}
+
 message HostMemory {
-  optional CudaPinnedMemory cuda_pinned_mem = 1;
+  oneof page_lock_case {
+    CudaPinnedMemory cuda_pinned_mem = 1;
+    DummyDevicePinnedMemory dummy_device_pinned_mem = 3;
+  }
   optional bool used_by_network = 2 [default = false];
 }
 
@@ -14,9 +21,14 @@ message DeviceCudaMemory {
   required int64 device_id = 1;
 }
 
+message DummyDeviceMemory {
+  optional int64 device_id = 1;
+}
+
 message MemoryCase {
   oneof case {
     HostMemory host_mem = 1;
     DeviceCudaMemory device_cuda_mem = 2;
+    DummyDeviceMemory dummy_device_mem = 3;
   }
 }

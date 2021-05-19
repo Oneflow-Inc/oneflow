@@ -67,7 +67,7 @@ RegstMgr::RegstMgr(const Plan& plan) {
       char* mem_block_ptr = chunk_id2ptr.at(mem_block.chunk_id()) + mem_block.chunk_offset();
       CHECK(mem_block_id2ptr_.emplace(mem_block_id, mem_block_ptr).second);
     } else {
-      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      int64_t zone_id = EncodeMemCaseIdToInt64(MemCaseId{mem_block.mem_case()});
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }

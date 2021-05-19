@@ -180,7 +180,8 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
     const MemoryCase& mem_case = chunk.mem_case();
     // only reused mem in cuda device
     if (mem_case.has_host_mem()) { continue; }
-    int64_t mzuid = MemoryCaseUtil::GenMemZoneUniqueId(chunk.machine_id(), mem_case);
+    int64_t mzuid = EncodeGlobalMemCaseIdToInt64(
+        GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(chunk.machine_id()), mem_case});
     CHECK_EQ(chunk.job_id_size(), 1);
     CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);
   }
@@ -274,8 +275,7 @@ void MergeSharedMemBlockR2L(RegstDescProto* lhs, RegstDescProto* rhs,
     CHECK_EQ(separated_header_mem_size, right_rt_regst.TotalSeparatedHeaderByteSize4AllRegst());
     int64_t merged_header_id = lhs->separated_header_mem_block_id();
     int64_t erased_header_id = rhs->separated_header_mem_block_id();
-    MemoryCase header_mem_case =
-        MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(lhs->mem_case());
+    MemoryCase header_mem_case = GenerateCorrespondingPageLockedHostMemoryCase(lhs->mem_case());
     MemBlockProto* merged_header_block =
         CheckValidAndGetMemBlock(merged_header_id, separated_header_mem_size, header_mem_case);
     MemBlockProto* erased_header_block =
@@ -312,11 +312,7 @@ void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs,
         RegstDescProto* regst_desc = PlanUtil::GetSoleProducedDataRegst(task_protos.at(i));
 
         MergeSharedMemBlockR2L(first_regst_desc, regst_desc, mem_block_id2mem_block);
-
-        MemoryCase common_mem_case;
-        CHECK(MemoryCaseUtil::GetCommonMemoryCase(common_mem_case_vec.at(i), regst_desc->mem_case(),
-                                                  &common_mem_case));
-        common_mem_case_vec[i] = common_mem_case;
+        CHECK(PatchMemCase(regst_desc->mem_case(), &common_mem_case_vec[i]));
       }
     }
     for (const auto& pair : job_id2same_op_name_sorted_task_protos) {
