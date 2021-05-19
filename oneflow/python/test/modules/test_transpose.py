@@ -22,35 +22,45 @@ import oneflow.experimental as flow
 
 
 def _test_transpose(test_case, device):
-        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
-        of_out = flow.transpose(input, 0, 1)
-        np_out = input.numpy().transpose((1, 0, 2, 3))
-        test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
+    of_out = flow.transpose(input, 0, 1)
+    np_out = input.numpy().transpose((1, 0, 2, 3))
+    test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
+
 
 def _test_tensor_transpose(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = input.transpose(0, 1)
     np_out = input.numpy().transpose((1, 0, 2, 3))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_tranpose_negative_dim(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.transpose(input, -4, -3)
     np_out = input.numpy().transpose((1, 0, 2, 3))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_transpose_backward(test_case, device):
-        x = flow.Tensor(
-            np.random.randn(2, 6, 5, 3), 
-            dtype=flow.float32, 
-            device=flow.device(device),
-            requires_grad=True
-        )
-        y = flow.transpose(x, 0, 1)
-        y.retain_grad()
-        z = y.sum()
-        z.backward()
-        test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
+    x = flow.Tensor(
+        np.random.randn(2, 6, 5, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.transpose(x, 0, 1)
+    y.retain_grad()
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -60,11 +70,10 @@ class TestTranspose(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            _test_transpose, 
+            _test_transpose,
             _test_tensor_transpose,
             _test_tranpose_negative_dim,
-            _test_transpose_backward
-
+            _test_transpose_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

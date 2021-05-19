@@ -54,14 +54,19 @@ def _test_masked_fill(test_case, device):
     fill_value = 8.7654321  # random value e.g. -1e9 3.14
 
     input = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device))
-    mask = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(flow.device(device))
+    mask = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(
+        flow.device(device)
+    )
     of_out = input.masked_fill(mask, value=fill_value)
     test_case.assertTrue(np.allclose(of_out.numpy(), output))
 
     input2 = flow.Tensor(input_arr, dtype=flow.float32, device=flow.device(device))
-    mask2 = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(flow.device(device))
+    mask2 = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(
+        flow.device(device)
+    )
     of_out2 = flow.masked_fill(input2, mask, value=fill_value)
     test_case.assertTrue(np.allclose(of_out2.numpy(), output))
+
 
 def _test_masked_fill_backward(test_case, device):
     input_arr = np.array(
@@ -97,18 +102,18 @@ def _test_masked_fill_backward(test_case, device):
     fill_value = 8.7654321  # random value e.g. -1e9 3.14
 
     x = flow.Tensor(
-        input_arr, dtype=flow.float32, 
-        requires_grad=True, 
-        device=flow.device(device)
+        input_arr, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
-    mask = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(flow.device(device))
+    mask = flow.Tensor((input_arr > 0).astype(np.int8), dtype=flow.int).to(
+        flow.device(device)
+    )
     y = x.masked_fill(mask, value=fill_value)
     y.retain_grad()
     z = y.sum()
     z.backward()
     test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones(input_arr.shape)))
-    
-    
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -117,7 +122,7 @@ class TestMaskedFill(flow.unittest.TestCase):
     def test_masked_fill(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
-            _test_masked_fill, 
+            _test_masked_fill,
             _test_masked_fill_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
