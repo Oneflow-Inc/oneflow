@@ -41,6 +41,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Conv2d
 .. autofunction:: oneflow.experimental.nn.Dropout
 .. autofunction:: oneflow.experimental.eq
+.. autofunction:: oneflow.experimental.to
+.. autofunction:: oneflow.experimental.Tensor.to
 .. autofunction:: oneflow.experimental.equal
 .. autofunction:: oneflow.experimental.Tensor.eq
 .. autofunction:: oneflow.experimental.exp
