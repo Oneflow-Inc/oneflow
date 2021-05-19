@@ -100,7 +100,6 @@ class TestUpsample2d(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-
     def test_UpsamplingBilinear2d(test_case):
         input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         input = input.to("cuda")
@@ -119,6 +118,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             ]
         )
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
+
 
 if __name__ == "__main__":
     unittest.main()

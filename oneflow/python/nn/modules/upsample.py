@@ -179,10 +179,10 @@ class UpsamplingNearest2d(Upsample):
         - Output: :math:`(N, C, H_{out}, W_{out})` where
 
     .. math::
-          H_{out} = \left\lfloor H_{in} \times \text{scale\_factor} \right\rfloor
+          H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
 
     .. math::
-          W_{out} = \left\lfloor W_{in} \times \text{scale\_factor} \right\rfloor
+          W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
 
     For example:
 
@@ -235,10 +235,10 @@ class UpsamplingBilinear2d(Upsample):
         - Output: :math:`(N, C, H_{out}, W_{out})` where
 
     .. math::
-        H_{out} = \left\lfloor H_{in} \times \text{scale\_factor} \right\rfloor
+        H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
 
     .. math::
-        W_{out} = \left\lfloor W_{in} \times \text{scale\_factor} \right\rfloor
+        W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
 
     For example:
 
