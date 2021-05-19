@@ -359,7 +359,9 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
+        flow.experimental.tmp.logical_slice_assign(
+            self, value, list(zip(start, stop, step))
+        )
         return self
 
     def __str__(self):

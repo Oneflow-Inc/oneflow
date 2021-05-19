@@ -17,124 +17,14 @@ import numpy as np
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from typing import Optional, Sequence, Tuple
-
-
-def _check_slice_tup_list(slice_tup_list, shape):
-    ndim = len(shape)
-    if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
-        raise ValueError(
-            "slice_tup_list must be a list or tuple with length "
-            "less than or equal to number of dimensions of input tensor"
-        )
-
-    # if length of slice_tup_list is less than number of dimensions of x, fill it to length of ndims reduce 1
-    if len(slice_tup_list) < ndim:
-        slice_tup_list += type(slice_tup_list)(
-            [(None, None, None)] * (ndim - len(slice_tup_list))
-        )
-
-    start_list = []
-    stop_list = []
-    step_list = []
-
-    for slice_tup, dim_size in zip(slice_tup_list, shape):
-        if not isinstance(slice_tup, (tuple, list)) or len(slice_tup) != 3:
-            raise ValueError(
-                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
-            )
-
-        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
-            raise ValueError("element of slice tuple must int or None")
-
-        (start, stop, step) = slice_tup
-        if step is None:
-            step = 1
-
-        if step == 0:
-            raise ValueError("slice step can't be 0")
-
-        if start is None:
-            start = 0 if step > 0 else np.iinfo(np.int64).max
-        elif start < -dim_size or start >= dim_size:
-            raise ValueError("slice start must be in range [-size, size)")
-
-        if stop is None:
-            stop = np.iinfo(np.int64).max if step > 0 else np.iinfo(np.int64).min
-        elif stop < -dim_size - 1 or stop > dim_size:
-            raise ValueError("slice start must be in range [-size-1, size]")
-
-        start_list.append(start)
-        stop_list.append(stop)
-        step_list.append(step)
-
-    return start_list, stop_list, step_list
-
-
-# Get slice attrs for slice_assign and logical_slice
-# Note the step in slice_tup_list must be greater than 0
-# as slice_assign and logical_slice only support step > 0
-def _GetSliceAttrs(slice_tup_list, input_shape):
-    ndim = len(input_shape)
-    if not (isinstance(slice_tup_list, (list, tuple)) and len(slice_tup_list) <= ndim):
-        raise ValueError(
-            "slice_tup_list must be a list or tuple with length "
-            "less than or equal to number of dimensions of input tensor"
-        )
-
-    # Right extends slice_tup_list with [None, None, None] if len(slice_tup_list) < len(input_shape)
-    if len(slice_tup_list) < ndim:
-        slice_tup_list += type(slice_tup_list)(
-            [(None, None, None)] * (ndim - len(slice_tup_list))
-        )
-
-    start_list = []
-    stop_list = []
-    step_list = []
-
-    for slice_tup, dim_size in zip(slice_tup_list, input_shape):
-        if not (isinstance(slice_tup, (tuple, list)) and len(slice_tup) == 3):
-            raise ValueError(
-                "element of slice_tup_list must be a list or tuple with form (start, stop, step)"
-            )
-
-        if not all(isinstance(idx, int) or idx is None for idx in slice_tup):
-            raise ValueError("element of slice tuple must int or None")
-
-        (start, stop, step) = slice_tup
-        if step is None:
-            step = 1
-
-        if step <= 0:
-            raise ValueError("slice_assign/logical_slice step must be greater than 0")
-
-        if start is None:
-            start = 0
-        elif start < -dim_size or start >= dim_size:
-            raise ValueError(
-                "slice_assign/logical_slice start must be in range [-size, size)"
-            )
-        elif start < 0:
-            start += dim_size
-
-        if stop is None:
-            stop = dim_size
-        elif stop < -dim_size or stop > dim_size:
-            raise ValueError(
-                "slice_assign/logical_slice start must be in range [-size, size]"
-            )
-        elif stop < 0:
-            stop += dim_size
-
-        start_list.append(start)
-        stop_list.append(stop)
-        step_list.append(step)
-
-    return start_list, stop_list, step_list
+from oneflow.python.ops.array_ops import _check_slice_tup_list, _GetSliceAttrs
+from typing import Sequence, Tuple
 
 
 class Slice(Module):
-    def __init__(self, start: int, stop: int, step: int) -> None:
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self._op = (
             flow.builtin_op("slice")
@@ -179,7 +69,9 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
 
 class SliceUpdate(Module):
-    def __init__(self, start: int, stop: int, step: int) -> None:
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self._op = (
             flow.builtin_op("slice_update")
@@ -224,7 +116,9 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
 
 class LogicalSliceAssign(Module):
-    def __init__(self, start: int, stop: int, step: int) -> None:
+    def __init__(
+        self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
+    ) -> None:
         super().__init__()
         self._op = (
             flow.builtin_op("logical_slice_assign")
@@ -240,7 +134,9 @@ class LogicalSliceAssign(Module):
         return self._op(x, update)
 
 
+# NOTE: conflict with exist userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign
 @oneflow_export("tmp.logical_slice_assign")
+@experimental_api
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 
