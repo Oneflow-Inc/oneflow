@@ -76,10 +76,10 @@ class Upsample(Module):
         output = m(input)
 
         # output.numpy()
-        [[[[1.0, 1.0, 2.0, 2.0],
-        [1.0, 1.0, 2.0, 2.0],
-        [3.0, 3.0, 4.0, 4.0],
-        [3.0, 3.0, 4.0, 4.0],]]]
+        # [[[[1.0, 1.0, 2.0, 2.0],
+        # [1.0, 1.0, 2.0, 2.0],
+        # [3.0, 3.0, 4.0, 4.0],
+        # [3.0, 3.0, 4.0, 4.0],]]]
     
     """
 
@@ -133,6 +133,7 @@ class Upsample(Module):
         )
 
     def forward(self, x):
+        assert x.device.type == "cuda", f"Upsample not support cpu version now!"
         assert (
             self.size != None or self.scale_factor != None
         ), f"size and scale_factor can not be none at the same time!"
@@ -152,3 +153,116 @@ class Upsample(Module):
             0
         ]
         return res
+
+
+@oneflow_export("nn.UpsamplingNearest2d")
+@experimental_api
+class UpsamplingNearest2d(Upsample):
+    r"""Applies a 2D nearest neighbor upsampling to an input signal composed of several input
+    channels.
+
+    To specify the scale, it takes either the :attr:`size` or the :attr:`scale_factor`
+    as it's constructor argument.
+
+    When :attr:`size` is given, it is the output size of the image `(h, w)`.
+
+    Args:
+        size (int or Tuple[int, int], optional): output spatial sizes
+        scale_factor (float or Tuple[float, float], optional): multiplier for
+            spatial size.
+
+    .. warning::
+        This class is deprecated in favor of :func:`~nn.functional.interpolate`.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+
+    .. math::
+          H_{out} = \left\lfloor H_{in} \times \text{scale\_factor} \right\rfloor
+
+    .. math::
+          W_{out} = \left\lfloor W_{in} \times \text{scale\_factor} \right\rfloor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
+        output = m(input)
+
+        # output.numpy()
+        # [[[[1.0, 1.0, 2.0, 2.0],
+        # [1.0, 1.0, 2.0, 2.0],
+        # [3.0, 3.0, 4.0, 4.0],
+        # [3.0, 3.0, 4.0, 4.0],]]]
+    """
+
+    def __init__(
+        self,
+        size: Optional[Tuple[int, int]] = None,
+        scale_factor: Optional[Tuple[float, float]] = None,
+    ) -> None:
+        super(UpsamplingNearest2d, self).__init__(size, scale_factor, mode="nearest")
+
+
+@oneflow_export("nn.UpsamplingBilinear2d")
+@experimental_api
+class UpsamplingBilinear2d(Upsample):
+    r"""Applies a 2D bilinear upsampling to an input signal composed of several input
+    channels.
+
+    To specify the scale, it takes either the :attr:`size` or the :attr:`scale_factor`
+    as it's constructor argument.
+
+    When :attr:`size` is given, it is the output size of the image `(h, w)`.
+
+    Args:
+        size (int or Tuple[int, int], optional): output spatial sizes
+        scale_factor (float or Tuple[float, float], optional): multiplier for
+            spatial size.
+
+    .. warning::
+        This class is deprecated in favor of :func:`~nn.functional.interpolate`. It is
+        equivalent to ``nn.functional.interpolate(..., mode='bilinear', align_corners=True)``.
+
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
+
+    .. math::
+        H_{out} = \left\lfloor H_{in} \times \text{scale\_factor} \right\rfloor
+
+    .. math::
+        W_{out} = \left\lfloor W_{in} \times \text{scale\_factor} \right\rfloor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
+        output = m(input)
+
+        # output.numpy()
+        # [[[[1.0000,  1.3333,  1.6667,  2.0000],
+        # [1.6667,  2.0000,  2.3333,  2.6667],
+        # [2.3333,  2.6667,  3.0000,  3.3333],
+        # [3.0000,  3.3333,  3.6667,  4.0000],]]]
+    """
+
+    def __init__(
+        self,
+        size: Optional[Tuple[int, int]] = None,
+        scale_factor: Optional[Tuple[float, float]] = None,
+    ) -> None:
+        super(UpsamplingBilinear2d, self).__init__(
+            size, scale_factor, mode="bilinear", align_corners=True
+        )

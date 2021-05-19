@@ -81,6 +81,44 @@ class TestUpsample2d(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
 
+    def test_UpsamplingNearest2d(test_case):
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
+        of_out = m(input)
+        np_out = np.array(
+            [
+                [
+                    [
+                        [1.0, 1.0, 2.0, 2.0],
+                        [1.0, 1.0, 2.0, 2.0],
+                        [3.0, 3.0, 4.0, 4.0],
+                        [3.0, 3.0, 4.0, 4.0],
+                    ]
+                ]
+            ]
+        )
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+    def test_UpsamplingBilinear2d(test_case):
+        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        input = input.to("cuda")
+        m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
+        of_out = m(input)
+        np_out = np.array(
+            [
+                [
+                    [
+                        [1.0000, 1.3333, 1.6667, 2.0000],
+                        [1.6667, 2.0000, 2.3333, 2.6667],
+                        [2.3333, 2.6667, 3.0000, 3.3333],
+                        [3.0000, 3.3333, 3.6667, 4.0000],
+                    ]
+                ]
+            ]
+        )
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
 
 if __name__ == "__main__":
     unittest.main()
