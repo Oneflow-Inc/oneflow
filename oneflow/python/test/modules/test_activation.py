@@ -308,7 +308,7 @@ class TestLogSoftmax(flow.unittest.TestCase):
             _test_logsoftmax,
             _test_logsoftmax_dim_2,
             _test_logsoftmax_dim_3,
-            # _test_logsoftmax_backward,
+            _test_logsoftmax_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
