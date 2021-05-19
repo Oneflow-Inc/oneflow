@@ -9,6 +9,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Tanh
 .. autofunction:: oneflow.experimental.tanh
 .. autofunction:: oneflow.experimental.Tensor.tanh
+.. autofunction:: oneflow.experimental.nn.ELU
 .. autofunction:: oneflow.experimental.nn.GELU
 .. autofunction:: oneflow.experimental.gelu
 .. autofunction:: oneflow.experimental.Tensor.gelu
