@@ -479,12 +479,22 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   ::mlir::ValueRange operands(operand_vec);
 
   Operation* created_op = nullptr;
+
+  auto out_types = llvm::SmallVector<Type, 8>();
+  for (auto kv : op.user_conf().output()) {
+    for (auto lbn : kv.second.s()) {
+      // TODO: add real dt
+      // auto out_type = RankedTensorType::get(ArrayRef<int64_t>({}), builder_.getF32Type());
+      job_wrapper_.QueryLogicalBlob(
+          lbn, [this, &out_types](const int64_t* shape_begin, const int64_t* shape_end,
+                                  ::oneflow::DataType dt) {
+            auto out_type = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end),
+                                                  this->builder_.getF32Type());
+            out_types.push_back(out_type);
+          });
+    }
+  }
   if (op_type_name == "constant") {
-    auto t = user_conf.attr().at("is_floating_value").at_bool()
-                 ? RankedTensorType::get({}, builder_.getF32Type())
-                 : RankedTensorType::get({}, builder_.getI32Type());
-    auto out_types = llvm::SmallVector<Type, 8>();
-    out_types.append({t});
     if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
       return failure();
     }
@@ -492,13 +502,6 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     created_op = builder_.create<oneflow::ConstantOp>(
         FileLineColLoc::get(context_, op.name(), 0, 0), out_types, operands, named_attributes);
   } else {
-    auto out_types = llvm::SmallVector<Type, 8>();
-    for (auto kv : op.user_conf().output()) {
-      for (int i = 0; i < kv.second.s_size(); i++) {
-        // TODO: add real types and shapes
-        out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
-      }
-    }
     if (failed(AppendCtrlOutType(out_types))) { return failure(); }
     // OperationState state(unknownLoc, "oneflow." + op_type_name);
     OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
@@ -574,14 +577,19 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }
   auto out_types = llvm::SmallVector<Type, 8>();
   for (auto output_lbn : output_lbns) {
-    out_types.append({RankedTensorType::get({}, builder_.getF32Type())});
+    job_wrapper_.QueryLogicalBlob(
+        output_lbn, [this, &out_types](const int64_t* shape_begin, const int64_t* shape_end,
+                                       ::oneflow::DataType dt) {
+          auto out_type = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end),
+                                                this->builder_.getF32Type());
+          out_types.push_back(out_type);
+        });
   }
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
   auto created_op = builder_.createOperation(state);
   if (failed(InsertOpResults(created_op))) { return failure(); }
-
   if (!created_op) {
     module_->emitError("fail to create op, name: " + op.name());
     return failure();

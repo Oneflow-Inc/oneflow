@@ -39,6 +39,10 @@ class RoundTripOneFlowJobWrapperInterface {
                                                         const std::string& new_val) const = 0;
   virtual ::oneflow::AttrType QueryAttrType(const std::string& op_type_name,
                                             const std::string& attr_name) const = 0;
+  virtual void QueryLogicalBlob(
+      const std::string& lbn, std::function<void(const int64_t* shape_begin,
+                                                 const int64_t* shape_end, ::oneflow::DataType dt)>
+                                  cb) const = 0;
   virtual void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const = 0;
 };

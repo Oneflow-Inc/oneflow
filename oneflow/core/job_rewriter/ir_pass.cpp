@@ -87,6 +87,16 @@ class RoundTripOneFlowJobWrapper : public mlir::RoundTripOneFlowJobWrapperInterf
     return op_def.GetAttrType(attr_name);
   }
 
+  void QueryLogicalBlob(
+      const std::string& lbn,
+      std::function<void(const int64_t* shape_begin, const int64_t* shape_end, DataType dt)> cb)
+      const {
+    LogicalBlobId lbi = GenLogicalBlobId(lbn);
+    auto& blob_desc = op_graph_.GetLogicalBlobDesc(lbi);
+    cb(blob_desc.shape().dim_vec().begin(), blob_desc.shape().dim_vec().end(),
+       blob_desc.data_type());
+  }
+
   void TopoForEachOpConf(std::function<void(const ::oneflow::OperatorConf*)> Handler) const {
     op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
