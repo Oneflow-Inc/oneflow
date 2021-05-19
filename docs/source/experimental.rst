@@ -4,6 +4,7 @@ Experimental features
 ----------------------------------
 .. currentmodule:: oneflow.experimental
 .. autofunction:: oneflow.experimental.nn.ReLU
+.. autofunction:: oneflow.experimental.nn.LeakyReLU
 .. autofunction:: oneflow.experimental.nn.Tanh
 .. autofunction:: oneflow.experimental.tanh
 .. autofunction:: oneflow.experimental.Tensor.tanh
@@ -39,6 +40,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Conv2d
 .. autofunction:: oneflow.experimental.nn.Dropout
 .. autofunction:: oneflow.experimental.eq
+.. autofunction:: oneflow.experimental.to
+.. autofunction:: oneflow.experimental.Tensor.to
 .. autofunction:: oneflow.experimental.equal
 .. autofunction:: oneflow.experimental.Tensor.eq
 .. autofunction:: oneflow.experimental.exp
@@ -112,5 +115,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.gather
 .. autofunction:: oneflow.experimental.nn.Embedding
 .. autofunction:: oneflow.experimental.Tensor.permute
+.. autofunction:: oneflow.experimental.nn.Hardswish
 .. autofunction:: oneflow.experimental.nn.PReLU
 .. autofunction:: oneflow.experimental.nn.Hardtanh
