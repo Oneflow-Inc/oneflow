@@ -117,13 +117,17 @@ class SGDUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
+    float lr = ctx->Attr<float>("lr");
     const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      lr = *(learning_rate->dptr<float>());
+    }
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -139,8 +143,7 @@ class SGDUpdateKernel final : public user_op::OpKernel {
     }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>());
+        lr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
@@ -244,11 +247,13 @@ template<DeviceType device_type, typename T, typename G>
 class MomentumUpdateKernel final : public user_op::OpKernel {
  public:
   explicit MomentumUpdateKernel(user_op::KernelCreateContext* ctx) {
+    lr_ = ctx->Attr<float>("lr");
     scale_ = ctx->Attr<double>("scale");
     l1_ = ctx->Attr<float>("l1");
     l2_ = ctx->Attr<float>("l2");
     beta_ = ctx->Attr<float>("beta");
     weight_decay_ = ctx->Attr<float>("weight_decay");
+    has_learning_rate_ptr_ = ctx->has_input("learning_rate", 0);
     has_scale_by_ptr_ = ctx->has_input("scale_by_tensor", 0);
     has_skip_if_ = ctx->has_input("skip_if", 0);
   };
@@ -256,10 +261,14 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
+    float lr = lr_;
+    if (has_learning_rate_ptr_) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      lr = *(learning_rate->dptr<float>());
+    }
     const T* scale_by_ptr = nullptr;
     if (has_scale_by_ptr_) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -275,17 +284,19 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     }
     MomentumUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale_), l1_, l2_, beta_,
-        weight_decay_, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), momentum->mut_dptr<T>());
+        weight_decay_, lr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(),
+        momentum->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 
  private:
+  float lr_;
   double scale_;
   float l1_;
   float l2_;
   float beta_;
   float weight_decay_;
+  bool has_learning_rate_ptr_;
   bool has_scale_by_ptr_;
   bool has_skip_if_;
 };

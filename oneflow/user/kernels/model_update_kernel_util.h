@@ -46,7 +46,7 @@ struct SGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     float learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
                      const G* model_diff, T* model);
 };
 
@@ -134,7 +134,7 @@ struct LambUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+                     float weight_decay, float learning_rate, const T* scale_by_ptr,
                      const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
 };
 

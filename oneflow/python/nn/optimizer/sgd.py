@@ -90,7 +90,6 @@ class SGD(Optimizer):
             flow.builtin_op("momentum_update")
             .Input("model")
             .Input("model_diff")
-            .Input("learning_rate")
             .Input("momentum")
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
@@ -101,7 +100,6 @@ class SGD(Optimizer):
             flow.builtin_op("sgd_update")
             .Input("model")
             .Input("model_diff")
-            .Input("learning_rate")
             .Attr("weight_decay", 0.0)
             .Attr("l1", 0.0)
             .Attr("l2", 0.0)
@@ -115,15 +113,13 @@ class SGD(Optimizer):
                 loss = closure()
 
             for param_group in self._param_groups:
+                lr = param_group.options["lr"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    lr_tensor = flow.Tensor(
-                        [param_group.options["lr"]], device=param.device
-                    )
                     if param_group.options["momentum"] == 0.0:
                         scale = param_group.options["scale"]
-                        self._sgd(param, param.grad, lr_tensor, scale=scale)
+                        self._sgd(param, param.grad, lr=lr, scale=scale)
                     else:
                         momentum_buf = self._state[param]["momentum_buf"]
                         scale = param_group.options["scale"]
@@ -131,8 +127,8 @@ class SGD(Optimizer):
                         self._momentum_sgd(
                             param,
                             param.grad,
-                            lr_tensor,
                             momentum_buf,
+                            lr=lr,
                             scale=scale,
                             beta=beta,
                         )
