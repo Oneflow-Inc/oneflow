@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
-from oneflow.python.test.modules.test_util import GenArgList
+from test_util import GenArgList
 
 
 def _test_add_forward(test_case, device):

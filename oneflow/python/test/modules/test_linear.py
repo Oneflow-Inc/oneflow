@@ -20,7 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 import oneflow.typing as tp
-from oneflow.python.test.modules.test_util import GenArgList
+from test_util import GenArgList
 
 
 def _to_device(self, device):
