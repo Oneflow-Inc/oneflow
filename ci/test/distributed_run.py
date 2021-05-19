@@ -388,6 +388,8 @@ if __name__ == "__main__":
 
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
     assert bool(args.bash_script) != bool(args.cmd)
+    assert args.debug, "--skip_libs only works with --debug"
+    assert args.oneflow_build_path, "--skip_libs only works with --oneflow_build_path"
     oneflow_wheel_path = args.oneflow_wheel_path
     if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
         whl_paths = [
@@ -446,12 +448,7 @@ if __name__ == "__main__":
                 ]
             )
         )
-        if args.skip_libs:
-            assert args.debug, "--skip_libs only works with --debug"
-            assert (
-                args.oneflow_build_path
-            ), "--skip_libs only works with --oneflow_build_path"
-        else:
+        if args.skip_libs == False:
             print("copying .so")
             loop.run_until_complete(
                 fix_and_sync_libs(
