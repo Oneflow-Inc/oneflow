@@ -207,7 +207,6 @@ def _test_softmax_backward(test_case, device):
     y.retain_grad()
     z = y.sum()
     z.backward()
-    output = numpy_softmax(arr, axis)
     test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 
@@ -230,12 +229,7 @@ class TestSoftmax(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-class TestLogSoftmaxModule(flow.unittest.TestCase):
-    def test_logsoftmax(test_case):
+def _test_logsoftmax(test_case, device):
         dim = 1
         m = flow.nn.LogSoftmax(dim)
         input_arr = np.random.randn(4, 7)
@@ -244,23 +238,52 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
         output = numpy_logsoftmax(input_arr, dim)
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
-    def test_logsoftmax_dim_2(test_case):
-        dim = 2
-        m = flow.nn.LogSoftmax(dim)
-        input_arr = np.random.randn(3, 4, 5)
-        x = flow.Tensor(input_arr)
-        y = m(x)
-        output = numpy_logsoftmax(input_arr, dim)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+def _test_logsoftmax_dim_2(test_case, device):
+    dim = 2
+    m = flow.nn.LogSoftmax(dim)
+    input_arr = np.random.randn(3, 4, 5)
+    x = flow.Tensor(input_arr)
+    y = m(x)
+    output = numpy_logsoftmax(input_arr, dim)
+    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
 
-    def test_logsoftmax_dim_3(test_case):
-        dim = 3
-        m = flow.nn.LogSoftmax(dim)
-        input_arr = np.random.randn(8, 9, 7, 3)
-        x = flow.Tensor(input_arr)
-        y = m(x)
-        output = numpy_logsoftmax(input_arr, dim)
-        test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+def _test_logsoftmax_dim_3(test_case, device):
+    dim = 3
+    m = flow.nn.LogSoftmax(dim)
+    input_arr = np.random.randn(8, 9, 7, 3)
+    x = flow.Tensor(input_arr)
+    y = m(x)
+    output = numpy_logsoftmax(input_arr, dim)
+    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+
+def _test_logsoftmax_backward(test_case, device):
+    axis = 0
+    m = flow.nn.LogSoftmax(axis)
+    arr = np.random.randn(2, 3, 4, 5)
+    x = flow.Tensor(arr, requires_grad=True, device=flow.device(device))
+    y = m(x)
+    y.retain_grad()
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLogSoftmax(flow.unittest.TestCase):
+    def test_log_softmax(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_logsoftmax, 
+            _test_logsoftmax_dim_2,
+            _test_logsoftmax_dim_3,
+            _test_logsoftmax_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+    
 
 
 @unittest.skipIf(
