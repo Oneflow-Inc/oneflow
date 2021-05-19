@@ -235,6 +235,16 @@ class TestTensor(flow.unittest.TestCase):
         )
 
     @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_to_list(test_case):
+        list_data = [[1, 3], [5, 6]]
+        input = flow.Tensor(list_data)
+        test_case.assertEqual(list_data, input.tolist())
+
+
+    @unittest.skipIf(
         # TODO(Liang Depeng): enable this test after tensor support indexing
         # not flow.unittest.env.eager_execution_enabled(),
         # "numpy doesn't work in lazy mode",

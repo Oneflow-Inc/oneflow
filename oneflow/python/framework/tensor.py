@@ -337,7 +337,7 @@ class Tensor:
         return remote_blob_util.BlobObjectNumpy(internal_tensor._blob_object)
 
     def tolist(self):
-        TODO()
+        return self.numpy().tolist()
 
     @_auto_determine
     @register_local_tensor_method()
@@ -348,7 +348,8 @@ class Tensor:
         return self.__repr__()
 
     def __repr__(self):
-        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
+        numpy_data = self.numpy()
+        return _gen_tensor_str(self)
 
     @register_local_tensor_method()
     def __gt__(self, other):
@@ -844,3 +845,42 @@ def _input_dtype_is_float(data):
     elif isinstance(data, (list, tuple)):
         return any(isinstance(x, float) for x in _flatten_list_or_tuple(data))
     return False
+
+def _add_suffixes(tensor_str, suffixes, indent):
+    tensor_strs = [tensor_str]
+    last_line_len = len(tensor_str) - tensor_str.rfind('\n') + 1
+    linewidth = 80
+    for suffix in suffixes:
+        suffix_len = len(suffix)
+        if last_line_len + suffix_len + 2 > linewidth:
+            tensor_strs.append(',\n' + ' ' * indent + suffix)
+            last_line_len = indent + suffix_len
+        else:
+            tensor_strs.append(', ' + suffix)
+            last_line_len += suffix_len + 2
+    tensor_strs.append(')')
+    return ''.join(tensor_strs)
+
+
+def _tensor_numpy_data_str(numpy_data, indent):
+    decimals = 4
+    numpy_str = np.round(numpy_data, decimals=decimals).__str__().replace('\n', '\n' + ' ' * indent)
+    return numpy_str
+
+def _gen_tensor_str(tensor):
+    prefix = 'tensor('
+    indent = len(prefix)
+    suffixes = []
+
+    if tensor.device.type != "cpu" \
+            or (tensor.device.type == 'cuda' and tensor.device.index != 0):
+        suffixes.append('device=\'' + str(tensor.device) + '\'')
+    suffixes.append('dtype=' + str(tensor.dtype))
+    tensor_str = _tensor_numpy_data_str(tensor.numpy(), indent)
+    if tensor.grad_fn is not None:
+        name = tensor.grad_fn.name()
+        suffixes.append('grad_fn=<{}>'.format(name))
+    elif tensor.requires_grad:
+        suffixes.append('requires_grad=True')
+    return _add_suffixes(prefix + tensor_str, suffixes, indent)
+
