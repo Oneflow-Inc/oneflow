@@ -72,9 +72,21 @@ class TestLogicalSliceAssigne(flow.unittest.TestCase):
     def test_tensor_logical_slice_assign(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
         input = flow.Tensor(x)
-        input[0] = 3.1415926
-        x[0] = 3.1415926
-        test_case.assertTrue(np.allclose(input[0].numpy(), x[0], 1e-5, 1e-5))
+        input[:, 0] = 3.1415926
+        x[:, 0] = 3.1415926
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[:, 1:2] = 1
+        x[:, 1:2] = 1
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[:] = 1.234
+        x[:] = 1.234
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[0] = 0
+        x[0] = 0
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":
