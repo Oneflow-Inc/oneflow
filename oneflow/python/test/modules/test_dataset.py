@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
