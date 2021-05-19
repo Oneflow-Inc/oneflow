@@ -230,20 +230,25 @@ class TestSoftplusModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
     def test_softplus_beta(test_case):
-        m = flow.nn.Softplus(beta = 1.11)
+        m = flow.nn.Softplus(beta=1.11)
         arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr)))
+        np_out = np.where(
+            arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+        )
         x = flow.Tensor(arr)
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
-    
+
     def test_softplus_threshold(test_case):
-        m = flow.nn.Softplus(beta = 1.11, threshold=1.55)
+        m = flow.nn.Softplus(beta=1.11, threshold=1.55)
         arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr)))
+        np_out = np.where(
+            arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+        )
         x = flow.Tensor(arr)
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
