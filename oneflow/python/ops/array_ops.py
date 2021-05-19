@@ -692,6 +692,7 @@ def slice_v2(
 
 
 @oneflow_export("slice_update")
+@stable_api
 def api_slice_update(
     x: oneflow._oneflow_internal.BlobDesc,
     update: oneflow._oneflow_internal.BlobDesc,

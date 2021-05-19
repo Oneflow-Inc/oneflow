@@ -240,8 +240,7 @@ class LogicalSliceAssign(Module):
         return self._op(x, update)
 
 
-# @oneflow_export("logical_slice_assign")
-# @experimental_api
+@oneflow_export("tmp.logical_slice_assign")
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 

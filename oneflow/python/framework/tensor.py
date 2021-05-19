@@ -24,7 +24,6 @@ import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
-from oneflow.python.nn.modules.slice import LogicalSliceAssign
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
@@ -360,8 +359,7 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        LogicalSliceAssign(start, stop, step)(self, value)
-        # flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
+        flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
         return self
 
     def __str__(self):
