@@ -18,7 +18,9 @@ limitations under the License.
 namespace oneflow {
 
 const AMPList& AutoMixedPrecisionLists::WhiteList() {
-  static AMPList white_list = {"matmul", "batch_matmul", "conv2d", "amp_white_identity"};
+  static AMPList white_list = {"matmul",           "batch_matmul",
+                               "conv2d",           "amp_white_identity",
+                               "broadcast_matmul", "fused_self_attention_query_mul_key_and_value"};
   return white_list;
 }
 
@@ -53,12 +55,13 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "sparse_softmax_cross_entropy",
                               "fused_tril_scale_softmax_mask_scale",
                               "fused_bias_add_gelu",
-                              "fused_bias_add_mask_scale"};
+                              "fused_bias_add_mask_scale",
+                              "acc"};
   return gray_list;
 }
 
 const AMPList& AutoMixedPrecisionLists::ClearList() {
-  // TODO(niuchong): identity, tuple_identity?
+  // TODO(niuchong): tuple_identity
   static AMPList clear_list = {"gather",
                                "max_pool_1d",
                                "max_pool_2d",
@@ -80,7 +83,12 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "cast_to_static_shape",
                                "parallel_cast",
                                "hierarchical_parallel_cast",
-                               "hierarchical_parallel_cast_like"};
+                               "hierarchical_parallel_cast_like",
+                               "repeat",
+                               "unpack",
+                               "pack",
+                               "nvtx_start",
+                               "nvtx_end"};
 
   return clear_list;
 }

@@ -17,7 +17,7 @@ import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.session_context as session_ctx
 import oneflow
 from oneflow.python.lib.core.high_order_bool import bool_functor
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @bool_functor("Current mode is %s" % rt_mode.NORMAL_MODE)
@@ -38,7 +38,7 @@ def in_device_mode(ctx):
 @bool_functor("Environment initialized")
 def env_initialized(ctx):
     assert in_normal_mode(ctx)
-    return oneflow_api.IsEnvInited()
+    return oneflow._oneflow_internal.IsEnvInited()
 
 
 @bool_functor("Any global function defined")
@@ -49,7 +49,7 @@ def any_global_function_defined(ctx):
 
 @bool_functor("Eager execution enabled")
 def eager_execution_enabled(ctx):
-    return oneflow_api.EagerExecutionEnabled()
+    return oneflow._oneflow_internal.EagerExecutionEnabled()
 
 
 @bool_functor("Session initialized")
@@ -61,16 +61,16 @@ def session_initialized(ctx):
 @bool_functor("Current global function is trainable")
 def is_trainable(ctx):
     assert in_global_mode(ctx)
-    if oneflow_api.EagerExecutionEnabled():
+    if oneflow._oneflow_internal.EagerExecutionEnabled():
         return session_ctx.GetDefaultSession().CurrentEagerGlobalFunctionDesc()
     else:
-        job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+        job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
         return session_ctx.GetDefaultSession().GetFunctionDesc(job_name)
 
 
 @bool_functor("Current machine is master")
 def is_current_machine_master(ctx):
-    return oneflow_api.CurrentMachineId() == 0
+    return oneflow._oneflow_internal.CurrentMachineId() == 0
 
 
 @bool_functor("Consistent view enabled")

@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/pass_util.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -48,7 +47,9 @@ Maybe<void> DoParallelCastBeforeWideningTypeCast::Apply(const OpGraph& op_graph,
     const OperatorConf& parallel_cast_op_conf =
         op_conf_cache.GetLatest(parallel_cast_node->op().op_conf());
     if (!(parallel_cast_op_conf.has_user_conf()
-          && parallel_cast_op_conf.user_conf().op_type_name() == "parallel_cast")) {
+          && (parallel_cast_op_conf.user_conf().op_type_name() == "parallel_cast"
+              || parallel_cast_op_conf.user_conf().op_type_name()
+                     == "hierarchical_parallel_cast"))) {
       return;
     }
     auto* cast_node = parallel_cast_node->SoleInEdge()->src_node();

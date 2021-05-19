@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
-#include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/dl/include/ibv.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -32,12 +32,12 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
   while (byte_size > 0) {
     size_t cur_size =
         std::min<size_t>(byte_size, Global<ResourceDesc, ForSession>::Get()->rdma_mem_block_byte());
-    ibv_mr* cur_mr =
-        ibv_reg_mr(pd, ch_mem_ptr, cur_size,
-                   IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+    ibv_mr* cur_mr = ibv::wrapper.ibv_reg_mr_wrap(
+        pd, ch_mem_ptr, cur_size,
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
     CHECK(cur_mr);
     mr_vec_.push_back(cur_mr);
-    ibv_sge cur_sge;
+    ibv_sge cur_sge{};
     cur_sge.addr = reinterpret_cast<uint64_t>(ch_mem_ptr);
     cur_sge.length = cur_size;
     cur_sge.lkey = cur_mr->lkey;
@@ -51,7 +51,7 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
 }
 
 IBVerbsMemDesc::~IBVerbsMemDesc() {
-  for (ibv_mr* mr : mr_vec_) { CHECK_EQ(ibv_dereg_mr(mr), 0); }
+  for (ibv_mr* mr : mr_vec_) { CHECK_EQ(ibv::wrapper.ibv_dereg_mr(mr), 0); }
 }
 
 IBVerbsMemDescProto IBVerbsMemDesc::ToProto() {

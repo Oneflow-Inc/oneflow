@@ -26,24 +26,20 @@ class Blob;
 
 template<>
 struct BlasIf<DeviceType::kCPU> {
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                       float alpha, float beta, const Blob* a, const Blob* b, Blob* c);
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                       double alpha, double beta, const Blob* a, const Blob* b, Blob* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
-                     const int m, const int n, const int k, const float alpha, const float* a,
-                     const float* b, const float beta, float* c);
+                     const int m, const int n, const int k, const double alpha, const float* a,
+                     const float* b, const double beta, float* c);
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
                      const int m, const int n, const int k, const double alpha, const double* a,
                      const double* b, const double beta, double* c);
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
-                            const int n, const int k, const float alpha, const float* a,
-                            const float* b, const float beta, float* c, float** buf);
+                            const int n, const int k, const double alpha, const float* a,
+                            const float* b, const double beta, float* c);
   static void OFBatchedGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                             enum CBLAS_TRANSPOSE trans_b, const int batch_size, const int m,
                             const int n, const int k, const double alpha, const double* a,
-                            const double* b, const double beta, double* c, double** buf);
+                            const double* b, const double beta, double* c);
 
   static void Axpy(DeviceCtx* ctx, const int n, const float alpha, const float* x, const int incx,
                    float* y, const int incy);

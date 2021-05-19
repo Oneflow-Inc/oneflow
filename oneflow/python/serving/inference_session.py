@@ -22,13 +22,13 @@ import enum
 import google.protobuf.text_format as text_format
 
 import oneflow as flow
-import oneflow_api
-import oneflow_api.oneflow.core.job.job_conf as job_conf_proto_cfg
+import oneflow._oneflow_internal
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_proto_cfg
 
-import oneflow_api.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
-import oneflow_api.oneflow.core.common.shape as shape_proto_cfg
-import oneflow_api.oneflow.core.common.data_type as dtype_proto_cfg
-import oneflow_api.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
+import oneflow._oneflow_internal.oneflow.core.operator.interface_blob_conf as interface_blob_conf_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.common.shape as shape_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.common.data_type as dtype_proto_cfg
+import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as sbp_parallel_cfg
 import oneflow.core.job.job_conf_pb2 as job_conf_proto
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_proto
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
@@ -175,11 +175,11 @@ class InferenceSession(object):
 
     def init(self):
         # env init
-        if not oneflow_api.IsEnvInited():
+        if not oneflow._oneflow_internal.IsEnvInited():
             flow.env.init()
 
         # session init
-        if not oneflow_api.IsSessionInited():
+        if not oneflow._oneflow_internal.IsSessionInited():
             self._make_config_proto()
             session_util._TryCompleteConfigProto(self.config_proto_)
             c_api_util.InitLazyGlobalSession(self.config_proto_)
@@ -191,10 +191,10 @@ class InferenceSession(object):
         self.event_loop_.close()
 
         if self.status_ == self.SessionStatus.RUNNING:
-            oneflow_api.StopLazyGlobalSession()
-            oneflow_api.DestroyLazyGlobalSession()
+            oneflow._oneflow_internal.StopLazyGlobalSession()
+            oneflow._oneflow_internal.DestroyLazyGlobalSession()
         elif self.status_ == self.SessionStatus.OPEN:
-            oneflow_api.DestroyLazyGlobalSession()
+            oneflow._oneflow_internal.DestroyLazyGlobalSession()
         else:
             pass
 
@@ -254,6 +254,7 @@ class InferenceSession(object):
         else:
             job_conf = job_conf_proto_cfg.JobConfigProto()
             job_conf.set_job_name(job_name)
+            job_conf.mutable_predict_conf()
             self.job_name2job_conf_[job_name] = job_conf
             return job_conf
 
@@ -284,7 +285,7 @@ class InferenceSession(object):
                 yield self
                 self.cur_job_name_ = None
 
-        oneflow_api.JobBuildAndInferCtx_Close()
+        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
     def compile(self, op_list):
         self._check_status(self.SessionStatus.OPEN)
@@ -302,12 +303,12 @@ class InferenceSession(object):
 
             compile_ctx.CurJobAddOp(op_conf)
 
-        oneflow_api.CurJobBuildAndInferCtx_Complete()
-        oneflow_api.CurJobBuildAndInferCtx_Rebuild()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Rebuild()
 
     def launch(self):
         self._check_status(self.SessionStatus.OPEN)
-        oneflow_api.StartLazyGlobalSession()
+        oneflow._oneflow_internal.StartLazyGlobalSession()
         self.inter_user_job_info_ = c_api_util.GetInterUserJobInfo()
         self._run_load_checkpoint_job()
         self.status_ = self.SessionStatus.RUNNING
@@ -433,7 +434,9 @@ class InferenceSession(object):
         if job_name is None:
             raise ValueError("please specify job_name")
 
-        lbn = oneflow_api.JobBuildAndInferCtx_GetOpBlobLbn(job_name, op_name, blob_name)
+        lbn = oneflow._oneflow_internal.JobBuildAndInferCtx_GetOpBlobLbn(
+            job_name, op_name, blob_name
+        )
         shape = c_api_util.JobBuildAndInferCtx_GetStaticShape(job_name, lbn)
         dtype = c_api_util.JobBuildAndInferCtx_GetDataType(job_name, lbn)
         dtype = dtype_util.convert_proto_dtype_to_oneflow_dtype(dtype)
@@ -461,7 +464,7 @@ class InferenceSession(object):
             self.event_loop_.call_soon_threadsafe(future.set_result, None)
 
         job_inst.AddPostFinishCallback(job_finish_cb)
-        oneflow_api.LaunchJob(job_inst)
+        oneflow._oneflow_internal.LaunchJob(job_inst)
         self.job_futures_.append(future)
 
     def _run_push_jobs(self, **kwargs):
@@ -499,7 +502,7 @@ class InferenceSession(object):
         return output_futures
 
     def _make_pull_job_cb(self, output_name, user_job_name, future):
-        output_lbn = oneflow_api.JobBuildAndInferCtx_GetOpBlobLbn(
+        output_lbn = oneflow._oneflow_internal.JobBuildAndInferCtx_GetOpBlobLbn(
             user_job_name, output_name, "out"
         )
         split_axis = c_api_util.JobBuildAndInferCtx_GetSplitAxisFromProducerView(

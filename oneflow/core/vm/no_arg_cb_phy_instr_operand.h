@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_NO_ARG_CB_PHY_INSTR_OPERAND_H_
 
 #include <functional>
-#include "oneflow/core/vm/instruction_operand.msg.h"
+#include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
 namespace vm {
@@ -29,6 +29,21 @@ class NoArgCbPhyInstrOperand : public PhyInstrOperand {
   ~NoArgCbPhyInstrOperand() = default;
 
   const std::function<void()>& callback() const { return callback_; }
+
+  void ForEachConstMirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+    // Do nothing
+  }
+
+  void ForEachMutMirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+    // Do nothing
+  }
+
+  void ForEachMut2MirroredObject(
+      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override {
+    // Do nothing
+  }
 
  private:
   std::function<void()> callback_;

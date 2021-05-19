@@ -31,6 +31,9 @@ limitations under the License.
 #include "oneflow/user/summary/events_writer.h"
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
+#ifdef WITH_RDMA
+#include "oneflow/core/dl/include/ibv.h"
+#endif  // WITH_RDMA
 
 namespace oneflow {
 
@@ -99,21 +102,22 @@ void Runtime::NewAllGlobal(const Plan& plan, size_t total_piece_num, bool is_exp
   if (GlobalProcessCtx::IsThisProcessMaster() && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
-  // TODO(chengcheng)
-  // this code should be called before Runtime::NewAllGlobal, maybe after Eager ENV init
-  // and should be called before Global<Transport>::New()
   if (Global<ResourceDesc, ForSession>::Get()->process_ranks().size() > 1) {
 #ifdef __linux__
-    // NOTE(chengcheng): Global<EpollCommNet> will new in any case.
+    // NOTE(chengcheng): Global<EpollCommNet> will new in any case, and will new in env start.
     // if use RDMA,
     //   The Global<CommNet> is set allocated by new Global<IBVerbsCommNet>
     // else,
     //   The Global<CommNet> is set allocated by Global<EpollCommNet>
-    Global<EpollCommNet>::New();
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
-      // DEPRECATED
-      IBVerbsCommNet::Init(plan);
+      if (ibv::IsAvailable()) {
+        Global<IBVerbsCommNet>::New();
+        Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get());
+      } else {
+        LOG(ERROR) << "libibverbs not available, falling back to epoll";
+        Global<CommNet>::SetAllocated(Global<EpollCommNet>::Get());
+      }
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif
@@ -161,7 +165,6 @@ void Runtime::DeleteAllGlobal() {
       // so the Global<CommNet> and Global<EpollCommNet> are same global object
       // then only need delete once.
     }
-    Global<EpollCommNet>::Delete();
 #endif
   }
 
