@@ -140,6 +140,8 @@ class Tensor:
     ):
         assert len(args) > 0
         dtype = dtype if dtype is not None else oneflow._oneflow_internal.float32
+        if isinstance(device, str):
+            device = flow.device(device)
         if placement is None:
             device = (
                 device
@@ -147,7 +149,10 @@ class Tensor:
                 else oneflow._oneflow_internal.device("cpu")
             )
         if _input_args_is_tensor(*args):
-            TODO()  # liyurui, construct using another tensor
+            self._local_or_consistent_tensor = flow.to(
+                *args, device=args[0].device, dtype=args[0].dtype, copy=True
+            )
+            self._undetermined_tensor = None
         elif _input_args_is_consistent_or_local(*args):
             self._local_or_consistent_tensor = args[0]
             self._undetermined_tensor = None
