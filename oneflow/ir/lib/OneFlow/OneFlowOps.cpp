@@ -114,14 +114,11 @@ void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteSystemOps>(context);
 }
 
-bool HaveIdenticalPlacement(mlir::Operation* op, mlir::Operation* argument_op) {
-  // TODO: use things like adaptor to make it more type safe
-  return op->hasAttr("device_tag") && argument_op->hasAttr("device_tag")
-         && (op->getAttrOfType<StringAttr>("device_tag")
-             == argument_op->getAttrOfType<StringAttr>("device_tag"))
-         && op->hasAttr("device_name") && argument_op->hasAttr("device_name")
-         && (op->getAttrOfType<ArrayAttr>("device_name")
-             == argument_op->getAttrOfType<ArrayAttr>("device_name"));
+bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
+  UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
+  UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
+  return adaptor_a.device_tag() == adaptor_b.device_tag()
+         && adaptor_a.device_name() == adaptor_b.device_name();
 }
 
 OpFoldResult OpTrait::impl::foldIdempotentOfIdenticalPlacement(Operation* op) {
