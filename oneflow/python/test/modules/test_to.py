@@ -74,7 +74,7 @@ class TestTo(flow.unittest.TestCase):
 
     def test_tensor_using_tensor(test_case):
         tensor = flow.Tensor(np.random.randn(2, 3, 4, 5), device="cuda", dtype=flow.int)
-        input = flow.Tensor(np.random.randn(2,3))
+        input = flow.Tensor(np.random.randn(2, 3))
         output = input.to(tensor)
         test_case.assertEqual(output.dtype, flow.int)
         test_case.assertEqual(output.device, flow.device("cuda"))
