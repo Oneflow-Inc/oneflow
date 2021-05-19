@@ -446,7 +446,12 @@ if __name__ == "__main__":
                 ]
             )
         )
-        if args.skip_libs == False:
+        if args.skip_libs:
+            assert args.debug, "--skip_libs only works with --debug"
+            assert (
+                args.oneflow_build_path
+            ), "--skip_libs only works with --oneflow_build_path"
+        else:
             print("copying .so")
             loop.run_until_complete(
                 fix_and_sync_libs(
