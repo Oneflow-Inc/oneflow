@@ -67,16 +67,16 @@ std::shared_ptr<Tensor> MirroredTensor::detach() const {
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const compatible_py::Distribute>& distribute,
+    const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
     bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   if (is_lazy) {
-    impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
-                                                      requires_grad, is_leaf);
+    impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, parallel_distribution,
+                                                      parallel_desc, requires_grad, is_leaf);
   } else {
-    impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
-                                                       requires_grad, is_leaf);
+    impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, parallel_distribution,
+                                                       parallel_desc, requires_grad, is_leaf);
   }
   return std::make_shared<ConsistentTensor>(impl);
 }

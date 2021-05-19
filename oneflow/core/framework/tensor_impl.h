@@ -29,9 +29,9 @@ namespace oneflow {
 class MemoryCase;
 class VmLocalDepObject;
 
-namespace compatible_py {
+namespace cfg {
 
-class Distribute;
+class ParallelDistribution;
 }
 
 class Shape;
@@ -80,8 +80,7 @@ class TensorImpl {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
 
  protected:
-  TensorImpl(bool requires_grad, bool is_leaf)
-      : autograd_meta_(new AutogradMeta(requires_grad, is_leaf)) {}
+  TensorImpl(const std::shared_ptr<AutogradMeta>& autograd_meta) : autograd_meta_(autograd_meta) {}
 
  protected:
   std::shared_ptr<AutogradMeta> autograd_meta_;
@@ -100,8 +99,9 @@ class MirroredTensorImpl : public TensorImpl {
       std::shared_ptr<vm::EagerBlobObject> eager_blob_object) = 0;
 
  protected:
-  MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
-      : TensorImpl(requires_grad, is_leaf) {
+  MirroredTensorImpl(const std::shared_ptr<const Device>& device,
+                     const std::shared_ptr<AutogradMeta>& autograd_meta)
+      : TensorImpl(autograd_meta) {
     set_device(device);
   }
 
@@ -113,20 +113,45 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; };
-  virtual const std::shared_ptr<const compatible_py::Distribute>& distribute() const = 0;
+  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
+  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
+  const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution() const {
+    return parallel_distribution_;
+  }
+  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
 
   // Setters
-  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  void set_parallel_distribution(
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribute) {
+    parallel_distribution_ = parallel_distribute;
+  }
+  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+    parallel_desc_ = parallel_desc;
+  }
 
-  virtual void set_distribute(
-      const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
+  // Setters
+  void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
+  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+
+  // Getters valid only for EagerMirroredTensorImpl
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
  protected:
-  ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
-                       bool is_leaf)
-      : TensorImpl(requires_grad, is_leaf), parallel_desc_(parallel_desc) {}
+  ConsistentTensorImpl(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc,
+      const std::shared_ptr<AutogradMeta>& autograd_meta)
+      : TensorImpl(autograd_meta),
+        shape_(shape),
+        dtype_(dtype),
+        parallel_distribution_(parallel_distribution),
+        parallel_desc_(parallel_desc) {}
 
+  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const DType> dtype_;
+  std::shared_ptr<const cfg::ParallelDistribution> parallel_distribution_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 };
 
@@ -137,7 +162,9 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
                          const std::shared_ptr<const DType>& dtype,
                          const std::shared_ptr<const Device>& device, bool requires_grad,
                          bool is_leaf)
-      : MirroredTensorImpl(device, requires_grad, is_leaf), shape_(shape), dtype_(dtype) {}
+      : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
+        shape_(shape),
+        dtype_(dtype) {}
   ~LazyMirroredTensorImpl() override = default;
 
   // Getters
@@ -167,12 +194,10 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerMirroredTensorImpl);
   EagerMirroredTensorImpl(const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-                          const std::shared_ptr<const Device>& device, bool requires_grad,
-                          bool is_leaf);
-  EagerMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                          const std::shared_ptr<const DType>& dtype,
                           const std::shared_ptr<const Device>& device,
-                          const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
+                          const std::shared_ptr<AutogradMeta>& autograd_meta);
+  EagerMirroredTensorImpl(const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+                          const std::shared_ptr<const Device>& device, bool requires_grad,
                           bool is_leaf);
   ~EagerMirroredTensorImpl() override;
 
@@ -196,6 +221,8 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   }
 
  private:
+  void Init();
+
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<TensorStorage> tensor_storage_;
@@ -205,79 +232,46 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
-  LazyConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
-                           const std::shared_ptr<const DType>& dtype,
-                           const std::shared_ptr<const compatible_py::Distribute>& distribute,
-                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                           bool requires_grad, bool is_leaf)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf),
-        shape_(shape),
-        dtype_(dtype),
-        distribute_(distribute) {}
+  LazyConsistentTensorImpl(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf)
+      : ConsistentTensorImpl(shape, dtype, parallel_distribution, parallel_desc,
+                             NewAutogradMeta(requires_grad, is_leaf)) {}
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
-    return distribute_;
-  }
   bool is_lazy() const override { return true; }
-
-  // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-
-  // Setters
-  void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
-    distribute_ = distribute;
-  }
-
- private:
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
 };
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
-  EagerConsistentTensorImpl(const std::shared_ptr<const Shape>& shape,
-                            const std::shared_ptr<const DType>& dtype,
-                            const std::shared_ptr<const compatible_py::Distribute>& distribute,
-                            const std::shared_ptr<const ParallelDesc>& parallel_desc,
-                            bool requires_grad, bool is_leaf)
-      : ConsistentTensorImpl(parallel_desc, requires_grad, is_leaf),
-        shape_(shape),
-        dtype_(dtype),
-        distribute_(distribute) {}
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const override {
-    return distribute_;
-  }
   bool is_lazy() const override { return false; }
 
-  // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
-
-  // Setters
-  void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) override {
-    distribute_ = distribute;
+  const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl() const {
+    return cur_rank_phy_tensor_impl_;
   }
 
+  Maybe<EagerConsistentTensorImpl> New(
+      const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc);
+
  private:
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const compatible_py::Distribute> distribute_;
+  EagerConsistentTensorImpl(
+      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<const ParallelDesc>& parallel_desc,
+      const std::shared_ptr<AutogradMeta>& autograd_meta,
+      const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl)
+      : ConsistentTensorImpl(shape, dtype, parallel_distribution, parallel_desc, autograd_meta),
+        cur_rank_phy_tensor_impl_(cur_rank_phy_tensor_impl) {}
+
+  std::shared_ptr<EagerMirroredTensorImpl> cur_rank_phy_tensor_impl_;
 };
 
 }  // namespace one

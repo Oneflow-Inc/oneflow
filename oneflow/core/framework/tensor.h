@@ -48,11 +48,9 @@ class Tensor {
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
-namespace compatible_py {
-
-class Distribute;
+namespace cfg {
+class ParallelDistribution;
 }
-
 class Device;
 class DType;
 
@@ -239,8 +237,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
   Maybe<const ParallelDesc> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<const Device> device() const override { OF_UNIMPLEMENTED(); }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
-    return impl_->distribute();
+  const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution() const {
+    return impl_->parallel_distribution();
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
@@ -262,10 +260,12 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
   Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    return impl_->set_parallel_desc(parallel_desc);
+    impl_->set_parallel_desc(parallel_desc);
+    return Maybe<void>::Ok();
   }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
-    impl_->set_distribute(distribute);
+  void set_distribute(
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution) {
+    impl_->set_parallel_distribution(parallel_distribution);
   }
 
   // Getters for autograd
@@ -288,7 +288,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf);
 
