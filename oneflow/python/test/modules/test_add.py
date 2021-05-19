@@ -69,7 +69,7 @@ def _test_add_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestAddModule(flow.unittest.TestCase):
-    def test_add_forward(test_case):
+    def test_add(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [_test_add_forward, _test_add_backward]
         arg_dict["device"] = ["cpu", "cuda"]
