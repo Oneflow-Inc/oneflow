@@ -536,6 +536,16 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Attr<int64_t>("depth", depth)
       .Build();
 }
+Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
+Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
+  return one::OpBuilder("prelu_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Input("alpha")
+      .Output("dx")
+      .Output("alpha_diff")
+      .Build();
+}
 
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const ParallelDistribution& parallel_dist,
                                                       const ParallelConf& parallel_conf) {
