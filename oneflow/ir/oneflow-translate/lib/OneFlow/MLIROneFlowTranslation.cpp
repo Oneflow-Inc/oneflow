@@ -116,20 +116,8 @@ class Importer {
     return builder_.getArrayAttr(attrs);
   }
 
-  llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
-    if (dt == ::oneflow::DataType::kInvalidDataType) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kChar) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kFloat) { return builder_.getF32Type(); }
-    if (dt == ::oneflow::DataType::kDouble) { return builder_.getF64Type(); }
-    if (dt == ::oneflow::DataType::kInt8) { return builder_.getIntegerType(8, true); }
-    if (dt == ::oneflow::DataType::kInt32) { return builder_.getI32Type(); }
-    if (dt == ::oneflow::DataType::kInt64) { return builder_.getI64Type(); }
-    if (dt == ::oneflow::DataType::kUInt8) { return builder_.getIntegerType(8, false); }
-    if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kFloat16) { return builder_.getF16Type(); }
-    if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
-    return llvm::None;
-  }
+  llvm::Optional<Type> GetTypeFromOneFlowDataType(::oneflow::DataType dt);
+  Type GetTensorTypeOfLbn(const std::string& lbn);
 
  private:
   /// The current builder, pointing at where the next Instruction should be
@@ -470,6 +458,35 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
   return success();
 }
 
+llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
+  {
+    if (dt == ::oneflow::DataType::kInvalidDataType) { return llvm::None; }
+    if (dt == ::oneflow::DataType::kChar) { return llvm::None; }
+    if (dt == ::oneflow::DataType::kFloat) { return builder_.getF32Type(); }
+    if (dt == ::oneflow::DataType::kDouble) { return builder_.getF64Type(); }
+    if (dt == ::oneflow::DataType::kInt8) { return builder_.getIntegerType(8, true); }
+    if (dt == ::oneflow::DataType::kInt32) { return builder_.getI32Type(); }
+    if (dt == ::oneflow::DataType::kInt64) { return builder_.getI64Type(); }
+    if (dt == ::oneflow::DataType::kUInt8) { return builder_.getIntegerType(8, false); }
+    if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
+    if (dt == ::oneflow::DataType::kFloat16) { return builder_.getF16Type(); }
+    if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
+    return llvm::None;
+  }
+}
+
+Type Importer::GetTensorTypeOfLbn(const std::string& lbn) {
+  Type ret = this->builder_.getNoneType();
+  job_wrapper_.QueryLogicalBlob(
+      lbn,
+      [this, &ret](const int64_t* shape_begin, const int64_t* shape_end, ::oneflow::DataType dt) {
+        if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
+          ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
+        }
+      });
+  return ret;
+}
+
 LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   if (op.has_user_conf() == false) {
     module_.emitError("Not a user op. op name: " + op.name());
@@ -497,18 +514,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
 
   auto out_types = llvm::SmallVector<Type, 8>();
   for (auto kv : op.user_conf().output()) {
-    for (auto lbn : kv.second.s()) {
-      job_wrapper_.QueryLogicalBlob(
-          lbn, [this, &out_types](const int64_t* shape_begin, const int64_t* shape_end,
-                                  ::oneflow::DataType dt) {
-            if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
-              out_types.push_back(
-                  RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue()));
-            } else {
-              out_types.push_back(this->builder_.getNoneType());
-            }
-          });
-    }
+    for (auto output_lbn : kv.second.s()) { out_types.push_back(GetTensorTypeOfLbn(output_lbn)); }
   }
   if (op_type_name == "constant") {
     if (failed(AddOperandSegmentSizes(0, op.ctrl_in_op_name_size(), attr_vec))) {
@@ -592,18 +598,7 @@ LogicalResult Importer::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   }
   if (failed(AppendCtrlInOperand(op, operand_vec))) { return failure(); }
   auto out_types = llvm::SmallVector<Type, 8>();
-  for (auto output_lbn : output_lbns) {
-    job_wrapper_.QueryLogicalBlob(
-        output_lbn, [this, &out_types](const int64_t* shape_begin, const int64_t* shape_end,
-                                       ::oneflow::DataType dt) {
-          if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
-            out_types.push_back(
-                RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue()));
-          } else {
-            out_types.push_back(this->builder_.getNoneType());
-          }
-        });
-  }
+  for (auto output_lbn : output_lbns) { out_types.push_back(GetTensorTypeOfLbn(output_lbn)); }
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
