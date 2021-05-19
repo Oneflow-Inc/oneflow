@@ -134,15 +134,72 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
-        if self.training:
-            res = self._training_op(
-                x, self.running_mean, self.running_var, self.weight, self.bias
-            )[0]
+
+        if x.device == flow.device("cpu"):
+            if self.training:
+                reduce_axis = []
+                for dim in range(len(x.shape)):
+                    if dim != 1:
+                        reduce_axis.append(dim)
+                mean = x.mean(dim=reduce_axis, keepdim=False)
+                variance = x.var(dim=reduce_axis, keepdim=False)
+
+                running_mean = (
+                    self.momentum * self.running_mean + (1 - self.momentum) * mean
+                )
+                running_var = (
+                    self.momentum * self.running_var + (1 - self.momentum) * variance
+                )
+
+                # update training parameters/buffers
+                self.__setattr__("running_mean", flow.Tensor(running_mean))
+                self.__setattr__("running_var", flow.Tensor(running_var))
+
+            else:
+                mean = self.running_mean
+                variance = self.running_var
+
+            axis = 1
+            params_shape = [x.shape[axis]]
+            weight = self.weight
+            bias = self.bias
+            if len(mean.shape) == 1:
+                nd_params_shape = [1] * len(x.shape)
+                nd_params_shape[axis] = params_shape[0]
+                mean = mean.reshape(shape=nd_params_shape)
+                variance = variance.reshape(shape=nd_params_shape)
+
+                if self.weight and params_shape[0] == self.weight.nelemenet():
+                    weight = self.weight.reshape(shape=nd_params_shape)
+                if self.bias and params_shape[0] == self.bias.nelemenet():
+                    bias = self.bias.reshape(shape=nd_params_shape)
+            elif len(mean.shape) == len(x.shape):
+                pass
+            else:
+                raise ValueError(
+                    "shape of mean and variance should be 1D or has number of axes and x's"
+                )
+
+            variance += self.eps
+            normalized = (x - mean) * variance.rsqrt()
+            affined = normalized
+
+            if self.weight:
+                affined = affined * weight
+            if self.bias:
+                affined = affined + bias
+            return affined
+
         else:
-            res = self._testing_op(
-                x, self.running_mean, self.running_var, self.weight, self.bias
-            )[0]
-        return res
+            if self.training:
+                res = self._training_op(
+                    x, self.running_mean, self.running_var, self.weight, self.bias
+                )[0]
+            else:
+                res = self._testing_op(
+                    x, self.running_mean, self.running_var, self.weight, self.bias
+                )[0]
+            return res
 
 
 @oneflow_export("nn.BatchNorm1d")
