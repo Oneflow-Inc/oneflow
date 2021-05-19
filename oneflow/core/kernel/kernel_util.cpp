@@ -300,18 +300,6 @@ void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
   func(ctx, dst, value, sz);
 }
 
-void SyncAutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
-                    const MemoryCase& dst_mem_case) {
-  AutoMemset(ctx, dst, value, sz, dst_mem_case);
-  if (dst_mem_case.has_device_cuda_mem()) {
-#ifdef WITH_CUDA
-    OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
-#else
-    UNIMPLEMENTED();
-#endif  // WITH_CUDA
-  }
-}
-
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
