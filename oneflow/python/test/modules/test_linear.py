@@ -23,16 +23,16 @@ import oneflow.experimental as flow
 import oneflow.typing as tp
 
 
-def _module_cpu_to(self, device):
-    return self
-
-
-_to_device = {"cpu": _module_cpu_to, "cuda": flow.nn.Linear.to}
+def _to_device(self, device):
+    if device == "cpu":
+        return self
+    else:
+        return self.to(device)
 
 
 def _test_linear_no_bias(test_case, device):
     linear = flow.nn.Linear(3, 8, False)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     input_arr = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -57,7 +57,7 @@ def _test_linear_no_bias(test_case, device):
 
 def _test_linear_with_bias(test_case, device):
     linear = flow.nn.Linear(3, 8)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     input_arr = np.array(
         [
             [-0.94630778, -0.83378579, -0.87060891],
@@ -88,7 +88,7 @@ def _test_linear_3_dimension_input(test_case, device):
     input_arr = np.random.randn(2, 3, 4)
     x = flow.Tensor(input_arr, device=flow.device(device))
     linear = flow.nn.Linear(4, 5, True)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     flow.nn.init.constant_(linear.weight, 5.6)
     flow.nn.init.constant_(linear.bias, 0.78)
     of_out = linear(x)
@@ -107,7 +107,7 @@ def _test_linear_4_dimension_input(test_case, device):
     input_arr = np.random.randn(4, 5, 6, 7)
     x = flow.Tensor(input_arr, device=flow.device(device))
     linear = flow.nn.Linear(7, 3, False)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     flow.nn.init.constant_(linear.weight, 11.3)
     of_out = linear(x)
 
@@ -119,7 +119,7 @@ def _test_linear_4_dimension_input(test_case, device):
 
 def _test_identity(test_case, device):
     linear = flow.nn.Identity(54, unused_argument1=0.1, unused_argument2=False)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     x = flow.Tensor(np.random.rand(2, 3, 4, 5), device=flow.device(device))
     y = linear(x)
     test_case.assertTrue(np.array_equal(x.numpy(), y.numpy()))
@@ -127,7 +127,7 @@ def _test_identity(test_case, device):
 
 def _test_linear_backward_with_bias(test_case, device):
     linear = flow.nn.Linear(3, 8)
-    linear = _to_device[device](linear, device)
+    linear = _to_device(linear, device)
     x = flow.Tensor(
         [
             [-0.94630778, -0.83378579, -0.87060891],
