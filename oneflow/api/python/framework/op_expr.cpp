@@ -95,6 +95,10 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
+  PybindExportOpExpr<one::CastToMirroredOpExpr, cfg::CastToMirroredOpConf>(
+      m, "CastToConsistentOpExpr");
+  PybindExportOpExpr<one::CastFromMirroredOpExpr, cfg::CastFromMirroredOpConf>(
+      m, "CastFromConsistentOpExpr");
 }
 
 }  // namespace oneflow

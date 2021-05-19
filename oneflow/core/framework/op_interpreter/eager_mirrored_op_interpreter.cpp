@@ -171,6 +171,13 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
   OF_UNIMPLEMENTED();
 }
 
+static Maybe<void> BuildAndRunConsistentCastInstruction(const BuiltinOpExpr& op_expr,
+                                                        const TensorTuple& inputs,
+                                                        TensorTuple* outputs) {
+  // TODO()
+  OF_UNIMPLEMENTED();
+}
+
 Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const AttrMap& attrs) const {
@@ -181,6 +188,18 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const AttrMap& attrs) const {
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
+}
+
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const AttrMap& attrs) const {
+  return BuildAndRunConsistentCastInstruction(op_expr, inputs, outputs);
+}
+
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const AttrMap& attrs) const {
+  return BuildAndRunConsistentCastInstruction(op_expr, inputs, outputs);
 }
 
 static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr,

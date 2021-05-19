@@ -16,17 +16,34 @@ limitations under the License.
 
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
-from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
+from typing import (
+    Union,
+    TypeVar,
+    Iterator,
+    Optional,
+    Set,
+    Tuple,
+    Dict,
+    List,
+    Callable,
+    Sequence,
+)
 import itertools
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.session_context as session_ctx
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
+from oneflow.python.framework.placement_context import PlacementScope as Placement
 from oneflow.python.nn.parameter import Parameter
+import oneflow._oneflow_internal.oneflow.core.operator.op_conf as cfg_op_conf
+import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as cfg_sbp_parallel
+import oneflow._oneflow_internal
 
 
 class _IncompatibleKeys(
@@ -61,16 +78,38 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
+        self._inputs_placement = OrderedDict()
+        self._outputs_placement = OrderedDict()
+        self._cast_to_consistent_ops = OrderedDict()
+        self._cast_from_consistent_ops = OrderedDict()
 
     @property
     def consistent(self):
         return self._consistent
 
+    def consistentize(self, sbp_signature, placement_signature):
+        self._register_cast_consistent_ops(sbp_signature[0], sbp_signature[1])
+        self._register_args_placement(placement_signature[0], placement_signature[1])
+        self._consistent = True
+
     def forward(self, *args):
         raise NotImplementedError()
 
     def consistent_forward(self, *args):
-        return self.forward(*args)
+        args = list(args)
+        sess = session_ctx.GetDefaultSession()
+        with sess.ConsistentScope():
+            for i in range(len(args)):
+                args[i] = self._cast_to_consistent_ops[i](args[i])
+            consistent_output = self.forward(args)
+            if len(elf._cast_from_consistent_ops) == 1:
+                res = self._cast_from_consistent_ops[0](consistent_output)
+            else:
+                res = [
+                    self._cast_from_consistent_ops[i](consistent_output[i])
+                    for i in len(self._cast_from_consistent_ops)
+                ]
+        return res
 
     def force_mirrored_forward(self, *args):
         raise NotImplementedError()
@@ -82,10 +121,32 @@ class Module(object):
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
-
-        res = self.forward(*args)
-
+        if not self.consistent:
+            res = self.forward(*args)
+        else:
+            res = self.consistent_forward(*args)
         return res
+
+    def consistent_cast(self, sbp_signature, placement_signature):
+        return flow.consistent_cast(self, sbp_signature, placement_signature)
+
+    def _register_cast_consistent_ops(
+        self,
+        inputs_sbp_signature: Sequence[Sequence[str]],
+        outputs_sbp_signature: Sequence[Sequence[str]],
+    ) -> None:
+        for i in range(len(inputs_sbp_signature)):
+            self._cast_to_consistent_ops[i] = inputs_sbp_signature[i]
+            self._cast_from_consistent_ops[i] = outputs_sbp_signature[i]
+
+    def _register_args_placement(
+        self,
+        inputs_placement: Sequence[Placement],
+        outputs_placement: Sequence[Placement],
+    ) -> None:
+        for i in range(len(inputs_placement)):
+            self._inputs_placement[i] = inputs_placement[i]
+            self._outputs_placement[i] = outputs_placement[i]
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.
@@ -529,3 +590,38 @@ class Module(object):
             return t.to(device)
 
         return self._apply(convert)
+
+
+@oneflow_export("consistent_cast")
+def api_consistent_cast(
+    module: Module,
+    sbp_signature: Union[
+        Tuple[
+            Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
+            Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
+        ],
+        Tuple[Sequence[Sequence[str]], Sequence[Sequence[str]]],
+    ],
+    placement_signature: Optional[
+        Tuple[Sequence[Placement], Sequence[Placement]]
+    ] = None,
+):
+    assert not module.consistent()
+    if placement_signature is not None:
+        assert len(sbp_signature[0]) == len(placement_signature[0]) and len(
+            sbp_signature[1]
+        ) == len(placement_signature[1])
+
+    def distribute_to_str(dist):
+        if dist is None:
+            return ""
+        elif type(dist) is str:
+            return dist
+        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
+            return "S({})".format(dist.axis)
+        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
+            return "B"
+        else:
+            raise ValueError("unsupported distribute")
+
+    module.consistentize(sbp_signature, placement_signature)

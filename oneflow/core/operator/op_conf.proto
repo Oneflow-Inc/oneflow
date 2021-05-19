@@ -6,6 +6,7 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";
@@ -282,6 +283,18 @@ message CastFromMirroredOpConf {
   required SbpParallel sbp_parallel = 3;
 }
 
+message CastToConsistentOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ParallelDistribution parallel_distribution = 3;
+}
+
+message CastFromConsistentOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ParallelDistribution parallel_distribution = 3;
+}
+
 message CaseOpConf {
   required string in = 1;
   repeated string out = 2;
@@ -510,6 +523,8 @@ message OperatorConf {
     ModelSaveV2OpConf model_save_v2_conf = 348;
     ImageDecoderRandomCropResizeOpConf image_decoder_random_crop_resize_conf = 349;
     XrtLaunchOpConf xrt_launch_conf = 410;
+    CastToConsistentOpConf cast_to_consistent_conf = 411;
+    CastFromConsistentOpConf cast_from_consistent_conf = 412;
 
     // math op
     BroadcastToCompatibleWithOpConf broadcast_to_compatible_with_conf = 525;

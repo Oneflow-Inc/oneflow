@@ -42,6 +42,8 @@ DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
 DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_TYPE_NAME(CastToConsistentOpConf, "cast_to_consistent");
+DEFINE_OPEXPR_TYPE_NAME(CastFromConsistentOpConf, "cast_from_consistent");
 DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
 DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
@@ -176,6 +178,14 @@ Maybe<const Device> UserOpExpr::InferDevices(
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
+Maybe<void> CastToConsistentOpExpr::SetParallelDistribution(const std::vector<std::string>& indexed_obns) const {
+
+}
+
+Maybe<void> CastFromConsistentOpExpr::SetParallelDistribution(const std::vector<std::string>& indexed_obns) const {
+
+}
+
 template<>
 Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                            const AttrMap& attrs) const {
@@ -220,6 +230,36 @@ Maybe<void> BuiltinOpExprImpl<CastFromMirroredOpConf>::BuildOpConf(OperatorConf*
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateOpGradClosure()
+    const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<CastToConsistentOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                   const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_to_consistent_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToConsistentOpConf>::GetOrCreateOpGradClosure()
+    const {
+  UNIMPLEMENTED_THEN_RETURN();
+}
+
+template<>
+Maybe<void> BuiltinOpExprImpl<CastFromConsistentOpConf>::BuildOpConf(OperatorConf* op_conf,
+                                                                     const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(attrs.size(), 0);
+  *(op_conf->mutable_name()) = op_name_;
+  *(op_conf->mutable_cast_from_consistent_conf()) = op_proto_;
+  return Maybe<void>::Ok();
+}
+
+template<>
+Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromConsistentOpConf>::GetOrCreateOpGradClosure()
     const {
   UNIMPLEMENTED_THEN_RETURN();
 }

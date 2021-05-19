@@ -141,9 +141,21 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
+class CastToConsistentOpExpr final : public BuiltinOpExprImpl<CastToConsistentOpConf> {
+ public:
+  Maybe<void> SetParallelDistribution(const std::vector<std::string>& indexed_obns) const;
+};
+
+class CastFromConsistentOpExpr final : public BuiltinOpExprImpl<CastFromConsistentOpConf> {
+ public:
+  Maybe<void> SetParallelDistribution(const std::vector<std::string>& indexed_obns) const;
+};
+
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
 using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
+// using CastToConsistentOpExpr = BuiltinOpExprImpl<CastToConsistentOpConf>;
+// using CastFromConsistentOpExpr = BuiltinOpExprImpl<CastFromConsistentOpConf>;
 using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
 using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;
