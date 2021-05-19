@@ -170,7 +170,7 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
         tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
-        y = flow.tmp.slice(input, slice_tup_list=tup_list)
+        y = flow.experimental.slice(input, slice_tup_list=tup_list)
 
         # y.shape >> flow.Size([3, 3, 2]
     """
@@ -215,7 +215,7 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        y = flow.tmp.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+        y = flow.experimental.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
 
         # [1. 2. 3. 4. 1.] 
     """
