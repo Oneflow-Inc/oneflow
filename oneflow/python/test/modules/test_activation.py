@@ -208,10 +208,7 @@ def _test_softmax_backward(test_case, device):
     z = y.sum()
     z.backward()
     output = numpy_softmax(arr, axis)
-    print("x.grad >>>>>>>>>>>>> ", x.grad)
-    print("y.grad >>>>>>>>>>>>> ", y.grad)
-    print("z.grad >>>>>>>>>>>>> ", z.grad)
-    # test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 
 @unittest.skipIf(
