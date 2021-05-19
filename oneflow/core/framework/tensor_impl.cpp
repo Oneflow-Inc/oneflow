@@ -24,6 +24,8 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 namespace one {
@@ -90,14 +92,46 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
     const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl,
     const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  OF_TODO();
+  {
+    int64_t machine_id = 0;
+    int64_t device_id = 0;
+    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+    const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
+    CHECK_OR_RETURN(*device == *cur_rank_phy_tensor_impl->device())
+        << "only LocalTensors on current rank Device can be casted to ConsistentTensor";
+  }
+  const auto& shape = JUST(
+      GetLogicalShape(*cur_rank_phy_tensor_impl->shape(), *parallel_distribution, *parallel_desc));
+  const auto& dtype = cur_rank_phy_tensor_impl->dtype();
+  const auto& autograd_meta = cur_rank_phy_tensor_impl->mut_autograd_meta();
+  return std::shared_ptr<EagerConsistentTensorImpl>(new EagerConsistentTensorImpl(
+      shape, dtype, parallel_distribution, parallel_desc, cur_rank_phy_tensor_impl, autograd_meta));
 }
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
     const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad, bool is_leaf) {
-  OF_TODO();
+  const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
+  std::shared_ptr<EagerMirroredTensorImpl> cur_rank_phy_tensor_impl;
+  {
+    int64_t machine_id = 0;
+    int64_t device_id = 0;
+    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+    int64_t parallel_id = JUST(parallel_desc->ParallelId4MachineDeviceId(machine_id, device_id));
+    const auto& cur_rank_phy_shape =
+        JUST(GetPhysicalShape(*shape, *parallel_distribution, *parallel_desc, parallel_id));
+    const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
+    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+        device->mem_case(), cur_rank_phy_shape, dtype->data_type(),
+        std::make_shared<vm::TensorBuffer>(), device->parallel_desc_ptr());
+    cur_rank_phy_tensor_impl.reset(
+        new EagerMirroredTensorImpl(eager_blob_object, device, autograd_meta));
+    cur_rank_phy_tensor_impl->set_shape(cur_rank_phy_shape);
+    cur_rank_phy_tensor_impl->set_dtype(dtype);
+  }
+  return std::shared_ptr<EagerConsistentTensorImpl>(new EagerConsistentTensorImpl(
+      shape, dtype, parallel_distribution, parallel_desc, cur_rank_phy_tensor_impl, autograd_meta));
 }
 
 }  // namespace one

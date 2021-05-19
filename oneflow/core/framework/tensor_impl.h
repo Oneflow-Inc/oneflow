@@ -271,8 +271,8 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc,
-      const std::shared_ptr<AutogradMeta>& autograd_meta,
-      const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl)
+      const std::shared_ptr<EagerMirroredTensorImpl>& cur_rank_phy_tensor_impl,
+      const std::shared_ptr<AutogradMeta>& autograd_meta)
       : ConsistentTensorImpl(shape, dtype, parallel_distribution, parallel_desc, autograd_meta),
         cur_rank_phy_tensor_impl_(cur_rank_phy_tensor_impl) {}
 
