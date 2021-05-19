@@ -287,12 +287,14 @@ message CastToConsistentOpConf {
   required string in = 1;
   required string out = 2;
   required ParallelDistribution parallel_distribution = 3;
+  required ParallelConf parallel_conf = 4;
 }
 
 message CastFromConsistentOpConf {
   required string in = 1;
   required string out = 2;
   required ParallelDistribution parallel_distribution = 3;
+  required ParallelConf parallel_conf = 4;
 }
 
 message CaseOpConf {

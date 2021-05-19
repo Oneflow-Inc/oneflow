@@ -143,19 +143,45 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
 class CastToConsistentOpExpr final : public BuiltinOpExprImpl<CastToConsistentOpConf> {
  public:
-  Maybe<void> SetParallelDistribution(const std::vector<std::string>& indexed_obns) const;
+  CastToConsistentOpExpr() = default;
+  virtual ~CastToConsistentOpExpr() = default;
+
+  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
+                                           CastToConsistentOpConf&& op_proto,
+                                           const std::vector<std::string>& indexed_ibns,
+                                           const std::vector<std::string>& indexed_obns);
+
+  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
+  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& sbp_parallels);
+
+ private:
+  CastToConsistentOpExpr(const std::string& op_name, CastToConsistentOpConf&& proto,
+                         const std::vector<std::string>& indexed_ibns,
+                         const std::vector<std::string>& indexed_obns);
 };
 
 class CastFromConsistentOpExpr final : public BuiltinOpExprImpl<CastFromConsistentOpConf> {
  public:
-  Maybe<void> SetParallelDistribution(const std::vector<std::string>& indexed_obns) const;
+  CastFromConsistentOpExpr() = default;
+  virtual ~CastFromConsistentOpExpr() = default;
+
+  static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
+                                             CastFromConsistentOpConf&& op_proto,
+                                             const std::vector<std::string>& indexed_ibns,
+                                             const std::vector<std::string>& indexed_obns);
+
+  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
+  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& sbp_parallels);
+
+ private:
+  CastFromConsistentOpExpr(const std::string& op_name, CastFromConsistentOpConf&& proto,
+                           const std::vector<std::string>& indexed_ibns,
+                           const std::vector<std::string>& indexed_obns);
 };
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;
 using CastToMirroredOpExpr = BuiltinOpExprImpl<CastToMirroredOpConf>;
 using CastFromMirroredOpExpr = BuiltinOpExprImpl<CastFromMirroredOpConf>;
-// using CastToConsistentOpExpr = BuiltinOpExprImpl<CastToConsistentOpConf>;
-// using CastFromConsistentOpExpr = BuiltinOpExprImpl<CastFromConsistentOpConf>;
 using DistributeSplitOpExpr = BuiltinOpExprImpl<DistributeSplitOpConf>;
 using DistributeCloneOpExpr = BuiltinOpExprImpl<DistributeCloneOpConf>;
 using DistributeConcatOpExpr = BuiltinOpExprImpl<DistributeConcatOpConf>;

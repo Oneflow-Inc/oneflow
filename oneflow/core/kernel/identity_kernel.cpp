@@ -34,5 +34,7 @@ ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCopyConf, IdentityKernel);
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastToMirroredConf, IdentityKernel);
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastFromMirroredConf, IdentityKernel);
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kBoxingIdentityConf, IdentityKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastToConsistentConf, IdentityKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kCastFromConsistentConf, IdentityKernel);
 
 }  // namespace oneflow

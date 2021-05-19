@@ -93,6 +93,30 @@ class MirroredCastOp : public Operator {
  private:
 };
 
+class ConsistentCastOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConsistentCastOp);
+  ConsistentCastOp() = default;
+  virtual ~ConsistentCastOp() override = default;
+
+  void InitFromOpConf() override {
+    EnrollInputBn("in");
+    EnrollOutputBn("out")->set_const_inplace_ibn("in");
+  }
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    return InferBlobDescs(BlobDesc4BnInOp);
+  }
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
+    return InferBlobDescs(GetBlobDesc4BnInOp);
+  }
+
+ private:
+};
+
 namespace {
 
 class CastToMirroredOp : public MirroredCastOp {
@@ -208,6 +232,134 @@ class CastFromMirroredOp : public MirroredCastOp {
 };
 
 REGISTER_OP(OperatorConf::kCastFromMirroredConf, CastFromMirroredOp);
+
+}  // namespace
+
+namespace {
+
+class CastToConsistentOp : public ConsistentCastOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CastToConsistentOp);
+  CastToConsistentOp() = default;
+  virtual ~CastToConsistentOp() override = default;
+
+ private:
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    BlobDesc* out = BlobDesc4BnInOp("out");
+    *out = *BlobDesc4BnInOp("in");
+    const ParallelDistribution& conf_sbp_distribute =
+        op_conf().cast_to_consistent_conf().parallel_distribution();
+    const std::shared_ptr<Shape>& hierarchy = parallel_desc.hierarchy();
+    int64_t index = 0;
+    for (const auto& conf_sbp : conf_sbp_distribute.sbp_parallel()) {
+      if (conf_sbp.has_split_parallel()) {
+        const int64_t axis = conf_sbp.split_parallel().axis();
+        CHECK_GE_OR_RETURN(axis, 0);
+        CHECK_LT_OR_RETURN(axis, out->shape().NumAxes());
+        out->mut_shape().Set(axis, out->shape().At(axis) * hierarchy->At(index));
+      }
+      ++index;
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const {
+    CHECK_GT_OR_RETURN(
+        op_conf().cast_to_consistent_conf().parallel_distribution().sbp_parallel_size(), 0)
+        << "attribute parallel_distribution not set.";
+    auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
+    (*map)["in"] = op_conf().cast_to_consistent_conf().parallel_distribution();
+    (*map)["out"] = op_conf().cast_to_consistent_conf().parallel_distribution();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferMirroredSignature(
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) override {
+    const auto& in_infer_hint = *JUST(MirroredSigInferHint4Ibn("in"));
+    CHECK_OR_RETURN(in_infer_hint.is_mirrored_parallel_view())
+        << "error use of CastToConsistentOp. `in' should be a mirrored blob";
+    CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
+    MutOptMirroredParallel("in")->mutable_mirrored_parallel();
+    MutOptMirroredParallel("out")->clear_mirrored_parallel();
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kCastToConsistentConf, CastToConsistentOp);
+
+}  // namespace
+
+namespace {
+
+class CastFromConsistentOp : public ConsistentCastOp {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CastFromConsistentOp);
+  CastFromConsistentOp() = default;
+  virtual ~CastFromConsistentOp() override = default;
+
+ private:
+  Maybe<void> InferLogicalOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+      const ParallelDesc& parallel_desc) const override {
+    BlobDesc* out = BlobDesc4BnInOp("out");
+    *out = *BlobDesc4BnInOp("in");
+    const ParallelDistribution& conf_sbp_distribute =
+        op_conf().cast_to_consistent_conf().parallel_distribution();
+    const std::shared_ptr<Shape>& hierarchy = parallel_desc.hierarchy();
+    int64_t index = 0;
+    for (const auto& conf_sbp : conf_sbp_distribute.sbp_parallel()) {
+      if (conf_sbp.has_split_parallel()) {
+        const int64_t axis = conf_sbp.split_parallel().axis();
+        CHECK_GE_OR_RETURN(axis, 0);
+        CHECK_LT_OR_RETURN(axis, out->shape().NumAxes());
+        const int64_t dim_value = out->shape().At(axis);
+        CHECK_EQ_OR_RETURN(dim_value % hierarchy->At(index), 0);
+        out->mut_shape().Set(axis, dim_value / hierarchy->At(index));
+      }
+      ++index;
+    }
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferParallelDistributionSignature(
+      ParallelDistributionSignature* parallel_distribution_signature,
+      const ParallelDistributionSignature& parallel_distribution_constraints,
+      const ParallelDesc& parallel_desc,
+      std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
+          ParallelDistributionInferHint4Ibn) const {
+    CHECK_GT_OR_RETURN(
+        op_conf().cast_from_consistent_conf().parallel_distribution().sbp_parallel_size(), 0)
+        << "attribute parallel_distribution not set.";
+    auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
+    (*map)["in"] = op_conf().cast_from_consistent_conf().parallel_distribution();
+    (*map)["out"] = op_conf().cast_from_consistent_conf().parallel_distribution();
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> InferMirroredSignature(
+      std::function<Maybe<const MirroredSigInferHint*>(const std::string&)>
+          MirroredSigInferHint4Ibn,
+      bool is_mirrored_parallel_view_conf, const ParallelDesc& parallel_desc) override {
+    const auto& in_infer_hint = *JUST(MirroredSigInferHint4Ibn("in"));
+    CHECK_OR_RETURN(!in_infer_hint.is_mirrored_parallel_view())
+        << "error use of CastToConsistentOp. `in' shouldn't be a mirrored blob";
+    CHECK_EQ_OR_RETURN(in_infer_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
+    MutOptMirroredParallel("in")->clear_mirrored_parallel();
+    MutOptMirroredParallel("out")->mutable_mirrored_parallel();
+    return Maybe<void>::Ok();
+  }
+};
+
+REGISTER_OP(OperatorConf::kCastFromConsistentConf, CastFromConsistentOp);
 
 }  // namespace
 

@@ -178,5 +178,16 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth);
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
                                                          const std::string& name);
 
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const ParallelDistribution& parallel_dist,
+                                                      const ParallelConf& parallel_conf);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name,
+                                                      const ParallelDistribution& parallel_dist,
+                                                      const ParallelConf& parallel_conf);
+
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const ParallelDistribution& parallel_dist,
+                                                          const ParallelConf& parallel_conf);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name,
+                                                          const ParallelDistribution& parallel_dist,
+                                                          const ParallelConf& parallel_conf);
 }  // namespace op_expr_helper
 }  // namespace oneflow

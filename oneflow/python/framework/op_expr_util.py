@@ -41,3 +41,5 @@ def user_op_expr_call(self, *args, **kwargs):
 
 def RegisterMethod4UserOpExpr():
     oneflow._oneflow_internal.one.UserOpExpr.__call__ = user_op_expr_call
+    oneflow._oneflow_internal.one.CastToConsistentOpExpr.__call__ = user_op_expr_call
+    oneflow._oneflow_internal.one.CastFromConsistentOpExpr.__call__ = user_op_expr_call

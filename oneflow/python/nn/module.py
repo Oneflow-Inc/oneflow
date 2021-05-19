@@ -39,7 +39,6 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.framework.placement_context import PlacementScope as Placement
 from oneflow.python.nn.parameter import Parameter
 import oneflow._oneflow_internal.oneflow.core.operator.op_conf as cfg_op_conf
 import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as cfg_sbp_parallel
@@ -78,8 +77,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-        self._inputs_placement = OrderedDict()
-        self._outputs_placement = OrderedDict()
         self._cast_to_consistent_ops = OrderedDict()
         self._cast_from_consistent_ops = OrderedDict()
 
@@ -87,9 +84,13 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def consistentize(self, sbp_signature, placement_signature):
-        self._register_cast_consistent_ops(sbp_signature[0], sbp_signature[1])
-        self._register_args_placement(placement_signature[0], placement_signature[1])
+    def consistentize(self, parallel_distribution, placement_signature):
+        self._register_cast_consistent_ops(
+            parallel_distribution[0],
+            parallel_distribution[1],
+            placement_signature[0],
+            placement_signature[1],
+        )
         self._consistent = True
 
     def forward(self, *args):
@@ -134,19 +135,46 @@ class Module(object):
         self,
         inputs_sbp_signature: Sequence[Sequence[str]],
         outputs_sbp_signature: Sequence[Sequence[str]],
+        inputs_placement: Sequence[oneflow._oneflow_internal.PlacementSymbol],
+        outputs_placement: Sequence[oneflow._oneflow_internal.PlacementSymbol],
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
-            self._cast_to_consistent_ops[i] = inputs_sbp_signature[i]
-            self._cast_from_consistent_ops[i] = outputs_sbp_signature[i]
+            cast_to_consisten_conf = cfg_op_conf.CastToConsistentOpConf()
+            print(type(cast_to_consisten_conf))
+            cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
+                id_util.UniqueStr("cast_to_consistent_op"),
+                cast_to_consisten_conf,
+                ["in_0"],
+                ["out_0"],
+            )
+            parallel_distribution = inputs_sbp_signature[i]
+            if isinstance(parallel_distribution, tuple):
+                parallel_distribution = list(parallel_distribution)
+            elif isinstance(parallel_distribution, str):
+                parallel_distribution = [parallel_distribution]
+            else:
+                assert isinstance(parallel_distribution, list)
+            cast_to_consistent_op_expr.SetParallelDistribution(parallel_distribution)
+            cast_to_consistent_op_expr.SetParallelConf(inputs_placement[i])
+            self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
 
-    def _register_args_placement(
-        self,
-        inputs_placement: Sequence[Placement],
-        outputs_placement: Sequence[Placement],
-    ) -> None:
-        for i in range(len(inputs_placement)):
-            self._inputs_placement[i] = inputs_placement[i]
-            self._outputs_placement[i] = outputs_placement[i]
+            cast_from_consisten_conf = cfg_op_conf.CastFromConsistentOpConf()
+            cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
+                id_util.UniqueStr("cast_from_consistent_op"),
+                cast_from_consisten_conf,
+                ["in_0"],
+                ["out_0"],
+            )
+            parallel_distribution = outputs_sbp_signature[i]
+            if isinstance(parallel_distribution, tuple):
+                parallel_distribution = list(parallel_distribution)
+            elif isinstance(parallel_distribution, str):
+                parallel_distribution = [parallel_distribution]
+            else:
+                assert isinstance(parallel_distribution, list)
+            cast_from_consistent_op_expr.SetParallelDistribution(parallel_distribution)
+            cast_from_consistent_op_expr.SetParallelConf(outputs_placement[i])
+            self._cast_from_consistent_ops[i] = cast_from_consistent_op_expr
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.
@@ -595,7 +623,7 @@ class Module(object):
 @oneflow_export("consistent_cast")
 def api_consistent_cast(
     module: Module,
-    sbp_signature: Union[
+    parallel_distribution: Union[
         Tuple[
             Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
             Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
@@ -603,14 +631,30 @@ def api_consistent_cast(
         Tuple[Sequence[Sequence[str]], Sequence[Sequence[str]]],
     ],
     placement_signature: Optional[
-        Tuple[Sequence[Placement], Sequence[Placement]]
+        Tuple[
+            Sequence[oneflow._oneflow_internal.PlacementSymbol],
+            Sequence[oneflow._oneflow_internal.PlacementSymbol],
+        ]
     ] = None,
 ):
-    assert not module.consistent()
-    if placement_signature is not None:
-        assert len(sbp_signature[0]) == len(placement_signature[0]) and len(
-            sbp_signature[1]
-        ) == len(placement_signature[1])
+    assert not module.consistent
+
+    def check_input_is_valid(parallel_distribution, placement_signature):
+        assert len(parallel_distribution) == len(placement_signature)
+        for i in range(len(parallel_distribution)):
+            if isinstance(parallel_distribution[i], (tuple, list)):
+                assert len(parallel_distribution[i]) == len(
+                    placement_signature[i].hierarchy()
+                )
+
+    if placement_signature is None:
+        cur_scope = oneflow._oneflow_internal.GetCurrentScope()
+        placement_signature = (
+            [cur_scope.device_parallel_desc_symbol() for _ in parallel_distribution[0]],
+            [ur_scope.device_parallel_desc_symbol() for _ in parallel_distribution[1]],
+        )
+    check_input_is_valid(parallel_distribution[0], placement_signature[0])
+    check_input_is_valid(parallel_distribution[1], placement_signature[1])
 
     def distribute_to_str(dist):
         if dist is None:
@@ -621,7 +665,17 @@ def api_consistent_cast(
             return "S({})".format(dist.axis)
         elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
             return "B"
+        elif type(dist) is oneflow._oneflow_internal.distribute.ParticalSumDistribute:
+            return "P"
+        elif isinstance(dist, (tuple, list)):
+            return tuple(map(distribute_to_str, dist))
+            pass
         else:
             raise ValueError("unsupported distribute")
 
-    module.consistentize(sbp_signature, placement_signature)
+    parallel_distribution = (
+        list(map(distribute_to_str, parallel_distribution[0])),
+        list(map(distribute_to_str, parallel_distribution[1])),
+    )
+
+    module.consistentize(parallel_distribution, placement_signature)

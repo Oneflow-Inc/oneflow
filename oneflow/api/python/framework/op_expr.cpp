@@ -95,10 +95,32 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
-  PybindExportOpExpr<one::CastToMirroredOpExpr, cfg::CastToMirroredOpConf>(
-      m, "CastToConsistentOpExpr");
-  PybindExportOpExpr<one::CastFromMirroredOpExpr, cfg::CastFromMirroredOpConf>(
-      m, "CastFromConsistentOpExpr");
+  auto py_cast_to_consistent_op_class =
+      PybindExportOpExpr<one::CastToConsistentOpExpr, cfg::CastToConsistentOpConf>(
+          m, "CastToConsistentOpExpr");
+  py_cast_to_consistent_op_class.def("SetParallelDistribution",
+                                     [](const std::shared_ptr<one::CastToConsistentOpExpr>& op_expr,
+                                        const std::vector<std::string>& sbp_parallels) {
+                                       op_expr->SetParallelDistribution(sbp_parallels).GetOrThrow();
+                                     });
+  py_cast_to_consistent_op_class.def("SetParallelConf",
+                                     [](const std::shared_ptr<one::CastToConsistentOpExpr>& op_expr,
+                                        const std::shared_ptr<ParallelDesc>& parallel_desc) {
+                                       op_expr->SetParallelConf(parallel_desc).GetOrThrow();
+                                     });
+  auto py_cast_from_consistent_op_class =
+      PybindExportOpExpr<one::CastFromConsistentOpExpr, cfg::CastFromConsistentOpConf>(
+          m, "CastFromConsistentOpExpr");
+  py_cast_from_consistent_op_class.def(
+      "SetParallelDistribution", [](const std::shared_ptr<one::CastFromConsistentOpExpr>& op_expr,
+                                    const std::vector<std::string>& sbp_parallels) {
+        op_expr->SetParallelDistribution(sbp_parallels).GetOrThrow();
+      });
+  py_cast_from_consistent_op_class.def(
+      "SetParallelConf", [](const std::shared_ptr<one::CastFromConsistentOpExpr>& op_expr,
+                            const std::shared_ptr<ParallelDesc>& parallel_desc) {
+        op_expr->SetParallelConf(parallel_desc).GetOrThrow();
+      });
 }
 
 }  // namespace oneflow

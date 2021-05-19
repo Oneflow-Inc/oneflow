@@ -88,13 +88,6 @@ static Maybe<void> BuildAndRunMirroredCastInstruction(const BuiltinOpExpr& op_ex
   return LogicalRun(build_instruction);
 }
 
-static Maybe<void> BuildAndRunConsistentCastInstruction(const BuiltinOpExpr& op_expr,
-                                                        const TensorTuple& inputs,
-                                                        TensorTuple* outputs) {
-  // TODO()
-  OF_UNIMPLEMENTED();
-}
-
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
@@ -107,16 +100,26 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& 
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
+static Maybe<void> BuildAndRunConsistentCastInstruction(const BuiltinOpExpr& op_expr,
+                                                        const ParallelConf& parallel_conf,
+                                                        const TensorTuple& inputs,
+                                                        TensorTuple* outputs) {
+  // TODO(hanbinbin)
+  UNIMPLEMENTED();
+}
+
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
-  return BuildAndRunConsistentCastInstruction(op_expr, inputs, outputs);
+  return BuildAndRunConsistentCastInstruction(op_expr, op_expr.proto().parallel_conf(), inputs,
+                                              outputs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
-  return BuildAndRunConsistentCastInstruction(op_expr, inputs, outputs);
+  return BuildAndRunConsistentCastInstruction(op_expr, op_expr.proto().parallel_conf(), inputs,
+                                              outputs);
 }
 
 static Maybe<compatible_py::BlobObject> GetInBlobObject(
