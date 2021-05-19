@@ -133,9 +133,6 @@ def compare_with_not_fused(test_case, device_type, x_shape, data_type, data_form
 class TestFusedBiasAdd(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_fused_bias_add(test_case):
-        if flow.eager_execution_enabled():
-            print("\nSkip under erger mode!")
-            return
         arg_dict = OrderedDict()
         arg_dict["device_type"] = ["gpu"]
         arg_dict["x_shape"] = [
