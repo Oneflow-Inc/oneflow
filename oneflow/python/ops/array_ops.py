@@ -492,6 +492,7 @@ def transpose(
 
 
 @oneflow_export("slice")
+@stable_api
 def slice(
     x: oneflow._oneflow_internal.BlobDesc,
     begin: Sequence[int],

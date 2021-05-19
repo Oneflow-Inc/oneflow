@@ -16,7 +16,7 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 from oneflow.python.nn.module import Module
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from typing import Optional, Sequence, Tuple
 
 
@@ -150,7 +150,8 @@ class Slice(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("tmp.slice")
+@oneflow_export("slice")
+@experimental_api
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
@@ -195,7 +196,8 @@ class SliceUpdate(Module):
         return self._op(x, update)[0]
 
 
-@oneflow_export("tmp.slice_update")
+@oneflow_export("slice_update")
+@experimental_api
 def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`. Like `x[start:stop:step] = update`. 
 
@@ -238,7 +240,8 @@ class LogicalSliceAssign(Module):
         return self._op(x, update)
 
 
-@oneflow_export("tmp.logical_slice_assign")
+# @oneflow_export("logical_slice_assign")
+# @experimental_api
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Update a slice of tensor `x`(in-place). Like `x[start:stop:step] = update`. 
 

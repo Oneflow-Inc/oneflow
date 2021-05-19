@@ -24,6 +24,7 @@ import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.check_point_v2 as check_point_v2
 from oneflow.python.framework.function_util import global_function_or_identity
+from oneflow.python.nn.modules.slice import LogicalSliceAssign
 import oneflow.python.framework.runtime_mode as rt_mode
 import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
@@ -348,7 +349,7 @@ class Tensor:
     @_auto_determine
     def __getitem__(self, key):
         start, stop, step, _ = self._get_slice_obj(key)
-        res = flow.tmp.slice(self, list(zip(start, stop, step)))
+        res = flow.experimental.slice(self, list(zip(start, stop, step)))
         return res
 
     @_auto_determine
@@ -359,25 +360,8 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
 
-        # BUG:F0519 15:39:02.922506 3976370 tensor_impl.h:232] UNIMPLEMENTED
-        # @global_function_or_identity()
-        # def job():
-        #     with self._placement_scope():
-        #         op = (
-        #             flow.builtin_op("logical_slice_assign")
-        #             .Input("ref")
-        #             .Input("value")
-        #             .Attr("start", start)
-        #             .Attr("stop", stop)
-        #             .Attr("step", step)
-        #             .Build()
-        #         )
-        #         op(self, value)
-
-        # job()
-        # return self
-
-        flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
+        LogicalSliceAssign(start, stop, step)(self, value)
+        # flow.tmp.logical_slice_assign(self, value, list(zip(start, stop, step)))
         return self
 
     def __str__(self):
