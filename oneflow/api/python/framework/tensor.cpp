@@ -130,11 +130,19 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
 }
 
+std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
+  return tensor.device().GetPtrOrThrow();
+}
+
+std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
+  return tensor.parallel_desc().GetPtrOrThrow();
+}
+
 }  // namespace
 
 void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
   using T = MirroredTensor;
-  api->def_property_readonly("device", &T::device);
+  api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
@@ -150,7 +158,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
   using T = ConsistentTensor;
-  api->def_property_readonly("placement", &T::parallel_desc);
+  api->def_property_readonly("placement", &TensorGetParallelDesc);
 }
 
 template<typename T>
