@@ -239,6 +239,22 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestHardswishModule(flow.unittest.TestCase):
+    def test_hardswish(test_case):
+        m = flow.nn.Hardswish()
+        arr = np.random.randn(2, 3, 4, 5)
+        f = arr + 3
+        relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
+        np_out = arr * relu6 / 6
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestHardtanhModule(flow.unittest.TestCase):
     def test_hardtanh(test_case):
         m = flow.nn.Hardtanh()
@@ -261,14 +277,13 @@ class TestHardtanhModule(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestHardswishModule(flow.unittest.TestCase):
-    def test_hardswish(test_case):
-        m = flow.nn.Hardswish()
+class TestLeakyReLUModule(flow.unittest.TestCase):
+    def test_leaky_relu(test_case):
+        negative_slope = 0.2
+        m = flow.nn.LeakyReLU(negative_slope=negative_slope)
         arr = np.random.randn(2, 3, 4, 5)
 
-        f = arr + 3
-        relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
-        np_out = arr * relu6 / 6
+        np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
