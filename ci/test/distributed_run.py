@@ -119,7 +119,7 @@ async def launch_remote_container(
         await spawn_shell_and_check(
             f"ssh {remote_host} docker exec {container_name} python3 -m pip install {workspace_dir}/{whl_basename}"
         )
-    await spawn_shell_and_check(
+    await spawn_shell(
         f"ssh {remote_host} docker exec {container_name} python3 -m oneflow --doctor"
     )
 
@@ -208,9 +208,8 @@ class DockerAgent:
     def __enter__(self):
         return self
 
-    def run_bash_script_async(self, bash_script=None):
+    def run_bash_script_async(self, bash_script=None, cmd=None):
         remote_hosts_str = ",".join(self.remote_hosts)
-        assert os.path.exists(bash_script)
         ctrl_port = find_free_port()
         data_port = find_free_port()
         exports = f"""
@@ -227,10 +226,21 @@ export ONEFLOW_TEST_WORKER_AGENT_AUTHKEY={agent_authkey}
             exports += f"python3 -m pip install {self.oneflow_wheel_path}"
         if self.oneflow_build_path:
             exports += f"export PYTHONPATH={self.oneflow_build_path}/python_scripts:$PYTHONPATH\n"
-        bash_cmd = f"""set -ex
-    {exports}
-    bash {bash_script}
-    """
+        bash_cmd = None
+        if bash_script:
+            assert os.path.exists(bash_script)
+            bash_cmd = f"""set -ex
+{exports}
+bash {bash_script}
+"""
+        elif cmd:
+            bash_cmd = f"""set -ex
+{exports}
+{cmd}
+"""
+        else:
+            raise ValueError("not impl")
+        assert bash_cmd
 
         def get_docker_cmd(f, cmd):
             f_name = f.name
@@ -369,6 +379,7 @@ if __name__ == "__main__":
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
     parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
+    parser.add_argument("--cmd", type=str, required=False, default=None)
     parser.add_argument(
         "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
     )
@@ -376,6 +387,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
+    assert bool(args.bash_script) != bool(args.cmd)
     oneflow_wheel_path = args.oneflow_wheel_path
     if oneflow_wheel_path and os.path.isdir(oneflow_wheel_path):
         whl_paths = [
@@ -477,7 +489,6 @@ if __name__ == "__main__":
     else:
         img_tag = args.custom_img_tag
     assert img_tag
-    assert args.bash_script
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
     container_name = (
@@ -569,5 +580,8 @@ if __name__ == "__main__":
         img_tag=img_tag,
         oneflow_test_tmp_dir=args.oneflow_test_tmp_dir,
     ) as agent:
-        agent.run_bash_script_async(bash_script=args.bash_script,)
+        if args.bash_script:
+            agent.run_bash_script_async(bash_script=args.bash_script,)
+        elif args.cmd:
+            agent.run_bash_script_async(cmd=args.cmd,)
         agent.block()
