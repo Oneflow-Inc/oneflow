@@ -267,7 +267,7 @@ class MomentumUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* momentum = ctx->Tensor4ArgNameAndIndex("momentum", 0);
     const float* learning_rate_ptr = nullptr;
-    if (ctx->has_input("learning_rate", 0)) {
+    if (has_learning_rate_ptr_) {
       const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
       learning_rate_ptr = learning_rate->dptr<float>();
     }
