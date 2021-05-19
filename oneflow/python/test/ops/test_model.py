@@ -52,9 +52,7 @@ class TestEagerModel(flow.unittest.TestCase):
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
                 print(fmt_str.format(step_idx, "validation output:", outputs))
 
-        val_exe_config = flow.ExecutionConfig()
         val_config = flow.model.ValidationConfig()
-        val_config.config_execution(val_exe_config)
         val_config.config_data(ValData())
         val_config.config_step_interval(1)
 

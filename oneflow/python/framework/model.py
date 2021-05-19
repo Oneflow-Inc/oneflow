@@ -97,7 +97,7 @@ class NumpyDataModule(DataModule):
 class TrainingConfig:
     def __init__(self):
         super().__init__()
-        self.exe_cfg = None
+        self.exe_cfg = ExecutionConfig()
         self.data = None
         self.error_msg = ""
 
@@ -110,9 +110,6 @@ class TrainingConfig:
     def check_valid(self):
         is_valid = True
         self.error_msg = ""
-        if self.exe_cfg is None:
-            self.error_msg += "model.TrainingConfig exe_cfg is None;"
-            is_valid = False
         if not isinstance(self.exe_cfg, ExecutionConfig):
             self.error_msg += "model.TrainingConfig exe_cfg is not ExecutionConfig;"
             is_valid = False
@@ -129,7 +126,7 @@ class TrainingConfig:
 class ValidationConfig:
     def __init__(self):
         super().__init__()
-        self.exe_cfg = None
+        self.exe_cfg = ExecutionConfig()
         self.data = None
         self.step_interval = 10
         self.error_msg = ""
@@ -146,20 +143,14 @@ class ValidationConfig:
     def check_valid(self):
         is_valid = True
         self.error_msg = ""
-        if self.exe_cfg is None:
-            self.error_msg += "model.ValidationConfig exe_cfg is None;"
-            is_valid = False
-        if not isinstance(self.exe_cfg, ExecutionConfig):
-            self.error_msg += "model.ValidationConfig exe_cfg is not ExecutionConfig;"
-            is_valid = False
         if self.data is None:
             self.error_msg += "model.ValidationConfig data is None;"
             is_valid = False
         if not isinstance(self.data, DataModule):
             self.error_msg += "model.ValidationConfig data is not DataModule;"
             is_valid = False
-        if self.step_interval <= 0:
-            self.error_msg += "model.ValidationConfig step_interval is <= 0;"
+        if self.step_interval <= 0 or not isinstance(self.step_interval, int):
+            self.error_msg += "model.ValidationConfig step_interval is <= 0 or is not int;"
             is_valid = False
         return is_valid
 
@@ -185,9 +176,10 @@ class CheckpointConfig(object):
         assert dirpath is not None, "dirpath should not be None"
         self.save_step_interval = step_interval
         assert step_interval > 0, "step_interval should not <= 0"
+        assert isinstance(step_interval, int), "step_interval should be int"
 
     def check_valid(self):
-        # Reserved interface for future use
+        # Configs has already been checked
         is_valid = True
         self.error_msg = ""
         return is_valid
@@ -302,36 +294,39 @@ class Model(
         if self._train_model.is_valid:
             sub_models.append(self._train_model)
         else:
-            print(
-                self._train_model.error_msg,
-                " {}'s fit() will not do training.".format(self.__class__.__name__),
-            )
+            if training_config is not None:
+                print(
+                    self._train_model.error_msg,
+                    "{}'s fit() will not do training.".format(self.__class__.__name__),
+                )
 
         self._val_model = (
             ValidateModel(validation_config, self, callbacks)
             if self._is_deprecated_function_style
-            else OOPStyleValidateModel(validation_config, self, callbacks)
+            else ValidateModelOOPStyle(validation_config, self, callbacks)
         )
         if self._val_model.is_valid:
             sub_models.append(self._val_model)
         else:
-            print(
-                self._val_model.error_msg,
-                " {}'s fit() will not do validation.".format(self.__class__.__name__),
-            )
+            if validation_config is not None:
+                print(
+                    self._val_model.error_msg,
+                    "{}'s fit() will not do validation.".format(self.__class__.__name__),
+                )
 
         if len(sub_models) == 0:
-            print(" {}'s fit() will do nothing.".format(self.__class__.__name__))
+            print("{}'s fit() will do nothing because there has no valid configuration.".format(self.__class__.__name__))
             return sub_models
 
         self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
         if self._checkpoint_model.is_valid:
             sub_models.append(self._checkpoint_model)
         else:
-            print(
-                self._checkpoint_model.error_msg,
-                " {}'s fit() will not do checkpoint.".format(self.__class__.__name__),
-            )
+            if checkpoint_config is not None:
+                print(
+                    self._checkpoint_model.error_msg,
+                    "{}'s fit() will not do checkpoint.".format(self.__class__.__name__),
+                )
 
         return sub_models
 
@@ -345,7 +340,7 @@ class SubModel(ABC):
 
         self.name = name
         self.is_valid = True
-        self.error_msg = self._model.__class__.__name__ + " " + self.name + " "
+        self.error_msg = self._model.__class__.__name__ + " " + self.name + " error message: "
 
         if not self._get_and_check_cfg():
             self.is_valid = False
@@ -400,7 +395,7 @@ class TrainModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("train_model", cfg, model, callbacks)
+        super().__init__("training", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -535,7 +530,7 @@ class ValidateModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("validate_model", cfg, model, callbacks)
+        super().__init__("validation", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -609,7 +604,7 @@ class CheckpointModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("checkpoint_model", cfg, model, callbacks)
+        super().__init__("checkpointing", cfg, model, callbacks)
 
     def load(self):
         assert self.is_valid
@@ -639,14 +634,14 @@ class CheckpointModel(SubModel):
         SaveVarDict(path=dirpath)
 
 
-class OOPStyleValidateModel(SubModel):
+class ValidateModelOOPStyle(SubModel):
     def __init__(
         self,
         cfg: ValidationConfig = None,
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("validate_model", cfg, model, callbacks)
+        super().__init__("validation", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
