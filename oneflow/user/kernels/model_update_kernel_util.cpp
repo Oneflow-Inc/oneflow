@@ -21,20 +21,21 @@ namespace oneflow {
 template<typename T, typename G>
 struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model);
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model);
 };
 
 template<typename T, typename G>
-void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(DeviceCtx* ctx, int64_t n, T scale,
-                                                         float l1, float l2, float weight_decay,
-                                                         float learning_rate, const T* scale_by_ptr,
-                                                         const int64_t* skip_if,
-                                                         const G* model_diff, T* model) {
+void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
-    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay, learning_rate);
+    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
+                             learning_rate_val);
   }
 }
 
@@ -79,20 +80,22 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_INDEXED_SLICES_SGD_UPDATE_KERNEL_UTIL_
 template<typename T, typename G>
 struct MomentumUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, float learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
+                     float weight_decay, float learning_rate_val, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* momentum);
 };
 
 template<typename T, typename G>
 void MomentumUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
-    float learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-    T* model, T* momentum) {
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
     MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, scale, l1, l2, beta,
-                                  weight_decay, learning_rate);
+                                  weight_decay, learning_rate_val);
   }
 }
 

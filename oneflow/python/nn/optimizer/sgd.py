@@ -119,7 +119,7 @@ class SGD(Optimizer):
                         continue
                     if param_group.options["momentum"] == 0.0:
                         scale = param_group.options["scale"]
-                        self._sgd(param, param.grad, lr=lr, scale=scale)
+                        self._sgd(param, param.grad, learning_rate_val=lr, scale=scale)
                     else:
                         momentum_buf = self._state[param]["momentum_buf"]
                         scale = param_group.options["scale"]
@@ -128,7 +128,7 @@ class SGD(Optimizer):
                             param,
                             param.grad,
                             momentum_buf,
-                            lr=lr,
+                            learning_rate_val=lr,
                             scale=scale,
                             beta=beta,
                         )

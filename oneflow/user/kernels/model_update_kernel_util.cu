@@ -23,12 +23,15 @@ namespace {
 
 template<typename T, typename G>
 __global__ void SGDUpdateGpu(int64_t n, T scale, float l1, float l2, float weight_decay,
-                             float learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                             const G* model_diff, T* model) {
+                             float learning_rate_val, const float* learning_rate,
+                             const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
+                             T* model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
-    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay, learning_rate);
+    SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
+                             learning_rate_val);
   }
 }
 
@@ -57,33 +60,34 @@ __global__ void IndexedSlicesSGDUpdateGpu(float weight_decay, const IDX feature_
 template<typename T, typename G>
 struct SGDUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model);
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model);
 };
 
 template<typename T, typename G>
-void SGDUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(DeviceCtx* ctx, int64_t n, T scale,
-                                                         float l1, float l2, float weight_decay,
-                                                         float learning_rate, const T* scale_by_ptr,
-                                                         const int64_t* skip_if,
-                                                         const G* model_diff, T* model) {
+void SGDUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model) {
   SGDUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, scale, l1, l2, weight_decay, learning_rate, scale_by_ptr, skip_if, model_diff, model);
+      n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
+      model_diff, model);
 }
 
 template<typename T>
 struct SGDUpdateKernelUtil<DeviceType::kGPU, T, float16> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const float16* model_diff, T* model);
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const float16* model_diff, T* model);
 };
 
 template<typename T>
 void SGDUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
-    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay, float learning_rate,
-    const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff, T* model) {
+    DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float16* model_diff, T* model) {
   SGDUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
-      ctx, n, scale, l1, l2, weight_decay, learning_rate, scale_by_ptr, skip_if,
+      ctx, n, scale, l1, l2, weight_decay, learning_rate_val, learning_rate, scale_by_ptr, skip_if,
       reinterpret_cast<const half*>(model_diff), model);
 }
 
@@ -122,14 +126,16 @@ namespace {
 
 template<typename T, typename G>
 __global__ void MomentumUpdateGpu(int64_t n, T scale, float l1, float l2, float beta,
-                                  float weight_decay, float learning_rate, const T* scale_by_ptr,
+                                  float weight_decay, float learning_rate_val,
+                                  const float* learning_rate, const T* scale_by_ptr,
                                   const int64_t* skip_if, const G* model_diff, T* model,
                                   T* momentum) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
+  if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
     MomentumUpdateFunctor<T, G>()(model_diff + i, model + i, momentum + i, scale, l1, l2, beta,
-                                  weight_decay, learning_rate);
+                                  weight_decay, learning_rate_val);
   }
 }
 
@@ -158,36 +164,38 @@ __global__ void IndexedSlicesMomentumUpdateGpu(T beta, float weight_decay, int64
 template<typename T, typename G>
 struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, G> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, float learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
+                     float weight_decay, float learning_rate_val, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* momentum);
 };
 
 template<typename T, typename G>
 void MomentumUpdateKernelUtil<DeviceType::kGPU, T, G>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
-    float learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-    T* model, T* momentum) {
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* model, T* momentum) {
   MomentumUpdateGpu<T, G>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, scale, l1, l2, beta, weight_decay, learning_rate, scale_by_ptr, skip_if, model_diff,
-          model, momentum);
+          n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
+          skip_if, model_diff, model, momentum);
 }
 
 template<typename T>
 struct MomentumUpdateKernelUtil<DeviceType::kGPU, T, float16> {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, float learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const float16* model_diff, T* model, T* momentum);
+                     float weight_decay, float learning_rate_val, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
+                     T* model, T* momentum);
 };
 
 template<typename T>
 void MomentumUpdateKernelUtil<DeviceType::kGPU, T, float16>::Update(
     DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta, float weight_decay,
-    float learning_rate, const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
-    T* model, T* momentum) {
+    float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+    const int64_t* skip_if, const float16* model_diff, T* model, T* momentum) {
   MomentumUpdateKernelUtil<DeviceType::kGPU, T, half>::Update(
-      ctx, n, scale, l1, l2, beta, weight_decay, learning_rate, scale_by_ptr, skip_if,
-      reinterpret_cast<const half*>(model_diff), model, momentum);
+      ctx, n, scale, l1, l2, beta, weight_decay, learning_rate_val, learning_rate, scale_by_ptr,
+      skip_if, reinterpret_cast<const half*>(model_diff), model, momentum);
 }
 
 template struct MomentumUpdateKernelUtil<DeviceType::kGPU, double, double>;

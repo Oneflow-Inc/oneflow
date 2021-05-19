@@ -40,13 +40,17 @@ Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const Da
 }
 
 Maybe<void> CheckLearningRateShape(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-  if (learning_rate != nullptr) { JUST(CheckScalarShape(learning_rate)); }
+  if (ctx->has_input("learning_rate", 0)) {
+    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+    JUST(CheckScalarShape(learning_rate));
+  }
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-  if (learning_rate != nullptr) { JUST(CheckScalarDataType(learning_rate, DataType::kFloat)); }
+  if (ctx->has_input("learning_rate", 0)) {
+    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+    JUST(CheckScalarDataType(learning_rate, DataType::kFloat));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -361,7 +365,7 @@ REGISTER_USER_OP("sgd_update")
     .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
-    .Attr<float>("lr", 0.0)
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -425,7 +429,7 @@ REGISTER_USER_OP("momentum_update")
     .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
-    .Attr<float>("lr", 0.0)
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
