@@ -886,7 +886,7 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
     const std::shared_ptr<VmLocalDepObject> compute_local_dep_object, const std::string& modifier,
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
-      ObjectMsgPtr<vm::InstructionMsg>::New("SoftSyncStream");
+      ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
   *instruction->mutable_phy_instr_operand() =
       std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
