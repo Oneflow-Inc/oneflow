@@ -646,10 +646,11 @@ void ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
 }
 
 void ConvertUseropInputs(Operation* op, ::oneflow::UserOpConf* user_conf, std::string& err_str) {
-  const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int input_idx = 0;
-  if (auto keys = op->getAttrOfType<ArrayAttr>("input_lbn_segment_keys")) {
-    auto sizes = op->getAttrOfType<ArrayAttr>("input_lbn_segment_sizes");
+  if (auto keys = user_op_adaptor.input_lbn_segment_keys()) {
+    auto sizes = user_op_adaptor.input_lbn_segment_sizes();
     if (keys.size() != sizes.size()) {
       err_str = "fail to convert op inputs, input_lbn_segment_keys != "
                 "input_lbn_segment_sizes, name: "
@@ -684,25 +685,24 @@ void ConvertUseropInputs(Operation* op, ::oneflow::UserOpConf* user_conf, std::s
 }
 
 void ConvertUseropOutputs(Operation* op, ::oneflow::UserOpConf* user_conf, std::string& err_str) {
+  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
   int output_key_idx = -1;
   int segment_offset = 0;
   for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
       output_key_idx += 1;
-      int size = op->getAttrOfType<ArrayAttr>("output_lbn_segment_sizes")[output_key_idx]
+      int size = user_op_adaptor.output_lbn_segment_sizes()[output_key_idx]
                      .dyn_cast<IntegerAttr>()
                      .getInt();
       segment_offset += size;
     }
-    std::string output_key = op->getAttrOfType<ArrayAttr>("output_lbn_segment_keys")[output_key_idx]
+    std::string output_key = user_op_adaptor.output_lbn_segment_keys()[output_key_idx]
                                  .dyn_cast<StringAttr>()
                                  .getValue()
                                  .str();
-    std::string output_lbn = op->getAttrOfType<ArrayAttr>("output_lbns")[result_idx]
-                                 .dyn_cast<StringAttr>()
-                                 .getValue()
-                                 .str();
+    std::string output_lbn =
+        user_op_adaptor.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str();
     *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
   }
 }
@@ -735,11 +735,12 @@ LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
 
 void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& op_conf,
                                        std::string& err_str) {
+  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
   auto user_conf = op_conf.mutable_user_conf();
   const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.first;
-
+    // mlir only attrs
     if (id.strref().equals("device_name") || id.strref().equals("hierarchy")
         || id.strref().contains("input_lbn_segment_keys")
         || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
@@ -749,100 +750,92 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
         || id.strref().contains("result_segment_sizes")) {
       continue;
     }
-
     // convert op conf attributes
-    if (id.strref().equals("op_name")) {
+    else if (id.strref().equals("op_name")) {
       op_conf.set_name(op_name);
-      continue;
-    }
-    if (id.strref().equals("op_type_name")) {
+    } else if (id.strref().equals("op_type_name")) {
       user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
-      continue;
+    } else if (id.strref().equals("device_tag")) {
+      op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
+    } else if (id.strref().equals("scope_symbol_id")) {
+      op_conf.set_scope_symbol_id(user_op_adaptor.scope_symbol_id().getInt());
     }
-    if (id.strref().equals("device_tag")) {
-      op_conf.set_device_tag(op->getAttrOfType<StringAttr>("device_tag").getValue().str());
-      continue;
-    }
-    if (id.strref().equals("scope_symbol_id")) {
-      op_conf.set_scope_symbol_id(op->getAttrOfType<IntegerAttr>("scope_symbol_id").getInt());
-      continue;
-    }  // convert op conf attributes
-
     // convert user conf attributes
-    auto attr_name = id.str();
-    Attribute attr = id_attr.second;
-    auto user_attr = ::oneflow::AttrValue();
-    auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
-    ::oneflow::AttrType attr_type = job_wrapper_.QueryAttrType(op_type_name, attr_name);
-    if (attr_type == ::oneflow::kAtInt32) {
-      user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
-    } else if (attr_type == ::oneflow::kAtInt64) {
-      user_attr.set_at_int64(attr.dyn_cast<IntegerAttr>().getSInt());
-    } else if (attr_type == ::oneflow::kAtBool) {
-      user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
-    } else if (attr_type == ::oneflow::kAtFloat) {
-      user_attr.set_at_float(attr.dyn_cast<FloatAttr>().getValue().convertToFloat());
-    } else if (attr_type == ::oneflow::kAtDouble) {
-      user_attr.set_at_double(attr.dyn_cast<FloatAttr>().getValue().convertToDouble());
-    } else if (attr_type == ::oneflow::kAtString) {
-      user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
-    } else if (attr_type == ::oneflow::kAtShape) {
-      WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
-    } else if (attr_type == ::oneflow::kAtDataType) {
-      ::oneflow::DataType dt;
-      if (succeeded(ConvertDT(attr, dt))) {
-        user_attr.set_at_data_type(dt);
-      } else {
-        err_str = "fail to convert op attr to data type, key: " + id.str();
-        return;
-      }
-    } else if (attr_type == ::oneflow::kAtListInt32) {
-      user_attr.mutable_at_list_int32();
-      auto ref = attr.dyn_cast<ArrayAttr>();
-      for (auto v : ref.getValue()) {
-        user_attr.mutable_at_list_int32()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
-      }
-    } else if (attr_type == ::oneflow::kAtListInt64) {
-      user_attr.mutable_at_list_int64();
-      auto ref = attr.dyn_cast<ArrayAttr>();
-      for (auto v : ref.getValue()) {
-        user_attr.mutable_at_list_int64()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
-      }
-    } else if (attr_type == ::oneflow::kAtListFloat) {
-      user_attr.mutable_at_list_float();
-      auto ref = attr.dyn_cast<ArrayAttr>();
-      for (auto v : ref.getValue()) {
-        user_attr.mutable_at_list_float()->add_val(
-            v.dyn_cast<FloatAttr>().getValue().convertToFloat());
-      }
-    } else if (attr_type == ::oneflow::kAtListDataType) {
-      for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+    else {
+      auto attr_name = id.str();
+      Attribute attr = id_attr.second;
+      auto user_attr = ::oneflow::AttrValue();
+      auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
+      ::oneflow::AttrType attr_type = job_wrapper_.QueryAttrType(op_type_name, attr_name);
+      if (attr_type == ::oneflow::kAtInt32) {
+        user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
+      } else if (attr_type == ::oneflow::kAtInt64) {
+        user_attr.set_at_int64(attr.dyn_cast<IntegerAttr>().getSInt());
+      } else if (attr_type == ::oneflow::kAtBool) {
+        user_attr.set_at_bool(attr.dyn_cast<BoolAttr>().getValue());
+      } else if (attr_type == ::oneflow::kAtFloat) {
+        user_attr.set_at_float(attr.dyn_cast<FloatAttr>().getValue().convertToFloat());
+      } else if (attr_type == ::oneflow::kAtDouble) {
+        user_attr.set_at_double(attr.dyn_cast<FloatAttr>().getValue().convertToDouble());
+      } else if (attr_type == ::oneflow::kAtString) {
+        user_attr.set_at_string(attr.dyn_cast<StringAttr>().getValue().str());
+      } else if (attr_type == ::oneflow::kAtShape) {
+        WriteDenseIntElementsToShape(attr, user_attr.mutable_at_shape());
+      } else if (attr_type == ::oneflow::kAtDataType) {
         ::oneflow::DataType dt;
-        if (succeeded(ConvertDT(v, dt))) {
-          user_attr.mutable_at_list_data_type()->add_val(dt);
+        if (succeeded(ConvertDT(attr, dt))) {
+          user_attr.set_at_data_type(dt);
         } else {
           err_str = "fail to convert op attr to data type, key: " + id.str();
           return;
         }
-      }
-    } else if (attr_type == ::oneflow::kAtListShape) {
-      for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
-        ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
-        for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
-          assert(int_v.isSignedIntN(64));
-          shape_ptr->mutable_dim()->Add(int_v.getSExtValue());
+      } else if (attr_type == ::oneflow::kAtListInt32) {
+        user_attr.mutable_at_list_int32();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_int32()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
         }
+      } else if (attr_type == ::oneflow::kAtListInt64) {
+        user_attr.mutable_at_list_int64();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_int64()->add_val(v.dyn_cast<IntegerAttr>().getSInt());
+        }
+      } else if (attr_type == ::oneflow::kAtListFloat) {
+        user_attr.mutable_at_list_float();
+        auto ref = attr.dyn_cast<ArrayAttr>();
+        for (auto v : ref.getValue()) {
+          user_attr.mutable_at_list_float()->add_val(
+              v.dyn_cast<FloatAttr>().getValue().convertToFloat());
+        }
+      } else if (attr_type == ::oneflow::kAtListDataType) {
+        for (auto v : attr.dyn_cast<ArrayAttr>().getValue()) {
+          ::oneflow::DataType dt;
+          if (succeeded(ConvertDT(v, dt))) {
+            user_attr.mutable_at_list_data_type()->add_val(dt);
+          } else {
+            err_str = "fail to convert op attr to data type, key: " + id.str();
+            return;
+          }
+        }
+      } else if (attr_type == ::oneflow::kAtListShape) {
+        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+          ::oneflow::ShapeProto* shape_ptr = user_attr.mutable_at_list_shape()->add_val();
+          for (auto int_v : s.dyn_cast<DenseIntElementsAttr>().getIntValues()) {
+            assert(int_v.isSignedIntN(64));
+            shape_ptr->mutable_dim()->Add(int_v.getSExtValue());
+          }
+        }
+      } else if (attr_type == ::oneflow::kAtListString) {
+        for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
+          user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
+        }
+      } else {
+        err_str = "fail to convert op attr of name: " + attr_name;
+        return;
       }
-    } else if (attr_type == ::oneflow::kAtListString) {
-      for (auto s : attr.dyn_cast<ArrayAttr>().getValue()) {
-        user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
-      }
-    } else {
-      err_str = "fail to convert op attr of name: " + attr_name;
-      return;
-    }  // convert user conf attributes
-
-    (*user_conf->mutable_attr())[id.str()] = user_attr;
+      (*user_conf->mutable_attr())[id.str()] = user_attr;
+    }
   }
 }
 
@@ -872,8 +865,9 @@ LogicalResult Importer::TryToUpdateJob() {
       // TODO: also generate blob_placement_group
     }
     if (is_user_op) {
+      oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
       ::oneflow::OperatorConf op_conf;
-      const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+      const std::string op_name = user_op_adaptor.op_name().getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
       ConvertUseropInputs(op, user_conf, err_str);
       ConvertUseropOutputs(op, user_conf, err_str);
