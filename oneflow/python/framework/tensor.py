@@ -605,6 +605,15 @@ class Tensor:
         return self._init_by_initializer_conf(initializer_conf)
 
     @_auto_determine
+    def zeros_(self):
+        internal_tensor = self._local_or_consistent_tensor
+        if internal_tensor.is_lazy:
+            TODO()
+        if internal_tensor.is_consistent:
+            TODO()
+        internal_tensor.zeros_()
+
+    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
