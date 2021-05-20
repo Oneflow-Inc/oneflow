@@ -37,6 +37,21 @@ class TestReLUModule(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestReLU6Module(flow.unittest.TestCase):
+    def test_relu6(test_case):
+        m = flow.nn.ReLU6()
+        arr = np.random.randn(2, 3, 4, 5)
+
+        np_out = np.minimum(np.maximum(0, arr), 6.0)
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTanhModule(flow.unittest.TestCase):
     def _test_body_tanh(test_case, input_arr):
         x = flow.Tensor(input_arr)
@@ -82,6 +97,28 @@ class TestTanhModule(flow.unittest.TestCase):
         z = np.tanh(input_arr)
 
         test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestELUModule(flow.unittest.TestCase):
+    def test_elu(test_case):
+        m = flow.nn.ELU()
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(arr > 0, arr, 1.0 * (np.exp(arr) - 1))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-4, atol=1e-4))
+
+    def test_elu_alpha(test_case):
+        m = flow.nn.ELU(alpha=1.2)
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(arr > 0, arr, 1.2 * (np.exp(arr) - 1))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-4, atol=1e-4))
 
 
 @unittest.skipIf(

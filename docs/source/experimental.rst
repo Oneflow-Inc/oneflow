@@ -4,10 +4,12 @@ Experimental features
 ----------------------------------
 .. currentmodule:: oneflow.experimental
 .. autofunction:: oneflow.experimental.nn.ReLU
+.. autofunction:: oneflow.experimental.nn.ReLU6
 .. autofunction:: oneflow.experimental.nn.LeakyReLU
 .. autofunction:: oneflow.experimental.nn.Tanh
 .. autofunction:: oneflow.experimental.tanh
 .. autofunction:: oneflow.experimental.Tensor.tanh
+.. autofunction:: oneflow.experimental.nn.ELU
 .. autofunction:: oneflow.experimental.nn.GELU
 .. autofunction:: oneflow.experimental.gelu
 .. autofunction:: oneflow.experimental.Tensor.gelu
@@ -119,3 +121,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Hardswish
 .. autofunction:: oneflow.experimental.nn.PReLU
 .. autofunction:: oneflow.experimental.nn.Hardtanh
+.. autofunction:: oneflow.experimental.nn.Upsample
+.. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
+.. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
