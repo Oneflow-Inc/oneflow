@@ -656,6 +656,54 @@ class TestLogSoftmax(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestLogSigmoidModule(flow.unittest.TestCase):
+    def test_logsigmoid(test_case):
+        m = flow.nn.LogSigmoid()
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestSoftplusModule(flow.unittest.TestCase):
+    def test_softplus(test_case):
+        m = flow.nn.Softplus()
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+    def test_softplus_beta(test_case):
+        m = flow.nn.Softplus(beta=1.11)
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(
+            arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+        )
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+    def test_softplus_threshold(test_case):
+        m = flow.nn.Softplus(beta=1.11, threshold=1.55)
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(
+            arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+        )
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestHardswishModule(flow.unittest.TestCase):
     def test_hardswish(test_case):
         m = flow.nn.Hardswish()
