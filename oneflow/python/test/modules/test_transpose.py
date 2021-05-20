@@ -62,6 +62,20 @@ def _test_transpose_backward(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
 
 
+def _test_transpose_backward_v2(test_case, device):
+    x = flow.Tensor(
+        np.random.randn(2, 3, 4, 5),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.transpose(x, 3, 1)
+    y.retain_grad()
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -74,6 +88,7 @@ class TestTranspose(flow.unittest.TestCase):
             _test_tensor_transpose,
             _test_tranpose_negative_dim,
             _test_transpose_backward,
+            _test_transpose_backward_v2,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
