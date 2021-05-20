@@ -69,7 +69,7 @@ class ReLU(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
 
@@ -114,7 +114,7 @@ class ReLU6(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self._op = (
             flow.builtin_op("hardtanh")
@@ -243,7 +243,6 @@ class ELU(Module):
 
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
-        assert inplace == False, f"ELU not support inplace equal true now!"
         self._op = (
             flow.builtin_op("elu")
             .Input("in")
@@ -448,7 +447,6 @@ class Hardsigmoid(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        assert inplace == False, f"Hardsigmoid not support inplace equal true now!"
         self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
@@ -639,7 +637,6 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        assert inplace == False, f"Hardswish no support inplace equal true now!"
         self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
 
     def forward(self, x):
@@ -710,7 +707,6 @@ class Hardtanh(Module):
                 "keyword argument max_value is deprecated and rename to max_val"
             )
             max_val = max_value
-        assert inplace == False, f"Hardtanh not support inplace equal true now!"
         self._op = (
             flow.builtin_op("hardtanh")
             .Input("in")
@@ -754,7 +750,6 @@ class LeakyReLU(Module):
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
-        assert inplace == False, f"LeakyReLU not support inplace mode now"
         self._op = (
             flow.builtin_op("leaky_relu")
             .Input("x")
