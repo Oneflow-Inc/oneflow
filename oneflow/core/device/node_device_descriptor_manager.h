@@ -32,6 +32,7 @@ class NodeDeviceDescriptorManager {
 
   void DumpSummary(const std::string& path) const;
 
+ private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
