@@ -37,6 +37,21 @@ class TestReLUModule(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestReLU6Module(flow.unittest.TestCase):
+    def test_relu6(test_case):
+        m = flow.nn.ReLU6()
+        arr = np.random.randn(2, 3, 4, 5)
+
+        np_out = np.minimum(np.maximum(0, arr), 6.0)
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestTanhModule(flow.unittest.TestCase):
     def _test_body_tanh(test_case, input_arr):
         x = flow.Tensor(input_arr)
@@ -82,6 +97,28 @@ class TestTanhModule(flow.unittest.TestCase):
         z = np.tanh(input_arr)
 
         test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestELUModule(flow.unittest.TestCase):
+    def test_elu(test_case):
+        m = flow.nn.ELU()
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(arr > 0, arr, 1.0 * (np.exp(arr) - 1))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-4, atol=1e-4))
+
+    def test_elu_alpha(test_case):
+        m = flow.nn.ELU(alpha=1.2)
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.where(arr > 0, arr, 1.2 * (np.exp(arr) - 1))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-4, atol=1e-4))
 
 
 @unittest.skipIf(
@@ -152,6 +189,20 @@ class TestSigmoidModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
         test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestHardsigmoidModule(flow.unittest.TestCase):
+    def test_hardsigmoid(test_case):
+        m = flow.nn.Hardsigmoid()
+        arr = np.random.randn(2, 3, 4, 5)
+        np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
 
 @unittest.skipIf(
@@ -239,6 +290,22 @@ class TestLogSoftmaxModule(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestHardswishModule(flow.unittest.TestCase):
+    def test_hardswish(test_case):
+        m = flow.nn.Hardswish()
+        arr = np.random.randn(2, 3, 4, 5)
+        f = arr + 3
+        relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
+        np_out = arr * relu6 / 6
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestHardtanhModule(flow.unittest.TestCase):
     def test_hardtanh(test_case):
         m = flow.nn.Hardtanh()
@@ -252,6 +319,22 @@ class TestHardtanhModule(flow.unittest.TestCase):
         m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
         arr = np.random.randn(2, 3, 4, 5)
         np_out = np.maximum(-2.0, np.minimum(2.3, arr))
+        x = flow.Tensor(arr)
+        of_out = m(x)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLeakyReLUModule(flow.unittest.TestCase):
+    def test_leaky_relu(test_case):
+        negative_slope = 0.2
+        m = flow.nn.LeakyReLU(negative_slope=negative_slope)
+        arr = np.random.randn(2, 3, 4, 5)
+
+        np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
