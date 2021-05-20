@@ -668,7 +668,6 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* mean_square = ctx->Tensor4ArgNameAndIndex("mean_square", 0);
@@ -679,6 +678,12 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto centered = ctx->Attr<bool>("centered");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -699,8 +704,9 @@ class RmsPropUpdateKernel final : public user_op::OpKernel {
     }
     RmsPropUpdateKernelUtil<device_type, T, G>::Update(
         ctx->device_ctx(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, centered,
-        epsilon, weight_decay, decay_rate, learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr,
-        model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(), mean_gradient_ptr);
+        epsilon, weight_decay, decay_rate, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), mean_square->mut_dptr<T>(),
+        mean_gradient_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
