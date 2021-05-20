@@ -347,6 +347,16 @@ async def fix_and_sync_libs(oneflow_internal_path=None, remote_hosts=None):
     )
 
 
+async def remove_containers_by_name(remote_hosts=None, container_name=None):
+    rm_cmd = f"docker rm -f {container_name}"
+    assert container_name
+    assert remote_hosts
+    await asyncio.gather(
+        *[spawn_shell(f"ssh {remote_host} {rm_cmd}") for remote_host in remote_hosts],
+        spawn_shell(rm_cmd),
+    )
+
+
 def get_remote_hosts(args):
     remote_hosts = None
     if len(args.remote_host) == 1:
@@ -413,6 +423,11 @@ if __name__ == "__main__":
         os.path.expanduser("~"), "distributed_run_workspace", sub_dir
     )
     print("workspace_dir", workspace_dir)
+    container_name = (
+        getpass.getuser()
+        + "-distributed-run-main-node-at-"
+        + this_host.replace(".", "-")
+    )
     loop = asyncio.get_event_loop()
     loop.run_until_complete(
         asyncio.gather(
@@ -422,7 +437,10 @@ if __name__ == "__main__":
                 )
                 for remote_host in remote_hosts
             ]
-        )
+        ),
+        remove_containers_by_name(
+            remote_hosts=remote_hosts, container_name=container_name
+        ),
     )
     if args.oneflow_build_path:
         so_paths = [
@@ -496,11 +514,6 @@ if __name__ == "__main__":
     assert img_tag
     agent_port = find_free_port()
     agent_authkey = str(uuid.uuid4())
-    container_name = (
-        getpass.getuser()
-        + "-distributed-run-main-node-at-"
-        + this_host.replace(".", "-")
-    )
 
     def exit_handler():
         print(
@@ -535,6 +548,7 @@ if __name__ == "__main__":
         )
         assert workspace_dir
         if args.debug == False:
+            print("removing docker workspace_dir:", workspace_dir)
             loop.run_until_complete(
                 asyncio.gather(
                     *[
@@ -544,14 +558,9 @@ if __name__ == "__main__":
                 )
             )
         print("removing docker container:", container_name)
-        rm_cmd = f"docker rm -f {container_name}"
         loop.run_until_complete(
-            asyncio.gather(
-                *[
-                    spawn_shell(f"ssh {remote_host} {rm_cmd}")
-                    for remote_host in remote_hosts
-                ],
-                spawn_shell(rm_cmd),
+            remove_containers_by_name(
+                remote_hosts=remote_hosts, container_name=container_name
             )
         )
 
