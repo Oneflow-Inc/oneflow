@@ -43,6 +43,7 @@ class DimGather : public OpExprGradFunction<DimGatherInterpState> {
 Maybe<void> DimGather::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   bw_dim_gather_op_ = JUST(op_expr_helper::DimScatterAddLikeOp(0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
@@ -64,6 +65,7 @@ Maybe<void> DimGather::Capture(DimGatherInterpState* ctx, const TensorTuple& inp
 Maybe<void> DimGather::Apply(const DimGatherInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const std::shared_ptr<oneflow::one::Tensor>& index = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(1);
 
