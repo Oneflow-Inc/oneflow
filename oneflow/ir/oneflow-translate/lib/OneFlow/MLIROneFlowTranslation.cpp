@@ -742,19 +742,19 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
     auto id = id_attr.first;
     // mlir only attrs
     if (id.strref().equals("device_name") || id.strref().equals("hierarchy")
-        || id.strref().contains("input_lbn_segment_keys")
-        || id.strref().contains("input_lbn_segment_sizes") || id.strref().contains("output_lbns")
-        || id.strref().contains("output_lbn_segment_keys")
-        || id.strref().contains("output_lbn_segment_sizes")
-        || id.strref().contains("operand_segment_sizes")
-        || id.strref().contains("result_segment_sizes")) {
+        || id.strref().equals("input_lbn_segment_keys")
+        || id.strref().equals("input_lbn_segment_sizes") || id.strref().equals("output_lbns")
+        || id.strref().equals("output_lbn_segment_keys")
+        || id.strref().equals("output_lbn_segment_sizes")
+        || id.strref().equals("operand_segment_sizes")
+        || id.strref().equals("result_segment_sizes")) {
       continue;
     }
     // convert op conf attributes
     else if (id.strref().equals("op_name")) {
       op_conf.set_name(op_name);
     } else if (id.strref().equals("op_type_name")) {
-      user_conf->set_op_type_name(op->getAttrOfType<StringAttr>("op_type_name").getValue().str());
+      user_conf->set_op_type_name(user_op_adaptor.op_type_name().getValue().str());
     } else if (id.strref().equals("device_tag")) {
       op_conf.set_device_tag(user_op_adaptor.device_tag().getValue().str());
     } else if (id.strref().equals("scope_symbol_id")) {
@@ -765,8 +765,8 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
       auto attr_name = id.str();
       Attribute attr = id_attr.second;
       auto user_attr = ::oneflow::AttrValue();
-      auto op_type_name = op->getAttrOfType<StringAttr>("op_type_name").getValue().str();
-      ::oneflow::AttrType attr_type = job_wrapper_.QueryAttrType(op_type_name, attr_name);
+      ::oneflow::AttrType attr_type =
+          job_wrapper_.QueryAttrType(user_op_adaptor.op_type_name().getValue().str(), attr_name);
       if (attr_type == ::oneflow::kAtInt32) {
         user_attr.set_at_int32(attr.dyn_cast<IntegerAttr>().getSInt());
       } else if (attr_type == ::oneflow::kAtInt64) {

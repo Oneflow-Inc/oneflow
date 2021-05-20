@@ -16,7 +16,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   );
   dag attrs = (ins);
   dag trait_attrs = (ins);
-  dag user_op_lbn_attrs = (ins);
+  dag user_op_attrs = (ins);
   dag input = (ins Variadic<AnyType>:$data_input);
   dag output = (outs Variadic<AnyType>:$data_output);
   dag ctrl_input = (ins);
@@ -26,7 +26,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
       ctrl_input,
       sys_attrs,
       trait_attrs,
-      user_op_lbn_attrs,
+      user_op_attrs,
       attrs
   );
   let results = !con(
@@ -48,7 +48,8 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
 class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, traits> {
     let summary = "";
-    let user_op_lbn_attrs = (ins
+    let user_op_attrs = (ins
+      StrAttr:$op_type_name,
       StrArrayAttr:$input_lbn_segment_keys,
       I32ArrayAttr:$input_lbn_segment_sizes,
       StrArrayAttr:$output_lbn_segment_keys,
