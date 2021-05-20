@@ -137,13 +137,6 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
-  // Getters to be deprecated
-  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
-
-  // Setters to be deprecated
-  virtual Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
-
  protected:
   ConsistentTensorImpl(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
