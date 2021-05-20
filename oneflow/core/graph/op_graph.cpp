@@ -191,11 +191,11 @@ namespace {
 
 std::function<std::shared_ptr<const ParallelDesc>(const std::string&)>
 MakeGetterParallelDesc4OpName(const Job& job) {
-  const PlacementConf& placement_conf = job.placement_conf();
+  const JobPlacementConf& job_placement_conf = job.job_placement_conf();
   auto op_name2parallel_desc =
       std::make_shared<HashMap<std::string, std::shared_ptr<const ParallelDesc>>>();
   op_name2parallel_desc->reserve(job.net().op_size());
-  for (const auto& placement_group : placement_conf.placement_group()) {
+  for (const auto& placement_group : job_placement_conf.placement_group()) {
     const ParallelConf& parallel_conf = placement_group.parallel_conf();
     std::shared_ptr<const ParallelDesc> parallel_desc =
         std::make_shared<const ParallelDesc>(parallel_conf);

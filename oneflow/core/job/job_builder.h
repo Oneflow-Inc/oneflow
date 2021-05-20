@@ -25,7 +25,7 @@ namespace oneflow {
 const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_diff_lbi";
 
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
-    const PlacementConf& placement_conf);
+    const JobPlacementConf& job_placement_conf);
 
 class SbpParallel;
 class LogicalBlobId;

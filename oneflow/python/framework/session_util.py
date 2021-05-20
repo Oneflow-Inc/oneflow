@@ -173,7 +173,7 @@ class Session(object):
             self.interface_op_name2op_attr_[op_attr.op_conf.name] = op_attr
         for job in c_api_util.GetJobSet().job:
             op_name2parallel_conf = {}
-            for placement_group in job.placement.placement_group:
+            for placement_group in job.job_placement_conf.placement_group:
                 for op_name in placement_group.op_set.op_name:
                     op_name2parallel_conf[op_name] = placement_group.parallel_conf
             for op_conf in job.net.op:
