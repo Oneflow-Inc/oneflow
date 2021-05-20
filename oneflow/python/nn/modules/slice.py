@@ -17,7 +17,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.ops.array_ops import _check_slice_tup_list, _GetSliceAttrs
+from oneflow.python.ops.array_ops import check_slice_tup_list, GetSliceAttrs
 from typing import Sequence, Tuple
 
 
@@ -64,7 +64,7 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         # y.shape >> flow.Size([3, 3, 2]
     """
-    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
     return Slice(start, stop, step)(x)
 
 
@@ -111,7 +111,7 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         # [1. 2. 3. 4. 1.] 
     """
-    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
 
 
@@ -134,7 +134,7 @@ class LogicalSliceAssign(Module):
         return self._op(x, update)
 
 
-# NOTE: conflict with exist userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign
+# NOTE: conflict with existing userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign
 @oneflow_export("tmp.logical_slice_assign")
 @experimental_api
 def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
@@ -158,5 +158,5 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
 
         # [1. 2. 3. 4. 1.] 
     """
-    start, stop, step = _GetSliceAttrs(slice_tup_list, x.shape)
+    start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)

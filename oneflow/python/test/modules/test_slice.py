@@ -29,7 +29,7 @@ class TestSlice(flow.unittest.TestCase):
         input = flow.Tensor(x)
         tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
         y = flow.experimental.slice(input, slice_tup_list=tup_list)
-        test_case.assertTrue(y.shape == flow.Size([3, 3, 2]))
+        test_case.assertEqual(y.shape, flow.Size([3, 3, 2]))
 
 
 @unittest.skipIf(
