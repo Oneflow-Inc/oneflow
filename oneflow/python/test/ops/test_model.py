@@ -19,14 +19,31 @@ import unittest
 import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
-
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
+# @unittest.skipIf(
+#     not flow.unittest.env.eager_execution_enabled(),
+#     ".numpy() doesn't work in lazy mode",
+# )
 class TestEagerModel(flow.unittest.TestCase):
-    def test_model(test_case):
-        flow.enable_eager_execution()
+    def test_module(test_case):
+        flow.enable_eager_execution(True)
+        init_val = np.random.randn(2, 3)
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = Parameter(flow.Tensor(init_val))
+
+            def forward(self, x):
+                return x + self.w
+        m = CustomModule()
+        inputs = flow.ones((2, 3))
+        out = m(inputs)
+        s = flow.sum(out)
+        print(out.numpy())
+        print(s.numpy())
+        s.backward()
+
+    def _test_model(test_case):
+        flow.enable_eager_execution(True)
         init_val = np.random.randn(2, 3)
         class CustomModule(flow.nn.Module):
             def __init__(self):
