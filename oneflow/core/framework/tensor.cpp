@@ -47,7 +47,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
   return std::make_shared<MirroredTensor>(impl);
 }
 
-bool MirroredTensor::is_cuda() const { return device()->type() == "cuda"; }
+bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
 
@@ -56,9 +56,7 @@ int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
 std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
-  std::shared_ptr<MirroredTensor> t =
-      MakeTensor(shape(), dtype(), device(), is_lazy(), false, is_leaf());
-  t->set_blob_object(blob_object());
+  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
   return t;
 }
 
@@ -84,7 +82,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
 }
 
 bool ConsistentTensor::is_cuda() const {
-  return parallel_desc()->device_type() == DeviceType::kGPU;
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
 
 int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); }
@@ -94,9 +92,7 @@ int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
 int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
-  std::shared_ptr<ConsistentTensor> t =
-      MakeTensor(shape(), dtype(), distribute(), parallel_desc(), is_lazy(), false, is_leaf());
-  t->set_blob_object(blob_object());
+  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 
