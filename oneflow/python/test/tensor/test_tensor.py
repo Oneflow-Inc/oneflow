@@ -71,6 +71,18 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_construct_from_another_tensor(test_case):
+        shape = (2, 3, 4, 5)
+        np_arr = np.random.rand(*shape).astype(np.float32)
+        tensor = flow.Tensor(np_arr)
+        output = flow.Tensor(tensor)
+        test_case.assertEqual(output.dtype, flow.float32)
+        test_case.assertTrue(np.array_equal(output.numpy(), np_arr))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_init_methods(test_case):
         # test float dtype init
         shape = (2, 3, 4, 5)
@@ -386,6 +398,75 @@ class TestTensor(flow.unittest.TestCase):
         of_out = -input
         np_out = -input.numpy()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_slice(test_case):
+        x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        input = flow.Tensor(x)
+        test_case.assertTrue(np.allclose(input[0].numpy(), x[0], 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(input[1].numpy(), x[1], 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(input[0, :].numpy(), x[0, :], 1e-5, 1e-5))
+        test_case.assertTrue(
+            np.allclose(input[0, :, 0:2].numpy(), x[0, :, 0:2], 1e-5, 1e-5)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_logical_slice_assign(test_case):
+        x = np.random.randn(2, 3, 4, 5).astype(np.float32)
+        input = flow.Tensor(x)
+        input[:, 0] = 3.1415926
+        x[:, 0] = 3.1415926
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[:, 1:2] = 1
+        x[:, 1:2] = 1
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[:] = 1.234
+        x[:] = 1.234
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+        input[0] = 0
+        x[0] = 0
+        test_case.assertTrue(np.allclose(input.numpy(), x, 1e-5, 1e-5))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_construct_small_tensor(test_case):
+        shape = (2, 3, 4, 5)
+        np_arr = np.random.rand(*shape).astype(np.float32)
+        tensor = flow.tensor(np_arr)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
+        test_case.assertEqual(tensor.dtype, flow.float32)
+
+        np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
+        tensor = flow.tensor(np_int_arr, dtype=flow.int32)
+        test_case.assertEqual(tensor.dtype, flow.int32)
+
+        list_data = [[1, 2.0], [5, 3]]
+        tensor = flow.tensor(list_data)
+        test_case.assertEqual(tensor.dtype, flow.float32)
+        test_case.assertTrue(
+            np.allclose(tensor.numpy(), np.array(list_data), 1e-4, 1e-4)
+        )
+
+        tuple_data = ((1, 2, 5), (4, 3, 10))
+        tensor = flow.tensor(tuple_data)
+        test_case.assertEqual(tensor.dtype, flow.int64)
+        test_case.assertTrue(np.array_equal(tensor.numpy(), np.array(tuple_data)))
+
+        scalar = 5.5
+        tensor = flow.tensor(scalar)
+        test_case.assertEqual(tensor.dtype, flow.float32)
+        test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
 
 
 if __name__ == "__main__":

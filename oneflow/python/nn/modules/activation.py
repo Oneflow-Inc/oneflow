@@ -69,9 +69,61 @@ class ReLU(Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, inplace: bool = False):
         super().__init__()
         self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
+@oneflow_export("nn.ReLU6")
+@experimental_api
+class ReLU6(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+
+        \text{Relu6}(x) = \begin{cases}
+            6 & \text{ if } x > 6 \\
+            0 & \text{ if } x < 0 \\
+            x & \text{ otherwise } \\
+        \end{cases}
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        m = flow.nn.ReLU6()
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = m(input)
+        # equal to np.minimum(np.maximum(0, arr), 6.0)
+
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("hardtanh")
+            .Input("in")
+            .Attr("min_val", 0.0)
+            .Attr("max_val", 6.0)
+            .Output("out")
+            .Build()
+        )
 
     def forward(self, x):
         res = self._op(x)[0]
@@ -154,6 +206,54 @@ def tanh_op(x):
 
     """
     return Tanh()(x)
+
+
+@oneflow_export("nn.ELU")
+@experimental_api
+class ELU(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+
+        \text{ELU}(x) = \begin{cases}
+				x & \text{ if } x \gt 0  \\
+                \alpha*(exp(x)-1) & \text{ if } x \le 0 \\
+    		    \end{cases}
+
+    Args:
+        alpha: the :math:`\alpha` value for the ELU formulation. Default: 1.0
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example: 
+
+    .. code-block:: python 
+
+        import oneflow.experimental as flow
+        
+        m = flow.nn.ELU()
+        input = flow.randn(2)
+        output = m(input)
+
+    """
+
+    def __init__(self, alpha: float = 1.0, inplace: bool = False):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("elu")
+            .Input("in")
+            .Attr("alpha", alpha)
+            .Output("out")
+            .Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
 
 
 @oneflow_export("nn.GELU")
@@ -314,6 +414,46 @@ def sigmoid_op(x):
     return Sigmoid()(x)
 
 
+@oneflow_export("nn.Hardsigmoid")
+@experimental_api
+class Hardsigmoid(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Hardsigmoid}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            1 & \text{ if } x \ge +3 \\
+            \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
+        \end{cases}
+    
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+    
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    
+    For example:
+    
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        m = flow.nn.Hardsigmoid()
+        input = flow.randn(2)
+        output = m(input)
+    
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
 @oneflow_export("nn.Softmax")
 @experimental_api
 class Softmax(Module):
@@ -468,6 +608,42 @@ class LogSoftmax(Module):
         return "dim={dim}".format(dim=self.dim)
 
 
+@oneflow_export("nn.Hardswish")
+@experimental_api
+class Hardswish(Module):
+    r"""Applies the hardswish function, element-wise, as described in the paper:
+    `Searching for MobileNetV3`_.
+    .. math::
+        \text{Hardswish}(x) = \begin{cases}
+            0 & \text{ if } x \le -3  \\
+            x & \text{ if } x \ge +3 \\
+            x*(x+3)/6 & \text{ otherwise } \\
+        \end{cases}
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    .. code-block:: python
+        import oneflow.experimental as flow
+        
+        m = flow.nn.Hardswish()
+        input = flow.randn(2)
+        output = m(input)
+    .. _`Searching for MobileNetV3`:
+        https://arxiv.org/abs/1905.02244
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+        self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
 @oneflow_export("nn.Hardtanh")
 @experimental_api
 class Hardtanh(Module):
@@ -531,13 +707,54 @@ class Hardtanh(Module):
                 "keyword argument max_value is deprecated and rename to max_val"
             )
             max_val = max_value
-        assert inplace == False, f"Hardtanh not support inplace equal true now!"
         self._op = (
             flow.builtin_op("hardtanh")
             .Input("in")
             .Attr("min_val", min_val)
             .Attr("max_val", max_val)
             .Output("out")
+            .Build()
+        )
+
+    def forward(self, x):
+        res = self._op(x)[0]
+        return res
+
+
+@oneflow_export("nn.LeakyReLU")
+@experimental_api
+class LeakyReLU(Module):
+    r"""Applies the element-wise function:
+    .. math::
+        \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
+    or 
+    .. math::
+        \text{LeakyRELU}(x) = \begin{cases}
+            x, & \text{ if } x \geq 0 \\
+            \text{negative_slope} \times x, & \text{ otherwise }
+        \end{cases}
+    Args:
+        negative_slope: Controls the angle of the negative slope. Default: 1e-2
+        inplace: can optionally do the operation in-place. Default: ``False``
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    For example: 
+    .. code-block:: python
+        import oneflow.experimental as flow
+        m = flow.nn.LeakyReLU(0.1)
+        input = flow.randn(2)
+        output = m(input)
+    """
+
+    def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("leaky_relu")
+            .Input("x")
+            .Attr("alpha", negative_slope)
+            .Output("y")
             .Build()
         )
 
