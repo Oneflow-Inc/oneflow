@@ -875,7 +875,8 @@ LogicalResult Importer::TryToUpdateJob() {
       ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
     } else if (is_sys_op) {
-      auto op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
+      oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      auto op_name = system_op_adaptor.op_name().getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
       for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
         auto result = GetDataInputOperands(op)[ibn.index()].dyn_cast<OpResult>();
