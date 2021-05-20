@@ -122,6 +122,13 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual void set_distribute(
       const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
 
+  // Getters to be deprecated
+  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
+
+  // Setters to be deprecated
+  virtual Maybe<void> set_blob_object(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
+
  protected:
   ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
                        bool is_leaf)
@@ -275,6 +282,9 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   }
 
  private:
+  Maybe<void> SyncBlobObject2Attributes(
+      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
+
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;

@@ -79,5 +79,14 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   return eager_blob_object_->blob_desc().shape_ptr();
 }
 
+Maybe<void> EagerConsistentTensorImpl::SyncBlobObject2Attributes(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  set_shape(blob_object->op_arg_blob_attr()->shape());
+  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
+  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
+  set_dtype(dtype);
+  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
+}
+
 }  // namespace one
 }  // namespace oneflow
