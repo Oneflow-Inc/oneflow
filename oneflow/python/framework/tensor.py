@@ -347,6 +347,7 @@ class Tensor:
 
     @_auto_determine
     def __getitem__(self, key):
+        # TODO: support inplace __getitem__
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         return res
