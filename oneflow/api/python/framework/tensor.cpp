@@ -157,7 +157,6 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
 }
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
-  using T = ConsistentTensor;
   api->def_property_readonly("placement", &TensorGetParallelDesc);
 }
 
