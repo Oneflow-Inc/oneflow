@@ -65,6 +65,12 @@ config.oneflow_tools_dir = os.path.join(config.oneflow_obj_root, "bin")
 
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
+llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
+llvm_config.with_environment(
+    "PYTHONPATH",
+    os.path.join(config.oneflow_obj_root, "python_scripts"),
+    append_path=True,
+)
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
 tools = ["oneflow-opt", "oneflow-translate"]
