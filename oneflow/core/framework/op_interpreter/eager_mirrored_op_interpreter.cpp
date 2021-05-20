@@ -107,9 +107,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         // stream
         JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
                                      JUST(tensor->device())->parallel_desc_ptr()));
-        JUST(Maybe<void>(Error::Unimplemented()));
-        LOG(INFO) << "xxxx";
-        JUST(Maybe<void>(Error::Unimplemented()));
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
