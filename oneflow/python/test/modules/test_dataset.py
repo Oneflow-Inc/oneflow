@@ -68,7 +68,9 @@ class TestOFRecordModule(flow.unittest.TestCase):
         val_record = record_reader()
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
+        print(image_raw_buffer.numpy()[0].shape)
         image = resize(image_raw_buffer)
+        print(image.numpy()[0].dtype)
         image = crop_mirror_normal(image)
 
         # recover image

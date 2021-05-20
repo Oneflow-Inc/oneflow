@@ -256,6 +256,30 @@ class OFRecordImageDecoder(Module):
         return res
 
 
+class TensorBufferToListOfTensors(Module):
+    def __init__(self, out_shapes, out_dtypes, out_num: int = 1):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("tensor_buffer_to_list_of_tensors_v2")
+            .Input("in")
+            .Output("out", out_num)
+            .Attr("out_shapes", out_shapes)
+            .Attr("out_dtypes", out_dtypes)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)
+
+
+@oneflow_export("tensor_buffer_to_list_of_tensors")
+@experimental_api
+def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
+    return TensorBufferToListOfTensors(
+        [list(out_shape) for out_shape in out_shapes], out_dtypes, len(out_shapes)
+    )(tensor)
+
+
 @oneflow_export("nn.image.Resize")
 @experimental_api
 class ImageResize(Module):

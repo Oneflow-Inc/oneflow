@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -156,12 +158,87 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetPtrOrThrow();
 }
 
+std::vector<std::shared_ptr<const Shape>> GetTensorBufferShapes(
+    const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<std::shared_ptr<const Shape>> shapes;
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor,
+        [&shapes, &synced](uint64_t of_blob_ptr) {
+          using namespace oneflow;
+          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          const Blob* blob = of_blob->blob();
+          const Shape& blob_shape = blob->static_shape();
+          const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
+          for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
+            const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
+            shapes.push_back(std::make_shared<const Shape>(tensor_buffer->shape()));
+          }
+          synced = true;
+        },
+        "const");
+  });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    while (!synced) {}
+  });
+  return shapes;
+}
+
+const DType DataType2Dtype(DataType data_type) {
+  switch (data_type) {
+    case DataType::kChar: return DType::Char().GetOrThrow();
+    case DataType::kDouble: return DType::Double().GetOrThrow();
+    case DataType::kFloat16: return DType::Float16().GetOrThrow();
+    case DataType::kFloat: return DType::Float().GetOrThrow();
+    case DataType::kInt32: return DType::Int32().GetOrThrow();
+    case DataType::kInt64: return DType::Int64().GetOrThrow();
+    case DataType::kInt8: return DType::Int8().GetOrThrow();
+    case DataType::kUInt8: return DType::UInt8().GetOrThrow();
+    default: UNIMPLEMENTED();
+  }
+}
+
+std::vector<std::shared_ptr<const DType>> GetTensorBufferDtypes(
+    const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<std::shared_ptr<const DType>> dtypes;
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor,
+        [&dtypes, &synced](uint64_t of_blob_ptr) {
+          using namespace oneflow;
+          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          const Blob* blob = of_blob->blob();
+          const Shape& blob_shape = blob->static_shape();
+          const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
+          for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
+            const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
+            dtypes.push_back(
+                std::make_shared<const DType>(DataType2Dtype(tensor_buffer->data_type())));
+          }
+          synced = true;
+        },
+        "const");
+  });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    while (!synced) {}
+  });
+  return dtypes;
+}
+
 }  // namespace
 
 void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
+  api->def_property_readonly("tensor_buffer_shapes", &GetTensorBufferShapes);
+  api->def_property_readonly("tensor_buffer_dtypes", &GetTensorBufferDtypes);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);

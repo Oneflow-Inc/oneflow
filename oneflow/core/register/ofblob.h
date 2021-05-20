@@ -32,6 +32,7 @@ class OfBlob final {
   }
   ~OfBlob() = default;
 
+  const Blob* blob() const { return blob_; }
   int data_type() const { return blob_->data_type(); }
   size_t NumAxes() const { return blob_->shape().NumAxes(); }
   bool is_dynamic() const { return blob_->blob_desc().is_dynamic(); }

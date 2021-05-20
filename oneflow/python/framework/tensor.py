@@ -46,6 +46,13 @@ def register_local_tensor_method(name=None):
 
 @register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
+    if eager_local_tensor.dtype == flow.tensor_buffer:
+        shapes = eager_local_tensor.tensor_buffer_shapes
+        dtypes = eager_local_tensor.tensor_buffer_dtypes
+        tensors = flow.experimental.tensor_buffer_to_list_of_tensors(
+            Tensor(eager_local_tensor), shapes, dtypes
+        )
+        return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
     ndarray = np.empty(
