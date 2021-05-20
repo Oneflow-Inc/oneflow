@@ -468,5 +468,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor.dtype, flow.float32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
 
+
 if __name__ == "__main__":
     unittest.main()
