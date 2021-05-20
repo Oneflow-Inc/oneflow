@@ -359,7 +359,7 @@ jobs:
             --bash_script=ci/test/2node_op_test.sh \
             --oneflow_wheel_path=${wheelhouse_dir}
       - name: Upload log (distributed test)
-        if: ${{ failure() }} && matrix.test_suite == 'cuda'
+        if: failure() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
         with:
           src_path: distributed-tmp
