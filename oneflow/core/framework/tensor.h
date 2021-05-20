@@ -181,6 +181,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return impl_->compute_local_dep_object();
   }
 
+  Maybe<MirroredTensorImpl> mirrored_tensor_impl() const { return impl_; }
+
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
@@ -255,6 +257,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
+
+  Maybe<ConsistentTensorImpl> consistent_tensor_impl() const { return impl_; }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }

@@ -100,14 +100,15 @@ class Module(object):
         args = list(args)
         sess = session_ctx.GetDefaultSession()
         with sess.ConsistentScope():
+            consisitent_args = []
             for i in range(len(args)):
-                args[i] = self._cast_to_consistent_ops[i](args[i])
-            consistent_output = self.forward(args)
-            if len(elf._cast_from_consistent_ops) == 1:
-                res = self._cast_from_consistent_ops[0](consistent_output)
+                args[i] = self._cast_to_consistent_ops[i](args[i])[0]
+            consistent_output = self.forward(*args)
+            if len(self._cast_from_consistent_ops) == 1:
+                res = self._cast_from_consistent_ops[0](consistent_output)[0]
             else:
                 res = [
-                    self._cast_from_consistent_ops[i](consistent_output[i])
+                    self._cast_from_consistent_ops[i](consistent_output[i])[0]
                     for i in len(self._cast_from_consistent_ops)
                 ]
         return res
@@ -140,7 +141,6 @@ class Module(object):
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
             cast_to_consisten_conf = cfg_op_conf.CastToConsistentOpConf()
-            print(type(cast_to_consisten_conf))
             cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
                 id_util.UniqueStr("cast_to_consistent_op"),
                 cast_to_consisten_conf,

@@ -39,6 +39,43 @@ def _softmax_need_transpose(x, axis):
     return need_transpose, permute
 
 
+@oneflow_export("nn.Empty")
+@experimental_api
+class Empty(Module):
+    r"""Applies the rectified linear unit function element-wise:
+
+    :math:`\text{ReLU}(x) = (x)^+ = \max(0, x)`
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        m = flow.nn.ReLU()
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = m(input)
+        # equal to np.maximum(0, arr)
+
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+
 @oneflow_export("nn.ReLU")
 @experimental_api
 class ReLU(Module):

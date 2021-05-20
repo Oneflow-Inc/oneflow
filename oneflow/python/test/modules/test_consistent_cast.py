@@ -24,20 +24,21 @@ import oneflow.experimental as flow
 )
 class TestConsistentCastReLUModule(flow.unittest.TestCase):
     def test_relu(test_case):
-        m = flow.nn.ReLU()
+        relu = flow.nn.ReLU()
+        empty = flow.nn.Empty()
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
-        m.consistent_cast(
+        empty.consistent_cast(
             (["S(0)"], ["S(0)"]),
             (
-                [flow.placement("gpu", ["0:0-1"], None)],
-                [flow.placement("gpu", ["0:0-3"], None)],
+                [flow.placement("cpu", ["0:0"], None)],
+                [flow.placement("cpu", ["0:0"], None)],
             ),
         )
         x = flow.Tensor(arr)
-        of_out = m(x)
-        print(of_out.numpy())
+        y = empty(x)
+        of_out = relu(y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
 

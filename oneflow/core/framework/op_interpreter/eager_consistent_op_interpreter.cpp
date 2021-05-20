@@ -53,26 +53,47 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& 
   OF_UNIMPLEMENTED();
 }
 
-static Maybe<void> BuildAndRunConsistentCastInstruction(const BuiltinOpExpr& op_expr,
-                                                        const ParallelConf& parallel_conf,
-                                                        const TensorTuple& inputs,
-                                                        TensorTuple* outputs) {
-  // TODO(hanbinbin)
-  UNIMPLEMENTED();
-}
-
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
-  return BuildAndRunConsistentCastInstruction(op_expr, op_expr.proto().parallel_conf(), inputs,
-                                              outputs);
+  const auto& input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(inputs.at(0));
+  CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
+  std::shared_ptr<EagerMirroredTensorImpl> eager_mirrored_tensor_impl =
+      std::dynamic_pointer_cast<EagerMirroredTensorImpl>(
+          JUST(input_mirrored_tensor->mirrored_tensor_impl()));
+  CHECK_OR_RETURN(eager_mirrored_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
+  std::shared_ptr<const cfg::ParallelDistribution> parallel_distribution =
+      std::make_shared<const cfg::ParallelDistribution>(op_expr.proto().parallel_distribution());
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      std::make_shared<const ParallelDesc>(op_expr.proto().parallel_conf());
+  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
+      JUST(EagerConsistentTensorImpl::New(eager_mirrored_tensor_impl, parallel_distribution,
+                                          parallel_desc));
+  std::shared_ptr<ConsistentTensor> consistent_tensor =
+      std::make_shared<ConsistentTensor>(eager_consistent_tensor_impl);
+  const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(consistent_tensor);
+  CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
+  outputs->at(0) = out_tensor;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
-  return BuildAndRunConsistentCastInstruction(op_expr, op_expr.proto().parallel_conf(), inputs,
-                                              outputs);
+  const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
+  CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
+  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
+      std::dynamic_pointer_cast<EagerConsistentTensorImpl>(
+          JUST(input_consistent_tensor->consistent_tensor_impl()));
+  CHECK_OR_RETURN(eager_consistent_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
+  std::shared_ptr<EagerMirroredTensorImpl> eager_mirrored_tensor_impl =
+      eager_consistent_tensor_impl->cur_rank_phy_tensor_impl();
+  std::shared_ptr<MirroredTensor> mirrored_tensor =
+      std::make_shared<MirroredTensor>(eager_mirrored_tensor_impl);
+  const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(mirrored_tensor);
+  CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
+  outputs->at(0) = out_tensor;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeSplitOpExpr& op_expr,
