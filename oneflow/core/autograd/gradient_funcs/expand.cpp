@@ -42,7 +42,6 @@ class Expand : public OpExprGradFunction<ExpandInterpState> {
 };
 
 Maybe<void> Expand::Init(const OpExpr& op) {
-  printf("enter expand\n");
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
@@ -55,33 +54,23 @@ Maybe<void> Expand::Init(const OpExpr& op) {
 
 Maybe<void> Expand::Capture(ExpandInterpState* ctx, const TensorTuple& inputs,
                             const TensorTuple& outputs, const AttrMap& attrs) const {
-  printf("enter expand capture\n");
   ctx->requires_grad = inputs.at(0)->requires_grad();
-  printf("%d\n", ctx->requires_grad);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->out_shape = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("out_shape"));
-  printf("outshape, ====>%d\n", ctx->out_shape.size());
+  ctx->out_shape = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("in_shape"));
   ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
-  printf("stride, ====>%d\n", ctx->stride.size());
-  ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Expand::Apply(const ExpandInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
-  printf("enter expand apply!\n");
-  printf("%d\n", ctx->requires_grad);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  printf("%d\n", out_grads.size());
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("out_shape", ctx->out_shape));
   JUST(attrs.SetAttr<std::vector<int32_t>>("stride", ctx->stride));
-  printf("in_grads begin\n");
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}, attrs));
-  printf("in_grads end\n");
   return Maybe<void>::Ok();
 }
 
