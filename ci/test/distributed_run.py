@@ -436,10 +436,10 @@ if __name__ == "__main__":
                     remote_host=remote_host, workspace_dir=workspace_dir
                 )
                 for remote_host in remote_hosts
-            ]
-        ),
-        remove_containers_by_name(
-            remote_hosts=remote_hosts, container_name=container_name
+            ],
+            remove_containers_by_name(
+                remote_hosts=remote_hosts, container_name=container_name
+            ),
         ),
     )
     if args.oneflow_build_path:
