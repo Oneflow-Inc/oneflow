@@ -104,9 +104,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
         CHECK_OR_RETURN(static_cast<bool>(tensor));
         // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
-        // streamm
+        // stream
         JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
-                                     JUST(tensor->parallel_desc())));
+                                     JUST(tensor->device())->parallel_desc_ptr()));
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
