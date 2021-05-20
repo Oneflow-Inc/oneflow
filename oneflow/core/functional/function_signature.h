@@ -20,7 +20,6 @@ limitations under the License.
 #include <memory>
 #include <tuple>
 
-#include "oneflow/core/functional/function_traits.h"
 #include "oneflow/core/functional/value_types.h"
 
 namespace oneflow {

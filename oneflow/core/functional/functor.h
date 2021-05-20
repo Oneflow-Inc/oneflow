@@ -19,9 +19,9 @@ limitations under the License.
 
 #include <memory>
 
+#include "oneflow/core/common/function_traits.h"
 #include "oneflow/core/functional/value_types.h"
 #include "oneflow/core/functional/function_signature.h"
-#include "oneflow/core/functional/function_traits.h"
 
 namespace oneflow {
 namespace one {
@@ -52,7 +52,7 @@ class FunctionBodyImpl<R(Args...)> : public FunctionBody {
 template<typename R, typename... Args>
 template<typename Func>
 FunctionBodyImpl<R(Args...)>::FunctionBodyImpl(Func func) {
-  using FuncType = typename detail::function_traits<Func>::func_type;
+  using FuncType = typename function_traits<Func>::func_type;
   static_assert(std::is_same<FuncType, R(Args...)>::value);
   func_ = [func](Args... args) { return func(std::forward<Args>(args)...); };
 }
@@ -100,7 +100,7 @@ class PackedFunctor {
 template<typename Func>
 /*static*/ PackedFunctor PackedFunctor::MakePackedFunctor(const std::string& func_name, Func func) {
   // static_assert(is_callable(func));
-  using func_type = typename detail::function_traits<Func>::func_type;
+  using func_type = typename function_traits<Func>::func_type;
   auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
   FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();
   Functor functor(body, signatute);
