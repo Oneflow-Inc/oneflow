@@ -839,6 +839,23 @@ void Importer::ConvertUseropAttributes(Operation* op, ::oneflow::OperatorConf& o
   }
 }
 
+template<typename OpType, typename AdaptorType>
+void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
+  auto* pg = job.mutable_placement()->add_placement_group();
+  pg->mutable_op_set()->add_op_name(adaptor.op_name().getValue().str());
+  pg->mutable_parallel_conf()->set_device_tag(adaptor.device_tag().getValue().str());
+  for (auto p : adaptor.device_name()) {
+    pg->mutable_parallel_conf()->add_device_name(
+        p.template dyn_cast<StringAttr>().getValue().str());
+  }
+  if (adaptor.hierarchy()) {
+    for (auto dim : adaptor.hierarchy()) {
+      pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
+          dim.template dyn_cast<IntegerAttr>().getInt());
+    }
+  }
+}
+
 LogicalResult Importer::TryToUpdateJob() {
   std::string err_str = "";
   auto new_job = ::oneflow::Job();
@@ -846,26 +863,9 @@ LogicalResult Importer::TryToUpdateJob() {
   new_job.clear_net();
   new_job.mutable_placement()->clear_placement_group();
   auto convertOps = [&](Operation* op) {
-    const bool is_user_op = llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name");
-    const bool is_sys_op = llvm::dyn_cast<oneflow::SystemOp>(op);
-    if (is_user_op || is_sys_op) {
-      auto* pg = new_job.mutable_placement()->add_placement_group();
-      pg->mutable_parallel_conf()->set_device_tag(
-          op->getAttrOfType<StringAttr>("device_tag").getValue().str());
-      for (auto p : op->getAttrOfType<ArrayAttr>("device_name")) {
-        pg->mutable_parallel_conf()->add_device_name(p.dyn_cast<StringAttr>().getValue().str());
-      }
-      if (op->hasAttrOfType<ArrayAttr>("hierarchy")) {
-        for (auto dim : op->getAttrOfType<ArrayAttr>("hierarchy")) {
-          pg->mutable_parallel_conf()->mutable_hierarchy()->add_dim(
-              dim.dyn_cast<IntegerAttr>().getInt());
-        }
-      }
-      pg->mutable_op_set()->add_op_name(op->getAttrOfType<StringAttr>("op_name").getValue().str());
-      // TODO: also generate blob_placement_group
-    }
-    if (is_user_op) {
+    if (llvm::dyn_cast<oneflow::UserOp>(op) || op->hasAttr("op_type_name")) {
       oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, user_op_adaptor, new_job);
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = user_op_adaptor.op_name().getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
@@ -874,8 +874,9 @@ LogicalResult Importer::TryToUpdateJob() {
       ConvertUseropAttributes(op, op_conf, err_str);
       ConvertCtrlInputs(op, op_conf);
       *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (is_sys_op) {
+    } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
+      UpdatePlacement(op, system_op_adaptor, new_job);
       auto op_name = system_op_adaptor.op_name().getValue().str();
       ::oneflow::OperatorConf op_conf = job_wrapper_.OpConf4OpName(op_name);
       for (auto ibn : llvm::enumerate(op->getAttrOfType<ArrayAttr>("input_bns"))) {
