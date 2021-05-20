@@ -72,7 +72,7 @@ class Importer {
       : builder_(context),
         context_(context),
         module_(module),
-        unknown_loc_(FileLineColLoc::get(context, "imported-protobuf", 0, 0)),
+        unknown_loc_(FileLineColLoc::get(context, job_wrapper.job()->job_conf().job_name(), 0, 0)),
         job_(job_wrapper.job()),
         job_wrapper_(job_wrapper) {}
 
