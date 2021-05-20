@@ -233,15 +233,6 @@ CudaCurrentDeviceGuard::CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaGetDevice(&
 
 CudaCurrentDeviceGuard::~CudaCurrentDeviceGuard() { OF_CUDA_CHECK(cudaSetDevice(saved_dev_id_)); }
 
-bool IsCudaDriverVersionSufficient() {
-  int driver_version;
-  int runtime_version;
-  OF_CUDA_CHECK(cudaDriverGetVersion(&driver_version));
-  OF_CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
-  return driver_version >= runtime_version;
-}
-
-
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

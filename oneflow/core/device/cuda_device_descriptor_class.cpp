@@ -33,7 +33,15 @@ namespace {
 
 constexpr char kJsonKeyDevices[] = "devices";
 
+bool IsCudaDriverVersionSufficient() {
+  int driver_version;
+  int runtime_version;
+  OF_CUDA_CHECK(cudaDriverGetVersion(&driver_version));
+  OF_CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
+  return driver_version >= runtime_version;
 }
+
+}  // namespace
 
 class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
  public:

@@ -185,8 +185,6 @@ int GetCudaPtxVersion();
 
 }  // namespace oneflow
 
-bool IsCudaDriverVersionSufficient();
-
 #else
 
 namespace oneflow {
