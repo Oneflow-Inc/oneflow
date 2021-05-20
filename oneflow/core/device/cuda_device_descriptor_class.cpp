@@ -33,14 +33,6 @@ namespace {
 
 constexpr char kJsonKeyDevices[] = "devices";
 
-bool IsCudaDriverVersionSufficient() {
-  int driver_version;
-  int runtime_version;
-  OF_CUDA_CHECK(cudaDriverGetVersion(&driver_version));
-  OF_CUDA_CHECK(cudaRuntimeGetVersion(&runtime_version));
-  return driver_version >= runtime_version;
-}
-
 }  // namespace
 
 class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
@@ -49,13 +41,14 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
   ~CudaDeviceDescriptorClass() override = default;
 
   std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const override {
-    if (!IsCudaDriverVersionSufficient()) {
+    int n_dev;
+    cudaError_t err = cudaGetDeviceCount(&n_dev);
+    if (err == cudaErrorInsufficientDriver) {
       LOG(WARNING) << "CUDA driver version is insufficient for CUDA runtime version";
       return std::make_shared<const BasicDeviceDescriptorList>(
           std::vector<std::shared_ptr<const DeviceDescriptor>>());
     }
-    int n_dev;
-    OF_CUDA_CHECK(cudaGetDeviceCount(&n_dev));
+    OF_CUDA_CHECK(err);
     std::vector<std::shared_ptr<const DeviceDescriptor>> devices(n_dev);
     for (int dev = 0; dev < n_dev; ++dev) { devices.at(dev) = CudaDeviceDescriptor::Query(dev); }
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
