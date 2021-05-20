@@ -40,7 +40,7 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
   CudaDeviceDescriptorClass() = default;
   ~CudaDeviceDescriptorClass() override = default;
 
-  std::shared_ptr<const DeviceDescriptorList> QueryDevices() const override {
+  std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const override {
     int n_dev;
     OF_CUDA_CHECK(cudaGetDeviceCount(&n_dev));
     std::vector<std::shared_ptr<const DeviceDescriptor>> devices(n_dev);
@@ -53,8 +53,8 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
     return name;
   }
 
-  void Serialize(const std::shared_ptr<const DeviceDescriptorList>& list,
-                 std::string* serialized) const override {
+  void SerializeDeviceDescriptorList(const std::shared_ptr<const DeviceDescriptorList>& list,
+                                     std::string* serialized) const override {
     std::vector<std::string> serialized_devices;
     serialized_devices.reserve(list->DeviceCount());
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
@@ -69,7 +69,7 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
     *serialized = json_object.dump();
   }
 
-  std::shared_ptr<const DeviceDescriptorList> Deserialize(
+  std::shared_ptr<const DeviceDescriptorList> DeserializeDeviceDescriptorList(
       const std::string& serialized) const override {
     auto json_object = nlohmann::json::parse(serialized);
     std::vector<std::string> serialized_devices = json_object[kJsonKeyDevices];
@@ -80,8 +80,8 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
     return std::make_shared<const BasicDeviceDescriptorList>(devices);
   }
 
-  void DumpSummary(const std::shared_ptr<const DeviceDescriptorList>& list,
-                   const std::string& path) const override {
+  void DumpDeviceDescriptorListSummary(const std::shared_ptr<const DeviceDescriptorList>& list,
+                                       const std::string& path) const override {
     for (size_t i = 0; i < list->DeviceCount(); ++i) {
       auto cuda_device = std::dynamic_pointer_cast<const CudaDeviceDescriptor>(list->GetDevice(i));
       CHECK(cuda_device);

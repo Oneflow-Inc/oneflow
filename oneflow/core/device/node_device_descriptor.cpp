@@ -62,7 +62,7 @@ void NodeDeviceDescriptor::Serialize(std::string* serialized) const {
     std::string serialized_descriptor_list;
     auto clz = DeviceDescriptorClass::GetRegisteredClass(pair.first);
     CHECK(clz);
-    clz->Serialize(pair.second, &serialized_descriptor_list);
+    clz->SerializeDeviceDescriptorList(pair.second, &serialized_descriptor_list);
     json_object[kJsonKeyClasses].push_back(
         {{kJsonKeyClassName, clz->Name()},
          {kJsonKeySerializedDescriptorList, serialized_descriptor_list}});
@@ -75,7 +75,7 @@ void NodeDeviceDescriptor::DumpSummary(const std::string& path) const {
   for (const auto& pair : impl_->class_name2descriptor_list) {
     auto clz = DeviceDescriptorClass::GetRegisteredClass(pair.first);
     CHECK(clz);
-    clz->DumpSummary(pair.second, JoinPath(classes_base, pair.first));
+    clz->DumpDeviceDescriptorListSummary(pair.second, JoinPath(classes_base, pair.first));
   }
 }
 
@@ -87,7 +87,7 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Query() {
     std::shared_ptr<const DeviceDescriptorClass> descriptor_class =
         DeviceDescriptorClass::GetRegisteredClass(i);
     desc->impl_->class_name2descriptor_list.emplace(descriptor_class->Name(),
-                                                    descriptor_class->QueryDevices());
+                                                    descriptor_class->QueryDeviceDescriptorList());
   }
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
 }
@@ -106,7 +106,7 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Deserialize(
         json_object[kJsonKeyClasses].at(i)[kJsonKeySerializedDescriptorList];
     auto clz = DeviceDescriptorClass::GetRegisteredClass(class_name);
     CHECK(clz);
-    const auto descriptor_list = clz->Deserialize(serialized_descriptor_list);
+    const auto descriptor_list = clz->DeserializeDeviceDescriptorList(serialized_descriptor_list);
     class_name2descriptor_list.emplace(class_name, descriptor_list);
   }
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
