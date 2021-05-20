@@ -80,14 +80,16 @@ def getExpandGrad(input_shape, expand_size):
 
 
 def _test_expand_new_dims(test_case, device):
-        input_shape = (1, 4, 1, 32)
-        expand_dim = [2, 1, 2, 4, 2, 32]
-        input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
-        of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
-        of_out = of_input.expand(expand_size=expand_dim)
+    input_shape = (1, 4, 1, 32)
+    expand_dim = [2, 1, 2, 4, 2, 32]
+    input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+    of_input = flow.Tensor(
+        input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_out = of_input.expand(expand_size=expand_dim)
 
-        test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
-        test_case.assertTrue(np.allclose(gin_np, of_input.grad.numpy(), 1e-4, 1e-4))
+    test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
+    test_case.assertTrue(np.allclose(gin_np, of_input.grad.numpy(), 1e-4, 1e-4))
 
 
 def _test_expand_same_dim(test_case, device):
@@ -99,6 +101,7 @@ def _test_expand_same_dim(test_case, device):
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
+
 def _test_expand_same_dim_negative(test_case, device):
     input_shape = (1, 6, 5, 3)
     expand_dim = [4, -1, 5, 3]
@@ -108,6 +111,7 @@ def _test_expand_same_dim_negative(test_case, device):
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
+
 def _test_expand_same_int(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]
@@ -116,6 +120,7 @@ def _test_expand_same_int(test_case, device):
     of_out = of_input.expand(expand_size=expand_dim)
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -128,7 +133,7 @@ class TestModule(flow.unittest.TestCase):
             _test_expand_new_dims,
             _test_expand_same_dim,
             _test_expand_same_dim_negative,
-            _test_expand_same_int
+            _test_expand_same_int,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
