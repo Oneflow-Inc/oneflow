@@ -393,7 +393,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--oneflow_test_tmp_dir", type=str, required=False, default="distributed-tmp"
     )
-    parser.add_argument("--timeout", type=int, required=False, default=6 * 60 * 60)
+    parser.add_argument("--timeout", type=int, required=False, default=1 * 60 * 60)
     args = parser.parse_args()
 
     assert bool(args.oneflow_wheel_path) != bool(args.oneflow_build_path)
