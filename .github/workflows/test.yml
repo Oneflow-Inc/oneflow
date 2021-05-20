@@ -357,11 +357,9 @@ jobs:
       - name: Op test (distributed)
         if: contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
-          python3 ci/test/distributed_run.py --make_dotssh
-          python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
-            --build_docker_img \
-            --oneflow_wheel_path=${wheelhouse_dir} \
-            --oneflow_worker_bin=${bin_dir}/oneflow_worker
+          python3 ci/test/distributed_run.py \
+            --bash_script=ci/test/2node_op_test.sh \
+            --oneflow_wheel_path=${wheelhouse_dir}
       - name: Print backtrace (distributed test)
         if: always() && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
@@ -372,8 +370,8 @@ jobs:
         if: always() && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         uses: ./.github/actions/upload_oss
         with:
-          src_path: oneflow_temp
-          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Dry run test (run without runtime)
