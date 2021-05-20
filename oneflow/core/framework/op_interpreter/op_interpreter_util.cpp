@@ -92,60 +92,11 @@ template<>
   return std::make_shared<cfg::OpAttribute>(*op_attribute);
 }
 
-/*static*/ Maybe<cfg::OpAttribute> OpInterpUtil::InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                                  const TensorTuple& inputs,
-                                                                  const AttrMap& attrs) {
-  const auto& scope = JUST(GetCurrentScope());
-  auto op_conf = JUST(GenBuiltinOpConf(op_expr, attrs));
-  int64_t symbol_id = JUST(scope->symbol_id());
-  op_conf->set_scope_symbol_id(symbol_id);
-  if (!op_conf->has_device_tag()) {
-    op_conf->set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
-  }
-  const auto& ibn2blob_object = JUST(MakeBn2BlobObjectMap(op_expr.indexed_ibns(), inputs));
-  OpNodeSignature upstream_signature;
-  if (ibn2blob_object->size()) {
-    std::shared_ptr<cfg::OpNodeSignature> cfg_upstream_signature(new cfg::OpNodeSignature);
-    for (const auto& it : *ibn2blob_object) {
-      it.second->op_arg_parallel_attr()->DumpToOpNodeSignature(it.first, cfg_upstream_signature);
-      it.second->op_arg_blob_attr()->DumpToOpNodeSignature(it.first, cfg_upstream_signature);
-    }
-    cfg_upstream_signature->ToProto(&upstream_signature);
-  }
-  const auto& op = JUST(ConstructAndInferOp(*op_conf, upstream_signature, *scope));
-  JUST(op->InferParallelSignatureIf());
-  const auto& op_attribute = op->GetOpAttributeWithoutOpNameAndLbn();
-  return std::make_shared<cfg::OpAttribute>(*op_attribute);
-}
-
-using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>;
-
-/*static*/ Maybe<Bn2BlobObjectMap> OpInterpUtil::MakeBn2BlobObjectMap(
-    const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs) {
-  CHECK_EQ_OR_RETURN(indexed_ibns.size(), inputs.size());
-  auto bn2blob_object = std::make_shared<Bn2BlobObjectMap>();
-  for (int i = 0; i < inputs.size(); ++i) {
-    const auto& ibn = indexed_ibns.at(i);
-    const auto& blob_object = JUST(GetTensorBlobObject(inputs[i]));
-    bn2blob_object->emplace(ibn, blob_object);
-  }
-  return bn2blob_object;
-}
-
 /*static*/ Maybe<OperatorConf> OpInterpUtil::GenBuiltinOpConf(const BuiltinOpExpr& op_expr,
                                                               const AttrMap& attrs) {
   auto op_conf = std::make_shared<OperatorConf>();
   op_expr.BuildOpConf(op_conf.get(), attrs);
   return op_conf;
-}
-
-/*static*/ Maybe<compatible_py::BlobObject> OpInterpUtil::GetTensorBlobObject(
-    const std::shared_ptr<Tensor>& tensor) {
-  if (auto* consistent_tensor = dynamic_cast<ConsistentTensor*>(tensor.get())) {
-    return consistent_tensor->blob_object();
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "The tensor should be Consistent Tensor.";
-  }
 }
 
 /*static*/ Maybe<Tensor> OpInterpUtil::BuildTensor(
@@ -156,13 +107,17 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
-    return static_cast<std::shared_ptr<Tensor>>(MirroredTensor::MakeTensor(
+    const auto& tensor = JUST(MirroredTensor::MakeTensor(
         blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/false));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
-    const auto& distribute = JUST(compatible_py::MakeDistribute(*(parallel_attr->sbp_parallel())));
-    return static_cast<std::shared_ptr<Tensor>>(ConsistentTensor::MakeTensor(
-        blob_attr->shape(), dtype, distribute, parallel_attr->parallel_desc_symbol(), is_lazy,
-        /*requires_grad=*/false, /*is_leaf=*/false));
+    const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
+    *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
+    const auto& tensor =
+        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, parallel_distribution,
+                                          parallel_attr->parallel_desc_symbol(), is_lazy,
+                                          /*requires_grad=*/false, /*is_leaf=*/false));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }
 
@@ -172,19 +127,6 @@ using Bn2BlobObjectMap = HashMap<std::string, std::shared_ptr<compatible_py::Blo
   auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
                                                 /* requires_grad */ false, /* is_leaf */ false);
   return std::static_pointer_cast<Tensor>(tensor);
-}
-
-/*static*/ Maybe<Tensor> OpInterpUtil::BuildTensorFromBlobObject(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  const auto& blob_attr = blob_object->op_arg_blob_attr();
-  const auto& parallel_attr = blob_object->op_arg_parallel_attr();
-  const auto& tensor = JUST(BuildTensor(blob_attr, parallel_attr, /*is_lazy=*/false));
-  if (!parallel_attr->is_mirrored()) {
-    dynamic_cast<ConsistentTensor*>(tensor.get())->set_blob_object(blob_object);
-  } else {
-    UNIMPLEMENTED_THEN_RETURN() << "only ConsistentTensor can be build from blob_object";
-  }
-  return tensor;
 }
 
 }  // namespace one

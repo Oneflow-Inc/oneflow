@@ -44,7 +44,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad,
                                                     bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf);
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -52,11 +53,12 @@ template<>
 struct TensorExportUtil<ConsistentTensor> final {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
-                                        requires_grad, is_leaf);
+    return ConsistentTensor::MakeTensor(shape, dtype, parallel_distribution, parallel_desc, is_lazy,
+                                        requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -157,12 +159,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
 }
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
-  using T = ConsistentTensor;
   api->def_property_readonly("placement", &TensorGetParallelDesc);
-  api->def_property_readonly("_blob_object", &T::blob_object);
-  api->def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-    t.set_blob_object(blob_object).GetOrThrow();
-  });
 }
 
 template<typename T>
