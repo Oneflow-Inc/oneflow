@@ -123,10 +123,7 @@ class TestFusedCastScale(flow.unittest.TestCase):
         arg_dict["input_shape"] = [(5, 4, 3)]
         arg_dict["in_dtype"] = ["float16", "float32", "double"]
         arg_dict["out_dtype"] = ["float16", "float32", "double"]
-        if flow.sysconfig.with_mlir():
-            arg_dict["test_fuse_cast_scale_pass"] = [True, False]
-        else:
-            arg_dict["test_fuse_cast_scale_pass"] = [True]
+        arg_dict["test_fuse_cast_scale_pass"] = [True, False]
         arg_dict["has_scalar_mul"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[2] == arg[3]:
@@ -135,6 +132,10 @@ class TestFusedCastScale(flow.unittest.TestCase):
                 continue
             if arg[0] == "cpu" and (arg[2] == "float16" or arg[3] == "float16"):
                 continue
+            if flow.sysconfig.with_mlir():
+                if arg[2] != "float32":
+                    continue
+                print(arg)
             compare_with_tensorflow(*arg)
 
 
