@@ -15,8 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/device/node_device_descriptor_manager.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -37,7 +37,7 @@ struct NodeDeviceDescriptorManager::Impl {
 };
 
 NodeDeviceDescriptorManager::NodeDeviceDescriptorManager() {
-  impl_.reset(new Impl(Global<ProcessCtx>::Get()->rank(), Global<ProcessCtx>::Get()->node_size()));
+  impl_.reset(new Impl(GlobalProcessCtx::Rank(), GlobalProcessCtx::WorldSize()));
   std::shared_ptr<const NodeDeviceDescriptor> local = NodeDeviceDescriptor::Query();
   impl_->nodes.at(impl_->rank) = local;
   if (impl_->nodes.size() > 1) {
