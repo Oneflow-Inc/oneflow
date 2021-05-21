@@ -684,6 +684,71 @@ def cos_op(tensor):
     return Cos()(tensor)
 
 
+class Atan(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("atan").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+    
+@oneflow_export("atan")
+@experimental_api
+def atan_op(tensor):
+    r"""
+    Returns a new tensor with the arctangent of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \tan^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.atan(input)
+        # [0.4636476  0.5404195  0.61072594]
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("atan")
+@experimental_api
+def atan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@oneflow_export("arctan")
+@experimental_api
+def arctan_op(tensor):
+    r"""
+    Alias for :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("arctan")
+@experimental_api
+def arctan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.arctan`
+    
+    """
+    return Atan()(tensor)
+
+
 class Log(Module):
     def __init__(self) -> None:
         super().__init__()
