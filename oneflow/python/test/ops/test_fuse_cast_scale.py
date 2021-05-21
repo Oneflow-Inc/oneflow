@@ -135,7 +135,7 @@ class TestFusedCastScale(flow.unittest.TestCase):
             if flow.sysconfig.with_mlir():
                 if arg[2] != "float32":
                     continue
-                print(arg)
+                print("running", arg)
             compare_with_tensorflow(*arg)
 
 
