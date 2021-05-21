@@ -57,6 +57,7 @@ Maybe<std::string> GetScaleLbn(const std::string& lbn) {
 Maybe<bool> IsConvBiasEdge(const QatConfig& qat_config, const OpEdge* edge,
                            std::string* conv_input_scale_lbn, std::string* conv_weight_scale_lbn,
                            int64_t* weight_scale_length) {
+  if (qat_config.target_backend() == "tensorrt7") { return false; }
   const auto* dst_node = edge->dst_node();
 
   const auto dst_op_type = dst_node->op().op_conf().user_conf().op_type_name();
@@ -170,7 +171,7 @@ std::string QuantizationSchemeAttr4QatConfig(const QatConfig& qat_config) {
 // TODO: refactor the following 4 methods by registration
 std::string QuantizationFormulaAttr4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return "google";
   } else if (target_backend == "cambricon") {
     return "cambricon";
@@ -185,6 +186,8 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
     return {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
   } else if (target_backend == "cambricon") {
     return {"conv2d", "matmul"};
+  } else if (target_backend == "tensorrt7") {
+    return {"conv2d"};
   } else {
     UNIMPLEMENTED();
   }
@@ -192,7 +195,7 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
 
 OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return {"reshape"};
   } else if (target_backend == "cambricon") {
     return {};
@@ -203,7 +206,7 @@ OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
 
 bool InsertQuantOpAfterInt8Ops4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return true;
   } else if (target_backend == "cambricon") {
     return false;
