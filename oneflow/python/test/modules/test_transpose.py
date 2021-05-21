@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from test_util import GenArgList
 from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
 
 
 def _test_transpose(test_case, device):
@@ -55,10 +56,8 @@ def _test_transpose_backward(test_case, device):
         device=flow.device(device),
         requires_grad=True,
     )
-    y = flow.transpose(x, 0, 1)
-    y.retain_grad()
-    z = y.sum()
-    z.backward()
+    y = flow.transpose(x, 0, 1).sum()
+    y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-5, 1e-5))
 
 
@@ -69,10 +68,8 @@ def _test_transpose_backward_v2(test_case, device):
         device=flow.device(device),
         requires_grad=True,
     )
-    y = flow.transpose(x, 3, 1)
-    y.retain_grad()
-    z = y.sum()
-    z.backward()
+    y = flow.transpose(x, 3, 1).sum()
+    y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 

@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from test_util import GenArgList
 from collections import OrderedDict
+
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
 
 
 @unittest.skipIf(
@@ -505,7 +507,10 @@ def _test_softmax_backward(test_case, device):
     axis = 0
     m = flow.nn.Softmax(dim=axis)
     x = flow.Tensor(
-        input_arr, requires_grad=True, device=flow.device(device), dtype=flow.float64
+        softmax_input_arr,
+        requires_grad=True,
+        device=flow.device(device),
+        dtype=flow.float64,
     )
     y = m(x).sum()
     y.backward()
