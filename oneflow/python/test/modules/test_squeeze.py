@@ -29,6 +29,7 @@ def _test_squeeze(test_case, device):
     of_shape = flow.squeeze(input, dim=[1, 2]).numpy().shape
     np_shape = (1, 3)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
+    test_case.assertTrue(np.allclose(flow.squeeze(input, dim=[1, 2]).numpy(), np.squeeze(input.numpy(), axis=(1, 2)), 1e-4, 1e-4))
 
 
 def _test_tensor_squeeze(test_case, device):
@@ -38,6 +39,7 @@ def _test_tensor_squeeze(test_case, device):
     of_shape = input.squeeze(dim=[1, 2]).numpy().shape
     np_shape = (1, 3)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
+    test_case.assertTrue(np.allclose(input.squeeze(dim=[1, 2]).numpy(), np.squeeze(input.numpy(), axis=(1, 2)), 1e-4, 1e-4))
 
 
 def _test_squeeze_int(test_case, device):
@@ -47,6 +49,7 @@ def _test_squeeze_int(test_case, device):
     of_shape = flow.squeeze(input, 1).numpy().shape
     np_shape = (1, 1, 3)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
+    test_case.assertTrue(np.allclose(input.squeeze(1).numpy(), np.squeeze(input.numpy(), axis=1), 1e-4, 1e-4))
 
 
 def _test_squeeze_backward(test_case, device):
