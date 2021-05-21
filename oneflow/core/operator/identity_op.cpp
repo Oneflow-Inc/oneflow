@@ -93,30 +93,6 @@ class MirroredCastOp : public Operator {
  private:
 };
 
-class ConsistentCastOp : public Operator {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConsistentCastOp);
-  ConsistentCastOp() = default;
-  virtual ~ConsistentCastOp() override = default;
-
-  void InitFromOpConf() override {
-    EnrollInputBn("in");
-    EnrollOutputBn("out")->set_const_inplace_ibn("in");
-  }
-  Maybe<void> InferLogicalOutBlobDescs(
-      const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-      const ParallelDesc& parallel_desc) const override {
-    return InferBlobDescs(BlobDesc4BnInOp);
-  }
-  Maybe<void> InferOutBlobDescs(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override {
-    return InferBlobDescs(GetBlobDesc4BnInOp);
-  }
-
- private:
-};
-
 namespace {
 
 class CastToMirroredOp : public MirroredCastOp {

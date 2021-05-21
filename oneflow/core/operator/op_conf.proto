@@ -6,7 +6,6 @@ import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 import "oneflow/core/record/record.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/placement.proto";
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/register/tensor_slice_view.proto";
 import "oneflow/core/framework/user_op_conf.proto";

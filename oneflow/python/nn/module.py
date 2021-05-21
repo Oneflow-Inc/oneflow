@@ -16,18 +16,7 @@ limitations under the License.
 
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
-from typing import (
-    Union,
-    TypeVar,
-    Iterator,
-    Optional,
-    Set,
-    Tuple,
-    Dict,
-    List,
-    Callable,
-    Sequence,
-)
+from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
 
 import numpy as np
@@ -132,15 +121,12 @@ class Module(object):
 
     def _register_cast_consistent_ops(
         self,
-        inputs_sbp_signature: Sequence[Sequence[str]],
-        outputs_sbp_signature: Sequence[Sequence[str]],
-        inputs_placement: Sequence[oneflow._oneflow_internal.PlacementSymbol],
-        outputs_placement: Sequence[oneflow._oneflow_internal.PlacementSymbol],
+        inputs_sbp_signature: List[Union[Tuple[str], str]],
+        outputs_sbp_signature: List[Union[Tuple[str], str]],
+        inputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
+        outputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
-            cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
-                id_util.UniqueStr("cast_to_consistent_op"), ["in_0"], ["out_0"],
-            )
             parallel_distribution = inputs_sbp_signature[i]
             if isinstance(parallel_distribution, tuple):
                 parallel_distribution = list(parallel_distribution)
@@ -148,12 +134,13 @@ class Module(object):
                 parallel_distribution = [parallel_distribution]
             else:
                 assert isinstance(parallel_distribution, list)
+            cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
+                id_util.UniqueStr("cast_to_consistent_op"), ["in_0"], ["out_0"],
+            )
             cast_to_consistent_op_expr.SetParallelDistribution(parallel_distribution)
             cast_to_consistent_op_expr.SetParallelConf(inputs_placement[i])
             self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
-            cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
-                id_util.UniqueStr("cast_from_consistent_op"), ["in_0"], ["out_0"],
-            )
+
             parallel_distribution = outputs_sbp_signature[i]
             if isinstance(parallel_distribution, tuple):
                 parallel_distribution = list(parallel_distribution)
@@ -161,6 +148,9 @@ class Module(object):
                 parallel_distribution = [parallel_distribution]
             else:
                 assert isinstance(parallel_distribution, list)
+            cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
+                id_util.UniqueStr("cast_from_consistent_op"), ["in_0"], ["out_0"],
+            )
             cast_from_consistent_op_expr.SetParallelDistribution(parallel_distribution)
             cast_from_consistent_op_expr.SetParallelConf(outputs_placement[i])
             self._cast_from_consistent_ops[i] = cast_from_consistent_op_expr
@@ -614,15 +604,25 @@ def api_consistent_cast(
     module: Module,
     parallel_distribution: Union[
         Tuple[
-            Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
-            Sequence[Sequence[oneflow._oneflow_internal.distribute.Distribute]],
+            List[
+                Union[
+                    Tuple[oneflow._oneflow_internal.distribute.Distribute],
+                    oneflow._oneflow_internal.distribute.Distribute,
+                ]
+            ],
+            List[
+                Union[
+                    Tuple[oneflow._oneflow_internal.distribute.Distribute],
+                    oneflow._oneflow_internal.distribute.Distribute,
+                ]
+            ],
         ],
-        Tuple[Sequence[Sequence[str]], Sequence[Sequence[str]]],
+        Tuple[List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]],
     ],
     placement_signature: Optional[
         Tuple[
-            Sequence[oneflow._oneflow_internal.PlacementSymbol],
-            Sequence[oneflow._oneflow_internal.PlacementSymbol],
+            List[oneflow._oneflow_internal.PlacementSymbol],
+            List[oneflow._oneflow_internal.PlacementSymbol],
         ]
     ] = None,
 ):
