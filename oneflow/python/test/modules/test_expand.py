@@ -87,7 +87,7 @@ def _test_expand_new_dims(test_case, device):
     of_input = flow.Tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(2, 1, 2, 4, 2, 32)
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
 
@@ -96,7 +96,7 @@ def _test_expand_same_dim(test_case, device):
     expand_dim = [2, 4, 2, 32]
     input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(2, 4, 2, 32)
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
@@ -106,7 +106,7 @@ def _test_expand_same_dim_negative(test_case, device):
     expand_dim = [4, -1, 5, 3]
     input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(4, -1, 5, 3)
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np))
 
@@ -116,7 +116,7 @@ def _test_expand_same_int(test_case, device):
     expand_dim = [2, 4, 2, 32]
     input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.int, device=flow.device(device))
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(2, 4, 2, 32)
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
@@ -143,7 +143,7 @@ def _test_expand_backward_same_dim(test_case, device):
     of_input = flow.Tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(2, 4, 2, 1)
     y = of_out.sum().backward()
     np_grad = [
         [[[2.0]], [[2.0]], [[2.0]], [[2.0]]],
@@ -168,7 +168,7 @@ def _test_expand_backward(test_case, device):
     of_input = flow.Tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input.expand(expand_size=expand_dim)
+    of_out = of_input.expand(2, 1, 2, 4, 2, 2)
     y = of_out.sum().backward()
     np_grad = [[[[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]], [[8.0, 8.0]]]]
     test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))

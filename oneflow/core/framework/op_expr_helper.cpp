@@ -547,12 +547,12 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t> &out_shape,
-                                    const std::vector<int32_t> &stride) {
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride) {
   return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
 }
-Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t> &out_shape,
-                                    const std::vector<int32_t> &stride, const std::string& name) {
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name) {
   return one::OpBuilder("expand_grad", name)
       .Input("in")
       .Output("out")
