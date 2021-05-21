@@ -43,8 +43,6 @@ DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
 DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
-// DEFINE_OPEXPR_TYPE_NAME(CastToConsistentOpConf, "cast_to_consistent");
-// DEFINE_OPEXPR_TYPE_NAME(CastFromConsistentOpConf, "cast_from_consistent");
 DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
 DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
