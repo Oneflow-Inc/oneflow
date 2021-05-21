@@ -13,12 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import unittest
-
 from collections import OrderedDict
+
+import unittest
 import numpy as np
+
 import oneflow.experimental as flow
 from test_util import GenArgList
+
 
 def getExpandGrad(input_shape, expand_size):
     input = np.random.random(size=input_shape).astype(np.float32)
