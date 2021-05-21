@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
+#include "oneflow/core/vm/soft_sync_stream_phy_instr_operand.h"
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -877,6 +878,18 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
       JUST(eager_blob_object->compute_local_dep_object());
   *instruction->mutable_phy_instr_operand() = std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(
       eager_blob_object, compute_local_dep_object);
+  *instruction->mut_parallel_desc() = parallel_desc;
+  instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InstructionsBuilder::SoftSyncStream(
+    const std::shared_ptr<VmLocalDepObject> compute_local_dep_object, const std::string& modifier,
+    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+  ObjectMsgPtr<vm::InstructionMsg> instruction =
+      ObjectMsgPtr<vm::InstructionMsg>::New(parallel_desc->device_tag() + ".SoftSyncStream");
+  *instruction->mutable_phy_instr_operand() =
+      std::make_shared<vm::SoftSyncStreamPhyInstrOperand>(compute_local_dep_object, modifier);
   *instruction->mut_parallel_desc() = parallel_desc;
   instruction_list_->EmplaceBack(std::move(instruction.Mutable()));
   return Maybe<void>::Ok();

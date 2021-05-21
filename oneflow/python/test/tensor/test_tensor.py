@@ -440,6 +440,16 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_zeros_(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(np.random.randn(*shape), dtype=flow.float32)
+        x.zeros_()
+        test_case.assertTrue(np.array_equal(x.numpy(), np.zeros(shape)))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_construct_small_tensor(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.rand(*shape).astype(np.float32)
