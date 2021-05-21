@@ -905,8 +905,7 @@ LogicalResult Importer::TryToUpdateJob() {
                || llvm::dyn_cast<ModuleOp>(op)) {
       return WalkResult::advance();
     } else {
-      op->emitError("failed to convert MLIR op: " + op->getName().getStringRef().str()) << "\n"
-                                                                                        << *op;
+      op->emitError("failed to convert op: " + op->getName().getStringRef().str()) << "\n" << *op;
       return WalkResult::interrupt();
     } /* convert op conf */
     return WalkResult::advance();
