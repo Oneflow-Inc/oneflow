@@ -898,7 +898,6 @@ LogicalResult Importer::TryToUpdateJob() {
     } else {
       err_str = "failed to convert MLIR op: " + op->getName().getStringRef().str();
       op->dump();
-      return;
     } /* convert op conf */
   };
   module_.getBodyRegion().walk(convertOps);
