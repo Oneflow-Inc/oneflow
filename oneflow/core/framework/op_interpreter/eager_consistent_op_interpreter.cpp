@@ -56,6 +56,10 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromMirroredOpExpr& 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
+  if (inputs.at(0)->is_consistent()) {
+    outputs->at(0) = inputs.at(0);
+    return Maybe<void>::Ok();
+  }
   const auto& input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
   std::shared_ptr<EagerMirroredTensorImpl> eager_mirrored_tensor_impl =
@@ -79,6 +83,10 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
+  if (!inputs.at(0)->is_consistent()) {
+    outputs->at(0) = inputs.at(0);
+    return Maybe<void>::Ok();
+  }
   const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
   std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
