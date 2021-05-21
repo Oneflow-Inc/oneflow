@@ -5,6 +5,7 @@ from datetime import date
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--xla", default=False, action="store_true", required=False)
+parser.add_argument("--mlir", default=False, action="store_true", required=False)
 parser.add_argument("--cuda", type=str, required=False)
 parser.add_argument("--src", type=str, required=False)
 args = parser.parse_args()
@@ -37,6 +38,9 @@ if args.cuda:
         compute_platform += ".xla"
 else:
     compute_platform = "cpu"
+if args.mlir:
+    compute_platform += ".mlir"
+
 assert compute_platform
 version += f"+{compute_platform}"
 

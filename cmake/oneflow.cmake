@@ -285,6 +285,9 @@ endif()
 if (WITH_XLA)
   list(APPEND gen_pip_args --xla)
 endif()
+if (WITH_MLIR)
+  list(APPEND gen_pip_args --mlir)
+endif()
 
 set(of_pyscript_dir "${PROJECT_BINARY_DIR}/python_scripts")
 add_custom_target(of_pyscript_copy ALL

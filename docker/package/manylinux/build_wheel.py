@@ -333,6 +333,7 @@ if __name__ == "__main__":
         "--use_system_proxy", default=False, action="store_true", required=False
     )
     parser.add_argument("--xla", default=False, action="store_true", required=False)
+    parser.add_argument("--mlir", default=False, action="store_true", required=False)
     parser.add_argument("--gcc7", default=False, action="store_true", required=False)
     parser.add_argument("--gcc9", default=False, action="store_true", required=False)
     parser.add_argument(
@@ -362,6 +363,10 @@ if __name__ == "__main__":
         extra_oneflow_cmake_args += " -DWITH_XLA=ON"
     else:
         extra_oneflow_cmake_args += " -DWITH_XLA=Off"
+    if args.mlir:
+        extra_oneflow_cmake_args += " -DWITH_MLIR=ON"
+    else:
+        extra_oneflow_cmake_args += " -DWITH_MLIR=Off"
     if args.xla == True and args.cpu == True:
         raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
@@ -376,10 +381,6 @@ if __name__ == "__main__":
             versioned_img_tag = f"{img_prefix}:0.1"
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
-            is_with_mlir = (
-                "-DWITH_MLIR=ON" in extra_oneflow_cmake_args
-                or "-DWITH_MLIR=1" in extra_oneflow_cmake_args
-            )
             if "--name" not in extra_docker_args:
                 extra_docker_args += (
                     f" --name run-by-{getpass.getuser()}-{str(uuid.uuid4())}"
@@ -407,7 +408,7 @@ if __name__ == "__main__":
             if args.xla:
                 bash_args = "-l"
             bash_wrap = ""
-            if args.xla or args.gcc7 or is_with_mlir:
+            if args.xla or args.gcc7 or args.mlir:
                 bash_wrap = """
 source scl_source enable devtoolset-7
 gcc --version
@@ -435,7 +436,7 @@ gcc --version
                 if args.cpu:
                     assert len(cuda_versions) == 1
                     sub_dir += "-cpu"
-                if is_with_mlir:
+                if args.mlir:
                     sub_dir += "-mlir"
                 cache_dir = os.path.join(cache_dir, sub_dir)
             if args.skip_third_party == False:
