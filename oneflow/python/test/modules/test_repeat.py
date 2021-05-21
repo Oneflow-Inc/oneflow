@@ -50,7 +50,8 @@ def _test_repeat_same_dim_int(test_case, device):
     input = flow.Tensor(
         np.random.randn(1, 2, 5, 3), dtype=flow.int32, device=flow.device(device)
     )
-    sizes = (4, 2, 3, 19)
+    size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
+    sizes = size_tensor.size()
     of_out = input.repeat(sizes=sizes)
     np_out = np_repeat(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
