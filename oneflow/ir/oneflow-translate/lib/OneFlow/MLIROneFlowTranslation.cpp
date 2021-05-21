@@ -120,14 +120,9 @@ class Importer {
   Type GetTensorTypeOfLbn(const std::string& lbn);
 
  private:
-  /// The current builder, pointing at where the next Instruction should be
-  /// generated.
   OpBuilder builder_;
-  /// The current context.
   MLIRContext* context_;
-  /// The current module being created.
   ModuleOp module_;
-  /// Cached FileLineColLoc
   Location unknown_loc_;
   std::unordered_map<std::string, mlir::OpResult> lbn2result_;
   std::unordered_map<std::string, mlir::OpResult> op_name2ctrl_result_;
@@ -525,7 +520,6 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
         FileLineColLoc::get(context_, op.name(), 0, 0), out_types, operands, named_attributes);
   } else {
     if (failed(AppendCtrlOutType(out_types))) { return failure(); }
-    // OperationState state(unknownLoc, "oneflow." + op_type_name);
     OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
@@ -937,14 +931,12 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   return success();
 }
 
-// Move this into another cpp which will be another target
 OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
   context->loadDialect<StandardOpsDialect>();
-  // Reimplement the logic after this function is moved to a independent target
   OwningModuleRef module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
