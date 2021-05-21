@@ -948,3 +948,53 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+class Topk(Module):
+    def __init__(
+        self, k: int = None, sorted: bool = False
+    ) -> None:
+        super().__init__()
+        self.k = k
+        self.sorted = sorted
+        self._op = (
+            flow.builtin_op("top_k")
+            .Input("in")
+            .Output("out")
+            .Attr("k", k)
+            .Attr("sorted", sorted)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input, k=self.k, sorted=self.sorted)[0]
+
+@oneflow_export("topk")
+@register_tensor_op("topk")
+@experimental_api
+def topk(input, k=None, sorted=False):
+    r"""
+    Returns the k largest elements of the given input tensor along a given dimension.
+    If dim is not given, the last dimension of the input is chosen.
+    If largest is False then the k smallest elements are returned.
+    A namedtuple of (values, indices) is returned, where the indices are the indices of the elements in the original input tensor.
+    The boolean option sorted if True, will make sure that the returned k elements are themselves sorted.
+
+    Args:
+        input (Tensor): the input tensor.
+        k (int) – the k in "top-k"
+        sorted (bool, optional) – controls whether to return the elements in sorted order
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([1, 3, 8, 7, 2])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.topk(input, 2)
+        # [2, 3]
+
+    """
+
+    return Topk(k, sorted)(input)

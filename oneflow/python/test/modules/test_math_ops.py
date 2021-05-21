@@ -215,5 +215,26 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestTopk(flow.unittest.TestCase):
+
+    def test_topk(test_case):
+        input = flow.Tensor(np.random.randn(4, 3))
+        of_out = flow.topk(input, 2)
+        print(input.numpy())
+        print(of_out.numpy())
+        # test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_topk_tensor_function(test_case):
+        input = flow.Tensor(np.random.randn(2, 3))
+        of_out = input.topk(1)
+        print(input.numpy())
+        print(of_out.numpy())
+        # test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
 if __name__ == "__main__":
     unittest.main()
