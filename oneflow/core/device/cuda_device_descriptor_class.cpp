@@ -43,8 +43,8 @@ class CudaDeviceDescriptorClass : public DeviceDescriptorClass {
   std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const override {
     int n_dev;
     cudaError_t err = cudaGetDeviceCount(&n_dev);
-    if (err == cudaErrorInsufficientDriver) {
-      LOG(WARNING) << "CUDA driver version is insufficient for CUDA runtime version";
+    if (err != cudaSuccess) {
+      LOG(WARNING) << cudaGetErrorString(err);
       return std::make_shared<const BasicDeviceDescriptorList>(
           std::vector<std::shared_ptr<const DeviceDescriptor>>());
     }
