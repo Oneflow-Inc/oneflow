@@ -624,7 +624,7 @@ class Asin(Module):
 
 @oneflow_export("asin")
 @experimental_api
-def asin_op(input):
+def asin_op(tensor):
     r"""
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
@@ -643,37 +643,34 @@ def asin_op(input):
         output = flow.asin(input)
         # [-0.6387,     nan, -0.4552,     nan]
     """
-    return Asin()(input)
+    return Asin()(tensor)
 
 @register_tensor_op("asin")
 @experimental_api
-def asin_op_tensor(input):
+def asin_op_tensor(tensor):
     r"""
-    asin() -> Tensor
 
     See :func:`oneflow.experimental.asin`
     """
-    return Asin()(input)
+    return Asin()(tensor)
 
 @oneflow_export("arcsin")
 @experimental_api
-def arcsin_op(input):
+def arcsin_op(tensor):
     r"""
-    arcsin() -> Tensor
 
     Alias for :func:`oneflow.experimental.asin`
     """
-    return Asin()(input)
+    return Asin()(tensor)
 
 @register_tensor_op("arcsin")
 @experimental_api
-def arcsin_op_tensor(input):
+def arcsin_op_tensor(tensor):
     r"""
-    arcsin() -> Tensor
 
     See for :func:`oneflow.experimental.asin`
     """
-    return Asin()(input)
+    return Asin()(tensor)
 
 
 class Sin(Module):
