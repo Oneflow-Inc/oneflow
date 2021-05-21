@@ -77,6 +77,7 @@ class TestModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_reshape,
+            _test_reshape_tuple,
             _test_tensor_reshape,
             _test_reshape_backward,
         ]
