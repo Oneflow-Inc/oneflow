@@ -20,6 +20,63 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+def getExpandGrad(input_shape, expand_size):
+    input = np.random.random(size=input_shape).astype(np.float32)
+
+    input_stride = [1]
+    for i in range(len(input_shape) - 2, -1, -1):
+        input_stride.insert(0, input_stride[0] * input_shape[i + 1])
+    # calculate the output shape and stride
+    new_size = []
+    new_stride = []
+    diff = len(expand_size) - len(input_shape)
+    for i in range(len(expand_size) - 1, -1, -1):
+        if i >= diff:
+            if expand_size[i] == -1 or expand_size[i] == input_shape[i - diff]:
+                new_size.insert(0, input_shape[i - diff])
+                new_stride.insert(0, input_stride[i - diff])
+            else:
+                assert expand_size[i] >= 1 and input_shape[i - diff] == 1
+                new_size.insert(0, expand_size[i])
+                new_stride.insert(0, 0)
+        else:
+            assert expand_size[i] >= 1
+            new_size.insert(0, expand_size[i])
+            if expand_size[i] == 1:
+                new_stride.insert(0, new_stride[0])
+            else:
+                new_stride.insert(0, 0)
+
+    gout = np.random.random(size=tuple(new_size)).astype(np.float32)
+
+    out_stride = [1]
+    for i in range(len(new_size) - 2, -1, -1):
+        out_stride.insert(0, out_stride[0] * new_size[i + 1])
+
+    gin = np.zeros(input_shape).flatten()
+    out = np.zeros(np.product(new_size))
+
+    def getOffset(i_offset, stride, expand_stride, n):
+        remain = i_offset
+        o_offset = 0
+        for i in range(n):
+            idx = int(remain / stride[i])
+            o_offset += idx * expand_stride[i]
+            remain = remain - idx * stride[i]
+        return o_offset
+
+    in_flatten = input.flatten()
+    gout_flatten = gout.flatten()
+    num_elem = np.product(new_size)
+    dims = len(new_size)
+
+    for i in range(num_elem):
+        offset = getOffset(i, out_stride, new_stride, dims)
+        gin[offset] += gout_flatten[i]
+        out[i] = in_flatten[offset]
+
+    return input, gout, out.reshape(tuple(new_size)), gin.reshape(input_shape)
+
 
 def _test_expand_new_dims(test_case, device):
     input_shape = (1, 4, 1, 32)
