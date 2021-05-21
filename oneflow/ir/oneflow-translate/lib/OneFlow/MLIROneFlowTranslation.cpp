@@ -98,8 +98,8 @@ class Importer {
   LogicalResult TryToUpdateJob();
 
   DenseIntElementsAttr DenseIntElementsAttrFromShape(const ::oneflow::ShapeProto& shape);
-  void ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                               ::oneflow::OperatorConf& op_conf, std::string& err_str);
+  LogicalResult ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+                                        ::oneflow::OperatorConf& op_conf);
 
   IntegerAttr getSI64IntegerAttr(int64_t value) {
     return IntegerAttr::get(builder_.getIntegerType(64, /*isSigned=*/true),
@@ -636,26 +636,27 @@ LogicalResult Importer::ProcessJob() {
   return success();
 }
 
-void ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
+LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf) {
   if (auto ctrl_ins = GetCtrlIntputOperands(op)) {
     for (auto ctrl_in : ctrl_ins.getValue()) {
       op_conf.add_ctrl_in_op_name(
           ctrl_in.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
     }
   }
+  return success();
 }
 
-void ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                         ::oneflow::UserOpConf* user_conf, std::string& err_str) {
+LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+                                  ::oneflow::UserOpConf* user_conf) {
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
   int input_idx = 0;
   if (auto keys = user_op_adaptor.input_lbn_segment_keys()) {
     auto sizes = user_op_adaptor.input_lbn_segment_sizes();
     if (keys.size() != sizes.size()) {
-      err_str = "fail to convert op inputs, input_lbn_segment_keys != "
-                "input_lbn_segment_sizes, name: "
-                + op_name;
-      return;
+      op->emitError() << "fail to convert op inputs, input_lbn_segment_keys != "
+                         "input_lbn_segment_sizes, name: "
+                             + op_name;
+      return failure();
     };
     // every key
     for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
@@ -673,19 +674,20 @@ void ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
           *((*user_conf->mutable_input())[input_key].mutable_s()->Add()) = output_lbn_in_source_op;
           input_idx += 1;
         } else {
-          err_str = "fail to cast result, name: " + op_name;
-          return;
+          op->emitError() << "fail to cast result, name: " + op_name;
+          return failure();
         }
       }
     }
   } else {
-    err_str = "fail to convert op inputs, name: " + op_name;
-    return;
+    op->emitError() << "fail to convert op inputs, name: " + op_name;
+    return failure();
   }
+  return success();
 }
 
-void ConvertUseropOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                          ::oneflow::UserOpConf* user_conf, std::string& err_str) {
+LogicalResult ConvertUseropOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+                                   ::oneflow::UserOpConf* user_conf) {
   int output_key_idx = -1;
   int segment_offset = 0;
   for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
@@ -697,14 +699,15 @@ void ConvertUseropOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor
                      .getInt();
       segment_offset += size;
     }
-    std::string output_key = user_op_adaptor.output_lbn_segment_keys()[output_key_idx]
-                                 .dyn_cast<StringAttr>()
-                                 .getValue()
-                                 .str();
-    std::string output_lbn =
+    const std::string& output_key = user_op_adaptor.output_lbn_segment_keys()[output_key_idx]
+                                        .dyn_cast<StringAttr>()
+                                        .getValue()
+                                        .str();
+    const std::string& output_lbn =
         user_op_adaptor.output_lbns()[result_idx].dyn_cast<StringAttr>().getValue().str();
     *((*user_conf->mutable_output())[output_key].mutable_s()->Add()) = output_lbn;
   }
+  return success();
 }
 
 LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
@@ -733,8 +736,9 @@ LogicalResult ConvertDT(Attribute attr, ::oneflow::DataType& data_type) {
   return success();
 }
 
-void Importer::ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
-                                       ::oneflow::OperatorConf& op_conf, std::string& err_str) {
+LogicalResult Importer::ConvertUseropAttributes(Operation* op,
+                                                oneflow::UserOpAdaptor& user_op_adaptor,
+                                                ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   const std::string op_name = op->getAttrOfType<StringAttr>("op_name").getValue().str();
   for (auto id_attr : op->getAttrDictionary()) {
@@ -785,8 +789,8 @@ void Importer::ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& us
         if (succeeded(ConvertDT(attr, dt))) {
           user_attr.set_at_data_type(dt);
         } else {
-          err_str = "fail to convert op attr to data type, key: " + id.str();
-          return;
+          op->emitError() << "fail to convert op attr to data type, key: " + id.str();
+          return failure();
         }
       } else if (attr_type == ::oneflow::kAtListInt32) {
         user_attr.mutable_at_list_int32();
@@ -813,8 +817,8 @@ void Importer::ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& us
           if (succeeded(ConvertDT(v, dt))) {
             user_attr.mutable_at_list_data_type()->add_val(dt);
           } else {
-            err_str = "fail to convert op attr to data type, key: " + id.str();
-            return;
+            op->emitError() << "fail to convert op attr to data type, key: " + id.str();
+            return failure();
           }
         }
       } else if (attr_type == ::oneflow::kAtListShape) {
@@ -830,12 +834,13 @@ void Importer::ConvertUseropAttributes(Operation* op, oneflow::UserOpAdaptor& us
           user_attr.mutable_at_list_string()->add_val(s.dyn_cast<StringAttr>().getValue().str());
         }
       } else {
-        err_str = "fail to convert op attr of name: " + attr_name;
-        return;
+        op->emitError() << "fail to convert op attr of name: " + attr_name;
+        return failure();
       }
       (*user_conf->mutable_attr())[id.str()] = user_attr;
     }
   }
+  return success();
 }
 
 template<typename OpType, typename AdaptorType>
@@ -856,7 +861,6 @@ void UpdatePlacement(OpType* op, AdaptorType& adaptor, ::oneflow::Job& job) {
 }
 
 LogicalResult Importer::TryToUpdateJob() {
-  std::string err_str = "";
   auto new_job = ::oneflow::Job();
   new_job.CopyFrom(*job_);
   new_job.clear_net();
@@ -868,11 +872,14 @@ LogicalResult Importer::TryToUpdateJob() {
       ::oneflow::OperatorConf op_conf;
       const std::string op_name = user_op_adaptor.op_name().getValue().str();
       auto user_conf = op_conf.mutable_user_conf();
-      ConvertUseropInputs(op, user_op_adaptor, user_conf, err_str);
-      ConvertUseropOutputs(op, user_op_adaptor, user_conf, err_str);
-      ConvertUseropAttributes(op, user_op_adaptor, op_conf, err_str);
-      ConvertCtrlInputs(op, op_conf);
-      *(new_job.mutable_net()->add_op()) = op_conf;
+      if (succeeded(ConvertUseropInputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUseropOutputs(op, user_op_adaptor, user_conf))
+          && succeeded(ConvertUseropAttributes(op, user_op_adaptor, op_conf))
+          && succeeded(ConvertCtrlInputs(op, op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
     } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
       oneflow::SystemOpAdaptor system_op_adaptor(op->getOperands(), op->getAttrDictionary());
       UpdatePlacement(op, system_op_adaptor, new_job);
@@ -889,25 +896,27 @@ LogicalResult Importer::TryToUpdateJob() {
         job_wrapper_.ReplaceInputLbnInOpCustomizedConf(
             &op_conf, ibn.value().dyn_cast<StringAttr>().getValue().str(), new_val);
       }
-      ConvertCtrlInputs(op, op_conf);
-      *(new_job.mutable_net()->add_op()) = op_conf;
-    } else if (llvm::dyn_cast<ReturnOp>(op)) {
-      // Do nothing
-    } else if (llvm::dyn_cast<FuncOp>(op)) {
-      // Do nothing
+      if (succeeded(ConvertCtrlInputs(op, op_conf))) {
+        *(new_job.mutable_net()->add_op()) = op_conf;
+      } else {
+        return WalkResult::interrupt();
+      }
+    } else if (llvm::dyn_cast<ReturnOp>(op) || llvm::dyn_cast<FuncOp>(op)
+               || llvm::dyn_cast<ModuleOp>(op)) {
+      return WalkResult::advance();
     } else {
-      err_str = "failed to convert MLIR op: " + op->getName().getStringRef().str();
-      op->dump();
+      op->emitError("failed to convert MLIR op: " + op->getName().getStringRef().str()) << "\n"
+                                                                                        << *op;
+      return WalkResult::interrupt();
     } /* convert op conf */
+    return WalkResult::advance();
   };
-  module_.getBodyRegion().walk(convertOps);
-  if (err_str.empty()) {
-    job_wrapper_.UpdateJob(&new_job);
-    return success();
-  } else {
-    module_->emitError(err_str);
+  if (module_->walk(convertOps).wasInterrupted()) {
     return failure();
+  } else {
+    job_wrapper_.UpdateJob(&new_job);
   }
+  return success();
 }  // namespace
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
