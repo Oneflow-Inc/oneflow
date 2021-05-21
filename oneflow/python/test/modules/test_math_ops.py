@@ -73,6 +73,25 @@ class TestCos(flow.unittest.TestCase):
         of_out = input.cos()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestAbs(flow.unittest.TestCase):
+    def test_abs(test_case):
+        input = flow.Tensor(np.array([-1, 2, -3]), dtype=flow.float32)
+        of_out = flow.abs(input)
+        np_out = np.abs(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(input.abs().numpy(), np_out, 1e-5, 1e-5))
+
+    def test_abs_tensor_function(test_case):
+        x = np.array([-1, 2, -3, 4]).astype(np.float32)
+        input = flow.Tensor(x, dtype=flow.float32)
+        np_out = np.abs(x)
+        of_out = input.abs()
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
