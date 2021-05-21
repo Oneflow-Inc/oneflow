@@ -614,6 +614,68 @@ def _add(x, y):
         return BroadcastAdd()(x, y)
 
 
+class Asin(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("asin").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+@oneflow_export("asin")
+@experimental_api
+def asin_op(input):
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([-0.5962,  1.4985, -0.4396,  1.4525])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.asin(input)
+        # [-0.6387,     nan, -0.4552,     nan]
+    """
+    return Asin()(input)
+
+@register_tensor_op("asin")
+@experimental_api
+def asin_op_tensor(input):
+    r"""
+    asin() -> Tensor
+
+    See :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+@oneflow_export("arcsin")
+@experimental_api
+def arcsin_op(input):
+    r"""
+    arcsin() -> Tensor
+
+    Alias for :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+@register_tensor_op("arcsin")
+@experimental_api
+def arcsin_op_tensor(input):
+    r"""
+    arcsin() -> Tensor
+
+    See for :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
 class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -948,3 +1010,4 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
