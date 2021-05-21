@@ -56,7 +56,7 @@ class Repeat(Module):
                 out_reshape.insert(0, repeat[i])
 
         new_tensor = flow.experimental.reshape(input, in_reshape)
-        tmp_tensor = flow.experimental.expand(new_tensor, expand_dim)
+        tmp_tensor = flow.experimental.expand(new_tensor, *expand_dim)
         out = flow.experimental.reshape(tmp_tensor, out_reshape)
         return out
 
