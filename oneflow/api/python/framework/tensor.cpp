@@ -158,9 +158,8 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetPtrOrThrow();
 }
 
-std::vector<std::shared_ptr<const Shape>> GetTensorBufferShapes(
-    const std::shared_ptr<MirroredTensor>& tensor) {
-  std::vector<std::shared_ptr<const Shape>> shapes;
+std::vector<Shape> GetTensorBufferShapes(const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<Shape> shapes;
   std::atomic<bool> synced(false);
 
   PhysicalRun([&](InstructionsBuilder* builder) {
@@ -174,7 +173,7 @@ std::vector<std::shared_ptr<const Shape>> GetTensorBufferShapes(
           const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
           for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
             const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-            shapes.push_back(std::make_shared<const Shape>(tensor_buffer->shape()));
+            shapes.push_back(tensor_buffer->shape());
           }
           synced = true;
         },
@@ -201,9 +200,8 @@ const DType DataType2Dtype(DataType data_type) {
   }
 }
 
-std::vector<std::shared_ptr<const DType>> GetTensorBufferDtypes(
-    const std::shared_ptr<MirroredTensor>& tensor) {
-  std::vector<std::shared_ptr<const DType>> dtypes;
+std::vector<DType> GetTensorBufferDtypes(const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<DType> dtypes;
   std::atomic<bool> synced(false);
 
   PhysicalRun([&](InstructionsBuilder* builder) {
@@ -217,8 +215,7 @@ std::vector<std::shared_ptr<const DType>> GetTensorBufferDtypes(
           const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
           for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
             const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-            dtypes.push_back(
-                std::make_shared<const DType>(DataType2Dtype(tensor_buffer->data_type())));
+            dtypes.push_back(DataType2Dtype(tensor_buffer->data_type()));
           }
           synced = true;
         },

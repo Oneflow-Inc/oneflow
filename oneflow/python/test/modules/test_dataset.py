@@ -68,9 +68,19 @@ class TestOFRecordModule(flow.unittest.TestCase):
         val_record = record_reader()
         label = record_label_decoder(val_record)
         image_raw_buffer = record_image_decoder(val_record)
-        print(image_raw_buffer.numpy()[0].shape)
+        image_raw_buffer_nd = image_raw_buffer.numpy()[0]
+
+        gt_np = cv2.imread("/dataset/imagenette/ofrecord/gt_tensor_buffer_image.png")
+        test_case.assertTrue(np.array_equal(image_raw_buffer_nd, gt_np))
+
         image = resize(image_raw_buffer)
-        print(image.numpy()[0].dtype)
+
+        resized_image_raw_buffer_nd = image.numpy()[0]
+        gt_np = cv2.imread(
+            "/dataset/imagenette/ofrecord/gt_tensor_buffer_resized_image.png"
+        )
+        test_case.assertTrue(np.array_equal(resized_image_raw_buffer_nd, gt_np))
+
         image = crop_mirror_normal(image)
 
         # recover image
