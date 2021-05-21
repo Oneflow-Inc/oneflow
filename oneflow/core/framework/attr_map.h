@@ -36,10 +36,19 @@ using AttrName2AttrVal = std::map<std::string, std::shared_ptr<const user_op::At
 
 class AttrName2AttrValWrapper {
  public:
-  AttrName2AttrValWrapper(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
+  AttrName2AttrValWrapper(const std::shared_ptr<const AttrName2AttrVal>& attrs);
+  AttrName2AttrValWrapper(const AttrName2AttrValWrapper&) = default;
+  AttrName2AttrValWrapper(AttrName2AttrValWrapper&&) = default;
+  ~AttrName2AttrValWrapper() = default;
 
   size_t size() const { return attrs_->size(); }
   bool empty() const { return attrs_->empty(); }
+
+  AttrName2AttrValWrapper& operator=(const AttrName2AttrValWrapper& other) {
+    attrs_ = other.attrs_;
+    hash_value_ = other.hash_value_;
+    return *this;
+  }
 
   bool operator==(const AttrName2AttrValWrapper& other) const;
 
@@ -49,8 +58,11 @@ class AttrName2AttrValWrapper {
 
   const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
 
+  size_t hash_value() const { return hash_value_; }
+
  private:
   std::shared_ptr<const AttrName2AttrVal> attrs_;
+  size_t hash_value_;
 };
 
 class AttrMap final {
@@ -77,19 +89,19 @@ class AttrMap final {
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(const std::string& attr_name) const;
 
-  size_t size() const { return attrs_->size(); }
-  bool empty() const { return attrs_->empty(); }
+  size_t size() const { return attrs_.size(); }
+  bool empty() const { return attrs_.empty(); }
 
   using const_iterator = typename AttrName2AttrVal::const_iterator;
-  const_iterator begin() const { return attrs_->begin(); }
-  const_iterator end() const { return attrs_->end(); }
+  const_iterator begin() const { return attrs_.begin(); }
+  const_iterator end() const { return attrs_.end(); }
 
-  const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
+  const_iterator find(const std::string& attr_name) const { return attrs_.find(attr_name); }
 
   size_t hash_value() const { return attrs_.hash_value(); }
 
  private:
-  Symbol<AttrName2AttrValWrapper> attrs_;
+  AttrName2AttrValWrapper attrs_;
 };
 
 class UserOpConf;
@@ -132,6 +144,13 @@ class MutableCfgAttrMap : public std::map<std::string, std::shared_ptr<cfg::Attr
 }  // namespace oneflow
 
 namespace std {
+
+template<>
+struct hash<oneflow::AttrName2AttrValWrapper> final {
+  size_t operator()(const oneflow::AttrName2AttrValWrapper& attr_name2attr_val) const {
+    return attr_name2attr_val.hash_value();
+  }
+};
 
 template<>
 struct hash<oneflow::AttrMap> final {

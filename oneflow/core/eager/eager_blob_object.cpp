@@ -39,10 +39,10 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       tensor_buffer_(tensor_buffer),
       blob_body_bytes_(0),
       is_shape_synced_(true),
-      infer_local_dep_object_(GetVmLocalDepObject(parallel_desc)),
       compute_local_dep_object_(GetVmLocalDepObject(parallel_desc)) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_buffer));
+  non_pod_initer_ = std::make_unique<MemoryAllocator>();
 }
 
 Maybe<void> EagerBlobObject::TryInitBlob() {
@@ -87,7 +87,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     allocator->Allocate(&dptr, required_body_bytes);
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
     blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(&non_pod_initer_, blob_.get());
+    InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
   }
   blob_body_bytes_ = required_body_bytes;
   return Maybe<void>::Ok();

@@ -35,31 +35,25 @@ namespace oneflow {
 namespace one {
 
 namespace {
-Maybe<const Device> GetDefaultDevice() {
-  // TODO: align with pytorch (default cpu) when tensor.to() is ready
-  return Device::New("cuda", 0);
-}
+Maybe<const Device> GetDefaultDevice() { return Device::New("cpu", 0); }
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
+                           const std::shared_ptr<const Device>& default_device,
                            const std::shared_ptr<EagerBlobObjectList>& output_eager_blob_objects,
                            const AttrMap& attrs,
                            std::vector<std::shared_ptr<const Device>>* out_devices) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
-  std::shared_ptr<const Device> default_device;
-  if (inputs.empty()) {
-    default_device = JUST(GetDefaultDevice());
-  } else {
-    default_device = inputs.at(0)->device();
-  }
   for (int i = 0; i < inputs.size(); i++) {
-    if (i > 0) { CHECK_OR_RETURN(*default_device == *inputs.at(i)->device()); }
+    const auto& input_device = JUST(inputs.at(i)->device());
+    if (i > 0) { CHECK_OR_RETURN(*default_device == *input_device); }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
+  bool need_check_mem_case = true;
   bool need_event_record = false;
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
@@ -72,9 +66,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       out_devices->at(i) = default_device;
     }
   } else {
+    need_check_mem_case = false;
     op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
     for (const auto& input_tensor : inputs) {
-      need_event_record = need_event_record || !(*op_device == *input_tensor->device());
+      const auto& input_device = JUST(input_tensor->device());
+      need_event_record = need_event_record || !(*op_device == *input_device);
     }
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
@@ -89,6 +85,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
@@ -106,10 +103,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       for (const auto& input_tensor : inputs) {
         const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
         CHECK_OR_RETURN(static_cast<bool>(tensor));
-        // Instruction `AccessBlobByCallback` records event which can be used to synchronize cuda
-        // stream.
-        JUST(builder->AccessBlobByCallback(
-            tensor, [](uint64_t) {}, "mut"));
+        // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
+        // stream
+        JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
+                                     JUST(tensor->device())->parallel_desc_ptr()));
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
@@ -118,14 +115,29 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   return Maybe<void>::Ok();
 }
 
-Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(DataType data_type,
-                                                            const Shape& shape) {
-  const auto zeros_expr = JUST(op_expr_helper::ZerosOp(shape, data_type));
+Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
+                           const std::shared_ptr<EagerBlobObjectList>& output_eager_blob_objects,
+                           const AttrMap& attrs,
+                           std::vector<std::shared_ptr<const Device>>* out_devices) {
+  std::shared_ptr<const Device> default_device;
+  if (inputs.empty()) {
+    default_device = JUST(GetDefaultDevice());
+  } else {
+    default_device = JUST(inputs.at(0)->device());
+  }
+  return NaiveInterpret(user_op_expr, inputs, default_device, output_eager_blob_objects, attrs,
+                        out_devices);
+}
+
+Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(
+    DataType data_type, const Shape& shape, const std::shared_ptr<const Device>& device) {
+  const auto empty_expr = JUST(op_expr_helper::EmptyOp(shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(1);
   std::vector<std::shared_ptr<const Device>> out_devices(1);
-  JUST(NaiveInterpret(*zeros_expr, *inputs, output_eager_blob_objects, AttrMap{}, &out_devices));
+  JUST(NaiveInterpret(*empty_expr, *inputs, device, output_eager_blob_objects, AttrMap{},
+                      &out_devices));
   return output_eager_blob_objects->at(0);
 }
 
@@ -134,7 +146,7 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   std::vector<std::shared_ptr<const Device>> out_devices(outputs->size());
-  NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices);
+  JUST(NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices));
   for (int i = 0; i < outputs->size(); ++i) {
     outputs->at(i) = JUST(OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
         output_eager_blob_objects->at(i), out_devices.at(i)));

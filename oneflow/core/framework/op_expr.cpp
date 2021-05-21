@@ -72,7 +72,7 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
   const auto& opkernel =
-      JUST(StatefulLocalOpKernel::New(op_conf, base_attrs(), device.shared_from_this(),
+      JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), base_attrs(),
                                       parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
@@ -122,19 +122,19 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
   std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
-                                                                    int32_t index) override {
+                                                                    int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return &output_devices_->at(tuple_index);
   }
 
-  const std::shared_ptr<const Device>& InputTensorDevice4ArgNameAndIndex(
-      const std::string& name, int32_t index) const override {
+  std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                                  int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return input_tensors_->at(tuple_index)->device();
+    return CHECK_JUST(input_tensors_->at(tuple_index)->device());
   }
 
  private:

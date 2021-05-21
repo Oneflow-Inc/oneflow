@@ -13,20 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
+#ifndef ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
+#define ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
 
-#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
-namespace vm {
+namespace dl {
 
-void ReadTensorShapeArgCbPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  vm::LocalDepObject* infer_local_dep_object =
-      CHECK_JUST(eager_blob_object()->infer_local_dep_object())->mut_local_dep_object();
-  DoEach(infer_local_dep_object->mut_mirrored_object(), nullptr);
-}
+class DynamicLibrary {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DynamicLibrary);
+  ~DynamicLibrary();
 
-}  // namespace vm
+  static std::unique_ptr<DynamicLibrary> Load(const std::vector<std::string>& names);
+  void* LoadSym(const char* name);
+  std::string AbsolutePath();
+
+ private:
+  DynamicLibrary(void* handle) : handle_(handle){};
+  void* handle_ = nullptr;
+};
+
+}  // namespace dl
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_

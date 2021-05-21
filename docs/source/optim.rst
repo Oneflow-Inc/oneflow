@@ -3,6 +3,8 @@ oneflow.optim
 Optimizers
 ----------------------------------
 .. currentmodule:: oneflow.optim
-.. automodule:: oneflow.optim
-    :members:
-    :imported-members:
+.. autofunction:: oneflow.experimental.optim.Adam
+.. autofunction:: oneflow.experimental.optim.AdamW
+.. autofunction:: oneflow.experimental.optim.RMSprop
+.. autofunction:: oneflow.experimental.optim.SGD
+.. autofunction:: oneflow.experimental.optim.lr_scheduler.CosineScheduler

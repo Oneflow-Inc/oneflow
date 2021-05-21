@@ -24,7 +24,15 @@ from oneflow.python.nn.parameter import Parameter
 
 
 def compare_with_numpy_adam(
-    test_case, x_shape, scale, learning_rate, train_iters, betas, weight_decay, eps
+    test_case,
+    device,
+    x_shape,
+    scale,
+    learning_rate,
+    train_iters,
+    betas,
+    weight_decay,
+    eps,
 ):
     # generate random number sequences
     random_grad_seq = []
@@ -34,21 +42,24 @@ def compare_with_numpy_adam(
     init_value = np.random.uniform(size=x_shape).astype(np.float32)
 
     def train_by_oneflow():
-        x = Parameter(flow.Tensor(init_value))
-        param_list = list()
-        param_list.append(x)
+        x = Parameter(flow.Tensor(init_value, device=flow.device(device)))
         adam = flow.optim.Adam(
-            [{"param": param_list}],
-            lr=learning_rate,
-            betas=betas,
-            eps=eps,
-            weight_decay=weight_decay,
-            scale=scale,
+            [
+                {
+                    "params": [x],
+                    "lr": learning_rate,
+                    "betas": betas,
+                    "eps": eps,
+                    "weight_decay": weight_decay,
+                    "scale": scale,
+                }
+            ]
         )
 
         def train_one_iter(grad):
-            grad_tensor = flow.Tensor(grad, requires_grad=False)
-            loss = x * grad_tensor
+            grad_tensor = flow.Tensor(
+                grad, requires_grad=False, device=flow.device(device)
+            )
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.step()
@@ -91,6 +102,7 @@ def compare_with_numpy_adam(
 class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["scale"] = [1.0, 0.8]
         arg_dict["learning_rate"] = [1]

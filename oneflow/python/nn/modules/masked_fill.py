@@ -48,8 +48,8 @@ def masked_fill_op(tensor, mask, value):
     The shape of :attr:`mask` must be broadcastable with the shape of the underlying tensor.
 
     Args:
-        mask (BoolTensor) – the boolean mask
-        value (float) – the value to fill in with
+        mask (BoolTensor): the boolean mask
+        value (float): the value to fill in with
 
     For example:
 

@@ -336,16 +336,15 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 }
 
 /* static */ Maybe<StatefulLocalOpKernel> StatefulLocalOpKernel::New(
-    const std::shared_ptr<OperatorConf>& op_conf, const AttrMap& base_attrs,
-    const std::shared_ptr<const Device>& device,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc,
+    const std::shared_ptr<OperatorConf>& op_conf, const std::shared_ptr<const Device>& device,
+    const AttrMap& base_attrs, const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple) {
   auto opkernel = std::shared_ptr<StatefulLocalOpKernel>(new StatefulLocalOpKernel());
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
-  opkernel->composed_attrs_.reset(new ComposedAttrMap(base_attrs));
   opkernel->device_ = device;
+  opkernel->composed_attrs_.reset(new ComposedAttrMap(base_attrs));
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
@@ -383,7 +382,6 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
       &opkernel->input_tuple_indexes4mut_ibns_, &opkernel->output_tuple_indexes4mut_obns_,
       &opkernel->output_tuple_indexes4mut2_obns_));
 
-  opkernel->infer_local_dep_object_ = std::make_shared<VmLocalDepObject>(parallel_desc);
   return opkernel;
 }
 
