@@ -15,7 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/dl/include/wrapper.h"
 #include <dlfcn.h>
+
+#ifdef __linux__
 #include <link.h>
+#endif  // __linux__
 
 namespace oneflow {
 namespace dl {
@@ -41,7 +44,9 @@ std::unique_ptr<DynamicLibrary> DynamicLibrary::Load(const std::vector<std::stri
     void* handle = dlopen(name.c_str(), RTLD_LOCAL | RTLD_NOW);
     if (handle != nullptr) {
       DynamicLibrary* lib = new DynamicLibrary(handle);
+#ifdef __linux__
       std::cout << "loaded library: " << lib->AbsolutePath() << "\n";
+#endif  // __linux__
       return std::unique_ptr<DynamicLibrary>(lib);
     }
   }
@@ -50,11 +55,13 @@ std::unique_ptr<DynamicLibrary> DynamicLibrary::Load(const std::vector<std::stri
 
 void* DynamicLibrary::LoadSym(const char* name) { return OpenSymbol(handle_, name); }
 
+#ifdef __linux__
 std::string DynamicLibrary::AbsolutePath() {
   struct link_map* map;
   dlinfo(handle_, RTLD_DI_LINKMAP, &map);
   return map->l_name;
 }
+#endif  // __linux__
 
 DynamicLibrary::~DynamicLibrary() { dlclose(handle_); }
 
