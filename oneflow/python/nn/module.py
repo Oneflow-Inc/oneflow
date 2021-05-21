@@ -89,7 +89,8 @@ class Module(object):
         with sess.ConsistentScope():
             consisitent_args = []
             for i in range(len(args)):
-                args[i] = self._cast_to_consistent_ops[i](args[i])[0]
+                if not args[i].is_consistent:
+                    args[i] = self._cast_to_consistent_ops[i](args[i])[0]
             consistent_output = self.forward(*args)
             if len(self._cast_from_consistent_ops) == 1:
                 res = self._cast_from_consistent_ops[0](consistent_output)[0]
