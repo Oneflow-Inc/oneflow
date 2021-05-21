@@ -29,14 +29,13 @@ for gpu in gpus:
     tf.config.experimental.set_memory_growth(gpu, True)
 
 
-def fused_cast_scale(x, scale_by_tensor, scale, name):
+def fused_cast_scale(x, scalar, name):
     return (
         flow.user_op_builder(name)
         .Op("fused_cast_scale")
         .Input("x", [x])
-        .Input("scale_by_tensor", [scale_by_tensor])
+        .Input("scalar", [scalar])
         .Output("y")
-        .Attr("scale", float(scale))
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
@@ -44,12 +43,7 @@ def fused_cast_scale(x, scale_by_tensor, scale, name):
 
 
 def compare_with_tensorflow(
-    device_type,
-    input_shape,
-    in_dtype,
-    out_dtype,
-    test_fuse_cast_scale_pass,
-    has_scalar_mul,
+    device_type, input_shape, in_dtype, out_dtype, test_fuse_cast_scale_pass
 ):
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
@@ -77,19 +71,13 @@ def compare_with_tensorflow(
             )
             loss = flow.cast(x, dtype=type_name_to_flow_type[in_dtype])
             if test_fuse_cast_scale_pass:
-                loss = flow.cast(loss, dtype=type_name_to_flow_type[out_dtype])
-                if has_scalar_mul:
-                    loss = loss * 0.125
-                loss = loss * flow.cast(scale, dtype=type_name_to_flow_type[out_dtype])
+                loss = flow.cast(
+                    loss, dtype=type_name_to_flow_type[out_dtype]
+                ) * flow.cast(scale, dtype=type_name_to_flow_type[out_dtype])
             else:
-                if has_scalar_mul:
-                    scale_val = 0.125
-                else:
-                    scale_val = 1.0
                 loss = fused_cast_scale(
                     loss,
                     flow.cast(scale, dtype=type_name_to_flow_type[out_dtype]),
-                    scale=scale_val,
                     name="fused_cast_scale",
                 )
             loss = flow.cast(loss, dtype=flow.float)
@@ -108,8 +96,6 @@ def compare_with_tensorflow(
         tf_out = tf.cast(tf_out, dtype=type_name_to_np_type[out_dtype]) * tf.cast(
             scale, dtype=type_name_to_np_type[out_dtype]
         )
-        if has_scalar_mul:
-            tf_out = tf_out * 0.125
         tf_out = tf.cast(tf_out, dtype=tf.float32)
 
     assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
@@ -124,7 +110,6 @@ class TestFusedCastScale(flow.unittest.TestCase):
         arg_dict["in_dtype"] = ["float16", "float32", "double"]
         arg_dict["out_dtype"] = ["float16", "float32", "double"]
         arg_dict["test_fuse_cast_scale_pass"] = [True, False]
-        arg_dict["has_scalar_mul"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[2] == arg[3]:
                 continue
@@ -132,10 +117,6 @@ class TestFusedCastScale(flow.unittest.TestCase):
                 continue
             if arg[0] == "cpu" and (arg[2] == "float16" or arg[3] == "float16"):
                 continue
-            if flow.sysconfig.with_mlir():
-                if arg[2] != "float32":
-                    continue
-                print("running", arg)
             compare_with_tensorflow(*arg)
 
 
