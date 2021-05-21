@@ -146,29 +146,27 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
-class CastConsistentOpExpr : public BuiltinOpExpr {
+class CastConsistentOpExpr : public OpExpr {
  public:
   CastConsistentOpExpr() = default;
   virtual ~CastConsistentOpExpr() = default;
 
-  // Setters
-  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
-  Maybe<void> SetParallelDistribution(
-      const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist);
-  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& parallel_desc);
+  const std::string& op_name() const { return op_name_; }
+  int input_size() const override { return 1; }
+  int output_size() const override { return 1; }
 
   // Getters
   Maybe<cfg::ParallelDistribution> parallel_distribution() const;
   Maybe<ParallelDesc> parallel_desc() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override {
-    OF_UNIMPLEMENTED();
-  }
 
  protected:
-  CastConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
-                       const std::vector<std::string>& indexed_obns);
+  CastConsistentOpExpr(const std::string& op_name,
+                       const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
+                       const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  std::string op_name_;
   std::shared_ptr<cfg::ParallelDistribution> parallel_distribution_;
   std::shared_ptr<ParallelDesc> parallel_desc_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
@@ -180,15 +178,21 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
   virtual ~CastToConsistentOpExpr() = default;
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
-                                           const std::vector<std::string>& indexed_ibns,
-                                           const std::vector<std::string>& indexed_obns);
+                                           const std::vector<std::string>& sbp_parallels,
+                                           const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  static Maybe<CastToConsistentOpExpr> New(
+      const std::string& op_name,
+      const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<ParallelDesc>& parallel_desc);
 
   const std::string type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
-                         const std::vector<std::string>& indexed_obns);
+  CastToConsistentOpExpr(const std::string& op_name,
+                         const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
+                         const std::shared_ptr<ParallelDesc>& parallel_desc);
 };
 
 class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
@@ -197,15 +201,21 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
   virtual ~CastFromConsistentOpExpr() = default;
 
   static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
-                                             const std::vector<std::string>& indexed_ibns,
-                                             const std::vector<std::string>& indexed_obns);
+                                             const std::vector<std::string>& sbp_parallels,
+                                             const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  static Maybe<CastFromConsistentOpExpr> New(
+      const std::string& op_name,
+      const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
+      const std::shared_ptr<ParallelDesc>& parallel_desc);
 
   const std::string type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
-                           const std::vector<std::string>& indexed_obns);
+  CastFromConsistentOpExpr(const std::string& op_name,
+                           const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
+                           const std::shared_ptr<ParallelDesc>& parallel_desc);
 };
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;

@@ -136,10 +136,10 @@ class Module(object):
             else:
                 assert isinstance(parallel_distribution, list)
             cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
-                id_util.UniqueStr("cast_to_consistent_op"), ["in_0"], ["out_0"],
+                id_util.UniqueStr("cast_to_consistent_op"),
+                parallel_distribution,
+                inputs_placement[i],
             )
-            cast_to_consistent_op_expr.SetParallelDistribution(parallel_distribution)
-            cast_to_consistent_op_expr.SetParallelConf(inputs_placement[i])
             self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
 
             parallel_distribution = outputs_sbp_signature[i]
@@ -150,10 +150,10 @@ class Module(object):
             else:
                 assert isinstance(parallel_distribution, list)
             cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
-                id_util.UniqueStr("cast_from_consistent_op"), ["in_0"], ["out_0"],
+                id_util.UniqueStr("cast_from_consistent_op"),
+                parallel_distribution,
+                outputs_placement[i],
             )
-            cast_from_consistent_op_expr.SetParallelDistribution(parallel_distribution)
-            cast_from_consistent_op_expr.SetParallelConf(outputs_placement[i])
             self._cast_from_consistent_ops[i] = cast_from_consistent_op_expr
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:

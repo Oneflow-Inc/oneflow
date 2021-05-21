@@ -181,17 +181,19 @@ Maybe<one::UserOpExpr> PReLUGradOp();
 Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<ParallelDesc>& parallel_conf);
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::string& name, const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::string& name,
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<ParallelDesc>& parallel_conf);
 
 Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<ParallelDesc>& parallel_conf);
 Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::string& name, const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::string& name,
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
     const std::shared_ptr<ParallelDesc>& parallel_conf);
 }  // namespace op_expr_helper
 }  // namespace oneflow
