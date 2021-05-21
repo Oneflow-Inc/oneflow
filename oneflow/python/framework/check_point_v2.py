@@ -204,7 +204,20 @@ def _ReadSlice(
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
     if isinstance(container, oneflow.Tensor):
-        raise ValueError("Tensor object arguments are not supported")
+
+        def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
+            start_nd_idx = list(map(int, start_nd_idx))
+            stop_nd_idx = list(map(int, stop_nd_idx))
+            return tensor[
+                tuple(
+                    [
+                        slice(start_nd_idx[i], stop_nd_idx[i])
+                        for i in range(len(start_nd_idx))
+                    ]
+                )
+            ].numpy()
+
+        yield from _ForEachSlice(container, ReadFromTensor)
     elif isinstance(container, EagerBlobTrait):
 
         def ReadFromEagerBlob(eager_blob, start_nd_idx, stop_nd_idx):
