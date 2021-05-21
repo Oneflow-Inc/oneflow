@@ -10,7 +10,9 @@ include(glog)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
-include(cocoapi)
+if (WITH_COCOAPI)
+  include(cocoapi)
+endif()
 include(half)
 include(re2)
 include(json)
@@ -154,8 +156,6 @@ set(oneflow_third_party_dependencies
   libpng_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
-  cocoapi_copy_headers_to_destination
-  cocoapi_copy_libs_to_destination
   half_copy_headers_to_destination
   re2
   json_copy_headers_to_destination
@@ -163,6 +163,11 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
+
+if (WITH_COCOAPI)
+  list(APPEND oneflow_third_party_dependencies cocoapi_copy_headers_to_destination)
+  list(APPEND oneflow_third_party_dependencies cocoapi_copy_libs_to_destination)
+endif()
 
 if (RPC_BACKEND MATCHES "GRPC")
   list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
