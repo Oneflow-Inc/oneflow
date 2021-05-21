@@ -21,10 +21,9 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-struct CastToConsistentOpExprInterpState : public OpExprInterpState {};
-struct CastFromConsistentOpExprInterpState : public OpExprInterpState {};
+struct CastConsistentOpExprInterpState : public OpExprInterpState {};
 
-class CastToConsistent : public OpExprGradFunction<CastToConsistentOpExprInterpState> {
+class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastToConsistentOpExpr*>(&op);
@@ -36,13 +35,13 @@ class CastToConsistent : public OpExprGradFunction<CastToConsistentOpExprInterpS
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastToConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     // do nothing
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastToConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
     return Maybe<void>::Ok();
@@ -54,7 +53,7 @@ class CastToConsistent : public OpExprGradFunction<CastToConsistentOpExprInterpS
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cast_to_consistent", CastToConsistent);
 
-class CastFromConsistent : public OpExprGradFunction<CastFromConsistentOpExprInterpState> {
+class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
@@ -66,13 +65,13 @@ class CastFromConsistent : public OpExprGradFunction<CastFromConsistentOpExprInt
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Capture(CastFromConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CastConsistentOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     // do nothing
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Apply(const CastFromConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
     return Maybe<void>::Ok();
