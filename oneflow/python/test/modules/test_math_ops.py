@@ -53,7 +53,26 @@ class TestSin(flow.unittest.TestCase):
         np_out = np.sin(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestAsin(flow.unittest.TestCase):
+    def test_asin(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3))
+        of_out = flow.asin(input)
+        np_out = np.arcsin(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
 
+    def test_asin_tensor_function(test_case):
+        input = flow.Tensor(np.random.randn(8, 11, 9, 7))
+        of_out = input.asin()
+        np_out = np.arcsin(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+        
+        
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
