@@ -94,8 +94,6 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Query() {
 
 std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Deserialize(
     const std::string& serialized) {
-  std::unordered_map<std::string, std::shared_ptr<const DeviceDescriptorList>>
-      class_name2descriptor_list;
   auto json_object = nlohmann::json::parse(serialized);
   auto* desc = new NodeDeviceDescriptor();
   desc->impl_->host_memory_size_bytes = json_object[kJsonKeyHostMemorySize];
@@ -107,7 +105,7 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Deserialize(
     auto clz = DeviceDescriptorClass::GetRegisteredClass(class_name);
     CHECK(clz);
     const auto descriptor_list = clz->DeserializeDeviceDescriptorList(serialized_descriptor_list);
-    class_name2descriptor_list.emplace(class_name, descriptor_list);
+    desc->impl_->class_name2descriptor_list.emplace(class_name, descriptor_list);
   }
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
 }
