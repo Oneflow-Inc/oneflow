@@ -38,5 +38,13 @@ class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
     "cpu.AccessBlobByCallback"));
 
+class CpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+ public:
+  CpuSoftSyncStreamInstructionType() = default;
+  ~CpuSoftSyncStreamInstructionType() override = default;
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuSoftSyncStreamInstructionType>("cpu.SoftSyncStream"));
+
 }  // namespace vm
 }  // namespace oneflow
