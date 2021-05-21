@@ -215,5 +215,23 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestCosh(flow.unittest.TestCase):
+    def test_cosh(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3))
+        of_out = flow.cosh(input)
+        np_out = np.cosh(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_cosh_tensor_function(test_case):
+        input = flow.Tensor(np.random.randn(8, 11, 9, 7))
+        of_out = input.cosh()
+        np_out = np.cosh(input.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
 if __name__ == "__main__":
     unittest.main()
