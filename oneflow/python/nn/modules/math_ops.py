@@ -948,3 +948,38 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+class Erf(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erf_op(input)[0]
+
+
+@oneflow_export("erf")
+@register_tensor_op("erf")
+@experimental_api
+def erf_op(input):
+    r"""---erf---
+        """
+    return Erf()(input)
+
+
+class Erfc(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erfc_op(input)[0]
+
+
+@oneflow_export("erfc")
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op(input):
+    r"""---erfc---
+        """
+    return Erf()(input)
