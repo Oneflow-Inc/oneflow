@@ -123,7 +123,10 @@ class TestFusedCastScale(flow.unittest.TestCase):
         arg_dict["input_shape"] = [(5, 4, 3)]
         arg_dict["in_dtype"] = ["float16", "float32", "double"]
         arg_dict["out_dtype"] = ["float16", "float32", "double"]
-        arg_dict["test_fuse_cast_scale_pass"] = [True, False]
+        if flow.sysconfig.with_mlir():
+            arg_dict["test_fuse_cast_scale_pass"] = [True, False]
+        else:
+            arg_dict["test_fuse_cast_scale_pass"] = [True]
         arg_dict["has_scalar_mul"] = [True, False]
         for arg in GenArgList(arg_dict):
             if arg[2] == arg[3]:
