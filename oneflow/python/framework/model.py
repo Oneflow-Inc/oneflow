@@ -726,8 +726,8 @@ class ValidateModelOOPStyle(SubModel):
         assert self.is_valid
         if (step_idx + 1) % self._cfg.step_interval == 0:
             outputs = None
-            with oneflw._oneflow_internal.autograd.no_grad():
-                inputs = self._cfg.data(step_idx=step_idx)
+            with oneflow._oneflow_internal.autograd.no_grad():
+                inputs = self._cfg.data(step_idx)
                 model_previous_mode = self._model.training
                 self._model.train()
                 outputs = self._model.validation_step(inputs)

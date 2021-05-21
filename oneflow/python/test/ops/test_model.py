@@ -24,25 +24,7 @@ from oneflow.python.nn.parameter import Parameter
 #     ".numpy() doesn't work in lazy mode",
 # )
 class TestEagerModel(flow.unittest.TestCase):
-    def test_module(test_case):
-        flow.enable_eager_execution(True)
-        init_val = np.random.randn(2, 3)
-        class CustomModule(flow.nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.w = Parameter(flow.Tensor(init_val))
-
-            def forward(self, x):
-                return x + self.w
-        m = CustomModule()
-        inputs = flow.ones((2, 3))
-        out = m(inputs)
-        s = flow.sum(out)
-        print(out.numpy())
-        print(s.numpy())
-        s.backward()
-
-    def _test_model(test_case):
+    def test_model(test_case):
         flow.enable_eager_execution(True)
         init_val = np.random.randn(2, 3)
         class CustomModule(flow.nn.Module):
@@ -93,12 +75,12 @@ class TestEagerModel(flow.unittest.TestCase):
                 assert optimizer_idx == 0
                 loss = outputs.numpy()
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-                print(fmt_str.format(step_idx, "train loss:", loss))
+                print(fmt_str.format(step_idx, "train loss:", loss.mean()))
 
             def on_validation_step_end(self, step_idx, outputs):
                 # test_case.assertEqual(outputs, 5)
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-                print(fmt_str.format(step_idx, "validation output:", outputs.numpy()))
+                print(fmt_str.format(step_idx, "validation output:", outputs.numpy().mean()))
 
         val_config = flow.model.ValidationConfig()
         val_config.config_data(ValData())
