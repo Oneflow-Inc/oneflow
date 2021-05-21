@@ -24,9 +24,13 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
+namespace cfg {
+
+class ParallelDistribution;
+
+}
 namespace one {
 
 class OpExprGradFunctionIf;
@@ -150,15 +154,12 @@ class CastConsistentOpExpr : public BuiltinOpExpr {
   // Setters
   Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
   Maybe<void> SetParallelDistribution(
-      const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist) {
-    parallel_distribution_ = parallel_dist;
-    return Maybe<void>::Ok();
-  }
+      const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist);
   Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& parallel_desc);
 
   // Getters
-  Maybe<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
-  Maybe<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+  Maybe<cfg::ParallelDistribution> parallel_distribution() const;
+  Maybe<ParallelDesc> parallel_desc() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override {

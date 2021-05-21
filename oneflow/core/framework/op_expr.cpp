@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -198,11 +199,23 @@ Maybe<void> CastConsistentOpExpr::SetParallelDistribution(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CastConsistentOpExpr::SetParallelDistribution(
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist) {
+  parallel_distribution_ = parallel_dist;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> CastConsistentOpExpr::SetParallelConf(
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
   parallel_desc_ = parallel_desc;
   return Maybe<void>::Ok();
 }
+
+Maybe<cfg::ParallelDistribution> CastConsistentOpExpr::parallel_distribution() const {
+  return parallel_distribution_;
+}
+
+Maybe<ParallelDesc> CastConsistentOpExpr::parallel_desc() const { return parallel_desc_; }
 
 CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name,
                                                const std::vector<std::string>& indexed_ibns,
