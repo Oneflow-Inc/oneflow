@@ -322,11 +322,8 @@ Maybe<void> GetScaleAndZeroPointLbn4Edge(OpEdge* edge, const std::string train_s
 
     *scale = mul_scale_op.output("z", 0);
     const std::string zp_var_name = ReplaceSlashToDash4Lbn(lbn) + ZP_SUFFIX;
-    const auto zp_var = qat_config.symmetric()
-                            ? Get1DZeroVariableOpConf<DataType::kInt8>(
-                                zp_var_name, scope_symbol_id, weight_scale_length, inserted_ops)
-                            : Get1DZeroVariableOpConf<DataType::kUInt8>(
-                                zp_var_name, scope_symbol_id, weight_scale_length, inserted_ops);
+    const auto zp_var =
+        Get1DZeroVariableOpConf(zp_var_name, scope_symbol_id, weight_scale_length, inserted_ops);
     *zero_point = GenLogicalBlobName(zp_var.name(), zp_var.variable_conf().out());
   } else {
     const std::string observer_op_name = ReplaceSlashToDash4Lbn(lbn) + OBSERVER_SUFFIX;
