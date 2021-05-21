@@ -95,32 +95,34 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
-  auto py_cast_to_consistent_op_class =
-      PybindExportOpExpr<one::CastToConsistentOpExpr, cfg::CastToConsistentOpConf>(
-          m, "CastToConsistentOpExpr");
-  py_cast_to_consistent_op_class.def("SetParallelDistribution",
-                                     [](const std::shared_ptr<one::CastToConsistentOpExpr>& op_expr,
-                                        const std::vector<std::string>& sbp_parallels) {
-                                       op_expr->SetParallelDistribution(sbp_parallels).GetOrThrow();
-                                     });
-  py_cast_to_consistent_op_class.def("SetParallelConf",
-                                     [](const std::shared_ptr<one::CastToConsistentOpExpr>& op_expr,
-                                        const std::shared_ptr<ParallelDesc>& parallel_desc) {
-                                       op_expr->SetParallelConf(parallel_desc).GetOrThrow();
-                                     });
-  auto py_cast_from_consistent_op_class =
-      PybindExportOpExpr<one::CastFromConsistentOpExpr, cfg::CastFromConsistentOpConf>(
-          m, "CastFromConsistentOpExpr");
-  py_cast_from_consistent_op_class.def(
-      "SetParallelDistribution", [](const std::shared_ptr<one::CastFromConsistentOpExpr>& op_expr,
-                                    const std::vector<std::string>& sbp_parallels) {
-        op_expr->SetParallelDistribution(sbp_parallels).GetOrThrow();
-      });
-  py_cast_from_consistent_op_class.def(
-      "SetParallelConf", [](const std::shared_ptr<one::CastFromConsistentOpExpr>& op_expr,
-                            const std::shared_ptr<ParallelDesc>& parallel_desc) {
+
+  py::class_<one::CastConsistentOpExpr, one::BuiltinOpExpr,
+             std::shared_ptr<one::CastConsistentOpExpr>>(m, "CastConsistentOpExpr")
+      .def("SetParallelDistribution",
+           [](const std::shared_ptr<one::CastConsistentOpExpr>& op_expr,
+              const std::vector<std::string>& sbp_parallels) {
+             op_expr->SetParallelDistribution(sbp_parallels).GetOrThrow();
+           })
+      .def("SetParallelConf", [](const std::shared_ptr<one::CastConsistentOpExpr>& op_expr,
+                                 const std::shared_ptr<ParallelDesc>& parallel_desc) {
         op_expr->SetParallelConf(parallel_desc).GetOrThrow();
       });
+
+  py::class_<one::CastToConsistentOpExpr, one::CastConsistentOpExpr,
+             std::shared_ptr<one::CastToConsistentOpExpr>>(m, "CastToConsistentOpExpr")
+      .def(py::init([](const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns) {
+        return one::CastToConsistentOpExpr::New(op_name, indexed_ibns, indexed_obns)
+            .GetPtrOrThrow();
+      }));
+
+  py::class_<one::CastFromConsistentOpExpr, one::CastConsistentOpExpr,
+             std::shared_ptr<one::CastFromConsistentOpExpr>>(m, "CastFromConsistentOpExpr")
+      .def(py::init([](const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns) {
+        return one::CastFromConsistentOpExpr::New(op_name, indexed_ibns, indexed_obns)
+            .GetPtrOrThrow();
+      }));
 }
 
 }  // namespace oneflow

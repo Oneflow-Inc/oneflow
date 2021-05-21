@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -141,41 +142,68 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
-class CastToConsistentOpExpr final : public BuiltinOpExprImpl<CastToConsistentOpConf> {
+class CastConsistentOpExpr : public BuiltinOpExpr {
+ public:
+  CastConsistentOpExpr() = default;
+  virtual ~CastConsistentOpExpr() = default;
+
+  // Setters
+  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
+  Maybe<void> SetParallelDistribution(
+      const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist) {
+    parallel_distribution_ = parallel_dist;
+    return Maybe<void>::Ok();
+  }
+  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  // Getters
+  Maybe<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  Maybe<ParallelDesc> parallel_desc() const { return parallel_desc_; }
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+  Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override {
+    OF_UNIMPLEMENTED();
+  }
+
+ protected:
+  CastConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+                       const std::vector<std::string>& indexed_obns);
+  std::shared_ptr<cfg::ParallelDistribution> parallel_distribution_;
+  std::shared_ptr<ParallelDesc> parallel_desc_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+};
+
+class CastToConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   CastToConsistentOpExpr() = default;
   virtual ~CastToConsistentOpExpr() = default;
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
-                                           CastToConsistentOpConf&& op_proto,
                                            const std::vector<std::string>& indexed_ibns,
                                            const std::vector<std::string>& indexed_obns);
 
-  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
-  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& sbp_parallels);
+  const std::string type_name() const override;
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastToConsistentOpExpr(const std::string& op_name, CastToConsistentOpConf&& proto,
-                         const std::vector<std::string>& indexed_ibns,
+  CastToConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
                          const std::vector<std::string>& indexed_obns);
 };
 
-class CastFromConsistentOpExpr final : public BuiltinOpExprImpl<CastFromConsistentOpConf> {
+class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   CastFromConsistentOpExpr() = default;
   virtual ~CastFromConsistentOpExpr() = default;
 
   static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
-                                             CastFromConsistentOpConf&& op_proto,
                                              const std::vector<std::string>& indexed_ibns,
                                              const std::vector<std::string>& indexed_obns);
 
-  Maybe<void> SetParallelDistribution(const std::vector<std::string>& sbp_parallels);
-  Maybe<void> SetParallelConf(const std::shared_ptr<ParallelDesc>& sbp_parallels);
+  const std::string type_name() const override;
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
-  CastFromConsistentOpExpr(const std::string& op_name, CastFromConsistentOpConf&& proto,
-                           const std::vector<std::string>& indexed_ibns,
+  CastFromConsistentOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
                            const std::vector<std::string>& indexed_obns);
 };
 

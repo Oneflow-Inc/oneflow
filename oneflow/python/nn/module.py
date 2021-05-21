@@ -40,8 +40,6 @@ from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
-import oneflow._oneflow_internal.oneflow.core.operator.op_conf as cfg_op_conf
-import oneflow._oneflow_internal.oneflow.core.job.sbp_parallel as cfg_sbp_parallel
 import oneflow._oneflow_internal
 
 
@@ -140,12 +138,8 @@ class Module(object):
         outputs_placement: Sequence[oneflow._oneflow_internal.PlacementSymbol],
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
-            cast_to_consisten_conf = cfg_op_conf.CastToConsistentOpConf()
             cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
-                id_util.UniqueStr("cast_to_consistent_op"),
-                cast_to_consisten_conf,
-                ["in_0"],
-                ["out_0"],
+                id_util.UniqueStr("cast_to_consistent_op"), ["in_0"], ["out_0"],
             )
             parallel_distribution = inputs_sbp_signature[i]
             if isinstance(parallel_distribution, tuple):
@@ -157,13 +151,8 @@ class Module(object):
             cast_to_consistent_op_expr.SetParallelDistribution(parallel_distribution)
             cast_to_consistent_op_expr.SetParallelConf(inputs_placement[i])
             self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
-
-            cast_from_consisten_conf = cfg_op_conf.CastFromConsistentOpConf()
             cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
-                id_util.UniqueStr("cast_from_consistent_op"),
-                cast_from_consisten_conf,
-                ["in_0"],
-                ["out_0"],
+                id_util.UniqueStr("cast_from_consistent_op"), ["in_0"], ["out_0"],
             )
             parallel_distribution = outputs_sbp_signature[i]
             if isinstance(parallel_distribution, tuple):

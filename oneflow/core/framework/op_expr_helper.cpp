@@ -547,33 +547,33 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Build();
 }
 
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const ParallelDistribution& parallel_dist,
-                                                      const ParallelConf& parallel_conf) {
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<ParallelDesc>& parallel_conf) {
   return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_dist, parallel_conf);
 }
-Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(const std::string& name,
-                                                      const ParallelDistribution& parallel_dist,
-                                                      const ParallelConf& parallel_conf) {
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::string& name, const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<ParallelDesc>& parallel_conf) {
   std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
-      JUST(one::CastToConsistentOpExpr::New(name, CastToConsistentOpConf(), {"in_0"}, {"out_0"}));
-  cast_to_consistent_op_expr->mutable_proto()->mutable_parallel_distribution()->CopyFrom(
-      parallel_dist);
-  cast_to_consistent_op_expr->mutable_proto()->mutable_parallel_conf()->CopyFrom(parallel_conf);
+      JUST(one::CastToConsistentOpExpr::New(name, {"in_0"}, {"out_0"}));
+  cast_to_consistent_op_expr->SetParallelDistribution(parallel_dist);
+  cast_to_consistent_op_expr->SetParallelConf(parallel_conf);
   return cast_to_consistent_op_expr;
 }
 
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const ParallelDistribution& parallel_dist,
-                                                          const ParallelConf& parallel_conf) {
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<ParallelDesc>& parallel_conf) {
   return CastFromConsistentOp(UniqueOpName("cast_from_consistent"), parallel_dist, parallel_conf);
 }
-Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(const std::string& name,
-                                                          const ParallelDistribution& parallel_dist,
-                                                          const ParallelConf& parallel_conf) {
-  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr = JUST(
-      one::CastFromConsistentOpExpr::New(name, CastFromConsistentOpConf(), {"in_0"}, {"out_0"}));
-  cast_from_consistent_op_expr->mutable_proto()->mutable_parallel_distribution()->CopyFrom(
-      parallel_dist);
-  cast_from_consistent_op_expr->mutable_proto()->mutable_parallel_conf()->CopyFrom(parallel_conf);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::string& name, const std::shared_ptr<cfg::ParallelDistribution>& parallel_dist,
+    const std::shared_ptr<ParallelDesc>& parallel_conf) {
+  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
+      JUST(one::CastFromConsistentOpExpr::New(name, {"in_0"}, {"out_0"}));
+  cast_from_consistent_op_expr->SetParallelDistribution(parallel_dist);
+  cast_from_consistent_op_expr->SetParallelConf(parallel_conf);
   return cast_from_consistent_op_expr;
 }
 

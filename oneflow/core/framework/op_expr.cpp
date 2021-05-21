@@ -43,14 +43,18 @@ DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
 DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
-DEFINE_OPEXPR_TYPE_NAME(CastToConsistentOpConf, "cast_to_consistent");
-DEFINE_OPEXPR_TYPE_NAME(CastFromConsistentOpConf, "cast_from_consistent");
+// DEFINE_OPEXPR_TYPE_NAME(CastToConsistentOpConf, "cast_to_consistent");
+// DEFINE_OPEXPR_TYPE_NAME(CastFromConsistentOpConf, "cast_from_consistent");
 DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
 DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
 DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
 DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
 #undef DEFINE_OPEXPR_TYPE_NAME
+
+const std::string CastToConsistentOpExpr::type_name() const { return "cast_to_consistent"; }
+
+const std::string CastFromConsistentOpExpr::type_name() const { return "cast_from_consistent"; }
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -179,70 +183,51 @@ Maybe<const Device> UserOpExpr::InferDevices(
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
-CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name,
-                                               CastToConsistentOpConf&& proto,
-                                               const std::vector<std::string>& indexed_ibns,
-                                               const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExprImpl<CastToConsistentOpConf>(op_name, std::move(proto), indexed_ibns,
-                                                indexed_obns) {}
+CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name,
+                                           const std::vector<std::string>& indexed_ibns,
+                                           const std::vector<std::string>& indexed_obns)
+    : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns),
+      parallel_distribution_(std::make_shared<cfg::ParallelDistribution>()) {}
 
-/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
-    const std::string& op_name, CastToConsistentOpConf&& op_proto,
-    const std::vector<std::string>& indexed_ibns, const std::vector<std::string>& indexed_obns) {
-  return std::shared_ptr<CastToConsistentOpExpr>(
-      new CastToConsistentOpExpr(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
-}
-
-Maybe<void> CastToConsistentOpExpr::SetParallelDistribution(
+Maybe<void> CastConsistentOpExpr::SetParallelDistribution(
     const std::vector<std::string>& sbp_parallels) {
-  auto* mut_op_proto = mutable_proto();
   SbpParallel sbp_parallel;
   for (const std::string& sbp_parallel_str : sbp_parallels) {
     CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
         << "invalid sbp_parallel: " << sbp_parallel_str;
-    *(mut_op_proto->mutable_parallel_distribution()->mutable_sbp_parallel()->Add()) = sbp_parallel;
+    parallel_distribution_->mutable_sbp_parallel()->Add()->InitFromProto(sbp_parallel);
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> CastToConsistentOpExpr::SetParallelConf(
+Maybe<void> CastConsistentOpExpr::SetParallelConf(
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
-  auto* mut_op_proto = mutable_proto();
-  *(mut_op_proto->mutable_parallel_conf()) = parallel_desc->parallel_conf();
+  parallel_desc_ = parallel_desc;
   return Maybe<void>::Ok();
+}
+
+CastToConsistentOpExpr::CastToConsistentOpExpr(const std::string& op_name,
+                                               const std::vector<std::string>& indexed_ibns,
+                                               const std::vector<std::string>& indexed_obns)
+    : CastConsistentOpExpr(op_name, indexed_ibns, indexed_obns) {}
+
+/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
+    const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+    const std::vector<std::string>& indexed_obns) {
+  return std::shared_ptr<CastToConsistentOpExpr>(
+      new CastToConsistentOpExpr(op_name, indexed_ibns, indexed_obns));
 }
 
 CastFromConsistentOpExpr::CastFromConsistentOpExpr(const std::string& op_name,
-                                                   CastFromConsistentOpConf&& proto,
                                                    const std::vector<std::string>& indexed_ibns,
                                                    const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExprImpl<CastFromConsistentOpConf>(op_name, std::move(proto), indexed_ibns,
-                                                  indexed_obns) {}
+    : CastConsistentOpExpr(op_name, indexed_ibns, indexed_obns) {}
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name, CastFromConsistentOpConf&& op_proto,
-    const std::vector<std::string>& indexed_ibns, const std::vector<std::string>& indexed_obns) {
+    const std::string& op_name, const std::vector<std::string>& indexed_ibns,
+    const std::vector<std::string>& indexed_obns) {
   return std::shared_ptr<CastFromConsistentOpExpr>(
-      new CastFromConsistentOpExpr(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
-}
-
-Maybe<void> CastFromConsistentOpExpr::SetParallelDistribution(
-    const std::vector<std::string>& sbp_parallels) {
-  auto* mut_op_proto = mutable_proto();
-  SbpParallel sbp_parallel;
-  for (const std::string& sbp_parallel_str : sbp_parallels) {
-    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
-        << "invalid sbp_parallel: " << sbp_parallel_str;
-    *(mut_op_proto->mutable_parallel_distribution()->mutable_sbp_parallel()->Add()) = sbp_parallel;
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> CastFromConsistentOpExpr::SetParallelConf(
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
-  auto* mut_op_proto = mutable_proto();
-  *(mut_op_proto->mutable_parallel_conf()) = parallel_desc->parallel_conf();
-  return Maybe<void>::Ok();
+      new CastFromConsistentOpExpr(op_name, indexed_ibns, indexed_obns));
 }
 
 template<>
@@ -293,18 +278,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateO
   UNIMPLEMENTED_THEN_RETURN();
 }
 
-template<>
-Maybe<void> BuiltinOpExprImpl<CastToConsistentOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                   const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
-  *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_to_consistent_conf()) = op_proto_;
-  return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToConsistentOpConf>::GetOrCreateOpGradClosure()
-    const {
+Maybe<OpExprGradClosure> CastToConsistentOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
@@ -313,18 +287,7 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastToConsistentOpConf>::GetOrCreateO
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
-template<>
-Maybe<void> BuiltinOpExprImpl<CastFromConsistentOpConf>::BuildOpConf(OperatorConf* op_conf,
-                                                                     const AttrMap& attrs) const {
-  CHECK_EQ_OR_RETURN(attrs.size(), 0);
-  *(op_conf->mutable_name()) = op_name_;
-  *(op_conf->mutable_cast_from_consistent_conf()) = op_proto_;
-  return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromConsistentOpConf>::GetOrCreateOpGradClosure()
-    const {
+Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
     op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
     CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());

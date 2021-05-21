@@ -63,9 +63,8 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& 
           JUST(input_mirrored_tensor->mirrored_tensor_impl()));
   CHECK_OR_RETURN(eager_mirrored_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
   std::shared_ptr<const cfg::ParallelDistribution> parallel_distribution =
-      std::make_shared<const cfg::ParallelDistribution>(op_expr.proto().parallel_distribution());
-  std::shared_ptr<const ParallelDesc> parallel_desc =
-      std::make_shared<const ParallelDesc>(op_expr.proto().parallel_conf());
+      JUST(op_expr.parallel_distribution());
+  std::shared_ptr<const ParallelDesc> parallel_desc = JUST(op_expr.parallel_desc());
   std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
       JUST(EagerConsistentTensorImpl::New(eager_mirrored_tensor_impl, parallel_distribution,
                                           parallel_desc));

@@ -30,9 +30,9 @@ class CastToConsistent : public OpExprGradFunction<CastToConsistentOpExprInterpS
     const auto* fw_op_expr = dynamic_cast<const CastToConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    const auto& fw_op_conf = fw_op_expr->proto();
-    grad_op_ = JUST(op_expr_helper::CastFromConsistentOp(
-        GradientOpName(op_name), fw_op_conf.parallel_distribution(), fw_op_conf.parallel_conf()));
+    grad_op_ = JUST(op_expr_helper::CastFromConsistentOp(GradientOpName(op_name),
+                                                         JUST(fw_op_expr->parallel_distribution()),
+                                                         JUST(fw_op_expr->parallel_desc())));
     return Maybe<void>::Ok();
   }
 
@@ -60,9 +60,9 @@ class CastFromConsistent : public OpExprGradFunction<CastFromConsistentOpExprInt
     const auto* fw_op_expr = dynamic_cast<const CastFromConsistentOpExpr*>(&op);
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    const auto& fw_op_conf = fw_op_expr->proto();
-    grad_op_ = JUST(op_expr_helper::CastToConsistentOp(
-        GradientOpName(op_name), fw_op_conf.parallel_distribution(), fw_op_conf.parallel_conf()));
+    grad_op_ = JUST(op_expr_helper::CastToConsistentOp(GradientOpName(op_name),
+                                                       JUST(fw_op_expr->parallel_distribution()),
+                                                       JUST(fw_op_expr->parallel_desc())));
     return Maybe<void>::Ok();
   }
 
