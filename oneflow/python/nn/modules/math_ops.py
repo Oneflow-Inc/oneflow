@@ -948,3 +948,147 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+class Clamp(Module):
+    def __init__(self, min_value = None, max_value = None) -> None:
+        super().__init__()
+        if min_value is not None:
+            floating_min_value = float(min_value)
+            integral_min_value = int(min_value)
+        if max_value is not None:
+            floating_max_value = float(max_value)
+            integral_max_value = int(max_value)
+
+        if min_value is not None and max_value is not None:
+            self._op = flow.builtin_op("clip_by_scalar").Input("x").Output("y").Attr("floating_min", floating_min_value).Attr("integral_min", integral_min_value).Attr("floating_max", floating_max_value).Attr("integral_max", integral_max_value).Build()
+        elif min_value is not None:
+            self._op = flow.builtin_op("clip_by_scalar_min").Input("x").Output("y").Attr("floating_min", floating_min_value).Attr("integral_min", integral_min_value).Build()
+        elif max_value is not None:
+            self._op = flow.builtin_op("clip_by_scalar_max").Input("x").Output("y").Attr("floating_max", floating_max_value).Attr("integral_max", integral_max_value).Build()
+        else:
+            raise ValueError("min_value and max_value cannot be None at the same time")
+        
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("clamp")
+@register_tensor_op("clamp")
+@experimental_api
+def clamp_op(tensor, min = None, max = None):
+    r"""
+    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
+    a resulting tensor:
+
+    .. math::
+        y_i = \begin{cases}
+            \text{min} & \text{if } x_i < \text{min} \\
+            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
+            \text{max} & \text{if } x_i > \text{max}
+        \end{cases}
+
+    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
+    and :attr:`max` must be real numbers, otherwise they should be integers.
+
+    Args:
+        input (Tensor): the input tensor.
+        min (Number): lower-bound of the range to be clamped to
+        max (Number): upper-bound of the range to be clamped to
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 6, 5, 3)
+        input = flow.Tensor(arr)
+        flow.clamp(input, min=-0.5, max=0.5)
+        # output equal to np.clip(arr, a_min=-0.5, a_max=0.5)
+
+    .. function:: clamp(input, *, min, out=None) -> Tensor
+
+    Clamps all elements in :attr:`input` to be larger or equal :attr:`min`.
+
+    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, :attr:`value`
+    should be a real number, otherwise it should be an integer.
+
+    Args:
+        input (Tensor): the input tensor.
+        value (Number): minimal value of each element in the output
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 6, 5, 3)
+        input = flow.Tensor(arr)
+        flow.clamp(input, min=0.5)
+        # output equal to np.clip(arr, a_min=-0.5, a_max=None)
+
+    .. function:: clamp(input, *, max, out=None) -> Tensor
+
+    Clamps all elements in :attr:`input` to be smaller or equal :attr:`max`.
+
+    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, :attr:`value`
+    should be a real number, otherwise it should be an integer.
+
+    Args:
+        input (Tensor): the input tensor.
+        value (Number): maximal value of each element in the output
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        arr = np.random.randn(2, 6, 5, 3)
+        input = flow.Tensor(arr)
+        flow.clamp(input, max=0.5)
+        # output equal to np.clip(arr, a_min=None, a_max=0.5)
+
+    """
+    return Clamp(min, max)(tensor)
+
+class Pow(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+
+    def forward(self, x, exponent: Union[int, float]):
+        return self._op(x, exponent=float(exponent))[0]
+
+
+@oneflow_export("pow")
+@register_tensor_op("pow")
+@experimental_api
+def pow_op(tensor, exponent):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        
+        x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))
+        out = flow.pow(x, 2).numpy()
+        print(out) # [1, 4, 9, 16, 25, 36]
+        
+    """
+    return Pow()(tensor, exponent)

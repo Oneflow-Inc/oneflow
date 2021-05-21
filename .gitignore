@@ -32,3 +32,5 @@ compile_commands.json
 /serving-tmp
 test_tmp_dir
 oneflow/python/version.py
+/pytorch
+*.zip

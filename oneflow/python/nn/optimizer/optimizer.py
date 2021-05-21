@@ -80,7 +80,8 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        param.grad.fill_(0)
+                        # param.grad.zeros_()
         if all_grad_is_none:
             # TODO: delete this after implementing Tensor.data
             warnings.warn(

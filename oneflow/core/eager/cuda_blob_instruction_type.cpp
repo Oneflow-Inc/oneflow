@@ -38,14 +38,6 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
 
-class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
- public:
-  GpuSoftSyncStreamInstructionType() = default;
-  ~GpuSoftSyncStreamInstructionType() override = default;
-  using stream_type = vm::CudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
-
 }  // namespace vm
 }  // namespace oneflow
 #endif

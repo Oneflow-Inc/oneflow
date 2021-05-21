@@ -492,7 +492,6 @@ def transpose(
 
 
 @oneflow_export("slice")
-@stable_api
 def slice(
     x: oneflow._oneflow_internal.BlobDesc,
     begin: Sequence[int],
@@ -579,7 +578,7 @@ def slice(
     return slice_v2(x, slice_tup_list, name=name)
 
 
-def check_slice_tup_list(slice_tup_list, shape):
+def _check_slice_tup_list(slice_tup_list, shape):
     ndim = len(shape)
     if not isinstance(slice_tup_list, (list, tuple)) or len(slice_tup_list) > ndim:
         raise ValueError(
@@ -676,7 +675,7 @@ def slice_v2(
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
 
     op = (
         flow.user_op_builder(name)
@@ -692,7 +691,6 @@ def slice_v2(
 
 
 @oneflow_export("slice_update")
-@stable_api
 def api_slice_update(
     x: oneflow._oneflow_internal.BlobDesc,
     update: oneflow._oneflow_internal.BlobDesc,
@@ -738,7 +736,7 @@ def api_slice_update(
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = _check_slice_tup_list(slice_tup_list, x.shape)
 
     op = (
         flow.user_op_builder(name)
@@ -757,7 +755,7 @@ def api_slice_update(
 # Get slice attrs for slice_assign and logical_slice
 # Note the step in slice_tup_list must be greater than 0
 # as slice_assign and logical_slice only support step > 0
-def GetSliceAttrs(slice_tup_list, input_shape):
+def _GetSliceAttrs(slice_tup_list, input_shape):
     ndim = len(input_shape)
     if not (isinstance(slice_tup_list, (list, tuple)) and len(slice_tup_list) <= ndim):
         raise ValueError(
@@ -827,7 +825,7 @@ def logical_slice(
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start_list, stop_list, step_list = GetSliceAttrs(slice_tup_list, x.shape)
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
     op = (
         flow.user_op_builder(name)
         .Op("logical_slice")
@@ -853,7 +851,7 @@ def logical_slice_assign(
     if not isinstance(name, str):
         raise ValueError("name must be a string")
 
-    start_list, stop_list, step_list = GetSliceAttrs(slice_tup_list, x.shape)
+    start_list, stop_list, step_list = _GetSliceAttrs(slice_tup_list, x.shape)
     op = (
         flow.user_op_builder(name)
         .Op("logical_slice_assign")

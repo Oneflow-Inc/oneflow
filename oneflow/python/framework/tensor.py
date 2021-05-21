@@ -344,71 +344,6 @@ class Tensor:
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
-    def _get_slice_obj(self, key):
-        def get_or_default(x, default):
-            return x if x is not None else default
-
-        def get_canonical_index(index, length, *, start=0):
-            if index < 0:
-                index += length
-            return max(min(index, length), start)
-
-        def get_slice_if_int(x):
-            if isinstance(x, slice):
-                return x
-            return slice(x, x + 1)
-
-        if isinstance(key, tuple):
-            assert all(isinstance(x, (slice, int)) for x in key)
-        else:
-            assert isinstance(key, (slice, int))
-            key = (key,)
-
-        key = list(map(get_slice_if_int, key))
-
-        assert len(key) <= len(self.shape)
-        for i in range(len(key), len(self.shape)):
-            key += (slice(None, None, None),)
-
-        starts = [
-            get_canonical_index(get_or_default(x.start, 0), self.shape[i])
-            for i, x in enumerate(key)
-        ]
-        stops = [
-            get_canonical_index(
-                get_or_default(x.stop, self.shape[i]), self.shape[i], start=starts[i]
-            )
-            for i, x in enumerate(key)
-        ]
-        steps = [get_or_default(x.step, 1) for x in key]
-        assert all(x > 0 for x in steps)
-        # np.abs is for compatibility of negative steps in the future
-        shape = (np.abs(np.array(stops) - np.array(starts)) - 1) // np.abs(
-            np.array(steps)
-        ) + 1
-        shape = shape.tolist()
-        return starts, stops, steps, shape
-
-    @_auto_determine
-    def __getitem__(self, key):
-        # TODO: support inplace __getitem__
-        start, stop, step, _ = self._get_slice_obj(key)
-        res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
-
-    @_auto_determine
-    def __setitem__(self, key, value):
-        start, stop, step, shape = self._get_slice_obj(key)
-        if isinstance(value, (int, float)):
-            scalar = value
-            value = flow.Tensor(*shape)
-            value.fill_(scalar)
-
-        flow.experimental.tmp.logical_slice_assign(
-            self, value, list(zip(start, stop, step))
-        )
-        return self
-
     def __str__(self):
         return self.__repr__()
 
@@ -605,15 +540,6 @@ class Tensor:
         return self._init_by_initializer_conf(initializer_conf)
 
     @_auto_determine
-    def zeros_(self):
-        internal_tensor = self._local_or_consistent_tensor
-        if internal_tensor.is_lazy:
-            TODO()
-        if internal_tensor.is_consistent:
-            TODO()
-        internal_tensor.zeros_()
-
-    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
@@ -621,7 +547,7 @@ class Tensor:
         if internal_tensor.is_consistent:
             TODO()
 
-        if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
+        if isinstance(other, Tensor):
             src_np = other.numpy()
         else:
             assert isinstance(other, np.ndarray)

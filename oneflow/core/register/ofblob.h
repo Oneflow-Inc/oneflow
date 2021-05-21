@@ -43,7 +43,6 @@ class OfBlob final {
   void AutoMemCopyTo(T* ptr, int64_t len) const;
   template<typename T>
   void AutoMemCopyFrom(const T* ptr, int64_t len) const;
-  void AsyncAutoMemset(const char value) const;
 
  private:
   DeviceCtx* device_ctx_;
@@ -88,11 +87,6 @@ void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
                  mem_case_);
 }
 
-inline void OfBlob::AsyncAutoMemset(const char value) const {
-  ::oneflow::AutoMemset(device_ctx_, blob_->mut_dptr(), value,
-                        blob_->shape().elem_cnt() * GetSizeOfDataType(blob_->data_type()),
-                        blob_->mem_case());
-}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_OFBLOB_H_
