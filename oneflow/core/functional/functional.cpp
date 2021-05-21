@@ -14,27 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// TODO(): Generate this file automatically.
-
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/functional/functor_library.h"
+
+#include "oneflow/core/framework/attr_map.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_expr_helper.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-Maybe<one::Tensor> AddScalar(const std::shared_ptr<one::Tensor>& a,
-                             const std::shared_ptr<cfg::AttrValue>& scalar) {
-  // "Tensor add_scalar(Tensor, Scalar)"
-  static thread_local const auto& f = JUST(FunctorLibrary::Global()->find("add_scalar"));
-  return f->call<Maybe<one::Tensor>>(a, scalar);
+Maybe<one::Tensor> Add(const TensorTuple& inputs, const AttrMap& attrs) {
+  static thread_local const auto& op = CHECK_JUST(op_expr_helper::AddOp());
+  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
 }
 
-Maybe<one::Tensor> Add(const std::shared_ptr<one::Tensor>& a,
-                       const std::shared_ptr<one::Tensor>& b) {
-  // "Tensor add(Tensor, Tensor)"
-  static thread_local const auto& f = JUST(FunctorLibrary::Global()->find("add"));
-  return f->call<Maybe<one::Tensor>>(a, b);
+Maybe<one::Tensor> AddScalar(const TensorTuple& inputs, const AttrMap& attrs) {
+  static thread_local const auto& op = CHECK_JUST(op_expr_helper::ScalarAddOp<float>(0));
+  return OpInterpUtil::Dispatch<Tensor>(*op, inputs, attrs);
 }
 
 }  // namespace functional

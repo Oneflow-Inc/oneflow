@@ -14,24 +14,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// TODO(): Generate this file automatically.
+#ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
+#define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_
 
-#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
-#define ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
+#include <pybind11/pybind11.h>
 
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-Maybe<one::Tensor> Add(const TensorTuple& inputs, const AttrMap& attrs);
-Maybe<one::Tensor> AddScalar(const TensorTuple& inputs, const AttrMap& attrs);
+class PythonArg {
+ public:
+  PythonArg(py::object value) : value_(value.ptr()) {}
+
+  virtual ~PythonArg() = default;
+
+  operator std::shared_ptr<one::Tensor>() const {
+    return py::cast<std::shared_ptr<one::Tensor>>(Borrow());
+  }
+
+  operator std::shared_ptr<one::TensorTuple>() const;
+  operator one::TensorTuple() const { return *(std::shared_ptr<one::TensorTuple>(*this)); }
+
+  operator std::shared_ptr<cfg::AttrValue>() const;
+
+  operator AttrMap() const;
+
+ private:
+  py::object Borrow() const { return py::reinterpret_borrow<py::object>(value_); }
+  PyObject* value_;
+};
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
+#endif  // ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_H_

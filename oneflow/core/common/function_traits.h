@@ -25,10 +25,21 @@ template<typename T, typename = void>
 struct function_traits;
 
 template<typename Ret, typename... Args>
+struct function_traits<Ret(Args...)> {
+  using func_type = Ret(Args...);
+  using return_type = Ret;
+  using args_type = std::tuple<Args...>;
+
+  static constexpr size_t nargs = sizeof...(Args);
+};
+
+template<typename Ret, typename... Args>
 struct function_traits<Ret (*)(Args...)> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+
+  static constexpr size_t nargs = sizeof...(Args);
 };
 
 template<typename Ret, typename C, typename... Args>
@@ -36,6 +47,8 @@ struct function_traits<Ret (C::*)(Args...)> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+
+  static constexpr size_t nargs = sizeof...(Args);
 };
 
 template<typename Ret, typename C, typename... Args>
@@ -43,6 +56,8 @@ struct function_traits<Ret (C::*)(Args...) const> {
   using func_type = Ret(Args...);
   using return_type = Ret;
   using args_type = std::tuple<Args...>;
+
+  static constexpr size_t nargs = sizeof...(Args);
 };
 
 template<typename F>

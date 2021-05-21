@@ -343,29 +343,25 @@ class BroadcastSub(Module):
 class ScalarAdd(Module):
     def __init__(self, operand) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_add").Input("in").Output("out")
-
-        if isinstance(operand, int):
-            self._op = (
-                self._op.Attr("has_int_operand", True)
-                .Attr("has_float_operand", False)
-                .Attr("int_operand", operand)
-                .Attr("float_operand", 0.0)
-                .Build()
-            )
-        elif isinstance(operand, float):
-            self._op = (
-                self._op.Attr("has_int_operand", False)
-                .Attr("has_float_operand", True)
-                .Attr("int_operand", 0)
-                .Attr("float_operand", operand)
-                .Build()
-            )
-        else:
+        if not isinstance(operand, int) and not isinstance(operand, float):
             raise ValueError("operand type can only be int or float")
+        self.operand = operand
 
     def forward(self, x):
-        return self._op(x)[0]
+        if isinstance(self.operand, int):
+            return flow.F.add_scalar(
+                x,
+                int_operand=self.operand,
+                has_int_operand=True,
+                has_float_operand=False,
+            )
+        else:
+            return flow.F.add_scalar(
+                x,
+                float_operand=self.operand,
+                has_int_operand=False,
+                has_float_operand=True,
+            )
 
 
 @oneflow_export("sub")
@@ -548,10 +544,9 @@ class ScalarAddByTensor(Module):
 class ElementwiseAdd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("add_n").Input("in", 2).Output("out").Build()
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.add(x, y)
 
 
 class BroadcastAdd(Module):

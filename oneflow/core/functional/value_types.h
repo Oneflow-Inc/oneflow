@@ -23,6 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
+class AttrMap;
 namespace cfg {
 class AttrValue;
 }  // namespace cfg
@@ -30,6 +31,7 @@ class AttrValue;
 namespace one {
 
 class Tensor;
+class TensorTuple;
 
 namespace functional {
 
@@ -39,22 +41,30 @@ enum ValueType {
   kTENSOR,
   kTENSOR_REF,
   kTENSOR_MAYBE,
+  kTENSOR_TUPLE,
+  kTENSOR_TUPLE_REF,
+  kTENSOR_TUPLE_MAYBE,
   kATTR,
   kATTR_REF,
+  kATTR_MAP,
 };
 
-#define FUNCTOR_VALUE_TYPE_TRAIT(cpp_type, value_type)                                             \
-  template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value>::type* = nullptr> \
-  inline ValueType ValueTypeOf() {                                                                 \
-    return value_type;                                                                             \
+#define FUNCTOR_VALUE_TYPE_TRAIT(cpp_type, value_type)                                           \
+  template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value, int>::type = 0> \
+  inline ValueType ValueTypeOf() {                                                               \
+    return value_type;                                                                           \
   }
 
 FUNCTOR_VALUE_TYPE_TRAIT(void, kVOID);
 FUNCTOR_VALUE_TYPE_TRAIT(one::Tensor, kTENSOR);
 FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<one::Tensor>, kTENSOR_REF);
 FUNCTOR_VALUE_TYPE_TRAIT(Maybe<one::Tensor>, kTENSOR_MAYBE);
+FUNCTOR_VALUE_TYPE_TRAIT(one::TensorTuple, kTENSOR_TUPLE);
+FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
+FUNCTOR_VALUE_TYPE_TRAIT(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
 FUNCTOR_VALUE_TYPE_TRAIT(cfg::AttrValue, kATTR);
 FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
+FUNCTOR_VALUE_TYPE_TRAIT(AttrMap, kATTR_MAP);
 
 }  // namespace functional
 }  // namespace one

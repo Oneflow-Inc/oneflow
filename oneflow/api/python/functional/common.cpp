@@ -13,30 +13,32 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <pybind11/pybind11.h>
 
-#ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
-#define ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
+#include "oneflow/api/python/functional/common.h"
 
-#include <memory>
-#include <vector>
+namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
+namespace functional {
 
-class Tensor;
+namespace detail {
 
-class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
-                          public std::enable_shared_from_this<TensorTuple> {
- public:
-  // TensorTuple(const TensorTuple&) = delete;
-  // TensorTuple(TensorTuple&) = delete;
-  TensorTuple() = default;
-  TensorTuple(std::vector<std::shared_ptr<Tensor>>::size_type size);
-  TensorTuple(std::initializer_list<std::shared_ptr<Tensor>> init_list);
-  ~TensorTuple() = default;
-};
+template<>
+bool isinstance<int>(py::object obj) {
+  static py::object dummy = py::cast((int)0);
+  return py::isinstance(obj, py::type::of(dummy));
+}
 
+template<>
+bool isinstance<double>(py::object obj) {
+  static py::object dummy = py::cast((double)0);
+  return py::isinstance(obj, py::type::of(dummy));
+}
+
+}  // namespace detail
+
+}  // namespace functional
 }  // namespace one
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_TUPLE_H_
