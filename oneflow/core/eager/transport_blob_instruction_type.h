@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/transport_stream_type.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class SendBlobInstructionType : public vm::InstructionType {
  public:
@@ -49,8 +49,8 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
   ReceiveBlobInstructionType() = default;
   virtual ~ReceiveBlobInstructionType() override = default;
 
-  using stream_type = vm::TransportSenderStreamType;
-  using RefCntType = vm::TransportSenderStreamType::RefCntType;
+  using stream_type = vm::TransportReceiverStreamType;
+  using RefCntType = vm::TransportReceiverStreamType::RefCntType;
 
   void Infer(vm::Instruction* instruction) const override {
     // do nothing
@@ -65,7 +65,7 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
   Maybe<void> Receive(vm::Instruction* instruction) const;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_SEND_BLOB_INSTRUCTION_TYPE_H_

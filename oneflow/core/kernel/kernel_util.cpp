@@ -285,6 +285,21 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
   }
 }
 
+void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                const MemoryCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.has_host_mem()) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
+}
+
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void CpuKernelUtilIf<T, Derived>::
@@ -553,6 +568,8 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
   } else if (initializer_conf.has_int_range_conf()) {
     IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }

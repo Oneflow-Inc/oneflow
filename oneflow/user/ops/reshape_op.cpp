@@ -25,11 +25,17 @@ namespace {
 Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const Shape& shape = ctx->Attr<Shape>("shape");
-  ShapeProto shape_proto;
-  shape.ToProto(&shape_proto);
-  const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape_proto));
-  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(in_shape, *outshape, {{"in", 0}},
-                                                          {{"out", 0}}, ctx);
+  const auto& outshape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
+  user_op::UserOpSbpSignatureBuilder builder = ctx->NewBuilder();
+  return ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
+      in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
+}
+
+Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnContext* ctx) {
+  const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
+  const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
+  const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
+  return ReshapeUserOpUtil::InferParallelDistribution(ctx, in_shape, *out_shape);
 }
 
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
@@ -57,11 +63,17 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const Shape& in_shape = in_tensor_desc->shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc->is_dynamic() == false);
-  *out_tensor_desc = *in_tensor_desc;
+  *out_tensor_desc->mut_shape() = in_tensor_desc->shape();
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
   const auto& parallel_distribution = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
   *out_shape = *JUST(
       GetPhysicalShape(shape, parallel_distribution, ctx->parallel_desc(), ctx->parallel_ctx()));
   CHECK_EQ_OR_RETURN(out_shape->elem_cnt(), in_shape.elem_cnt());
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -71,7 +83,9 @@ REGISTER_USER_OP("reshape")
     .Attr<Shape>("shape")
     .SetLogicalTensorDescInferFn(LogicalTensorDescInferFn)
     .SetPhysicalTensorDescInferFn(TensorDescInferFn)
-    .SetGetSbpFn(GetSbpFn);
+    .SetGetSbpFn(GetSbpFn)
+    .SetParallelDistributionInferFn(InferParallelDistributionFn)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("reshape").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {

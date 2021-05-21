@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/vm/symbol_storage.h"
+#include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -677,7 +678,7 @@ Maybe<void> Operator::InferParallelDistributionSignature(
         ParallelDistributionInferHint4Ibn) const {
   const auto IsBroadcast = [](const ParallelDistribution& parallel_distribution,
                               const ParallelDesc& parallel_desc) -> bool {
-    if (parallel_desc.hierarchy()->NumAxes() == 1) { return true; }
+    if (parallel_desc.parallel_num() == 1) { return true; }
     for (int64_t i = 0; i < parallel_distribution.sbp_parallel_size(); ++i) {
       if (!parallel_distribution.sbp_parallel(i).has_broadcast_parallel()) { return false; }
     }
@@ -722,7 +723,9 @@ Maybe<void> Operator::InferParallelDistributionSignature(
       }
       if (distribution.sbp_parallel_size() != parallel_hierarchy->NumAxes()) {
         CHECK_OR_RETURN(IsBroadcast(distribution,
-                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()));
+                                    JUST(ParallelDistributionInferHint4Ibn(ibn))->parallel_desc()))
+            << ibn << "'s hierarchy is different from " << op_name()
+            << "'s, it should be broadcast but get " << distribution.DebugString();
         distribution.clear_sbp_parallel();
         for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
           distribution.add_sbp_parallel()->mutable_broadcast_parallel();
@@ -897,6 +900,7 @@ void Operator::GenKernelConf(
     if (blob_desc == nullptr) { continue; }
     (*dtype_signature->mutable_name2dtype())[ibn] = blob_desc->data_type();
   }
+
   CHECK_JUST(ToOpAttribute(kernel_conf->mutable_op_attribute()));
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                            [](const BlobDesc* blob_desc) { return blob_desc->is_dynamic(); })) {
@@ -910,6 +914,7 @@ void Operator::GenKernelConf(
     }
     kernel_conf->set_data_type(data_type);
   }
+
   if (parallel_ctx != nullptr) { *(kernel_conf->mutable_parallel_ctx()) = *parallel_ctx; }
 
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
@@ -1180,7 +1185,8 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
   if (bn2parallel_desc_) {
     auto* map = op_attribute->mutable_parallel_conf_signature()->mutable_bn_in_op2parallel_conf();
     for (const auto& pair : *bn2parallel_desc_) {
-      (*map)[pair.first] = pair.second->parallel_conf();
+      const bool has_same_parallel_conf_as_op = *op_parallel_desc_ == *pair.second;
+      if (!has_same_parallel_conf_as_op) { (*map)[pair.first] = pair.second->parallel_conf(); }
     }
   }
   if (op_parallel_desc_ && bn2parallel_desc_) {
@@ -1195,10 +1201,19 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         if (*pair.second == *op_parallel_desc_) {
           (*symbol_map)[pair.first] = parallel_desc_symbol_id;
         } else {
-          (*symbol_map)[pair.first] =
-              (*Global<std::shared_ptr<ForeignCallback>>::Get())
-                  ->MakeParallelDescSymbol(
-                      std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf()));
+          const auto parallel_conf =
+              std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
+          const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
+            int64_t symbol_id;
+            const auto BuildInstruction =
+                [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+              symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
+              return Maybe<void>::Ok();
+            };
+            LogicalRun(BuildInstruction);
+            return symbol_id;
+          };
+          (*symbol_map)[pair.first] = MakeParallelDescSymbol();
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }

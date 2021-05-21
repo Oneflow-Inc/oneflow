@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/dl/include/ibv.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
@@ -34,7 +35,11 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
 }
 
 void IBVForkInit() {
-  if (ibv_fork_init() != 0) { LOG(ERROR) << "ibv_fork_init failed"; }
+  if (ibv::IsAvailable()) {
+    if (ibv::wrapper.ibv_fork_init() != 0) { std::cerr << "ibv_fork_init failed\n"; }
+  } else {
+    std::cerr << "libibverbs not available, ibv_fork_init skipped\n";
+  }
 }
 
 }  // namespace
@@ -45,9 +50,9 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
   }
-  CHECK_EQ(ibv_destroy_cq(cq_), 0);
-  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
-  CHECK_EQ(ibv_close_device(context_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_destroy_cq(cq_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_dealloc_pd(pd_), 0);
+  CHECK_EQ(ibv::wrapper.ibv_close_device(context_), 0);
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
@@ -57,6 +62,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
     this_tokens_msg.mutable_token2mem_desc()->insert(
         {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
   }
+  // TODO(chengcheng): Use Global<Transport> to sync session tokens.
   Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
   for (int64_t peer_id : peer_machine_id()) {
     IBVerbsTokensMsg peer_tokens_msg;
@@ -76,26 +82,26 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
-    : CommNetIf(plan),
+IBVerbsCommNet::IBVerbsCommNet()
+    : CommNetIf(),
       token2mem_desc_(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size()),
       poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  ibv_device** device_list = ibv_get_device_list(nullptr);
+  ibv_device** device_list = ibv::wrapper.ibv_get_device_list(nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
-  context_ = ibv_open_device(device);
+  context_ = ibv::wrapper.ibv_open_device(device);
   CHECK(context_);
-  ibv_free_device_list(device_list);
-  pd_ = ibv_alloc_pd(context_);
+  ibv::wrapper.ibv_free_device_list(device_list);
+  pd_ = ibv::wrapper.ibv_alloc_pd(context_);
   CHECK(pd_);
-  ibv_device_attr device_attr;
-  CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
-  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
+  ibv_device_attr device_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_device(context_, &device_attr), 0);
+  cq_ = ibv::wrapper.ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
-  ibv_port_attr port_attr;
-  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
-  ibv_gid gid;
-  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
+  ibv_port_attr port_attr{};
+  CHECK_EQ(ibv::wrapper.ibv_query_port_wrap(context_, 1, &port_attr), 0);
+  ibv_gid gid{};
+  CHECK_EQ(ibv::wrapper.ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = GlobalProcessCtx::Rank();
   qp_vec_.assign(Global<ResourceDesc, ForEnv>::Get()->process_ranks().size(), nullptr);
   for (int64_t peer_id : peer_machine_id()) {

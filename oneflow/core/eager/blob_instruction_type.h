@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class LazyReferenceInstructionType : public vm::InstructionType {
  public:
@@ -41,5 +41,27 @@ class LazyReferenceInstructionType : public vm::InstructionType {
   Maybe<void> Run(vm::Instruction* instruction) const;
 };
 
-}  // namespace eager
+class AccessBlobByCallbackInstructionType : public vm::InstructionType {
+ public:
+  AccessBlobByCallbackInstructionType() = default;
+  ~AccessBlobByCallbackInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override;
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+
+class SoftSyncStreamInstructionType : public vm::InstructionType {
+ public:
+  SoftSyncStreamInstructionType() = default;
+  ~SoftSyncStreamInstructionType() override = default;
+
+  void Compute(vm::Instruction* instruction) const override {
+    instruction->set_has_event_record(true);
+  }
+
+  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
+};
+
+}  // namespace vm
 }  // namespace oneflow
