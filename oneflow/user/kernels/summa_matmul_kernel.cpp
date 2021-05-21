@@ -22,73 +22,101 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-class SummaMatmulABKernelCommState final : public user_op::OpKernelState {
+class SummaMatmulKernelCommState final : public user_op::OpKernelState {
  public:
-  SummaMatmulABKernelCommState(user_op::KernelInitContext* ctx)
-      : is_init_(false),
-        parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
-    OF_CUDA_CHECK(cudaStreamCreate(&nccl_stream_));
+  SummaMatmulKernelCommState(user_op::KernelInitContext* ctx)
+      : parallel_desc_(ctx->parallel_desc()), this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    OF_CUDA_CHECK(cudaStreamCreate(&row_nccl_stream_));
+    OF_CUDA_CHECK(cudaStreamCreate(&col_nccl_stream_));
+    OF_CUDA_CHECK(cudaEventCreate(&start_comm_event_));
+    CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 2);
+    CHECK_EQ(parallel_desc_.hierarchy()->At(0), parallel_desc_.hierarchy()->At(1));
+    summa_dim_ = parallel_desc_.hierarchy()->At(0);
+    row_data_release_events_.resize(summa_dim_);
+    col_data_release_events_.resize(summa_dim_);
+    buffer_free_events_.resize(summa_dim_);
+    FOR_RANGE(int64_t, i, 0, summa_dim_) {
+      OF_CUDA_CHECK(cudaEventCreate(&row_data_release_events_.at(i)));
+      OF_CUDA_CHECK(cudaEventCreate(&col_data_release_events_.at(i)));
+      OF_CUDA_CHECK(cudaEventCreate(&buffer_free_events_.at(i)));
+    }
   }
-  ~SummaMatmulABKernelCommState() { cudaStreamDestroy(nccl_stream_); };
+  ~SummaMatmulKernelCommState() {
+    OF_CUDA_CHECK(cudaStreamDestroy(row_nccl_stream_));
+    OF_CUDA_CHECK(cudaStreamDestroy(col_nccl_stream_));
+    OF_CUDA_CHECK(cudaEventDestroy(start_comm_event_));
+    CHECK_EQ(buffer_free_events_.size(), row_data_release_events_.size());
+    FOR_RANGE(int64_t, i, 0, buffer_free_events_.size()) {
+      OF_CUDA_CHECK(cudaEventDestroy(buffer_free_events_.at(i)));
+      OF_CUDA_CHECK(cudaEventDestroy(row_data_release_events_.at(i)));
+      OF_CUDA_CHECK(cudaEventDestroy(col_data_release_events_.at(i)));
+    }
+  };
 
-  ncclComm_t a_comm() {
-    if (!is_init_) { Init(); }
-    return a_comm_;
-  }
+  ncclComm_t row_comm() { return GetOrCreate().row_comm; }
 
-  ncclComm_t b_comm() {
-    if (!is_init_) { Init(); }
-    return b_comm_;
-  }
+  ncclComm_t col_comm() { return GetOrCreate().col_comm; }
 
-  int64_t num_ranks() {
-    if (!is_init_) { Init(); }
-    return num_ranks_;
-  }
+  int64_t summa_dim() { return summa_dim_; }
 
-  cudaStream_t nccl_stream() {
-    if (!is_init_) { Init(); }
-    return nccl_stream_;
+  cudaStream_t row_nccl_stream() { return row_nccl_stream_; }
+
+  cudaStream_t col_nccl_stream() { return col_nccl_stream_; }
+
+  cudaEvent_t start_comm_event() { return start_comm_event_; }
+
+  const std::vector<cudaEvent_t>& row_data_release_events() { return row_data_release_events_; }
+
+  const std::vector<cudaEvent_t>& col_data_release_events() { return col_data_release_events_; }
+
+  const std::vector<cudaEvent_t>& buffer_free_events() { return buffer_free_events_; }
+
+  struct Comm {
+    Comm(ncclComm_t row_comm, ncclComm_t col_comm) : row_comm(row_comm), col_comm(col_comm) {}
+    ncclComm_t row_comm;
+    ncclComm_t col_comm;
+  };
+
+  std::unique_ptr<Comm> comm_;
+
+  const Comm& GetOrCreate() {
+    if (!comm_) { Init(); }
+    return *comm_;
   }
 
  private:
   void Init() {
-    CHECK(!is_init_);
     std::set<std::pair<int64_t, int64_t>> a_device_set;
     std::set<std::pair<int64_t, int64_t>> b_device_set;
-    const Shape& hierarchy = *parallel_desc_.hierarchy();
-    CHECK_EQ(hierarchy.NumAxes(), 2);
-    CHECK_EQ(hierarchy.At(0), hierarchy.At(1));
-    const int64_t q = hierarchy.At(0);
-    int64_t row_rank = this_parallel_id_ / q;
-    int64_t col_rank = this_parallel_id_ % q;
-    for (int64_t i = 0; i < q; ++i) {
-      const int64_t parallel_id = row_rank * q + i;
+    int64_t row_rank = this_parallel_id_ / summa_dim_;
+    int64_t col_rank = this_parallel_id_ % summa_dim_;
+    for (int64_t i = 0; i < summa_dim_; ++i) {
+      const int64_t parallel_id = row_rank * summa_dim_ + i;
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       a_device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    for (int64_t i = 0; i < q; ++i) {
-      const int64_t parallel_id = i * q + col_rank;
+    for (int64_t i = 0; i < summa_dim_; ++i) {
+      const int64_t parallel_id = i * summa_dim_ + col_rank;
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       b_device_set.emplace(std::make_pair(machine_id, device_id));
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-    a_comm_ = comm_mgr->GetCommForDevice(a_device_set);
-    b_comm_ = comm_mgr->GetCommForDevice(b_device_set);
-    num_ranks_ = q;
-    is_init_ = true;
+    ncclComm_t row_comm = comm_mgr->GetCommForDevice(a_device_set);
+    ncclComm_t col_comm = comm_mgr->GetCommForDevice(b_device_set);
+    comm_.reset(new Comm(row_comm, col_comm));
   }
 
-  bool is_init_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
-  int64_t num_ranks_;
-  ncclComm_t a_comm_;
-  ncclComm_t b_comm_;
-  cudaStream_t nccl_stream_;
+  int64_t summa_dim_;
+  cudaStream_t row_nccl_stream_;
+  cudaStream_t col_nccl_stream_;
+  cudaEvent_t start_comm_event_;
+  std::vector<cudaEvent_t> row_data_release_events_;
+  std::vector<cudaEvent_t> col_data_release_events_;
+  std::vector<cudaEvent_t> buffer_free_events_;
 };
 
 template<typename T>
@@ -99,12 +127,12 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<SummaMatmulABKernelCommState>(ctx);
+    return std::make_shared<SummaMatmulKernelCommState>(ctx);
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* kernel_state = dynamic_cast<SummaMatmulABKernelCommState*>(state);
+    auto* kernel_state = dynamic_cast<SummaMatmulKernelCommState*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
@@ -128,47 +156,57 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
 
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 1.0;
-    int q = kernel_state->num_ranks();
-    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    const int64_t row_rank = parallel_id / q;
-    const int64_t col_rank = parallel_id % q;
-    cudaEvent_t start_comm_event;
-    cudaEventCreate(&start_comm_event);
-
-    cudaEvent_t data_release_event[q];
-    cudaEvent_t buffer_free_event[q];
-    FOR_RANGE(int64_t, i, 0, q) {
-      cudaEventCreate(&data_release_event[i]);
-      cudaEventCreate(&buffer_free_event[i]);
-    }
-    cudaEventRecord(start_comm_event, ctx->device_ctx()->cuda_stream());
-    cudaStreamWaitEvent(kernel_state->nccl_stream(), start_comm_event, 0);
+    int summa_dim = kernel_state->summa_dim();
+    OF_CUDA_CHECK(
+        cudaEventRecord(kernel_state->start_comm_event(), ctx->device_ctx()->cuda_stream()));
+    OF_CUDA_CHECK(
+        cudaStreamWaitEvent(kernel_state->row_nccl_stream(), kernel_state->start_comm_event(), 0));
     OF_NCCL_CHECK(ncclBroadcast(a->dptr(), a_buffer.at(0), a->shape().elem_cnt(),
-                                GetNcclDataType(a->data_type()), 0, kernel_state->a_comm(),
-                                kernel_state->nccl_stream()));
+                                GetNcclDataType(a->data_type()), 0, kernel_state->row_comm(),
+                                kernel_state->row_nccl_stream()));
+    OF_CUDA_CHECK(cudaEventRecord(kernel_state->row_data_release_events().at(0),
+                                  kernel_state->row_nccl_stream()));
+    OF_CUDA_CHECK(
+        cudaStreamWaitEvent(kernel_state->col_nccl_stream(), kernel_state->start_comm_event(), 0));
     OF_NCCL_CHECK(ncclBroadcast(b->dptr(), b_buffer.at(0), b->shape().elem_cnt(),
-                                GetNcclDataType(b->data_type()), 0, kernel_state->b_comm(),
-                                kernel_state->nccl_stream()));
-    cudaEventRecord(data_release_event[0], kernel_state->nccl_stream());
-    cudaEventRecord(buffer_free_event[0], ctx->device_ctx()->cuda_stream());
-    for (int64_t i = 1; i < q; ++i) {
-      cudaStreamWaitEvent(kernel_state->nccl_stream(), buffer_free_event[i - 1], 0);
+                                GetNcclDataType(b->data_type()), 0, kernel_state->col_comm(),
+                                kernel_state->col_nccl_stream()));
+    OF_CUDA_CHECK(cudaEventRecord(kernel_state->col_data_release_events().at(0),
+                                  kernel_state->col_nccl_stream()));
+    OF_CUDA_CHECK(cudaEventRecord(kernel_state->buffer_free_events().at(0),
+                                  ctx->device_ctx()->cuda_stream()));
+    for (int64_t i = 1; i < summa_dim; ++i) {
+      OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->row_nccl_stream(),
+                                        kernel_state->buffer_free_events().at(i - 1), 0));
       OF_NCCL_CHECK(ncclBroadcast(a->dptr(), a_buffer.at(i % 2), a->shape().elem_cnt(),
-                                  GetNcclDataType(a->data_type()), i, kernel_state->a_comm(),
-                                  kernel_state->nccl_stream()));
+                                  GetNcclDataType(a->data_type()), i, kernel_state->row_comm(),
+                                  kernel_state->row_nccl_stream()));
+      OF_CUDA_CHECK(cudaEventRecord(kernel_state->row_data_release_events().at(i),
+                                    kernel_state->row_nccl_stream()));
+      OF_CUDA_CHECK(cudaStreamWaitEvent(kernel_state->col_nccl_stream(),
+                                        kernel_state->buffer_free_events().at(i - 1), 0));
       OF_NCCL_CHECK(ncclBroadcast(b->dptr(), b_buffer.at(i % 2), b->shape().elem_cnt(),
-                                  GetNcclDataType(b->data_type()), i, kernel_state->b_comm(),
-                                  kernel_state->nccl_stream()));
-      cudaEventRecord(data_release_event[i], kernel_state->nccl_stream());
-      cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(), data_release_event[i - 1], 0);
-
+                                  GetNcclDataType(b->data_type()), i, kernel_state->col_comm(),
+                                  kernel_state->col_nccl_stream()));
+      OF_CUDA_CHECK(cudaEventRecord(kernel_state->col_data_release_events().at(i),
+                                    kernel_state->col_nccl_stream()));
+      OF_CUDA_CHECK(cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(),
+                                        kernel_state->row_data_release_events().at(i - 1), 0));
+      OF_CUDA_CHECK(cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(),
+                                        kernel_state->col_data_release_events().at(i - 1), 0));
       const T* a_ptr = reinterpret_cast<T*>(a_buffer.at((i - 1) % 2));
       const T* b_ptr = reinterpret_cast<T*>(b_buffer.at((i - 1) % 2));
       NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasNoTrans, m, n,
                                               k, alpha, a_ptr, b_ptr, beta, out->mut_dptr<T>());
-      cudaEventRecord(buffer_free_event[i], ctx->device_ctx()->cuda_stream());
+      OF_CUDA_CHECK(cudaEventRecord(kernel_state->buffer_free_events().at(i),
+                                    ctx->device_ctx()->cuda_stream()));
     }
-    cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(), data_release_event[q - 1], 0);
+    OF_CUDA_CHECK(cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(),
+                                      kernel_state->row_data_release_events().at(summa_dim - 1),
+                                      0));
+    OF_CUDA_CHECK(cudaStreamWaitEvent(ctx->device_ctx()->cuda_stream(),
+                                      kernel_state->col_data_release_events().at(summa_dim - 1),
+                                      0));
     NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasNoTrans, m, n, k,
                                             alpha, reinterpret_cast<T*>(a_buffer.at(1)),
                                             reinterpret_cast<T*>(b_buffer.at(1)), beta,
