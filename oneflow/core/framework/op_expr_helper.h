@@ -183,5 +183,9 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
 
+Maybe<one::UserOpExpr> UnaryMathOpGrad(const std::string& op);
+Maybe<one::UserOpExpr> BinaryMathOpXGrad(const std::string& op);
+Maybe<one::UserOpExpr> BinaryMathOpYGrad(const std::string& op);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
