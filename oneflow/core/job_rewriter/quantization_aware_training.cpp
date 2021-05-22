@@ -74,7 +74,7 @@ Maybe<bool> IsConvBiasEdge(const QatConfig& qat_config, const OpEdge* edge,
       if (ibn[0] == "in_0") {
         *conv_input_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
       } else if (ibn[0] == "weight_0") {
-        if (qat_config.has_per_channel_weight_quantization()) {
+        if (qat_config.per_channel_weight_quantization()) {
           *weight_scale_length = conv_node->LogicalBlobDesc4Lbi(lbi).shape().At(0);
         }
         *conv_weight_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
