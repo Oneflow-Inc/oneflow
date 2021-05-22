@@ -32,6 +32,7 @@ runs:
         make -j 2 of_ccobj
       shell: bash
     - name: Build (oneflow_internal)
+      if: false
       run: |
         mkdir -p build
         cd build
@@ -39,6 +40,7 @@ runs:
         make -j 2 oneflow_internal
       shell: bash
     - name: Build (generate_api)
+      if: false
       run: |
         mkdir -p build
         cd build
