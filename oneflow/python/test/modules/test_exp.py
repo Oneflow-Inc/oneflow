@@ -21,26 +21,38 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _test_exp(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.exp(input)
     np_out = np.exp(input.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 def _test_tensor_exp(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = input.exp()
     np_out = np.exp(input.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 def _test_exp_backward(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
     of_out = flow.exp(input)
     np_grad = of_out.numpy()
     of_out = of_out.sum()
     of_out.backward()
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, rtol=1e-05))
-    
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

@@ -24,39 +24,54 @@ from test_util import GenArgList
 
 def _test_negtive(test_case, device):
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32, device=flow.device(device)
+        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
     )
     of_out = flow.negative(input)
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_negative_neg(test_case, device):
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32, device=flow.device(device)
+        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
     )
     of_out = flow.neg(input)
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_tensor_negative(test_case, device):
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32, device=flow.device(device)
+        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
     )
     of_out = input.negative()
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_self_tensor_negative(test_case, device):
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32, device=flow.device(device)
+        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
     )
     of_out = -input
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_negative_backward(test_case, device):
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32, device=flow.device(device), requires_grad=True
+        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_out = flow.negative(input)
     of_out = of_out.sum()

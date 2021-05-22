@@ -23,25 +23,44 @@ from test_util import GenArgList
 
 
 def _test_less_v1(test_case, device):
-    input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
-    input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input1 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
+    input2 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.lt(input1, input2)
     np_out = np.less(input1.numpy(), input2.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_tensor_less(test_case, device):
-    input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
-    input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device))
+    input1 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
+    input2 = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = input1.lt(input2)
     np_out = np.less(input1.numpy(), input2.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_less_symbol(test_case, device):
-    input1 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32, device=flow.device(device))
-    input2 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32, device=flow.device(device))
+    input1 = flow.Tensor(
+        np.array([1, 1, 4]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    input2 = flow.Tensor(
+        np.array([1, 2, 3]).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
     of_out = input1 < input2
     np_out = np.less(input1.numpy(), input2.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
 
 def _test_less_int_scalar(test_case, device):
     np_arr = np.random.randn(2, 3, 4, 5)
@@ -51,6 +70,7 @@ def _test_less_int_scalar(test_case, device):
     np_out = np.less(np_arr, input2)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+
 def _test_less_float_scalar(test_case, device):
     np_arr = np.random.randn(3, 2, 5, 7)
     input1 = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
@@ -58,7 +78,7 @@ def _test_less_float_scalar(test_case, device):
     of_out = input1 < input2
     np_out = np.less(np_arr, input2)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-    
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
