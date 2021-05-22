@@ -32,16 +32,16 @@ runs:
         make -j 2 of_ccobj
       shell: bash
     - name: Build (oneflow_internal)
-      if: false
       run: |
+        exit 0
         mkdir -p build
         cd build
         cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
         make -j 2 oneflow_internal
       shell: bash
     - name: Build (generate_api)
-      if: false
       run: |
+        exit 0
         mkdir -p build
         cd build
         cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
