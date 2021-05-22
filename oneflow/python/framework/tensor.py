@@ -605,6 +605,15 @@ class Tensor:
         return self._init_by_initializer_conf(initializer_conf)
 
     @_auto_determine
+    def zeros_(self):
+        internal_tensor = self._local_or_consistent_tensor
+        if internal_tensor.is_lazy:
+            TODO()
+        if internal_tensor.is_consistent:
+            TODO()
+        internal_tensor.zeros_()
+
+    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
@@ -612,7 +621,7 @@ class Tensor:
         if internal_tensor.is_consistent:
             TODO()
 
-        if isinstance(other, Tensor):
+        if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
             src_np = other.numpy()
         else:
             assert isinstance(other, np.ndarray)

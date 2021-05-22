@@ -61,7 +61,8 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
 }
 
 bool ResourceDesc::enable_debug_mode() const {
-  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || resource_.enable_debug_mode();
+  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr
+         || resource_.enable_debug_mode();
 }
 
 bool ResourceDesc::enable_dry_run() const { return std::getenv("ONEFLOW_DRY_RUN") != nullptr; }

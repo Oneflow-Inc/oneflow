@@ -182,5 +182,8 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim);
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
