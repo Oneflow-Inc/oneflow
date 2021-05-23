@@ -134,6 +134,8 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
     auto* kernel_state = dynamic_cast<SummaMatmulKernelCommState*>(state);
     CHECK(kernel_state != nullptr);
+    CHECK(kernel_state->row_comm());
+    CHECK(kernel_state->col_comm());
     const user_op::Tensor* a = ctx->Tensor4ArgNameAndIndex("a", 0);
     const user_op::Tensor* b = ctx->Tensor4ArgNameAndIndex("b", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -142,18 +144,18 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
     const int m = out->shape().At(num_axes - 2);
     const int n = out->shape().At(num_axes - 1);
     const int k = a->shape().At(num_axes - 1);
+    const size_t a_buffer_size = GetCudaAlignedSize(a->shape().elem_cnt() * sizeof(T));
+    const size_t b_buffer_size = GetCudaAlignedSize(b->shape().elem_cnt() * sizeof(T));
     char* a_buffer_0 = tmp_buffer->mut_dptr<char>();
-    char* a_buffer_1 = tmp_buffer->mut_dptr<char>() + a->shape().elem_cnt() * sizeof(T);
-    char* b_buffer_0 = tmp_buffer->mut_dptr<char>() + 2 * a->shape().elem_cnt() * sizeof(T);
-    char* b_buffer_1 = tmp_buffer->mut_dptr<char>() + 2 * a->shape().elem_cnt() * sizeof(T)
-                       + b->shape().elem_cnt() * sizeof(T);
+    char* a_buffer_1 = tmp_buffer->mut_dptr<char>() + a_buffer_size;
+    char* b_buffer_0 = tmp_buffer->mut_dptr<char>() + 2 * a_buffer_size;
+    char* b_buffer_1 = tmp_buffer->mut_dptr<char>() + 2 * a_buffer_size + b_buffer_size;
     std::vector<void*> a_buffer;
     a_buffer.push_back(reinterpret_cast<void*>(a_buffer_0));
     a_buffer.push_back(reinterpret_cast<void*>(a_buffer_1));
     std::vector<void*> b_buffer;
     b_buffer.push_back(reinterpret_cast<void*>(b_buffer_0));
     b_buffer.push_back(reinterpret_cast<void*>(b_buffer_1));
-
     const double alpha = ctx->Attr<double>("alpha");
     double beta = 1.0;
     int summa_dim = kernel_state->summa_dim();
@@ -215,15 +217,16 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                                \
-  REGISTER_USER_KERNEL("summa_matmul_ab")                                                     \
-      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                          \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))         \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);                   \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);                   \
-        return 2 * (a_desc->shape().elem_cnt() + b_desc->shape().elem_cnt()) * sizeof(dtype); \
+#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                        \
+  REGISTER_USER_KERNEL("summa_matmul_ab")                                             \
+      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                  \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);           \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);           \
+        return 2 * GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))     \
+               + 2 * GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype));  \
       });
 
 #ifdef WITH_CUDA
