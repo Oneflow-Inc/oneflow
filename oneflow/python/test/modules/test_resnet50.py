@@ -21,7 +21,7 @@ import numpy as np
 import oneflow.experimental as flow
 from resnet50_model import resnet50
 
-
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
