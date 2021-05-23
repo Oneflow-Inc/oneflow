@@ -583,6 +583,7 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
       .Build();
 }
 
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride) {
   return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
