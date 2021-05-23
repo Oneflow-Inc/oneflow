@@ -82,7 +82,7 @@ class TestResNet50(flow.unittest.TestCase):
         of_losses = []
         gt_of_losses = []
 
-        with open("./resnet50_loss.txt", "r") as lines:
+        with open("/dataset/imagenette/resnet50_loss.txt", "r") as lines:
             for line in lines:
                 arr = line.strip()
                 gt_of_losses.append(float(arr))
