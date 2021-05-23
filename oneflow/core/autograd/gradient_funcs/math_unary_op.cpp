@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -41,8 +40,7 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& x = ctx->SavedTensors().at(0);
-    const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, {x, out_grads.at(0)}));
-    in_grads->at(0) = grads->at(0);
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
 

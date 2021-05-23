@@ -22,7 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_exp_impl(test_case, shape, device):
+def _test_pow_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -41,13 +41,31 @@ def _test_exp_impl(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestExp(flow.unittest.TestCase):
-    def test_exp(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_exp_impl(test_case, *arg)
+class TestPow(flow.unittest.TestCase):
+    def test_pow(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = flow.pow(input, 2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_pow_tensor_function(test_case):
+        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
+        of_out = input.pow(2.1)
+        np_out = np.power(input.numpy(), 2.1)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+# @unittest.skipIf(
+#     not flow.unittest.env.eager_execution_enabled(),
+#     ".numpy() doesn't work in lazy mode",
+# )
+# class TestExp(flow.unittest.TestCase):
+#     def test_pow(test_case):
+#         arg_dict = OrderedDict()
+#         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+#         arg_dict["device"] = ["cpu", "cuda"]
+#         for arg in GenArgList(arg_dict):
+#             _test_exp_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
