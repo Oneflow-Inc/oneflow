@@ -105,7 +105,7 @@ class TestResNet50(flow.unittest.TestCase):
             of_losses.append(l)
             errors += np.abs(of_losses[b] - gt_of_losses[b])
             print(errors / (b + 1))
-        test_case.assertTrue((errors / 100) < 1e-4)
+        test_case.assertTrue((errors / 100) < 1e-2)
 
 
 if __name__ == "__main__":
