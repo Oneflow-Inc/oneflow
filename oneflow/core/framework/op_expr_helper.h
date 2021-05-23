@@ -13,6 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
@@ -180,12 +192,24 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> PReLUGradOp();
 Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim);
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride);
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride, const std::string& name);
-Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
-Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
+
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type);
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow
