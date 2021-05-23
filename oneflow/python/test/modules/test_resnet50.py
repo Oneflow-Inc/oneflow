@@ -67,14 +67,14 @@ class TestResNet50(flow.unittest.TestCase):
         )
 
         res50_module = resnet50()
-        res50_module.eval()
+        res50_module.train()
         res50_module.load_state_dict(flow.load("/dataset/imagenette/resnet50_models"))
         of_corss_entropy = flow.nn.CrossEntropyLoss()
         res50_module.to("cuda")
         of_corss_entropy.to("cuda")
 
-        learning_rate = 0.00001
-        mom = 0.9
+        learning_rate = 1e-7
+        mom = 0.1
         of_sgd = flow.optim.SGD(
             res50_module.parameters(), lr=learning_rate, momentum=mom
         )
@@ -82,7 +82,7 @@ class TestResNet50(flow.unittest.TestCase):
         of_losses = []
         gt_of_losses = []
 
-        with open("/dataset/imagenette/resnet50_loss.txt", "r") as lines:
+        with open("./resnet50_loss.txt", "r") as lines:
             for line in lines:
                 arr = line.strip()
                 gt_of_losses.append(float(arr))
@@ -104,8 +104,8 @@ class TestResNet50(flow.unittest.TestCase):
             l = loss.numpy()[0]
             of_losses.append(l)
             errors += np.abs(of_losses[b] - gt_of_losses[b])
-
-        test_case.assertTrue((errors / 100) < 1e-3)
+            print(errors / (b + 1))
+        test_case.assertTrue((errors / 100) < 1e-4)
 
 
 if __name__ == "__main__":
