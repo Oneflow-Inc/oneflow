@@ -86,25 +86,25 @@ class SummaMatmulKernelCommState final : public user_op::OpKernelState {
 
  private:
   void Init() {
-    std::set<std::pair<int64_t, int64_t>> a_device_set;
-    std::set<std::pair<int64_t, int64_t>> b_device_set;
+    std::set<std::pair<int64_t, int64_t>> row_device_set;
+    std::set<std::pair<int64_t, int64_t>> col_device_set;
     int64_t row_rank = this_parallel_id_ / summa_dim_;
     int64_t col_rank = this_parallel_id_ % summa_dim_;
     for (int64_t i = 0; i < summa_dim_; ++i) {
       const int64_t parallel_id = row_rank * summa_dim_ + i;
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-      a_device_set.emplace(std::make_pair(machine_id, device_id));
+      row_device_set.emplace(std::make_pair(machine_id, device_id));
     }
     for (int64_t i = 0; i < summa_dim_; ++i) {
       const int64_t parallel_id = i * summa_dim_ + col_rank;
       const int64_t machine_id = CHECK_JUST(parallel_desc_.MachineId4ParallelId(parallel_id));
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
-      b_device_set.emplace(std::make_pair(machine_id, device_id));
+      col_device_set.emplace(std::make_pair(machine_id, device_id));
     }
     EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
-    ncclComm_t row_comm = comm_mgr->GetCommForDevice(a_device_set);
-    ncclComm_t col_comm = comm_mgr->GetCommForDevice(b_device_set);
+    ncclComm_t row_comm = comm_mgr->GetCommForDevice(row_device_set);
+    ncclComm_t col_comm = comm_mgr->GetCommForDevice(col_device_set);
     comm_.reset(new Comm(row_comm, col_comm));
   }
 
