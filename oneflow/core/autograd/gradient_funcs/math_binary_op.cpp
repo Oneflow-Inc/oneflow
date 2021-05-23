@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
@@ -43,14 +42,17 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     if (!(ctx->x_requires_grad || ctx->y_requires_grad)) { return Maybe<void>::Ok(); }
 
-    const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-    const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(1);
+    in_grads->resize(2);
+    const std::shared_ptr<one::Tensor>& x = ctx->SavedTensors().at(0);
+    const std::shared_ptr<one::Tensor>& y = ctx->SavedTensors().at(1);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*x_grad_op_, {x, y, out_grads.at(0)}));
+      in_grads->at(0) =
+          JUST(OpInterpUtil::Dispatch<one::Tensor>(*x_grad_op_, {x, y, out_grads.at(0)}));
     }
 
     if (ctx->y_requires_grad) {
-      in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {x, y, out_grads.at(0)}));
+      in_grads->at(1) =
+          JUST(OpInterpUtil::Dispatch<one::Tensor>(*y_grad_op_, {x, y, out_grads.at(0)}));
     }
     return Maybe<void>::Ok();
   }
@@ -60,15 +62,15 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathOpExprInterpState> {
   std::shared_ptr<OpExpr> y_grad_op_;
 };
 
-#define INSTANSE_BINARY_MATHOP_CLASS(op_type_name, op_cls)                \
-  class op_cls##Cls final : public BinaryMathOp {                         \
-    Maybe<void> Init(const OpExpr& op) override {                         \
-      x_grad_op_ = JUST(op_expr_helper::BinaryMathOpXGrad(op_type_name)); \
-      y_grad_op_ = JUST(op_expr_helper::BinaryMathOpYGrad(op_type_name)); \
-      return Maybe<void>::Ok();                                           \
-    }                                                                     \
-  };                                                                      \
-                                                                          \
+#define INSTANSE_BINARY_MATHOP_CLASS(op_type_name, op_cls)            \
+  class op_cls##Cls final : public BinaryMathOp {                     \
+    Maybe<void> Init(const OpExpr& op) override {                     \
+      x_grad_op_ = JUST(op_expr_helper::BinaryXGradOp(op_type_name)); \
+      y_grad_op_ = JUST(op_expr_helper::BinaryYGradOp(op_type_name)); \
+      return Maybe<void>::Ok();                                       \
+    }                                                                 \
+  };                                                                  \
+                                                                      \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANSE_BINARY_MATHOP_CLASS, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);

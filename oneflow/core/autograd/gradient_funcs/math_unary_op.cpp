@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
@@ -40,7 +39,7 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathOpExprInterpState> {
                     TensorTuple* in_grads) const override {
     if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
     const auto& x = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}));
+    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<one::Tensor>(*grad_op_, {x, out_grads.at(0)}));
     return Maybe<void>::Ok();
   }
 
@@ -48,14 +47,14 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathOpExprInterpState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-#define INSTANSE_UNARY_MATHOP_CLASS(op_type_name, op_cls)             \
-  class op_cls##Cls final : public UnaryMathOp {                      \
-    Maybe<void> Init(const OpExpr& op) override {                     \
-      grad_op_ = JUST(op_expr_helper::UnaryMathOpGrad(op_type_name)); \
-      return Maybe<void>::Ok();                                       \
-    }                                                                 \
-  };                                                                  \
-                                                                      \
+#define INSTANSE_UNARY_MATHOP_CLASS(op_type_name, op_cls)         \
+  class op_cls##Cls final : public UnaryMathOp {                  \
+    Maybe<void> Init(const OpExpr& op) override {                 \
+      grad_op_ = JUST(op_expr_helper::UnaryGradOp(op_type_name)); \
+      return Maybe<void>::Ok();                                   \
+    }                                                             \
+  };                                                              \
+                                                                  \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
 OF_PP_FOR_EACH_TUPLE(INSTANSE_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);

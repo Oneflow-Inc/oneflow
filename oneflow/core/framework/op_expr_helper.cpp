@@ -558,23 +558,30 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
       .Build();
 }
 
-Maybe<one::UserOpExpr> UnaryMathOpGrad(const std::string& op_type_name) {
-  return one::OpBuilder(op_type_name + "_grad", UniqueOpName(op_type_name + "_grad"))
-      .Input("x")
-      .Input("dy")
-      .Output("dx")
-      .Build();
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
+  return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
 }
-Maybe<one::UserOpExpr> BinaryMathOpXGrad(const std::string& op_type_name) {
-  return one::OpBuilder(op_type_name + "_x_grad", UniqueOpName(op_type_name + "_x_grad"))
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name) {
+  return one::OpBuilder(unary_op_type + "_grad", name).Input("x").Input("dy").Output("dx").Build();
+}
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type) {
+  return BinaryXGradOp(binary_op_type, UniqueOpName(binary_op_type + "_x_grad"));
+}
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_x_grad", name)
       .Input("x")
       .Input("y")
       .Input("dz")
       .Output("dx")
       .Build();
 }
-Maybe<one::UserOpExpr> BinaryMathOpYGrad(const std::string& op_type_name) {
-  return one::OpBuilder(op_type_name + "_y_grad", UniqueOpName(op_type_name + "_y_grad"))
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type) {
+  return BinaryYGradOp(binary_op_type, UniqueOpName(binary_op_type + "_y_grad"));
+}
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_y_grad", name)
       .Input("x")
       .Input("y")
       .Input("dz")
