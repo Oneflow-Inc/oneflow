@@ -62,18 +62,17 @@ class BinaryMathOp : public OpExprGradFunction<BinaryMathOpExprInterpState> {
   std::shared_ptr<OpExpr> y_grad_op_;
 };
 
-#define INSTANSE_BINARY_MATHOP_CLASS(op_type_name, op_cls)            \
-  class op_cls##Cls final : public BinaryMathOp {                     \
-    Maybe<void> Init(const OpExpr& op) override {                     \
-      x_grad_op_ = JUST(op_expr_helper::BinaryXGradOp(op_type_name)); \
-      y_grad_op_ = JUST(op_expr_helper::BinaryYGradOp(op_type_name)); \
-      return Maybe<void>::Ok();                                       \
-    }                                                                 \
-  };                                                                  \
-                                                                      \
+#define INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS(op_type_name, op_cls) \
+  class op_cls##Cls final : public BinaryMathOp {                         \
+    Maybe<void> Init(const OpExpr& op) override {                         \
+      x_grad_op_ = JUST(op_expr_helper::BinaryXGradOp(op_type_name));     \
+      y_grad_op_ = JUST(op_expr_helper::BinaryYGradOp(op_type_name));     \
+      return Maybe<void>::Ok();                                           \
+    }                                                                     \
+  };                                                                      \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
-OF_PP_FOR_EACH_TUPLE(INSTANSE_BINARY_MATHOP_CLASS, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_BINARY_MATHOP_CLASS, MATH_BINARY_ELEMENTWISE_FUNC_SEQ);
 
 }  // namespace one
 }  // namespace oneflow

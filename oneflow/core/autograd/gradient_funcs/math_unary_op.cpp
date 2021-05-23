@@ -47,17 +47,16 @@ class UnaryMathOp : public OpExprGradFunction<UnaryMathOpExprInterpState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-#define INSTANSE_UNARY_MATHOP_CLASS(op_type_name, op_cls)         \
-  class op_cls##Cls final : public UnaryMathOp {                  \
-    Maybe<void> Init(const OpExpr& op) override {                 \
-      grad_op_ = JUST(op_expr_helper::UnaryGradOp(op_type_name)); \
-      return Maybe<void>::Ok();                                   \
-    }                                                             \
-  };                                                              \
-                                                                  \
+#define INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS(op_type_name, op_cls) \
+  class op_cls##Cls final : public UnaryMathOp {                         \
+    Maybe<void> Init(const OpExpr& op) override {                        \
+      grad_op_ = JUST(op_expr_helper::UnaryGradOp(op_type_name));        \
+      return Maybe<void>::Ok();                                          \
+    }                                                                    \
+  };                                                                     \
   REGISTER_OP_EXPR_GRAD_FUNCTION(op_type_name, op_cls##Cls);
 
-OF_PP_FOR_EACH_TUPLE(INSTANSE_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIAT_AND_REGISTER_UNARY_MATHOP_CLASS, MATH_UNARY_ELEMENTWISE_FUNC_SEQ);
 
 }  // namespace one
 }  // namespace oneflow
