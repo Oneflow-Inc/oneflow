@@ -60,14 +60,6 @@ def _test_argmax_dim_equal_none(test_case, device):
     np_out = np.argmax(input.numpy().flatten(), axis=0)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
-def  _test_argmax_backward(test_case, device):
-    input = flow.Tensor(np.random.randn(1, 1, 1, 3), dtype=flow.float32, device=flow.device(device), requires_grad=True)
-    axis = -1
-    of_out = flow.argmax(input, dim=axis)
-    of_out = of_out.sum()
-    of_out.backward()
-    print(input.numpy().tolist())
-    print(input.grad.numpy())
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -82,7 +74,6 @@ class TestArgmax(flow.unittest.TestCase):
             _test_argmax_v3,
             _test_argmax_keepdims,
             _test_argmax_dim_equal_none,
-            _test_argmax_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
