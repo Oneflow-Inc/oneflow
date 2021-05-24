@@ -18,11 +18,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+// Initalizes DeviceCtx
 void TransportStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
                                         Stream* stream) const {
   device_ctx->reset();
 }
 
+// Reinterprets status_buffer as RefCntType
 void TransportStreamType::InitInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(RefCntType) < kInstructionStatusBufferBytes, "");
@@ -34,18 +36,21 @@ void TransportStreamType::DeleteInstructionStatus(const Stream& stream,
   // do nothing
 }
 
+// Returns true if RefCntType eaquals to 0
 bool TransportStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
   const char* data = status_buffer.buffer().data();
   return *reinterpret_cast<const RefCntType*>(data) == 0;
 }
 
+// Launches a cuda kernel
 void TransportStreamType::Compute(Instruction* instruction) const {
   const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
   CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
   instr_type_id.instruction_type().Compute(instruction);
 }
 
+// Stream description used by virtual machine initialization
 template<typename DerivedT>
 ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
@@ -66,11 +71,13 @@ ObjectMsgPtr<StreamDesc> TransportStreamType::MakeTransportStreamDesc(
   return ret;
 }
 
+// Specifies transport sender stream description
 ObjectMsgPtr<StreamDesc> TransportSenderStreamType::MakeStreamDesc(const Resource& resource,
                                                                    int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportSenderStreamType>(resource, this_machine_id);
 }
 
+// Specifies transport receiver stream description
 ObjectMsgPtr<StreamDesc> TransportReceiverStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   return MakeTransportStreamDesc<TransportReceiverStreamType>(resource, this_machine_id);
