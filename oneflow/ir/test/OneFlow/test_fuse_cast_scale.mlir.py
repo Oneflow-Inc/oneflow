@@ -17,8 +17,6 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
-import typing
-import os
 
 func_config = flow.FunctionConfig()
 
