@@ -24,11 +24,7 @@ from test_util import GenArgList
 
 def _test_negtive(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    input = flow.Tensor(
-        np_input,
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
+    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device),)
     of_out = flow.negative(input)
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -36,11 +32,7 @@ def _test_negtive(test_case, shape, device):
 
 def _test_negative_neg(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    input = flow.Tensor(
-        np_input,
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
+    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device),)
     of_out = flow.neg(input)
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -48,11 +40,7 @@ def _test_negative_neg(test_case, shape, device):
 
 def _test_tensor_negative(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    input = flow.Tensor(
-        np_input,
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
+    input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device),)
     of_out = input.negative()
     np_out = -(input.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
@@ -61,10 +49,7 @@ def _test_tensor_negative(test_case, shape, device):
 def _test_negative_backward(test_case, shape, device):
     np_input = np.random.randn(*shape)
     input = flow.Tensor(
-        np_input,
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True,
     )
     of_out = flow.negative(input)
     of_out = of_out.sum()
