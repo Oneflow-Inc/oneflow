@@ -75,7 +75,7 @@ __inline__ __device__ T Exp(T x);
 
 template<>
 __inline__ __device__ float Exp<float>(float x) {
-#ifdef OF_USE_FAST_MATH
+#ifdef OF_SOFTMAX_USE_FAST_MATH
   return __expf(x);
 #else
   return exp(x);
