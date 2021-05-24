@@ -54,7 +54,7 @@ Maybe<void> Unsqueeze::Capture(UnsqueezeInterpState* ctx, const TensorTuple& inp
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->SaveTensorForBackward(inputs.at(0));  // save tensor for backward input : "like"
+  ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
 
@@ -65,6 +65,7 @@ Maybe<void> Unsqueeze::Apply(const UnsqueezeInterpState* ctx, const TensorTuple&
 
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
+  in_grads->resize(1);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
   return Maybe<void>::Ok();
 }
