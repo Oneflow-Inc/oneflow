@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional, Union
+
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
@@ -20,29 +22,57 @@ from oneflow.python.framework.tensor import register_tensor_op
 
 
 class Arange(Module):
-    def __init__(self, start, end, step=1) -> None:
+    def __init__(
+        self,
+        start: int = 0,
+        end: int = None,
+        step: int = 1,
+        dtype: flow.dtype = None,
+        device: Union[str, flow.device] = "cpu",
+        requires_grad: bool = False,
+    ) -> None:
         super().__init__()
-        self.start = 0 if start is None else start
-        self.end = 1 if end is None else end
+        assert end > start, "end should be larger than start"
+        assert step <= end - start, "step is ilegal"
+
+        self.start = start
+        self.end = end
         self.step = step
-        self.dtype = flow.int64  # "Only support dtype: `flow.int64` for now!"
-        assert self.end > self.start, "end should be larger than start"
-        assert self.step <= self.end - self.start, "step is ilegal"
-        assert type(self.start) == int, "Params `start`'s type should be int"
-        assert type(self.end) == int, "Params `end`'s type should be int"
-        assert type(self.step) == int, "Params `step`'s type should be int"
+        self.dtype = dtype
+        self.device = device
+        self.requires_grad = requires_grad
+
         # TODO: zhaoluyang Put dtype attr in forward() after bug fixed
         self._op_arange = (
-            flow.builtin_op("range").Output("out").Attr("dtype", self.dtype).Build()
+            flow.builtin_op("range").Output("out").Attr("dtype", flow.int64).Build()
         )
 
     def forward(self):
-        return self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
+        tmp = self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
+        # TODO: (zhaoluyang) Not support dynamic set .requires_grad yet
+        # tmp.requires_grad = self.requires_grad
+
+        if isinstance(self.device, str):
+            device = flow.device(self.device)
+        else:
+            device = self.device
+
+        res = tmp.to(device)
+        # TODO: (zhaoluyang) Change as below when dtype cast are supported in .to()
+        # res = tmp.to(device, dtype = self.dtype)
+        return res
 
 
 @oneflow_export("arange")
 @experimental_api
-def arange_op(start=1, end=1, step=1):
+def arange_op(
+    start: int = 0,
+    end: int = None,
+    step: int = 1,
+    dtype: flow.dtype = flow.int64,
+    device: Union[str, flow.device] = "cpu",
+    requires_grad: bool = False,
+):
     r"""
     Returns a 1-D tensor of size :math:`\left\lfloor \frac{\text{end} - \text{start}}{\text{step}} \right\rfloor + 1`
     with values from :attr:`start` to :attr:`end` with step :attr:`step`. Step is
@@ -68,4 +98,7 @@ def arange_op(start=1, end=1, step=1):
         # [0, 1, 2, 3, 4]
 
     """
-    return Arange(start, end, step)()
+    if end is None:
+        end = start
+        start = 0
+    return Arange(start, end, step, dtype, device, requires_grad)()
