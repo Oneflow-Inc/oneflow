@@ -13,7 +13,7 @@ jobs:
         if: (contains(github.event.pull_request.labels.*.name, 'bug') || contains(github.event.pull_request.labels.*.name, 'enhancement') || contains(github.event.pull_request.labels.*.name, 'purge') || contains(github.event.pull_request.labels.*.name, 'feature') || contains(github.event.pull_request.labels.*.name, 'documentation')) == false
         run: |
           exit 1
-      - name: Check component labels 'op, system, eager, build, xla, python, ci, test, tooling, onnx'
-        if: (contains(github.event.pull_request.labels.*.name, 'op') || contains(github.event.pull_request.labels.*.name, 'system') || contains(github.event.pull_request.labels.*.name, 'eager') || contains(github.event.pull_request.labels.*.name, 'build') || contains(github.event.pull_request.labels.*.name, 'xla') || contains(github.event.pull_request.labels.*.name, 'python') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'test') || contains(github.event.pull_request.labels.*.name, 'tooling') || contains(github.event.pull_request.labels.*.name, 'onnx')) == false
+      - name: Check component labels 'op, system, eager, build, xla, python, ci, test, tooling, onnx, quantization'
+        if: (contains(github.event.pull_request.labels.*.name, 'op') || contains(github.event.pull_request.labels.*.name, 'system') || contains(github.event.pull_request.labels.*.name, 'eager') || contains(github.event.pull_request.labels.*.name, 'build') || contains(github.event.pull_request.labels.*.name, 'xla') || contains(github.event.pull_request.labels.*.name, 'python') || contains(github.event.pull_request.labels.*.name, 'ci') || contains(github.event.pull_request.labels.*.name, 'test') || contains(github.event.pull_request.labels.*.name, 'tooling') || contains(github.event.pull_request.labels.*.name, 'onnx') || contains(github.event.pull_request.labels.*.name, 'quantization')) == false
         run: |
           exit 2
