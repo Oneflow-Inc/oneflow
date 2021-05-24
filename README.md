@@ -163,8 +163,8 @@ More info on this demo, please refer to [doc on quick start](http://docs.oneflow
 - [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-* GitHub issues : any install, bug, feature issues.
-* [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
+- [www.oneflow.org](http://www.oneflow.org) : brand related information.
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
