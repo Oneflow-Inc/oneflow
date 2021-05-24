@@ -92,6 +92,13 @@ class TestAbs(flow.unittest.TestCase):
         of_out = input.abs()
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    def test_abs_grad(test_case):
+        np_input = np.array([-1, 2, -3]).astype(np.float32)
+        input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = flow.abs(input).sum()
+        of_out.backward()
+        np_grad = np.array([-1, 1, -1])
+        test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

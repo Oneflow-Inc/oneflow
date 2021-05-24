@@ -949,40 +949,7 @@ def pow_op(tensor, exponent):
     """
     return Pow()(tensor, exponent)
 
-@oneflow_export("nn.Abs")
-@experimental_api
 class Abs(Module):
-    r"""This operator returns the absolute value of Blob.
-
-    Args:
-        x (oneflow._oneflow_internal.BlobDesc): A Blob
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        oneflow._oneflow_internal.BlobDesc: The result Blob
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def abs_Job(x: tp.Numpy.Placeholder((3,))
-        ) -> tp.Numpy:
-            return flow.math.abs(x)
-
-
-        x = np.array([-1, 2, -3]).astype(np.float32)
-        out = abs_Job(x)
-
-        # out [1. 2. 3.]
-
-    """
-
     def __init__(self):
         super().__init__()
         self._op = flow.builtin_op("abs").Input("x").Output("y").Build()
@@ -991,39 +958,26 @@ class Abs(Module):
         res = self._op(x)[0]
         return res
 
-
 @oneflow_export("abs")
 @register_tensor_op("abs")
 @experimental_api
 def abs_op(x):
-    r"""This operator returns the absolute value of Blob.
-
-    Args:
-        x (oneflow._oneflow_internal.BlobDesc): A Blob
-        name (Optional[str], optional): The name for the operation. Defaults to None.
-
-    Returns:
-        oneflow._oneflow_internal.BlobDesc: The result Blob
+    r"""Returns the absolute value of a tensor:math:`y = |x|` element-wise.
 
     For example:
 
     .. code-block:: python
-
-        import oneflow as flow
+        
+        import oneflow.experimental as flow
         import numpy as np
-        import oneflow.typing as tp
 
-
-        @flow.global_function()
-        def abs_Job(x: tp.Numpy.Placeholder((3,))
-        ) -> tp.Numpy:
-            return flow.math.abs(x)
-
+        x = flow.Tensor(np.array([-1, 2, -3]), dtype=flow.float32)
+        y = flow.abs(x)
 
         x = np.array([-1, 2, -3]).astype(np.float32)
-        out = abs_Job(x)
+        out = np.abs(x)
 
         # out [1. 2. 3.]
-
+    
     """
     return Abs()(x)
