@@ -152,7 +152,9 @@ class ValidationConfig:
             self.error_msg += "model.ValidationConfig data is not DataModule;"
             is_valid = False
         if self.step_interval <= 0 or not isinstance(self.step_interval, int):
-            self.error_msg += "model.ValidationConfig step_interval is <= 0 or is not int;"
+            self.error_msg += (
+                "model.ValidationConfig step_interval is <= 0 or is not int;"
+            )
             is_valid = False
         return is_valid
 
@@ -194,7 +196,9 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]],
+        outputs: Optional[
+            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
+        ],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
@@ -203,7 +207,9 @@ class Callback(ABC):
 
     def on_validation_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]],
+        outputs: Optional[
+            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
+        ],
         step_idx: int = 0,
     ):
         # Do nothing, to be overrided by subclass.
@@ -292,9 +298,11 @@ class Model(
     ):
         sub_models = []
 
-        self._train_model = (TrainModel(training_config, self, callbacks)
+        self._train_model = (
+            TrainModel(training_config, self, callbacks)
             if self._is_deprecated_function_style
-            else TrainModelOOPStyle(training_config, self, callbacks))
+            else TrainModelOOPStyle(training_config, self, callbacks)
+        )
         if self._train_model.is_valid:
             sub_models.append(self._train_model)
         else:
@@ -315,23 +323,33 @@ class Model(
             if validation_config is not None:
                 print(
                     self._val_model.error_msg,
-                    "{}'s fit() will not do validation.".format(self.__class__.__name__),
+                    "{}'s fit() will not do validation.".format(
+                        self.__class__.__name__
+                    ),
                 )
 
         if len(sub_models) == 0:
-            print("{}'s fit() will do nothing because there has no valid configuration.".format(self.__class__.__name__))
+            print(
+                "{}'s fit() will do nothing because there has no valid configuration.".format(
+                    self.__class__.__name__
+                )
+            )
             return sub_models
 
-        self._checkpoint_model = (CheckpointModel(checkpoint_config, self, callbacks)
+        self._checkpoint_model = (
+            CheckpointModel(checkpoint_config, self, callbacks)
             if self._is_deprecated_function_style
-            else CheckpointModelOOPStyle(checkpoint_config, self, callbacks))
+            else CheckpointModelOOPStyle(checkpoint_config, self, callbacks)
+        )
         if self._checkpoint_model.is_valid:
             sub_models.append(self._checkpoint_model)
         else:
             if checkpoint_config is not None:
                 print(
                     self._checkpoint_model.error_msg,
-                    "{}'s fit() will not do checkpoint.".format(self.__class__.__name__),
+                    "{}'s fit() will not do checkpoint.".format(
+                        self.__class__.__name__
+                    ),
                 )
 
         return sub_models
@@ -346,7 +364,9 @@ class SubModel(ABC):
 
         self.name = name
         self.is_valid = True
-        self.error_msg = self._model.__class__.__name__ + " " + self.name + " error message: "
+        self.error_msg = (
+            self._model.__class__.__name__ + " " + self.name + " error message: "
+        )
 
         if not self._get_and_check_cfg():
             self.is_valid = False
@@ -639,6 +659,7 @@ class CheckpointModel(SubModel):
         """
         SaveVarDict(path=dirpath)
 
+
 class TrainModelOOPStyle(SubModel):
     def __init__(
         self,
@@ -710,6 +731,7 @@ class TrainModelOOPStyle(SubModel):
 
         return True
 
+
 class ValidateModelOOPStyle(SubModel):
     def __init__(
         self,
@@ -742,6 +764,7 @@ class ValidateModelOOPStyle(SubModel):
             return False
         else:
             return True
+
 
 class CheckpointModelOOPStyle(SubModel):
     def __init__(

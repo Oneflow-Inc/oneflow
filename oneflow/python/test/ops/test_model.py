@@ -27,6 +27,7 @@ class TestEagerModel(flow.unittest.TestCase):
     def test_model(test_case):
         flow.enable_eager_execution(True)
         init_val = np.random.randn(2, 3)
+
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -44,12 +45,19 @@ class TestEagerModel(flow.unittest.TestCase):
                 return self.m(x)
 
             def training_step(self, batch, **kwargs):
-                #return flow.sum(self(batch))
+                # return flow.sum(self(batch))
                 return flow.sum(self(batch))
-            
+
             def configure_optimizers(self):
                 sgd = flow.optim.SGD(
-                    [{"params": list(self.m.parameters()), "lr": 1.0, "momentum": 0.0, "scale": 1.0}]
+                    [
+                        {
+                            "params": list(self.m.parameters()),
+                            "lr": 1.0,
+                            "momentum": 0.0,
+                            "scale": 1.0,
+                        }
+                    ]
                 )
                 return sgd
 
@@ -80,7 +88,11 @@ class TestEagerModel(flow.unittest.TestCase):
             def on_validation_step_end(self, step_idx, outputs):
                 # test_case.assertEqual(outputs, 5)
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
-                print(fmt_str.format(step_idx, "validation output:", outputs.numpy().mean()))
+                print(
+                    fmt_str.format(
+                        step_idx, "validation output:", outputs.numpy().mean()
+                    )
+                )
 
         val_config = flow.model.ValidationConfig()
         val_config.config_data(ValData())
@@ -93,8 +105,11 @@ class TestEagerModel(flow.unittest.TestCase):
 
         eager_md = EagerModel()
 
-        eager_md.fit(training_config=train_config,
-            validation_config=val_config, callbacks=output_monitor_cb, max_steps=10
+        eager_md.fit(
+            training_config=train_config,
+            validation_config=val_config,
+            callbacks=output_monitor_cb,
+            max_steps=10,
         )
 
 
