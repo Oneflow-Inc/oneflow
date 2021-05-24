@@ -46,7 +46,6 @@ class Permute(Module):
         return self._op(x, perm=new_perm)[0]
 
 
-@oneflow_export("permute")
 @register_tensor_op("permute")
 @experimental_api
 def transpose_op(tensor, *dims):
