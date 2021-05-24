@@ -16,15 +16,11 @@ limitations under the License.
 #include "oneflow/core/job/session_global_objects_scope.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/control/ctrl_server.h"
-#include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/profiler.h"
-#include "oneflow/core/persistence/file_system.h"
-#include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/inter_user_job_info.pb.h"
 #include "oneflow/core/job/job_desc.h"
@@ -34,32 +30,44 @@ limitations under the License.
 #include "oneflow/core/job/runtime_buffer_managers_scope.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/version.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/device/node_device_descriptor_manager.h"
+
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_device_descriptor.h"
+#endif  // WITH_CUDA
 
 namespace oneflow {
 
 namespace {
 
-std::string GetAmdCtrlKey(int64_t machine_id) {
-  return "AvailableMemDesc/" + std::to_string(machine_id);
-}
-
-void PushAvailableMemDescOfThisMachine() {
-  AvailableMemDescOfMachine this_machine_mem_desc;
+AvailableMemDescOfMachine GetAvailableMemDescOfMachine(int64_t rank) {
+  AvailableMemDescOfMachine machine_mem_desc;
+  const auto node_desc =
+      Global<device::NodeDeviceDescriptorManager>::Get()->GetNodeDeviceDescriptor(rank);
 #ifdef WITH_CUDA
+  const auto cuda_device_list =
+      node_desc->GetDeviceDescriptorList(device::kCudaDeviceDescriptorClassName);
+  CHECK(cuda_device_list);
   FOR_RANGE(int, i, 0, (Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum())) {
-    this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
+    if (i >= cuda_device_list->DeviceCount()) {
+      LOG(WARNING) << "Invalid CUDA device ordinal: rank " << rank << " ordinal " << i;
+      machine_mem_desc.add_zone_size(0);
+    } else {
+      const auto cuda_device = std::dynamic_pointer_cast<const device::CudaDeviceDescriptor>(
+          cuda_device_list->GetDevice(i));
+      CHECK(cuda_device);
+      machine_mem_desc.add_zone_size(cuda_device->GlobalMemorySizeBytes());
+    }
   }
 #endif
-  this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(GlobalProcessCtx::Rank()), this_machine_mem_desc);
+  machine_mem_desc.add_zone_size(node_desc->HostMemorySizeBytes());
+  return machine_mem_desc;
 }
 
-AvailableMemDesc PullAvailableMemDesc() {
+AvailableMemDesc GetAvailableMemDesc() {
   AvailableMemDesc ret;
-  AvailableMemDescOfMachine machine_amd_i;
   for (int64_t i : Global<ResourceDesc, ForSession>::Get()->process_ranks()) {
-    Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+    *ret.add_machine_amd() = GetAvailableMemDescOfMachine(i);
   }
   return ret;
 }
@@ -99,13 +107,12 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
   }
-  PushAvailableMemDescOfThisMachine();
   if (GlobalProcessCtx::IsThisProcessMaster()) {
     Global<AvailableMemDesc>::New();
     if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
       *Global<AvailableMemDesc>::Get() = GetDryRunAvailableMemDesc();
     } else {
-      *Global<AvailableMemDesc>::Get() = PullAvailableMemDesc();
+      *Global<AvailableMemDesc>::Get() = GetAvailableMemDesc();
     }
     Global<JobName2JobId>::New();
     Global<CriticalSectionDesc>::New();
@@ -129,7 +136,6 @@ Maybe<void> SessionGlobalObjectsScope::EagerInit(const ConfigProto& config_proto
       && Global<const ProfilerConf>::Get()->collect_act_event()) {
     Global<Profiler>::New();
   }
-  PushAvailableMemDescOfThisMachine();
   for (const std::string lib_path : config_proto.load_lib_path()) { JUST(LoadLibrary(lib_path)); }
   return Maybe<void>::Ok();
 }
