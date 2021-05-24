@@ -51,57 +51,33 @@ class TestReLU6Module(flow.unittest.TestCase):
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 
+def _test_tanh_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    tanh = flow.nn.Tanh()
+    of_out = tanh(of_input)
+    np_out = np.tanh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestTanhModule(flow.unittest.TestCase):
-    def _test_body_tanh(test_case, input_arr):
-        x = flow.Tensor(input_arr)
-
-        tanh = flow.nn.Tanh()
-        y = tanh(x)
-        z = np.tanh(input_arr)
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
-
-    def _test_ones_body_tanh(self, shape):
-        x = np.ones(shape, dtype=np.float32)
-        self._test_body_tanh(x)
-
-    def _test_random_body_tanh(self, shape):
-        x = np.random.random(shape).astype(np.float32)
-        self._test_body_tanh(x)
-
-    def test_ones_input_tanh(self):
-        self._test_ones_body_tanh((1))
-        self._test_ones_body_tanh((1, 10))
-        self._test_ones_body_tanh((2, 10, 2))
-        self._test_ones_body_tanh((2, 5, 2, 2))
-
-    def test_random_input_tanh(self):
-        self._test_random_body_tanh((1))
-        self._test_random_body_tanh((1, 10))
-        self._test_random_body_tanh((2, 10, 2))
-        self._test_random_body_tanh((2, 5, 2, 2))
-
-    def _test_body_tanh_v2(test_case, input_arr):
-        x = flow.Tensor(input_arr)
-
-        y = flow.tanh(x)
-        z = np.tanh(input_arr)
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
-
-    def _test_body_tanh_v3(test_case, input_arr):
-        x = flow.Tensor(input_arr)
-
-        y = x.tanh()
-        z = np.tanh(input_arr)
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
-
+class TestExp(flow.unittest.TestCase):
+    def test_exp(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_tanh_impl(test_case, *arg)
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
