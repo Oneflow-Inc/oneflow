@@ -19,32 +19,17 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-def gather_numpy(input, index, dim):
-    """ 
-    Gathers values along an axis specified by dim. 
-    For a 3-D tensor the output is specified by: 
-     out[i][j][k] = input[index[i][j][k]][j][k] # if dim == 0 
-     out[i][j][k] = input[i][index[i][j][k]][k] # if dim == 1 
-     out[i][j][k] = input[i][j][index[i][j][k]] # if dim == 2 
-
-    :param dim: The axis along which to index 
-    :param index: A tensor of indices of elements to gather 
-    :return: tensor of gathered values 
-    """
-    idx_xsection_shape = index.shape[:dim] + index.shape[dim + 1 :]
-    self_xsection_shape = input.shape[:dim] + input.shape[dim + 1 :]
-    if idx_xsection_shape != self_xsection_shape:
-        raise ValueError(
-            "Except for dimension "
-            + str(dim)
-            + ", all dimensions of index and self should be the same size"
-        )
-    if index.dtype != np.dtype("int_"):
-        raise TypeError("The values of index must be integers")
-    data_swaped = np.swapaxes(input, 0, dim)
-    index_swaped = np.swapaxes(index, 0, dim)
-    gathered = np.choose(index_swaped, data_swaped)
-    return np.swapaxes(gathered, 0, dim)
+def _scatter_add_numpy(src, dim, index, outshape):
+    output = np.zeros(outshape)
+    for srcidx in range(0, src.size):
+        outcoord = np.unravel_index(srcidx, src.shape)
+        outcoord = [*outcoord]
+        outcoord[dim] = index[np.unravel_index(srcidx, index.shape)]
+        output_offset = np.ravel_multi_index(outcoord, outshape)
+        output[np.unravel_index(output_offset, outshape)] += src[
+            np.unravel_index(srcidx, src.shape)
+        ]
+    return output
 
 
 @unittest.skipIf(
@@ -55,7 +40,7 @@ class TestGather(flow.unittest.TestCase):
     def test_gather(test_case):
         input = np.array([[1, 2], [3, 4]])
         index = np.array([[0, 0], [1, 0]])
-        np_out = gather_numpy(input, index, dim=0)
+        np_out = np.take_along_axis(input, index, 0)
         output = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=0
         )
@@ -64,7 +49,7 @@ class TestGather(flow.unittest.TestCase):
     def test_gather_tensor_function(test_case):
         input = np.array([[1, 2], [3, 4]])
         index = np.array([[0, 0], [1, 0]])
-        np_out = gather_numpy(input, index, dim=1)
+        np_out = np.take_along_axis(input, index, 1)
         input = flow.Tensor(input)
         index = flow.Tensor(index, dtype=flow.int)
         output = input.gather(index, dim=1)
@@ -76,23 +61,43 @@ class TestGather(flow.unittest.TestCase):
         index = np.random.choice(np.arange(3), size=180, replace=True).reshape(
             (3, 4, 3, 5)
         )
-        np_out = gather_numpy(input, index, dim=1)
+        np_out = np.take_along_axis(input, index, 1)
         output = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1
         )
         test_case.assertTrue(np.allclose(output.numpy(), np_out))
 
-        np_out2 = gather_numpy(input, index, dim=2)
+        np_out2 = np.take_along_axis(input, index, 2)
         output2 = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=2
         )
         test_case.assertTrue(np.allclose(output2.numpy(), np_out2))
 
-        np_out3 = gather_numpy(input, index, dim=3)
+        np_out3 = np.take_along_axis(input, index, 3)
         output3 = flow.gather(
             flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=3
         )
         test_case.assertTrue(np.allclose(output3.numpy(), np_out3))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestGatherBackward(flow.unittest.TestCase):
+    def test_gather_backward(test_case):
+        input = np.array([[1, 2], [3, 4]])
+        index = np.array([[0, 0], [1, 0]])
+        np_out = np.take_along_axis(input, index, 0)
+        np_grad = _scatter_add_numpy(np.ones_like(np_out), 0, index, input.shape)
+
+        of_input = flow.Tensor(input, requires_grad=True)
+        output = flow.gather(of_input, flow.Tensor(index, dtype=flow.int), dim=0)
+        out_sum = output.sum()
+        out_sum.backward()
+
+        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
+        test_case.assertTrue(np.array_equal(of_input.grad.numpy(), np_grad))
 
 
 if __name__ == "__main__":

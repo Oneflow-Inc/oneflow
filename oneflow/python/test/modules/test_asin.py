@@ -32,11 +32,14 @@ def _test_asin(test_case, shape, device):
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = 1 /np.sqrt(1 - np_input ** 2)
+<<<<<<< HEAD
     # print(of_input.grad.numpy().shape)
     # print(of_input.grad.numpy())
     # print(10 * '-')
     # print(np_out_grad.shape)
     # print(np_out_grad)
+=======
+>>>>>>> af925ba3f448afdbe7480db997ac5b660e668774
 
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
 
