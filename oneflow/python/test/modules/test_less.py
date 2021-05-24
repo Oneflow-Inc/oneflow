@@ -77,7 +77,6 @@ class TestLess(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_less_normal,
-            _test_tensor_less,
             _test_less_symbol,
             _test_less_int_scalar,
             _test_less_float_scalar,

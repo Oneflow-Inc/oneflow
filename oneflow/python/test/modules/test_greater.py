@@ -81,7 +81,6 @@ class TestGreater(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_greater_normal,
-            _test_tensor_greater,
             _test_greater_symbol,
             _test_greater_int_scalar,
             _test_greater_float_scalar,
