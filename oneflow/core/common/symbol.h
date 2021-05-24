@@ -16,6 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_SYMBOL_H_
 #define ONEFLOW_CORE_COMMON_SYMBOL_H_
 
+#include <mutex>
+#include <memory>
+#include <unordered_map>
+#include <glog/logging.h>
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
 
 namespace oneflow {
@@ -36,8 +40,14 @@ class Symbol final {
   bool operator!=(const Symbol<T>& rhs) const { return !(*this == rhs); }
   size_t hash_value() const { return std::hash<const T*>()(ptr_); }
 
+  Symbol& operator=(const Symbol& other) {
+    ptr_ = other.ptr_;
+    return *this;
+  }
   void reset() { ptr_ = nullptr; }
   void reset(const T& obj) { ptr_ = GetOrCreatePtr(obj); }
+
+  std::shared_ptr<const T> shared_from_symbol() const;
 
  private:
   static const T* GetOrCreatePtr(const T& obj);
@@ -45,31 +55,80 @@ class Symbol final {
   const T* ptr_;
 };
 
-template<typename T>
-const T* Symbol<T>::GetOrCreatePtr(const T& obj) {
-  using HashSet = std::unordered_set<HashEqTraitPtr<const T>>;
-  static HashSet cached_objs;
-  static thread_local std::unordered_map<HashEqTraitPtr<const T>, const T*> obj2ptr;
+namespace sym {
 
+template<typename T>
+using SymbolTable = std::unordered_map<HashEqTraitPtr<const T>, std::shared_ptr<const T>>;
+
+template<typename T>
+SymbolTable<T>* GlobalSymbolTable() {
+  static SymbolTable<T> symbol_table;
+  return &symbol_table;
+}
+
+template<typename T>
+std::mutex* GlobalSymbolTableMutex() {
+  static std::mutex mutex;
+  return &mutex;
+}
+
+template<typename T>
+SymbolTable<T>* ThreadLocalSymbolTable() {
+  static thread_local SymbolTable<T> thread_local_symbol_table;
+  return &thread_local_symbol_table;
+}
+
+template<typename T,
+         typename SymbolTable<T>::iterator (*GetIter4ObjectAndHashValue)(const T&, size_t)>
+std::shared_ptr<const T> LocalThreadGetOr(const T& obj) {
+  auto* thread_local_symbol_table = ThreadLocalSymbolTable<T>();
   size_t hash_value = std::hash<T>()(obj);
   HashEqTraitPtr<const T> obj_ptr_wraper(&obj, hash_value);
-  {
-    auto iter = obj2ptr.find(obj_ptr_wraper);
-    if (iter != obj2ptr.end()) { return iter->second; }
-  }
-  static std::mutex mutex;
-  typename HashSet::iterator iter;
-  {
-    std::lock_guard<std::mutex> lock(mutex);
-    iter = cached_objs.find(obj_ptr_wraper);
-  }
-  if (iter == cached_objs.end()) {
-    HashEqTraitPtr<const T> new_obj_ptr_wraper(new T(obj), hash_value);
-    std::lock_guard<std::mutex> lock(mutex);
-    iter = cached_objs.emplace(new_obj_ptr_wraper).first;
-  }
-  obj2ptr[*iter] = iter->ptr();
-  return iter->ptr();
+  const auto& local_iter = thread_local_symbol_table->find(obj_ptr_wraper);
+  if (local_iter != thread_local_symbol_table->end()) { return local_iter->second; }
+  const auto& iter = GetIter4ObjectAndHashValue(obj, hash_value);
+  (*thread_local_symbol_table)[iter->first] = iter->second;
+  return iter->second;
+}
+
+template<typename T>
+typename SymbolTable<T>::iterator FindGlobalSymbol(const T& obj, size_t hash_value) {
+  HashEqTraitPtr<const T> new_obj_ptr_wraper(&obj, hash_value);
+  auto* symbol_table = GlobalSymbolTable<T>();
+  std::unique_lock<std::mutex> lock(*GlobalSymbolTableMutex<T>());
+  const auto& iter = symbol_table->find(new_obj_ptr_wraper);
+  CHECK(iter != symbol_table->end());
+  return iter;
+}
+
+template<typename T>
+std::shared_ptr<const T> SharedFromObject(const T& obj) {
+  return LocalThreadGetOr<T, FindGlobalSymbol<T>>(obj);
+}
+
+template<typename T>
+typename SymbolTable<T>::iterator CreateGlobalSymbol(const T& obj, size_t hash_value) {
+  std::shared_ptr<const T> ptr(new T(obj));
+  HashEqTraitPtr<const T> new_obj_ptr_wraper(ptr.get(), hash_value);
+  std::unique_lock<std::mutex> lock(*GlobalSymbolTableMutex<T>());
+  return GlobalSymbolTable<T>()->emplace(new_obj_ptr_wraper, ptr).first;
+}
+
+template<typename T>
+std::shared_ptr<const T> GetOrCreatePtr(const T& obj) {
+  return LocalThreadGetOr<T, CreateGlobalSymbol<T>>(obj);
+}
+
+}  // namespace sym
+
+template<typename T>
+std::shared_ptr<const T> Symbol<T>::shared_from_symbol() const {
+  return sym::SharedFromObject(*this->ptr_);
+}
+
+template<typename T>
+const T* Symbol<T>::GetOrCreatePtr(const T& obj) {
+  return sym::GetOrCreatePtr(obj).get();
 }
 
 template<typename T>
