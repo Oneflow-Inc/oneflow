@@ -52,6 +52,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+
 def _test_tanh_nn_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -65,7 +66,10 @@ def _test_tanh_nn_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4))
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4)
+    )
+
 
 def _test_tanh_function_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
@@ -79,7 +83,10 @@ def _test_tanh_function_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4))
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4)
+    )
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -119,6 +126,7 @@ class TestELUModule(flow.unittest.TestCase):
 
 def _np_gelu(x):
     return 0.5 * x * (1 + special.erf(x / np.sqrt(2)))
+
 
 def _test_gelu_impl(test_case, device):
     np_input = np.array([1.0, -1.0, 2.3]).astype(np.float32)
