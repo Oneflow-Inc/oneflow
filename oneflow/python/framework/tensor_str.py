@@ -31,12 +31,6 @@ def _add_suffixes(tensor_str, suffixes, indent):
     tensor_strs.append(')')
     return ''.join(tensor_strs)
 
-
-def _tensor_numpy_data_str(numpy_data, indent):
-    decimals = 4
-    numpy_str = np.round(numpy_data, decimals=decimals).__str__().replace('\n', '\n' + ' ' * indent)
-    return numpy_str
-
 def _gen_tensor_str(tensor):
     prefix = 'tensor('
     indent = len(prefix)
@@ -46,11 +40,11 @@ def _gen_tensor_str(tensor):
             or (tensor.device.type == 'cuda' and tensor.device.index != 0):
         suffixes.append('device=\'' + str(tensor.device) + '\'')
     suffixes.append('dtype=' + str(tensor.dtype))
-    tensor_str = _tensor_numpy_data_str(tensor.numpy(), indent)
     if tensor.grad_fn is not None:
         name = tensor.grad_fn.name()
         suffixes.append('grad_fn=<{}>'.format(name))
     elif tensor.requires_grad:
         suffixes.append('requires_grad=True')
+    tensor_str = np.array2string(tensor.numpy(), precision=4, separator=', ', prefix=prefix)
     return _add_suffixes(prefix + tensor_str, suffixes, indent)
 
