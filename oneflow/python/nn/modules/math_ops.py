@@ -949,6 +949,7 @@ def pow_op(tensor, exponent):
     """
     return Pow()(tensor, exponent)
 
+
 class Abs(Module):
     def __init__(self):
         super().__init__()
@@ -958,11 +959,15 @@ class Abs(Module):
         res = self._op(x)[0]
         return res
 
+
 @oneflow_export("abs")
 @register_tensor_op("abs")
 @experimental_api
 def abs_op(x):
-    r"""Returns the absolute value of a tensor:math:`y = |x|` element-wise.
+    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+
+    Args:
+        input (Tensor): the input tensor.
 
     For example:
 
@@ -971,7 +976,7 @@ def abs_op(x):
         import oneflow.experimental as flow
         import numpy as np
 
-        x = flow.Tensor(np.array([-1, 2, -3]), dtype=flow.float32)
+        x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         y = flow.abs(x)
 
         x = np.array([-1, 2, -3]).astype(np.float32)
