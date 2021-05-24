@@ -62,7 +62,6 @@ class Expand(Module):
         )[0]
 
 
-@oneflow_export("expand")
 @register_tensor_op("expand")
 @experimental_api
 def expand_op(x, *sizes):
