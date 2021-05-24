@@ -56,6 +56,36 @@ void ParallelDistributionSignatureToSbpSignature(
     SbpSignature* sbp_signature);
 void CheckSbpSignatureAndParallelDistributionEquals(
     const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig);
+
+template<typename SbpParallelT>
+struct HashSbpParallel {
+  size_t operator()(const SbpParallelT& sbp_parallel) const {
+    size_t hash_value = static_cast<size_t>(sbp_parallel.parallel_type_case());
+    if (sbp_parallel.has_split_parallel()) {
+      hash_value ^= sbp_parallel.split_parallel().axis();
+    } else if (sbp_parallel.has_broadcast_parallel()) {
+      // Do nothing.
+    } else if (sbp_parallel.has_partial_sum_parallel()) {
+      // Do nothing.
+    } else {
+      UNIMPLEMENTED();
+    }
+    return hash_value;
+  }
+};
+
+template<typename ParallelDistributionT, typename SbpParallelT>
+struct HashParallelDistribution {
+  size_t operator()(const ParallelDistributionT& parallel_distribution) const {
+    const auto& sbp_hash_functor = std::hash<SbpParallelT>();
+    size_t hash_value = 0;
+    for (const auto& sbp_parallel : parallel_distribution.sbp_parallel()) {
+      hash_value ^= sbp_hash_functor(sbp_parallel);
+    }
+    return hash_value;
+  }
+};
+
 }  // namespace oneflow
 
 namespace std {
@@ -68,6 +98,22 @@ struct hash<oneflow::SbpSignature> {
     return std::hash<std::string>()(serialized_string);
   }
 };
+
+template<>
+struct hash<oneflow::SbpParallel>
+  : public oneflow::HashSbpParallel<oneflow::SbpParallel> { };
+
+template<>
+struct hash<oneflow::cfg::SbpParallel>
+  : public oneflow::HashSbpParallel<oneflow::cfg::SbpParallel> { };
+
+template<>
+struct hash<oneflow::ParallelDistribution>
+  : public oneflow::HashParallelDistribution<oneflow::ParallelDistribution, oneflow::SbpParallel> { };
+
+template<>
+struct hash<oneflow::cfg::ParallelDistribution>
+  : public oneflow::HashParallelDistribution<oneflow::cfg::ParallelDistribution, oneflow::cfg::SbpParallel> { };
 
 }  // namespace std
 

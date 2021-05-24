@@ -25,7 +25,8 @@ class Symbol final {
  public:
   Symbol() : ptr_(nullptr) {}
   Symbol(const T& obj) : ptr_(GetOrCreatePtr(obj)) {}
-  Symbol(const Symbol<T>& rhs) = default;
+  Symbol(const Symbol& rhs) = default;
+  Symbol(Symbol&& rhs) = default;
   ~Symbol() = default;
 
   operator bool() const { return ptr_ != nullptr; }

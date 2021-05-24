@@ -221,6 +221,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
       const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf);
 
+  std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
+
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
