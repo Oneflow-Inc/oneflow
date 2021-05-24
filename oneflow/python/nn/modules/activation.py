@@ -178,9 +178,9 @@ class Tanh(Module):
 def tanh_op(x):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
@@ -190,9 +190,9 @@ def tanh_op(x):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -228,13 +228,13 @@ class ELU(Module):
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow.experimental as flow
-        
+
         m = flow.nn.ELU()
         input = flow.randn(2)
         output = m(input)
@@ -312,7 +312,7 @@ def gelu_op(x):
 
     Args:
         x (oneflow.Tensor): Input Tensor
- 
+
     Returns:
         oneflow.Tensor: A Tensor.
 
@@ -327,7 +327,7 @@ def gelu_op(x):
         x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         input = flow.Tensor(x)
         gelu = flow.nn.GELU()
-        
+
         out = gelu(input)
         # out [-0.15426877, 0., 0.34573123]
     """
@@ -425,24 +425,24 @@ class Hardsigmoid(Module):
             1 & \text{ if } x \ge +3 \\
             \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
         \end{cases}
-    
+
     Args:
         inplace: can optionally do the operation in-place. Default: ``False``
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
-    
+
     .. code-block:: python
 
         import oneflow.experimental as flow
         m = flow.nn.Hardsigmoid()
         input = flow.randn(2)
         output = m(input)
-    
+
     """
 
     def __init__(self, inplace: bool = False):
@@ -509,9 +509,9 @@ def softmax_op(tensor, dim=None):
         dim (int): A dimension along which Softmax will be computed (so every slice
             along dim will sum to 1).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -615,18 +615,18 @@ class LogSigmoid(Module):
 
     .. math::
         \text{LogSigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow.experimental as flow
-        
+
         m = flow.nn.LogSigmoid()
         input = flow.randn(2)
         output = m(input)
@@ -652,29 +652,37 @@ class Softplus(Module):
 
     SoftPlus is a smooth approximation to the ReLU function and can be used
     to constrain the output of a machine to always be positive.
-    
+
     For numerical stability the implementation reverts to the linear function
     when :math:`input \times \beta > threshold`.
-    
+
     Args:
         beta: the :math:`\beta` value for the Softplus formulation. Default: 1
         threshold: values above this revert to a linear function. Default: 20
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
 
     .. code-block:: python
 
         import oneflow.experimental as flow
-        
+
         m = flow.nn.Softplus()
         input = flow.randn(2)
         output = m(input)
 
+    >>> import oneflow.experimental as flow
+    >>> import numpy as np
+    >>> flow.enable_eager_execution()
+    >>> relu = flow.nn.ReLU()
+    >>> ndarr = np.asarray([1, -2, 3])
+    >>> x = flow.Tensor(ndarr)
+    >>> relu(x).numpy()
+    array([1., 0., 3.], dtype=float32)
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
@@ -704,7 +712,7 @@ class Hardswish(Module):
             x & \text{ if } x \ge +3 \\
             x*(x+3)/6 & \text{ otherwise } \\
         \end{cases}
-    
+
     Args:
         inplace: can optionally do the operation in-place. Default: ``False``
 
@@ -715,11 +723,11 @@ class Hardswish(Module):
 
     .. code-block:: python
         import oneflow.experimental as flow
-        
+
         m = flow.nn.Hardswish()
         input = flow.randn(2)
         output = m(input)
-    
+
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
     """
@@ -769,12 +777,12 @@ class Hardtanh(Module):
     .. code-block:: python
 
         import oneflow.experimental as flow
-        
+
         m = flow.nn.Hardtanh()
         arr = np.random.randn(2, 3, 4, 5)
         x = flow.Tensor(arr)
         out = m(x)
-    
+
     """
 
     def __init__(
@@ -818,7 +826,7 @@ class LeakyReLU(Module):
     .. math::
         \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
 
-    or 
+    or
 
     .. math::
         \text{LeakyRELU}(x) = \begin{cases}
@@ -835,7 +843,7 @@ class LeakyReLU(Module):
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -858,3 +866,9 @@ class LeakyReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
