@@ -194,8 +194,5 @@ Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const st
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
-Maybe<one::UserOpExpr> UnsqueezeGradOp();
-Maybe<one::UserOpExpr> UnsqueezeGradOp(const std::string& name);
-
 }  // namespace op_expr_helper
 }  // namespace oneflow

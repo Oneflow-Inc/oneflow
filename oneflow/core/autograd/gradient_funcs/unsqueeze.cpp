@@ -23,7 +23,6 @@ namespace oneflow {
 namespace one {
 
 struct UnsqueezeInterpState : public OpExprInterpState {
-  int32_t axis;
   bool requires_grad;
 };
 
@@ -45,9 +44,7 @@ Maybe<void> Unsqueeze::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  int32_t axis;
-  std::cout << "op_name : <<<<<<<<<<<<<<<<<<< " << op_name << std::endl;
-  grad_op_ = JUST(op_expr_helper::UnsqueezeGradOp(GradientOpName(op_name)));
+  grad_op_ = JUST(op_expr_helper::ReshapeLikeOp(GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -57,7 +54,6 @@ Maybe<void> Unsqueeze::Capture(UnsqueezeInterpState* ctx, const TensorTuple& inp
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->axis = JUST(composed_attrs.GetAttr<int32_t>("axis"));
   ctx->SaveTensorForBackward(inputs.at(0));  // save tensor for backward input : "like"
   return Maybe<void>::Ok();
 }
@@ -68,9 +64,7 @@ Maybe<void> Unsqueeze::Apply(const UnsqueezeInterpState* ctx, const TensorTuple&
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(0);
-
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int32_t>("axis", ctx->axis));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
   return Maybe<void>::Ok();
 }

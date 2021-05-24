@@ -48,12 +48,11 @@ def _test_unsqueeze_different_dim(test_case, device):
 
 
 def _test_unsqueeze_backward(test_case, device):
-    np_arr = np.random.rand(2, 3, 4)
+    np_arr = np.random.rand(2, 3, 4, 5)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
     y = flow.unsqueeze(x, dim=1).sum()
     y.backward()
-    print("x grad >>>>>>>>>>>>>>>>>>>>>>>>>> \n", x.grad.numpy())
-    # test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5)), 1e-5, 1e-5))
 
 
 @unittest.skipIf(
