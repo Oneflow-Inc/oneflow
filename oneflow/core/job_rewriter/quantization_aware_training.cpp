@@ -57,7 +57,6 @@ Maybe<std::string> GetScaleLbn(const std::string& lbn) {
 Maybe<bool> IsConvBiasEdge(const QatConfig& qat_config, const OpEdge* edge,
                            std::string* conv_input_scale_lbn, std::string* conv_weight_scale_lbn,
                            int64_t* weight_scale_length) {
-  if (qat_config.target_backend() == "tensorrt7") { return false; }
   const auto* dst_node = edge->dst_node();
 
   const auto dst_op_type = dst_node->op().op_conf().user_conf().op_type_name();
