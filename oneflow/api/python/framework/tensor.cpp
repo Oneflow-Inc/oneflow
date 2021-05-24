@@ -186,20 +186,6 @@ std::vector<Shape> GetTensorBufferShapes(const std::shared_ptr<MirroredTensor>& 
   return shapes;
 }
 
-const DType DataType2Dtype(DataType data_type) {
-  switch (data_type) {
-    case DataType::kChar: return DType::Char().GetOrThrow();
-    case DataType::kDouble: return DType::Double().GetOrThrow();
-    case DataType::kFloat16: return DType::Float16().GetOrThrow();
-    case DataType::kFloat: return DType::Float().GetOrThrow();
-    case DataType::kInt32: return DType::Int32().GetOrThrow();
-    case DataType::kInt64: return DType::Int64().GetOrThrow();
-    case DataType::kInt8: return DType::Int8().GetOrThrow();
-    case DataType::kUInt8: return DType::UInt8().GetOrThrow();
-    default: UNIMPLEMENTED();
-  }
-}
-
 std::vector<DType> GetTensorBufferDtypes(const std::shared_ptr<MirroredTensor>& tensor) {
   std::vector<DType> dtypes;
   std::atomic<bool> synced(false);
@@ -215,7 +201,7 @@ std::vector<DType> GetTensorBufferDtypes(const std::shared_ptr<MirroredTensor>& 
           const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
           for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
             const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-            dtypes.push_back(DataType2Dtype(tensor_buffer->data_type()));
+            dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
           }
           synced = true;
         },
