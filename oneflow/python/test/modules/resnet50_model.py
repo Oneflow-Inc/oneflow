@@ -19,6 +19,46 @@ from oneflow.experimental import Tensor
 from typing import Type, Any, Callable, Union, List, Optional
 
 
+class FakeBN(nn.Module):
+    """Common base of _InstanceNorm and _BatchNorm"""
+
+    def __init__(
+        self,
+        num_features: int,
+        eps: float = 1e-5,
+        momentum: float = 0.1,
+        affine: bool = True,
+        track_running_stats: bool = True,
+    ) -> None:
+        super().__init__()
+        self.num_features = num_features
+        self.eps = eps
+        self.momentum = momentum
+        self.affine = affine
+        self.track_running_stats = track_running_stats
+        if self.affine:
+            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
+            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
+        else:
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
+        if self.track_running_stats:
+            self.register_buffer(
+                "running_mean", flow.Tensor(num_features),
+            )
+            self.register_buffer(
+                "running_var", flow.Tensor(num_features),
+            )
+        else:
+            self.register_parameter("running_mean", None)
+            self.register_parameter("running_var", None)
+
+        self._op = flow.builtin_op("identity").Input("in").Output("out").Build()
+
+    def forward(self, input):
+        return self._op(input)[0]
+
+
 def conv3x3(
     in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1
 ) -> nn.Conv2d:

@@ -15,9 +15,6 @@ limitations under the License.
 """
 import unittest
 
-import cv2
-import numpy as np
-
 import oneflow.experimental as flow
 from resnet50_model import resnet50
 
@@ -28,7 +25,7 @@ from resnet50_model import resnet50
     ".numpy() doesn't work in lazy mode",
 )
 class TestResNet50(flow.unittest.TestCase):
-    def test_resnet50(test_case):
+    def test_resnet50_with_batchnorm(test_case):
         # init ofrecord
         flow.InitEagerGlobalSession()
 
@@ -77,19 +74,11 @@ class TestResNet50(flow.unittest.TestCase):
         res50_module.to("cuda")
         of_corss_entropy.to("cuda")
 
-        learning_rate = 1e-7
-        mom = 0.1
+        learning_rate = 1e-3
+        mom = 0.9
         of_sgd = flow.optim.SGD(
             res50_module.parameters(), lr=learning_rate, momentum=mom
         )
-
-        of_losses = []
-        gt_of_losses = []
-
-        with open("/dataset/imagenette/resnet50_loss.txt", "r") as lines:
-            for line in lines:
-                arr = line.strip()
-                gt_of_losses.append(float(arr))
 
         errors = 0.0
         for b in range(100):
@@ -106,10 +95,8 @@ class TestResNet50(flow.unittest.TestCase):
             of_sgd.step()
             of_sgd.zero_grad()
             l = loss.numpy()[0]
-            of_losses.append(l)
-            errors += np.abs(of_losses[b] - gt_of_losses[b])
-            print(errors / (b + 1))
-        test_case.assertTrue((errors / 100) < 1e-2)
+
+        test_case.assertTrue(l < 3.5)
 
 
 if __name__ == "__main__":
