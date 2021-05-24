@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from scipy import special
 
 import oneflow.experimental as flow
 from test_util import GenArgList
@@ -71,8 +72,8 @@ def _test_tanh_impl(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestExp(flow.unittest.TestCase):
-    def test_exp(test_case):
+class TestTanh(flow.unittest.TestCase):
+    def test_tanh(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
@@ -101,39 +102,36 @@ class TestELUModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-4, atol=1e-4))
 
 
+def _np_gelu(x):
+    return 0.5 * x * (1 + special.erf(x / np.sqrt(2)))
+
+def _test_gelu_impl(test_case, device):
+    np_input = np.array([1.0, -1.0, 2.3]).astype(np.float32)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    gelu = flow.nn.GELU()
+    of_out = gelu(of_input)
+    np_out = _np_gelu(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [1.0833154916763306, -0.08331547677516937, 1.0544281005859375]
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestGeLU(flow.unittest.TestCase):
-    def test_gelu_v1(test_case):
-        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        x = flow.Tensor(input_arr)
-
-        gelu = flow.nn.GELU()
-        y = gelu(x)
-        z = np.array([-0.15426877, 0.0, 0.34573123])
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
-
-    def test_gelu_v2(test_case):
-        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        x = flow.Tensor(input_arr)
-
-        y = flow.gelu(x)
-        z = np.array([-0.15426877, 0.0, 0.34573123])
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
-
-    def test_gelu_v3(test_case):
-        input_arr = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        x = flow.Tensor(input_arr)
-
-        y = x.gelu()
-
-        z = np.array([-0.15426877, 0.0, 0.34573123])
-
-        test_case.assertTrue(np.allclose(y.numpy(), z, rtol=1e-4, atol=1e-4))
+class TestGelu(flow.unittest.TestCase):
+    def test_gelu(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_gelu_impl(test_case, *arg)
 
 
 def numpy_sigmoid(x):
