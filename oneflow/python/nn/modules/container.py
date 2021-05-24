@@ -46,8 +46,8 @@ class Sequential(Module):
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
-    To make it easier to understand, here is a small 
-    
+    To make it easier to understand, here is a small
+
     For example::
 
         # Example of using Sequential
@@ -65,6 +65,9 @@ class Sequential(Module):
                   ('conv2', nn.Conv2d(20,64,5)),
                   ('relu2', nn.ReLU())
                 ]))
+    >>> import oneflow.experimental.nn as nn
+    >>> nn.Sequential(nn.Conv2d(1,20,5), nn.ReLU(), nn.Conv2d(20,64,5), nn.ReLU()) #doctest: +ELLIPSIS
+    <oneflow.python.nn.modules.container.Sequential object at 0x...>
     """
 
     @overload
@@ -533,3 +536,9 @@ class ModuleDict(Module):
         )
 
         return super(ParameterDict, self)._replicate_for_data_parallel()
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
