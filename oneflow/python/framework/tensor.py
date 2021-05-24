@@ -334,7 +334,7 @@ class Tensor:
         if not internal_tensor.is_lazy and not internal_tensor.is_consistent:
             return _local_tensor_numpy(internal_tensor)
 
-        return remote_blob_util.BlobObjectNumpy(internal_tensor._blob_object)
+        raise NotImplementedError()
 
     def tolist(self):
         TODO()
@@ -605,6 +605,15 @@ class Tensor:
         return self._init_by_initializer_conf(initializer_conf)
 
     @_auto_determine
+    def zeros_(self):
+        internal_tensor = self._local_or_consistent_tensor
+        if internal_tensor.is_lazy:
+            TODO()
+        if internal_tensor.is_consistent:
+            TODO()
+        internal_tensor.zeros_()
+
+    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:
@@ -612,7 +621,7 @@ class Tensor:
         if internal_tensor.is_consistent:
             TODO()
 
-        if isinstance(other, Tensor):
+        if isinstance(other, (Tensor, check_point_v2.FileBackendVariableBlob)):
             src_np = other.numpy()
         else:
             assert isinstance(other, np.ndarray)
@@ -640,11 +649,6 @@ class Tensor:
             return _convert_to_placement_scope(self.placement)
         else:
             return _convert_to_placement_scope(self.device)
-
-    @property
-    @_auto_determine
-    def _blob_object(self):
-        return self._local_or_consistent_tensor._blob_object
 
     def _construct_with_data(
         self,
@@ -727,45 +731,11 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _create_blob_object(shape, dtype, initializer, placement_scope_getter):
-    blob = None
-
-    @global_function_or_identity()
-    def job():
-        nonlocal blob
-        variable_name = id_util.UniqueStr("tensor_")
-        with placement_scope_getter():
-            blob = flow.get_variable(
-                name=variable_name, shape=shape, dtype=dtype, initializer=initializer,
-            )
-
-    job()
-    return blob.blob_object
-
-
 def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
     if undetermined_tensor.is_consistent:
-        shape = undetermined_tensor.shape
-        dtype = undetermined_tensor.dtype
-        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
-            shape,
-            dtype,
-            undetermined_tensor.sbp,
-            undetermined_tensor.placement,
-            undetermined_tensor.is_lazy,
-            undetermined_tensor.requires_grad,
-            True,
-        )
-        determined_tensor._set_blob_object(
-            _create_blob_object(
-                tuple(shape),
-                dtype,
-                undetermined_tensor.data_initializer,
-                tensor._placement_scope,
-            )
-        )
+        raise NotImplementedError()
     else:
         shape = undetermined_tensor.shape
         dtype = undetermined_tensor.dtype
@@ -790,32 +760,7 @@ def _numpy_initializer_for_determining(tensor):
     assert numpy_data is not None
 
     if undetermined_tensor.is_consistent:
-        variable_name = id_util.UniqueStr("tensor_")
-
-        @global_function_or_identity()
-        def set_numpy_data():
-            with tensor._placement_scope():
-                flow.get_variable(
-                    name=variable_name,
-                    shape=tuple(undetermined_tensor.shape),
-                    dtype=undetermined_tensor.dtype,
-                    initializer=undetermined_tensor.data_initializer,
-                )
-
-        set_numpy_data()
-        flow.load_variables({variable_name: numpy_data})
-        blob = flow.get_all_variables()[variable_name]
-
-        determined_tensor = oneflow._oneflow_internal.ConsistentTensor(
-            undetermined_tensor.shape,
-            undetermined_tensor.dtype,
-            undetermined_tensor.sbp,
-            undetermined_tensor.placement,
-            undetermined_tensor.is_lazy,
-            undetermined_tensor.requires_grad,
-            True,
-        )
-        determined_tensor._set_blob_object(blob.blob_object)
+        raise NotImplementedError()
     else:
         determined_tensor = oneflow._oneflow_internal.LocalTensor(
             undetermined_tensor.shape,
