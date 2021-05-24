@@ -56,8 +56,8 @@ def _test_op_asinh(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestExp(flow.unittest.TestCase):
-    def test_exp(test_case):
+class TestAsinh(flow.unittest.TestCase):
+    def test_asinh(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, ), (2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
