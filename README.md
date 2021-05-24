@@ -35,36 +35,33 @@
 
   - To install latest stable release of OneFlow with CUDA support:
 
-    ```
-    python3 -m pip install -f https://release.oneflow.info oneflow_cu102 --user
+    ```bash
+    python3 -m pip install -f https://release.oneflow.info oneflow==0.4.0+cu102 --user
     ```
 
   - To install nightly release of OneFlow with CUDA support:
-
-    ```
+    ```bash
     python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/cu102
     ```
 
   - To install other available builds for different variants:
-    ```
-    python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
-    ```
-
-    All available `[PLATFORM]`:
-    | Platform |CUDA Driver Version| Supported GPUs |
-    |---|---|---|
-    | cu111  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
-    | cu110, cu110_xla  | >= 450.36.06  | GTX 10xx, RTX 20xx, A100|
-    | cu102, cu102_xla  | >= 440.33  | GTX 10xx, RTX 20xx |
-    | cu101, cu101_xla  | >= 418.39  | GTX 10xx, RTX 20xx |
-    | cu100, cu100_xla  | >= 410.48  | GTX 10xx, RTX 20xx |
-    | cpu  | N/A | N/A |
-
-  - To install latest release of CPU-only OneFlow:
-
-    ```
-    python3 -m pip install --find-links https://release.oneflow.info oneflow_cpu --user
-    ```
+    - Stable
+      ```bash
+      python3 -m pip install --find-links https://release.oneflow.info oneflow==0.4.0+[PLATFORM] --user
+      ```
+    - Nightly
+      ```
+      python3 -m pip install oneflow --user -f https://staging.oneflow.info/branch/master/[PLATFORM]
+      ```
+    - All available `[PLATFORM]`:
+      | Platform |CUDA Driver Version| Supported GPUs |
+      |---|---|---|
+      | cu111  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
+      | cu110, cu110_xla  | >= 450.36.06  | GTX 10xx, RTX 20xx, A100|
+      | cu102, cu102_xla  | >= 440.33  | GTX 10xx, RTX 20xx |
+      | cu101, cu101_xla  | >= 418.39  | GTX 10xx, RTX 20xx |
+      | cu100, cu100_xla  | >= 410.48  | GTX 10xx, RTX 20xx |
+      | cpu  | N/A | N/A |
 
   - To install legacy version of OneFlow with CUDA support:
 
@@ -79,8 +76,6 @@
     python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
     ```
     For more information on this, please refer to [pypi 镜像使用帮助](https://mirror.tuna.tsinghua.edu.cn/help/pypi/)
-
-  - Releases are built with G++/GCC 4.8.5, cuDNN 7 and MKL 2020.0-088.
 
 ### Build from Source
 
