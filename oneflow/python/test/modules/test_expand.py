@@ -13,16 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
-import unittest
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def getExpandGrad(input_shape, expand_size):
+def _np_get_expand(input_shape, expand_size):
     input = np.random.random(size=input_shape).astype(np.float32)
 
     input_stride = [1]
@@ -83,7 +83,7 @@ def getExpandGrad(input_shape, expand_size):
 def _test_expand_new_dims(test_case, device):
     input_shape = (1, 4, 1, 32)
     expand_dim = [2, 1, 2, 4, 2, 32]
-    input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.Tensor(
         input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -94,7 +94,7 @@ def _test_expand_new_dims(test_case, device):
 def _test_expand_same_dim(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]
-    input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(2, 4, 2, 32)
 
@@ -104,7 +104,7 @@ def _test_expand_same_dim(test_case, device):
 def _test_expand_same_dim_negative(test_case, device):
     input_shape = (1, 6, 5, 3)
     expand_dim = [4, -1, 5, 3]
-    input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.float32, device=flow.device(device))
     of_out = of_input.expand(4, -1, 5, 3)
 
@@ -114,7 +114,7 @@ def _test_expand_same_dim_negative(test_case, device):
 def _test_expand_same_int(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]
-    input, gout, out_np, gin_np = getExpandGrad(input_shape, expand_dim)
+    input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.Tensor(input, dtype=flow.int, device=flow.device(device))
     of_out = of_input.expand(2, 4, 2, 32)
 
