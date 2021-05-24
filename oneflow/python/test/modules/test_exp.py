@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
 import unittest
@@ -22,36 +23,19 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_exp(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+def _test_exp_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = flow.exp(input)
-    np_out = np.exp(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+    of_out = flow.exp(of_input)
+    np_out = np.exp(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-def _test_tensor_exp(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = input.exp()
-    np_out = np.exp(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
-
-
-def _test_exp_backward(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(2, 6, 5, 3),
-        dtype=flow.float32,
-        device=flow.device(device),
-        requires_grad=True,
-    )
-    of_out = flow.exp(input)
-    np_grad = of_out.numpy()
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, rtol=1e-05))
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -61,14 +45,10 @@ def _test_exp_backward(test_case, device):
 class TestExp(flow.unittest.TestCase):
     def test_exp(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_exp,
-            _test_tensor_exp,
-            _test_exp_backward,
-        ]
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            _test_exp_impl(test_case, *arg)
 
 
 if __name__ == "__main__":

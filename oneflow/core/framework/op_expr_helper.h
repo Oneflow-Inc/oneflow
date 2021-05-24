@@ -185,5 +185,14 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string&
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
 
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type);
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
