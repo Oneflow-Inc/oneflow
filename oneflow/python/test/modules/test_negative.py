@@ -77,7 +77,7 @@ def _test_negative_backward(test_case, device):
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [-1.0, -1.0, -1.0]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, rtol=1e-05))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05))
 
 
 @unittest.skipIf(

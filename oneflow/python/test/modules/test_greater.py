@@ -13,16 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
-import unittest
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
 
-
-def _test_greater_v1(test_case, device):
+def _test_greater_normal(test_case, device):
     input1 = flow.Tensor(
         np.array([1, 1, 4]).astype(np.float32),
         dtype=flow.float32,
@@ -96,7 +95,7 @@ class TestGreater(flow.unittest.TestCase):
     def test_greter(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_greater_v1,
+            _test_greater_normal,
             _test_tensor_greater,
             _test_greater_symbol,
             _test_greater_int_scalar,
