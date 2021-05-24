@@ -38,7 +38,6 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
     return _type_name;                                         \
   }
 
-DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
 DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
 DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
 DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
@@ -48,6 +47,11 @@ DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
 DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
 #undef DEFINE_OPEXPR_TYPE_NAME
+
+template<>
+const std::string BuiltinOpExprImpl<UserOpConf>::type_name() const {
+  return op_proto_.op_type_name();
+}
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,

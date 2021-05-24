@@ -55,10 +55,11 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
 }  // namespace
 
 StackFunctionNode::StackFunctionNode(
+    const std::string& op_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
     const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode() {
+    : FunctionNode(op_name) {
   input_meta_datas_.resize(inputs.size());
   next_functions_->reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -204,6 +205,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 }
 
 std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
+    const std::string& op_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
     const TensorTuple& inputs, TensorTuple* outputs) {
@@ -221,7 +223,7 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   }
 
   std::shared_ptr<StackFunctionNode> func_node =
-      std::make_shared<StackFunctionNode>(backward_fn, inputs, *outputs);
+      std::make_shared<StackFunctionNode>(op_name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);
   }
@@ -240,8 +242,8 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
       std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
           [=](const TensorTuple& out_grads, TensorTuple* in_grads,
               bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); });
-  tensor->set_grad_fn_node(
-      std::make_shared<StackFunctionNode>(backward_fn, TensorTuple(), TensorTuple({tensor})));
+  tensor->set_grad_fn_node(std::make_shared<StackFunctionNode>(
+      "accumulate_grad", backward_fn, TensorTuple(), TensorTuple({tensor})));
   return Maybe<void>::Ok();
 }
 
