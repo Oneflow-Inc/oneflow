@@ -35,7 +35,7 @@ class TestReLUModule(flow.unittest.TestCase):
         np_out = np.maximum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -50,9 +50,9 @@ class TestReLU6Module(flow.unittest.TestCase):
         np_out = np.minimum(np.maximum(0, arr), 6.0)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-def _test_tanh_impl(test_case, shape, device):
+def _test_tanh_nn_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -67,6 +67,19 @@ def _test_tanh_impl(test_case, shape, device):
     of_out.backward()
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4))
 
+def _test_tanh_function_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.tanh(of_input)
+    np_out = np.tanh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), 1.0 - np_out * np_out, 1e-4, 1e-4))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -78,7 +91,9 @@ class TestTanh(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            _test_tanh_impl(test_case, *arg)
+            _test_tanh_nn_impl(test_case, *arg)
+            _test_tanh_function_impl(test_case, *arg)
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -165,9 +180,9 @@ def _test_sigmoid(test_case, device):
     y3 = x.sigmoid()
     output = numpy_sigmoid(input_arr)
 
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
-    test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(y2.numpy(), output, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(y3.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_sigmoid_backward(test_case, device):
@@ -177,7 +192,7 @@ def _test_sigmoid_backward(test_case, device):
     m = flow.nn.Sigmoid()
     y = m(x).sum()
     y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, rtol=1e-05))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -203,7 +218,7 @@ def _test_softmax(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_1(test_case, device):
@@ -213,7 +228,7 @@ def _test_softmax_dim_1(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_2(test_case, device):
@@ -223,7 +238,7 @@ def _test_softmax_dim_2(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_3(test_case, device):
@@ -233,13 +248,13 @@ def _test_softmax_dim_3(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
     axis2 = -1
     m2 = flow.nn.Softmax(dim=axis)
     y2 = m(x)
     output2 = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y2.numpy(), output2, 1e-4, 1e-4))
 
 
 softmax_input_arr = np.array(
@@ -502,7 +517,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -531,7 +546,7 @@ def _test_logsoftmax(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_dim_2(test_case, device):
@@ -541,7 +556,7 @@ def _test_logsoftmax_dim_2(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_dim_3(test_case, device):
@@ -551,7 +566,7 @@ def _test_logsoftmax_dim_3(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_backward(test_case, device):
@@ -642,7 +657,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -656,7 +671,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_softplus_beta(test_case):
         m = flow.nn.Softplus(beta=1.11)
@@ -666,7 +681,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         )
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_softplus_threshold(test_case):
         m = flow.nn.Softplus(beta=1.11, threshold=1.55)
@@ -676,7 +691,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         )
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -692,7 +707,7 @@ class TestHardswishModule(flow.unittest.TestCase):
         np_out = arr * relu6 / 6
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -706,7 +721,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
         np_out = np.maximum(-1, np.minimum(1, arr))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_hardtanh_min_max(test_case):
         m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
@@ -714,7 +729,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
         np_out = np.maximum(-2.0, np.minimum(2.3, arr))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -730,7 +745,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 if __name__ == "__main__":
