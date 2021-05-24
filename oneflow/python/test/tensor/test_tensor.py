@@ -270,16 +270,16 @@ class TestTensor(flow.unittest.TestCase):
         input = flow.Tensor(*shape)
         input_str = str(input)
         test_case.assertTrue(input_str.startswith("tensor("))
-        test_case.assertTrue(input_str.find("device=") == -1)
+        test_case.assertTrue("device=" not in input_str)
 
         gpu_input = flow.Tensor(*shape, device="cuda")
         gpu_input_str = str(gpu_input)
-        test_case.assertTrue(gpu_input_str.find("device=") != -1)
-        test_case.assertTrue(gpu_input_str.find("cuda:0") != -1)
+        test_case.assertTrue("device=" in gpu_input_str)
+        test_case.assertTrue("cuda:0" in gpu_input_str)
 
         requires_grad_input = flow.Tensor(*shape, requires_grad=True) 
         requires_grad_input_str = str(requires_grad_input)
-        test_case.assertTrue(requires_grad_input_str.find("requires_grad=") != -1)
+        test_case.assertTrue("requires_grad=" in requires_grad_input_str)
 
     @unittest.skipIf(
         # TODO(Liang Depeng): enable this test after tensor support indexing
