@@ -247,7 +247,15 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite:
-          ["cuda", "cuda_op", "cuda_new_interface", "cpu", "xla", "cuda_op_eager", "cpu_op_eager"]
+          [
+            "cuda",
+            "cuda_op",
+            "cuda_new_interface",
+            "cpu",
+            "xla",
+            "cuda_op_eager",
+            "cpu_op_eager",
+          ]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
@@ -347,25 +355,23 @@ jobs:
       - name: Op test (distributed)
         if: matrix.test_suite == 'cuda'
         run: |
-          python3 ci/test/distributed_run.py --make_dotssh
-          python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
-            --build_docker_img \
-            --oneflow_wheel_path=${wheelhouse_dir} \
-            --oneflow_worker_bin=${bin_dir}/oneflow_worker
+          python3 ci/test/distributed_run.py \
+            --bash_script=ci/test/2node_op_test.sh \
+            --oneflow_wheel_path=${wheelhouse_dir}
+      - name: Upload log (distributed test)
+        if: failure() && matrix.test_suite == 'cuda'
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Print backtrace (distributed test)
         if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
-      - name: Upload log (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: oneflow_temp
-          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
