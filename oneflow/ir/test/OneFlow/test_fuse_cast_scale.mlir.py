@@ -29,13 +29,11 @@ class TestMLIROptimizations(flow.unittest.TestCase):
             scale = flow.get_variable(
                 "scale",
                 shape=(1,),
-                dtype=flow.float,
+                dtype=flow.float64,
                 initializer=flow.random_uniform_initializer(),
                 trainable=False,
             )
-            loss = flow.cast(x, dtype=flow.float64) * flow.cast(
-                scale, dtype=flow.float64
-            )
+            loss = flow.cast(x, dtype=flow.float64) * scale
             return loss
 
         x = np.random.rand(96, 96).astype(np.float32) - 1
