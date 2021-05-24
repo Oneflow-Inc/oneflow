@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import oneflow.experimental as flow
-import numpy as np
-import os
 import random
-import oneflow.typing as oft
 from collections import OrderedDict
+
+import numpy as np
+
+import oneflow.experimental as flow
+import oneflow.typing as oft
+
 
 
 @flow.unittest.skip_unless_1n1d()
