@@ -23,7 +23,6 @@ import oneflow.experimental as flow
 import oneflow.typing as oft
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestTensor(flow.unittest.TestCase):
     @unittest.skipIf(

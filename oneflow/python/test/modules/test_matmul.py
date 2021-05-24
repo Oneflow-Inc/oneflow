@@ -153,7 +153,72 @@ def _test_matmul_backward(test_case, device):
             0.5414588451385498,
         ],
     ]
-    test_case.assertTrue(np.allclose(input1.grad.numpy(), np_grad, rtol=1e-05))
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
+
+
+def _test_matmul_backward_x_grad(test_case, device):
+    input1 = flow.Tensor(
+        [
+            [-1.8604081869125366, -2.0019688606262207],
+            [1.0511547327041626, -2.263841390609741],
+        ],
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    input2 = flow.Tensor(
+        [
+            [-0.13973912596702576, 0.8478717803955078],
+            [-0.2144828885793686, -1.7145386934280396],
+        ],
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
+    )
+    of_out = flow.matmul(input1, input2)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [0.7081326246261597, -1.9290215969085693],
+        [0.7081326246261597, -1.9290215969085693],
+    ]
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
+
+
+def _test_matmul_backward_y_grad(test_case, device):
+    input1 = flow.Tensor(
+        [
+            [-1.8604081869125366, -2.0019688606262207],
+            [1.0511547327041626, -2.263841390609741],
+        ],
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=False,
+    )
+    input2 = flow.Tensor(
+        [
+            [-0.13973912596702576, 0.8478717803955078],
+            [-0.2144828885793686, -1.7145386934280396],
+        ],
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    of_out = flow.matmul(input1, input2)
+    of_out = of_out.sum()
+    of_out.backward()
+    print(input2.grad.numpy().tolist())
+    np_grad = [
+        [-0.809253454208374, -0.809253454208374],
+        [-4.265810012817383, -4.265810012817383],
+    ]
+    test_case.assertTrue(
+        np.allclose(input2.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
 
 
 def _test_broadcast_matmul_backward(test_case, device):
@@ -195,7 +260,9 @@ def _test_broadcast_matmul_backward(test_case, device):
             [-0.22928276658058167, -0.411813348531723, -3.6369922161102295],
         ],
     ]
-    test_case.assertTrue(np.allclose(input1.grad.numpy(), np_grad, rtol=1e-05))
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
 
 
 def _test_batch_matmul_backward(test_case, device):
@@ -244,7 +311,9 @@ def _test_batch_matmul_backward(test_case, device):
             [1.5945144891738892, -0.6643214225769043, 1.5997850894927979],
         ],
     ]
-    test_case.assertTrue(np.allclose(input1.grad.numpy(), np_grad, rtol=1e-05))
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
 
 
 @unittest.skipIf(
@@ -259,6 +328,8 @@ class TestModule(flow.unittest.TestCase):
             _test_broadcast_matmul,
             _test_batch_matmul,
             _test_matmul_backward,
+            _test_matmul_backward_x_grad,
+            _test_matmul_backward_y_grad,
             _test_broadcast_matmul_backward,
             _test_batch_matmul_backward,
         ]
