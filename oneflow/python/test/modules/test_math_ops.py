@@ -219,7 +219,7 @@ class TestPow(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestNegativeModule(flow.unittest.TestCase):
+class TestFloor(flow.unittest.TestCase):
     def test_floor(test_case):
         input = flow.Tensor(
             np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
