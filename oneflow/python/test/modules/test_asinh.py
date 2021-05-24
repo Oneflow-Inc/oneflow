@@ -19,21 +19,21 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
-def _test_asin(test_case, shape, device):
+def _test_asinh(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
 
-    of_out = flow.asin(of_input)
-    np_out = np.arcsin(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+    of_out = flow.asinh(of_input)
+    np_out = np.arcsinh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = 1 /np.sqrt(1 - np_input ** 2)
+    np_out_grad = 1 /np.sqrt(1 + np_input ** 2)
 
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -46,7 +46,7 @@ class TestExp(flow.unittest.TestCase):
         arg_dict["shape"] = [(2, ), (2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            _test_asin(test_case, *arg)
+            _test_asinh(test_case, *arg)
 
 
 if __name__ == "__main__":
