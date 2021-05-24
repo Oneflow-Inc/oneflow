@@ -176,12 +176,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
 }
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
-  using T = ConsistentTensor;
   api->def_property_readonly("placement", &TensorGetParallelDesc);
-  api->def_property_readonly("_blob_object", &T::blob_object);
-  api->def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-    t.set_blob_object(blob_object).GetOrThrow();
-  });
 }
 
 template<typename T>
