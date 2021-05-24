@@ -123,6 +123,7 @@ std::shared_ptr<const T> GetOrCreatePtr(const T& obj) {
 
 template<typename T>
 std::shared_ptr<const T> Symbol<T>::shared_from_symbol() const {
+  if (this->ptr_ == nullptr) { return std::shared_ptr<const T>(); }
   return sym::SharedFromObject(*this->ptr_);
 }
 
