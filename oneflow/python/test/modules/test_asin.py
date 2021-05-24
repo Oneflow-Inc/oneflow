@@ -35,6 +35,54 @@ def _test_asin(test_case, shape, device):
 
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
 
+def _test_op_asin(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = of_input.asin()
+    np_out = np.arcsin(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 /np.sqrt(1 - np_input ** 2)
+
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
+
+def _test_arcsin(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.arcsin(of_input)
+    np_out = np.arcsin(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 /np.sqrt(1 - np_input ** 2)
+
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
+
+def _test_op_arcsin(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = of_input.arcsin()
+    np_out = np.arcsin(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 /np.sqrt(1 - np_input ** 2)
+
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -47,6 +95,9 @@ class TestExp(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_asin(test_case, *arg)
+            _test_op_asin(test_case, *arg)
+            _test_arcsin(test_case, *arg)
+            _test_op_arcsin(test_case, *arg)
 
 
 if __name__ == "__main__":
