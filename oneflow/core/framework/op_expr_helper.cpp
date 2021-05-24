@@ -571,6 +571,20 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
       .Build();
 }
 
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride) {
+  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+}
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name) {
+  return one::OpBuilder("expand_grad", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<int32_t>>("out_shape", out_shape)
+      .Attr<std::vector<int32_t>>("stride", stride)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
   return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
 }
