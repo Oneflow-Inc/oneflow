@@ -320,7 +320,7 @@ class Tensor:
         return prod
 
     def numel(self):
-        return self.nelemenet()
+        return self.nelement()
 
     def retain_grad(self):
         assert self.is_determined
