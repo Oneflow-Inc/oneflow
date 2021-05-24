@@ -602,5 +602,10 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+Maybe<one::UserOpExpr> UnsqueezeGradOp() { return UnsqueezeGradOp(UniqueOpName("reshape_like")); }
+Maybe<one::UserOpExpr> UnsqueezeGradOp(const std::string& name) {
+  return one::OpBuilder("reshape_like", name).Input("in").Input("like").Output("out").Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
