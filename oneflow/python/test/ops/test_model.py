@@ -13,25 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import numpy as np
 import unittest
+
+import numpy as np
 
 import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
 
-# @unittest.skipIf(
-#     not flow.unittest.env.eager_execution_enabled(),
-#     ".numpy() doesn't work in lazy mode",
-# )
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestEagerModel(flow.unittest.TestCase):
     def test_model(test_case):
-        flow.enable_eager_execution(True)
-        init_val = np.random.randn(2, 3)
+        para = np.random.randn(2, 3)
+        in_data = np.full((2, 3), 1)
 
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
-                self.w = Parameter(flow.Tensor(init_val))
+                self.w = Parameter(flow.Tensor(para))
 
             def forward(self, x):
                 return x + self.w
@@ -45,8 +47,7 @@ class TestEagerModel(flow.unittest.TestCase):
                 return self.m(x)
 
             def training_step(self, batch, **kwargs):
-                # return flow.sum(self(batch))
-                return flow.sum(self(batch))
+                return (flow.sum(self(batch)), list(self.m.parameters())[0])
 
             def configure_optimizers(self):
                 sgd = flow.optim.SGD(
@@ -80,13 +81,23 @@ class TestEagerModel(flow.unittest.TestCase):
 
         class OutputMonitor(flow.model.Callback):
             def on_training_step_end(self, step_idx, outputs, optimizer_idx):
-                assert optimizer_idx == 0
-                loss = outputs.numpy()
+                nonlocal para
+                loss = outputs[0].numpy()
+                test_case.assertTrue(
+                    np.allclose(
+                        loss, np.sum(in_data + para, dtype=np.float), 1e-4, 1e-4
+                    )
+                )
+                para -= 1
+                test_case.assertTrue(np.allclose(outputs[1].numpy(), para, 1e-4, 1e-4))
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
                 print(fmt_str.format(step_idx, "train loss:", loss.mean()))
 
             def on_validation_step_end(self, step_idx, outputs):
-                # test_case.assertEqual(outputs, 5)
+                nonlocal para
+                test_case.assertTrue(
+                    np.allclose(outputs.numpy(), in_data + para, 1e-4, 1e-4)
+                )
                 fmt_str = "{:>12}  {:>12}  {:>12.6f}"
                 print(
                     fmt_str.format(

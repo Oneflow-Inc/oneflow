@@ -280,9 +280,7 @@ class Model(
                     sub_model.step(step_idx)
                 except Exception as e:
                     print(
-                        "Model step_idx {} {} failed.".format(
-                            step_idx, sub_model.name
-                        )
+                        "Model step_idx {} {} failed.".format(step_idx, sub_model.name)
                     )
                     raise e
 
