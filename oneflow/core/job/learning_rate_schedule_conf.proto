@@ -59,6 +59,7 @@ message LearningRateDecayConf {
     LinearCosineDecayConf linear_cosine_conf = 2006;
     PiecewiseScalingConf piecewise_scaling_conf = 2007;
   }
+  optional bool exclude_warmup = 3000 [default = false];
 }
 
 message ConstantWarmupConf {

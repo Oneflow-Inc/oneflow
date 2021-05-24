@@ -324,10 +324,12 @@ class CosineScheduler(LrScheduler):
         steps: int,
         alpha: float = 0.0,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.alpha = alpha
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -338,6 +340,7 @@ class CosineScheduler(LrScheduler):
         )
         learning_rate_decay_conf.cosine_conf.decay_batches = self.steps
         learning_rate_decay_conf.cosine_conf.alpha = self.alpha
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 
@@ -407,11 +410,13 @@ class PiecewiseConstantScheduler(LrScheduler):
         boundaries: Sequence[int],
         values: Sequence[float],
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         assert len(boundaries) + 1 == len(values)
         super().__init__(base_lr=values[0], warmup=warmup)
         self.boundaries = boundaries
         self.values = values
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -424,6 +429,7 @@ class PiecewiseConstantScheduler(LrScheduler):
             self.boundaries
         )
         learning_rate_decay_conf.piecewise_constant_conf.values.extend(self.values)
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 
@@ -485,6 +491,7 @@ class PiecewiseScalingScheduler(LrScheduler):
         boundaries: Sequence[int],
         scale: Union[float, Sequence[float]],
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.boundaries = boundaries
@@ -492,6 +499,7 @@ class PiecewiseScalingScheduler(LrScheduler):
             scale = [scale] * len(boundaries)
         assert len(boundaries) == len(scale)
         self.scale = [1] + list(scale)
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -504,6 +512,7 @@ class PiecewiseScalingScheduler(LrScheduler):
             self.boundaries
         )
         learning_rate_decay_conf.piecewise_scaling_conf.scales.extend(self.scale)
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 
@@ -573,12 +582,14 @@ class PolynomialScheduler(LrScheduler):
         power: float = 1.0,
         cycle: bool = False,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.end_learning_rate = end_learning_rate
         self.power = power
         self.cycle = cycle
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -593,6 +604,7 @@ class PolynomialScheduler(LrScheduler):
         )
         learning_rate_decay_conf.polynomial_conf.power = self.power
         learning_rate_decay_conf.polynomial_conf.cycle = self.cycle
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 
@@ -607,6 +619,7 @@ class PolynomialSchduler(PolynomialScheduler):
         power: float = 1.0,
         cycle: bool = False,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         print(
             "WARNING:",
@@ -623,6 +636,7 @@ class PolynomialSchduler(PolynomialScheduler):
             power=power,
             cycle=cycle,
             warmup=warmup,
+            exclude_warmup=exclude_warmup,
         )
 
 
@@ -686,12 +700,14 @@ class LinearCosineScheduler(LrScheduler):
         alpha: float = 0.0,
         beta: float = 0.001,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.num_periods = num_periods
         self.alpha = alpha
         self.beta = beta
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -704,6 +720,7 @@ class LinearCosineScheduler(LrScheduler):
         learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
         learning_rate_decay_conf.linear_cosine_conf.alpha = self.alpha
         learning_rate_decay_conf.linear_cosine_conf.beta = self.beta
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 
@@ -770,6 +787,7 @@ class ExponentialScheduler(LrScheduler):
         decay_rate: float,
         staircase=False,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
@@ -934,11 +952,13 @@ class NaturalExpScheduler(LrScheduler):
         decay_rate: float,
         staircase: bool = False,
         warmup: Optional[WarmupConf] = None,
+        exclude_warmup: Optional[bool] = False,
     ):
         super().__init__(base_lr=base_lr, warmup=warmup)
         self.steps = steps
         self.decay_rate = decay_rate
         self.staircase = staircase
+        self.exclude_warmup = exclude_warmup
 
     @property
     def learning_rate_decay_conf(
@@ -950,6 +970,7 @@ class NaturalExpScheduler(LrScheduler):
         learning_rate_decay_conf.natural_exp_conf.decay_batches = self.steps
         learning_rate_decay_conf.natural_exp_conf.decay_rate = self.decay_rate
         learning_rate_decay_conf.natural_exp_conf.staircase = self.staircase
+        learning_rate_decay_conf.exclude_warmup = self.exclude_warmup
         return learning_rate_decay_conf
 
 

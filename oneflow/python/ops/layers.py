@@ -25,6 +25,19 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 
+import oneflow.typing as otp
+import os
+import numpy as np
+
+def SaveNumpy(name: str, blob: otp.Numpy):
+    save_dir = "/home/scxfjiang/Desktop/of_blobs/grad"
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
+    def _Save(blob: otp.Numpy):
+        np.save(os.path.join(save_dir, name), blob)
+
+    return _Save
+
 IntPair = Tuple[int, int]
 
 
@@ -132,6 +145,7 @@ def dense(
             distribute=model_distribute,
             reuse=False,
         )
+        flow.watch_diff(weight, SaveNumpy("fc_weight_diff", weight))
         weight = weight.with_distribute(model_distribute)
 
         out = flow.matmul(a=inputs, b=weight, transpose_b=True, name="matmul")
@@ -1224,6 +1238,9 @@ def batch_normalization(
         moving_variance_initializer,
     )
 
+    flow.watch_diff(beta, SaveNumpy(name + "-beta_diff", beta))
+    flow.watch_diff(gamma, SaveNumpy(name + "-gamma_diff", gamma))
+
     if flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu":
         if training:
             reduce_axis = []
@@ -1394,6 +1411,9 @@ def batch_normalization_add_relu(
         moving_mean_initializer,
         moving_variance_initializer,
     )
+
+    flow.watch_diff(beta, SaveNumpy(name + "-beta_diff", beta))
+    flow.watch_diff(gamma, SaveNumpy(name + "-gamma_diff", gamma))
 
     builder = (
         flow.user_op_builder(name)
