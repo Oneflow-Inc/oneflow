@@ -29,6 +29,7 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
 
@@ -312,7 +313,7 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    def nelemenet(self):
+    def nelement(self):
         prod = 1
         for dim in self.shape:
             prod *= dim
@@ -320,11 +321,6 @@ class Tensor:
 
     def numel(self):
         return self.nelemenet()
-
-    @_auto_determine
-    def item(self):
-        assert self.numel() == 1
-        return self[0]
 
     def retain_grad(self):
         assert self.is_determined
@@ -421,7 +417,7 @@ class Tensor:
         return self.__repr__()
 
     def __repr__(self):
-        return _gen_tensor_str(self)
+        return tensor_str_util._gen_tensor_str(self)
 
     @register_local_tensor_method()
     def __gt__(self, other):
@@ -926,177 +922,3 @@ def _input_dtype_is_float(data):
     elif isinstance(data, (list, tuple)):
         return any(isinstance(x, float) for x in _flatten_list_or_tuple(data))
     return False
-
-def _add_suffixes(tensor_str, suffixes, indent):
-    tensor_strs = [tensor_str]
-    last_line_len = len(tensor_str) - tensor_str.rfind('\n') + 1
-    linewidth = 80
-    for suffix in suffixes:
-        suffix_len = len(suffix)
-        if last_line_len + suffix_len + 2 > linewidth:
-            tensor_strs.append(',\n' + ' ' * indent + suffix)
-            last_line_len = indent + suffix_len
-        else:
-            tensor_strs.append(', ' + suffix)
-            last_line_len += suffix_len + 2
-    tensor_strs.append(')')
-    return ''.join(tensor_strs)
-
-class __PrinterOptions(object):
-    precision = 4
-    threshold = 1000
-    edgeitems = 3
-    linewidth = 80
-    sci_mode = None
-
-
-PRINT_OPTS = __PrinterOptions()
-
-class _Formatter(object):
-    def __init__(self, tensor):
-        self.floating_dtype = tensor.dtype.is_floating_point
-        self.int_mode = True
-        self.sci_mode = False
-        self.max_width = 1
-
-        with flow.no_grad():
-            tensor_view = tensor.reshape(-1)
-
-        if not self.floating_dtype:
-            for value in tensor_view:
-                value_str = '{}'.format(value)
-                self.max_width = max(self.max_width, len(value_str))
-
-        else:
-            # Uncomment this when relative module is ready
-            # nonzero_finite_vals = flow.masked_select(tensor_view, flow.isfinite(tensor_view) & tensor_view.ne(0))
-            nonzero_finite_vals = tensor_view
-
-            if nonzero_finite_vals.numel() == 0:
-                # no valid number, do nothing
-                return
-
-            # Convert to double for easy calculation. HalfTensor overflows with 1e8, and there's no div() on CPU.
-            nonzero_finite_abs = nonzero_finite_vals.abs().double()
-            nonzero_finite_min = nonzero_finite_abs.min().double()
-            nonzero_finite_max = nonzero_finite_abs.max().double()
-
-            for value in nonzero_finite_vals:
-                if value != torch.ceil(value):
-                    self.int_mode = False
-                    break
-
-            if self.int_mode:
-                # in int_mode for floats, all numbers are integers, and we append a decimal to nonfinites
-                # to indicate that the tensor is of floating type. add 1 to the len to account for this.
-                if nonzero_finite_max / nonzero_finite_min > 1000. or nonzero_finite_max > 1.e8:
-                    self.sci_mode = True
-                    for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
-                        self.max_width = max(self.max_width, len(value_str))
-                else:
-                    for value in nonzero_finite_vals:
-                        value_str = ('{:.0f}').format(value)
-                        self.max_width = max(self.max_width, len(value_str) + 1)
-            else:
-                # Check if scientific representation should be used.
-                if nonzero_finite_max / nonzero_finite_min > 1000.\
-                        or nonzero_finite_max > 1.e8\
-                        or nonzero_finite_min < 1.e-4:
-                    self.sci_mode = True
-                    for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}e}}').format(PRINT_OPTS.precision).format(value)
-                        self.max_width = max(self.max_width, len(value_str))
-                else:
-                    for value in nonzero_finite_vals:
-                        value_str = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
-                        self.max_width = max(self.max_width, len(value_str))
-
-        if PRINT_OPTS.sci_mode is not None:
-            self.sci_mode = PRINT_OPTS.sci_mode
-
-    def width(self):
-        return self.max_width
-
-    def format(self, value):
-        if self.floating_dtype:
-            if self.sci_mode:
-                ret = ('{{:{}.{}e}}').format(self.max_width, PRINT_OPTS.precision).format(value)
-            elif self.int_mode:
-                ret = '{:.0f}'.format(value)
-                if not (math.isinf(value) or math.isnan(value)):
-                    ret += '.'
-            else:
-                ret = ('{{:.{}f}}').format(PRINT_OPTS.precision).format(value)
-        else:
-            ret = '{}'.format(value)
-        return (self.max_width - len(ret)) * ' ' + ret
-
-def _scalar_str(self, formatter):
-    return formatter.format(self.item())
-
-
-def _vector_str(self, indent, formatter, summarize):
-    # length includes spaces and comma between elements
-    element_length = formatter.width() + 2
-    elements_per_line = max(1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length))))
-    char_per_line = element_length * elements_per_line
-
-    if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        data = ([formatter.format(val) for val in self[:PRINT_OPTS.edgeitems].tolist()] +
-                [' ...'] +
-                [formatter.format(val) for val in self[-PRINT_OPTS.edgeitems:].tolist()])
-    else:
-        data = [formatter.format(val) for val in self.tolist()]
-
-    data_lines = [data[i:i + elements_per_line] for i in range(0, len(data), elements_per_line)]
-    lines = [', '.join(line) for line in data_lines]
-    return '[' + (',' + '\n' + ' ' * (indent + 1)).join(lines) + ']'
-
-
-def _tensor_str_with_formatter(self, indent, formatter, summarize):
-    dim = self.dim()
-
-    if dim == 0:
-        return _scalar_str(self, formatter)
-    if dim == 1:
-        return _vector_str(self, indent, formatter, summarize)
-
-    if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        slices = ([_tensor_str_with_formatter(self[i], indent + 1, formatter, summarize)
-                   for i in range(0, PRINT_OPTS.edgeitems)] +
-                  ['...'] +
-                  [_tensor_str_with_formatter(self[i], indent + 1, formatter, summarize)
-                   for i in range(len(self) - PRINT_OPTS.edgeitems, len(self))])
-    else:
-        slices = [_tensor_str_with_formatter(self[i], indent + 1, formatter, summarize)
-                  for i in range(0, self.size(0))]
-
-    tensor_str = (',' + '\n' * (dim - 1) + ' ' * (indent + 1)).join(slices)
-    return '[' + tensor_str + ']'
-
-
-def _tensor_data_str(self, indent):
-   if self.numel() == 0:
-       return '[]'
-   summarize = self.numel() > PRINT_OPTS.threshold
-   formatter = _Formatter(get_summarized_data(self) if summarize else self)
-   return _tensor_str_with_formatter(self, indent, formatter, summarize)
-
-def _gen_tensor_str(tensor):
-    prefix = 'tensor('
-    indent = len(prefix)
-    suffixes = []
-
-    if tensor.device.type != "cpu" \
-            or (tensor.device.type == 'cuda' and tensor.device.index != 0):
-        suffixes.append('device=\'' + str(tensor.device) + '\'')
-    suffixes.append('dtype=' + str(tensor.dtype))
-    tensor_str = _tensor_data_str(tensor, indent)
-    if tensor.grad_fn is not None:
-        name = tensor.grad_fn.name()
-        suffixes.append('grad_fn=<{}>'.format(name))
-    elif tensor.requires_grad:
-        suffixes.append('requires_grad=True')
-    return _add_suffixes(prefix + tensor_str, suffixes, indent)
-
