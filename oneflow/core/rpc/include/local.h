@@ -63,6 +63,9 @@ class LocalCtrlClient : public CtrlClient {
   std::condition_variable kv_cv_;
   HashMap<std::string, int32_t> counter_;
   std::mutex counter_mtx_;
+  HashMap<std::string, int32_t> barrier_counter_;
+  std::mutex barrier_counter_mtx_;
+  std::condition_variable barrier_counter_cv_;
 };
 
 class LocalRpcManager : public RpcManager {
