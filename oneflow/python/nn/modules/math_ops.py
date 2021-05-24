@@ -24,10 +24,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
 
 
-def _build_math_binary_elementwise_op(math_op):
-    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
-
-
 class Sum(Module):
     def __init__(
         self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
@@ -926,16 +922,10 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._scalar_pow_op = (
-            flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
-        )
-        self._elementwise_pow_op = _build_math_binary_elementwise_op("pow")
+        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
 
-    def forward(self, x, y):
-        if isinstance(y, (int, float)):
-            return self._scalar_pow_op(x, exponent=float(y))[0]
-        else:
-            return self._elementwise_pow_op(x, y)[0]
+    def forward(self, x, exponent: Union[int, float]):
+        return self._op(x, exponent=float(exponent))[0]
 
 
 @oneflow_export("pow")
@@ -960,11 +950,18 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
+class Floor(Module):
+    def __init__(self) -> None: 
+        super().__init__()
+        self._op = flow.builtin_op("floor").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+    
 @oneflow_export("floor")
-@register_tensor_op("floor")
 @experimental_api
 def floor_op(x):
-    """This operator computes the floor value of Tensor.
+    r"""This operator computes the floor value of Tensor.
 
     Args:
         x (oneflow.Tensor): A Tensor
@@ -989,4 +986,11 @@ def floor_op(x):
     """
     return Floor()(x)
 
+@register_tensor_op("floor")
+@experimental_api
+def floor_op_tensor(input):
+    r"""
 
+    See :func:`oneflow.experimental.floor`
+    """
+    return Floor(input)
