@@ -28,37 +28,14 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<void> TensorImpl::SyncBlobObject2Attributes(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  set_shape(blob_object->op_arg_blob_attr()->shape());
-  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
-  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
-  set_dtype(dtype);
-  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
-}
-
 Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
-  parallel_desc_ = device->parallel_desc_ptr();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> MirroredTensorImpl::set_parallel_desc(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  parallel_desc_ = parallel_desc;
-  device_ = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ConsistentTensorImpl::set_parallel_desc(
     const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   parallel_desc_ = parallel_desc;
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> EagerMirroredTensorImpl::set_blob_object(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  UNIMPLEMENTED();
   return Maybe<void>::Ok();
 }
 
@@ -76,7 +53,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     : MirroredTensorImpl(device, requires_grad, is_leaf), eager_blob_object_(eager_blob_object) {
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
-  const auto& parallel_desc = this->parallel_desc();
+  const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         PhysicalRun([&](InstructionsBuilder* builder) {
@@ -106,6 +83,15 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   eager_blob_object_->set_is_shape_synced(true);
   return eager_blob_object_->blob_desc().shape_ptr();
+}
+
+Maybe<void> EagerConsistentTensorImpl::SyncBlobObject2Attributes(
+    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+  set_shape(blob_object->op_arg_blob_attr()->shape());
+  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
+  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
+  set_dtype(dtype);
+  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
 }
 
 }  // namespace one

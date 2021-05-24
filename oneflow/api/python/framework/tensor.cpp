@@ -60,12 +60,25 @@ struct TensorExportUtil<ConsistentTensor> final {
   }
 };
 
-template<typename T>
-void SpecializedDef(py::class_<T, Tensor, std::shared_ptr<T>>* api) {
-  // do nothing
+namespace {
+
+Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor,
+        [](uint64_t of_blob_ptr) {
+          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          of_blob->AsyncAutoMemset(0);
+        },
+        "mut");
+  }));
+
+  return Maybe<void>::Ok();
 }
 
-namespace {
+void ApiEagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
+  return EagerMirroredTensorZeros(tensor).GetOrThrow();
+}
 
 template<typename T>
 Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTensor>& tensor,
@@ -74,7 +87,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
     builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
@@ -82,7 +95,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
           synced = true;
         },
         modifier);
-  });
+  }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
                                                                     while (!synced) {}
@@ -135,11 +148,20 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
 }
 
+std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
+  return tensor.device().GetPtrOrThrow();
+}
+
+std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
+  return tensor.parallel_desc().GetPtrOrThrow();
+}
+
 }  // namespace
 
-template<>
-void SpecializedDef<MirroredTensor>(
-    py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
+void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
+  using T = MirroredTensor;
+  api->def_property_readonly("device", &TensorGetDevice);
+  api->def_property_readonly("data", &T::data);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
@@ -150,6 +172,16 @@ void SpecializedDef<MirroredTensor>(
            &ApiGetCopyMirroredTensorToNumpyFuncName);
   api->def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName);
+  api->def("zeros_", &ApiEagerMirroredTensorZeros);
+}
+
+void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
+  using T = ConsistentTensor;
+  api->def_property_readonly("placement", &TensorGetParallelDesc);
+  api->def_property_readonly("_blob_object", &T::blob_object);
+  api->def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
+    t.set_blob_object(blob_object).GetOrThrow();
+  });
 }
 
 template<typename T>
@@ -159,10 +191,8 @@ void ExportTensor(py::module& m, const char* name) {
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
-      .def_property_readonly("device", &T::device)
-      .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("dtype", &T::dtype)
-      .def_property_readonly("data", &T::data)
+      .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("requires_grad", &T::requires_grad)
@@ -174,16 +204,11 @@ void ExportTensor(py::module& m, const char* name) {
            })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
-      .def_property_readonly("placement", &T::parallel_desc)
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent)
-      .def_property_readonly("_blob_object", &T::blob_object)
       // OneFlow tensor methods other than pytorch tensor
-      .def("_set_requires_grad", &T::set_requires_grad)
-      .def("_set_blob_object", [](T& t, std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-        t.set_blob_object(blob_object).GetOrThrow();
-      });
-  SpecializedDef<T>(&tensor_api);
+      .def("_set_requires_grad", &T::set_requires_grad);
+  SpecializedDef(&tensor_api);
 }
 
 }  // namespace

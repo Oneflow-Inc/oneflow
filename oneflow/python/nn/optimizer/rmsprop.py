@@ -131,7 +131,6 @@ class RMSprop(Optimizer):
             flow.builtin_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
-            .Input("learning_rate")
             .Input("mean_square")
             .Input("mean_gradient")
             .Attr("centered", True)
@@ -143,7 +142,6 @@ class RMSprop(Optimizer):
             flow.builtin_op("rmsprop_update")
             .Input("model")
             .Input("model_diff")
-            .Input("learning_rate")
             .Input("mean_square")
             .Attr("centered", False)
             .Attr("l1", 0.0)
@@ -165,6 +163,7 @@ class RMSprop(Optimizer):
 
             for param_group in self._param_groups:
                 kwargs = {
+                    "learning_rate_val": param_group.options["lr"],
                     "scale": param_group.options["scale"],
                     "epsilon": param_group.options["eps"],
                     "decay_rate": param_group.options["alpha"],
@@ -173,17 +172,14 @@ class RMSprop(Optimizer):
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    lr_tensor = flow.Tensor(
-                        [param_group.options["lr"]], device=param.device
-                    )
                     ms_tensor = self._state[param]["square_avg"]
                     if param_group.options["centered"]:
                         mg_tensor = self._state[param]["grad_avg"]
                         self._centered_rmsprop(
-                            param, param.grad, lr_tensor, ms_tensor, mg_tensor, **kwargs
+                            param, param.grad, ms_tensor, mg_tensor, **kwargs
                         )
                     else:
-                        self._rmsprop(param, param.grad, lr_tensor, ms_tensor, **kwargs)
+                        self._rmsprop(param, param.grad, ms_tensor, **kwargs)
 
             self._state["step"] = self._state["step"] + 1
 
