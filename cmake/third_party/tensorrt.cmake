@@ -1,7 +1,12 @@
 include (ExternalProject)
 
 if (WITH_TENSORRT)
-
+    #link_libraries(/user/local/cuda/lib64/libcudnn.so.7)
+    #link_libraries(/usr/local/cuda/lib64/libcudart.so.10.0)
+    #    find_library_create_target(nvinfer nvinfer SHARED ) 
+    find_library(CUDNN_LIB cudnn /usr/local/cuda/lib64/libcudnn.so.7)
+find_library(CUDART_LIB cudart /usr/local/cuda/lib64/libcudart.so.10.0)
+find_library(CUBLAS_LIB cublas /sur/local/cuda/lib64/libcublas.so.10.0)
 find_path(TENSORRT_INCLUDE_DIR NvInfer.h
           PATHS ${TENSORRT_ROOT} ${TENSORRT_ROOT}/include
           $ENV{TENSORRT_ROOT} $ENV{TENSORRT_ROOT}/include
