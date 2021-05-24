@@ -119,4 +119,28 @@ TaskId DeserializeTaskIdFromInt64(int64_t task_id_val) {
   return TaskId{stream_id, static_cast<TaskId::task_index_t>(task_index)};
 }
 
+namespace mem_zone_id_const {
+
+constexpr size_t kMemZoneIdDeviceTypeShift = MemZoneId::kDeviceIndexBits;
+constexpr int64_t kMemZoneIdDeviceTypeInt64Mask = ((int64_t{1} << MemZoneId::kDeviceTypeBits) - 1)
+                                                  << kMemZoneIdDeviceTypeShift;
+constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDeviceIndexBits) - 1;
+
+}  // namespace mem_zone_id_const
+
+int64_t EncodeMemZoneIdToInt64(const MemZoneId& mem_zone_id) {
+  int64_t id = static_cast<int64_t>(mem_zone_id.device_index());
+  id |= static_cast<int64_t>(mem_zone_id.device_type())
+        << mem_zone_id_const::kMemZoneIdDeviceTypeShift;
+  return id;
+}
+
+MemZoneId DecodeMemZoneIdFromInt64(int64_t mem_zone_id) {
+  int64_t device_type = (mem_zone_id & mem_zone_id_const::kMemZoneIdDeviceTypeInt64Mask)
+                        >> mem_zone_id_const::kMemZoneIdDeviceTypeShift;
+  int64_t device_index = mem_zone_id & mem_zone_id_const::kMemZoneIdDeviceIndexInt64Mask;
+  return MemZoneId(static_cast<DeviceType>(device_type),
+                   static_cast<MemZoneId::device_index_t>(device_index));
+}
+
 }  // namespace oneflow
