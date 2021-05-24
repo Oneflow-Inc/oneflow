@@ -122,13 +122,6 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual void set_distribute(
       const std::shared_ptr<const compatible_py::Distribute>& distribute) = 0;
 
-  // Getters to be deprecated
-  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
-
-  // Setters to be deprecated
-  virtual Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
-
  protected:
   ConsistentTensorImpl(const std::shared_ptr<const ParallelDesc>& parallel_desc, bool requires_grad,
                        bool is_leaf)
@@ -242,17 +235,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
     distribute_ = distribute;
   }
 
-  // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    UNIMPLEMENTED();
-  }
-
-  // Setters to be deprecated
-  Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
-
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
@@ -292,23 +274,10 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     distribute_ = distribute;
   }
 
-  // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    return blob_object_;
-  }
-
-  // Setters to be deprecated
-  Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override;
-
  private:
-  Maybe<void> SyncBlobObject2Attributes(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
-
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
   std::shared_ptr<const compatible_py::Distribute> distribute_;
-  std::shared_ptr<compatible_py::BlobObject> blob_object_;
 };
 
 }  // namespace one
