@@ -22,9 +22,10 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_negtive(test_case, device):
+def _test_negtive(test_case, shape, device):
+    np_input = np.random.randn(*shape)
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        np_input,
         dtype=flow.float32,
         device=flow.device(device),
     )
@@ -33,9 +34,10 @@ def _test_negtive(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_negative_neg(test_case, device):
+def _test_negative_neg(test_case, shape, device):
+    np_input = np.random.randn(*shape)
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        np_input,
         dtype=flow.float32,
         device=flow.device(device),
     )
@@ -44,9 +46,10 @@ def _test_negative_neg(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_tensor_negative(test_case, device):
+def _test_tensor_negative(test_case, shape, device):
+    np_input = np.random.randn(*shape)
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        np_input,
         dtype=flow.float32,
         device=flow.device(device),
     )
@@ -55,9 +58,10 @@ def _test_tensor_negative(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_negative_backward(test_case, device):
+def _test_negative_backward(test_case, shape, device):
+    np_input = np.random.randn(*shape)
     input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32),
+        np_input,
         dtype=flow.float32,
         device=flow.device(device),
         requires_grad=True,
@@ -65,7 +69,7 @@ def _test_negative_backward(test_case, device):
     of_out = flow.negative(input)
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = [-1.0, -1.0, -1.0]
+    np_grad = -np.ones(shape)
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
     )
@@ -82,9 +86,9 @@ class TestNegativeModule(flow.unittest.TestCase):
             _test_negtive,
             _test_negative_neg,
             _test_tensor_negative,
-            _test_self_tensor_negative,
             _test_negative_backward,
         ]
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

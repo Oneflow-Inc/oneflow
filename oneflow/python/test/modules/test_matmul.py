@@ -44,7 +44,6 @@ def _test_broadcast_matmul(test_case, device):
     of_out = flow.matmul(input1, input2)
     np_out = np.matmul(input1.numpy(), input2.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    test_case.assertTrue(of_out.numpy().shape, np_out.shape)
 
 
 def _test_batch_matmul(test_case, device):
