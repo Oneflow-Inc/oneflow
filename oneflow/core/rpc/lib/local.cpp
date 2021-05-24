@@ -36,15 +36,11 @@ void LocalCtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_n
   std::unique_lock<std::mutex> lck(barrier_counter_mtx_);
   auto it = barrier_counter_.find(barrier_name);
   if (it == barrier_counter_.end()) {
-    barrier_counter_.insert({barrier_name, barrier_num - 1});
+    barrier_counter_.insert({barrier_name, std::make_shared<BlockingCounter>(barrier_num - 1)});
   } else {
-    it->second -= 1;
+    it->second->Decrease();
   }
-  if (it->second == 0) {
-    barrier_counter_cv_.notify_all();
-  } else {
-    barrier_counter_cv_.wait(lck);
-  }
+  it->second->WaitUntilCntEqualZero();
 }
 
 TryLockResult LocalCtrlClient::TryLock(const std::string& name) {
