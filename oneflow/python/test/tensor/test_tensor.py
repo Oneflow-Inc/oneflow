@@ -268,17 +268,17 @@ class TestTensor(flow.unittest.TestCase):
     def test_tensor_print(test_case):
         shape = (2, 3, 4, 5)
         input = flow.Tensor(*shape)
-        input_str = input.__str__()
+        input_str = str(input)
         test_case.assertTrue(input_str.startswith("tensor("))
         test_case.assertTrue(input_str.find("device=") == -1)
 
         gpu_input = flow.Tensor(*shape, device="cuda")
-        gpu_input_str = gpu_input.__str__()
+        gpu_input_str = str(gpu_input)
         test_case.assertTrue(gpu_input_str.find("device=") != -1)
         test_case.assertTrue(gpu_input_str.find("cuda:0") != -1)
 
         requires_grad_input = flow.Tensor(*shape, requires_grad=True) 
-        requires_grad_input_str = requires_grad_input.__str__()
+        requires_grad_input_str = str(requires_grad_input)
         test_case.assertTrue(requires_grad_input_str.find("requires_grad=") != -1)
 
     @unittest.skipIf(
