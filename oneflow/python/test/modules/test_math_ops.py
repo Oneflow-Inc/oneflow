@@ -236,6 +236,12 @@ class TestFloor(flow.unittest.TestCase):
         np_out = np.floor(input.numpy())
         test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+    def test_backward_cpu(test_case):
+        input = flow.Tensor([3], requires_grad=True)
+        of_out = flow.floor(input)
+        of_out.backward()
+        test_case.assertTrue(np.array_equal(input.grad.numpy(), np.array([0.0])))
 
 if __name__ == "__main__":
     unittest.main()
+
