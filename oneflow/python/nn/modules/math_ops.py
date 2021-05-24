@@ -948,3 +948,35 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+@oneflow_export("floor")
+@register_tensor_op("floor")
+@experimental_api
+def floor_op(x):
+    """This operator computes the floor value of Tensor.
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        input = flow.Tensor(
+            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
+        )
+        out = flow.floor(input).numpy()
+
+        # out [-1.0, -2.0, 2.0]
+
+    """
+    return Floor()(x)
+
+

@@ -215,5 +215,27 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestNegativeModule(flow.unittest.TestCase):
+    def test_floor(test_case):
+        input = flow.Tensor(
+            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
+        )
+        of_out = flow.floor(input)
+        np_out = np.floor(input.numpy())
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    def test_tensor_floor(test_case):
+        input = flow.Tensor(
+            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
+        )
+        of_out = input.floor()
+        np_out = np.floor(input.numpy())
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 if __name__ == "__main__":
     unittest.main()
