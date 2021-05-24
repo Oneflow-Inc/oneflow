@@ -494,7 +494,7 @@ class TrainModel(SubModel):
         if self._is_numpy_input:
             self._first_numpy_batch = []
             for optimizer_idx in range(0, len(self._opts)):
-                batch = self._cfg.data(step_idx=0, optimizer_idx=optimizer_idx)
+                batch = self._cfg.data(0, optimizer_idx)
                 self._first_numpy_batch.insert(optimizer_idx, batch)
                 self._jobs.insert(
                     optimizer_idx, self._construct_numpy_job(batch, optimizer_idx)
