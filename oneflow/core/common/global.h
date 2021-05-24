@@ -25,6 +25,21 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace global {
+
+static bool& GetIsEnabledRef() {
+  static bool is_enabled = true;
+  return is_enabled;
+}
+
+static const bool IsEnabled() { return GetIsEnabledRef(); }
+
+static void Enable() { GetIsEnabledRef() = true; }
+
+static void Disable() { GetIsEnabledRef() = false; }
+
+}  // namespace global
+
 template<typename T, typename Kind = void>
 class Global final {
  public:
@@ -66,11 +81,13 @@ class Global final {
 
  private:
   static T** GetPPtr() {
+    CHECK(global::IsEnabled());
     CheckKind();
     static T* ptr = nullptr;
     return &ptr;
   }
   static std::unique_ptr<T>* GetPPtr(int32_t session_id) {
+    CHECK(global::IsEnabled());
     CheckKind();
     static std::mutex mutex;
     static std::map<int32_t, std::unique_ptr<T>> session_id2ptr;
