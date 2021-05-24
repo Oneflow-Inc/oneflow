@@ -731,22 +731,6 @@ class UndeterminedTensor:
         return device_type == "gpu" or device_type == "cuda"
 
 
-def _create_blob_object(shape, dtype, initializer, placement_scope_getter):
-    blob = None
-
-    @global_function_or_identity()
-    def job():
-        nonlocal blob
-        variable_name = id_util.UniqueStr("tensor_")
-        with placement_scope_getter():
-            blob = flow.get_variable(
-                name=variable_name, shape=shape, dtype=dtype, initializer=initializer,
-            )
-
-    job()
-    return blob.blob_object
-
-
 def _default_initializer_for_determining(tensor):
     assert not tensor.is_determined
     undetermined_tensor = tensor._undetermined_tensor
