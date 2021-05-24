@@ -21,6 +21,7 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _test_greater_normal(test_case, device):
     input1 = flow.Tensor(
         np.array([1, 1, 4]).astype(np.float32),
@@ -33,22 +34,6 @@ def _test_greater_normal(test_case, device):
         device=flow.device(device),
     )
     of_out = flow.gt(input1, input2)
-    np_out = np.greater(input1.numpy(), input2.numpy())
-    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-
-
-def _test_tensor_greater(test_case, device):
-    input1 = flow.Tensor(
-        np.array([1, 1, 4]).astype(np.float32),
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
-    input2 = flow.Tensor(
-        np.array([1, 2, 3]).astype(np.float32),
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
-    of_out = input1.gt(input2)
     np_out = np.greater(input1.numpy(), input2.numpy())
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 

@@ -34,18 +34,6 @@ def _test_less_normal(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_tensor_less(test_case, device):
-    input1 = flow.Tensor(
-        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
-    )
-    input2 = flow.Tensor(
-        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
-    )
-    of_out = input1.lt(input2)
-    np_out = np.less(input1.numpy(), input2.numpy())
-    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-
-
 def _test_less_symbol(test_case, device):
     input1 = flow.Tensor(
         np.array([1, 1, 4]).astype(np.float32),

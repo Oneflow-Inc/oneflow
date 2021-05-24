@@ -55,17 +55,6 @@ def _test_tensor_negative(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
-def _test_self_tensor_negative(test_case, device):
-    input = flow.Tensor(
-        np.array([1.0, -1.0, 2.3]).astype(np.float32),
-        dtype=flow.float32,
-        device=flow.device(device),
-    )
-    of_out = -input
-    np_out = -(input.numpy())
-    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-
-
 def _test_negative_backward(test_case, device):
     input = flow.Tensor(
         np.array([1.0, -1.0, 2.3]).astype(np.float32),
@@ -77,7 +66,9 @@ def _test_negative_backward(test_case, device):
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [-1.0, -1.0, -1.0]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
+    )
 
 
 @unittest.skipIf(

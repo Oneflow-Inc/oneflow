@@ -22,30 +22,41 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def  _test_argmax_v1(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),)
+def _test_argmax_v1(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
+    )
     axis = -1
     of_out = flow.argmax(input, dim=axis)
     np_out = np.argmax(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_tensor_argmax(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),)
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
+    )
     axis = 0
     of_out = input.argmax(dim=axis)
     np_out = np.argmax(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_argmax_v3(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),)
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
+    )
     axis = 1
     of_out = flow.argmax(input, dim=axis)
     np_out = np.argmax(input.numpy(), axis=axis)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_argmax_keepdims(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),)
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
+    )
     axis = 0
     of_out = input.argmax(axis, True)
     np_out = np.argmax(input.numpy(), axis=axis)
@@ -54,8 +65,11 @@ def _test_argmax_keepdims(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
+
 def _test_argmax_dim_equal_none(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),)
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
+    )
     of_out = input.argmax()
     np_out = np.argmax(input.numpy().flatten(), axis=0)
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))

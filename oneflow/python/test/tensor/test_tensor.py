@@ -403,6 +403,42 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_negative(test_case):
+        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
+        of_out = input.negative()
+        np_out = -input.numpy()
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_greater(test_case):
+        input1 = flow.Tensor(
+            np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32,
+        )
+        input2 = flow.Tensor(
+            np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32,
+        )
+        of_out = input1.gt(input2)
+        np_out = np.greater(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_less(test_case):
+        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = input1.lt(input2)
+        np_out = np.less(input1.numpy(), input2.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_slice(test_case):
         x = np.random.randn(2, 3, 4, 5).astype(np.float32)
         input = flow.Tensor(x)
