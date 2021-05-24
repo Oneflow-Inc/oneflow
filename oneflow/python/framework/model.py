@@ -280,7 +280,7 @@ class Model(
                     sub_model.step(step_idx)
                 except Exception as e:
                     print(
-                        "Model step_idx {} sub-model {} failed.".format(
+                        "Model step_idx {} {} failed.".format(
                             step_idx, sub_model.name
                         )
                     )
@@ -494,7 +494,7 @@ class TrainModel(SubModel):
         if self._is_numpy_input:
             self._first_numpy_batch = []
             for optimizer_idx in range(0, len(self._opts)):
-                batch = self._cfg.data(0, optimizer_idx)
+                batch = self._cfg.data(step_idx=0, optimizer_idx=optimizer_idx)
                 self._first_numpy_batch.insert(optimizer_idx, batch)
                 self._jobs.insert(
                     optimizer_idx, self._construct_numpy_job(batch, optimizer_idx)
@@ -573,7 +573,7 @@ class ValidateModel(SubModel):
                 if step_idx == 0:
                     batch = self._first_numpy_batch
                 else:
-                    batch = self._cfg.data(step_idx)
+                    batch = self._cfg.data(step_idx, 0)
                 outputs = self._job(*batch).get()
             else:
                 outputs = self._job().get()
@@ -597,7 +597,7 @@ class ValidateModel(SubModel):
         if not self._is_numpy_input:
             self._job = self._construct_job()
         else:
-            batch = self._cfg.data(0)
+            batch = self._cfg.data(0, 0)
             self._first_numpy_batch = batch
             self._job = self._construct_numpy_job(batch)
 
@@ -605,7 +605,7 @@ class ValidateModel(SubModel):
 
     def _construct_job(self):
         def job():
-            batch = self._cfg.data()
+            batch = self._cfg.data(0, 0)
             return self._model.validation_step(batch)
 
         job.__name__ = self._model.__class__.__name__ + "_Model_eval_job"
@@ -749,7 +749,7 @@ class ValidateModelOOPStyle(SubModel):
         if (step_idx + 1) % self._cfg.step_interval == 0:
             outputs = None
             with oneflow._oneflow_internal.autograd.no_grad():
-                inputs = self._cfg.data(step_idx)
+                inputs = self._cfg.data(step_idx, 0)
                 model_previous_mode = self._model.training
                 self._model.train()
                 outputs = self._model.validation_step(inputs)
@@ -766,6 +766,7 @@ class ValidateModelOOPStyle(SubModel):
             return True
 
 
+# TODO(strint): implement oop model checkpoint
 class CheckpointModelOOPStyle(SubModel):
     def __init__(
         self,

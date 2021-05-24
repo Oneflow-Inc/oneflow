@@ -68,14 +68,14 @@ class TestEagerModel(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
 
-            def forward(self, step_idx=0, *args):
+            def forward(self, step_idx=0, optimizer_idx=0):
                 return flow.ones((2, 3))
 
         class ValData(flow.model.DataModule):
             def __init__(self):
                 super().__init__()
 
-            def forward(self, step_idx=0, *args):
+            def forward(self, step_idx=0, optimizer_idx=0):
                 return flow.ones((2, 3))
 
         class OutputMonitor(flow.model.Callback):
