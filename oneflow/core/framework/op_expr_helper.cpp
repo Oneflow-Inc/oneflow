@@ -616,5 +616,23 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+Maybe<one::UserOpExpr> MatmulGradOp(const bool& transpose_a, const bool& transpose_b,
+                                    const double& alpha) {
+  return MatmulGradOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
+}
+
+Maybe<one::UserOpExpr> MatmulGradOp(const bool& transpose_a, const bool& transpose_b,
+                                    const double& alpha, const std::string& name) {
+  return one::OpBuilder("matmul", name)
+      .Input("a")
+      .Input("b")
+      .Input("_add_to_output")
+      .Output("out")
+      .Attr<bool>("transpose_a", transpose_a)
+      .Attr<bool>("transpose_b", transpose_b)
+      .Attr<double>("alpha", alpha)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
