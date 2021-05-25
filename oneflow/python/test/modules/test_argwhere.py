@@ -22,11 +22,28 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_argwhere(test_case, shape, device):
-    np_input = np.random.randn(*shape)
+def _test_argwhere(test_case, device):
+    np_input = np.random.randn(2, 4, 5, 6)
     input = flow.Tensor(np_input, device=flow.device(device))
     of_out = flow.argwhere(input)
-    print(of_out.shape)
+    np_list = []
+    for i in range(2):
+        for j in range(4):
+            for k in range(5):
+                for l in range(6):
+                    if np_input[i][j][k][k]:
+                        np_list.append([i, j, k, l])
+    np_out = np.array(np_list)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
+
+def _test_argwhere_grad(test_case, device):
+    np_input = [[1.0, 2.0], [0.0, 0.2]]
+    input = flow.Tensor(np_input, device=flow.device(device), requires_grad=True)
+    of_out = flow.argwhere(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    print(input.grad.numpy().tolist())
 
 
 @unittest.skipIf(
@@ -36,8 +53,7 @@ def _test_argwhere(test_case, shape, device):
 class TestArgwhere(flow.unittest.TestCase):
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_argwhere]
-        arg_dict["shape"] = [(2, 4, 5, 6)]
+        arg_dict["test_fun"] = [_test_argwhere, _test_argwhere_grad]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
