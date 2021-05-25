@@ -15,6 +15,8 @@ limitations under the License.
 """
 import unittest
 
+import numpy as np
+
 import oneflow.experimental as flow
 from resnet50_model import resnet50, FakeBN
 
@@ -198,7 +200,7 @@ class TestResNet50(flow.unittest.TestCase):
             of_sgd.step()
             of_sgd.zero_grad()
             l = loss.numpy()[0]
-            test_case.assertEqual(l.item(), gt_of_losses[b])
+            test_case.assertTrue(np.allclose(l.item(), gt_of_losses[b], atol=1e-5))
 
 
 if __name__ == "__main__":
