@@ -115,7 +115,7 @@ void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteSystemOps>(context);
 }
 
-// TODO: rmerge all ctrl input and output when folding op
+// TODO: merge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
   UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
   UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
