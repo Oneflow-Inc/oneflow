@@ -34,7 +34,7 @@ class TestReLUModule(flow.unittest.TestCase):
         np_out = np.maximum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -49,7 +49,7 @@ class TestReLU6Module(flow.unittest.TestCase):
         np_out = np.minimum(np.maximum(0, arr), 6.0)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -191,9 +191,9 @@ def _test_sigmoid(test_case, device):
     y3 = x.sigmoid()
     output = numpy_sigmoid(input_arr)
 
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
-    test_case.assertTrue(np.allclose(y2.numpy(), output, rtol=1e-05))
-    test_case.assertTrue(np.allclose(y3.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(y2.numpy(), output, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(y3.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_sigmoid_backward(test_case, device):
@@ -203,7 +203,7 @@ def _test_sigmoid_backward(test_case, device):
     m = flow.nn.Sigmoid()
     y = m(x).sum()
     y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, rtol=1e-05))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -229,7 +229,7 @@ def _test_softmax(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_1(test_case, device):
@@ -239,7 +239,7 @@ def _test_softmax_dim_1(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_2(test_case, device):
@@ -249,7 +249,7 @@ def _test_softmax_dim_2(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_softmax_dim_3(test_case, device):
@@ -259,255 +259,23 @@ def _test_softmax_dim_3(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     y = m(x)
     output = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
     axis2 = -1
     m2 = flow.nn.Softmax(dim=axis)
     y2 = m(x)
     output2 = numpy_softmax(arr, axis)
-    test_case.assertTrue(np.allclose(y2.numpy(), output2, rtol=1e-05))
-
-
-softmax_input_arr = np.array(
-    [
-        [
-            [
-                [2.0, 1.0, 9.0, 3.0, 4.0],
-                [1.0, 6.0, 7.0, 1.0, 4.0],
-                [4.0, 7.0, 5.0, 8.0, 1.0],
-                [9.0, 5.0, 7.0, 8.0, 5.0],
-            ],
-            [
-                [1.0, 1.0, 5.0, 3.0, 5.0],
-                [3.0, 6.0, 3.0, 7.0, 8.0],
-                [8.0, 8.0, 1.0, 2.0, 6.0],
-                [3.0, 5.0, 6.0, 1.0, 1.0],
-            ],
-            [
-                [8.0, 3.0, 6.0, 3.0, 7.0],
-                [8.0, 5.0, 1.0, 2.0, 7.0],
-                [3.0, 9.0, 4.0, 6.0, 5.0],
-                [5.0, 1.0, 2.0, 3.0, 6.0],
-            ],
-        ],
-        [
-            [
-                [3.0, 5.0, 3.0, 1.0, 7.0],
-                [5.0, 2.0, 6.0, 3.0, 5.0],
-                [5.0, 1.0, 8.0, 6.0, 9.0],
-                [9.0, 8.0, 4.0, 5.0, 1.0],
-            ],
-            [
-                [7.0, 5.0, 7.0, 1.0, 6.0],
-                [3.0, 3.0, 6.0, 6.0, 7.0],
-                [9.0, 4.0, 1.0, 5.0, 7.0],
-                [7.0, 6.0, 9.0, 8.0, 6.0],
-            ],
-            [
-                [6.0, 7.0, 5.0, 3.0, 9.0],
-                [4.0, 1.0, 2.0, 3.0, 2.0],
-                [4.0, 3.0, 8.0, 7.0, 8.0],
-                [1.0, 3.0, 8.0, 6.0, 2.0],
-            ],
-        ],
-    ]
-)
+    test_case.assertTrue(np.allclose(y2.numpy(), output2, 1e-4, 1e-4))
 
 
 def _test_softmax_backward(test_case, device):
-    x_grad = np.array(
-        [
-            [
-                [
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        -2.21495572e-16,
-                        9.77881196e-17,
-                        -1.05306593e-17,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        1.32341829e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -2.21495572e-16,
-                        -1.05306593e-17,
-                        9.77881196e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -1.05306593e-17,
-                        -2.11513946e-16,
-                        -2.11513946e-16,
-                        0.00000000e00,
-                    ],
-                ],
-                [
-                    [
-                        -5.49032632e-19,
-                        0.00000000e00,
-                        1.32341829e-17,
-                        9.77881196e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -2.11513946e-16,
-                        -1.05306593e-17,
-                        0.00000000e00,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -1.05306593e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        -1.05306593e-17,
-                        0.00000000e00,
-                        -1.48611144e-18,
-                    ],
-                ],
-                [
-                    [
-                        9.77881196e-17,
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        1.32341829e-17,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -2.20558493e-16,
-                    ],
-                    [
-                        0.00000000e00,
-                        -2.21495572e-16,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -1.05306593e-17,
-                    ],
-                    [
-                        0.00000000e00,
-                        1.32341829e-17,
-                        -5.49032632e-19,
-                        -1.05306593e-17,
-                        0.00000000e00,
-                    ],
-                ],
-            ],
-            [
-                [
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        -5.49032632e-19,
-                        1.32341829e-17,
-                        -2.11513946e-16,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        9.77881196e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -5.49032632e-19,
-                        -2.11513946e-16,
-                        1.32341829e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -2.11513946e-16,
-                        -1.05306593e-17,
-                        -1.05306593e-17,
-                        0.00000000e00,
-                    ],
-                ],
-                [
-                    [
-                        -2.21495572e-16,
-                        0.00000000e00,
-                        9.77881196e-17,
-                        1.32341829e-17,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        -1.05306593e-17,
-                        -2.11513946e-16,
-                        0.00000000e00,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -2.11513946e-16,
-                        0.00000000e00,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        -2.11513946e-16,
-                        0.00000000e00,
-                        -2.20558493e-16,
-                    ],
-                ],
-                [
-                    [
-                        1.32341829e-17,
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        9.77881196e-17,
-                    ],
-                    [
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -1.48611144e-18,
-                    ],
-                    [
-                        0.00000000e00,
-                        -5.49032632e-19,
-                        0.00000000e00,
-                        0.00000000e00,
-                        -2.11513946e-16,
-                    ],
-                    [
-                        0.00000000e00,
-                        9.77881196e-17,
-                        -2.21495572e-16,
-                        -2.11513946e-16,
-                        0.00000000e00,
-                    ],
-                ],
-            ],
-        ]
-    )
-
+    # Grad of softmax should equal to zero.
+    # See:https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
+    x_grad = np.zeros((2, 3, 4, 5))
     axis = 0
     m = flow.nn.Softmax(dim=axis)
     x = flow.Tensor(
-        softmax_input_arr,
+        np.random.randn(2, 3, 4, 5),
         requires_grad=True,
         device=flow.device(device),
         dtype=flow.float64,
@@ -528,7 +296,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -557,7 +325,7 @@ def _test_logsoftmax(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_dim_2(test_case, device):
@@ -567,7 +335,7 @@ def _test_logsoftmax_dim_2(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_dim_3(test_case, device):
@@ -577,17 +345,58 @@ def _test_logsoftmax_dim_3(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     output = numpy_logsoftmax(input_arr, dim)
-    test_case.assertTrue(np.allclose(y.numpy(), output, rtol=1e-05))
+    test_case.assertTrue(np.allclose(y.numpy(), output, 1e-4, 1e-4))
 
 
 def _test_logsoftmax_backward(test_case, device):
     axis = 0
     m = flow.nn.LogSoftmax(axis)
+    input_arr = np.array(
+        [
+            [
+                [
+                    [2.0, 1.0, 9.0, 3.0, 4.0],
+                    [1.0, 6.0, 7.0, 1.0, 4.0],
+                    [4.0, 7.0, 5.0, 8.0, 1.0],
+                    [9.0, 5.0, 7.0, 8.0, 5.0],
+                ],
+                [
+                    [1.0, 1.0, 5.0, 3.0, 5.0],
+                    [3.0, 6.0, 3.0, 7.0, 8.0],
+                    [8.0, 8.0, 1.0, 2.0, 6.0],
+                    [3.0, 5.0, 6.0, 1.0, 1.0],
+                ],
+                [
+                    [8.0, 3.0, 6.0, 3.0, 7.0],
+                    [8.0, 5.0, 1.0, 2.0, 7.0],
+                    [3.0, 9.0, 4.0, 6.0, 5.0],
+                    [5.0, 1.0, 2.0, 3.0, 6.0],
+                ],
+            ],
+            [
+                [
+                    [3.0, 5.0, 3.0, 1.0, 7.0],
+                    [5.0, 2.0, 6.0, 3.0, 5.0],
+                    [5.0, 1.0, 8.0, 6.0, 9.0],
+                    [9.0, 8.0, 4.0, 5.0, 1.0],
+                ],
+                [
+                    [7.0, 5.0, 7.0, 1.0, 6.0],
+                    [3.0, 3.0, 6.0, 6.0, 7.0],
+                    [9.0, 4.0, 1.0, 5.0, 7.0],
+                    [7.0, 6.0, 9.0, 8.0, 6.0],
+                ],
+                [
+                    [6.0, 7.0, 5.0, 3.0, 9.0],
+                    [4.0, 1.0, 2.0, 3.0, 2.0],
+                    [4.0, 3.0, 8.0, 7.0, 8.0],
+                    [1.0, 3.0, 8.0, 6.0, 2.0],
+                ],
+            ],
+        ]
+    )
     x = flow.Tensor(
-        softmax_input_arr,
-        requires_grad=True,
-        device=flow.device(device),
-        dtype=flow.float64,
+        input_arr, requires_grad=True, device=flow.device(device), dtype=flow.float64,
     )
     x_grad = np.array(
         [
@@ -633,9 +442,8 @@ def _test_logsoftmax_backward(test_case, device):
             ],
         ]
     )
-    y = m(x)
-    z = y.sum()
-    z.backward()
+    y = m(x).sum()
+    y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
 
@@ -668,7 +476,7 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -682,7 +490,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_softplus_beta(test_case):
         m = flow.nn.Softplus(beta=1.11)
@@ -692,7 +500,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         )
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_softplus_threshold(test_case):
         m = flow.nn.Softplus(beta=1.11, threshold=1.55)
@@ -702,7 +510,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
         )
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -718,7 +526,7 @@ class TestHardswishModule(flow.unittest.TestCase):
         np_out = arr * relu6 / 6
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -732,7 +540,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
         np_out = np.maximum(-1, np.minimum(1, arr))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     def test_hardtanh_min_max(test_case):
         m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
@@ -740,7 +548,7 @@ class TestHardtanhModule(flow.unittest.TestCase):
         np_out = np.maximum(-2.0, np.minimum(2.3, arr))
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -756,7 +564,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
         x = flow.Tensor(arr)
         of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 if __name__ == "__main__":
