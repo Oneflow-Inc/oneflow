@@ -71,7 +71,7 @@ jobs:
         id: git_push
         if: ${{ failure() }}
         run: |
-          git config --global user.email "youarefly@qq.com"
+          git config --global user.email "ci-bot@oneflow.org"
           git config --global user.name "oneflow-ci-bot"
           git add -u
           git commit -m "auto format by CI"
