@@ -20,10 +20,10 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
-  const Shape* cond_shape = ctx->Shape4ArgNameAndIndex("condition", 0);
-  CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("x", 0));
-  CHECK_EQ_OR_RETURN(*cond_shape, *ctx->Shape4ArgNameAndIndex("y", 0));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = *cond_shape;
+  const Shape& cond_shape = ctx->InputShape("condition", 0);
+  CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("x", 0));
+  CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("y", 0));
+  *ctx->OutputShape("out", 0) = cond_shape;
   return Maybe<void>::Ok();
 }
 
@@ -65,7 +65,7 @@ REGISTER_USER_OP("where")
       CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
       DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
+      *ctx->OutputDType("out", 0) = x_dtype;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetWhereSbpSignatures);

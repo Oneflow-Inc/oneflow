@@ -29,6 +29,7 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
 
@@ -46,6 +47,12 @@ def register_local_tensor_method(name=None):
 
 @register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
+    if eager_local_tensor.dtype == flow.tensor_buffer:
+        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
+        tensors = flow.experimental.tensor_buffer_to_list_of_tensors(
+            Tensor(eager_local_tensor), shapes, dtypes
+        )
+        return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
     ndarray = np.empty(
@@ -272,12 +279,7 @@ class Tensor:
     @requires_grad.setter
     def requires_grad(self, requires_grad):
         if self._local_or_consistent_tensor is not None:
-            if self.is_leaf:
-                self._local_or_consistent_tensor._set_requires_grad(requires_grad)
-            else:
-                raise RuntimeError(
-                    "You can only change requires_grad flags of leaf tensors."
-                )
+            self._local_or_consistent_tensor.requires_grad = requires_grad
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
@@ -312,11 +314,16 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    def nelemenet(self):
+    @register_local_tensor_method()
+    def nelement(self):
         prod = 1
         for dim in self.shape:
             prod *= dim
         return prod
+
+    @register_local_tensor_method()
+    def numel(self):
+        return self.nelement()
 
     def retain_grad(self):
         assert self.is_determined
@@ -336,14 +343,16 @@ class Tensor:
 
         raise NotImplementedError()
 
+    @register_local_tensor_method()
     def tolist(self):
-        TODO()
+        return self.numpy().tolist()
 
     @_auto_determine
     @register_local_tensor_method()
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -390,6 +399,7 @@ class Tensor:
         return starts, stops, steps, shape
 
     @_auto_determine
+    @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
         start, stop, step, _ = self._get_slice_obj(key)
@@ -397,6 +407,7 @@ class Tensor:
         return res
 
     @_auto_determine
+    @register_local_tensor_method()
     def __setitem__(self, key, value):
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
@@ -409,11 +420,13 @@ class Tensor:
         )
         return self
 
+    @register_local_tensor_method()
     def __str__(self):
         return self.__repr__()
 
+    @register_local_tensor_method()
     def __repr__(self):
-        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
+        return tensor_str_util._gen_tensor_str(self)
 
     @register_local_tensor_method()
     def __gt__(self, other):
@@ -612,6 +625,25 @@ class Tensor:
         if internal_tensor.is_consistent:
             TODO()
         internal_tensor.zeros_()
+
+    @_auto_determine
+    @register_local_tensor_method()
+    def register_hook(self, hook):
+        assert self.is_leaf, "register_hook only supports leaf tensor for now"
+        assert (
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
+
+        def hook_returning_determined_tensor(grad):
+            new_grad = hook(grad)
+            if isinstance(new_grad, Tensor) and not new_grad.is_determined:
+                new_grad.determine()
+                new_grad = new_grad._local_or_consistent_tensor
+            return new_grad
+
+        self._local_or_consistent_tensor._register_hook(
+            hook_returning_determined_tensor
+        )
 
     @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):

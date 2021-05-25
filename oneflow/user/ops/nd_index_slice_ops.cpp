@@ -37,44 +37,44 @@ Maybe<void> CheckScatterNdShape(const Shape& params_shape, const Shape& indices_
 }
 
 Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& params_shape = ctx->Attr<Shape>("shape");
-  JUST(CheckScatterNdShape(params_shape, *indices_shape, *updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
+  JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
+  *ctx->OutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-  JUST(CheckScatterNdShape(*like_shape, *indices_shape, *updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  const Shape& updates_shape = ctx->InputShape("updates", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  JUST(CheckScatterNdShape(like_shape, indices_shape, updates_shape));
+  *ctx->OutputShape("out", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
-  Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
-  Shape* updates_shape = ctx->Shape4ArgNameAndIndex("updates", 0);
-  Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-  JUST(CheckScatterNdShape(*params_shape, *indices_shape, *updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = *params_shape;
+  const Shape& params_shape = ctx->InputShape("params", 0);
+  const Shape& updates_shape = ctx->InputShape("updates", 0);
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
+  *ctx->OutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
   return Maybe<void>::Ok();
 }
 
@@ -117,16 +117,15 @@ REGISTER_USER_OP("gather_nd")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* params_shape = ctx->Shape4ArgNameAndIndex("params", 0);
-      Shape* indices_shape = ctx->Shape4ArgNameAndIndex("indices", 0);
-      int64_t index_ndims = indices_shape->At(indices_shape->NumAxes() - 1);
-      CHECK_LE_OR_RETURN(index_ndims, params_shape->NumAxes());
-      DimVector out_shape_vec(indices_shape->dim_vec().cbegin(),
-                              indices_shape->dim_vec().cend() - 1);
-      FOR_RANGE(int64_t, i, index_ndims, params_shape->NumAxes()) {
-        out_shape_vec.push_back(params_shape->At(i));
+      const Shape& params_shape = ctx->InputShape("params", 0);
+      const Shape& indices_shape = ctx->InputShape("indices", 0);
+      int64_t index_ndims = indices_shape.At(indices_shape.NumAxes() - 1);
+      CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
+      DimVector out_shape_vec(indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend() - 1);
+      FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
+        out_shape_vec.push_back(params_shape.At(i));
       }
-      *ctx->Shape4ArgNameAndIndex("out", 0) = Shape(out_shape_vec);
+      *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -164,7 +163,7 @@ REGISTER_USER_OP("gather_nd")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     });
 
