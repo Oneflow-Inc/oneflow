@@ -413,9 +413,11 @@ class Tensor:
         )
         return self
 
+    @register_local_tensor_method()
     def __str__(self):
         return self.__repr__()
 
+    @register_local_tensor_method()
     def __repr__(self):
         return tensor_str_util._gen_tensor_str(self)
 
