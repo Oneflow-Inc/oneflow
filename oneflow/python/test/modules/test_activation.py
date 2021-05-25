@@ -281,6 +281,19 @@ def _test_softmax_backward(test_case, device):
     y.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
+def _np_hardsigmoid_grad(x):
+    return np.where(x > 0, np.where(x >= 1, 0, 1.0 / 6), 0)
+
+def _test_hardsigmoid_impl(test_case, shape, device):
+    m = flow.nn.Hardsigmoid()
+    arr = np.random.randn(*shape)
+    np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), _np_hardsigmoid_grad(np_out), 1e-4, 1e-4))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -288,12 +301,11 @@ def _test_softmax_backward(test_case, device):
 )
 class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_hardsigmoid(test_case):
-        m = flow.nn.Hardsigmoid()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.maximum(0, np.minimum(1, (arr + 3) / 6))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_hardsigmoid_impl(test_case, *arg)
 
 
 @unittest.skipIf(
