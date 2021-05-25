@@ -339,6 +339,7 @@ class Tensor:
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -385,6 +386,7 @@ class Tensor:
         return starts, stops, steps, shape
 
     @_auto_determine
+    @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
         start, stop, step, _ = self._get_slice_obj(key)
@@ -392,6 +394,7 @@ class Tensor:
         return res
 
     @_auto_determine
+    @register_local_tensor_method()
     def __setitem__(self, key, value):
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
