@@ -277,7 +277,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue("device=" in gpu_input_str)
         test_case.assertTrue("cuda:0" in gpu_input_str)
 
-        requires_grad_input = flow.Tensor(*shape, requires_grad=True) 
+        requires_grad_input = flow.Tensor(*shape, requires_grad=True)
         requires_grad_input_str = str(requires_grad_input)
         test_case.assertTrue("requires_grad=" in requires_grad_input_str)
 
