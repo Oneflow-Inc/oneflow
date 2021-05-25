@@ -41,12 +41,6 @@ Maybe<void> ConsistentTensorImpl::set_parallel_desc(
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
-Maybe<void> EagerConsistentTensorImpl::set_blob_object(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  blob_object_ = blob_object;
-  return SyncBlobObject2Attributes(blob_object);
-}
-
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
@@ -83,15 +77,6 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   eager_blob_object_->set_is_shape_synced(true);
   return eager_blob_object_->blob_desc().shape_ptr();
-}
-
-Maybe<void> EagerConsistentTensorImpl::SyncBlobObject2Attributes(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  set_shape(blob_object->op_arg_blob_attr()->shape());
-  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
-  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
-  set_dtype(dtype);
-  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
 }
 
 }  // namespace one

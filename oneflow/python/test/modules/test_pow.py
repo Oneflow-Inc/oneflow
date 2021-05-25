@@ -27,17 +27,17 @@ def _test_pow_scalar_impl(test_case, shape, scalar, device):
     of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
     of_out = flow.pow(of_input, scalar)
     np_out = np.power(np_input, scalar)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_pow_elementwise_impl(test_case, shape, scalar, device):
     np_input_x = 10 * np.random.rand(*shape)
-    np_input_y = 10 * np.random.randn(*shape)
+    np_input_y = np.random.randint(1, 3, shape) + np.random.randn(*shape)
     of_input_x = flow.Tensor(np_input_x, dtype=flow.float32, device=flow.device(device))
     of_input_y = flow.Tensor(np_input_y, dtype=flow.float32, device=flow.device(device))
     of_out = flow.pow(of_input_x, of_input_y)
     np_out = np.power(np_input_x, np_input_y)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_pow_backward_impl(test_case, device):
