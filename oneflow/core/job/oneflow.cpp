@@ -1160,7 +1160,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   }
   MergeSubPlanWithoutGenNetTopo(&plan, std::move(sub_plans));
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
-  InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
+  InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs( jobs, &plan);
   PlanUtil::SetForceInplaceMemBlock(&plan);
   FinishGlobalCriticalSectionDesc(plan, jobs.size());
   Plan main_plan;
