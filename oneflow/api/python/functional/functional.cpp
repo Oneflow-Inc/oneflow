@@ -40,7 +40,10 @@ static py::object PyWrapFunc(py::args args, py::kwargs kwargs) {
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {
   m.def("add", &CAST_PY_WRAP_FUNC(functional::Add));
+  m.def("add_n", &CAST_PY_WRAP_FUNC(functional::AddN));
   m.def("add_scalar", &CAST_PY_WRAP_FUNC(functional::AddScalar));
+
+  m.def("normalization", &CAST_PY_WRAP_FUNC(functional::Normalization));
 }
 #undef CAST_PY_WRAP_FUNC
 

@@ -23,6 +23,31 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
+PythonArg::operator std::vector<int32_t>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<uint32_t>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<int64_t>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<uint64_t>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<float>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<double>() const { UNIMPLEMENTED(); }
+PythonArg::operator std::vector<bool>() const { UNIMPLEMENTED(); }
+
+PythonArg::operator Scalar() const {
+  py::object obj = Borrow();
+  if (detail::isinstance<int32_t>(obj)) {
+    return Scalar(py::cast<int32_t>(obj));
+  } else if (detail::isinstance<int64_t>(obj)) {
+    return Scalar(py::cast<int64_t>(obj));
+  } else if (detail::isinstance<float>(obj)) {
+    return Scalar(py::cast<float>(obj));
+  } else if (detail::isinstance<double>(obj)) {
+    return Scalar(py::cast<double>(obj));
+  } else {
+    UNIMPLEMENTED() << "Can not convert to scalar from python object with type "
+                    << py::cast<std::string>(py::str(py::type::of(obj)));
+    return Scalar(0);
+  }
+}
+
 PythonArg::operator std::shared_ptr<one::TensorTuple>() const {
   py::object obj = Borrow();
   if (detail::isinstance<one::TensorTuple>(obj)) {

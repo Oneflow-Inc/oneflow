@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_LIBRARY_H_
-#define ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_LIBRARY_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_
+#define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/functional/functor.h"
@@ -24,9 +24,9 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-class FunctorLibrary {
+class FunctionLibrary {
  public:
-  virtual ~FunctorLibrary() = default;
+  virtual ~FunctionLibrary() = default;
 
   template<typename Func>
   void add_functor(const std::string& name) {
@@ -41,28 +41,28 @@ class FunctorLibrary {
     return std::make_shared<PackedFunctor>(it->second);
   }
 
-  static FunctorLibrary* Global() {
-    static FunctorLibrary global_functor_library;
-    return &global_functor_library;
+  static FunctionLibrary* Global() {
+    static FunctionLibrary global_function_library;
+    return &global_function_library;
   }
 
  private:
-  FunctorLibrary() = default;
+  FunctionLibrary() = default;
   HashMap<std::string, PackedFunctor> functors_;
 };
 
-#define ONEFLOW_FUNCTOR_LIBRARY(m) ONEFLOW_FUNCTOR_LIBRARY_IMPL(m, __COUNTER__)
-#define ONEFLOW_FUNCTOR_LIBRARY_IMPL(m, uuid)                                 \
-  static void OF_PP_CAT(_oneflow_functor_library_, uuid)(FunctorLibrary & m); \
-  static int OF_PP_CAT(_oneflow_functor_library_dummy_, uuid) = []() {        \
-    FunctorLibrary* library = FunctorLibrary::Global();                       \
-    OF_PP_CAT(_oneflow_functor_library_, uuid)(*library);                     \
-    return 0;                                                                 \
-  }();                                                                        \
-  void OF_PP_CAT(_oneflow_functor_library_, uuid)(FunctorLibrary & m)
+#define ONEFLOW_FUNCTION_LIBRARY(m) ONEFLOW_FUNCTION_LIBRARY_IMPL(m, __COUNTER__)
+#define ONEFLOW_FUNCTION_LIBRARY_IMPL(m, uuid)                                  \
+  static void OF_PP_CAT(_oneflow_function_library_, uuid)(FunctionLibrary & m); \
+  static int OF_PP_CAT(_oneflow_function_library_dummy_, uuid) = []() {         \
+    FunctionLibrary* library = FunctionLibrary::Global();                       \
+    OF_PP_CAT(_oneflow_function_library_, uuid)(*library);                      \
+    return 0;                                                                   \
+  }();                                                                          \
+  void OF_PP_CAT(_oneflow_function_library_, uuid)(FunctionLibrary & m)
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_LIBRARY_H_
+#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTION_LIBRARY_H_

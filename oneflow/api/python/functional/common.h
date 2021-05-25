@@ -36,6 +36,32 @@ inline bool isinstance(py::object obj) {
   return py::isinstance<T>(obj);
 }
 
+#define IMPLEMENT_IS_INSTANCE(T)                     \
+  template<>                                         \
+  inline bool isinstance<T>(py::object obj) {        \
+    static py::object dummy = py::cast(T());         \
+    return py::isinstance(obj, py::type::of(dummy)); \
+  }
+
+IMPLEMENT_IS_INSTANCE(int32_t);
+IMPLEMENT_IS_INSTANCE(uint32_t);
+IMPLEMENT_IS_INSTANCE(int64_t);
+IMPLEMENT_IS_INSTANCE(uint64_t);
+IMPLEMENT_IS_INSTANCE(float);
+IMPLEMENT_IS_INSTANCE(double);
+IMPLEMENT_IS_INSTANCE(bool);
+IMPLEMENT_IS_INSTANCE(std::string);
+IMPLEMENT_IS_INSTANCE(std::vector<int32_t>);
+IMPLEMENT_IS_INSTANCE(std::vector<uint32_t>);
+IMPLEMENT_IS_INSTANCE(std::vector<int64_t>);
+IMPLEMENT_IS_INSTANCE(std::vector<uint64_t>);
+IMPLEMENT_IS_INSTANCE(std::vector<float>);
+IMPLEMENT_IS_INSTANCE(std::vector<double>);
+IMPLEMENT_IS_INSTANCE(std::vector<bool>);
+IMPLEMENT_IS_INSTANCE(std::vector<std::string>);
+
+#undef IMPLEMENT_IS_INSTANCE
+
 template<typename R, int nleft, int index, typename Func>
 struct unpack_call_dispatcher {
   template<typename... Args>

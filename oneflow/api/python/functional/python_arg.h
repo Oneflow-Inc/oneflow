@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace py = pybind11;
 
@@ -35,6 +36,25 @@ class PythonArg {
   PythonArg(py::object value) : value_(value.ptr()) {}
 
   virtual ~PythonArg() = default;
+
+  operator int32_t() const { return py::cast<int32_t>(Borrow()); }
+  operator uint32_t() const { return py::cast<uint32_t>(Borrow()); }
+  operator int64_t() const { return py::cast<int64_t>(Borrow()); }
+  operator uint64_t() const { return py::cast<uint64_t>(Borrow()); }
+  operator float() const { return py::cast<float>(Borrow()); }
+  operator double() const { return py::cast<double>(Borrow()); }
+  operator bool() const { return py::cast<bool>(Borrow()); }
+  operator std::string() const { return py::cast<std::string>(Borrow()); }
+
+  operator std::vector<int32_t>() const;
+  operator std::vector<uint32_t>() const;
+  operator std::vector<int64_t>() const;
+  operator std::vector<uint64_t>() const;
+  operator std::vector<float>() const;
+  operator std::vector<double>() const;
+  operator std::vector<bool>() const;
+
+  operator Scalar() const;
 
   operator std::shared_ptr<one::Tensor>() const {
     return py::cast<std::shared_ptr<one::Tensor>>(Borrow());

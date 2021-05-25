@@ -31,14 +31,7 @@ class Function:
                 if not arg.is_determined:
                     arg.determine()
                 args[i] = arg._local_or_consistent_tensor
-
-        kwattrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-        for attr_name, attr_value in kwargs.items():
-            assert isinstance(attr_name, str)
-            kwattrs[attr_name] = convert_to_user_attr_value(
-                self.func_name, attr_name, attr_value
-            )
-        return self.handle(args, kwattrs)
+        return self.handle(*args, **kwargs)
 
 
 def RegisterFunctionalApis():
@@ -51,6 +44,7 @@ def RegisterFunctionalApis():
             func_name = s
             if s in _function_name_aliases:
                 func_name = _function_name_aliases[s]
+                setattr(oneflow.F, func_name, Function(func_name, f))
             setattr(oneflow.F, s, Function(func_name, f))
 
     del inspect

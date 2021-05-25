@@ -22,13 +22,26 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
 namespace functional {
 
-Maybe<one::Tensor> Add(const TensorTuple& inputs, const AttrMap& attrs);
-Maybe<one::Tensor> AddScalar(const TensorTuple& inputs, const AttrMap& attrs);
+Maybe<one::Tensor> Add(const std::shared_ptr<one::Tensor>& x,
+                       const std::shared_ptr<one::Tensor>& y);
+
+Maybe<one::Tensor> AddN(const TensorTuple& inputs);
+
+Maybe<one::Tensor> AddScalar(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar);
+
+Maybe<one::Tensor> Normalization(const std::shared_ptr<one::Tensor>& x,
+                                 const std::shared_ptr<one::Tensor>& moving_mean,
+                                 const std::shared_ptr<one::Tensor>& moving_variance,
+                                 const std::shared_ptr<one::Tensor>& gamma,
+                                 const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                                 const float& epsilon, const float& momentum,
+                                 const bool& is_training);
 
 }  // namespace functional
 }  // namespace one

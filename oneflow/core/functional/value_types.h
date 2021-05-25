@@ -29,15 +29,35 @@ class AttrValue;
 }  // namespace cfg
 
 namespace one {
-
 class Tensor;
 class TensorTuple;
 
+namespace functional {
+class Scalar;
+}  // namespace functional
+}  // namespace one
+
+namespace one {
 namespace functional {
 
 enum ValueType {
   kINVALID = 0,
   kVOID,
+  kINT32,
+  kUINT32,
+  kINT64,
+  kUINT64,
+  kFLOAT,
+  kDOUBLE,
+  kBOOL,
+  kINT32_LIST,
+  kUINT32_LIST,
+  kINT64_LIST,
+  kUINT64_LIST,
+  kFLOAT_LIST,
+  kDOUBLE_LIST,
+  kBOOL_LIST,
+  kSCALAR,
   kTENSOR,
   kTENSOR_REF,
   kTENSOR_MAYBE,
@@ -56,6 +76,22 @@ enum ValueType {
   }
 
 FUNCTOR_VALUE_TYPE_TRAIT(void, kVOID);
+FUNCTOR_VALUE_TYPE_TRAIT(int32_t, kINT32);
+FUNCTOR_VALUE_TYPE_TRAIT(uint32_t, kUINT32);
+FUNCTOR_VALUE_TYPE_TRAIT(int64_t, kINT64);
+FUNCTOR_VALUE_TYPE_TRAIT(uint64_t, kUINT64);
+FUNCTOR_VALUE_TYPE_TRAIT(float, kFLOAT);
+FUNCTOR_VALUE_TYPE_TRAIT(double, kDOUBLE);
+FUNCTOR_VALUE_TYPE_TRAIT(bool, kBOOL);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<int32_t>, kINT32_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<uint32_t>, kUINT32_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<int64_t>, kINT64_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<uint64_t>, kUINT64_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<float>, kFLOAT_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<double>, kDOUBLE_LIST);
+FUNCTOR_VALUE_TYPE_TRAIT(std::vector<bool>, kBOOL_LIST);
+
+FUNCTOR_VALUE_TYPE_TRAIT(Scalar, kSCALAR);
 FUNCTOR_VALUE_TYPE_TRAIT(one::Tensor, kTENSOR);
 FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<one::Tensor>, kTENSOR_REF);
 FUNCTOR_VALUE_TYPE_TRAIT(Maybe<one::Tensor>, kTENSOR_MAYBE);
