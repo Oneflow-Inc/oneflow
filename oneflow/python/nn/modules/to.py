@@ -96,6 +96,3 @@ def to_op(input, *args, **kwargs):
             return To(copy)(input, device, dtype)
     if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
         return To(copy)(input, device, dtype)
-
-
-
