@@ -1169,7 +1169,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
     Job main_job;
     std::vector<ReentrantLockBackEdge> lock_back_edges;
     JUST(MakeMainJob(&main_job, &identity_tick_op_names, &lock_back_edges));
-    AddJobName2JobId(main_job.job_conf().job_name(), jobs.size());
+    AddJobName2JobId( main_job.job_conf().job_name(), jobs.size());
     JUST(CompileMainJob(&main_job, lock_back_edges, jobs.size(), &main_plan));
   }
   LinkMainPlan(&plan, std::move(main_plan), identity_tick_op_names);
