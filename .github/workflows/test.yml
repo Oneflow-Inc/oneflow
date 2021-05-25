@@ -36,16 +36,42 @@ jobs:
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
-      - name: Check license (please run 'make of_format' if failed)
+      - name: Check license
         run: |
           python3 ci/check/run_license_format.py -i oneflow -c
-      - name: Check license C++/CUDA format (please run 'make of_format' if failed)
+      - name: Add license
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow --fix
+          echo "is_updated=1" >> $GITHUB_ENV
+      - name: Check license C++/CUDA format
         run: |
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-      - name: Check Python format (please run 'make of_format' if failed)
+      - name: Run license C++/CUDA format
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
+          echo "is_updated=1" >> $GITHUB_ENV
+      - name: Check Python format
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD
+      - name: Run Python Format
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_py_format.py --source_dir $PWD --fix
+          echo "is_updated=1" >> $GITHUB_ENV
+      - name: Git push
+        id: git_push
+        if: ${{ env.is_updated }}
+        run: |
+          git add -u
+          git commit -m "CI auto format"
+          git push origin ${GITHUB_REF##*/}
+      - name: Please request CI again
+        if: steps.git_push.conclusion == "success"
+        run: |
+          exit 1
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
