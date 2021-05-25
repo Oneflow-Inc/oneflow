@@ -73,27 +73,32 @@ def to_op(input, *args, **kwargs):
         # True
 
     """
-    copy = kwargs.get("copy", False)
-    device = kwargs.get("device", None)
-    dtype = kwargs.get("dtype", None)
-    if len(args) > 0:
-        if isinstance(args[0], flow.Tensor):
-            if len(args) == 2:
-                copy = args[1]
-            return To(copy)(input, args[0].device, args[0].dtype)
-        elif isinstance(args[0], flow.dtype):
-            if len(args) == 2:
-                copy = args[1]
-            return To(copy)(input, None, args[0])
-        else:
-            device = flow.device(args[0]) if isinstance(args[0], str) else args[0]
-            if len(args) > 1:
-                dtype = args[1]
-                assert isinstance(dtype, flow.dtype)
-            if len(args) > 2:
-                copy = args[2]
-            assert isinstance(device, flow.device)
+    try:
+        copy = kwargs.get("copy", False)
+        device = kwargs.get("device", None)
+        dtype = kwargs.get("dtype", None)
+        if len(args) > 0:
+            if isinstance(args[0], flow.Tensor):
+                if len(args) == 2:
+                    copy = args[1]
+                return To(copy)(input, args[0].device, args[0].dtype)
+            elif isinstance(args[0], flow.dtype):
+                if len(args) == 2:
+                    copy = args[1]
+                return To(copy)(input, None, args[0])
+            else:
+                device = flow.device(args[0]) if isinstance(args[0], str) else args[0]
+                if len(args) > 1:
+                    dtype = args[1]
+                    assert isinstance(dtype, flow.dtype)
+                if len(args) > 2:
+                    copy = args[2]
+                assert isinstance(device, flow.device)
+                return To(copy)(input, device, dtype)
+        if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
             return To(copy)(input, device, dtype)
-    if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
-        return To(copy)(input, device, dtype)
-    raise TypeError("to() received an invalid combination of arguments")
+        raise TypeError("to() received an invalid combination of arguments")
+    except flow._oneflow_internal.exception.InputDeviceNotMatchException:
+        print('wa')
+
+

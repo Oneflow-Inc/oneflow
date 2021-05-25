@@ -255,6 +255,12 @@ Error Error::CompileOptionWrong() {
   return error;
 }
 
+Error Error::InputDeviceNotMatchError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_tensor_device_not_math_error();
+  return error;
+}
+
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
