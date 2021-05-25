@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/common/maybe.h"
@@ -43,7 +44,7 @@ class Scope final {
   int64_t auto_increment_id() { return ++auto_increment_id_; }
   int64_t session_id() const { return scope_proto().session_id(); }
   const std::shared_ptr<JobDesc>& job_desc_symbol() const { return job_desc_; }
-  Symbol<ParallelDesc> device_parallel_desc_symbol() const { return device_parallel_desc_; }
+  Symbol<ParallelDesc> device_parallel_desc_symbol() const { return placement_scope_->device_parallel_desc(); }
   const std::shared_ptr<Scope>& parent_scope_symbol() const { return parent_scope_symbol_; }
   Maybe<cfg::ScopeProto> MakeChildScopeProto() const;
 
@@ -77,8 +78,7 @@ class Scope final {
   Maybe<int64_t> symbol_id_;
   const ScopeProto scope_proto_;
   std::shared_ptr<JobDesc> job_desc_;
-  Symbol<ParallelDesc> device_parallel_desc_;
-  Symbol<ParallelDesc> host_parallel_desc_;
+  Symbol<PlacementScope> placement_scope_;
   std::shared_ptr<Scope> parent_scope_symbol_;
 };
 

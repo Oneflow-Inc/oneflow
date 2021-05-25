@@ -47,10 +47,11 @@ Maybe<void> Scope::Init() {
   }
   {
     const auto& storage = *Global<symbol::Storage<ParallelDesc>>::Get();
-    device_parallel_desc_ =
+    const auto& device_parallel_desc =
         SymbolOf(*JUST(storage.MaybeGetPtr(scope_proto_.device_parallel_desc_symbol_id())));
-    host_parallel_desc_ =
+    const auto& host_parallel_desc =
         SymbolOf(*JUST(storage.MaybeGetPtr(scope_proto_.host_parallel_desc_symbol_id())));
+    placement_scope_ = SymbolOf(PlacementScope(device_parallel_desc, host_parallel_desc));
   }
   {
     const auto& storage = *Global<symbol::Storage<Scope>>::Get();
@@ -75,11 +76,7 @@ Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const
 }
 
 Maybe<Symbol<ParallelDesc>> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
-  if (op_conf.device_tag() == "cpu" || IsCpuOnly(op_conf)) {
-    return host_parallel_desc_;
-  } else {
-    return device_parallel_desc_;
-  }
+  return placement_scope_->GetParallelDesc(op_conf);
 }
 
 const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {
