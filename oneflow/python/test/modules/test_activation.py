@@ -509,6 +509,21 @@ class TestSoftplusModule(flow.unittest.TestCase):
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+def _test_hardswish_impl(test_case, shape, device):
+    m = flow.nn.Hardswish()
+    arr = np.random.randn(*shape)
+    f = arr + 3
+    relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
+    relu6_grad = np.where(f > 6, 0, np.where(f < 0, 0, 1))
+    np_out = arr * relu6 / 6
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = relu6 / 6 + arr * relu6_grad / 6
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-4, 1e-4))
+    
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -516,14 +531,12 @@ class TestSoftplusModule(flow.unittest.TestCase):
 )
 class TestHardswishModule(flow.unittest.TestCase):
     def test_hardswish(test_case):
-        m = flow.nn.Hardswish()
-        arr = np.random.randn(2, 3, 4, 5)
-        f = arr + 3
-        relu6 = np.where(np.where(f < 0, 0, f) > 6, 6, np.where(f < 0, 0, f))
-        np_out = arr * relu6 / 6
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_hardswish_impl(test_case, *arg)
+        
 
 def _np_hardtanh_grad(x):
     return np.where(x <= -2.0, 0.0, np.where(x >= 2.3 , 0.0, 1.0))
