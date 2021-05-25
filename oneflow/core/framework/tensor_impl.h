@@ -109,34 +109,34 @@ class MirroredTensorImpl : public TensorImpl {
   std::shared_ptr<const Device> device_;
 };
 
-
 class ConsistentTensorMeta {
  public:
-  ConsistentTensorMeta(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : shape_(shape), dtype_(dtype), parallel_distribution_(parallel_distribution), parallel_desc_(parallel_desc) {}
-  ConsistentTensorMeta(const ConsistentTensorMeta&) = delete;
-  ConsistentTensorMeta(ConsistentTensorMeta&&) = delete;
+  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape,
+                       const std::shared_ptr<const DType>& dtype,
+                       Symbol<cfg::ParallelDistribution> parallel_distribution,
+                       Symbol<ParallelDesc> parallel_desc)
+      : shape_(shape),
+        dtype_(dtype),
+        parallel_distribution_(parallel_distribution),
+        parallel_desc_(parallel_desc) {}
+  ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
+  ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
   ~ConsistentTensorMeta() = default;
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
   const std::shared_ptr<const DType>& dtype() const { return dtype_; }
-  const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution() const {
-    return parallel_distribution_;
-  }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
+  Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
   size_t CalcHashValue() const;
 
  private:
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const DType> dtype_;
-  std::shared_ptr<const cfg::ParallelDistribution> parallel_distribution_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
+  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Symbol<ParallelDesc> parallel_desc_;
 };
 
 class ConsistentTensorImpl : public TensorImpl {
@@ -144,37 +144,36 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
-  const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
-  const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution() const {
-    return parallel_distribution_;
+  const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape(); }
+  const std::shared_ptr<const DType>& dtype() const override { return tensor_meta_->dtype(); }
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
+    return tensor_meta_->parallel_distribution();
   }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
-
-  // Setters
-  void set_parallel_distribution(
-      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribute) {
-    parallel_distribution_ = parallel_distribute;
-  }
-  void set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-    parallel_desc_ = parallel_desc;
+  Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
+  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution() const {
+    return consumer_forced_parallel_distribution_;
   }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { UNIMPLEMENTED(); }
+  void set_consumer_forced_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
+    consumer_forced_parallel_distribution_ = val;
+  }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
  protected:
-  ConsistentTensorImpl(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-      const std::shared_ptr<AutogradMeta>& autograd_meta)
-      : TensorImpl(autograd_meta), consistent_tensor_meta_(consistent_tensor_meta) {}
+  ConsistentTensorImpl(Symbol<ConsistentTensorMeta> tensor_meta,
+                       const std::shared_ptr<AutogradMeta>& autograd_meta)
+      : TensorImpl(autograd_meta),
+        tensor_meta_(tensor_meta),
+        consumer_forced_parallel_distribution_() {}
 
-  Symbol<ConsistentTensorMeta> consistent_tensor_meta_;
+  Symbol<ConsistentTensorMeta> tensor_meta_;
+  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
@@ -254,14 +253,16 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyConsistentTensorImpl);
-  LazyConsistentTensorImpl(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf)
+  LazyConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad,
+                           bool is_leaf)
       : ConsistentTensorImpl(consistent_tensor_meta, NewAutogradMeta(requires_grad, is_leaf)) {}
   ~LazyConsistentTensorImpl() override = default;
 
   // Getters
   bool is_lazy() const override { return true; }
 };
+
+class MirroredTensor;
 
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
@@ -277,18 +278,14 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   static Maybe<EagerConsistentTensorImpl> New(
       const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
-      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc);
+      Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc);
 
-  static Maybe<EagerConsistentTensorImpl> New(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf);
+  static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                                              bool requires_grad, bool is_leaf);
 
  private:
-  EagerConsistentTensorImpl(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-      const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor)
-      : ConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->mut_autograd_meta()),
-        cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
+  EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                            const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor);
 
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor_;
 };
@@ -300,12 +297,12 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 namespace std {
 
 template<>
-struct hash<oneflow::ConsistentTensorMeta> final {
-  size_t operator()(const oneflow::ConsistentTensorMeta& other) const {
+struct hash<oneflow::one::ConsistentTensorMeta> final {
+  size_t operator()(const oneflow::one::ConsistentTensorMeta& other) const {
     return other.CalcHashValue();
   }
 };
 
-}
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_IMPL_H_

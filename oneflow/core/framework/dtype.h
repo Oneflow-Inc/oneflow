@@ -74,11 +74,11 @@ namespace std {
 
 template<>
 struct hash<oneflow::DType> final {
- size_t operator()(const oneflow::DType& dtype) const {
-   return static_cast<size_t>(dtype.data_type());
- }
+  size_t operator()(const oneflow::DType& dtype) const {
+    return static_cast<size_t>(dtype.data_type());
+  }
 };
 
-}
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_DTYPE_H_
