@@ -118,4 +118,16 @@ int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
 
 void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
 
+void GrpcCtrlClient::CriticalSectionEnter(const std::string& critical_section,
+                                          const std::string& group, int64_t rank,
+                                          int64_t num_ranks) {
+  return rpc_client_.CriticalSectionEnter(critical_section, group, rank, num_ranks);
+}
+
+void GrpcCtrlClient::CriticalSectionLeave(const std::string& critical_section,
+                                          const std::string& group, int64_t rank,
+                                          int64_t num_ranks) {
+  return rpc_client_.CriticalSectionLeave(critical_section, group, rank, num_ranks);
+}
+
 }  // namespace oneflow

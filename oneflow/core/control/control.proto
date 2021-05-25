@@ -98,3 +98,23 @@ message EraseCountRequest {
 
 message EraseCountResponse {
 }
+
+message CriticalSectionEnterRequest {
+  required string critical_section = 1;
+  required string group = 2;
+  required int64 rank = 3;
+  required int64 num_ranks = 4;
+}
+
+message CriticalSectionEnterResponse {
+}
+
+message CriticalSectionLeaveRequest {
+  required string critical_section = 1;
+  required string group = 2;
+  required int64 rank = 3;
+  required int64 num_ranks = 4;
+}
+
+message CriticalSectionLeaveResponse {
+}

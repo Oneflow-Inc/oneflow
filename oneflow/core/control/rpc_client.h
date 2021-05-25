@@ -76,6 +76,10 @@ class RpcClient {
   size_t GetStubSize() { return stubs_.size(); };
   void ReserveStubsOfSize(int64_t n) { stubs_.reserve(n); };
   void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.push_back(std::move(s)); };
+  void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks);
+  void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks);
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;

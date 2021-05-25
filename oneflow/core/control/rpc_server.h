@@ -38,7 +38,7 @@ class RpcServer {
   virtual ~RpcServer();
 
  protected:
-  RpcServer() {}
+  RpcServer();
   void HandleRpcs();
   void Init();
 
@@ -93,6 +93,9 @@ class RpcServer {
   HashMap<std::string, std::list<CtrlCall<CtrlMethod::kPullKV>*>> pending_kv_calls_;
   // IncreaseCount, EraseCount
   HashMap<std::string, int32_t> count_;
+  // CriticalSectionEnter, CriticalSectionLeave
+  class CriticalSectionStore;
+  std::unique_ptr<CriticalSectionStore> critical_section_store_;
 };
 
 }  // namespace oneflow

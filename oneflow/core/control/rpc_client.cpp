@@ -211,4 +211,24 @@ CtrlService::Stub* RpcClient::GetResponsibleStub(const std::string& key) {
   return stubs_[machine_id].get();
 }
 
+void RpcClient::CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                                     int64_t rank, int64_t num_ranks) {
+  ClientCall<CtrlMethod::kCriticalSectionEnter> call;
+  call.mut_request()->set_critical_section(critical_section);
+  call.mut_request()->set_group(group);
+  call.mut_request()->set_rank(rank);
+  call.mut_request()->set_num_ranks(num_ranks);
+  call(GetResponsibleStub(critical_section));
+}
+
+void RpcClient::CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                                     int64_t rank, int64_t num_ranks) {
+  ClientCall<CtrlMethod::kCriticalSectionLeave> call;
+  call.mut_request()->set_critical_section(critical_section);
+  call.mut_request()->set_group(group);
+  call.mut_request()->set_rank(rank);
+  call.mut_request()->set_num_ranks(num_ranks);
+  call(GetResponsibleStub(critical_section));
+}
+
 }  // namespace oneflow

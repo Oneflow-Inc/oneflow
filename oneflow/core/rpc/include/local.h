@@ -53,6 +53,10 @@ class LocalCtrlClient : public CtrlClient {
   void Clear() override;
   int32_t IncreaseCount(const std::string& k, int32_t v) override;
   void EraseCount(const std::string& k) override;
+  void CriticalSectionEnter(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override;
+  void CriticalSectionLeave(const std::string& critical_section, const std::string& group,
+                            int64_t rank, int64_t num_ranks) override;
 
   HashSet<std::string> done_names_;
   HashSet<std::string> doing_names_;
@@ -63,6 +67,8 @@ class LocalCtrlClient : public CtrlClient {
   std::condition_variable kv_cv_;
   HashMap<std::string, int32_t> counter_;
   std::mutex counter_mtx_;
+  class CriticalSectionStore;
+  std::unique_ptr<CriticalSectionStore> critical_section_store_;
 };
 
 class LocalRpcManager : public RpcManager {
