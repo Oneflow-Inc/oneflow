@@ -313,12 +313,14 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
+    @register_local_tensor_method()
     def nelement(self):
         prod = 1
         for dim in self.shape:
             prod *= dim
         return prod
 
+    @register_local_tensor_method()
     def numel(self):
         return self.nelement()
 
@@ -340,6 +342,7 @@ class Tensor:
 
         return remote_blob_util.BlobObjectNumpy(internal_tensor._blob_object)
 
+    @register_local_tensor_method()
     def tolist(self):
         return self.numpy().tolist()
 
