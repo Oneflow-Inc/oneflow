@@ -161,7 +161,7 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor([1.0], dtype=flow.float)
         test_case.assertEqual(x.item(), 1.0)
         x = flow.Tensor([5], dtype=flow.int)
-        test_case.assertTrue(x.item(), 5)
+        test_case.assertEqual(x.item(), 5)
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
