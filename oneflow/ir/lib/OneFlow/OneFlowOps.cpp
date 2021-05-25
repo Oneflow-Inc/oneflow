@@ -38,6 +38,7 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::Operat
 
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
+// TODO: replace this with a condition to merge all ctrl input and output when folding op
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
   const int32_t num_ctrl_outputs =
@@ -74,7 +75,8 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
                || op_type_name.equals("ceil") || op_type_name.equals("floor")
                || op_type_name.equals("relu") || op_type_name.equals("rint")
                || op_type_name.equals("round") || op_type_name.equals("sign")
-               || op_type_name.equals("negative") || op_type_name.equals("reciprocal")) {
+               || op_type_name.equals("negative") || op_type_name.equals("reciprocal")
+               || op_type_name.equals("cast")) {
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
@@ -138,6 +140,8 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   }
   return {};
 }
+
+ModuleOp Fuse(Operation* op) { return {}; }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
