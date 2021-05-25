@@ -626,6 +626,7 @@ class Asin(Module):
     def forward(self, x):
         return self._op(x)[0]
 
+
 @oneflow_export("asin")
 @experimental_api
 def asin_op(input):
@@ -649,6 +650,7 @@ def asin_op(input):
     """
     return Asin()(input)
 
+
 @register_tensor_op("asin")
 @experimental_api
 def asin_op_tensor(input):
@@ -657,6 +659,7 @@ def asin_op_tensor(input):
     See :func:`oneflow.experimental.asin`
     """
     return Asin()(input)
+
 
 @oneflow_export("arcsin")
 @experimental_api
@@ -667,6 +670,7 @@ def arcsin_op(input):
     """
     return Asin()(input)
 
+
 @register_tensor_op("arcsin")
 @experimental_api
 def arcsin_op_tensor(input):
@@ -676,6 +680,7 @@ def arcsin_op_tensor(input):
     """
     return Asin()(input)
 
+
 class Asinh(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -683,6 +688,7 @@ class Asinh(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 @oneflow_export("asinh")
 @experimental_api
@@ -706,6 +712,7 @@ def asinh_op(input):
         # [1.44363548, 1.81844646, 2.09471255]
     """
     return Asinh()(input)
+
 
 @register_tensor_op("asinh")
 @experimental_api
@@ -1057,4 +1064,3 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
-

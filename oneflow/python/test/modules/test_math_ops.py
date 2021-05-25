@@ -52,7 +52,8 @@ class TestSin(flow.unittest.TestCase):
         of_out = input.sin()
         np_out = np.sin(input.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-        
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
