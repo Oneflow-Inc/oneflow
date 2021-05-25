@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +19,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_argmax_aixs_negative(test_case, device):
+def _test_argmax_v1(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
     )
@@ -43,7 +40,7 @@ def _test_tensor_argmax(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy().flatten(), np_out.flatten()))
 
 
-def _test_argmax_axis_postive(test_case, device):
+def _test_argmax_v3(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device),
     )
@@ -83,9 +80,9 @@ class TestArgmax(flow.unittest.TestCase):
     def test_transpose(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_argmax_aixs_negative,
+            _test_argmax_v1,
             _test_tensor_argmax,
-            _test_argmax_axis_postive,
+            _test_argmax_v3,
             _test_argmax_keepdims,
             _test_argmax_dim_equal_none,
         ]
