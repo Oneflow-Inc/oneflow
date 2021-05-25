@@ -21,6 +21,7 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _prelu(input, alpha):
     alpha = np.expand_dims(alpha, 0)
     alpha = np.expand_dims(alpha, 2)
