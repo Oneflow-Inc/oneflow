@@ -525,6 +525,9 @@ class TestHardswishModule(flow.unittest.TestCase):
         of_out = m(x)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+def _np_hardtanh_grad(x):
+    return np.where(x <= -2.0, 0.0, np.where(x >= 2.3 , 0.0, 1.0))
+
 
 def _test_hardtanh_impl(test_case, shape, device):
     m = flow.nn.Hardtanh()
@@ -541,6 +544,9 @@ def _test_hardtanh_impl(test_case, shape, device):
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), _np_hardtanh_grad(np_out), 1e-4, 1e-4))
 
 
 @unittest.skipIf(
