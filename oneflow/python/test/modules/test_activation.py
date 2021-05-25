@@ -528,7 +528,6 @@ class TestHardswishModule(flow.unittest.TestCase):
 def _np_hardtanh_grad(x):
     return np.where(x <= -2.0, 0.0, np.where(x >= 2.3 , 0.0, 1.0))
 
-
 def _test_hardtanh_impl(test_case, shape, device):
     m = flow.nn.Hardtanh()
     arr = np.random.randn(*shape)
