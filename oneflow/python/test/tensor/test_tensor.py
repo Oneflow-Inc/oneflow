@@ -403,14 +403,6 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-<<<<<<< HEAD
-    def test_tensor_reshape(test_case):
-        x = np.random.randn(4, 4)
-        input = flow.Tensor(x, dtype=flow.float32, requires_grad=True)
-        of_shape = input.reshape([2, 2, 2, -1]).numpy().shape
-        np_shape = (2, 2, 2, 2)
-        test_case.assertTrue(np.array_equal(of_shape, np_shape))
-=======
     def test_negative(test_case):
         input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
         of_out = input.negative()
@@ -442,7 +434,6 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input1.lt(input2)
         np_out = np.less(input1.numpy(), input2.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
->>>>>>> master
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
