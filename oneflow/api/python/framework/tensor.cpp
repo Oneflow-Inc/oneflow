@@ -158,60 +158,31 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetPtrOrThrow();
 }
 
-std::vector<Shape> GetTensorBufferShapes(const std::shared_ptr<MirroredTensor>& tensor) {
+std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDTypes(
+    const std::shared_ptr<MirroredTensor>& tensor) {
   std::vector<Shape> shapes;
-  std::atomic<bool> synced(false);
-
-  PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
-        tensor,
-        [&shapes, &synced](uint64_t of_blob_ptr) {
-          using namespace oneflow;
-          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          const Blob* blob = of_blob->blob();
-          const Shape& blob_shape = blob->static_shape();
-          const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
-          for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
-            const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-            shapes.push_back(tensor_buffer->shape());
-          }
-          synced = true;
-        },
-        "const");
-  });
-
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
-    while (!synced) {}
-  });
-  return shapes;
-}
-
-std::vector<DType> GetTensorBufferDtypes(const std::shared_ptr<MirroredTensor>& tensor) {
   std::vector<DType> dtypes;
   std::atomic<bool> synced(false);
 
   PhysicalRun([&](InstructionsBuilder* builder) {
     builder->AccessBlobByCallback(
-        tensor,
-        [&dtypes, &synced](uint64_t of_blob_ptr) {
-          using namespace oneflow;
-          OfBlob* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          const Blob* blob = of_blob->blob();
-          const Shape& blob_shape = blob->static_shape();
-          const auto* tensor_buffer_ptr = blob->dptr<TensorBuffer>();
-          for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
-            const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
-            dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
-          }
-          synced = true;
-        },
-        "const");
+        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const");
   });
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
     while (!synced) {}
   });
-  return dtypes;
+
+  const Blob& blob = CHECK_JUST(tensor->eager_blob_object())->blob();
+  const Shape& blob_shape = blob.static_shape();
+  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
+  for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
+    const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
+    shapes.push_back(tensor_buffer->shape());
+    dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
+  }
+
+  return std::make_tuple(shapes, dtypes);
 }
 
 }  // namespace
@@ -220,8 +191,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
-  api->def_property_readonly("tensor_buffer_shapes", &GetTensorBufferShapes);
-  api->def_property_readonly("tensor_buffer_dtypes", &GetTensorBufferDtypes);
+  api->def_property_readonly("tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
