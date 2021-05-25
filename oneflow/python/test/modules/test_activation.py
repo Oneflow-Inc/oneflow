@@ -526,26 +526,34 @@ class TestHardswishModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
+def _test_hardtanh_impl(test_case, shape, device):
+    m = flow.nn.Hardtanh()
+    arr = np.random.randn(*shape)
+    np_out = np.maximum(-1, np.minimum(1, arr))
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
+    arr = np.random.randn(*shape)
+    np_out = np.maximum(-2.0, np.minimum(2.3, arr))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestHardtanhModule(flow.unittest.TestCase):
     def test_hardtanh(test_case):
-        m = flow.nn.Hardtanh()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.maximum(-1, np.minimum(1, arr))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-    def test_hardtanh_min_max(test_case):
-        m = flow.nn.Hardtanh(min_val=-2.0, max_val=2.3)
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.maximum(-2.0, np.minimum(2.3, arr))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_hardtanh_impl(test_case, *arg)
 
 
 @unittest.skipIf(
