@@ -257,7 +257,7 @@ Error Error::CompileOptionWrong() {
 
 Error Error::InputDeviceNotMatchError() {
   auto error = std::make_shared<cfg::ErrorProto>();
-  error->mutable_input_device_not_math_error();
+  error->mutable_input_device_not_match_error();
   return error;
 }
 
