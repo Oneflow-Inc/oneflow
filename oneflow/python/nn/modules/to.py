@@ -19,6 +19,7 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Union
 
+
 class To(Module):
     def __init__(self, copy):
         super().__init__()
@@ -95,4 +96,6 @@ def to_op(input, *args, **kwargs):
             return To(copy)(input, device, dtype)
     if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
         return To(copy)(input, device, dtype)
-    raise TypeError("to() received an invalid combination of arguments")
+
+
+
