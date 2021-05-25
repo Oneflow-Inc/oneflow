@@ -15,6 +15,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.arcsin
 .. autofunction:: oneflow.experimental.asinh
 .. autofunction:: oneflow.experimental.Tensor.asinh
+.. autofunction:: oneflow.experimental.arcsinh
+.. autofunction:: oneflow.experimental.Tensor.arcsinh
 .. autofunction:: oneflow.experimental.nn.ELU
 .. autofunction:: oneflow.experimental.nn.GELU
 .. autofunction:: oneflow.experimental.gelu

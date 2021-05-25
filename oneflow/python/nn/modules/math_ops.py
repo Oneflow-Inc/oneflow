@@ -724,6 +724,26 @@ def asinh_op_tensor(input):
     return Asinh()(input)
 
 
+@oneflow_export("arcsinh")
+@experimental_api
+def arcsin_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
+@register_tensor_op("arcsinh")
+@experimental_api
+def arcsin_op_tensor(input):
+    r"""
+
+    See for :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
 class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
