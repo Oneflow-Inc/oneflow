@@ -50,6 +50,7 @@ enum ValueType {
   kFLOAT,
   kDOUBLE,
   kBOOL,
+  kSTRING,
   kINT32_LIST,
   kUINT32_LIST,
   kINT64_LIST,
@@ -57,6 +58,7 @@ enum ValueType {
   kFLOAT_LIST,
   kDOUBLE_LIST,
   kBOOL_LIST,
+  kSTRING_LIST,
   kSCALAR,
   kTENSOR,
   kTENSOR_REF,
@@ -69,38 +71,42 @@ enum ValueType {
   kATTR_MAP,
 };
 
-#define FUNCTOR_VALUE_TYPE_TRAIT(cpp_type, value_type)                                           \
+#define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
   template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value, int>::type = 0> \
   inline ValueType ValueTypeOf() {                                                               \
     return value_type;                                                                           \
   }
 
-FUNCTOR_VALUE_TYPE_TRAIT(void, kVOID);
-FUNCTOR_VALUE_TYPE_TRAIT(int32_t, kINT32);
-FUNCTOR_VALUE_TYPE_TRAIT(uint32_t, kUINT32);
-FUNCTOR_VALUE_TYPE_TRAIT(int64_t, kINT64);
-FUNCTOR_VALUE_TYPE_TRAIT(uint64_t, kUINT64);
-FUNCTOR_VALUE_TYPE_TRAIT(float, kFLOAT);
-FUNCTOR_VALUE_TYPE_TRAIT(double, kDOUBLE);
-FUNCTOR_VALUE_TYPE_TRAIT(bool, kBOOL);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<int32_t>, kINT32_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<uint32_t>, kUINT32_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<int64_t>, kINT64_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<uint64_t>, kUINT64_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<float>, kFLOAT_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<double>, kDOUBLE_LIST);
-FUNCTOR_VALUE_TYPE_TRAIT(std::vector<bool>, kBOOL_LIST);
+VALUE_TYPE_OF_IMPL(void, kVOID);
+VALUE_TYPE_OF_IMPL(int32_t, kINT32);
+VALUE_TYPE_OF_IMPL(uint32_t, kUINT32);
+VALUE_TYPE_OF_IMPL(int64_t, kINT64);
+VALUE_TYPE_OF_IMPL(uint64_t, kUINT64);
+VALUE_TYPE_OF_IMPL(float, kFLOAT);
+VALUE_TYPE_OF_IMPL(double, kDOUBLE);
+VALUE_TYPE_OF_IMPL(bool, kBOOL);
+VALUE_TYPE_OF_IMPL(std::string, kSTRING);
+VALUE_TYPE_OF_IMPL(std::vector<int32_t>, kINT32_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<uint32_t>, kUINT32_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<int64_t>, kINT64_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<uint64_t>, kUINT64_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<float>, kFLOAT_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<double>, kDOUBLE_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<bool>, kBOOL_LIST);
+VALUE_TYPE_OF_IMPL(std::vector<std::string>, kSTRING_LIST);
 
-FUNCTOR_VALUE_TYPE_TRAIT(Scalar, kSCALAR);
-FUNCTOR_VALUE_TYPE_TRAIT(one::Tensor, kTENSOR);
-FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<one::Tensor>, kTENSOR_REF);
-FUNCTOR_VALUE_TYPE_TRAIT(Maybe<one::Tensor>, kTENSOR_MAYBE);
-FUNCTOR_VALUE_TYPE_TRAIT(one::TensorTuple, kTENSOR_TUPLE);
-FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
-FUNCTOR_VALUE_TYPE_TRAIT(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
-FUNCTOR_VALUE_TYPE_TRAIT(cfg::AttrValue, kATTR);
-FUNCTOR_VALUE_TYPE_TRAIT(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
-FUNCTOR_VALUE_TYPE_TRAIT(AttrMap, kATTR_MAP);
+VALUE_TYPE_OF_IMPL(Scalar, kSCALAR);
+VALUE_TYPE_OF_IMPL(one::Tensor, kTENSOR);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Tensor>, kTENSOR_REF);
+VALUE_TYPE_OF_IMPL(Maybe<one::Tensor>, kTENSOR_MAYBE);
+VALUE_TYPE_OF_IMPL(one::TensorTuple, kTENSOR_TUPLE);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<one::TensorTuple>, kTENSOR_TUPLE_REF);
+VALUE_TYPE_OF_IMPL(Maybe<one::TensorTuple>, kTENSOR_TUPLE_MAYBE);
+VALUE_TYPE_OF_IMPL(cfg::AttrValue, kATTR);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<cfg::AttrValue>, kATTR_REF);
+VALUE_TYPE_OF_IMPL(AttrMap, kATTR_MAP);
+
+#undef VALUE_TYPE_OF_IMPL
 
 }  // namespace functional
 }  // namespace one

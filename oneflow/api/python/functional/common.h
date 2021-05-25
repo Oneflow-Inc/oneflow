@@ -16,12 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_COMMON_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_COMMON_H_
 
+#include <string>
+#include <vector>
 #include <pybind11/pybind11.h>
 
-#include "oneflow/api/python/functional/python_arg.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/common/function_traits.h"
+#include "oneflow/core/common/preprocessor.h"
 
 namespace py = pybind11;
 
@@ -30,6 +29,19 @@ namespace one {
 namespace functional {
 
 namespace detail {
+
+#define ARITHMETIC_TYPE_SEQ      \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t)  \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t) \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t)  \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t) \
+  OF_PP_MAKE_TUPLE_SEQ(float)    \
+  OF_PP_MAKE_TUPLE_SEQ(double)   \
+  OF_PP_MAKE_TUPLE_SEQ(bool)
+
+#define MAKE_LIST_TUPLE_SEQ(T) (MAKE_LIST_TUPLE(T))
+#define MAKE_LIST_TUPLE(T) (std::vector<T>)
+#define ARITHMETIC_LIST_TYPE_SEQ OF_PP_FOR_EACH_TUPLE(MAKE_LIST_TUPLE_SEQ, ARITHMETIC_TYPE_SEQ)
 
 template<typename T>
 inline bool isinstance(py::object obj) {
@@ -43,71 +55,15 @@ inline bool isinstance(py::object obj) {
     return py::isinstance(obj, py::type::of(dummy)); \
   }
 
-IMPLEMENT_IS_INSTANCE(int32_t);
-IMPLEMENT_IS_INSTANCE(uint32_t);
-IMPLEMENT_IS_INSTANCE(int64_t);
-IMPLEMENT_IS_INSTANCE(uint64_t);
-IMPLEMENT_IS_INSTANCE(float);
-IMPLEMENT_IS_INSTANCE(double);
-IMPLEMENT_IS_INSTANCE(bool);
-IMPLEMENT_IS_INSTANCE(std::string);
-IMPLEMENT_IS_INSTANCE(std::vector<int32_t>);
-IMPLEMENT_IS_INSTANCE(std::vector<uint32_t>);
-IMPLEMENT_IS_INSTANCE(std::vector<int64_t>);
-IMPLEMENT_IS_INSTANCE(std::vector<uint64_t>);
-IMPLEMENT_IS_INSTANCE(std::vector<float>);
-IMPLEMENT_IS_INSTANCE(std::vector<double>);
-IMPLEMENT_IS_INSTANCE(std::vector<bool>);
-IMPLEMENT_IS_INSTANCE(std::vector<std::string>);
+OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE, ARITHMETIC_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE, ARITHMETIC_LIST_TYPE_SEQ);
 
+IMPLEMENT_IS_INSTANCE(std::string);
+IMPLEMENT_IS_INSTANCE(std::vector<std::string>);
 #undef IMPLEMENT_IS_INSTANCE
 
-template<typename R, int nleft, int index, typename Func>
-struct unpack_call_dispatcher {
-  template<typename... Args>
-  static R apply(const Func& f, py::args args, Args&&... unpacked_args) {
-    return unpack_call_dispatcher<R, nleft - 1, index + 1, Func>::apply(
-        f, args, std::forward<Args>(unpacked_args)..., PythonArg(args[index]));
-  }
-};
-
-template<typename R, int index, typename Func>
-struct unpack_call_dispatcher<R, 0, index, Func> {
-  template<typename... Args>
-  static R apply(const Func& f, py::args args, Args&&... unpacked_args) {
-    return f(std::forward<Args>(unpacked_args)...);
-  }
-};
-
-template<typename Func, typename R>
-struct unpack_call {
-  static R apply(const Func& f, py::args args) {
-    constexpr size_t nargs = function_traits<Func>::nargs;
-    CHECK_EQ(nargs, args.size()) << "Requires " << nargs << " arguments, but " << args.size()
-                                 << " is given.";
-    return unpack_call_dispatcher<R, nargs, 0, Func>::apply(f, args);
-  }
-};
-
-#define SPEC_MAYBE_UNPACK_CALL(T, return_fn)                                            \
-  template<typename Func>                                                               \
-  struct unpack_call<Func, T> {                                                         \
-    static constexpr auto return_fn_ = (return_fn);                                     \
-    using R = typename function_traits<decltype(return_fn_)>::return_type;              \
-    static R apply(const Func& f, py::args args) {                                      \
-      constexpr size_t nargs = function_traits<Func>::nargs;                            \
-      CHECK_EQ(nargs, args.size())                                                      \
-          << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \
-      return (return_fn)(unpack_call_dispatcher<T, nargs, 0, Func>::apply(f, args));    \
-    }                                                                                   \
-  };
-
-SPEC_MAYBE_UNPACK_CALL(Maybe<one::Tensor>,
-                       ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
-SPEC_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>,
-                       ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
-
-#undef SPEC_MAYBE_UNPACK_CALL
+template<typename T>
+std::vector<T> CastToList(py::object obj);
 
 }  // namespace detail
 

@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/api/python/functional/common.h"
 
 namespace py = pybind11;
 
@@ -37,14 +38,12 @@ class PythonArg {
 
   virtual ~PythonArg() = default;
 
-  operator int32_t() const { return py::cast<int32_t>(Borrow()); }
-  operator uint32_t() const { return py::cast<uint32_t>(Borrow()); }
-  operator int64_t() const { return py::cast<int64_t>(Borrow()); }
-  operator uint64_t() const { return py::cast<uint64_t>(Borrow()); }
-  operator float() const { return py::cast<float>(Borrow()); }
-  operator double() const { return py::cast<double>(Borrow()); }
-  operator bool() const { return py::cast<bool>(Borrow()); }
-  operator std::string() const { return py::cast<std::string>(Borrow()); }
+#define IMPLICIT_TRANSFORM_OP(T) \
+  operator T() const { return py::cast<T>(Borrow()); }
+
+  OF_PP_FOR_EACH_TUPLE(IMPLICIT_TRANSFORM_OP,
+                       ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
+#undef IMPLICIT_TRANSFORM_OP
 
   operator std::vector<int32_t>() const;
   operator std::vector<uint32_t>() const;
@@ -53,6 +52,7 @@ class PythonArg {
   operator std::vector<float>() const;
   operator std::vector<double>() const;
   operator std::vector<bool>() const;
+  operator std::vector<std::string>() const;
 
   operator Scalar() const;
 

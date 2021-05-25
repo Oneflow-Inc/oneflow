@@ -15,7 +15,10 @@ limitations under the License.
 */
 
 #include "oneflow/api/python/functional/python_arg.h"
+
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 
 namespace py = pybind11;
 
@@ -23,13 +26,12 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-PythonArg::operator std::vector<int32_t>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<uint32_t>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<int64_t>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<uint64_t>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<float>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<double>() const { UNIMPLEMENTED(); }
-PythonArg::operator std::vector<bool>() const { UNIMPLEMENTED(); }
+#define IMPLICIT_TRANSFORM_LIST_OP(T) \
+  PythonArg::operator std::vector<T>() const { return detail::CastToList<T>(Borrow()); }
+
+OF_PP_FOR_EACH_TUPLE(IMPLICIT_TRANSFORM_LIST_OP,
+                     ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
+#undef IMPLICIT_TRANSFORM_LIST_OP
 
 PythonArg::operator Scalar() const {
   py::object obj = Borrow();
@@ -41,6 +43,8 @@ PythonArg::operator Scalar() const {
     return Scalar(py::cast<float>(obj));
   } else if (detail::isinstance<double>(obj)) {
     return Scalar(py::cast<double>(obj));
+  } else if (detail::isinstance<bool>(obj)) {
+    return Scalar(py::cast<bool>(obj));
   } else {
     UNIMPLEMENTED() << "Can not convert to scalar from python object with type "
                     << py::cast<std::string>(py::str(py::type::of(obj)));
@@ -51,16 +55,12 @@ PythonArg::operator Scalar() const {
 PythonArg::operator std::shared_ptr<one::TensorTuple>() const {
   py::object obj = Borrow();
   if (detail::isinstance<one::TensorTuple>(obj)) {
-    return py::cast<std::shared_ptr<one::TensorTuple>>(Borrow());
+    return py::cast<std::shared_ptr<one::TensorTuple>>(obj);
   }
-  CHECK(detail::isinstance<py::list>(obj));
-  py::list list = py::cast<py::list>(obj);
-  auto tensor_tuple = std::make_shared<one::TensorTuple>(list.size());
-  for (int i = 0; i < list.size(); ++i) {
-    CHECK(detail::isinstance<one::Tensor>(list[i]));
-    tensor_tuple->at(i) = py::cast<std::shared_ptr<one::Tensor>>(list[i]);
-  }
-  return tensor_tuple;
+  auto v = detail::CastToList<std::shared_ptr<one::Tensor>>(obj);
+  auto values = std::make_shared<one::TensorTuple>(v.size());
+  for (int i = 0; i < v.size(); ++i) { values->at(i) = v[i]; }
+  return values;
 }
 
 PythonArg::operator std::shared_ptr<cfg::AttrValue>() const {
@@ -70,8 +70,8 @@ PythonArg::operator std::shared_ptr<cfg::AttrValue>() const {
     return py::cast<std::shared_ptr<cfg::AttrValue>>(obj);
   }
   auto attr_value = std::make_shared<cfg::AttrValue>();
-  if (detail::isinstance<int>(obj)) {
-    attr_value->set_at_int32(py::cast<int>(obj));
+  if (detail::isinstance<int32_t>(obj)) {
+    attr_value->set_at_int32(py::cast<int32_t>(obj));
   } else if (detail::isinstance<double>(obj)) {
     attr_value->set_at_double(py::cast<double>(obj));
   } else {
