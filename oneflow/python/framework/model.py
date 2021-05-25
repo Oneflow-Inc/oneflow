@@ -764,7 +764,6 @@ class ValidateModelOOPStyle(SubModel):
             return True
 
 
-# TODO(strint): implement oop model checkpoint
 class CheckpointModelOOPStyle(SubModel):
     def __init__(
         self,
@@ -773,8 +772,35 @@ class CheckpointModelOOPStyle(SubModel):
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
         super().__init__("checkpointing", cfg, model, callbacks)
-        self.is_valid = False
-        self.error_msg = "checkpointing has not been implemented yet."
+
+    def load(self):
+        assert self.is_valid
+        if self._cfg.need_load:
+            self._load_checkpoint(self._cfg.load_dirpath)
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid
+        if self._cfg.need_save:
+            if (step_idx + 1) % self._cfg.save_step_interval == 0:
+                self._save_checkpoint(
+                    dirpath=self._cfg.save_dirpath + "-" + str(step_idx)
+                )
+
+    def _load_checkpoint(
+        self, dirpath: str,
+    ):
+        r"""Load model states from a checkpoint.
+        """
+        stat_dict = GetCheckpoint(path=dirpath)
+        self._model.load_state_dict(stat_dict)
+
+    def _save_checkpoint(
+        self, dirpath: str,
+    ):
+        r"""Save model states as a checkpoint.
+        """
+        stat_dict = self._model.state_dict()
+        SaveVarDict(path=dirpath, var_dict=stat_dict)
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):

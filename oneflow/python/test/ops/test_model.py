@@ -16,6 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
+import tempfile
 
 import oneflow.experimental as flow
 from oneflow.python.nn.parameter import Parameter
@@ -27,6 +28,9 @@ from oneflow.python.nn.parameter import Parameter
 )
 class TestEagerModel(flow.unittest.TestCase):
     def test_model(test_case):
+        model_dir = tempfile.TemporaryDirectory()
+        model_dir_path = model_dir.name
+        print(model_dir)
         para = np.random.randn(2, 3)
         in_data = np.full((2, 3), 1)
 
@@ -105,12 +109,15 @@ class TestEagerModel(flow.unittest.TestCase):
                     )
                 )
 
+        train_config = flow.model.TrainingConfig()
+        train_config.config_data(TrainData())
+
         val_config = flow.model.ValidationConfig()
         val_config.config_data(ValData())
         val_config.config_step_interval(1)
 
-        train_config = flow.model.TrainingConfig()
-        train_config.config_data(TrainData())
+        ck_config = flow.model.CheckpointConfig()
+        ck_config.config_save(dirpath=model_dir_path, step_interval=5)
 
         output_monitor_cb = OutputMonitor()
 
@@ -119,9 +126,22 @@ class TestEagerModel(flow.unittest.TestCase):
         eager_md.fit(
             training_config=train_config,
             validation_config=val_config,
+            checkpoint_config=ck_config,
             callbacks=output_monitor_cb,
             max_steps=10,
         )
+
+        step_9_para = list(eager_md.parameters())[0][0].numpy()
+
+        eager_md_load = EagerModel()
+        eager_md_load.load_state_dict(flow.load(model_dir_path + "-4"))
+        loaded_step_4_para = list(eager_md_load.parameters())[0][0].numpy()
+
+        test_case.assertTrue(
+            np.allclose(step_9_para, loaded_step_4_para - 5, 1e-4, 1e-4)
+        )
+
+        model_dir.cleanup()
 
 
 if __name__ == "__main__":
