@@ -20,8 +20,12 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
+template<typename T>
+size_t HashTypedAttrVal(const T& val);
 
 namespace user_op {
 
@@ -84,6 +88,10 @@ class AttrVal {
   AttrVal() = default;
   virtual ~AttrVal() = default;
 
+  virtual size_t hash_value() const = 0;
+  virtual bool operator==(const AttrVal& other) const = 0;
+  bool operator!=(const AttrVal& other) const { return !(*this == other); }
+
  private:
   OF_DISALLOW_COPY_AND_MOVE(AttrVal)
 };
@@ -93,6 +101,13 @@ class TypedAttrVal final : public AttrVal {
  public:
   TypedAttrVal(T v) : val_(v) {}
   ~TypedAttrVal() = default;
+
+  size_t hash_value() const override { return std::hash<T>()(val_); }
+  bool operator==(const AttrVal& other) const override {
+    auto* that = dynamic_cast<const TypedAttrVal<T>*>(&other);
+    if (that == nullptr) { return false; }
+    return this->val_ == that->val_;
+  }
 
   const T& val() const { return val_; }
 
