@@ -73,7 +73,4 @@ class PReLU(Module):
         assert (
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
-        try:
-            return self.op(x, self.weight)[0]
-        except flow._oneflow_internal.exception.InputDeviceNotMatchException:
-            raise "op build failed!"
+        return self.op(x, self.weight)[0]

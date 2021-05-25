@@ -34,7 +34,10 @@ def user_op_expr_call(self, *args, **kwargs):
             self.op_type_name, attr_name, attr_value
         )
 
-    results = self.apply(args, attrs)
+    try:
+        results = self.apply(args, attrs)
+    except flow._oneflow_internal.exception.InputDeviceNotMatchException:
+        raise "The device of the input tensor that this op relies on does'nt match!"
 
     return results
 
