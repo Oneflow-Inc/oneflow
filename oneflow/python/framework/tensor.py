@@ -273,12 +273,7 @@ class Tensor:
     @requires_grad.setter
     def requires_grad(self, requires_grad):
         if self._local_or_consistent_tensor is not None:
-            if self.is_leaf:
-                self._local_or_consistent_tensor._set_requires_grad(requires_grad)
-            else:
-                raise RuntimeError(
-                    "You can only change requires_grad flags of leaf tensors."
-                )
+            self._local_or_consistent_tensor.requires_grad = requires_grad
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
