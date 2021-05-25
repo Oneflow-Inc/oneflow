@@ -56,6 +56,13 @@ def _local_tensor_numpy(eager_local_tensor):
     return ndarray
 
 
+@register_local_tensor_method("item")
+def _local_tensor_item(eager_local_tensor):
+    method_name = eager_local_tensor._get_scalar_mirrored_tensor_item_func_name()
+    get_item_func = getattr(eager_local_tensor, method_name)
+    return get_item_func()
+
+
 @register_local_tensor_method("copy_")
 def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
     method_name = eager_local_tensor._get_copy_mirrored_tensor_from_numpy_func_name()
@@ -305,6 +312,15 @@ class Tensor:
 
     def requires_grad_(self, requires_grad=True):
         self.requires_grad = requires_grad
+
+    @_auto_determine
+    def item(self):
+        assert self.is_determined
+        if self.nelemenet() != 1:
+            raise ValueError(
+                "only one element tensors can be converted to Python scalars"
+            )
+        return self._local_or_consistent_tensor.item()
 
     def get_device(self):
         if self._local_or_consistent_tensor is not None:
