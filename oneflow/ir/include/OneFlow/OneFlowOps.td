@@ -100,12 +100,17 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
+
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
+
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
     let summary = "";
     let input = (ins AnyType:$x);
     let output = (outs AnyType:$y);
 }
+
 
 // Idempotent ops
 
