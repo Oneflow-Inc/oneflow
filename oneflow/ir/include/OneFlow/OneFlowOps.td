@@ -102,7 +102,7 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
 
 def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {}
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {

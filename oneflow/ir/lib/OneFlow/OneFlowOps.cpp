@@ -91,6 +91,23 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         op->erase();
         return success();
       }
+    } else if (op_type_name.equals("scalar_mul_by_tensor")) {
+      // TODO: refine redundant code
+      NamedAttrList attributes(op->getAttrDictionary());
+      attributes.erase("operand_segment_sizes");
+      attributes.erase("result_segment_sizes");
+      auto unknownLoc = UnknownLoc::get(rewriter.getContext());
+      OperationState state(unknownLoc, "oneflow." + op_type_name.str());
+      state.addAttributes(attributes);
+      state.addOperands(op->getOperands());
+      assert(op.data_input().size() == 2);
+      assert(op.data_output().size() == 1);
+      state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+      if (auto elementwise = rewriter.createOperation(state)) {
+        op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
+        op->erase();
+        return success();
+      }
     }
     return failure();
   }
