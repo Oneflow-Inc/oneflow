@@ -286,16 +286,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const {
-    return impl_->blob_object();
-  }
-
-  // Setters to be deprecated
-  Maybe<void> set_blob_object(const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-    return impl_->set_blob_object(blob_object);
-  }
-
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
       const std::shared_ptr<const compatible_py::Distribute>& distribute,
