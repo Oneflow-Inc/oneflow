@@ -626,7 +626,6 @@ Maybe<one::UserOpExpr> MatmulGradOp(const bool& transpose_a, const bool& transpo
   return one::OpBuilder("matmul", name)
       .Input("a")
       .Input("b")
-      .Input("_add_to_output")
       .Output("out")
       .Attr<bool>("transpose_a", transpose_a)
       .Attr<bool>("transpose_b", transpose_b)

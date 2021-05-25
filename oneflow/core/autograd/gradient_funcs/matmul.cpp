@@ -75,32 +75,36 @@ Maybe<void> Matmul::Capture(MatmulInterpState* ctx, const TensorTuple& inputs,
   ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));
   ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b"));
   ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+  ctx->SaveTensorForBackward(inputs.at(0));  // input a
+  ctx->SaveTensorForBackward(inputs.at(1));  // input b
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
-  std::cout << "matmul backward cpp function !!!!!!!!!!!!!! <<<<<<<<<<<<<<<<< " << std::endl;
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   MutableAttrMap attrs;
+
+  const auto& input_a = ctx->SavedTensors().at(0);
+  const auto& input_b = ctx->SavedTensors().at(1);
   if (ctx->requires_grad_a) {
     if (ctx->transpose_a) {
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op1_, {out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op1_, {input_b, out_grads.at(0)}, attrs));
     } else {
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op2_, {out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op2_, {out_grads.at(0), input_b}, attrs));
     }
   }
 
   if (ctx->requires_grad_b) {
     if (ctx->transpose_b) {
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op1_, {out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op1_, {out_grads.at(0), input_a}, attrs));
     } else {
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op2_, {out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op2_, {input_a, out_grads.at(0)}, attrs));
     }
   }
   return Maybe<void>::Ok();
