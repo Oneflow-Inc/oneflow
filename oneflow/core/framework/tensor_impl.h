@@ -144,6 +144,7 @@ class ConsistentTensorImpl : public TensorImpl {
   virtual ~ConsistentTensorImpl() = default;
 
   // Getters
+  Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return tensor_meta_->dtype(); }
   Symbol<cfg::ParallelDistribution> parallel_distribution() const {
