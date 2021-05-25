@@ -60,16 +60,10 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& 
   CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
   const auto& input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
-  std::shared_ptr<EagerMirroredTensorImpl> eager_mirrored_tensor_impl =
-      std::dynamic_pointer_cast<EagerMirroredTensorImpl>(
-          JUST(input_mirrored_tensor->mirrored_tensor_impl()));
-  CHECK_OR_RETURN(eager_mirrored_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
-  std::shared_ptr<const cfg::ParallelDistribution> parallel_distribution =
-      JUST(op_expr.parallel_distribution());
-  std::shared_ptr<const ParallelDesc> parallel_desc = JUST(op_expr.parallel_desc());
-  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
-      JUST(EagerConsistentTensorImpl::New(eager_mirrored_tensor_impl, parallel_distribution,
-                                          parallel_desc));
+  auto parallel_distribution = op_expr.parallel_distribution();
+  auto parallel_desc = op_expr.parallel_desc();
+  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl = JUST(
+      EagerConsistentTensorImpl::New(input_mirrored_tensor, parallel_distribution, parallel_desc));
   std::shared_ptr<ConsistentTensor> consistent_tensor =
       std::make_shared<ConsistentTensor>(eager_consistent_tensor_impl);
   const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(consistent_tensor);
@@ -89,10 +83,8 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr
       std::dynamic_pointer_cast<EagerConsistentTensorImpl>(
           JUST(input_consistent_tensor->consistent_tensor_impl()));
   CHECK_OR_RETURN(eager_consistent_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
-  std::shared_ptr<EagerMirroredTensorImpl> eager_mirrored_tensor_impl =
-      eager_consistent_tensor_impl->cur_rank_phy_tensor_impl();
-  std::shared_ptr<MirroredTensor> mirrored_tensor =
-      std::make_shared<MirroredTensor>(eager_mirrored_tensor_impl);
+  const std::shared_ptr<MirroredTensor>& mirrored_tensor =
+      eager_consistent_tensor_impl->cur_rank_phy_tensor();
   const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(mirrored_tensor);
   CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
   outputs->at(0) = out_tensor;

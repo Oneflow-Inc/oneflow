@@ -113,10 +113,10 @@ template<>
   } else {
     const auto& parallel_distribution = std::make_shared<cfg::ParallelDistribution>();
     *parallel_distribution->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
-    const auto& tensor =
-        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, parallel_distribution,
-                                          parallel_attr->parallel_desc_symbol(), is_lazy,
-                                          /*requires_grad=*/false, /*is_leaf=*/false));
+    const auto& tensor = JUST(
+        ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*parallel_distribution),
+                                     SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
+                                     /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 }

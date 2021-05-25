@@ -56,13 +56,31 @@ struct TensorExportUtil<ConsistentTensor> final {
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, parallel_distribution, parallel_desc, is_lazy,
-                                        requires_grad, is_leaf)
+    return ConsistentTensor::MakeTensor(shape, dtype, SymbolOf(*parallel_distribution),
+                                        SymbolOf(*parallel_desc), is_lazy, requires_grad, is_leaf)
         .GetPtrOrThrow();
   }
 };
 
 namespace {
+
+Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor,
+        [](uint64_t of_blob_ptr) {
+          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+          of_blob->AsyncAutoMemset(0);
+        },
+        "mut");
+  }));
+
+  return Maybe<void>::Ok();
+}
+
+void ApiEagerMirroredTensorZeros(const std::shared_ptr<MirroredTensor>& tensor) {
+  return EagerMirroredTensorZeros(tensor).GetOrThrow();
+}
 
 template<typename T>
 Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTensor>& tensor,
@@ -71,7 +89,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
                                               const std::string& modifier) {
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) {
     builder->AccessBlobByCallback(
         tensor,
         [&array, &synced, &Copy](uint64_t ofblob_ptr) {
@@ -79,7 +97,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
           synced = true;
         },
         modifier);
-  });
+  }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
                                                                     while (!synced) {}
@@ -137,7 +155,7 @@ std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
 }
 
 std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
-  return tensor.parallel_desc().GetPtrOrThrow();
+  return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
 }
 
 }  // namespace
@@ -156,6 +174,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
            &ApiGetCopyMirroredTensorToNumpyFuncName);
   api->def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName);
+  api->def("zeros_", &ApiEagerMirroredTensorZeros);
 }
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {

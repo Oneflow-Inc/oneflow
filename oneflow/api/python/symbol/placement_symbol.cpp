@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -90,6 +91,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
+
+  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "ParallelDescSymbol")
+      .def(py::init([](const std::shared_ptr<ParallelDesc>& parallel_desc) {
+        return Symbol<ParallelDesc>(*parallel_desc);
+      }));
 }
 
 }  // namespace oneflow

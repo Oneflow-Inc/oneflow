@@ -549,33 +549,98 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
 }
 
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
   return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_distribution,
                             parallel_desc);
 }
 Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
-    const std::string& name,
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
   std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
       JUST(one::CastToConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
   return cast_to_consistent_op_expr;
 }
 
 Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
   return CastFromConsistentOp(UniqueOpName("cast_from_consistent"), parallel_distribution,
                               parallel_desc);
 }
 Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
-    const std::string& name,
-    const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution,
-    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
   std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
       JUST(one::CastFromConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
   return cast_from_consistent_op_expr;
+}
+
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
+  return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
+}
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
+  return one::OpBuilder("dim_scatter_add_like", name)
+      .Input("like")
+      .Input("input")
+      .Input("index")
+      .Output("output")
+      .Attr<int32_t>("dim", dim)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm) {
+  return TransposeOp(perm, UniqueOpName("transpose"));
+}
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name) {
+  return one::OpBuilder("transpose", name)
+      .Input("input")
+      .Output("output")
+      .Attr<std::vector<int32_t>>("perm", perm)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride) {
+  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+}
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name) {
+  return one::OpBuilder("expand_grad", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<int32_t>>("out_shape", out_shape)
+      .Attr<std::vector<int32_t>>("stride", stride)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
+  return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
+}
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name) {
+  return one::OpBuilder(unary_op_type + "_grad", name).Input("x").Input("dy").Output("dx").Build();
+}
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type) {
+  return BinaryXGradOp(binary_op_type, UniqueOpName(binary_op_type + "_x_grad"));
+}
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_x_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dx")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type) {
+  return BinaryYGradOp(binary_op_type, UniqueOpName(binary_op_type + "_y_grad"));
+}
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_y_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dy")
+      .Build();
 }
 
 }  // namespace op_expr_helper

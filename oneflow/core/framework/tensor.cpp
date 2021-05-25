@@ -68,16 +68,16 @@ std::shared_ptr<Tensor> MirroredTensor::detach() const {
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
-    const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-    bool is_leaf) {
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
+    bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
+  Symbol<ConsistentTensorMeta> consistent_tensor_meta(
+      ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
   if (is_lazy) {
-    impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, parallel_distribution,
-                                                      parallel_desc, requires_grad, is_leaf);
+    impl =
+        std::make_shared<LazyConsistentTensorImpl>(consistent_tensor_meta, requires_grad, is_leaf);
   } else {
-    impl = JUST(EagerConsistentTensorImpl::New(shape, dtype, parallel_distribution, parallel_desc,
-                                               requires_grad, is_leaf));
+    impl = JUST(EagerConsistentTensorImpl::New(consistent_tensor_meta, requires_grad, is_leaf));
   }
   return std::make_shared<ConsistentTensor>(impl);
 }
