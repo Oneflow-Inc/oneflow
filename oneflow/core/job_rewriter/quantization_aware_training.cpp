@@ -170,7 +170,7 @@ std::string QuantizationSchemeAttr4QatConfig(const QatConfig& qat_config) {
 // TODO: refactor the following 4 methods by registration
 std::string QuantizationFormulaAttr4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return "google";
   } else if (target_backend == "cambricon") {
     return "cambricon";
@@ -185,6 +185,8 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
     return {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
   } else if (target_backend == "cambricon") {
     return {"conv2d", "matmul"};
+  } else if (target_backend == "tensorrt7") {
+    return {"conv2d"};
   } else {
     UNIMPLEMENTED();
   }
@@ -192,7 +194,7 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
 
 OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return {"reshape"};
   } else if (target_backend == "cambricon") {
     return {};
@@ -203,7 +205,7 @@ OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
 
 bool InsertQuantOpAfterInt8Ops4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return true;
   } else if (target_backend == "cambricon") {
     return false;
