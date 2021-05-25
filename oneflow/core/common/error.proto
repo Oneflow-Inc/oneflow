@@ -163,6 +163,6 @@ message ErrorProto {
     SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
     UnknownError unknown_error = 900;
     CompileOptionWrongError compile_option_wrong_error = 950;
-    InputDeviceNotMatchError tensor_device_not_math_error = 1000;
+    InputDeviceNotMatchError input_device_not_math_error = 1000;
   }
 }
