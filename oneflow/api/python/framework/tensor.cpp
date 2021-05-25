@@ -118,6 +118,12 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<MirroredTensor>& tenso
       .GetOrThrow();
 }
 
+template<typename T>
+T ApiScalarMirroredTensorItem(const std::shared_ptr<MirroredTensor>& tensor) {
+  const auto& eager_blob_object = tensor->eager_blob_object().GetPtrOrThrow();
+  return *(eager_blob_object->blob().dptr<T>());
+}
+
 Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
@@ -148,6 +154,21 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
 }
 
+Maybe<std::string> GetScalarMirroredTensorItemFuncName(const DType& dtype) {
+  using namespace oneflow;
+  static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
+#define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
+  {type_proto, std::make_shared<std::string>("_item_with_dtype_" #type_cpp)},
+      OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
+#undef DATA_TYPE_FUNC_NAME_PAIR
+  };
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+}
+
+const std::string& ApiGetScalarMirroredTensorItemFuncName(const Tensor& tensor) {
+  return *GetScalarMirroredTensorItemFuncName(*tensor.dtype()).GetPtrOrThrow();
+}
+
 std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
   return tensor.device().GetPtrOrThrow();
 }
@@ -162,9 +183,10 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
-#define DEFINE_TENSOR_METHOD(T, type_proto)                         \
-  api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
-  api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
+#define DEFINE_TENSOR_METHOD(T, type_proto)                             \
+  api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>);     \
+  api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>); \
+  api->def("_item_with_dtype_" #T, &ApiScalarMirroredTensorItem<T>);
   OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ);
 
 #undef DEFINE_TENSOR_METHOD
@@ -172,6 +194,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
            &ApiGetCopyMirroredTensorToNumpyFuncName);
   api->def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName);
+  api->def("_get_scalar_mirrored_tensor_item_func_name", &ApiGetScalarMirroredTensorItemFuncName);
   api->def("zeros_", &ApiEagerMirroredTensorZeros);
 }
 

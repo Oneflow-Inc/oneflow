@@ -157,6 +157,16 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_scalar_item(test_case):
+        x = flow.Tensor([1.0], dtype=flow.float)
+        test_case.assertEqual(x.item(), 1.0)
+        x = flow.Tensor([5], dtype=flow.int)
+        test_case.assertTrue(x.item(), 5)
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_autograd_related_methods(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(*shape)
