@@ -279,10 +279,6 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
-    return compute_local_dep_object_;
-  }
-
   Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
                               const EagerBlobObjectListPtr& outputs,
                               LocalUserOpInferContext* op_infer_ctx);
@@ -352,7 +348,6 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
