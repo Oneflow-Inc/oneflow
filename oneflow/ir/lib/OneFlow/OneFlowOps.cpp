@@ -38,7 +38,6 @@ static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::Operat
 
 static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
-// TODO: replace this with a condition to merge all ctrl input and output when folding op
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
   const int32_t num_ctrl_outputs =
@@ -116,6 +115,7 @@ void SystemOp::getCanonicalizationPatterns(::mlir::RewritePatternSet& results,
   results.insert<ConcreteSystemOps>(context);
 }
 
+// TODO: rmerge all ctrl input and output when folding op
 bool HaveIdenticalPlacement(mlir::Operation* a, mlir::Operation* b) {
   UserOpAdaptor adaptor_a(a->getOperands(), a->getAttrDictionary());
   UserOpAdaptor adaptor_b(b->getOperands(), b->getAttrDictionary());
