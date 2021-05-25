@@ -16,6 +16,9 @@ limitations under the License.
 import oneflow.experimental as flow
 import unittest
 import numpy as np
+from collections import OrderedDict
+
+from test_util import GenArgList
 
 
 @unittest.skipIf(
@@ -215,28 +218,56 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+def _test_abs_forward(test_case, device):
+    input = flow.Tensor(np.random.randn(2, 3).astype(np.float32))
+    of_out = flow.abs(input)
+    np_out = np.abs(input.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(input.abs().numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_abs_tensor_function_forward(test_case, device):
+    x = np.random.randn(2, 3).astype(np.float32)
+    input = flow.Tensor(x, dtype=flow.float32)
+    np_out = np.abs(x)
+    of_out = input.abs()
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_abs_backward(test_case, device):
+    np_input = np.random.randn(2, 3).astype(np.float32)
+    input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+    of_out = flow.abs(input).sum()
+    of_out.backward()
+    np_grad = np.where(np_input > 0, 1, -1)
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_abs_tensor_function_backward(test_case, device):
+    np_input = np.random.randn(2, 3).astype(np.float32)
+    input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+    of_out = input.abs().sum()
+    of_out.backward()
+    np_grad = np.where(np_input > 0, 1, -1)
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestAbs(flow.unittest.TestCase):
-    def test_abs(test_case):
-        input = flow.Tensor(np.random.randn(2, 3).astype(np.float32))
-        of_out = flow.abs(input)
-        np_out = np.abs(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-        test_case.assertTrue(np.allclose(input.abs().numpy(), np_out, 1e-5, 1e-5))
-
-    def test_abs_tensor_function(test_case):
-        x = np.random.randn(2, 3).astype(np.float32)
-        input = flow.Tensor(x, dtype=flow.float32)
-        np_out = np.abs(x)
-        of_out = input.abs()
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_abs_grad(test_case):
-        np_input = np.random.randn(2, 3).astype(np.float32)
-        input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
-        of_out = flow.abs(input).sum()
-        of_out.backward()
-        np_grad = np.where(np_input > 0, 1, -1)
-        test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+    def test_cosh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_abs_forward,
+            _test_abs_tensor_function_forward,
+            _test_abs_backward,
+            _test_abs_tensor_function_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
