@@ -30,7 +30,6 @@ class TestEagerModel(flow.unittest.TestCase):
     def test_model(test_case):
         model_dir = tempfile.TemporaryDirectory()
         model_dir_path = model_dir.name
-        print(model_dir)
         para = np.random.randn(2, 3)
         in_data = np.full((2, 3), 1)
 
