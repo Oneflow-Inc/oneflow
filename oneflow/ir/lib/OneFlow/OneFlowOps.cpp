@@ -29,9 +29,9 @@ using namespace mlir::oneflow;
 static mlir::ParseResult parseConstantOp(mlir::OpAsmParser& parser, mlir::OperationState& result) {
   mlir::DenseElementsAttr value;
   if (parser.parseOptionalAttrDict(result.attributes)
-      || parser.parseAttribute(value, "value", result.attributes))
+      || parser.parseAttribute(value, "value", result.attributes)) {
     return failure();
-
+  }
   result.addTypes(value.getType());
   return success();
 }
