@@ -1162,7 +1162,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   InterJobMemSharingUtil::MergeMemReusedChunkBetweenUserJobs(function_jobs, &plan);
   InterJobMemSharingUtil::MergeMemSharedInterfaceMemBlockBetweenJobs(jobs, &plan);
   PlanUtil::SetForceInplaceMemBlock(&plan);
-  FinishGlobalCriticalSectionDesc(plan, jobs.size());
+  FinishGlobalCriticalSectionDesc( plan, jobs.size());
   Plan main_plan;
   std::vector<std::map<int64_t, std::string>> identity_tick_op_names;
   {
