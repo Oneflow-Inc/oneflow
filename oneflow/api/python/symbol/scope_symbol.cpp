@@ -30,6 +30,10 @@ Maybe<Scope> CreateScopeSymbol(int64_t symbol_id,
   return Scope::New(symbol_id, symbol_pb);
 }
 
+std::shared_ptr<const ParallelDesc> GetDeviceParallelDesc(const Scope& scope) {
+  return scope.device_parallel_desc_symbol().GetOrThrow().shared_from_symbol();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Scope, std::shared_ptr<Scope>>(m, "ScopeSymbol")
       .def(py::init([](int64_t symbol_id, const std::shared_ptr<cfg::ScopeProto>& symbol_conf) {
@@ -40,7 +44,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("job_desc_symbol", &Scope::job_desc_symbol)
-      .def_property_readonly("device_parallel_desc_symbol", &Scope::device_parallel_desc_symbol)
+      .def_property_readonly("device_parallel_desc_symbol", &GetDeviceParallelDesc)
       .def_property_readonly("parent_scope_symbol", &Scope::parent_scope_symbol)
       .def("MakeChildScopeProto",
            [](const Scope& scope) { return scope.MakeChildScopeProto().GetOrThrow(); });
