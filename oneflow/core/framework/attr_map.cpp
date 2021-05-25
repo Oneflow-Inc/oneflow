@@ -23,31 +23,84 @@ limitations under the License.
 
 namespace oneflow {
 
-const std::shared_ptr<const AttrName2AttrVal>& EmptyAttrName2AttrVal() {
-  static const auto empty = std::make_shared<const AttrName2AttrVal>();
-  return empty;
+namespace {
+
+size_t HashAttrName2AttrValWrapper(const oneflow::AttrName2AttrValWrapper& attr_name2attr_val) {
+  size_t hash_value = 0;
+  for (const auto& pair : attr_name2attr_val) {
+    hash_value ^= std::hash<std::string>()(pair.first);
+    hash_value ^= pair.second->hash_value();
+  }
+  return hash_value;
 }
 
-AttrMap::AttrMap(std::initializer_list<AttrMap::value_type> init) {
+const AttrName2AttrValWrapper& EmptyAttrName2AttrVal() {
+  static const auto empty = std::make_shared<AttrName2AttrVal>();
+  static const AttrName2AttrValWrapper empty_symbol(empty);
+  return empty_symbol;
+}
+
+}  // namespace
+
+AttrName2AttrValWrapper::AttrName2AttrValWrapper(
+    const std::shared_ptr<const AttrName2AttrVal>& attrs)
+    : attrs_(attrs) {
+  hash_value_ = HashAttrName2AttrValWrapper(*this);
+}
+
+bool AttrName2AttrValWrapper::operator==(const AttrName2AttrValWrapper& other) const {
+  if (this->size() != other.size()) { return false; }
+  for (const_iterator this_iter = this->begin(), that_iter = other.begin();
+       this_iter != this->end(); ++this_iter, ++that_iter) {
+    if (this_iter->first != that_iter->first) { return false; }
+    if (*this_iter->second != *that_iter->second) { return false; }
+  }
+  return true;
+}
+
+AttrMap::AttrMap() : attrs_(EmptyAttrName2AttrVal()) {}
+
+AttrMap::AttrMap(const std::shared_ptr<const AttrName2AttrVal>& attrs) : attrs_(attrs) {}
+
+namespace {
+
+AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(
+    const std::initializer_list<AttrMap::value_type>& init) {
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& pair : init) { attrs->emplace(pair.first, pair.second); }
-  attrs_ = attrs;
+  return AttrName2AttrValWrapper(attrs);
 }
 
-AttrMap::AttrMap(const MutableAttrMap& other) {
+AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableAttrMap& other) {
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& pair : other) { attrs->emplace(pair.first, pair.second); }
-  attrs_ = attrs;
+  return AttrName2AttrValWrapper(attrs);
 }
 
-AttrMap::AttrMap(const MutableCfgAttrMap& other) {
+AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableCfgAttrMap& other) {
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& pair : other) {
     const auto& attr_value = CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(*pair.second));
     attrs->emplace(pair.first, attr_value);
   }
-  attrs_ = attrs;
+  return AttrName2AttrValWrapper(attrs);
 }
+
+}  // namespace
+
+AttrMap::AttrMap(std::initializer_list<AttrMap::value_type> init)
+    : attrs_(MakeAttrName2AttrValWrapper(init)) {}
+
+AttrMap::AttrMap(const MutableAttrMap& other) : attrs_(MakeAttrName2AttrValWrapper(other)) {}
+
+AttrMap::AttrMap(const MutableCfgAttrMap& other) : attrs_(MakeAttrName2AttrValWrapper(other)) {}
+
+AttrMap& AttrMap::operator=(const AttrMap& other) {
+  attrs_ = other.attrs_;
+  return *this;
+}
+
+bool AttrMap::operator==(const AttrMap& other) const { return attrs_ == other.attrs_; }
 
 template<typename T>
 Maybe<const T&> AttrMap::GetAttr(const std::string& attr_name) const {
@@ -67,8 +120,7 @@ const std::shared_ptr<const user_op::AttrVal>& AttrMap::Attr4Name(
 }
 
 AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
-  const auto& attrs =
-      std::make_shared<HashMap<std::string, std::shared_ptr<const user_op::AttrVal>>>();
+  const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& kv : user_op_conf.attr()) {
     attrs->emplace(kv.first, CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(kv.second)));
   }
