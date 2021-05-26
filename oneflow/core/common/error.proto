@@ -111,7 +111,9 @@ message UnknownError { }
 
 message CompileOptionWrongError { }
 
-message InputDeviceNotMatchError { }
+message InputDeviceNotMatchError { 
+  repeated string info = 1;
+}
 
 message ErrorStackFrame {
   required string location = 1;

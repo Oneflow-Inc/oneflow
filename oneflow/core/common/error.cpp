@@ -257,7 +257,10 @@ Error Error::CompileOptionWrong() {
 
 Error Error::InputDeviceNotMatchError() {
   auto error = std::make_shared<cfg::ErrorProto>();
-  error->mutable_input_device_not_match_error();
+  auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
+  input_device_not_match_error->add_info(
+      std::string("The device of all input tensor of this op is inconsistent, please try to use "
+                  "module.to api to solve it!"));
   return error;
 }
 
