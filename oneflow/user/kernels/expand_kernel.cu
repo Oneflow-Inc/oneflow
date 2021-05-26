@@ -145,6 +145,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
 REGISTER_EXPAND_KERNEL(float16);
+REGISTER_EXPAND_KERNEL(int);
 
 template<typename T>
 class GpuExpandGradKernel final : public user_op::OpKernel {
@@ -188,5 +189,6 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);
 REGISTER_EXPAND_GRAD_KERNEL(float16);
+REGISTER_EXPAND_GRAD_KERNEL(int);
 
 }  // namespace oneflow

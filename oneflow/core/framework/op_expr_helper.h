@@ -34,6 +34,12 @@ Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const 
 Maybe<one::UserOpExpr> ZeroLikeOp();
 Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
 
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype);
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype, const std::string& name);
+
+Maybe<one::UserOpExpr> OnesLikeOp();
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name);
+
 template<typename T>
 Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const T& value);
 template<typename T>
@@ -96,6 +102,10 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name);
 
 Maybe<one::UserOpExpr> CastLikeOp();
 Maybe<one::UserOpExpr> CastLikeOp(const std::string& name);
+
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id);
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id,
+                              const std::string& name);
 
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon);
 Maybe<one::UserOpExpr> NormalizationGradOp(const int32_t& axis, const float& epsilon,
@@ -167,6 +177,27 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth);
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
                                                          const std::string& name);
+Maybe<one::UserOpExpr> PReLUGradOp();
+Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
+
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim);
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
+
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride);
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name);
+
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type);
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name);
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow

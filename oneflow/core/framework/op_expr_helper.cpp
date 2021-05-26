@@ -40,6 +40,11 @@ Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name) {
   return one::OpBuilder("zero_like", name).Input("like").Output("out").Build();
 }
 
+Maybe<one::UserOpExpr> OnesLikeOp() { return OnesLikeOp(UniqueOpName("ones_like")); }
+Maybe<one::UserOpExpr> OnesLikeOp(const std::string& name) {
+  return one::OpBuilder("ones_like", name).Input("like").Output("out").Build();
+}
+
 #define DEFINE_FLOATING_CONSTATNT_OP(cpp_type, data_type)                        \
   template<>                                                                     \
   Maybe<one::UserOpExpr> ConstantOp(const Shape& shape, const cpp_type& value,   \
@@ -81,7 +86,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_INTEGER_CONSTATNT_OP, INT_DATA_TYPE_SEQ)
 #undef DEFINE_INTEGER_CONSTATNT_OP
 
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype) {
-  return OnesOp(shape, dtype, UniqueOpName("constant"));
+  return ZerosOp(shape, dtype, UniqueOpName("constant"));
 }
 Maybe<one::UserOpExpr> ZerosOp(const Shape& shape, const DataType& dtype, const std::string& name) {
   switch (dtype) {
@@ -104,6 +109,17 @@ Maybe<one::UserOpExpr> OnesOp(const Shape& shape, const DataType& dtype, const s
 #undef CONSTANT_DATA_TYPE_CASE
     default: UNIMPLEMENTED_THEN_RETURN();
   }
+}
+
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype) {
+  return EmptyOp(shape, dtype, UniqueOpName("empty"));
+}
+Maybe<one::UserOpExpr> EmptyOp(const Shape& shape, const DataType& dtype, const std::string& name) {
+  return one::OpBuilder("empty", name)
+      .Output("out")
+      .Attr<DataType>("dtype", dtype)
+      .Attr<Shape>("shape", shape)
+      .Build();
 }
 
 Maybe<one::UserOpExpr> IdentityOp() { return IdentityOp(UniqueOpName("identity")); }
@@ -272,6 +288,19 @@ Maybe<one::UserOpExpr> CastOp(const DataType& to_type, const std::string& name) 
       .Input("in")
       .Output("out")
       .Attr<DataType>("dtype", to_type)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id) {
+  return CopyOp(device_type, device_id, UniqueOpName("copy"));
+}
+Maybe<one::UserOpExpr> CopyOp(const std::string& device_type, const int64_t device_id,
+                              const std::string& name) {
+  return one::OpBuilder("copy", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::string>("device_type", device_type)
+      .Attr<int64_t>("device_id", device_id)
       .Build();
 }
 
@@ -505,6 +534,85 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
       .Input("dy")
       .Output("prediction_diff")
       .Attr<int64_t>("depth", depth)
+      .Build();
+}
+Maybe<one::UserOpExpr> PReLUGradOp() { return PReLUGradOp(UniqueOpName("prelu_grad")); }
+Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
+  return one::OpBuilder("prelu_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Input("alpha")
+      .Output("dx")
+      .Output("alpha_diff")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
+  return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
+}
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
+  return one::OpBuilder("dim_scatter_add_like", name)
+      .Input("like")
+      .Input("input")
+      .Input("index")
+      .Output("output")
+      .Attr<int32_t>("dim", dim)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm) {
+  return TransposeOp(perm, UniqueOpName("transpose"));
+}
+Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name) {
+  return one::OpBuilder("transpose", name)
+      .Input("input")
+      .Output("output")
+      .Attr<std::vector<int32_t>>("perm", perm)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride) {
+  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+}
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name) {
+  return one::OpBuilder("expand_grad", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<int32_t>>("out_shape", out_shape)
+      .Attr<std::vector<int32_t>>("stride", stride)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
+  return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
+}
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name) {
+  return one::OpBuilder(unary_op_type + "_grad", name).Input("x").Input("dy").Output("dx").Build();
+}
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type) {
+  return BinaryXGradOp(binary_op_type, UniqueOpName(binary_op_type + "_x_grad"));
+}
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_x_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dx")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type) {
+  return BinaryYGradOp(binary_op_type, UniqueOpName(binary_op_type + "_y_grad"));
+}
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_y_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dy")
       .Build();
 }
 

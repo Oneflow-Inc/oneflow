@@ -36,16 +36,50 @@ jobs:
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
-      - name: Check license (please run 'make of_format' if failed)
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Check license
+        id: license_check
         run: |
           python3 ci/check/run_license_format.py -i oneflow -c
-      - name: Check license C++/CUDA format (please run 'make of_format' if failed)
+      - name: Add license
+        id: license_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow --fix
+      - name: Check C++/CUDA format
+        id: cpp_check
         run: |
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-      - name: Check Python format (please run 'make of_format' if failed)
+      - name: Run C++/CUDA format
+        id: cpp_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
+      - name: Check Python format
+        id: py_check
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD
+      - name: Run Python Format
+        id: py_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 -m pip install black==19.10b0
+          python3 ci/check/run_py_format.py --source_dir $PWD --fix
+      - name: Git push
+        id: git_push
+        if: ${{ failure() }}
+        run: |
+          git config --global user.email "ci-bot@oneflow.org"
+          git config --global user.name "oneflow-ci-bot"
+          git add -u
+          git commit -m "auto format by CI"
+          git push
+      - name: Please request CI again
+        if: ${{ failure() }}
+        run: |
+          exit 1
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -74,7 +108,7 @@ jobs:
     needs: [check_license_and_format, mirror_third_party]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
       matrix:
@@ -247,7 +281,15 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite:
-          ["cuda", "cuda_op", "cuda_new_interface", "cpu", "xla", "cuda_op_eager", "cpu_op_eager"]
+          [
+            "cuda",
+            "cuda_op",
+            "cuda_new_interface",
+            "cpu",
+            "xla",
+            "cuda_op_eager",
+            "cpu_op_eager",
+          ]
         include:
           - test_suite: "cuda"
             os: [self-hosted, linux, gpu]
@@ -347,25 +389,23 @@ jobs:
       - name: Op test (distributed)
         if: matrix.test_suite == 'cuda'
         run: |
-          python3 ci/test/distributed_run.py --make_dotssh
-          python3 ci/test/distributed_run.py --run --bash_script=ci/test/2node_op_test.sh \
-            --build_docker_img \
-            --oneflow_wheel_path=${wheelhouse_dir} \
-            --oneflow_worker_bin=${bin_dir}/oneflow_worker
+          python3 ci/test/distributed_run.py \
+            --bash_script=ci/test/2node_op_test.sh \
+            --oneflow_wheel_path=${wheelhouse_dir}
+      - name: Upload log (distributed test)
+        if: failure() && matrix.test_suite == 'cuda'
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: distributed-tmp
+          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
+          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Print backtrace (distributed test)
         if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
-      - name: Upload log (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: oneflow_temp
-          oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/oneflow_temp
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |

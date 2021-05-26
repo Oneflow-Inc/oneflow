@@ -22,6 +22,24 @@ import numpy as np
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestVariance(flow.unittest.TestCase):
+    def test_variance(test_case):
+        input_arr = np.random.randn(2, 3, 4, 5)
+        of_out = flow.Tensor(input_arr).var(1, True)
+        np_out = np.var(input_arr, 1, keepdims=True)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    def test_variance_v2(test_case):
+        input_arr = np.random.randn(4, 1, 3, 2)
+        of_out = flow.var(flow.Tensor(input_arr), 2, False)
+        np_out = np.var(input_arr, 2, keepdims=False)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSin(flow.unittest.TestCase):
     def test_sin(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3))
@@ -99,6 +117,13 @@ class TestStd(flow.unittest.TestCase):
         np_out = np.std(np_arr, axis=1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    def test_std_negative_dim(test_case):
+        np_arr = np.random.randn(4, 2, 3, 5)
+        input = flow.Tensor(np_arr)
+        of_out = input.std(dim=(-2, -1, -3), keepdim=False)
+        np_out = np.std(np_arr, axis=(-2, -1, -3))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -128,6 +153,30 @@ class TestSqrt(flow.unittest.TestCase):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
+class TestRsqrt(flow.unittest.TestCase):
+    def test_rsqrt(test_case):
+        input_arr = np.random.randn(2, 3, 4, 5)
+        np_out = 1 / np.sqrt(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = x.rsqrt()
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    def test_rsqrt_tensor_function(test_case):
+        input_arr = np.random.randn(3, 2, 5, 7)
+        np_out = 1 / np.sqrt(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = flow.rsqrt(input=x)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestSquare(flow.unittest.TestCase):
     def test_square(test_case):
         input_arr = np.random.randn(9, 4, 5, 6)
@@ -146,24 +195,6 @@ class TestSquare(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
-
-
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-class TestPow(flow.unittest.TestCase):
-    def test_pow(test_case):
-        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = flow.pow(input, 2.1)
-        np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_pow_tensor_function(test_case):
-        input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
-        of_out = input.pow(2.1)
-        np_out = np.power(input.numpy(), 2.1)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":

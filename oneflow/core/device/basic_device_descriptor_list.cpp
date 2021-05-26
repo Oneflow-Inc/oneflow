@@ -13,20 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
-
-#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/device/basic_device_descriptor_list.h"
 
 namespace oneflow {
 
-namespace vm {
+namespace device {
 
-void ReadTensorShapeArgCbPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(MirroredObject* infer, MirroredObject* compute)>& DoEach) const {
-  vm::LocalDepObject* infer_local_dep_object =
-      CHECK_JUST(eager_blob_object()->infer_local_dep_object())->mut_local_dep_object();
-  DoEach(infer_local_dep_object->mut_mirrored_object(), nullptr);
+BasicDeviceDescriptorList::BasicDeviceDescriptorList(
+    std::vector<std::shared_ptr<const DeviceDescriptor>> device_descriptor_list)
+    : device_descriptor_list_(std::move(device_descriptor_list)) {}
+
+BasicDeviceDescriptorList::~BasicDeviceDescriptorList() = default;
+
+size_t BasicDeviceDescriptorList::DeviceCount() const { return device_descriptor_list_.size(); }
+
+std::shared_ptr<const DeviceDescriptor> BasicDeviceDescriptorList::GetDevice(size_t ordinal) const {
+  return device_descriptor_list_.at(ordinal);
 }
 
-}  // namespace vm
+}  // namespace device
+
 }  // namespace oneflow

@@ -28,7 +28,9 @@ class Less(Module):
 
     def forward(self, x, y):
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
         return self._op(x, y)[0]
 
 
@@ -41,7 +43,6 @@ def less_op(x, y):
     Args:
         x (oneflow.Tensor): A Tensor
         y (oneflow.Tensor): A Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: A Tensor with int8 type.

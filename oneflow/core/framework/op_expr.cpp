@@ -71,8 +71,9 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   BuildOpConf(op_conf.get(), {});
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
-  const auto& opkernel = JUST(StatefulLocalOpKernel::New(op_conf, device.mem_case(), parallel_desc,
-                                                         input_arg_tuple(), output_arg_tuple()));
+  const auto& opkernel =
+      JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), base_attrs(),
+                                      parallel_desc, input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -121,19 +122,19 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   }
 
   std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
-                                                                    int32_t index) override {
+                                                                    int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return &output_devices_->at(tuple_index);
   }
 
-  const std::shared_ptr<const Device>& InputTensorDevice4ArgNameAndIndex(
-      const std::string& name, int32_t index) const override {
+  std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                                  int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return input_tensors_->at(tuple_index)->device();
+    return CHECK_JUST(input_tensors_->at(tuple_index)->device());
   }
 
  private:
@@ -149,14 +150,22 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto,
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(MakeAttrMapFromUserOpConf(proto)) {
+      base_attrs_(base_attrs) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+}
+
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
+                                               const std::vector<std::string>& indexed_ibns,
+                                               const std::vector<std::string>& indexed_obns) {
+  AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
+  return std::shared_ptr<UserOpExpr>(
+      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
 }
 
 Maybe<const Device> UserOpExpr::InferDevices(

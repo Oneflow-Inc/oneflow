@@ -21,6 +21,7 @@ namespace oneflow {
 class ForeignLockHelper {
  public:
   virtual void WithScopedRelease(const std::function<void()>&) const = 0;
+  virtual void WithScopedAcquire(const std::function<void()>&) const = 0;
 };
 }  // namespace oneflow
 

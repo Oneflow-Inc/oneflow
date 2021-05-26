@@ -49,12 +49,12 @@ def arange_op(start=1, end=1, step=1):
     the gap between two values in the tensor.
 
     .. math::
-    \text{out}_{i+1} = \text{out}_i + \text{step}.
+        \text{out}_{i+1} = \text{out}_i + \text{step}.
 
     Args:
-    start (float): the starting value for the set of points. Default: ``0``.
-    end (float): the ending value for the set of points
-    step (float): the gap between each pair of adjacent points. Default: ``1``.
+        start (float): the starting value for the set of points. Default: ``0``.
+        end (float): the ending value for the set of points
+        step (float): the gap between each pair of adjacent points. Default: ``1``.
 
     Keyword args:
     dtype: If `dtype` is not given, the `dtype` is inferred to be the default dtype.

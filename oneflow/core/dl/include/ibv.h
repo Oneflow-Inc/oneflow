@@ -46,10 +46,12 @@ extern "C" typedef struct IBV {
 #undef DECLARE_ONE
   // for a function is not only a function but also a macro,
   // it requires an alternative name
-  struct ibv_mr* (*ibv_reg_mr_)(struct ibv_pd* pd, void* addr, size_t length, int access);
-  int (*ibv_query_port_)(struct ibv_context* context, uint8_t port_num,
-                         struct ibv_port_attr* port_attr);
+  struct ibv_mr* (*ibv_reg_mr_wrap)(struct ibv_pd* pd, void* addr, size_t length, int access);
+  int (*ibv_query_port_wrap)(struct ibv_context* context, uint8_t port_num,
+                             struct ibv_port_attr* port_attr);
 } IBV;
+
+bool IsAvailable();
 
 extern IBV wrapper;
 

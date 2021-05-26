@@ -16,6 +16,7 @@ limitations under the License.
 #ifdef WITH_CUDA
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/async_cuda_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -24,7 +25,7 @@ class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
   GpuLazyReferenceInstructionType() = default;
   ~GpuLazyReferenceInstructionType() override = default;
 
-  using stream_type = vm::CudaStreamType;
+  using stream_type = vm::AsyncCudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
@@ -36,6 +37,14 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
 };
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
     "gpu.AccessBlobByCallback"));
+
+class GpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+ public:
+  GpuSoftSyncStreamInstructionType() = default;
+  ~GpuSoftSyncStreamInstructionType() override = default;
+  using stream_type = vm::CudaStreamType;
+};
+COMMAND(vm::RegisterInstructionType<GpuSoftSyncStreamInstructionType>("gpu.SoftSyncStream"));
 
 }  // namespace vm
 }  // namespace oneflow

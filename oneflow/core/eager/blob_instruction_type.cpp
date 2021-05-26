@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/object_msg/flat_msg_view.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/vm/read_tensor_shape_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.msg.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/string_object.h"
@@ -129,36 +128,7 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
-  // Always records instruction-complete event.
-  instruction->set_has_event_record(true);
 }
-
-class ReadTensorShapeByCallbackInstructionType : public vm::InstructionType {
- public:
-  ReadTensorShapeByCallbackInstructionType() = default;
-  ~ReadTensorShapeByCallbackInstructionType() override = default;
-
-  using stream_type = vm::ControlStreamType;
-
-  void Compute(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
-    // do nothing
-  }
-
-  void Infer(vm::VirtualMachine*, vm::InstructionMsg* instr_msg) const override {
-    const auto& phy_instr_operand = instr_msg->phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr =
-        dynamic_cast<const vm::ReadTensorShapeArgCbPhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    ptr->callback()(ptr->eager_blob_object()->blob_desc().shape_ptr());
-  }
-
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Compute(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
-};
-
-COMMAND(vm::RegisterInstructionType<ReadTensorShapeByCallbackInstructionType>(
-    "ReadTensorShapeByCallback"));
 
 }  // namespace vm
 }  // namespace oneflow

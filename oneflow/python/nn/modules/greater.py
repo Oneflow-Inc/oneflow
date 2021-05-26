@@ -32,12 +32,13 @@ class Greater(Module):
 
     def forward(self, x, y):
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
         return self._op(x, y)[0]
 
 
 @oneflow_export("gt")
-@register_tensor_op("gt")
 @experimental_api
 def greater_op(x, y):
     r"""Returns the truth value of :math:`x > y` element-wise.
@@ -45,7 +46,6 @@ def greater_op(x, y):
     Args:
         x (oneflow.Tensor): A Tensor
         y (oneflow.Tensor): A Tensor
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.Tensor: A Tensor with int8 type.
@@ -62,6 +62,19 @@ def greater_op(x, y):
         
         out = flow.gt(input1, input2).numpy()
         # out shape (2, 6, 5, 3)
+    
+    """
+    return Greater()(x, y)
+
+
+@register_tensor_op("gt")
+@experimental_api
+def greater_op_tensor(x, y):
+    r"""
+
+    gt() -> Tensor
+
+    See :func:`oneflow.experimental.gt`
     
     """
     return Greater()(x, y)

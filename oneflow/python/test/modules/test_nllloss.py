@@ -56,6 +56,24 @@ def nll_loss_2d(logs, targets, reduction="none"):
         return out
 
 
+def nll_loss_bert(logs, targets, reduction="none"):
+    input_shape = logs.shape
+    N = input_shape[0]
+    H = input_shape[2]
+    out = np.zeros_like(targets).astype(np.float64)
+    total_weight = N * H
+    for i in range(N):
+        for h in range(H):
+            cur_target = targets[i][h]
+            out[i][h] = -logs[i][cur_target][h]
+    if reduction == "sum":
+        return np.sum(out)
+    elif reduction == "mean":
+        return out.sum() / total_weight
+    elif reduction == "none":
+        return out
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -152,6 +170,42 @@ class TestNLLLossModule(flow.unittest.TestCase):
         nll_loss = flow.nn.NLLLoss(reduction="sum")
         of_out = nll_loss(input, target)
         np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="sum")
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_nllloss_bert_none(test_case):
+        x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
+            np.float32
+        )
+        input = flow.Tensor(x, dtype=flow.float32)
+        y = np.array([[1, 0, 0, 1]]).astype(np.int)
+        target = flow.Tensor(y, dtype=flow.int64)
+        nll_loss = flow.nn.NLLLoss()
+        of_out = nll_loss(input, target)
+        np_out = nll_loss_bert(input.numpy(), target.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_nllloss_bert_mean(test_case):
+        x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
+            np.float32
+        )
+        input = flow.Tensor(x, dtype=flow.float32)
+        y = np.array([[1, 0, 0, 1]]).astype(np.int)
+        target = flow.Tensor(y, dtype=flow.int64)
+        nll_loss = flow.nn.NLLLoss(reduction="mean")
+        of_out = nll_loss(input, target)
+        np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="mean")
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    def test_nllloss_bert_sum(test_case):
+        x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
+            np.float32
+        )
+        input = flow.Tensor(x, dtype=flow.float32)
+        y = np.array([[1, 0, 0, 1]]).astype(np.int)
+        target = flow.Tensor(y, dtype=flow.int64)
+        nll_loss = flow.nn.NLLLoss(reduction="sum")
+        of_out = nll_loss(input, target)
+        np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="sum")
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 

@@ -28,25 +28,8 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<void> TensorImpl::SyncBlobObject2Attributes(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  set_shape(blob_object->op_arg_blob_attr()->shape());
-  DataType data_type = static_cast<DataType>(blob_object->op_arg_blob_attr()->get_dtype());
-  const std::shared_ptr<DType>& dtype = JUST(DType::GetDTypeByDataType(data_type));
-  set_dtype(dtype);
-  return set_parallel_desc(blob_object->op_arg_parallel_attr()->parallel_desc_symbol());
-}
-
 Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
-  parallel_desc_ = device->parallel_desc_ptr();
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> MirroredTensorImpl::set_parallel_desc(
-    const std::shared_ptr<const ParallelDesc>& parallel_desc) {
-  parallel_desc_ = parallel_desc;
-  device_ = JUST(Device::MakeDeviceByParallelDesc(*parallel_desc));
   return Maybe<void>::Ok();
 }
 
@@ -56,19 +39,7 @@ Maybe<void> ConsistentTensorImpl::set_parallel_desc(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerMirroredTensorImpl::set_blob_object(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  UNIMPLEMENTED();
-  return Maybe<void>::Ok();
-}
-
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
-
-Maybe<void> EagerConsistentTensorImpl::set_blob_object(
-    const std::shared_ptr<compatible_py::BlobObject>& blob_object) {
-  blob_object_ = blob_object;
-  return SyncBlobObject2Attributes(blob_object);
-}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
@@ -76,17 +47,13 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     : MirroredTensorImpl(device, requires_grad, is_leaf), eager_blob_object_(eager_blob_object) {
   dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
-  const auto& parallel_desc = this->parallel_desc();
+  const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         PhysicalRun([&](InstructionsBuilder* builder) {
           builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
       });
-}
-
-Maybe<VmLocalDepObject> EagerMirroredTensorImpl::infer_local_dep_object() const {
-  return eager_blob_object_->infer_local_dep_object();
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
@@ -96,22 +63,20 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
-  const std::shared_ptr<const Shape>* result = nullptr;
-  Global<ForeignLockHelper>::Get()->WithScopedRelease([this, &result]() {
-    BlockingCounter bc(1);
-    auto callback = [&bc, &result](const std::shared_ptr<const Shape>& shape) -> void {
-      result = &shape;
-      bc.Decrease();
-    };
-    auto build_instruction = [&](InstructionsBuilder* builder) -> Maybe<void> {
-      JUST(builder->ReadTensorShapeByCallback(JUST(eager_blob_object()), callback));
-      return Maybe<void>::Ok();
-    };
-    CHECK_JUST(PhysicalRun(build_instruction));
-    bc.WaitUntilCntEqualZero();
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        this, [&synced](uint64_t) { synced = true; }, "const");
   });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    // spin wait
+    while (!synced) {}
+  });
+
   eager_blob_object_->set_is_shape_synced(true);
-  return *result;
+  return eager_blob_object_->blob_desc().shape_ptr();
 }
 
 }  // namespace one

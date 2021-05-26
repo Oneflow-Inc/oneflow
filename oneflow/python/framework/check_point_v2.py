@@ -135,7 +135,7 @@ ValueContainer = Union[
 
 
 def _ElemCnt(shape):
-    return np.prod(shape).astype(np.int).item()
+    return np.prod(shape).astype(int).item()
 
 
 @oneflow_export("get_all_variables")
@@ -206,10 +206,16 @@ def _ReadSlice(
     if isinstance(container, oneflow.Tensor):
 
         def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
-            with tensor._placement_scope():
-                return _LogicalSlice(
-                    tensor._blob_object, start_nd_idx, stop_nd_idx, None
+            start_nd_idx = list(map(int, start_nd_idx))
+            stop_nd_idx = list(map(int, stop_nd_idx))
+            return tensor[
+                tuple(
+                    [
+                        slice(start_nd_idx[i], stop_nd_idx[i])
+                        for i in range(len(start_nd_idx))
+                    ]
                 )
+            ].numpy()
 
         yield from _ForEachSlice(container, ReadFromTensor)
     elif isinstance(container, EagerBlobTrait):
@@ -468,7 +474,7 @@ def FeedValueToVariable(
     )
 
     if isinstance(var_blob, oneflow.Tensor):
-        var_blob_object = var_blob._blob_object
+        raise ValueError("Tensor object arguments are not supported")
     else:
         assert isinstance(var_blob, EagerBlobTrait)
         var_blob_object = var_blob.blob_object
@@ -579,7 +585,7 @@ def init_by_initializer_conf(
         vals = generate_values_by_initializer(initializer, shape, var_blob.dtype)
 
         if isinstance(var_blob, oneflow.Tensor):
-            var_blob_object = var_blob._blob_object
+            raise ValueError("Tensor object arguments are not supported")
         else:
             assert isinstance(var_blob, EagerBlobTrait)
             var_blob_object = var_blob.blob_object

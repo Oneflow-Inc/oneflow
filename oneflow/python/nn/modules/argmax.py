@@ -29,19 +29,19 @@ class Argmax(Module):
         self._op_softmax_last_dim = (
             flow.builtin_op("argmax").Input("in").Output("out").Build()
         )
-        self._expand_op = (
-            flow.builtin_op("expand_dims")
-            .Input("in")
-            .Output("out")
-            .Attr("axis", -1)
-            .Build()
-        )
         self._flatten = (
             flow.builtin_op("flatten")
             .Input("in")
             .Output("out")
             .Attr("start_dim", 0)
             .Attr("end_dim", -1)
+            .Build()
+        )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
             .Build()
         )
 
@@ -59,16 +59,16 @@ class Argmax(Module):
         if axis == num_axes - 1:
             x = self._op_softmax_last_dim(input)[0]
             if self.keepdim == True:
-                x = self._expand_op(x)
+                x = flow.experimental.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = input.transpose(perm=perm)
+            x = self._transpose_op(input, perm=perm)[0]
             x = self._op_softmax_last_dim(x)[0]
-            x = self._expand_op(x)[0]
-            x = x.transpose(perm=get_inversed_perm(perm))
+            x = flow.experimental.unsqueeze(x, -1)
+            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
             if self.keepdim == False:
-                x = x.squeeze(axis=[axis])
+                x = x.squeeze(dim=[axis])
             return x
 
 

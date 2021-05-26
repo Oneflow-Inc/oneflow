@@ -6,7 +6,7 @@ import util.proto_reflect_util as proto_reflect_util
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-project_build", "--project_build_dir", type=str, required=True)
-parser.add_argument("-proto_file", "--proto_file_path", type=str, required=True)
+parser.add_argument("--proto_file_path", action="append", default=[])
 parser.add_argument(
     "-of_cfg_proto_python", "--of_cfg_proto_python_dir", type=str, required=True
 )
@@ -108,7 +108,13 @@ def render_template(proto_file):
 
 
 def main():
-    render_template(args.proto_file_path)
+    import multiprocessing
+
+    assert len(args.proto_file_path) > 0
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        pool.map(render_template, args.proto_file_path)
+        pool.close()
+        pool.join()
 
 
 if __name__ == "__main__":
