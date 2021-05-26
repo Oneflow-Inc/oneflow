@@ -89,7 +89,7 @@ def arange_op(
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         y = flow.arange(0, 5)
         # [0, 1, 2, 3, 4]
 
