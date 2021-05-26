@@ -633,5 +633,51 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
       .Build();
 }
 
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha) {
+  return BatchMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("batch_matmul"));
+}
+
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha, const std::string& name) {
+  return one::OpBuilder("batch_matmul", name)
+      .Input("a")
+      .Input("b")
+      .Output("out")
+      .Attr<bool>("transpose_a", transpose_a)
+      .Attr<bool>("transpose_b", transpose_b)
+      .Attr<double>("alpha", alpha)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha) {
+  return BroadcastMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("broadcast_matmul"));
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha, const std::string& name) {
+  return one::OpBuilder("broadcast_matmul", name)
+      .Input("a")
+      .Input("b")
+      .Output("out")
+      .Attr<bool>("transpose_a", transpose_a)
+      .Attr<bool>("transpose_b", transpose_b)
+      .Attr<double>("alpha", alpha)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha) {
+  return BroadcastMatmulGradBOp(alpha, UniqueOpName("broadcast_matmul_grad_b"));
+}
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name) {
+  return one::OpBuilder("broadcast_matmul_grad_b", name)
+      .Input("a")
+      .Input("b")
+      .Output("out")
+      .Attr<double>("alpha", alpha)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

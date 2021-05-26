@@ -204,5 +204,18 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha, const std::string& name);
 
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha);
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha);
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha);
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
