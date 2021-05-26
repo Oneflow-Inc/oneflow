@@ -46,22 +46,10 @@ class OpInterpUtil {
   static Maybe<cfg::OpAttribute> AddOpAndInferOpAttribute(const OperatorConf& op_conf,
                                                           const bool is_mirrored_strategy_enabled);
 
-  static Maybe<cfg::OpAttribute> InferOpAttribute(const BuiltinOpExpr& op_expr,
-                                                  const TensorTuple& inputs, const AttrMap& attrs);
-
-  static Maybe<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
-  MakeBn2BlobObjectMap(const std::vector<std::string>& indexed_ibns, const TensorTuple& inputs);
-
-  static Maybe<compatible_py::BlobObject> GetTensorBlobObject(
-      const std::shared_ptr<Tensor>& tensor);
-
   static Maybe<Tensor> BuildTensor(
       const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
       const bool is_lazy);
-
-  static Maybe<Tensor> BuildTensorFromBlobObject(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object);
 
   static Maybe<Tensor> BuildEagerMirroredTensorFromEagerBlobObject(
       const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
