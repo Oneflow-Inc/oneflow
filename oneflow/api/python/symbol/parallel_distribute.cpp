@@ -18,6 +18,7 @@ limitations under the License.
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/symbol.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace py = pybind11;
@@ -29,6 +30,16 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       m, "ParallelDistribution")
       .def(py::init([](const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution) {
         return Symbol<cfg::ParallelDistribution>(*parallel_distribution);
+      }))
+      .def(py::init([](const std::vector<std::string>& sbp_parallels) {
+        cfg::ParallelDistribution parallel_distribution;
+        SbpParallel sbp_parallel;
+        for (const std::string& sbp_parallel_str : sbp_parallels) {
+          CHECK(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
+              << "invalid sbp_parallel: " << sbp_parallel_str;
+          parallel_distribution.mutable_sbp_parallel()->Add()->InitFromProto(sbp_parallel);
+        }
+        return Symbol<cfg::ParallelDistribution>(parallel_distribution);
       }))
       .def("__str__",
            [](const Symbol<cfg::ParallelDistribution>& x) {
