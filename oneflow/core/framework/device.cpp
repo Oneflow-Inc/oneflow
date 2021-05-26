@@ -102,13 +102,20 @@ Maybe<const std::string&> Device::local_call_instruction_name() const {
   return MapAt(type2instr_name, type());
 }
 
-std::string Device::ToString() const {
+std::string Device::ToRepr() const {
   std::stringstream ss;
   ss << "device(type='";
   ss << type_;
   ss << "', index=";
   ss << device_id_;
   ss << ")";
+  return ss.str();
+}
+
+std::string Device::ToString() const {
+  std::stringstream ss;
+  ss << type_;
+  if (type_ != "cpu") { ss << ":" << device_id_; }
   return ss.str();
 }
 
