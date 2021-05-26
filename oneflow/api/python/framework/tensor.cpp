@@ -44,7 +44,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad,
                                                     bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf);
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -52,11 +53,12 @@ template<>
 struct TensorExportUtil<ConsistentTensor> final {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
-                                        requires_grad, is_leaf);
+    return ConsistentTensor::MakeTensor(shape, dtype, SymbolOf(*parallel_distribution),
+                                        SymbolOf(*parallel_desc), is_lazy, requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -153,7 +155,7 @@ std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
 }
 
 std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
-  return tensor.parallel_desc().GetPtrOrThrow();
+  return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
 }
 
 }  // namespace
