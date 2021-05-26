@@ -206,7 +206,7 @@ CastToConsistentOpExpr::CastToConsistentOpExpr(
 
 /* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
     const std::string& op_name, const std::vector<std::string>& sbp_parallels,
-    Symbol<ParallelDesc> parallel_desc) {
+    const std::shared_ptr<ParallelDesc>& parallel_desc) {
   cfg::ParallelDistribution parallel_distribution;
   SbpParallel sbp_parallel;
   for (const std::string& sbp_parallel_str : sbp_parallels) {
@@ -214,8 +214,9 @@ CastToConsistentOpExpr::CastToConsistentOpExpr(
         << "invalid sbp_parallel: " << sbp_parallel_str;
     parallel_distribution.mutable_sbp_parallel()->Add()->InitFromProto(sbp_parallel);
   }
-  return CastToConsistentOpExpr::New(
-      op_name, Symbol<cfg::ParallelDistribution>(parallel_distribution), parallel_desc);
+  return CastToConsistentOpExpr::New(op_name,
+                                     Symbol<cfg::ParallelDistribution>(parallel_distribution),
+                                     Symbol<ParallelDesc>(*parallel_desc));
 }
 
 /* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
@@ -232,7 +233,7 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
     const std::string& op_name, const std::vector<std::string>& sbp_parallels,
-    Symbol<ParallelDesc> parallel_desc) {
+    const std::shared_ptr<ParallelDesc>& parallel_desc) {
   cfg::ParallelDistribution parallel_distribution;
   SbpParallel sbp_parallel;
   for (const std::string& sbp_parallel_str : sbp_parallels) {
@@ -240,7 +241,8 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(
         << "invalid sbp_parallel: " << sbp_parallel_str;
     parallel_distribution.mutable_sbp_parallel()->Add()->InitFromProto(sbp_parallel);
   }
-  return CastFromConsistentOpExpr::New(op_name, parallel_distribution, parallel_desc);
+  return CastFromConsistentOpExpr::New(op_name, parallel_distribution,
+                                       Symbol<ParallelDesc>(*parallel_desc));
 }
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(

@@ -25,12 +25,28 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
+std::string ParallelDistributionSymbolToString(const Symbol<cfg::ParallelDistribution>& x) {
+  py::list sbp_parallels;
+  std::stringstream ss;
+  int32_t idx = 0;
+  ss << "ParallelDistribution([";
+  for (const auto& sbp_para : x->sbp_parallel()) {
+    SbpParallel proto_sbp;
+    sbp_para.ToProto(&proto_sbp);
+    ss << SbpParallelToString(proto_sbp);
+    if (++idx != x->sbp_parallel_size()) { ss << ", "; }
+  }
+  ss << "])";
+  return ss.str();
+}
+
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<cfg::ParallelDistribution>, std::shared_ptr<Symbol<cfg::ParallelDistribution>>>(
-      m, "ParallelDistribution")
-      .def(py::init([](const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution) {
-        return Symbol<cfg::ParallelDistribution>(*parallel_distribution);
-      }))
+      m, "ParallelDistributionSymbol")
       .def(py::init([](const std::vector<std::string>& sbp_parallels) {
         cfg::ParallelDistribution parallel_distribution;
         SbpParallel sbp_parallel;
@@ -41,15 +57,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         }
         return Symbol<cfg::ParallelDistribution>(parallel_distribution);
       }))
-      .def("__str__",
-           [](const Symbol<cfg::ParallelDistribution>& x) {
-             const auto& parallel_distribution = *x;
-             return parallel_distribution.DebugString();
-           })
-      .def("__repr__", [](const Symbol<cfg::ParallelDistribution>& x) {
-        const auto& parallel_distribution = *x;
-        return parallel_distribution.DebugString();
-      });
+      .def("__str__", &ParallelDistributionSymbolToString)
+      .def("__repr__", &ParallelDistributionSymbolToString);
 }
 
 }  // namespace oneflow

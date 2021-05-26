@@ -138,7 +138,7 @@ class Module(object):
             cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
                 id_util.UniqueStr("cast_to_consistent_op"),
                 parallel_distribution,
-                oneflow._oneflow_internal.ParallelDescSymbol(inputs_placement[i]),
+                inputs_placement[i],
             )
             self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
 
@@ -152,7 +152,7 @@ class Module(object):
             cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
                 id_util.UniqueStr("cast_from_consistent_op"),
                 parallel_distribution,
-                oneflow._oneflow_internal.ParallelDescSymbol(outputs_placement[i]),
+                outputs_placement[i],
             )
             self._cast_from_consistent_ops[i] = cast_from_consistent_op_expr
 

@@ -102,7 +102,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::CastToConsistentOpExpr, one::CastConsistentOpExpr,
              std::shared_ptr<one::CastToConsistentOpExpr>>(m, "CastToConsistentOpExpr")
       .def(py::init([](const std::string& op_name, const std::vector<std::string>& sbp_parallels,
-                       Symbol<ParallelDesc> parallel_desc) {
+                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
         return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
             .GetPtrOrThrow();
       }));
@@ -110,7 +110,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::CastFromConsistentOpExpr, one::CastConsistentOpExpr,
              std::shared_ptr<one::CastFromConsistentOpExpr>>(m, "CastFromConsistentOpExpr")
       .def(py::init([](const std::string& op_name, const std::vector<std::string>& sbp_parallels,
-                       Symbol<ParallelDesc> parallel_desc) {
+                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
         return one::CastFromConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
             .GetPtrOrThrow();
       }));
