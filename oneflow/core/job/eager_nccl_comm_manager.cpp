@@ -69,7 +69,9 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
   LOG(INFO) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
             << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
             << ", key = {" << key << "}\n";
+  LOG(ERROR) << "ncclCommInitRank start parallel: " << dev;
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));
+  LOG(ERROR) << "ncclCommInitRank success parallel: " << dev;
 }
 
 }  // namespace
