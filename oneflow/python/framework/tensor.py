@@ -278,12 +278,7 @@ class Tensor:
     @requires_grad.setter
     def requires_grad(self, requires_grad):
         if self._local_or_consistent_tensor is not None:
-            if self.is_leaf:
-                self._local_or_consistent_tensor._set_requires_grad(requires_grad)
-            else:
-                raise RuntimeError(
-                    "You can only change requires_grad flags of leaf tensors."
-                )
+            self._local_or_consistent_tensor.requires_grad = requires_grad
         else:
             self._undetermined_tensor.requires_grad = requires_grad
 
@@ -350,6 +345,7 @@ class Tensor:
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -396,6 +392,7 @@ class Tensor:
         return starts, stops, steps, shape
 
     @_auto_determine
+    @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
         start, stop, step, _ = self._get_slice_obj(key)
@@ -403,6 +400,7 @@ class Tensor:
         return res
 
     @_auto_determine
+    @register_local_tensor_method()
     def __setitem__(self, key, value):
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):

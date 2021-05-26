@@ -220,8 +220,16 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
-      .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
+      .def_property(
+          "requires_grad", &T::requires_grad,
+          [](T& t, bool requires_grad) {
+            if (t.is_leaf()) {
+              t.set_requires_grad(requires_grad);
+            } else {
+              throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
+            }
+          })
       // Methods of pytorch
       .def("retain_grad",
            [](T& t) {
@@ -230,9 +238,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &T::is_lazy)
-      .def_property_readonly("is_consistent", &T::is_consistent)
-      // OneFlow tensor methods other than pytorch tensor
-      .def("_set_requires_grad", &T::set_requires_grad);
+      .def_property_readonly("is_consistent", &T::is_consistent);
   SpecializedDef(&tensor_api);
 }
 
