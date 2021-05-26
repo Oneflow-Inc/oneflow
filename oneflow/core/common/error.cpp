@@ -259,8 +259,8 @@ Error Error::InputDeviceNotMatchError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
   input_device_not_match_error->add_info(
-      std::string("The device of all input tensor of this op is inconsistent, please try to use "
-                  "module.to api to solve it!"));
+      std::string("The devices of input tensors are inconsistent，please try to use tensor.to or "
+                  "module.to to correct it."));
   return error;
 }
 
