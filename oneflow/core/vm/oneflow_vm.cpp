@@ -56,7 +56,7 @@ void ControlSync(vm::VirtualMachine* vm) {
 }  // namespace
 
 OneflowVM::~OneflowVM() {
-  ControlSync(mut_vm());
+  // ControlSync(mut_vm());
   exiting_ = true;
   OBJECT_MSG_LIST_UNSAFE_FOR_EACH_PTR(vm_->mut_thread_ctx_list(), thread_ctx) {
     thread_ctx->mut_pending_instruction_list()->Close();

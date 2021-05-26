@@ -98,7 +98,7 @@ Maybe<void> CopyBetweenMirroredTensorAndNumpy(const std::shared_ptr<MirroredTens
   }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() { /* spin wait */
-                                                                    while (!synced) {}
+                                                                    // while (!synced) {}
   });
 
   return Maybe<void>::Ok();
