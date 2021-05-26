@@ -44,6 +44,7 @@ class Device final : public std::enable_shared_from_this<Device> {
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
+  static Maybe<const Device> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<const Device> New(const std::string& type, int64_t device_id);
   static Maybe<const Device> New(const std::string& typed);
 
