@@ -72,7 +72,7 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def_property_readonly("type_name", &one::OpExpr::type_name)
+      .def_property_readonly("op_type_name", &one::OpExpr::op_type_name)
       .def_property_readonly("input_size", &one::OpExpr::input_size)
       .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
