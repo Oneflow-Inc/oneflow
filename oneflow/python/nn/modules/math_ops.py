@@ -948,3 +948,48 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+class Atanh(Module):
+    def __init__(self):
+        super().__init__()
+        self._op = flow.builtin_op("atanh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("atanh")
+@register_tensor_op("atanh")
+@experimental_api
+def atanh_op(x):
+    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+        import oneflow.typing as tp
+
+
+        @flow.global_function()
+        def atanh_Job(x: tp.Numpy.Placeholder((3,))
+        ) -> tp.Numpy:
+            return flow.math.atanh(x)
+
+
+        x = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        out = atanh_Job(x)
+
+        # out [0.54930615 0.6931472  0.8673005 ]
+
+    """
+
+    return Atanh()(x)
