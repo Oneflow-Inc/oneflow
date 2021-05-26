@@ -27,17 +27,17 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Symbol<cfg::ParallelDistribution>, std::shared_ptr<Symbol<cfg::ParallelDistribution>>>(
       m, "ParallelDistribution")
-      .def(py::init([](const std::shared_ptr<cfg::ParallelDistribution>& parallel_distrition) {
-        return Symbol<cfg::ParallelDistribution>(*parallel_distrition);
+      .def(py::init([](const std::shared_ptr<cfg::ParallelDistribution>& parallel_distribution) {
+        return Symbol<cfg::ParallelDistribution>(*parallel_distribution);
       }))
       .def("__str__",
            [](const Symbol<cfg::ParallelDistribution>& x) {
-             const auto& parallel_distrition = *x;
-             return x.DebugString();
+             const auto& parallel_distribution = *x;
+             return parallel_distribution.DebugString();
            })
       .def("__repr__", [](const Symbol<cfg::ParallelDistribution>& x) {
-        const auto& parallel_distrition = *x;
-        return x.DebugString();
+        const auto& parallel_distribution = *x;
+        return parallel_distribution.DebugString();
       });
 }
 
