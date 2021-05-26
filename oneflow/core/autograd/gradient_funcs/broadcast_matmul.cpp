@@ -87,8 +87,6 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulInterpState* ctx,
   JUST(attrs.SetAttr<double>("alpha", ctx->alpha));
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
-  std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>Enter braodcast_matmul.cpp<<<<<<<<<<<<<<<<<<<<<<<"
-            << std::endl;
   in_grads->resize(2);
   JUST(attrs.SetAttr<bool>("transpose_a", ctx->transpose_a));
   JUST(attrs.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));

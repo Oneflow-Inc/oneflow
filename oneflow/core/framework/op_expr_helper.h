@@ -199,6 +199,16 @@ Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const st
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
+#define MATMUL_SERIES_OPS(op_type_name)       \
+  return one::OpBuilder(op_type_name, name)   \
+      .Input("a")                             \
+      .Input("b")                             \
+      .Output("out")                          \
+      .Attr<bool>("transpose_a", transpose_a) \
+      .Attr<bool>("transpose_b", transpose_b) \
+      .Attr<double>("alpha", alpha)           \
+      .Build();
+
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha);
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,

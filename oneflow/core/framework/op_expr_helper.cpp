@@ -623,14 +623,7 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha, const std::string& name) {
-  return one::OpBuilder("matmul", name)
-      .Input("a")
-      .Input("b")
-      .Output("out")
-      .Attr<bool>("transpose_a", transpose_a)
-      .Attr<bool>("transpose_b", transpose_b)
-      .Attr<double>("alpha", alpha)
-      .Build();
+  MATMUL_SERIES_OPS("matmul");
 }
 
 Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
@@ -640,14 +633,7 @@ Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transp
 
 Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
                                      const double& alpha, const std::string& name) {
-  return one::OpBuilder("batch_matmul", name)
-      .Input("a")
-      .Input("b")
-      .Output("out")
-      .Attr<bool>("transpose_a", transpose_a)
-      .Attr<bool>("transpose_b", transpose_b)
-      .Attr<double>("alpha", alpha)
-      .Build();
+  MATMUL_SERIES_OPS("batch_matmul");
 }
 
 Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
@@ -657,14 +643,7 @@ Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& tr
 
 Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
                                          const double& alpha, const std::string& name) {
-  return one::OpBuilder("broadcast_matmul", name)
-      .Input("a")
-      .Input("b")
-      .Output("out")
-      .Attr<bool>("transpose_a", transpose_a)
-      .Attr<bool>("transpose_b", transpose_b)
-      .Attr<double>("alpha", alpha)
-      .Build();
+  MATMUL_SERIES_OPS("broadcast_matmul");
 }
 
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha) {

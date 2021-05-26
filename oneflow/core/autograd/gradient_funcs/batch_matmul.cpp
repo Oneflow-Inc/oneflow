@@ -84,18 +84,14 @@ Maybe<void> BatchMatmul::Apply(const BatchMatmulInterpState* ctx, const TensorTu
   const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
   JUST(attrs.SetAttr<double>("alpha", ctx->alpha));
 
-  std::cout << ">>>>>>>>>>>>>>>>>>>>>>>>>Enter batch_matmul.cpp<<<<<<<<<<<<<<<<<<<<<<<"
-            << std::endl;
   in_grads->resize(2);
   if (ctx->requires_grad_a) {
     if (ctx->transpose_a) {
-      std::cout << "requires_grad_a=True && transpose_a=True" << std::endl;
       JUST(attrs.SetAttr<bool>("transpose_a", ctx->transpose_b));
       JUST(attrs.SetAttr<bool>("transpose_b", true));
       in_grads->at(0) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {input_b, out_grads.at(0)}, attrs));
     } else {
-      std::cout << "requires_grad_a=True && transpose_a=False" << std::endl;
       JUST(attrs.SetAttr<bool>("transpose_a", false));
       JUST(attrs.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
       in_grads->at(0) =
@@ -105,13 +101,11 @@ Maybe<void> BatchMatmul::Apply(const BatchMatmulInterpState* ctx, const TensorTu
 
   if (ctx->requires_grad_b) {
     if (ctx->transpose_b) {
-      std::cout << "requires_grad_b=True && transpose_b=True" << std::endl;
       JUST(attrs.SetAttr<bool>("transpose_a", true));
       JUST(attrs.SetAttr<bool>("transpose_b", ctx->transpose_a));
       in_grads->at(1) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs));
     } else {
-      std::cout << "requires_grad_b=True && transpose_b=False" << std::endl;
       JUST(attrs.SetAttr<bool>("transpose_a", !(ctx->transpose_a)));
       JUST(attrs.SetAttr<bool>("transpose_b", false));
       in_grads->at(1) =
