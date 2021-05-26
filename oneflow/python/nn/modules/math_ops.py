@@ -961,9 +961,7 @@ def pow_op(tensor, exponent):
 
 
 class Topk(Module):
-    def __init__(
-        self, k: int = None, sorted: bool = False
-    ) -> None:
+    def __init__(self, k: int = None, sorted: bool = False) -> None:
         super().__init__()
         self.k = k
         self.sorted = sorted
@@ -978,6 +976,7 @@ class Topk(Module):
 
     def forward(self, input):
         return self._op(input, k=self.k, sorted=self.sorted)[0]
+
 
 @oneflow_export("topk")
 @register_tensor_op("topk")

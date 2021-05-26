@@ -220,7 +220,6 @@ class TestPow(flow.unittest.TestCase):
     ".numpy() doesn't work in lazy mode",
 )
 class TestTopk(flow.unittest.TestCase):
-
     def test_topk(test_case):
         input = flow.Tensor(np.random.randn(4, 3))
         of_out = flow.topk(input, 2)
