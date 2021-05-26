@@ -29,12 +29,16 @@ def _test_acosh_impl(test_case, shape, device):
     )
     of_out = flow.acosh(of_input)
     np_out = np.arccosh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+    )
 
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = 1. / np.sqrt(np.square(np_input) - 1)
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True))
+    np_grad = 1.0 / np.sqrt(np.square(np_input) - 1)
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 @unittest.skipIf(
