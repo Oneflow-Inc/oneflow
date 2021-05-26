@@ -119,12 +119,16 @@ void JobCompleter::Complete(Job* job) const {
 
 #ifdef WITH_CUDA
   if (Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()) {
+    TeePersistentLogStream::Create(StrCat("optimized_job", 000))->Write(*job);
     // NOTE(chengcheng): this pass need as last pass for insert correct op with nccl boxing.
     JobPass4Name("InsertNcclLogicalOpPass")(job, &job_pass_ctx);
     // NOTE(chengcheng): Becasue insert new logical nccl op, MUST dump time shape, sbp again.
     JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx);
   }
 #endif  // WITH_CUDA
+  TeePersistentLogStream::Create(StrCat("optimized_job", 111))->Write(*job);
+  JobPass4Name("ReplaceMatmulOpPass")(job, &job_pass_ctx);
+  TeePersistentLogStream::Create(StrCat("optimized_job", 222))->Write(*job);
   CheckOpGraph(OpGraph(*job));
 }
 

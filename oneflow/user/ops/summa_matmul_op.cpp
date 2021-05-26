@@ -246,4 +246,35 @@ REGISTER_USER_OP_GRAD("summa_matmul_atb")
       });
     });
 
+REGISTER_USER_OP("matmul_ab")
+    .Input("a")
+    .Input("b")
+    .Output("out")
+    .Attr<double>("alpha", 1.0)
+    .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
+      const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
+      CHECK_EQ_OR_RETURN(a->shape().NumAxes(), 2);
+      CHECK_EQ_OR_RETURN(b->shape().NumAxes(), 2);
+      const int m = a->shape().At(0);
+      const int n = b->shape().At(1);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = Shape({m, n});
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("a", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+      return Maybe<void>::Ok();
+    })
+    .SetParallelDistributionInferFn(
+        [](user_op::InferParallelDistributionFnContext* ctx) -> Maybe<void> {
+          ParallelDistribution parallel_distribution;
+          parallel_distribution.add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
+          parallel_distribution.add_sbp_parallel()->mutable_split_parallel()->set_axis(1);
+          *ctx->ParallelDistribution4ArgNameAndIndex("a", 0) = parallel_distribution;
+          *ctx->ParallelDistribution4ArgNameAndIndex("b", 0) = parallel_distribution;
+          *ctx->ParallelDistribution4ArgNameAndIndex("out", 0) = parallel_distribution;
+          return Maybe<void>::Ok();
+        });
+
 }  // namespace oneflow
