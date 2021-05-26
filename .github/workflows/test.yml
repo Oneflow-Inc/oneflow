@@ -36,16 +36,50 @@ jobs:
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
-      - name: Check license (please run 'make of_format' if failed)
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Check license
+        id: license_check
         run: |
           python3 ci/check/run_license_format.py -i oneflow -c
-      - name: Check license C++/CUDA format (please run 'make of_format' if failed)
+      - name: Add license
+        id: license_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_license_format.py -i oneflow --fix
+      - name: Check C++/CUDA format
+        id: cpp_check
         run: |
           python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow
-      - name: Check Python format (please run 'make of_format' if failed)
+      - name: Run C++/CUDA format
+        id: cpp_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 ci/check/run_clang_format.py --clang_format_binary clang-format --source_dir oneflow --fix
+      - name: Check Python format
+        id: py_check
         run: |
           python3 -m pip install black==19.10b0
           python3 ci/check/run_py_format.py --source_dir $PWD
+      - name: Run Python Format
+        id: py_fmt
+        if: ${{ failure() }}
+        run: |
+          python3 -m pip install black==19.10b0
+          python3 ci/check/run_py_format.py --source_dir $PWD --fix
+      - name: Git push
+        id: git_push
+        if: ${{ failure() }}
+        run: |
+          git config --global user.email "ci-bot@oneflow.org"
+          git config --global user.name "oneflow-ci-bot"
+          git add -u
+          git commit -m "auto format by CI"
+          git push
+      - name: Please request CI again
+        if: ${{ failure() }}
+        run: |
+          exit 1
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
@@ -74,7 +108,7 @@ jobs:
     needs: [check_license_and_format, mirror_third_party]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
     strategy:
       max-parallel: 5
       matrix:
