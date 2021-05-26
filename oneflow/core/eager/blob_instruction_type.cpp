@@ -119,7 +119,6 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
-  return;
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
   CHECK(static_cast<bool>(phy_instr_operand));
