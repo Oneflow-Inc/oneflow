@@ -37,14 +37,6 @@ def _test_argwhere(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
     test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
 
-def _test_argwhere_grad(test_case, device):
-    np_input = [[1.0, 2.0], [0.0, 0.2]]
-    input = flow.Tensor(np_input, device=flow.device(device), requires_grad=True)
-    of_out = flow.argwhere(input)
-    of_out = of_out.sum()
-    of_out.backward()
-    print(input.grad.numpy().tolist())
-
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -53,7 +45,7 @@ def _test_argwhere_grad(test_case, device):
 class TestArgwhere(flow.unittest.TestCase):
     def test_argwhere(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_argwhere, _test_argwhere_grad]
+        arg_dict["test_fun"] = [_test_argwhere]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
