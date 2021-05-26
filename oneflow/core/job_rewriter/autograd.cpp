@@ -376,6 +376,10 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
                       OpBlobArgPairs* identical_sbp_oba_pairs) {
   HashSet<OpBlobArg> split_paralleled_obas;
   op_graph.ForEachNode([&](OpNode* op_node) {
+    bool is_parallel_cast =
+        (op_node->op().op_conf().has_user_conf()
+         && (op_node->op().op_conf().user_conf().op_type_name() == "hierarchical_parallel_cast"
+             || op_node->op().op_conf().user_conf().op_type_name() == "parallel_cast"));
     auto TryInserSplitParalleledObas = [&](const std::string& bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
       const auto& fw_parallel_distribution = op_node->ParallelDistribution4Lbi(lbi);
@@ -383,8 +387,10 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
         split_paralleled_obas.insert(GenOpBlobArg(op_node->op().op_name(), bn));
       }
     };
-    for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
-    for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
+    if (!is_parallel_cast) {
+      for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
+      for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
+    }
   });
   for (const auto& pair : fw_bw_oba_pairs.pair()) {
     CHECK(split_paralleled_obas.find(pair.first()) == split_paralleled_obas.end());
