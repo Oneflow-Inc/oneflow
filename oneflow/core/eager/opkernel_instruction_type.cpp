@@ -454,6 +454,7 @@ struct LocalCallOpKernelUtil final {
   }
 
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
+    return Maybe<void>::Ok();
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));

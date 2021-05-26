@@ -582,7 +582,7 @@ void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
-  // mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
+  mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
 }
 
 void VirtualMachine::Receive(ObjectMsgPtr<InstructionMsg>&& compute_instr_msg) {
