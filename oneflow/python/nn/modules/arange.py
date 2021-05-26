@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
+from typing import Union
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
@@ -42,7 +42,6 @@ class Arange(Module):
         self.device = device
         self.requires_grad = requires_grad
 
-        # TODO: zhaoluyang Put dtype attr in forward() after bug fixed
         self._op_arange = (
             flow.builtin_op("range").Output("out").Attr("dtype", flow.int64).Build()
         )

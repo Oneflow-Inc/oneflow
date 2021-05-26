@@ -28,13 +28,13 @@ def _test_arange(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
-def _test_arange_v2(test_case, device):
+def _test_arange_step_prarm(test_case, device):
     np_out = np.arange(0, 20, 2)
     of_out = flow.arange(0, 20, step=2, device=device)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
-def _test_arange_v3(test_case, device):
+def _test_arange_more_params(test_case, device):
     np_out = np.arange(0, 100, 3)
     of_out = flow.arange(start=0, end=100, step=3, device=device)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
@@ -58,8 +58,8 @@ class TestArange(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["function_test"] = [
             _test_arange,
-            _test_arange_v2,
-            _test_arange_v3,
+            _test_arange_step_prarm,
+            _test_arange_more_params,
             _test_arange_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
