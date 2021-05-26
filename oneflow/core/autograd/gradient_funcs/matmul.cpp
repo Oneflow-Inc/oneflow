@@ -25,6 +25,8 @@ namespace one {
 struct MatmulInterpState : public OpExprInterpState {
   bool transpose_a;
   bool transpose_b;
+  bool grad_transpose_a;
+  bool grad_transpose_b;
   double alpha;
   bool requires_grad_a;
   bool requires_grad_b;
@@ -40,10 +42,9 @@ class Matmul : public OpExprGradFunction<MatmulInterpState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_a_op1_;
-  std::shared_ptr<OpExpr> grad_a_op2_;
-  std::shared_ptr<OpExpr> grad_b_op1_;
-  std::shared_ptr<OpExpr> grad_b_op2_;
+  //std::shared_ptr<OpExpr> grad_op_;
+  std::shared_ptr<OpExpr> grad_a_op_;
+  std::shared_ptr<OpExpr> grad_b_op_;
 };
 
 Maybe<void> Matmul::Init(const OpExpr& op) {
@@ -54,14 +55,11 @@ Maybe<void> Matmul::Init(const OpExpr& op) {
   bool transpose_a;
   bool transpose_b;
   double alpha;
-  grad_a_op1_ =
-      JUST(op_expr_helper::MatmulGradOp(transpose_b, true, alpha, GradientOpName(op_name)));
-  grad_a_op2_ =
-      JUST(op_expr_helper::MatmulGradOp(false, !transpose_b, alpha, GradientOpName(op_name)));
-  grad_b_op1_ =
-      JUST(op_expr_helper::MatmulGradOp(true, transpose_a, alpha, GradientOpName(op_name)));
-  grad_b_op2_ =
-      JUST(op_expr_helper::MatmulGradOp(!transpose_a, false, alpha, GradientOpName(op_name)));
+  // grad_op_ = JUST(op_expr_helper::MatmulGradOp(transpose_a, transpose_b, alpha, GradientOpName(op_name)));
+  grad_a_op_ =
+      JUST(op_expr_helper::MatmulGradOp(transpose_b, transpose_b, alpha, GradientOpName(op_name+"_grad_a")));
+  grad_b_op_ =
+      JUST(op_expr_helper::MatmulGradOp(transpose_a, transpose_a, alpha, GradientOpName(op_name+"_grad_b")));
   return Maybe<void>::Ok();
 }
 
@@ -71,9 +69,9 @@ Maybe<void> Matmul::Capture(MatmulInterpState* ctx, const TensorTuple& inputs,
   ctx->requires_grad_b = inputs.at(1)->requires_grad();
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));
-  ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b"));
+  ComposedAttrMap composed_attrs(attrs, base_attrs_);  
+  ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));;
+  ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b"));;
   ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
   ctx->SaveTensorForBackward(inputs.at(0));  // input a
   ctx->SaveTensorForBackward(inputs.at(1));  // input b
@@ -88,25 +86,38 @@ Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_g
 
   const auto& input_a = ctx->SavedTensors().at(0);
   const auto& input_b = ctx->SavedTensors().at(1);
+  in_grads->resize(2);
+
   if (ctx->requires_grad_a) {
     if (ctx->transpose_a) {
+      JUST(attrs.SetAttr<bool>("transpose_a", ctx->transpose_b));
+      JUST(attrs.SetAttr<bool>("transpose_b", true));
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op1_, {input_b, out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {input_b, out_grads.at(0)}, attrs));
     } else {
+      JUST(attrs.SetAttr<bool>("transpose_a", false));
+      JUST(attrs.SetAttr<bool>("transpose_b", true));
+      std::cout << "ctx->requires_grad_a=True && transpose_a=False" << std::endl;
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op2_, {out_grads.at(0), input_b}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs));
     }
   }
 
   if (ctx->requires_grad_b) {
     if (ctx->transpose_b) {
+      JUST(attrs.SetAttr<bool>("transpose_a", true));
+      JUST(attrs.SetAttr<bool>("transpose_b", ctx->transpose_a));
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op1_, {out_grads.at(0), input_a}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs));
     } else {
+      JUST(attrs.SetAttr<bool>("transpose_a", true));
+      JUST(attrs.SetAttr<bool>("transpose_b", false));
+      std::cout << "ctx->requires_grad_b=True && transpose_b=False" << std::endl;
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op2_, {input_a, out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs));
     }
   }
+
   return Maybe<void>::Ok();
 }
 
