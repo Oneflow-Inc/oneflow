@@ -388,6 +388,11 @@ def GetEnvDefaultParallelConf(device_tag):
     return device_tag2default_parallel_conf[device_tag]
 
 
+@oneflow_export("get_env_proto")
+def get_env_proto():
+    return default_env_proto
+
+
 device_tag2default_parallel_conf = {}
 
 default_env_proto = _DefaultEnvProto()

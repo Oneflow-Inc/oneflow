@@ -57,7 +57,8 @@ inline Maybe<void> DestroyDefaultEnv() {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  // if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  ClusterInstruction::HaltBarrier();
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
@@ -85,7 +86,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
+  // if (!GlobalProcessCtx::IsThisProcessMaster()) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
