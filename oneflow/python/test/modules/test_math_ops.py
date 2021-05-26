@@ -197,5 +197,29 @@ class TestSquare(flow.unittest.TestCase):
         )
 
 
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestLog1p(flow.unittest.TestCase):
+    def test_log1p(test_case):
+        input_arr = np.random.randn(3, 4, 5, 6)
+        np_out = np.log1p(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = flow.log1p(x)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    def test_log1p_tensor_function(test_case):
+        input_arr = np.random.randn(3, 4, 5, 6)
+        np_out = np.log1p(input_arr)
+        x = flow.Tensor(input_arr)
+        of_out = x.log1p()
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
