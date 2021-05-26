@@ -51,9 +51,7 @@ Maybe<void> Matmul::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  bool transpose_a;
-  bool transpose_b;
-  double alpha;
+
   grad_a_op_ = JUST(op_expr_helper::MatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
                                              /*alpha=*/1.0, GradientOpName(op_name + "_a")));
   grad_b_op_ = JUST(op_expr_helper::MatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
@@ -96,7 +94,6 @@ Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_g
     } else {
       JUST(attrs.SetAttr<bool>("transpose_a", false));
       JUST(attrs.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
-      std::cout << "ctx->requires_grad_a=True && transpose_a=False" << std::endl;
       in_grads->at(0) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs));
     }
@@ -111,7 +108,6 @@ Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_g
     } else {
       JUST(attrs.SetAttr<bool>("transpose_a", !(ctx->transpose_a)));
       JUST(attrs.SetAttr<bool>("transpose_b", false));
-      std::cout << "ctx->requires_grad_b=True && transpose_b=False" << std::endl;
       in_grads->at(1) =
           JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs));
     }
