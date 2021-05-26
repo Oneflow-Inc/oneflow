@@ -50,16 +50,14 @@ class Arange(Module):
     def forward(self):
         tmp = self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
         # TODO: (zhaoluyang) Not support dynamic set .requires_grad yet
-        # tmp.requires_grad = self.requires_grad
+        tmp.requires_grad = self.requires_grad
 
         if isinstance(self.device, str):
             device = flow.device(self.device)
         else:
             device = self.device
 
-        res = tmp.to(device)
-        # TODO: (zhaoluyang) Change as below when dtype cast are supported in .to()
-        # res = tmp.to(device, dtype = self.dtype)
+        res = tmp.to(device, dtype=self.dtype)
         return res
 
 

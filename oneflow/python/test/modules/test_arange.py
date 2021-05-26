@@ -23,8 +23,8 @@ from test_util import GenArgList
 
 
 def _test_arange(test_case, device):
-    np_out = np.arange(13)
-    of_out = flow.arange(13, device=device)
+    np_out = np.arange(13, dtype=np.float32)
+    of_out = flow.arange(13, device=device, dtype=flow.float32)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
@@ -60,7 +60,7 @@ class TestArange(flow.unittest.TestCase):
             _test_arange,
             _test_arange_v2,
             _test_arange_v3,
-            # _test_arange_backward,
+            _test_arange_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
