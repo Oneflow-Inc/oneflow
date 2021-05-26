@@ -163,7 +163,7 @@ jobs:
           fi
           echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
           extra_docker_args=""
-          extra_docker_args+=" --cap-add sys_ptrace"
+          extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
           container_name=pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${test_suite}-build
           echo "container_name=${container_name}" >> $GITHUB_ENV
@@ -338,7 +338,7 @@ jobs:
         run: |
           set -x
           extra_docker_args=""
-          extra_docker_args+=" --cap-add sys_ptrace"
+          extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
           # load shared environment variables
           cat ${{ matrix.build_env }} >> $GITHUB_ENV
