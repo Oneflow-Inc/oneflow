@@ -85,8 +85,8 @@ class TestPReLU(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_prelu(test_case, *arg)
-            # _test_prelu_ndims(test_case, *arg)
-            # _test_prelu_grad(test_case, *arg)
+            _test_prelu_ndims(test_case, *arg)
+            _test_prelu_grad(test_case, *arg)
 
 
 if __name__ == "__main__":
