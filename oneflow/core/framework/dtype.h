@@ -45,6 +45,8 @@ class DType final {
         is_floating_point_(is_floating_point),
         is_complex_(is_complex) {}
 
+  bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
+
   DataType data_type() const { return data_type_; }
   bool is_signed() const { return is_signed_; }
   bool is_complex() const { return is_complex_; }
@@ -71,12 +73,9 @@ class DType final {
 namespace std {
 
 template<>
-struct hash<oneflow::DType> {
+struct hash<oneflow::DType> final {
   size_t operator()(const oneflow::DType& dtype) const {
-    size_t ret = 0;
-    ret ^= std::hash<int64_t>()(dtype.data_type());
-    ret ^= std::hash<string>()(dtype.name());
-    return ret;
+    return static_cast<size_t>(dtype.data_type());
   }
 };
 
