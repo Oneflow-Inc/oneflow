@@ -21,6 +21,25 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
+struct DTypeExportUtil final {
+  static bool IsEqual(const DType& dtype, const py::object& py_obj) {
+    std::shared_ptr<DType> other;
+    if (py::isinstance<DType>(py_obj)) {
+      other = std::make_shared<DType>(py_obj.cast<DType>());
+    } else {
+      return false;
+    }
+    if (other->data_type() != dtype.data_type()) { return false; }
+    return true;
+  }
+
+  static size_t Hash(const DType& dtype) { return std::hash<DType>()(dtype); }
+};
+
+}  // namespace
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<DType, std::shared_ptr<DType>>(m, "dtype")
       .def_property_readonly("is_signed", &DType::is_signed)
@@ -28,6 +47,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_floating_point", &DType::is_floating_point)
       .def("__str__", &DType::name)
       .def("__repr__", &DType::name)
+      .def("__eq__", &DTypeExportUtil::IsEqual)
+      .def("__hash__", &DTypeExportUtil::Hash)
       .def_property_readonly(
           "bytes", [](const std::shared_ptr<DType>& x) { return x->bytes().GetOrThrow(); });
 

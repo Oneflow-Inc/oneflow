@@ -191,7 +191,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
-  api->def_property_readonly("tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes);
+  api->def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);

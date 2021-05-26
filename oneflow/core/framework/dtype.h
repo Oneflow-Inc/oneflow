@@ -68,4 +68,18 @@ class DType final {
 
 }  // namespace oneflow
 
+namespace std {
+
+template<>
+struct hash<oneflow::DType> {
+  size_t operator()(const oneflow::DType& dtype) const {
+    size_t ret = 0;
+    ret ^= std::hash<int64_t>()(dtype.data_type());
+    ret ^= std::hash<string>()(dtype.name());
+    return ret;
+  }
+};
+
+}  // namespace std
+
 #endif  // ONEFLOW_CORE_FRAMEWORK_DTYPE_H_

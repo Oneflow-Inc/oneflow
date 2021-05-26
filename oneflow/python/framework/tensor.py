@@ -47,7 +47,7 @@ def register_local_tensor_method(name=None):
 @register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
     if eager_local_tensor.dtype == flow.tensor_buffer:
-        shapes, dtypes = eager_local_tensor.tensor_buffer_shapes_and_dtypes
+        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
         tensors = flow.experimental.tensor_buffer_to_list_of_tensors(
             Tensor(eager_local_tensor), shapes, dtypes
         )
