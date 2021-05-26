@@ -131,8 +131,6 @@ def _test_matmul_backward(test_case, device):
         device=flow.device(device),
         requires_grad=True,
     )
-    print("input1.shape >>>>>>>>>>>>>>>>>>>>>> \n", input1.shape)
-    print("input2.shape >>>>>>>>>>>>>>>>>>>>>> \n", input2.shape)
     of_out = flow.matmul(input1, input2)
     of_out = of_out.sum()
     of_out.backward()
@@ -154,7 +152,6 @@ def _test_matmul_backward(test_case, device):
             0.5414588451385498,
         ],
     ]
-    print("input1.grad.numpy() >>>>>>>>>>>>>>>>>>>>>>>> \n", input1.grad.numpy())
     test_case.assertTrue(
         np.allclose(input1.grad.numpy(), np_grad, atol=1e-05, rtol=1e-05)
     )
