@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Optional
+
 import oneflow as flow
-from oneflow.python.framework.dtype import dtypes
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
-from typing import Optional
 
 
 class Argwhere(Module):
@@ -40,10 +40,12 @@ class Argwhere(Module):
 
 
 @oneflow_export("argwhere")
-@register_tensor_op("argwhere")
 @experimental_api
 def argwhere_op(x, dtype: Optional[flow.dtype] = None):
-    """This operator finds the indices of input Tensor `x` elements that are non-zero. It returns a List.
+    """This operator finds the indices of input Tensor `x` elements that are non-zero. 
+
+    It returns a list in which each element is a coordinate that points to a non-zero element in the condition.
+
     Each element in the output is a coordinate that points to a non-zero element in the condition.
 
     Args:
@@ -70,6 +72,19 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
         #             [1, 0],
         #             [1, 2]]
 
+
+    """
+    return Argwhere(dtype=dtype)(x)
+
+
+@register_tensor_op("argwhere")
+@experimental_api
+def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
+    """
+
+    argwhere() -> Tensor
+
+    See :func:`oneflow.experimental.argwhere`
 
     """
     return Argwhere(dtype=dtype)(x)
