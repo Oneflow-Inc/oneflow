@@ -77,9 +77,10 @@ Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_g
   int input_len = (*in_grads).size();
   printf("%d\n", input_len);
   in_grads->resize(input_len);
-  
+  TensorTuple like;
+  for (int i = 0; i < input_len; i++) { like.push_back(ctx->SavedTensors().at(i)); }
   const auto& in_grads = JUST(
-      OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, {input_len, out_grads.at(0), }, attrs));
+      OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, {input_len, out_grads.at(0), like}, attrs));
 
   return Maybe<void>::Ok();
 }
