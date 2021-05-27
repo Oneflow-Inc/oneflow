@@ -31,6 +31,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Softplus
 .. autofunction:: oneflow.experimental.nn.LogSoftmax
 .. autofunction:: oneflow.experimental.arange
+.. autofunction:: oneflow.experimental.argwhere
+.. autofunction:: oneflow.experimental.Tensor.argwhere
 .. autofunction:: oneflow.experimental.argmax
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
