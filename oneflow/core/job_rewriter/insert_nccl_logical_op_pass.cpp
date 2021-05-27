@@ -405,10 +405,15 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
   for (const OpNode* src_node : subgraph_order) {
     const std::string& src_op_name = src_node->op().op_name();
     if (src_node->op().op_conf().has_user_conf()
-        && src_node->op().op_conf().user_conf().op_type_name() == "matmul_ab") {
-      OperatorConf nccl_summa_op = src_node->op().op_conf();
-      nccl_summa_op.mutable_user_conf()->set_op_type_name(
-          "summa_" + src_node->op().op_conf().user_conf().op_type_name());
+        && src_node->op().op_conf().user_conf().op_type_name() == "summa_matmul_placeholder") {
+      OperatorConf nccl_summa_op;
+      auto it = subgraph_op_name2conf->find(src_op_name);
+      if (it == subgraph_op_name2conf->end()) {
+        nccl_summa_op = src_node->op().op_conf();
+      } else {
+        nccl_summa_op = it->second;
+      }
+      nccl_summa_op.mutable_user_conf()->set_op_type_name("summa_matmul");
       if (nccl_op_confs->size() >= 1) {
         const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
         nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name);
@@ -476,6 +481,25 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
     const HashMap<const OpNode*, int64_t>& node2subgraph_order) {
   for (const OpNode* dst_node : subgraph_order) {
     const std::string& dst_op_name = dst_node->op().op_name();
+    if (dst_node->op().op_conf().has_user_conf()
+        && dst_node->op().op_conf().user_conf().op_type_name() == "summa_matmul_placeholder") {
+      OperatorConf nccl_summa_op;
+      auto it = subgraph_op_name2conf->find(dst_op_name);
+      if (it == subgraph_op_name2conf->end()) {
+        nccl_summa_op = dst_node->op().op_conf();
+      } else {
+        nccl_summa_op = it->second;
+      }
+      nccl_summa_op.mutable_user_conf()->set_op_type_name("summa_matmul");
+      if (nccl_op_confs->size() >= 1) {
+        const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
+        nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name);
+      }
+      nccl_op_confs->push_back(nccl_summa_op);
+      nccl_op_parallel_confs->push_back(dst_node->parallel_desc().parallel_conf());
+      mut_op_names->insert(dst_op_name);
+      subgraph_op_name2conf->at(dst_op_name) = nccl_summa_op;
+    }
     for (const OpEdge* op_edge : dst_node->in_edges()) {
       const OpNode* src_node = op_edge->src_node();
       const std::string& src_op_name = src_node->op().op_name();
@@ -755,8 +779,8 @@ void InsertNcclLogicalOpsInSubGraph(
 
   CHECK_EQ(nccl_op_confs.size(), nccl_op_parallel_confs.size());
   for (int64_t i = 0; i < nccl_op_confs.size(); ++i) {
-    if (!nccl_op_confs.at(i).has_user_conf()
-        && nccl_op_confs.at(i).user_conf().op_type_name() == "summa_matmul_ab") {
+    if (!(nccl_op_confs.at(i).has_user_conf()
+          && nccl_op_confs.at(i).user_conf().op_type_name() == "summa_matmul")) {
       CHECK_JUST(job_builder->AddOp(nccl_op_parallel_confs.at(i), nccl_op_confs.at(i)));
     }
   }

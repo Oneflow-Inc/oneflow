@@ -272,16 +272,18 @@ class SummaMatmulABKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("summa_matmul_ab")                                             \
-      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                  \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);           \
-        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);           \
-        return 2 * GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))     \
-               + 2 * GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype));  \
+#define REGISTER_SUMMA_MATMUL_AB_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("summa_matmul")                                               \
+      .SetCreateFn<SummaMatmulABKernel<dtype>>()                                     \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                 \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value) \
+                       & (user_op::HobAttr<bool>("transpose_a") == false)            \
+                       & (user_op::HobAttr<bool>("transpose_b") == false))           \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                            \
+        const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);          \
+        const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);          \
+        return 2 * GetCudaAlignedSize(a_desc->shape().elem_cnt() * sizeof(dtype))    \
+               + 2 * GetCudaAlignedSize(b_desc->shape().elem_cnt() * sizeof(dtype)); \
       });
 
 #ifdef WITH_CUDA
@@ -364,10 +366,12 @@ class SummaMatmulABTKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SUMMA_MATMUL_ABT_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("summa_matmul_abt")                                             \
+  REGISTER_USER_KERNEL("summa_matmul")                                                 \
       .SetCreateFn<SummaMatmulABTKernel<dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))  \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)   \
+                       & (user_op::HobAttr<bool>("transpose_a") == false)              \
+                       & (user_op::HobAttr<bool>("transpose_b") == true))              \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const TensorDesc* b_desc = ctx->TensorDesc4ArgNameAndIndex("b", 0);            \
         const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);        \
@@ -454,10 +458,12 @@ class SummaMatmulATBKernel final : public user_op::OpKernel {
 };
 
 #define REGISTER_SUMMA_MATMUL_ATB_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("summa_matmul_atb")                                             \
+  REGISTER_USER_KERNEL("summa_matmul")                                                 \
       .SetCreateFn<SummaMatmulATBKernel<dtype>>()                                      \
       .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value))  \
+                       & (user_op::HobDataType("a", 0) == GetDataType<dtype>::value)   \
+                       & (user_op::HobAttr<bool>("transpose_a") == true)               \
+                       & (user_op::HobAttr<bool>("transpose_b") == false))             \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
         const TensorDesc* a_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);            \
         const TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);        \
