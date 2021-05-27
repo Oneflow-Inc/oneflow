@@ -304,7 +304,7 @@ file(WRITE "${PROJECT_BINARY_DIR}/source.sh" "export PYTHONPATH=${of_pyscript_di
 add_dependencies(of_pyscript_copy of_protoobj)
 add_custom_target(generate_api ALL
   COMMAND rm -rf ${of_pyscript_dir}/oneflow/generated
-  COMMAND export PYTHONPATH=${of_pyscript_dir}:$PYTHONPATH && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
+  COMMAND export PYTHONPATH=${of_pyscript_dir}:$ENV{PYTHONPATH} && ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_oneflow_api.py --root_path=${of_pyscript_dir}/oneflow)
 add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
 
