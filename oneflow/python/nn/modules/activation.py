@@ -39,34 +39,6 @@ def _softmax_need_transpose(x, axis):
     return need_transpose, permute
 
 
-@oneflow_export("nn.Empty")
-@experimental_api
-class Empty(Module):
-    r"""Do nothing
-    return input
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow.experimental as flow
-        import numpy as np
-
-        m = flow.nn.Empty()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # output == input
-
-    """
-
-    def __init__(self, inplace: bool = False):
-        super().__init__()
-
-    def forward(self, x):
-        return x
-
-
 @oneflow_export("nn.ReLU")
 @experimental_api
 class ReLU(Module):

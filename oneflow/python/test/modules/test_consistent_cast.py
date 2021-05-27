@@ -18,6 +18,32 @@ import numpy as np
 import oneflow.experimental as flow
 
 
+class Empty(flow.nn.Empty):
+    r"""Do nothing
+    return input
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+
+        m = flow.nn.Empty()
+        arr = np.random.randn(2, 3, 4, 5)
+        input = flow.Tensor(arr)
+        output = m(input)
+        # output == input
+
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -25,7 +51,7 @@ import oneflow.experimental as flow
 class TestConsistentCastReLUModule(flow.unittest.TestCase):
     def test_relu(test_case):
         relu = flow.nn.ReLU()
-        empty = flow.nn.Empty()
+        empty = Empty()
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
