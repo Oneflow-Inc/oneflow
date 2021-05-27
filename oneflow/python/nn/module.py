@@ -141,12 +141,11 @@ class Module(object):
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
             parallel_distribution = inputs_sbp_signature[i]
-            if isinstance(parallel_distribution, tuple):
-                parallel_distribution = list(parallel_distribution)
-            elif isinstance(parallel_distribution, str):
+            if isinstance(parallel_distribution, str):
                 parallel_distribution = [parallel_distribution]
             else:
-                assert isinstance(parallel_distribution, list)
+                assert isinstance(parallel_distribution, tuple)
+                parallel_distribution = list(parallel_distribution)
             cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
                 id_util.UniqueStr("cast_to_consistent_op"),
                 parallel_distribution,
@@ -161,12 +160,11 @@ class Module(object):
     ) -> None:
         for i in range(len(outputs_sbp_signature)):
             parallel_distribution = outputs_sbp_signature[i]
-            if isinstance(parallel_distribution, tuple):
-                parallel_distribution = list(parallel_distribution)
-            elif isinstance(parallel_distribution, str):
+            if isinstance(parallel_distribution, str):
                 parallel_distribution = [parallel_distribution]
             else:
-                assert isinstance(parallel_distribution, list)
+                assert isinstance(parallel_distribution, tuple)
+                parallel_distribution = list(parallel_distribution)
             cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
                 id_util.UniqueStr("cast_from_consistent_op"),
                 parallel_distribution,
