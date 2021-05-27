@@ -25,6 +25,7 @@ namespace one {
 
 struct ConcatInterpState : public OpExprInterpState {
   bool requires_grad;
+  int64_t axis;
 };
 
 class Concat : public OpExprGradFunction<ConcatInterpState> {
@@ -39,7 +40,6 @@ class Concat : public OpExprGradFunction<ConcatInterpState> {
   std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
   AttrMap base_attrs_;
   std::shared_ptr<OpExpr> grad_op_;
-  int64_t axis_;
 };
 
 Maybe<void> Concat::Init(const OpExpr& op) {
@@ -48,9 +48,9 @@ Maybe<void> Concat::Init(const OpExpr& op) {
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-  axis_ = JUST(op_trait_->GetAttr<int64_t>("axis"));
   int32_t input_num = JUST(op_trait_->input_size("in"));
-  grad_op_ = JUST(op_expr_helper::SplitLikeOp(input_num, axis_, GradientOpName(op_name)));
+  int64_t axis;
+  grad_op_ = JUST(op_expr_helper::SplitLikeOp(input_num, axis, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -63,6 +63,7 @@ Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
+  ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
   for (int i = 0; i < input_len; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
   return Maybe<void>::Ok();
 }
@@ -71,18 +72,18 @@ Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_g
                           TensorTuple* in_grads) const {
   printf("enter concat apply");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  //   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  auto &in = out_grads.at(0);
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   int n = (*in_grads).size();
   TensorTuple like;
-  like.reserve((*in_grads).size());
-  for(int i = 0; i < n; i++){
-    like.push_back(ctx->SavedTensors().at(i));
-  }
+  like.reserve((*in_grads).size() + 1);
+  like.push_back(out_grads.at(0));
+  for (int i = 0; i < n; i++) { like.push_back(ctx->SavedTensors().at(i)); }
   MutableAttrMap concat_attrs;
-  concat_attrs.SetAttr<int>("axis", axis_);
-  const auto& grads = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, {in, like}, concat_attrs));
-
+  int64_t axis = ctx->axis;
+  JUST(concat_attrs.SetAttr<int64_t>("axis", axis));
+  const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, like, concat_attrs));
+  CHECK_EQ_OR_RETURN(results->size(), n);
+  for (int i = 0; i < n; i++) { in_grads->at(i) = results->at(i); }
   return Maybe<void>::Ok();
 }
 

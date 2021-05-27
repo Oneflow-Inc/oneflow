@@ -87,7 +87,15 @@ def _test_concat_with_three_tensor_backward(test_case, device):
     of_out = flow.cat([input1, input2, input3], dim=1)
     of_out = of_out.sum()
     of_out.backward()
-    print(input1.grad.numpy())
+    test_case.assertTrue(
+        np.allclose(input1.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-4, 1e-4)
+    )
+    test_case.assertTrue(
+        np.allclose(input2.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-4, 1e-4)
+    )
+    test_case.assertTrue(
+        np.allclose(input3.grad.numpy(), np.ones((2, 6, 5, 3)), 1e-4, 1e-4)
+    )
 
 
 @unittest.skipIf(
