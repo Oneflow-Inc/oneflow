@@ -52,22 +52,26 @@ Maybe<void> Concat::Init(const OpExpr& op) {
 
 Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
                             const TensorTuple& outputs, const AttrMap& attrs) const {
+  printf("enter concat capture\n");
   int input_len = inputs.size();
   for (int i = 0; i < input_len; i++) {
     ctx->requires_grad = ctx->requires_grad | inputs.at(i)->requires_grad();
   }
+  printf("%d\n", ctx->requires_grad);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  for (int i = 0; i < input_len; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
+  printf("%d\n", ctx->axis);
+  for (int i = 0; i < input_len; i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
+  printf("enter concat apply");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
-  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  //   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<int64_t>("axis", ctx->axis));
