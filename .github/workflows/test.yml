@@ -97,7 +97,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/github-workflow-schedule@286010392b8658836e374657a39d87654512926d
+      - uses: Oneflow-Inc/github-workflow-schedule@0cc7410469a80fb976a83907c6c05b008ec95f66
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
