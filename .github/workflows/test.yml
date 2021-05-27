@@ -339,6 +339,7 @@ jobs:
           set -x
           extra_docker_args=""
           extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
+          extra_docker_args+=" --env ONEFLOW_CI=1"
 
           # load shared environment variables
           cat ${{ matrix.build_env }} >> $GITHUB_ENV
