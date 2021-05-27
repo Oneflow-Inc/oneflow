@@ -59,6 +59,7 @@ Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
   int input_len = inputs.size();
   for (int i = 0; i < input_len; i++) {
     ctx->requires_grad = ctx->requires_grad | inputs.at(i)->requires_grad();
+    if (ctx->requires_grad == true) break;
   }
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -72,7 +73,7 @@ Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_g
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  int n = (*in_grads).size();
+  const int n = (*in_grads).size();
   TensorTuple like;
   like.reserve((*in_grads).size() + 1);
   like.push_back(out_grads.at(0));
