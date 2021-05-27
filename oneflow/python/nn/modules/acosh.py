@@ -26,7 +26,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
@@ -46,7 +45,9 @@ class Acosh(Module):
 @experimental_api
 def acosh_op(x):
     r"""Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
+    
     .. math::
+
         \text{out}_{i} = \acosh^{-1}(\text{input}_{i})
     Args:
         input (Tensor): the input tensor.
