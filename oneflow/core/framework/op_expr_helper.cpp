@@ -571,10 +571,10 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
       .Build();
 }
 
-Maybe<one::UserOpExpr> ConcatGradOp(const int n, const int64_t axis) {
-  return ConcatGradOp(n, axis, UniqueOpName("concat"));
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis) {
+  return SplitLikeOp(n, axis, UniqueOpName("split_like"));
 }
-Maybe<one::UserOpExpr> ConcatGradOp(const int n, const int64_t axis, const std::string& name) {
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::string& name) {
   return one::OpBuilder("split_like", name)
       .Input("in")
       .Input("like", n)

@@ -185,8 +185,8 @@ Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string&
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name);
 
-Maybe<one::UserOpExpr> ConcatGradOp(const int n, const int64_t axis);
-Maybe<one::UserOpExpr> ConcatGradOp(const int n, const int64_t axis, const std::string& name);
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis);
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::string& name);
 
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride);
