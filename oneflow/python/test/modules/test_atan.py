@@ -13,34 +13,115 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
+from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_atan(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.atan(of_input)
+    np_out = np.arctan(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / (1 + np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
+
+
+def _test_op_atan(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = of_input.atan()
+    np_out = np.arctan(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / (1 + np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
+
+
+def _test_arctan(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.arctan(of_input)
+    np_out = np.arctan(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / (1 + np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
+
+
+def _test_op_arctan(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = of_input.arctan()
+    np_out = np.arctan(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / (1 + np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestNegativeModule(flow.unittest.TestCase):
+class TestAtan(flow.unittest.TestCase):
     def test_atan(test_case):
-        input = flow.Tensor(
-            np.array([0.5, 0.6, 0.7]).astype(np.float32), dtype=flow.float32
-        )
-        of_out = flow.atan(input)
-        np_out = np.arctan(input.numpy())
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-
-    def test_tensor_atan(test_case):
-        input = flow.Tensor(
-            np.array([0.5, 0.6, 0.7]).astype(np.float32), dtype=flow.float32
-        )
-        of_out = input.atan()
-        np_out = np.arctan(input.numpy())
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_atan(test_case, *arg)
+            _test_op_atan(test_case, *arg)
+            _test_arctan(test_case, *arg)
+            _test_op_arctan(test_case, *arg)
 
 
 if __name__ == "__main__":
     unittest.main()
+
