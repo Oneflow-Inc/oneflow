@@ -199,5 +199,12 @@ Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const st
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step);
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
