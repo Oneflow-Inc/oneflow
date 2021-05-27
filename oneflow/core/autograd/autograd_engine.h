@@ -37,6 +37,9 @@ class FunctionNode {
  public:
   virtual ~FunctionNode() = default;
 
+  virtual Maybe<void> AddPostHook(
+      const std::function<const std::shared_ptr<Tensor>&(const std::shared_ptr<Tensor>&)>&
+          hook) = 0;
   virtual Maybe<bool> Apply(bool create_graph) = 0;
   virtual Maybe<void> AccGrad4LeafTensor(bool create_graph) = 0;
   virtual Maybe<void> AccGrad4RetainGradTensor() = 0;
@@ -93,6 +96,12 @@ class StackFunctionNode final : public FunctionNode {
   StackFunctionNode() = delete;
   ~StackFunctionNode() override = default;
 
+  Maybe<void> AddPostHook(
+      const std::function<const std::shared_ptr<Tensor>&(const std::shared_ptr<Tensor>&)>& hook)
+      override {
+    post_hooks_.push_back(hook);
+    return Maybe<void>::Ok();
+  }
   Maybe<void> AccGrad4LeafTensor(bool create_graph) override;
   Maybe<void> AccGrad4RetainGradTensor() override;
   void ReleaseOutTensorArgs() override;
@@ -109,6 +118,8 @@ class StackFunctionNode final : public FunctionNode {
   std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>
       backward_fn_;
   bool is_in_stack_;
+  std::vector<std::function<const std::shared_ptr<Tensor>&(const std::shared_ptr<Tensor>&)>>
+      post_hooks_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {

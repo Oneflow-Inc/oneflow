@@ -127,6 +127,14 @@ Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
       JUST(input_meta_datas_.at(i)->now_grad_arg()->PushPartialTensor(input_grads.at(i)));
     }
   }
+  for (int i = 0; i < input_meta_datas_.size(); ++i) {
+    if (input_grads.at(i)) {
+      auto op = JUST(op_expr_helper::EagerNcclAllReduceOp(2));
+      auto grad_arg = input_meta_datas_.at(i)->now_grad_arg();
+      auto input_grad = JUST(grad_arg->GetAccTensor());
+      grad_arg->SetAccTensor(JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input_grad})));
+    }
+  }
   return true;
 }
 

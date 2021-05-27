@@ -49,29 +49,39 @@ if __name__ == "__main__":
             worker_env_proto = copy.deepcopy(env_proto)
             worker_env_proto.ctrl_bootstrap_conf.rank = i
             worker_env_proto.cpp_logging_conf.log_dir = "/tmp/log_" + str(i)
-            with open('env_{}.prototxt'.format(i), 'w') as f:
+            with open("env_{}.prototxt".format(i), "w") as f:
                 f.write(pbtxt.MessageToString(worker_env_proto))
         rank = 0
-        print('written!')
+        print("env prototxt is written!")
         flow.env.init()
-        print('init!')
+        print("init!")
     elif args.env_prototxt is not None:
         assert not args.master, args.master
         with open(args.env_prototxt, "r") as f:
             flow_old._oneflow_internal.InitEnv(f.read())
         rank = 1
-        print('init!')
+        print("init!")
     else:
         raise NotImplementedError()
 
     flow.enable_eager_execution(True)
-    x = flow.Tensor([2, 3])
-    print('rank:', rank)
-    x = x.to('cuda:{}'.format(rank))
-    y = x * (rank + 1)
+    x = flow.Tensor([2, 3], requires_grad=True, device="cuda:{}".format(rank))
+    print("rank:", rank)
+    if rank == 0:
+        y = x * 3
+    else:
+        y = x * 4
     print(y.numpy())
-    parallel_conf="""  device_tag: "gpu", device_name: "0:0-1" """
-    op = flow.builtin_op("eager_nccl_all_reduce").Input("in").Attr("parallel_conf", parallel_conf).Output("out").Build()
-    z = op(y)[0]
-    print(z.numpy())
-
+    loss = y.sum()
+    loss.backward()
+    print(x.grad.numpy())
+    # parallel_conf = """  device_tag: "gpu", device_name: "0:0-1" """
+    # op = (
+    #     flow.builtin_op("eager_nccl_all_reduce")
+    #     .Input("in")
+    #     .Attr("parallel_conf", parallel_conf)
+    #     .Output("out")
+    #     .Build()
+    # )
+    # z = op(y)[0]
+    # print(z.numpy())
