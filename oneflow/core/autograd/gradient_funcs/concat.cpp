@@ -70,7 +70,6 @@ Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_grads,
                           TensorTuple* in_grads) const {
-  printf("enter concat apply");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   int n = (*in_grads).size();
