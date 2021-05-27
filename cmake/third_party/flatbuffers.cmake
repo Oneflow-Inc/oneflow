@@ -1,6 +1,6 @@
 include(ExternalProject)
 
-set(FLATBUFFERS_URL https://github.com/google/flatbuffers/archive/v1.12.0.tar.gz)
+set(FLATBUFFERS_URL https://github.com/google/flatbuffers/archive/refs/tags/v2.0.0.tar.gz)
 
 set(FLATBUFFERS_INSTALL_PREFIX ${THIRD_PARTY_DIR}/flatbuffers)
 set(FLATBUFFERS_INSTALL_INCLUDEDIR include)
@@ -12,7 +12,7 @@ if (THIRD_PARTY)
     ExternalProject_Add(flatbuffers
             PREFIX flatbuffers
             URL ${FLATBUFFERS_URL}
-            URL_MD5 c62ffefb3d4548b127cca14ce047f16c
+            URL_MD5 a27992324c3cbf86dd888268a23d17bd
             UPDATE_COMMAND bash -c "rm -f BUILD || true"
             BUILD_IN_SOURCE 1
             SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/flatbuffers/src/flatbuffers
