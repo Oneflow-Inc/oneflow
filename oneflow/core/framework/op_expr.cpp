@@ -34,22 +34,26 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
-#define DEFINE_OPEXPR_TYPE_NAME(_T, _type_name)                \
-  template<>                                                   \
-  const std::string BuiltinOpExprImpl<_T>::type_name() const { \
-    return _type_name;                                         \
+#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)             \
+  template<>                                                      \
+  const std::string BuiltinOpExprImpl<_T>::op_type_name() const { \
+    return _op_type_name;                                         \
   }
 
-DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
-DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
-DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
-DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
-DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
-DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
-DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
+DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
-#undef DEFINE_OPEXPR_TYPE_NAME
+#undef DEFINE_OPEXPR_OP_TYPE_NAME
+
+template<>
+const std::string BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
+  return op_proto_.op_type_name();
+}
 
 const std::string CastToConsistentOpExpr::type_name() const {
   static const std::string type_name = "cast_to_consistent";

@@ -40,7 +40,7 @@ class OpExprGradClosure;
 class OpExpr {
  public:
   virtual ~OpExpr() = default;
-  virtual const std::string type_name() const = 0;
+  virtual const std::string op_type_name() const = 0;
 
   virtual int input_size() const = 0;
   virtual int output_size() const = 0;
@@ -100,7 +100,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   const ProtoType& proto() const { return op_proto_; }
   ProtoType* mutable_proto() { return &op_proto_; }
 
-  const std::string type_name() const override;
+  const std::string op_type_name() const override;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
@@ -237,7 +237,7 @@ class FunctionOpExpr : public OpExpr {
       : OpExpr(), forward_(forward), backward_(backward) {}
   virtual ~FunctionOpExpr() = default;
 
-  const std::string type_name() const override { return "function"; }
+  const std::string op_type_name() const override { return "function"; }
 
   int input_size() const override { UNIMPLEMENTED(); }
   int output_size() const override { UNIMPLEMENTED(); }

@@ -44,7 +44,7 @@ Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inp
   APPLY_IF(BuiltinOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
                      << " has not been supported in LazyInterpreter::Apply.";
 }
 
@@ -119,7 +119,7 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(FunctionOp);
 #undef APPLY_IF
 
-  OF_UNIMPLEMENTED() << "The type " << op_expr.type_name()
+  OF_UNIMPLEMENTED() << "The type " << op_expr.op_type_name()
                      << " has not been supported in EagerInterpreter::Apply.";
 }
 
@@ -171,7 +171,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
-    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(backward_fn, inputs, outputs);
+    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
+                                                       backward_fn, inputs, outputs);
   }
   return Maybe<void>::Ok();
 }
