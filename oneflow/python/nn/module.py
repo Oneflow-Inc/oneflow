@@ -32,7 +32,10 @@ from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
-import oneflow._oneflow_internal
+from oneflow._oneflow_internal.one import (
+    CastToConsistentOpExpr,
+    CastFromConsistentOpExpr,
+)
 
 
 class _IncompatibleKeys(
@@ -137,7 +140,7 @@ class Module(object):
     def _register_cast_to_consistent_ops(
         self,
         inputs_sbp_signature: List[Union[Tuple[str], str]],
-        inputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
+        inputs_placement: List[flow.placement],
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
             parallel_distribution = inputs_sbp_signature[i]
@@ -146,7 +149,7 @@ class Module(object):
             else:
                 assert isinstance(parallel_distribution, tuple)
                 parallel_distribution = list(parallel_distribution)
-            cast_to_consistent_op_expr = oneflow._oneflow_internal.one.CastToConsistentOpExpr(
+            cast_to_consistent_op_expr = CastToConsistentOpExpr(
                 id_util.UniqueStr("cast_to_consistent_op"),
                 parallel_distribution,
                 inputs_placement[i],
@@ -156,7 +159,7 @@ class Module(object):
     def _register_cast_from_consistent_ops(
         self,
         outputs_sbp_signature: List[Union[Tuple[str], str]],
-        outputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
+        outputs_placement: List[flow.placement],
     ) -> None:
         for i in range(len(outputs_sbp_signature)):
             parallel_distribution = outputs_sbp_signature[i]
@@ -165,7 +168,7 @@ class Module(object):
             else:
                 assert isinstance(parallel_distribution, tuple)
                 parallel_distribution = list(parallel_distribution)
-            cast_from_consistent_op_expr = oneflow._oneflow_internal.one.CastFromConsistentOpExpr(
+            cast_from_consistent_op_expr = CastFromConsistentOpExpr(
                 id_util.UniqueStr("cast_from_consistent_op"),
                 parallel_distribution,
                 outputs_placement[i],
@@ -623,10 +626,7 @@ def api_consistent_cast(
         List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]
     ],
     placement_signature: Optional[
-        Tuple[
-            List[oneflow._oneflow_internal.PlacementSymbol],
-            List[oneflow._oneflow_internal.PlacementSymbol],
-        ]
+        Tuple[List[flow.placement], List[flow.placement],]
     ] = None,
 ):
     assert not module.consistent
@@ -649,10 +649,10 @@ def api_consistent_cast(
                 assert len(placement_signature[i].hierarchy) == 1
 
     if placement_signature is None:
-        cur_scope = oneflow._oneflow_internal.GetCurrentScope()
+        cur_scope = flow.current_scope()
         placement_signature = (
-            [cur_scope.device_parallel_desc_symbol() for _ in parallel_distribution[0]],
-            [ur_scope.device_parallel_desc_symbol() for _ in parallel_distribution[1]],
+            [cur_scope.device_parallel_desc_symbol for _ in parallel_distribution[0]],
+            [cur_scope.device_parallel_desc_symbol for _ in parallel_distribution[1]],
         )
     check_input_is_valid(parallel_distribution[0], placement_signature[0])
     check_input_is_valid(parallel_distribution[1], placement_signature[1])
