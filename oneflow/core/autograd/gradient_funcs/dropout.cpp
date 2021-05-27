@@ -43,10 +43,9 @@ class Dropout : public OpExprGradFunction<DropoutInterpState> {
 Maybe<void> Dropout::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  std::cout << "Enter dropout.cpp function >>>>>>>>>>>>>>>>> Init()" << std::endl;
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  grad_op_ = JUST(op_expr_helper::DropoutGradOp(/*scale=*/1.0, GradientOpName(op_name)));
+  grad_op_ = JUST(op_expr_helper::DropoutGradOp(/*scale=*/2.0, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +54,6 @@ Maybe<void> Dropout::Capture(DropoutInterpState* ctx, const TensorTuple& inputs,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->requires_grad = inputs.at(0)->requires_grad();
 
-  std::cout << "Enter dropout.cpp function >>>>>>>>>>>>>>>>>  Capture()" << std::endl;
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->scale = JUST(composed_attrs.GetAttr<float>("scale"));
   CHECK_EQ_OR_RETURN(inputs.size(), 2);
@@ -69,12 +67,10 @@ Maybe<void> Dropout::Apply(const DropoutInterpState* ctx, const TensorTuple& out
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
-  std::cout << "Enter dropout.cpp function >>>>>>>>>>>>>>>>>  Apply()" << std::endl;
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
-  std::cout << "ctx->scale >>>>>>>>>>>>>>>>> " << ctx->scale << std::endl;
   JUST(attrs.SetAttr<float>("scale", ctx->scale));
-  in_grads->resize(1);
+  in_grads->resize(2);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), mask}, attrs));
   return Maybe<void>::Ok();
 }
