@@ -18,22 +18,9 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-class Empty(flow.nn.Empty):
+class Empty(flow.nn.Module):
     r"""Do nothing
     return input
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow.experimental as flow
-        import numpy as np
-
-        m = flow.nn.Empty()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # output == input
 
     """
 
@@ -55,7 +42,8 @@ class TestConsistentCastReLUModule(flow.unittest.TestCase):
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
-        empty.consistent_cast(
+        flow.consistent_cast(
+            empty,
             (["S(0)"], ["S(0)"]),
             (
                 [flow.placement("cpu", ["0:0"], None)],
