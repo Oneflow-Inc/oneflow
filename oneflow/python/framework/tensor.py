@@ -29,6 +29,7 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
 
@@ -307,11 +308,16 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    def nelemenet(self):
+    @register_local_tensor_method()
+    def nelement(self):
         prod = 1
         for dim in self.shape:
             prod *= dim
         return prod
+
+    @register_local_tensor_method()
+    def numel(self):
+        return self.nelement()
 
     def retain_grad(self):
         assert self.is_determined
@@ -331,8 +337,9 @@ class Tensor:
 
         raise NotImplementedError()
 
+    @register_local_tensor_method()
     def tolist(self):
-        TODO()
+        return self.numpy().tolist()
 
     @_auto_determine
     @register_local_tensor_method()
@@ -407,11 +414,13 @@ class Tensor:
         )
         return self
 
+    @register_local_tensor_method()
     def __str__(self):
         return self.__repr__()
 
+    @register_local_tensor_method()
     def __repr__(self):
-        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
+        return tensor_str_util._gen_tensor_str(self)
 
     @register_local_tensor_method()
     def __gt__(self, other):
