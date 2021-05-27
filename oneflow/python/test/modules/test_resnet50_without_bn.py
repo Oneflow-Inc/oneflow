@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 
 import numpy as np
@@ -23,7 +24,7 @@ from resnet50_model import resnet50, FakeBN
 
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
+    not flow.unittest.env.eager_execution_enabled() or os.getenv("ONEFLOW_CI"),
     ".numpy() doesn't work in lazy mode",
 )
 class TestResNet50(flow.unittest.TestCase):
