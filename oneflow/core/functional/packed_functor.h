@@ -60,11 +60,11 @@ FunctionBodyImpl<R(Args...)>::FunctionBodyImpl(Func func) {
 class Functor {
  public:
   Functor(const std::shared_ptr<FunctionBody>& body, const FunctionSignature& signatrue)
-      : body_(body), signatrue_(signatrue) {}
+      : signatrue_(signatrue), body_(body) {}
 
   template<typename R, typename... Args>
   R call(Args... args) const {
-    if (!detail::CheckFunctionSignature<R(Args...)>(signatrue_).Ok()) {
+    if (!detail::CheckSignature<R(Args...)>(signatrue_).Ok()) {
       LOG(FATAL) << "The function was called with wrong arguments.";
     }
     using FuncType = std::function<R(Args...)>;
@@ -73,8 +73,8 @@ class Functor {
   }
 
  private:
-  std::shared_ptr<FunctionBody> body_;
   FunctionSignature signatrue_;
+  std::shared_ptr<FunctionBody> body_;
 };
 
 class PackedFunctor {
@@ -82,7 +82,7 @@ class PackedFunctor {
   virtual ~PackedFunctor() = default;
 
   template<typename Func>
-  static PackedFunctor MakePackedFunctor(const std::string& func_name, Func func);
+  static PackedFunctor Make(const std::string& func_name, Func func);
 
   template<typename R, typename... Args>
   R call(Args... args) const {
@@ -98,7 +98,7 @@ class PackedFunctor {
 };
 
 template<typename Func>
-/*static*/ PackedFunctor PackedFunctor::MakePackedFunctor(const std::string& func_name, Func func) {
+/*static*/ PackedFunctor PackedFunctor::Make(const std::string& func_name, Func func) {
   // static_assert(is_callable(func));
   using func_type = typename function_traits<Func>::func_type;
   auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);

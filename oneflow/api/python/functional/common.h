@@ -52,14 +52,14 @@ inline bool isinstance(py::object obj) {
   template<>                                         \
   inline bool isinstance<T>(py::object obj) {        \
     static py::object dummy = py::cast(T());         \
+    CHECK_NOTNULL(dummy.ptr());                      \
     return py::isinstance(obj, py::type::of(dummy)); \
   }
 
-OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE, ARITHMETIC_TYPE_SEQ);
-OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE, ARITHMETIC_LIST_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE, ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
+OF_PP_FOR_EACH_TUPLE(IMPLEMENT_IS_INSTANCE,
+                     ARITHMETIC_LIST_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::vector<std::string>));
 
-IMPLEMENT_IS_INSTANCE(std::string);
-IMPLEMENT_IS_INSTANCE(std::vector<std::string>);
 #undef IMPLEMENT_IS_INSTANCE
 
 template<typename T>

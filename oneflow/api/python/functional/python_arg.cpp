@@ -46,7 +46,7 @@ PythonArg::operator Scalar() const {
   } else if (detail::isinstance<bool>(obj)) {
     return Scalar(py::cast<bool>(obj));
   } else {
-    UNIMPLEMENTED() << "Can not convert to scalar from python object with type "
+    UNIMPLEMENTED() << "Can not convert to scalar from python object whose type is "
                     << py::cast<std::string>(py::str(py::type::of(obj)));
     return Scalar(0);
   }

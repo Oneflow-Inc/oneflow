@@ -16,14 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_UNPACK_CALL_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_UNPACK_CALL_H_
 
-#include <pybind11/pybind11.h>
-
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/common/function_traits.h"
-
-namespace py = pybind11;
 
 namespace oneflow {
 namespace one {
@@ -34,23 +30,23 @@ namespace detail {
 template<typename R, int nleft, int index, typename Func>
 struct unpack_call_dispatcher {
   template<typename... Args>
-  static R apply(const Func& f, py::args args, Args&&... unpacked_args) {
+  static R apply(const Func& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
     return unpack_call_dispatcher<R, nleft - 1, index + 1, Func>::apply(
-        f, args, std::forward<Args>(unpacked_args)..., PythonArg(args[index]));
+        f, args, std::forward<Args>(unpacked_args)..., args[index]);
   }
 };
 
 template<typename R, int index, typename Func>
 struct unpack_call_dispatcher<R, 0, index, Func> {
   template<typename... Args>
-  static R apply(const Func& f, py::args args, Args&&... unpacked_args) {
+  static R apply(const Func& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
     return f(std::forward<Args>(unpacked_args)...);
   }
 };
 
 template<typename Func, typename R>
 struct unpack_call {
-  static R apply(const Func& f, py::args args) {
+  static R apply(const Func& f, const std::vector<PythonArg>& args) {
     constexpr size_t nargs = function_traits<Func>::nargs;
     CHECK_EQ(nargs, args.size()) << "Requires " << nargs << " arguments, but " << args.size()
                                  << " is given.";
@@ -63,7 +59,7 @@ struct unpack_call {
   struct unpack_call<Func, T> {                                                         \
     static constexpr auto return_fn_ = (return_fn);                                     \
     using R = typename function_traits<decltype(return_fn_)>::return_type;              \
-    static R apply(const Func& f, py::args args) {                                      \
+    static R apply(const Func& f, const std::vector<PythonArg>& args) {                 \
       constexpr size_t nargs = function_traits<Func>::nargs;                            \
       CHECK_EQ(nargs, args.size())                                                      \
           << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \

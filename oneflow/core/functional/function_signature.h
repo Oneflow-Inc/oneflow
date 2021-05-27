@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_SIGNATURE_H_
 
 #include <memory>
-#include <tuple>
 
 #include "oneflow/core/functional/value_types.h"
 
@@ -82,25 +81,22 @@ class PackFunctionSignature<R(Args...)> {
 };
 
 template<typename T>
-class CheckFunctionSignature;
+class CheckSignature;
 
 template<typename R, typename... Args>
-class CheckFunctionSignature<R(Args...)> {
+class CheckSignature<R(Args...)> {
  public:
-  CheckFunctionSignature(const FunctionSignature& signature) {
-    status_ = CheckFunctionSignatureImpl(signature);
-  }
+  CheckSignature(const FunctionSignature& signature) { status_ = CheckSignatureImpl(signature); }
 
   bool Ok() { return status_; }
 
  private:
-  bool CheckFunctionSignatureImpl(const FunctionSignature& signature);
+  bool CheckSignatureImpl(const FunctionSignature& signature);
   bool status_;
 };
 
 template<typename R, typename... Args>
-bool CheckFunctionSignature<R(Args...)>::CheckFunctionSignatureImpl(
-    const FunctionSignature& signature) {
+bool CheckSignature<R(Args...)>::CheckSignatureImpl(const FunctionSignature& signature) {
   static ValueType return_type = detail::PackType<R>();
   if (signature.return_type != return_type) { return false; }
   static std::vector<ValueType> argument_types = detail::PackTypeList<Args...>();

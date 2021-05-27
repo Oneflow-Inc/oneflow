@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_0_H_
-#define ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_0_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_FUNCTOR_0_H_
+#define ONEFLOW_CORE_FUNCTIONAL_IMPL_FUNCTOR_0_H_
 
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -56,10 +56,23 @@ class AddScalarFunctor {
   std::shared_ptr<OpExpr> add_scalar_op_;
 };
 
+class NormalizationFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& moving_mean,
+                           const std::shared_ptr<one::Tensor>& moving_variance,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                           const float& epsilon, const float& momentum,
+                           const bool& is_training) const {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+};
+
 }  // namespace impl
 
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTOR_0_H_
+#endif  // ONEFLOW_CORE_FUNCTIONAL_IMPL_FUNCTOR_0_H_

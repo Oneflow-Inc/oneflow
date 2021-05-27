@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/functional/functor_0.h"
-#include "oneflow/core/functional/functor.h"
+#include "oneflow/core/functional/impl/functor_0.h"
 #include "oneflow/core/functional/function_library.h"
 
 #include "oneflow/core/framework/tensor.h"
@@ -76,9 +75,10 @@ Maybe<Tensor> AddScalarFunctor::operator()(const std::shared_ptr<one::Tensor>& x
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::AddFunctor>("add");
-  m.add_functor<impl::AddNFunctor>("add_n");
-  m.add_functor<impl::AddScalarFunctor>("add_scalar");
+  m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::AddNFunctor>("AddN");
+  m.add_functor<impl::AddScalarFunctor>("AddScalar");
+  m.add_functor<impl::NormalizationFunctor>("Normalization");
 };
 
 }  // namespace functional

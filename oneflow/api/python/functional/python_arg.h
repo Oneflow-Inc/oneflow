@@ -34,6 +34,7 @@ namespace functional {
 
 class PythonArg {
  public:
+  PythonArg() = default;
   PythonArg(py::object value) : value_(value.ptr()) {}
 
   virtual ~PythonArg() = default;
