@@ -79,7 +79,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulInterpState* ctx,
                                    const TensorTuple& out_grads, TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  MutableAttrMap attrs;
+  MutableAttrMap attrs_a;
   MutableAttrMap attrs_b;
 
   const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
@@ -88,10 +88,10 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulInterpState* ctx,
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
-  JUST(attrs.SetAttr<bool>("transpose_a", ctx->transpose_a));
-  JUST(attrs.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
+  JUST(attrs_a.SetAttr<bool>("transpose_a", ctx->transpose_a));
+  JUST(attrs_a.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
   in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs));
+      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
 
   if (!ctx->transpose_b) {
     in_grads->at(1) =
