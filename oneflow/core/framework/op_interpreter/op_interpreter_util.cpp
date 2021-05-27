@@ -52,8 +52,7 @@ std::shared_ptr<AutogradInterpreter> BuildLazyInterpreter() {
   static const auto& g_eager_mirrored_interpreter = BuildEagerInterpreter(/*is_mirrored=*/true);
   if (EagerExecutionEnabled()) {
     const auto& session = JUST(GetDefaultSession());
-    bool is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
-                                        || JUST(session->IsMirroredStrategyEnabled());
+    bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabledWhenDefaultIsMirrored());
     if (is_mirrored_strategy_enabled) {
       return g_eager_mirrored_interpreter;
     } else {

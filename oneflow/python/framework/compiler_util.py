@@ -19,6 +19,7 @@ from __future__ import absolute_import
 import inspect
 from typing import Callable, Union
 
+import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
 from oneflow.python.framework.function_util import (
@@ -38,6 +39,9 @@ class GraphFunction(object):
         oft_util.CheckGlobalFunctionAnnotation(
             self._func.__oneflow_function_signature__
         )
+        if function_config.function_desc.function_attribute.default_distribute_strategy is None:
+           function_config.default_logical_view(distribute_util.DistributeMirroredStrategy())
+           print(function_config.function_desc.function_attribute.default_distribute_strategy)
         self._sess = session_ctx.GetDefaultSession()
         self._sess.AddJob(_CloneFunctionDesc(function_config.function_desc, self._func))
 

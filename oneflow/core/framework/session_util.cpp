@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <mutex>
+#include "oneflow/api/python/session/session.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/session_util.h"
 
@@ -73,6 +74,11 @@ Maybe<bool> Session::IsMirroredStrategyEnabled() const {
   return is_mirrored_strategy_enabled_stack_->size() > 0
          && is_mirrored_strategy_enabled_stack_->back();
 }
+
+Maybe<bool> Session::IsMirroredStrategyEnabledWhenDefaultIsMirrored() const {
+  return is_mirrored_strategy_enabled_stack_->size() == 0 || JUST(IsMirroredStrategyEnabled());
+}
+
 Maybe<bool> Session::IsConsistentStrategyEnabled() const {
   return is_mirrored_strategy_enabled_stack_->size() > 0
          && !is_mirrored_strategy_enabled_stack_->back();

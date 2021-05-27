@@ -199,6 +199,7 @@ class Tensor:
     @property
     def grad(self):
         if self._local_or_consistent_tensor is not None:
+            print(type(self._local_or_consistent_tensor))
             if self._local_or_consistent_tensor.grad is not None:
                 return flow.Tensor(self._local_or_consistent_tensor.grad)
         else:
@@ -720,7 +721,7 @@ def _numpy_initializer_for_determining(tensor):
         def variable_numpy_initializer():
             flow.load_variables({variable_name: undetermined_tensor.numpy_data})
             blob = flow.get_all_variables()[variable_name]
-            # determined_tensor._set_blob_object(blob.blob_object)
+            determined_tensor._set_blob_object(blob.blob_object)
 
         if flow.eager_execution_enabled():
             variable_numpy_initializer()

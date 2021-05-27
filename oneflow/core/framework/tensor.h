@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_H_
 
+#include <memory>
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
@@ -156,6 +157,12 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
  private:
   Maybe<DerivedT> cast_for_api(const std::shared_ptr<Tensor>& tensor) const {
     if (!tensor) { return std::shared_ptr<DerivedT>(); }
+    if (std::dynamic_pointer_cast<MirroredTensor>(tensor)) {
+      std::cout << "is mirror" << std::endl;
+    }
+    if (std::dynamic_pointer_cast<ConsistentTensor>(tensor)) {
+      std::cout << "is consistent " << std::endl;
+    }
     const auto& ptr = std::dynamic_pointer_cast<DerivedT>(tensor);
     CHECK_OR_RETURN(ptr) << Error::ValueError("Tensor Cast Error");
     return ptr;
@@ -206,7 +213,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
+  const std::shared_ptr<Tensor>& acc_grad() const override { 
+    std::cout << "mirror acc grad." << std::endl;
+    return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
@@ -291,7 +300,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
+  const std::shared_ptr<Tensor>& acc_grad() const override { 
+    std::cout << "consistant acc grad." << std::endl;
+    return impl_->acc_grad(); }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }

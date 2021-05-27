@@ -33,7 +33,7 @@ from typing import Optional, Tuple
 
 
 class TestModule(flow.unittest.TestCase):
-    def test_add_case1(test_case):
+    def _test_add_case1(test_case):
         flow.clear_default_session()
         init_val = np.random.randn(2, 3)
 
@@ -57,22 +57,30 @@ class TestModule(flow.unittest.TestCase):
             np.allclose(of_out[1].numpy(), np.full((2, 3), init_val + 4), 1e-4, 1e-4)
         )
 
-    def _test_add_case2(test_case):
+    def test_add_case2(test_case):
         flow.clear_default_session()
         init_val = np.random.randn(2, 3)
 
         def fn2():
-            x = Parameter(flow.Tensor(init_val))
+            x = Parameter(flow.Tensor(init_val, is_consistent=True))
+            print("x", type(x._data))
 
             y = flow.ones((2, 3))
+            print("y", type(y))
 
-            of_out = flow.add(x * 2.2, y)
+            m = flow.add(x * 2.2, y)
+            print("m", type(m))
+            of_out = flow.Tensor(m)
 
             grad = flow.ones((2, 3))
             of_out.backward(grad)
 
             return x.grad
 
+        # func_config = flow.ExecutionConfig()
+        # func_config.default_data_type(flow.float)
+        # func_config.default_logical_view(flow.scope.mirrored_view())
+        # graph_fn = flow.compiler.trace(fn2, execution_config=func_config)
         graph_fn = flow.compiler.trace(fn2)
 
         x_grad = graph_fn().get()

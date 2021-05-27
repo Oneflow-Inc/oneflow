@@ -64,7 +64,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const BuiltinOpExpr& op_expr, const Tenso
     ReplaceInputLbnInOpCustomizedConf(op_conf.get(), ibn, tensor_name);
   }
   const auto& session = JUST(GetDefaultSession());
-  bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabled());
+  bool is_mirrored_strategy_enabled = JUST(session->IsMirroredStrategyEnabledWhenDefaultIsMirrored());
+  VLOG(10) << " lazy interpreter is mirror " << is_mirrored_strategy_enabled;
   const auto& op_attribute =
       JUST(OpInterpUtil::AddOpAndInferOpAttribute(*op_conf, is_mirrored_strategy_enabled));
   OpAttribute proto_op_attribute;

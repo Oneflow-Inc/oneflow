@@ -40,6 +40,7 @@ class Session {
   Maybe<void> PushMirroredStrategyEnabled(bool is_mirrored);
   Maybe<void> PopMirroredStrategyEnabled();
   Maybe<bool> IsMirroredStrategyEnabled() const;
+  Maybe<bool> IsMirroredStrategyEnabledWhenDefaultIsMirrored() const;
   Maybe<bool> IsConsistentStrategyEnabled() const;
 
  private:

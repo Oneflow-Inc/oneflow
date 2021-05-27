@@ -82,6 +82,7 @@ def InterpretScope(session, function_desc, config_proto):
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
+    print("test is mirror ", is_mirrored)
     assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
     if hierarchy is not None:
         hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
