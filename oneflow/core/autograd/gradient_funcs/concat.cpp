@@ -26,6 +26,7 @@ namespace one {
 struct ConcatInterpState : public OpExprInterpState {
   bool requires_grad;
   int64_t axis;
+  int64_t input_num;
 };
 
 class Concat : public OpExprGradFunction<ConcatInterpState> {
@@ -49,7 +50,7 @@ Maybe<void> Concat::Init(const OpExpr& op) {
   const std::string& op_name = fw_op_expr->op_name();
   op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
   int32_t input_num = JUST(op_trait_->input_size("in"));
-  int64_t axis;
+  int64_t axis = 0;
   grad_op_ = JUST(op_expr_helper::SplitLikeOp(input_num, axis, GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
@@ -67,7 +68,8 @@ Maybe<void> Concat::Capture(ConcatInterpState* ctx, const TensorTuple& inputs,
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->axis = JUST(composed_attrs.GetAttr<int64_t>("axis"));
-  for (int i = 0; i < (int)inputs.size(); i++) { ctx->SaveTensorForBackward(inputs.at(i)); }
+  for (const auto& input : inputs) { ctx->SaveTensorForBackward(input); }
+  ctx->input_num = inputs.size();
   return Maybe<void>::Ok();
 }
 
@@ -75,17 +77,16 @@ Maybe<void> Concat::Apply(const ConcatInterpState* ctx, const TensorTuple& out_g
                           TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  const int n = in_grads->size();
-  TensorTuple like;
-  like.reserve(in_grads->size() + 1);
-  like.push_back(out_grads.at(0));
-  for (int i = 0; i < n; i++) { like.push_back(ctx->SavedTensors().at(i)); }
+  in_grads->resize(ctx->input_num);
+  TensorTuple inputs(ctx->input_num + 1);
+  inputs[0] = out_grads.at(0);
+  for (int i = 0; i < ctx->input_num; ++i) { inputs[i + 1] = ctx->SavedTensors().at(i); }
   MutableAttrMap concat_attrs;
-  int64_t axis = ctx->axis;
-  JUST(concat_attrs.SetAttr<int64_t>("axis", axis));
-  const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, like, concat_attrs));
-  CHECK_EQ_OR_RETURN(results->size(), n);
-  for (int i = 0; i < n; i++) { in_grads->at(i) = results->at(i); }
+  JUST(concat_attrs.SetAttr<int64_t>("axis", ctx->axis));
+  const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(*grad_op_, inputs, concat_attrs));
+  CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
+
+  for (int i = 0; i < ctx->input_num; ++i) { in_grads->at(i) = results->at(i); }
   return Maybe<void>::Ok();
 }
 
