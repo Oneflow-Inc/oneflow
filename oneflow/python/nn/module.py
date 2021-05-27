@@ -18,6 +18,8 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
+import functools
+import re
 
 import numpy as np
 
@@ -71,7 +73,30 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def consistentize(self, parallel_distribution, placement_signature):
+    # internal decorator
+    def _auto_consisitentize(func):
+        @functools.wraps(func)
+        def wrapped_func(*args):
+            module = args[0]
+            args = list(args)
+            sess = session_ctx.GetDefaultSession()
+            with sess.ConsistentScope():
+                for i in range(1, len(args)):
+                    if not args[i].is_consistent:
+                        args[i] = module._cast_to_consistent_ops[i - 1](args[i])[0]
+                consistent_output = func(*args)
+                if len(module._cast_from_consistent_ops) == 1:
+                    res = module._cast_from_consistent_ops[0](consistent_output)[0]
+                else:
+                    res = [
+                        module._cast_from_consistent_ops[i](consistent_output[i])[0]
+                        for i in len(module._cast_from_consistent_ops)
+                    ]
+            return res
+
+        return wrapped_func
+
+    def consistent_cast(self, parallel_distribution, placement_signature):
         self._register_cast_consistent_ops(
             parallel_distribution[0],
             parallel_distribution[1],
@@ -83,23 +108,9 @@ class Module(object):
     def forward(self, *args):
         raise NotImplementedError()
 
+    @_auto_consisitentize
     def consistent_forward(self, *args):
-        args = list(args)
-        sess = session_ctx.GetDefaultSession()
-        with sess.ConsistentScope():
-            consisitent_args = []
-            for i in range(len(args)):
-                if not args[i].is_consistent:
-                    args[i] = self._cast_to_consistent_ops[i](args[i])[0]
-            consistent_output = self.forward(*args)
-            if len(self._cast_from_consistent_ops) == 1:
-                res = self._cast_from_consistent_ops[0](consistent_output)[0]
-            else:
-                res = [
-                    self._cast_from_consistent_ops[i](consistent_output[i])[0]
-                    for i in len(self._cast_from_consistent_ops)
-                ]
-        return res
+        return self.forward(*args)
 
     def force_mirrored_forward(self, *args):
         raise NotImplementedError()
@@ -116,9 +127,6 @@ class Module(object):
         else:
             res = self.consistent_forward(*args)
         return res
-
-    def consistent_cast(self, sbp_signature, placement_signature):
-        return flow.consistent_cast(self, sbp_signature, placement_signature)
 
     def _register_cast_consistent_ops(
         self,
@@ -603,22 +611,8 @@ class Module(object):
 @oneflow_export("consistent_cast")
 def api_consistent_cast(
     module: Module,
-    parallel_distribution: Union[
-        Tuple[
-            List[
-                Union[
-                    Tuple[oneflow._oneflow_internal.distribute.Distribute],
-                    oneflow._oneflow_internal.distribute.Distribute,
-                ]
-            ],
-            List[
-                Union[
-                    Tuple[oneflow._oneflow_internal.distribute.Distribute],
-                    oneflow._oneflow_internal.distribute.Distribute,
-                ]
-            ],
-        ],
-        Tuple[List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]],
+    parallel_distribution: Tuple[
+        List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]
     ],
     placement_signature: Optional[
         Tuple[
@@ -634,8 +628,17 @@ def api_consistent_cast(
         for i in range(len(parallel_distribution)):
             if isinstance(parallel_distribution[i], (tuple, list)):
                 assert len(parallel_distribution[i]) == len(
-                    placement_signature[i].hierarchy()
+                    placement_signature[i].hierarchy
                 )
+                for sbp_parallel_str in parallel_distribution:
+                    assert re.match("^B|P|(S\(\d+\))$", sbp_parallel_str) is not None, (
+                        "Distribute %s is not valid" % sbp_parallel_str
+                    )
+            else:
+                assert (
+                    re.match("^B|P|(S\(\d+\))$", parallel_distribution[0]) is not None
+                ), ("Distribute %s is not valid" % parallel_distribution)
+                assert len(placement_signature[i].hierarchy) == 1
 
     if placement_signature is None:
         cur_scope = oneflow._oneflow_internal.GetCurrentScope()
@@ -646,26 +649,4 @@ def api_consistent_cast(
     check_input_is_valid(parallel_distribution[0], placement_signature[0])
     check_input_is_valid(parallel_distribution[1], placement_signature[1])
 
-    def distribute_to_str(dist):
-        if dist is None:
-            return ""
-        elif type(dist) is str:
-            return dist
-        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
-            return "S({})".format(dist.axis)
-        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
-            return "B"
-        elif type(dist) is oneflow._oneflow_internal.distribute.ParticalSumDistribute:
-            return "P"
-        elif isinstance(dist, (tuple, list)):
-            return tuple(map(distribute_to_str, dist))
-            pass
-        else:
-            raise ValueError("unsupported distribute")
-
-    parallel_distribution = (
-        list(map(distribute_to_str, parallel_distribution[0])),
-        list(map(distribute_to_str, parallel_distribution[1])),
-    )
-
-    module.consistentize(parallel_distribution, placement_signature)
+    module.consistent_cast(parallel_distribution, placement_signature)
