@@ -109,7 +109,6 @@ class Module(object):
             parallel_distribution[1], placement_signature[1],
         )
         consisitent_module._consistent = True
-        # upddate attr of module in Sequential(Module)
         for module in consisitent_module._modules.values():
             module._consistent = True
         return consisitent_module
