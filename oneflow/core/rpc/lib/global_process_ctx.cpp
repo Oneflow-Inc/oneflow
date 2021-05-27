@@ -19,6 +19,11 @@ limitations under the License.
 
 namespace oneflow {
 
+void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
+  *machine_id = Rank();
+  *device_id = *machine_id % NumOfProcessPerNode();
+}
+
 int64_t GlobalProcessCtx::Rank() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
