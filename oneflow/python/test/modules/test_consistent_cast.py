@@ -42,7 +42,7 @@ class TestConsistentCastReLUModule(flow.unittest.TestCase):
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
-        flow.consistent_cast(
+        consisitent_empty = flow.consistent_cast(
             empty,
             (["S(0)"], ["S(0)"]),
             (
@@ -51,7 +51,7 @@ class TestConsistentCastReLUModule(flow.unittest.TestCase):
             ),
         )
         x = flow.Tensor(arr)
-        y = empty(x)
+        y = consisitent_empty(x)
         of_out = relu(y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 

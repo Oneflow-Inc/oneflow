@@ -20,6 +20,7 @@ from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, C
 import itertools
 import functools
 import re
+import copy
 
 import numpy as np
 
@@ -97,13 +98,18 @@ class Module(object):
         return wrapped_func
 
     def consistent_cast(self, parallel_distribution, placement_signature):
-        self._register_cast_consistent_ops(
-            parallel_distribution[0],
-            parallel_distribution[1],
-            placement_signature[0],
-            placement_signature[1],
+        consisitent_module = copy.deepcopy(self)
+        consisitent_module._register_cast_to_consistent_ops(
+            parallel_distribution[0], placement_signature[0],
         )
-        self._consistent = True
+        consisitent_module._register_cast_from_consistent_ops(
+            parallel_distribution[1], placement_signature[1],
+        )
+        consisitent_module._consistent = True
+        # upddate attr of module in Sequential(Module)
+        for module in consisitent_module._modules.values():
+            module._consistent = True
+        return consisitent_module
 
     def forward(self, *args):
         raise NotImplementedError()
@@ -128,12 +134,10 @@ class Module(object):
             res = self.consistent_forward(*args)
         return res
 
-    def _register_cast_consistent_ops(
+    def _register_cast_to_consistent_ops(
         self,
         inputs_sbp_signature: List[Union[Tuple[str], str]],
-        outputs_sbp_signature: List[Union[Tuple[str], str]],
         inputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
-        outputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
     ) -> None:
         for i in range(len(inputs_sbp_signature)):
             parallel_distribution = inputs_sbp_signature[i]
@@ -150,6 +154,12 @@ class Module(object):
             )
             self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
 
+    def _register_cast_from_consistent_ops(
+        self,
+        outputs_sbp_signature: List[Union[Tuple[str], str]],
+        outputs_placement: List[oneflow._oneflow_internal.PlacementSymbol],
+    ) -> None:
+        for i in range(len(outputs_sbp_signature)):
             parallel_distribution = outputs_sbp_signature[i]
             if isinstance(parallel_distribution, tuple):
                 parallel_distribution = list(parallel_distribution)
@@ -649,4 +659,4 @@ def api_consistent_cast(
     check_input_is_valid(parallel_distribution[0], placement_signature[0])
     check_input_is_valid(parallel_distribution[1], placement_signature[1])
 
-    module.consistent_cast(parallel_distribution, placement_signature)
+    return module.consistent_cast(parallel_distribution, placement_signature)

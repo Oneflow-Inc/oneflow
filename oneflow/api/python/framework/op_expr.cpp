@@ -92,8 +92,12 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def_property_readonly("indexed_obns", &one::BuiltinOpExpr::indexed_obns);
 
   auto py_user_op_class = PybindExportOpExpr<one::UserOpExpr, cfg::UserOpConf>(m, "UserOpExpr");
-  py_user_op_class.def_property_readonly(
-      "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
+  py_user_op_class
+      .def_property_readonly("op_type_name",
+                             [](const one::UserOpExpr& op) { return op.proto().op_type_name(); })
+      .def("__copy__", [](const one::UserOpExpr& self) { return one::UserOpExpr(self); })
+      .def("__deepcopy__",
+           [](const one::UserOpExpr& self, py::dict) { return one::UserOpExpr(self); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
 
   py::class_<one::CastConsistentOpExpr, one::OpExpr, std::shared_ptr<one::CastConsistentOpExpr>>(
