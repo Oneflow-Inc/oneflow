@@ -286,7 +286,13 @@ class StatefulLocalOpKernel final {
                             const EagerBlobObjectListPtr& outputs,
                             LocalUserOpInferContext* op_infer_ctx);
 
-  void ResetDynamicOpAttrs(const AttrMap& attrs);
+  ComposedAttrMap* composed_attrs_for_thread_a() const {
+    return composed_attrs_for_thread_a_.get();
+  }
+
+  ComposedAttrMap* composed_attrs_for_thread_b() const {
+    return composed_attrs_for_thread_b_.get();
+  }
 
   LocalUserOpInferContext* op_infer_ctx_for_thread_a() const {
     return op_infer_ctx_for_thread_a_.get();
@@ -326,7 +332,8 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_thread_a_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_thread_b_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   std::shared_ptr<const Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;

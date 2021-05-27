@@ -344,7 +344,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
   opkernel->device_ = device;
-  opkernel->composed_attrs_.reset(new ComposedAttrMap(base_attrs));
+  opkernel->composed_attrs_for_thread_a_.reset(new ComposedAttrMap(base_attrs));
+  opkernel->composed_attrs_for_thread_b_.reset(new ComposedAttrMap(base_attrs));
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
@@ -355,17 +356,20 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  const ComposedAttrMap* composed_attrs = opkernel->composed_attrs_.get();
   opkernel->op_infer_ctx_for_thread_a_.reset(
-      new LocalUserOpInferContext(user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple));
+      new LocalUserOpInferContext(user_op_conf, opkernel->composed_attrs_for_thread_a_.get(),
+                                  input_arg_tuple, output_arg_tuple));
   opkernel->op_infer_ctx_for_thread_b_.reset(
-      new LocalUserOpInferContext(user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple));
+      new LocalUserOpInferContext(user_op_conf, opkernel->composed_attrs_for_thread_b_.get(),
+                                  input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, device_tag, user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple,
-      opkernel->mut_temp_blob_object()));
-  opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(user_op_conf, composed_attrs));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, user_op_conf, composed_attrs,
-                                                         input_arg_tuple, output_arg_tuple));
+      nullptr, device_tag, user_op_conf, opkernel->composed_attrs_for_thread_a_.get(),
+      input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
+  opkernel->create_ctx_.reset(
+      new LocalUserKernelCreateContext(user_op_conf, opkernel->composed_attrs_for_thread_a_.get()));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
+      device_tag, user_op_conf, opkernel->composed_attrs_for_thread_a_.get(), input_arg_tuple,
+      output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -465,8 +469,5 @@ LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
   return compute_ctx_.get();
 }
 
-void StatefulLocalOpKernel::ResetDynamicOpAttrs(const AttrMap& attrs) {
-  composed_attrs_->ResetPrior(attrs);
-}
 }  // namespace one
 }  // namespace oneflow

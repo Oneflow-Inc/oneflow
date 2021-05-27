@@ -91,7 +91,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  kernel->ResetDynamicOpAttrs(attrs);
+  kernel->composed_attrs_for_thread_b()->ResetPrior(attrs);
   JUST(kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
                              kernel->op_infer_ctx_for_thread_b()));
   JUST(kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
