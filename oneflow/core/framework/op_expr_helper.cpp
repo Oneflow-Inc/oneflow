@@ -616,5 +616,17 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
+  return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
+}
+Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
+  return one::OpBuilder("dropout_grad", name)
+      .Input("dy")
+      .Input("mask")
+      .Output("dx")
+      .Attr<float>("scale", scale)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

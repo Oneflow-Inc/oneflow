@@ -26,9 +26,62 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_dropout(test_case, device):
+    input_arr = np.array(
+        [
+            [-0.7797, 0.2264, 0.2458, 0.4163],
+            [0.4299, 0.3626, -0.4892, 0.4141],
+            [-1.4115, 1.2183, -0.5503, 0.6520],
+        ]
+    )
+    m = flow.nn.Dropout(p=0)
+    x = flow.Tensor(input_arr, device=flow.device(device))
+    y = m(x)
+    test_case.assertTrue(np.allclose(y.numpy(), input_arr))
+
+def _test_dropout_special_case(test_case, device):
+    input_arr = np.array(
+        [
+            [-0.7797, 0.2264, 0.2458, 0.4163],
+            [0.4299, 0.3626, -0.4892, 0.4141],
+            [-1.4115, 1.2183, -0.5503, 0.6520],
+        ]
+    )
+    output = np.array(
+        [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],]
+    )
+    m = flow.nn.Dropout(p=1.0)
+    x = flow.Tensor(input_arr, device=flow.device(device))
+    y = m(x)
+    test_case.assertTrue(np.allclose(y.numpy(), output))
+
+def _test_dropout_backward(test_case, device):
+    input_arr = np.array(
+        [
+            [-0.7797, 0.2264, 0.2458, 0.4163],
+            [0.4299, 0.3626, -0.4892, 0.4141],
+            [-1.4115, 1.2183, -0.5503, 0.6520],
+        ]
+    )
+    output = np.array(
+        [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],]
+    )
+    m = flow.nn.Dropout(p=1.0)
+    x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
+    y = m(x)
+    z = y.sum()
+    z.backward()
+    print("y.numpy() >>>>>>>>>>>>>>>>>>>>>>>> \n", y.numpy())
+    print("x.grad.numpy() >>>>>>>>>>>>>>>>>>>>>>>> \n", x.grad.numpy())
+    # test_case.assertTrue(np.allclose(y.numpy(), output))
 
 
 @unittest.skipIf(
@@ -36,34 +89,16 @@ import oneflow.experimental as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestDropout(flow.unittest.TestCase):
-    def test_dropout(test_case):
-        input_arr = np.array(
-            [
-                [-0.7797, 0.2264, 0.2458, 0.4163],
-                [0.4299, 0.3626, -0.4892, 0.4141],
-                [-1.4115, 1.2183, -0.5503, 0.6520],
-            ]
-        )
-        m = flow.nn.Dropout(p=0)
-        x = flow.Tensor(input_arr)
-        y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), input_arr))
-
-    def test_dropout_special_case(test_case):
-        input_arr = np.array(
-            [
-                [-0.7797, 0.2264, 0.2458, 0.4163],
-                [0.4299, 0.3626, -0.4892, 0.4141],
-                [-1.4115, 1.2183, -0.5503, 0.6520],
-            ]
-        )
-        output = np.array(
-            [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],]
-        )
-        m = flow.nn.Dropout(p=1.0)
-        x = flow.Tensor(input_arr)
-        y = m(x)
-        test_case.assertTrue(np.allclose(y.numpy(), output))
+    def test_transpose(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_functions"] = [
+            _test_dropout,
+            _test_dropout_special_case,
+            _test_dropout_backward
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
