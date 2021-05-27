@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -52,6 +53,22 @@ template<>
 const std::string BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
+
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
+  template<>                                                    \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
+    return _bool;                                               \
+  }
+
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeSplitOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeCloneOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeConcatOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
+
+#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -187,11 +204,6 @@ Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<bool> BuiltinOpExprImpl<VariableOpConf>::IsGradDisabled() const {
-  return true;
 }
 
 template<>
