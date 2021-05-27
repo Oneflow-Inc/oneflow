@@ -34,51 +34,33 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_dropout(test_case, device):
-    input_arr = np.array(
-        [
-            [-0.7797, 0.2264, 0.2458, 0.4163],
-            [0.4299, 0.3626, -0.4892, 0.4141],
-            [-1.4115, 1.2183, -0.5503, 0.6520],
-        ]
-    )
+def _test_dropout(test_case, shape, device):
+    input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=0)
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
 
-
-def _test_dropout_p1(test_case, device):
-    input_arr = np.array(
-        [
-            [-0.7797, 0.2264, 0.2458, 0.4163],
-            [0.4299, 0.3626, -0.4892, 0.4141],
-            [-1.4115, 1.2183, -0.5503, 0.6520],
-        ]
-    )
-    output = np.array(
-        [[0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0],]
-    )
+def _test_dropout_p1(test_case, shape, device):
+    input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1.0)
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), output))
+    test_case.assertTrue(np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32)))
 
-
-def _test_dropout_backward_p0(test_case, device):
-    input_arr = np.random.randn(2, 3, 4, 5)
+def _test_dropout_backward_p0(test_case, shape, device):
+    input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=0)
     x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
     z = y.sum()
     z.backward()
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.ones((2, 3, 4, 5), dtype=np.float32), 1e-5, 1e-5)
+        np.allclose(x.grad.numpy(), np.ones(input_arr.shape, dtype=np.float32), 1e-5, 1e-5)
     )
 
-
-def _test_dropout_backward_p1(test_case, device):
-    input_arr = np.random.randn(2, 3, 4, 5)
+def _test_dropout_backward_p1(test_case, shape, device):
+    input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1)
     x = flow.Tensor(input_arr, device=flow.device(device), requires_grad=True)
     y = m(x)
@@ -86,10 +68,9 @@ def _test_dropout_backward_p1(test_case, device):
     z.backward()
     test_case.assertTrue(
         np.allclose(
-            x.grad.numpy(), np.zeros((2, 3, 4, 5), dtype=np.float32), 1e-5, 1e-5
+            x.grad.numpy(), np.zeros(input_arr.shape, dtype=np.float32), 1e-5, 1e-5
         )
     )
-
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -104,6 +85,7 @@ class TestDropout(flow.unittest.TestCase):
             _test_dropout_backward_p0,
             _test_dropout_backward_p1,
         ]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
