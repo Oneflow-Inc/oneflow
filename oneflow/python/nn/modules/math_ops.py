@@ -984,7 +984,7 @@ class Clamp(Module):
         return self._op(x)[0]
 
 
-@oneflow_export("clamp, clip")
+@oneflow_export("clamp")
 @experimental_api
 def clamp_op(tensor, min = None, max = None):
     r"""
@@ -1023,10 +1023,27 @@ def clamp_op(tensor, min = None, max = None):
     """
     return Clamp(min, max)(tensor)
 
-@register_tensor_op("clamp, clip")
+@register_tensor_op("clamp")
 @experimental_api
 def clamp_op_tensor(tensor, min = None, max = None):
     r"""
     See :func:`oneflow.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
+
+@oneflow_export("clip")
+@experimental_api
+def clip_op(tensor, min = None, max = None):
+    r"""
+    Alias for :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+@register_tensor_op("clip")
+@experimental_api
+def clip_op_tensor(tensor, min = None, max = None):
+    r"""
+    See :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+

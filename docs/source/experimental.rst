@@ -126,3 +126,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.clamp
+.. autofunction:: oneflow.experimental.Tensor.clamp
+.. autofunction:: oneflow.experimental.clip
+.. autofunction:: oneflow.experimental.Tensor.clip
