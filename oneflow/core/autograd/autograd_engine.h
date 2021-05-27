@@ -53,10 +53,12 @@ class FunctionNode {
       const {
     return next_functions_;
   }
-  const std::string& GetOpName() const { return op_name_; }
+  const std::string& GetOpTypeName() const { return op_name_; }
 
  protected:
-  FunctionNode() : next_functions_(new std::vector<std::shared_ptr<const FunctionNode>>{}) {}
+  explicit FunctionNode(const std::string& op_type_name)
+      : op_name_(op_type_name),
+        next_functions_(new std::vector<std::shared_ptr<const FunctionNode>>{}) {}
 
   const std::string op_name_;
   std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
@@ -77,6 +79,7 @@ class AutogradEngine {
   virtual void ClearEngine() = 0;
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   virtual std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+      const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
       const TensorTuple& inputs, TensorTuple* outputs) = 0;
@@ -90,6 +93,7 @@ class StackFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StackFunctionNode);
   StackFunctionNode(
+      const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
       const TensorTuple& inputs, const TensorTuple& outputs);
@@ -138,6 +142,7 @@ class StackAutogradEngine final : public AutogradEngine {
                                                           bool create_graph) override;
   void ClearEngine() override;
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+      const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
       const TensorTuple& inputs, TensorTuple* outputs) override;
