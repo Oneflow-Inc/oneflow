@@ -39,9 +39,16 @@ class GraphFunction(object):
         oft_util.CheckGlobalFunctionAnnotation(
             self._func.__oneflow_function_signature__
         )
-        if function_config.function_desc.function_attribute.default_distribute_strategy is None:
-           function_config.default_logical_view(distribute_util.DistributeMirroredStrategy())
-           print(function_config.function_desc.function_attribute.default_distribute_strategy)
+        if (
+            function_config.function_desc.function_attribute.default_distribute_strategy
+            is None
+        ):
+            function_config.default_logical_view(
+                distribute_util.DistributeMirroredStrategy()
+            )
+            print(
+                function_config.function_desc.function_attribute.default_distribute_strategy
+            )
         self._sess = session_ctx.GetDefaultSession()
         self._sess.AddJob(_CloneFunctionDesc(function_config.function_desc, self._func))
 

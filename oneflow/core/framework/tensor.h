@@ -212,9 +212,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { 
+  const std::shared_ptr<Tensor>& acc_grad() const override {
     std::cout << "mirror acc grad." << std::endl;
-    return impl_->acc_grad(); }
+    return impl_->acc_grad();
+  }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
@@ -288,9 +289,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const override { 
+  const std::shared_ptr<Tensor>& acc_grad() const override {
     std::cout << "consistant acc grad." << std::endl;
-    return impl_->acc_grad(); }
+    return impl_->acc_grad();
+  }
   const std::shared_ptr<TensorArg>& now_grad_arg() const override { return impl_->now_grad_arg(); }
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
