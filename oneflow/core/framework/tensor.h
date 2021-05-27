@@ -49,11 +49,9 @@ class Tensor {
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
-namespace compatible_py {
-
-class Distribute;
+namespace cfg {
+class ParallelDistribution;
 }
-
 class Device;
 class DType;
 
@@ -68,10 +66,13 @@ class Tensor {
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual const std::shared_ptr<const DType>& dtype() const = 0;
-  virtual const std::shared_ptr<const ParallelDesc>& parallel_desc() const = 0;
-  virtual const std::shared_ptr<const Device>& device() const = 0;
+  virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
+  virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
+  virtual Maybe<const Device> device() const = 0;
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
+  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution()
+      const = 0;
 
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
@@ -80,8 +81,8 @@ class Tensor {
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
   virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
-  virtual Maybe<void> set_parallel_desc(
-      const std::shared_ptr<const ParallelDesc>& parallel_desc) = 0;
+  virtual Maybe<void> set_consumer_forced_parallel_distribution(
+      Symbol<cfg::ParallelDistribution> val) = 0;
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -143,13 +144,6 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
     return cast_for_api(tensor);
   }
 
-  // Getters to be deprecated
-  virtual const std::shared_ptr<compatible_py::BlobObject>& blob_object() const = 0;
-
-  // Setters to be deprecated
-  virtual Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) = 0;
-
  protected:
   TensorIf() = default;
   std::shared_ptr<FunctionNode> grad_fn_node_;
@@ -179,12 +173,16 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
-    return impl_->parallel_desc();
+  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
+    OF_UNIMPLEMENTED();
   }
-  const std::shared_ptr<const Device>& device() const override { return impl_->device(); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
+  Maybe<const Device> device() const override { return impl_->device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
+  Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
+    OF_UNIMPLEMENTED();
+  }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
@@ -205,8 +203,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<void> set_device(const std::shared_ptr<const Device>& device) {
     return impl_->set_device(device);
   }
-  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    return impl_->set_parallel_desc(parallel_desc);
+  Maybe<void> set_consumer_forced_parallel_distribution(
+      Symbol<cfg::ParallelDistribution> val) override {
+    OF_UNIMPLEMENTED();
   }
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
     return impl_->set_eager_blob_object(eager_blob_object);
@@ -232,21 +231,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    return impl_->blob_object();
-  }
-
-  // Setters to be deprecated
-  Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    return impl_->set_blob_object(blob_object);
-  }
-
-  static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                    const std::shared_ptr<const DType>& dtype,
-                                                    const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad, bool is_leaf);
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                          const std::shared_ptr<const DType>& dtype,
+                                          const std::shared_ptr<const Device>& device, bool is_lazy,
+                                          bool requires_grad, bool is_leaf);
 
   static std::shared_ptr<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
@@ -266,15 +254,16 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const override {
-    return impl_->parallel_desc();
+  Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
+    return impl_->parallel_distribution();
   }
-  const std::shared_ptr<const Device>& device() const override { return impl_->device(); }
-  const std::shared_ptr<const compatible_py::Distribute>& distribute() const {
-    return impl_->distribute();
-  }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
+  Maybe<const Device> device() const override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
+  Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
+    return impl_->consumer_forced_parallel_distribution();
+  }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;
@@ -292,11 +281,10 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
   void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
-  Maybe<void> set_parallel_desc(const std::shared_ptr<const ParallelDesc>& parallel_desc) override {
-    return impl_->set_parallel_desc(parallel_desc);
-  }
-  void set_distribute(const std::shared_ptr<const compatible_py::Distribute>& distribute) {
-    impl_->set_distribute(distribute);
+  Maybe<void> set_consumer_forced_parallel_distribution(
+      Symbol<cfg::ParallelDistribution> val) override {
+    impl_->set_consumer_forced_parallel_distribution(val);
+    return Maybe<void>::Ok();
   }
 
   // Getters for autograd
@@ -319,22 +307,11 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  // Getters to be deprecated
-  const std::shared_ptr<compatible_py::BlobObject>& blob_object() const override {
-    return impl_->blob_object();
-  }
-
-  // Setters to be deprecated
-  Maybe<void> set_blob_object(
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object) override {
-    return impl_->set_blob_object(blob_object);
-  }
-
-  static std::shared_ptr<ConsistentTensor> MakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
-      const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-      bool is_leaf);
+  static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                            const std::shared_ptr<const DType>& dtype,
+                                            Symbol<cfg::ParallelDistribution> parallel_distribution,
+                                            Symbol<ParallelDesc> parallel_desc, bool is_lazy,
+                                            bool requires_grad, bool is_leaf);
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;

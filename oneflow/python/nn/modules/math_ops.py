@@ -21,28 +21,11 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
+from oneflow.python.nn.modules.utils import _check_axis
 
 
-def _check_axis(axis, shape):
-    ndim = len(shape)
-    # TODO(yaochi): refine this function when all related ops in `python/ops/math_ops.py` migrated
-    if axis is None:
-        axis = list(range(len(shape)))
-    if isinstance(axis, int):
-        axis = [axis]
-
-    assert isinstance(axis, (list, tuple)), "Invalid axis {}".format(axis)
-    axis = list(axis)
-    for i in range(len(axis)):
-        assert (
-            -ndim <= axis[i] <= ndim - 1
-        ), "Dimension out of range (expected to be in range of [{}, {}], but got {})".format(
-            -ndim, ndim - 1, axis[i]
-        )
-        if axis[i] < 0:
-            axis[i] = axis[i] + ndim
-
-    return axis
+def _build_math_binary_elementwise_op(math_op):
+    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
 
 
 class Sum(Module):
@@ -278,6 +261,61 @@ def _mean(input_tensor, dim=None, keepdim=False):
     """
 
     return Mean(axis=dim, keepdims=keepdim)(input_tensor)
+
+
+class Variance(Module):
+    def __init__(self, dim: int = None, keepdim: bool = False) -> None:
+        super().__init__()
+        self.dim = dim
+        self.keepdim = keepdim
+
+    def forward(self, input):
+        axis = _check_axis(self.dim, input.shape)
+        if isinstance(axis, list) and len(axis) == 0:
+            return flow.experimental.zeros(size=input.shape)
+        else:
+            return flow.experimental.sub(
+                flow.experimental.mean(
+                    flow.experimental.square(input), axis, self.keepdim
+                ),
+                flow.experimental.square(
+                    flow.experimental.mean(input, axis, self.keepdim)
+                ),
+            )
+
+
+@oneflow_export("var")
+@register_tensor_op("var")
+@experimental_api
+def variance_op(input, dim=None, keepdim=False):
+    r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
+
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    tensor having 1 (or `len(dim)`) fewer dimension(s).
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int or tuple of python:ints): the dimension or dimensions to reduce. Defaults to None.
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Defaults to False.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        import numpy as np
+
+        np_arr = np.random.randn(2,3,4,5)
+        input = flow.Tensor(np_arr)
+        output = flow.var(input, 1, True)
+        # equal to np.var(input_arr, 1, keepdim=True)
+
+    """
+    return Variance(dim, keepdim)(input)
 
 
 class ScalarSubByTensor(Module):
@@ -715,6 +753,44 @@ class Sqrt(Module):
         return self.sqrt_op(input)[0]
 
 
+@oneflow_export("rsqrt")
+@register_tensor_op("rsqrt")
+@experimental_api
+def rsqrt_op(input):
+    r"""Returns a new tensor with the reciprocal of the square-root of each of
+        the elements of :attr:`input`.
+
+        .. math::
+            \text{out}_{i} = \frac{1}{\sqrt{\text{input}_{i}}}
+
+        Args:
+            input (Tensor) – the input tensor.
+
+         For example:
+
+        .. code-block:: python
+
+            import oneflow.experimental as flow
+            import numpy as np
+
+            a = flow.Tensor(np.random.randn(4))
+            # tensor([-0.0370,  0.2970,  1.5420, -0.9105])
+            flow.rsqrt(a)
+            # tensor([    nan,  1.8351,  0.8053,     nan])
+
+    """
+    return Rsqrt()(input)
+
+
+class Rsqrt(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.rsqrt_op = flow.builtin_op("rsqrt").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.rsqrt_op(input)[0]
+
+
 @oneflow_export("sqrt")
 @register_tensor_op("sqrt")
 @experimental_api
@@ -796,7 +872,7 @@ class Std(Module):
             return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
-                self.reduce_count = x.nelemenet()
+                self.reduce_count = x.nelement()
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
@@ -850,10 +926,16 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+        self._scalar_pow_op = (
+            flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+        )
+        self._elementwise_pow_op = _build_math_binary_elementwise_op("pow")
 
-    def forward(self, x, exponent: Union[int, float]):
-        return self._op(x, exponent=float(exponent))[0]
+    def forward(self, x, y):
+        if isinstance(y, (int, float)):
+            return self._scalar_pow_op(x, exponent=float(y))[0]
+        else:
+            return self._elementwise_pow_op(x, y)[0]
 
 
 @oneflow_export("pow")
