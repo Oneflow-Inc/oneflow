@@ -203,21 +203,37 @@ class TestSquare(flow.unittest.TestCase):
 )
 class TestLog1p(flow.unittest.TestCase):
     def test_log1p(test_case):
-        input_arr = np.random.randn(3, 4, 5, 6)
+        input_arr = np.random.randn(3, 2)
         np_out = np.log1p(input_arr)
-        x = flow.Tensor(input_arr)
+        x = flow.Tensor(input_arr, requires_grad=True)
         of_out = flow.log1p(x)
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
 
+        of_out = of_out.sum()
+        of_out.backward()
+        print(of_out.numpy())
+        np_out_grad = 1.0 / (1 + input_arr)
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        )
+
     def test_log1p_tensor_function(test_case):
         input_arr = np.random.randn(3, 4, 5, 6)
         np_out = np.log1p(input_arr)
-        x = flow.Tensor(input_arr)
+        x = flow.Tensor(input_arr, requires_grad=True)
         of_out = x.log1p()
         test_case.assertTrue(
-            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+            np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        print(of_out.numpy())
+        np_out_grad = 1.0 / (1 + input_arr)
+        test_case.assertTrue(
+            np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
 
