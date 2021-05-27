@@ -628,7 +628,9 @@ def api_consistent_cast(
         Tuple[List[flow.placement], List[flow.placement],]
     ] = None,
 ):
-    assert not module.consistent
+    assert (
+        not module.consistent
+    ), "the module is already consistented module, don't cast again!"
 
     def check_input_is_valid(parallel_distribution, placement_signature):
         assert len(parallel_distribution) == len(placement_signature)
