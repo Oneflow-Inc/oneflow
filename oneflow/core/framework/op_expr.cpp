@@ -55,14 +55,14 @@ const std::string BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
 
-const std::string CastToConsistentOpExpr::type_name() const {
-  static const std::string type_name = "cast_to_consistent";
-  return type_name;
+const std::string CastToConsistentOpExpr::op_type_name() const {
+  static const std::string op_type_name = "cast_to_consistent";
+  return op_type_name;
 }
 
-const std::string CastFromConsistentOpExpr::type_name() const {
-  static const std::string type_name = "cast_from_consistent";
-  return type_name;
+const std::string CastFromConsistentOpExpr::op_type_name() const {
+  static const std::string op_type_name = "cast_from_consistent";
+  return op_type_name;
 }
 
 template<>

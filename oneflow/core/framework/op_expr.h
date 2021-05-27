@@ -186,7 +186,7 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
                                            Symbol<cfg::ParallelDistribution> parallel_distribution,
                                            Symbol<ParallelDesc> parallel_des);
 
-  const std::string type_name() const override;
+  const std::string op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
@@ -208,7 +208,7 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
       const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
       Symbol<ParallelDesc> parallel_des);
 
-  const std::string type_name() const override;
+  const std::string op_type_name() const override;
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
