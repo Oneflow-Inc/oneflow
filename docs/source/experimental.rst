@@ -96,6 +96,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.std
 .. autofunction:: oneflow.experimental.pow
 .. autofunction:: oneflow.experimental.Tensor.pow
+.. autofunction:: oneflow.experimental.acos
+.. autofunction:: oneflow.experimental.Tensor.acos
 .. autofunction:: oneflow.experimental.matmul
 .. autofunction:: oneflow.experimental.Tensor.matmul
 .. autofunction:: oneflow.experimental.negative

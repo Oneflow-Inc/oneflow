@@ -959,30 +959,40 @@ def pow_op(tensor, exponent):
     """
     return Pow()(tensor, exponent)
 
-class Floor(Module):
+
+class Acos(Module):
     def __init__(self) -> None:
-        pass
+        super().__init__()
+        self._op = flow.builtin_op("acos").Input("x").Output("y").Build()
 
-    def forward(self, input):
-        pass
+    def forward(self, x):
+        return self._op(x)[0]
 
-@oneflow_export("floor")
-@register_tensor_op("floor")
+
+@oneflow_export("acos")
+@register_tensor_op("acos")
 @experimental_api
-def floor_op(x):
-    """This operator computes the floor value of Tensor.
+def acos_op(tensor):
+    r"""
+    Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \arccos(\text{input}_{i})
+
     Args:
-        x (oneflow.Tensor): A Tensor
-    Returns:
-        oneflow.Tensor: The result Tensor
+        input (Tensor): the input tensor.
+
     For example:
+
     .. code-block:: python
+
         import oneflow.experimental as flow
         import numpy as np
-        input = flow.Tensor(
-            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
-        )
-        out = flow.floor(input).numpy()
-        # out [-1.0, -2.0, 2.0]
+
+        arr = np.array([0.5, 0.6, 0.7])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.acos(input)
+        print(out) # [1.0471976 0.9272952 0.7953989]
+
     """
-    return Floor()(x)
+    return Acos()(tensor)
