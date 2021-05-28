@@ -84,7 +84,7 @@ Maybe<void> BroadcastMatmul::Apply(const BroadcastMatmulInterpState* ctx,
 
   const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
   const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
-  JUST(attrs.SetAttr<double>("alpha", ctx->alpha));
+  JUST(attrs_a.SetAttr<double>("alpha", ctx->alpha));
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
