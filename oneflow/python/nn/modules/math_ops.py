@@ -958,3 +958,94 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+
+
+class Ceil(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("ceil").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("ceil")
+@register_tensor_op("ceil")
+@experimental_api
+def ceil_op(x):
+    r"""Returns a new tensor with the ceil of the elements of :attr:`x`,
+    the smallest integer greater than or equal to each element.
+
+    The equation is: 
+
+    .. math::
+        \text{out}_{i} = \left\lceil \text{input}_{i} \right\rceil = \left\lfloor \text{input}_{i} \right\rfloor + 1
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+    
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example: 
+
+
+    .. code-block:: python 
+        
+        import numpy as np
+        import oneflow as flow
+        
+        x = flow.Tensor(np.array([1.0, -1.3, 2.3]).astype(np.float32)) 
+        y = flow.ceil(x)
+
+        # y tensor([ 1. -1.  3.])
+
+    """
+
+    return Ceil()(x)
+
+
+class Expm1(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("expm1").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("expm1")
+@register_tensor_op("expm1")
+@experimental_api
+def expm1_op(x):
+    """Returns a new tensor with the exponential of the elements minus 1
+    of :attr:`x`.
+
+
+    The equation is: 
+
+    .. math::
+        y_{i} = e^{x_{i}} - 1
+
+    Args:
+        x (oneflow.Tensor): A Tensor.
+    
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example: 
+
+    .. code-block:: python 
+        
+        import numpy as np
+        import oneflow as flow
+        
+        x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        y = flow.expm1(x)
+
+        # y [ 1.7182819  6.389056  19.085537 ]
+
+    """
+    return Expm1()(x)
