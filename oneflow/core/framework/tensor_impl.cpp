@@ -56,7 +56,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 
 void EagerMirroredTensorImpl::Init() {
   const auto& eager_blob_object = eager_blob_object_;
-  dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
+  dtype_ = CHECK_JUST(DType::New(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(

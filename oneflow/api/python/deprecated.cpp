@@ -61,7 +61,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
         [](const std::shared_ptr<DType>& x) { return GetProtoDtype4OfDtype(x).GetOrThrow(); });
 
   m.def("GetDTypeByDataType", [](int data_type) {
-    return DType::GetDTypeByDataType(static_cast<DataType>(data_type)).GetPtrOrThrow();
+    return DType::New(static_cast<DataType>(data_type)).GetPtrOrThrow();
   });
 }
 
