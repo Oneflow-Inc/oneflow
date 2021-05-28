@@ -443,9 +443,9 @@ Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type
 struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Infer(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+    operand->mut_opkernel()->composed_attrs_for_thread_a()->ResetPrior(operand->attrs());
     operand->set_user_opkernel(
         JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
-    operand->mut_opkernel()->composed_attrs_for_thread_a()->ResetPrior(operand->attrs());
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
     JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
