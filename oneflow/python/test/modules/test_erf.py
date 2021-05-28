@@ -24,7 +24,7 @@ from scipy import special
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestNegativeModule(flow.unittest.TestCase):
+class TestErfModule(flow.unittest.TestCase):
     def test_erf(test_case):
         input = flow.Tensor(
             np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
