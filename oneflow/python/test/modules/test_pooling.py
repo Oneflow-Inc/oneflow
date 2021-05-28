@@ -94,7 +94,7 @@ class MaxPool2dNumpy:
                         index = np.unravel_index(
                             self.arg_max[n, c, i, j], self.kernel_size
                         )
-                        dx[n, c, start_i:end_i, start_j:end_j][index] = d_loss[
+                        dx[n, c, start_i:end_i, start_j:end_j][index] += d_loss[
                             n, c, i, j
                         ]
         dx = dx[
@@ -159,6 +159,22 @@ class TestPoolingModule(flow.unittest.TestCase):
         x = flow.Tensor(input_arr)
         output = m(x)
         test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
+    def test_maxpool2d_backward(test_case):
+        input_arr = np.random.randn(6, 4, 7, 9)
+        kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
+
+        m_numpy = MaxPool2dNumpy(kernel_size, stride, padding)
+        numpy_output = m_numpy(input_arr)
+
+        m = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding)
+        x = flow.Tensor(input_arr, requires_grad=True)
+        output = m(x)
+        output = output.sum()
+        output.backward()
+        doutput = np.ones_like(numpy_output, dtype=np.float64)
+        numpy_grad = m_numpy.backward(doutput)
+        test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":
