@@ -27,10 +27,6 @@ namespace oneflow {
 
 namespace {
 
-void CheckBlobInRegstNotDisabled(const RegstDescProto& regst_desc) {
-  CHECK(regst_desc.regst_desc_type().has_data_regst_desc());
-}
-
 struct PackedChunkInfo {
   MemoryCase mem_case;
   int64_t size;
@@ -147,12 +143,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->set_regst_desc(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
       NewBlobsInOneRegst(lbi_pairs, regst, rt_regst_desc, main_mem_ptr, separated_header_mem_ptr);
-      if (rt_regst_desc->mem_case().has_host_mem()
-          && rt_regst_desc->mem_case().host_mem().used_by_network()) {
-        CheckBlobInRegstNotDisabled(regst_desc_proto);
-        regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
-            main_mem_ptr, rt_regst_desc->MainByteSize4OneRegst());
-      }
       if (main_mem_ptr != nullptr) { main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst(); }
       if (separated_header_mem_ptr != nullptr) {
         separated_header_mem_ptr += rt_regst_desc->SeparatedHeaderByteSize4OneRegst();
@@ -190,6 +180,8 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
       cur_body_pointer = main_mem_ptr + rt_regst_desc->GetSoleBlobDesc()->ByteSizeOfBlobHeader();
     }
   }
+  regst->set_main_mem_ptr(main_mem_ptr);
+  regst->set_separated_header_mem_ptr(separated_header_mem_ptr);
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,
                                                     const BlobDesc* blob_desc, int64_t body_offset,
                                                     int64_t header_offset) {
