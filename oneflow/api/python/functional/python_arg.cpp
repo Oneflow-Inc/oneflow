@@ -26,14 +26,23 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define IMPLICIT_TRANSFORM_LIST_OP(T) \
-  PythonArg::operator std::vector<T>() const { return detail::CastToList<T>(Borrow()); }
+#define INSTANCE_CAST_OBJECT_AS(T)                             \
+  template<>                                                   \
+  T PythonArg::ObjectAs<T>() const {                           \
+    return py::cast<T>(Borrow());                              \
+  }                                                            \
+  template<>                                                   \
+  std::vector<T> PythonArg::ObjectAs<std::vector<T>>() const { \
+    return detail::CastToList<T>(Borrow());                    \
+  }
 
-OF_PP_FOR_EACH_TUPLE(IMPLICIT_TRANSFORM_LIST_OP,
+OF_PP_FOR_EACH_TUPLE(INSTANCE_CAST_OBJECT_AS,
                      ARITHMETIC_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(std::string));
-#undef IMPLICIT_TRANSFORM_LIST_OP
 
-PythonArg::operator Scalar() const {
+#undef INSTANCE_CAST_OBJECT_AS
+
+template<>
+Scalar PythonArg::ObjectAs<Scalar>() const {
   py::object obj = Borrow();
   if (detail::isinstance<int32_t>(obj)) {
     return Scalar(py::cast<int32_t>(obj));
@@ -52,7 +61,13 @@ PythonArg::operator Scalar() const {
   }
 }
 
-PythonArg::operator std::shared_ptr<one::TensorTuple>() const {
+template<>
+std::shared_ptr<one::Tensor> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
+  return py::cast<std::shared_ptr<one::Tensor>>(Borrow());
+}
+
+template<>
+std::shared_ptr<one::TensorTuple> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>() const {
   py::object obj = Borrow();
   if (detail::isinstance<one::TensorTuple>(obj)) {
     return py::cast<std::shared_ptr<one::TensorTuple>>(obj);
@@ -63,7 +78,13 @@ PythonArg::operator std::shared_ptr<one::TensorTuple>() const {
   return values;
 }
 
-PythonArg::operator std::shared_ptr<cfg::AttrValue>() const {
+template<>
+one::TensorTuple PythonArg::ObjectAs<one::TensorTuple>() const {
+  return *ObjectAs<std::shared_ptr<one::TensorTuple>>();
+}
+
+template<>
+std::shared_ptr<cfg::AttrValue> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrValue>>() const {
   // TODO()
   py::object obj = Borrow();
   if (detail::isinstance<cfg::AttrValue>(obj)) {
@@ -81,7 +102,8 @@ PythonArg::operator std::shared_ptr<cfg::AttrValue>() const {
   return attr_value;
 }
 
-PythonArg::operator AttrMap() const {
+template<>
+AttrMap PythonArg::ObjectAs<AttrMap>() const {
   py::object obj = Borrow();
   CHECK(detail::isinstance<MutableCfgAttrMap>(obj));
   return *(py::cast<std::shared_ptr<MutableCfgAttrMap>>(obj));

@@ -291,10 +291,16 @@ class FunctionSignature:
         return fmt
 
 
+class Block:
+    def __init__(self, name, signature, bind_python):
+        self._name = name
+        self._signature = signature
+        self._bind_python = bind_python
+
+
 class FunctionGenerator:
     def __init__(self, input_file):
-        self.input_file = input_file
-        self.signatures = {}
+        self._blocks = {}
         with open(input_file) as f:
             doc = yaml.load(f, Loader=yaml.FullLoader)
             for block in doc:
@@ -302,13 +308,18 @@ class FunctionGenerator:
                 assert "signature" in block
                 name = block["name"]
                 signature = block["signature"]
-                self.signatures[name] = FunctionSignature(signature)
+                bind_python = False
+                if "bind_python" in block:
+                    bind_python = block["bind_python"]
+                self._blocks[name] = Block(
+                    name, FunctionSignature(signature), bind_python
+                )
 
     def generate_cpp_header_file(self, target_header_file):
         fmt = ""
-        for name, signature in self.signatures.items():
+        for name, block in self._blocks.items():
             fmt += "\n"
-            fmt += signature.to_string(to_cpp=True)
+            fmt += block._signature.to_string(to_cpp=True)
             fmt += ";\n"
 
         with open(target_header_file, "w") as f:
@@ -316,7 +327,8 @@ class FunctionGenerator:
 
     def generate_cpp_source_file(self, target_source_file):
         fmt = ""
-        for name, signature in self.signatures.items():
+        for name, block in self._blocks.items():
+            signature = block._signature
             fmt += "\n"
             fmt += signature.to_string(to_cpp=True)
             fmt += " {\n"
@@ -335,7 +347,11 @@ class FunctionGenerator:
     def generate_function_schema_for_python(self, target_schema_source_file):
         schema_fmt = ""
         module_fmt = ""
-        for name, signature in self.signatures.items():
+        for name, block in self._blocks.items():
+            if not block._bind_python:
+                continue
+
+            signature = block._signature
             return_type = signature._ret._cpp_type
             schema_fmt += "\n"
             schema_fmt += "struct {0}Schema {{\n".format(signature._name)

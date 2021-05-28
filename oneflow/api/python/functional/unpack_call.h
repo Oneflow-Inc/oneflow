@@ -27,43 +27,43 @@ namespace functional {
 
 namespace detail {
 
-template<typename R, int nleft, int index, typename Func>
+template<typename F, typename R, typename T, int nleft, int index>
 struct unpack_call_dispatcher {
   template<typename... Args>
-  static R apply(const Func& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
-    return unpack_call_dispatcher<R, nleft - 1, index + 1, Func>::apply(
+  static R apply(const F& f, const std::vector<T>& args, Args&&... unpacked_args) {
+    return unpack_call_dispatcher<F, R, T, nleft - 1, index + 1>::apply(
         f, args, std::forward<Args>(unpacked_args)..., args[index]);
   }
 };
 
-template<typename R, int index, typename Func>
-struct unpack_call_dispatcher<R, 0, index, Func> {
+template<typename F, typename R, typename T, int index>
+struct unpack_call_dispatcher<F, R, T, 0, index> {
   template<typename... Args>
-  static R apply(const Func& f, const std::vector<PythonArg>& args, Args&&... unpacked_args) {
+  static R apply(const F& f, const std::vector<T>& args, Args&&... unpacked_args) {
     return f(std::forward<Args>(unpacked_args)...);
   }
 };
 
-template<typename Func, typename R>
+template<typename F, typename R, typename T>
 struct unpack_call {
-  static R apply(const Func& f, const std::vector<PythonArg>& args) {
-    constexpr size_t nargs = function_traits<Func>::nargs;
+  static R apply(const F& f, const std::vector<T>& args) {
+    constexpr size_t nargs = function_traits<F>::nargs;
     CHECK_EQ(nargs, args.size()) << "Requires " << nargs << " arguments, but " << args.size()
                                  << " is given.";
-    return unpack_call_dispatcher<R, nargs, 0, Func>::apply(f, args);
+    return unpack_call_dispatcher<F, R, T, nargs, 0>::apply(f, args);
   }
 };
 
-#define INSTANCE_MAYBE_UNPACK_CALL(T, return_fn)                                        \
-  template<typename Func>                                                               \
-  struct unpack_call<Func, T> {                                                         \
+#define INSTANCE_MAYBE_UNPACK_CALL(K, return_fn)                                        \
+  template<typename F, typename T>                                                      \
+  struct unpack_call<F, K, T> {                                                         \
     static constexpr auto return_fn_ = (return_fn);                                     \
     using R = typename function_traits<decltype(return_fn_)>::return_type;              \
-    static R apply(const Func& f, const std::vector<PythonArg>& args) {                 \
-      constexpr size_t nargs = function_traits<Func>::nargs;                            \
+    static R apply(const F& f, const std::vector<T>& args) {                            \
+      constexpr size_t nargs = function_traits<F>::nargs;                               \
       CHECK_EQ(nargs, args.size())                                                      \
           << "Requires " << nargs << " arguments, but " << args.size() << " is given."; \
-      return (return_fn)(unpack_call_dispatcher<T, nargs, 0, Func>::apply(f, args));    \
+      return (return_fn)(unpack_call_dispatcher<F, K, T, nargs, 0>::apply(f, args));    \
     }                                                                                   \
   };
 

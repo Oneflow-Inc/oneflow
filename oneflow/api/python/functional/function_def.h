@@ -16,10 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_FUNCTION_DEF_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_FUNCTION_DEF_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/core/functional/value_types.h"
 
 namespace py = pybind11;
@@ -42,14 +44,14 @@ struct ArgumentDef {
   template<typename T>
   ArgumentDef(const std::string& _name, const T& _default_value)
       : name(_name), type(ValueTypeOf<T>()), has_default_value(true) {
-    default_value = py::cast(_default_value);
+    default_value = std::make_shared<detail::ValueImpl<T>>(_default_value);
   }
 
   std::string name;
   ValueType type;
 
   bool has_default_value;
-  py::object default_value;
+  std::shared_ptr<const detail::Value> default_value;
 };
 
 struct FunctionDef {

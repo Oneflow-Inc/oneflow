@@ -344,7 +344,7 @@ class ScalarAdd(Module):
     def __init__(self, alpha) -> None:
         super().__init__()
         if not isinstance(alpha, int) and not isinstance(alpha, float):
-            raise ValueError("operand type can only be int or float")
+            raise ValueError("scalar type can only be int or float")
         self.alpha = alpha
 
     def forward(self, x):

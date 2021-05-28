@@ -20,17 +20,22 @@
 
 - name: "add"
   signature: "Tensor Add(Tensor x, Tensor y)"
+  bind_python: True
 
 - name: "add_n"
   signature: "Tensor AddN(TensorTuple inputs)"
+  bind_python: True
 
 - name: "add_scalar"
   signature: "Tensor AddScalar(Tensor x, *, Scalar alpha)"
+  bind_python: True
 
 - name: "normalization"
   signature: "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
                                    Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
                                    Float momentum=0.9, Bool is_training=False)"
+  bind_python: True
 
 - name: "test"
   signature: "Int32 Test(Scalar str=1)"
+  bind_python: True
