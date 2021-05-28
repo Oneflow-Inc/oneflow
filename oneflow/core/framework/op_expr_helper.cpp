@@ -559,11 +559,11 @@ Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& wi
   return one::OpBuilder("upsample_grad", name)
       .Input("dy")
       .Output("dx")
-      .Attr("height_scale", height_scale)
-      .Attr("width_scale", width_scale)
-      .Attr("align_corners", align_corners)
-      .Attr("data_format", data_format)
-      .Attr("interpolation", interpolation)
+      .Attr<float>("height_scale", height_scale)
+      .Attr<float>("width_scale", width_scale)
+      .Attr<bool>("align_corners", align_corners)
+      .Attr<std::string>("data_format", data_format)
+      .Attr<std::string>("interpolation", interpolation)
       .Build();
 }
 
