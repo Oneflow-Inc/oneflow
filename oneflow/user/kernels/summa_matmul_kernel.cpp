@@ -38,28 +38,30 @@ class SummaMatmulKernelCommState final : public user_op::OpKernelState {
     summa_dim_ = parallel_desc_.hierarchy()->At(0);
     row_data_release_events_.resize(summa_dim_);
     col_data_release_events_.resize(summa_dim_);
-    buffer_free_events_.resize(summa_dim_ + 1);
     FOR_RANGE(int64_t, i, 0, summa_dim_) {
       OF_CUDA_CHECK(cudaEventCreate(&row_data_release_events_.at(i)));
       OF_CUDA_CHECK(cudaEventCreate(&col_data_release_events_.at(i)));
+    }
+    buffer_free_events_.resize(summa_dim_ + 1);
+    FOR_RANGE(int64_t, i, 0, summa_dim_) {
       OF_CUDA_CHECK(cudaEventCreate(&buffer_free_events_.at(i)));
     }
-    OF_CUDA_CHECK(cudaEventCreate(&buffer_free_events_.at(summa_dim_)));
   }
   ~SummaMatmulKernelCommState() {
     OF_CUDA_CHECK(cudaStreamDestroy(row_nccl_stream_));
     OF_CUDA_CHECK(cudaStreamDestroy(col_nccl_stream_));
     OF_CUDA_CHECK(cudaEventDestroy(start_comm_event_));
     OF_CUDA_CHECK(cudaEventDestroy(end_comm_event_));
-    CHECK_EQ(buffer_free_events_.size(), summa_dim_ + 1);
     CHECK_EQ(row_data_release_events_.size(), summa_dim_);
     CHECK_EQ(col_data_release_events_.size(), summa_dim_);
     FOR_RANGE(int64_t, i, 0, summa_dim_) {
-      OF_CUDA_CHECK(cudaEventDestroy(buffer_free_events_.at(i)));
       OF_CUDA_CHECK(cudaEventDestroy(row_data_release_events_.at(i)));
       OF_CUDA_CHECK(cudaEventDestroy(col_data_release_events_.at(i)));
     }
-    OF_CUDA_CHECK(cudaEventCreate(&buffer_free_events_.at(summa_dim_)));
+    CHECK_EQ(buffer_free_events_.size(), summa_dim_ + 1);
+    FOR_RANGE(int64_t, i, 0, summa_dim_ + 1) {
+      OF_CUDA_CHECK(cudaEventDestroy(&buffer_free_events_.at(i)));
+    }
   };
 
   ncclComm_t row_comm() { return GetOrCreate().row_comm; }
