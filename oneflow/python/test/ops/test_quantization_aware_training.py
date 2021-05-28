@@ -23,7 +23,9 @@ import oneflow.typing as tp
 from test_util import GenArgList
 
 
-def _test(test_case, per_channel, symmetric, target_backend, build_backbone_fn):
+def _test(
+    test_case, per_channel, symmetric, target_backend, build_backbone_fn, unused_arg
+):
     def run_with_func_config(build_backbone_fn, func_config):
         flow.clear_default_session()
 
@@ -71,6 +73,7 @@ class TestQAT(flow.unittest.TestCase):
         arg_dict["symmetric"] = [True, False]
         arg_dict["target_backend"] = ["", "cambricon"]
         arg_dict["build_backbone_fn"] = [build_conv_with_bias, build_conv_without_bias]
+        arg_dict["unused_arg"] = list(range(100))
         for arg in GenArgList(arg_dict):
             if arg[2] == "cambricon" and arg[0] == True:
                 continue
