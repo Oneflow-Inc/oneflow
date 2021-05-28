@@ -420,6 +420,15 @@ def _sub(x, y):
     else:
         return BroadcastSub()(x, y)
 
+@oneflow_export("subtract")
+@register_tensor_op("subtract")
+@experimental_api
+def _subtract(x, y):
+    """ Alias for `oneflow.experimental.sub`
+   
+    """
+    return _sub(x, y)
+
 
 class BroadcastDiv(Module):
     def __init__(self) -> None:
