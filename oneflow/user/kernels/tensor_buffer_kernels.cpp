@@ -189,13 +189,19 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
     CHECK_GT(in->shape().elem_cnt(), 0);
     CHECK_EQ(in->data_type(), DataType::kTensorBuffer);
     const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
+    const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
     const auto* in_ptr = in->dptr<TensorBuffer>();
     MultiThreadLoop(in->shape().elem_cnt(), [&](size_t i) {
       CHECK(IsPODDataType(out_dtypes[i]));
       const TensorBuffer* tensor_buffer = in_ptr + i;
       user_op::Tensor* out_i = ctx->Tensor4ArgNameAndIndex("out", i);
       CHECK_EQ(out_dtypes[i], tensor_buffer->data_type());
-      CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+      if (dynamic_out) {
+        CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+        out_i->mut_shape()->set_shape(tensor_buffer->shape());
+      } else {
+        CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
+      }
       Memcpy<DeviceType::kCPU>(ctx->device_ctx(), out_i->mut_dptr<void>(), tensor_buffer->data(),
                                tensor_buffer->nbytes());
     });

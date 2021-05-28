@@ -257,7 +257,9 @@ class OFRecordImageDecoder(Module):
 
 
 class TensorBufferToListOfTensors(Module):
-    def __init__(self, out_shapes, out_dtypes, out_num: int = 1):
+    def __init__(
+        self, out_shapes, out_dtypes, out_num: int = 1, dynamic_out: bool = False
+    ):
         super().__init__()
         self._op = (
             flow.builtin_op("tensor_buffer_to_list_of_tensors_v2")
@@ -265,6 +267,7 @@ class TensorBufferToListOfTensors(Module):
             .Output("out", out_num)
             .Attr("out_shapes", out_shapes)
             .Attr("out_dtypes", out_dtypes)
+            .Attr("dynamic_out", dynamic_out)
             .Build()
         )
 
