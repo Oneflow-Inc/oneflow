@@ -35,6 +35,7 @@ from oneflow.python.nn.parameter import Parameter
 from oneflow._oneflow_internal.one import (
     CastToConsistentOpExpr,
     CastFromConsistentOpExpr,
+    OpExpr,
 )
 
 
@@ -53,6 +54,30 @@ class _IncompatibleKeys(
 # of `T` to annotate `self`. Many methods of `Module` return `self` and we want those return values to be
 # the type of the subclass, not the looser type of `Module`.
 T = TypeVar("T", bound="Module")
+
+
+def _make_cast_consistent_ops(
+    sbp_signature: List[Union[Tuple[str], str]],
+    placement: List[flow.placement],
+    op_expr: OpExpr,
+    name: Optional[str] = None,
+) -> None:
+    cast_consistent_op = OrderedDict()
+    for i in range(len(sbp_signature)):
+        parallel_distribution = sbp_signature[i]
+        if isinstance(parallel_distribution, str):
+            parallel_distribution = [parallel_distribution]
+        else:
+            assert isinstance(parallel_distribution, tuple)
+            parallel_distribution = list(parallel_distribution)
+        assert len(parallel_distribution) == len(placement[i].hierarchy)
+        cast_consistent_op_expr = op_expr(
+            name if name is not None else id_util.UniqueStr("cast_consistent"),
+            parallel_distribution,
+            placement[i],
+        )
+        cast_consistent_op[i] = cast_consistent_op_expr
+    return cast_consistent_op
 
 
 @oneflow_export("nn.Module")
@@ -77,37 +102,42 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    # internal decorator
-    def _auto_consisitentize(func):
-        @functools.wraps(func)
-        def wrapped_func(*args):
-            module = args[0]
-            args = list(args)
-            sess = session_ctx.GetDefaultSession()
-            with sess.ConsistentScope():
-                for i in range(1, len(args)):
-                    if not args[i].is_consistent:
-                        args[i] = module._cast_to_consistent_ops[i - 1](args[i])[0]
-                consistent_output = func(*args)
-                if len(module._cast_from_consistent_ops) == 1:
-                    res = module._cast_from_consistent_ops[0](consistent_output)[0]
-                else:
-                    res = [
-                        module._cast_from_consistent_ops[i](consistent_output[i])[0]
-                        for i in len(module._cast_from_consistent_ops)
-                    ]
-            return res
-
-        return wrapped_func
-
     def consistent_cast(self, parallel_distribution, placement_signature):
+        def cast_input_to_consistent(*args):
+            args = list(args[1])
+            sess = session_ctx.GetDefaultSession()
+            cast_to_consistent_ops = _make_cast_consistent_ops(
+                parallel_distribution[0],
+                placement_signature[0],
+                CastToConsistentOpExpr,
+                id_util.UniqueStr("cast_to_consistent_op"),
+            )
+            assert len(args) == len(cast_to_consistent_ops)
+            with sess.ConsistentScope():
+                for i in range(0, len(args)):
+                    if not args[i].is_consistent:
+                        args[i] = cast_to_consistent_ops[i](args[i])[0]
+            return tuple(args)
+
+        def cast_output_from_consistent(*args):
+            args = [args[1]]
+            sess = session_ctx.GetDefaultSession()
+            cast_from_consistent_ops = _make_cast_consistent_ops(
+                parallel_distribution[1],
+                placement_signature[1],
+                CastFromConsistentOpExpr,
+                id_util.UniqueStr("cast_from_consistent_op"),
+            )
+            assert len(args) == len(cast_from_consistent_ops)
+            with sess.ConsistentScope():
+                for i in range(0, len(args)):
+                    if args[i].is_consistent:
+                        args[i] = cast_from_consistent_ops[i](args[i])[0]
+            return args[0] if len(args) == 1 else tuple(args)
+
         consisitent_module = copy.deepcopy(self)
-        consisitent_module._register_cast_to_consistent_ops(
-            parallel_distribution[0], placement_signature[0],
-        )
-        consisitent_module._register_cast_from_consistent_ops(
-            parallel_distribution[1], placement_signature[1],
-        )
+        consisitent_module.register_forward_pre_hook(cast_input_to_consistent)
+        consisitent_module.register_forward_hook(cast_output_from_consistent)
         consisitent_module._consistent = True
         for module in consisitent_module._modules.values():
             module._consistent = True
@@ -116,7 +146,6 @@ class Module(object):
     def forward(self, *args):
         raise NotImplementedError()
 
-    @_auto_consisitentize
     def consistent_forward(self, *args):
         return self.forward(*args)
 
@@ -133,7 +162,13 @@ class Module(object):
         if not self.consistent:
             res = self.forward(*args)
         else:
-            res = self.consistent_forward(*args)
+            sess = session_ctx.GetDefaultSession()
+            with sess.ConsistentScope():
+                res = self.consistent_forward(*args)
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, res)
+            if result is not None:
+                res = result
         return res
 
     def _register_cast_to_consistent_ops(
@@ -575,6 +610,9 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+
+    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        self._forward_hooks[len(self._forward_hooks)] = hook
 
     def _apply(self, fn):
         for module in self.children():
