@@ -23,6 +23,9 @@ BasicDeviceDescriptorList::BasicDeviceDescriptorList(
     std::vector<std::shared_ptr<const DeviceDescriptor>> device_descriptor_list)
     : device_descriptor_list_(std::move(device_descriptor_list)) {}
 
+BasicDeviceDescriptorList::BasicDeviceDescriptorList()
+    : BasicDeviceDescriptorList(std::vector<std::shared_ptr<const DeviceDescriptor>>()) {}
+
 BasicDeviceDescriptorList::~BasicDeviceDescriptorList() = default;
 
 size_t BasicDeviceDescriptorList::DeviceCount() const { return device_descriptor_list_.size(); }
