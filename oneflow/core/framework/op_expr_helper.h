@@ -180,6 +180,13 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> PReLUGradOp();
 Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation);
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation, const std::string& name);
+
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim);
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
