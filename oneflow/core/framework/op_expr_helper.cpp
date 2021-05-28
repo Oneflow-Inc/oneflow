@@ -571,6 +571,18 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
       .Build();
 }
 
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis) {
+  return SplitLikeOp(n, axis, UniqueOpName("split_like"));
+}
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::string& name) {
+  return one::OpBuilder("split_like", name)
+      .Input("in")
+      .Input("like", n)
+      .Output("out", n)
+      .Attr<int64_t>("axis", axis)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride) {
   return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
