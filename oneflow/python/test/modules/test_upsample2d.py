@@ -88,7 +88,7 @@ def _test_upsample2d_bilinear_aligncorner(test_case, device):
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_UpsamplingNearest2d(test_case, device):
@@ -134,7 +134,7 @@ def _test_UpsamplingBilinear2d(test_case, device):
             ]
         ]
     )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_upsample2d_4dim(test_case, device):
