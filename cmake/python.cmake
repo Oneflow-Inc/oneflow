@@ -2,6 +2,18 @@ if (NOT DEFINED Python3_EXECUTABLE)
   if (DEFINED ENV{CONDA_PREFIX})
     message(STATUS "Using Python3 from Conda: " $ENV{CONDA_PREFIX}/bin/python3)
     set(Python3_EXECUTABLE $ENV{CONDA_PREFIX}/bin/python3)
+  else()
+    execute_process(
+      COMMAND which python3
+      RESULT_VARIABLE STATUS
+      OUTPUT_VARIABLE OUTPUT
+      ERROR_QUIET
+    )
+    if(STATUS EQUAL 0)
+      string(STRIP ${OUTPUT} STRIPPED)
+      message(STATUS "Using Python3 from 'which python3': ${STRIPPED}")
+      set(Python3_EXECUTABLE ${STRIPPED})
+    endif()
   endif()
 endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
