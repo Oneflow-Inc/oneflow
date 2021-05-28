@@ -97,7 +97,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/github-workflow-schedule@286010392b8658836e374657a39d87654512926d
+      - uses: Oneflow-Inc/github-workflow-schedule@0e42bf5171f37d1b91825b9b6f6040e3372ae049
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
@@ -403,6 +403,7 @@ jobs:
           oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
         if: always() && matrix.test_suite == 'cuda'
         run: |
