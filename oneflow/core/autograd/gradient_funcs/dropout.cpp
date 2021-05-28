@@ -70,7 +70,7 @@ Maybe<void> Dropout::Apply(const DropoutInterpState* ctx, const TensorTuple& out
   const std::shared_ptr<oneflow::one::Tensor>& mask = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<float>("scale", ctx->scale));
-  //mask hava no grad(reqiures_grad=False), but still take a place in in_grads
+  // mask hava no grad(reqiures_grad=False), but still take a place in in_grads
   in_grads->resize(2);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), mask}, attrs));
   return Maybe<void>::Ok();

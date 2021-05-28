@@ -199,6 +199,11 @@ Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const st
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type);
 Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name);
 
+Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha);
+Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha, const std::string& name);
+
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
 

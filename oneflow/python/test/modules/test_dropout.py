@@ -41,12 +41,16 @@ def _test_dropout(test_case, shape, device):
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), input_arr))
 
+
 def _test_dropout_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     m = flow.nn.Dropout(p=1.0)
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
-    test_case.assertTrue(np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32)))
+    test_case.assertTrue(
+        np.allclose(y.numpy(), np.zeros(input_arr.shape, dtype=np.float32))
+    )
+
 
 def _test_dropout_backward_p0(test_case, shape, device):
     input_arr = np.random.randn(*shape)
@@ -56,8 +60,11 @@ def _test_dropout_backward_p0(test_case, shape, device):
     z = y.sum()
     z.backward()
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np.ones(input_arr.shape, dtype=np.float32), 1e-5, 1e-5)
+        np.allclose(
+            x.grad.numpy(), np.ones(input_arr.shape, dtype=np.float32), 1e-5, 1e-5
+        )
     )
+
 
 def _test_dropout_backward_p1(test_case, shape, device):
     input_arr = np.random.randn(*shape)
@@ -71,6 +78,7 @@ def _test_dropout_backward_p1(test_case, shape, device):
             x.grad.numpy(), np.zeros(input_arr.shape, dtype=np.float32), 1e-5, 1e-5
         )
     )
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
