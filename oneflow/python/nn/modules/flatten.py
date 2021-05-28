@@ -33,7 +33,8 @@ class Flatten(Module):
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.experimental as flow
+        
         input = flow.Tensor(32, 1, 5, 5)
         m = flow.nn.Flatten()
         output = m(input)

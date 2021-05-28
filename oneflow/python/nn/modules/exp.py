@@ -51,7 +51,7 @@ def exp_op(x):
     .. code-block:: python 
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         y = x.exp().numpy()
