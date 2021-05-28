@@ -60,9 +60,8 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("GetProtoDtype4OfDtype",
         [](const std::shared_ptr<DType>& x) { return GetProtoDtype4OfDtype(x).GetOrThrow(); });
 
-  m.def("GetDTypeByDataType", [](int data_type) {
-    return DType::New(static_cast<DataType>(data_type)).GetPtrOrThrow();
-  });
+  m.def("GetDTypeByDataType",
+        [](int data_type) { return DType::New(static_cast<DataType>(data_type)).GetPtrOrThrow(); });
 }
 
 }  // namespace oneflow

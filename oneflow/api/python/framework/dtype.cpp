@@ -29,13 +29,11 @@ struct DTypeExportUtil final {
   static bool is_floating_point(const DType& dtype) {
     return dtype.is_floating_point().GetOrThrow();
   }
-  static const std::string& name(const DType& dtype) {
-    return dtype.name().GetOrThrow();
-  }
+  static const std::string& name(const DType& dtype) { return dtype.name().GetOrThrow(); }
   static size_t bytes(const DType& dtype) { return dtype.bytes().GetOrThrow(); }
 };
 
-}
+}  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<DType, std::shared_ptr<DType>>(m, "dtype")

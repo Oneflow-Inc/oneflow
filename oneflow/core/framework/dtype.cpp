@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type_seq.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device_register_cpu.h"
 
@@ -37,8 +38,10 @@ DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SW
 class DTypeMeta final {
  public:
   DTypeMeta(const std::string& name, bool is_signed, bool is_floating_point, bool is_complex)
-    : name_(name), is_signed_(is_signed), is_floating_point_(is_floating_point),
-      is_complex_(is_complex) {}
+      : name_(name),
+        is_signed_(is_signed),
+        is_floating_point_(is_floating_point),
+        is_complex_(is_complex) {}
   DTypeMeta(const DTypeMeta&) = default;
   DTypeMeta(DTypeMeta&) = default;
   ~DTypeMeta() = default;
@@ -48,7 +51,7 @@ class DTypeMeta final {
   bool is_floating_point() const { return is_floating_point_; }
   bool is_complex() const { return is_complex_; }
 
- private:  
+ private:
   const std::string name_;
   const bool is_signed_;
   const bool is_floating_point_;
@@ -57,17 +60,17 @@ class DTypeMeta final {
 
 Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
   static HashMap<DataType, DTypeMeta> data_type2dtype_meta{
-    {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
-    {DataType::kChar, DTypeMeta("oneflow.char", false, false, false)},
-    {DataType::kFloat16, DTypeMeta("oneflow.float16", true, true, false)},
-    {DataType::kFloat, DTypeMeta("oneflow.float32", true, true, false)},
-    {DataType::kDouble, DTypeMeta("oneflow.float64", true, true, false)},
-    {DataType::kInt8, DTypeMeta("oneflow.int8", true, false, false)},
-    {DataType::kInt32, DTypeMeta("oneflow.int32", true, false, false)},
-    {DataType::kInt64, DTypeMeta("oneflow.int64", true, false, false)},
-    {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
-    {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
-    {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
+      {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
+      {DataType::kChar, DTypeMeta("oneflow.char", false, false, false)},
+      {DataType::kFloat16, DTypeMeta("oneflow.float16", true, true, false)},
+      {DataType::kFloat, DTypeMeta("oneflow.float32", true, true, false)},
+      {DataType::kDouble, DTypeMeta("oneflow.float64", true, true, false)},
+      {DataType::kInt8, DTypeMeta("oneflow.int8", true, false, false)},
+      {DataType::kInt32, DTypeMeta("oneflow.int32", true, false, false)},
+      {DataType::kInt64, DTypeMeta("oneflow.int64", true, false, false)},
+      {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
+      {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
+      {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
   };
   return MapAt(data_type2dtype_meta, data_type);
 };
@@ -88,13 +91,9 @@ Maybe<size_t> DType::bytes() const {
   return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
-Maybe<bool> DType::is_signed() const {
-  return JUST(DTypeMeta4DataType(data_type_)).is_signed();
-}
+Maybe<bool> DType::is_signed() const { return JUST(DTypeMeta4DataType(data_type_)).is_signed(); }
 
-Maybe<bool> DType::is_complex() const {
-  return JUST(DTypeMeta4DataType(data_type_)).is_complex();
-}
+Maybe<bool> DType::is_complex() const { return JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
 
 Maybe<bool> DType::is_floating_point() const {
   return JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
@@ -104,9 +103,9 @@ Maybe<const std::string&> DType::name() const {
   return JUST(DTypeMeta4DataType(data_type_)).name();
 }
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                      \
-Maybe<DType> DType::data_type() { return New(OF_PP_CAT(DataType::k, data_type)); }
-  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type) \
+  Maybe<DType> DType::data_type() { return New(OF_PP_CAT(DataType::k, data_type)); }
+OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
 }  // namespace oneflow

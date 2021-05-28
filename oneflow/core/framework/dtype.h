@@ -51,7 +51,7 @@ class DType final {
   Maybe<const std::string&> name() const;
   Maybe<size_t> bytes() const;
 
-  DataType* mut_data_type() return { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
 
   static Maybe<DType> New(DataType);
 
