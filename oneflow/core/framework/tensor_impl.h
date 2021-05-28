@@ -48,6 +48,29 @@ namespace one {
 class Tensor;
 class TensorArg;
 
+class TensorMeta {
+ public:
+  TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype)
+      : shape_(shape), dtype_(dtype) {}
+  TensorMeta(const TensorMeta&) = default;
+  TensorMeta(TensorMeta&&) = default;
+  ~TensorMeta() = default;
+
+  virtual bool operator==(const TensorMeta& other) const = 0;
+
+  const std::shared_ptr<const Shape>& shape() const { return shape_; }
+  const std::shared_ptr<const DType>& dtype() const { return dtype_; }
+
+  Shape* mut_shape() { return const_cast<Shape*>(shape_.get()); }
+  DType* mut_dtype() { return const_cast<DType*>(dtype_.get()); }
+
+  virtual size_t CalcHashValue() const = 0;
+
+ private:
+  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<const DType> dtype_;
+};
+
 class TensorImpl {
  public:
   virtual ~TensorImpl() = default;
@@ -109,32 +132,33 @@ class MirroredTensorImpl : public TensorImpl {
   std::shared_ptr<const Device> device_;
 };
 
-class ConsistentTensorMeta {
+class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape,
                        const std::shared_ptr<const DType>& dtype,
                        Symbol<cfg::ParallelDistribution> parallel_distribution,
                        Symbol<ParallelDesc> parallel_desc)
-      : shape_(shape),
-        dtype_(dtype),
+      : TensorMeta(shape, dtype),
         parallel_distribution_(parallel_distribution),
         parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
   ~ConsistentTensorMeta() = default;
 
-  bool operator==(const ConsistentTensorMeta& other) const;
+  bool operator==(const ConsistentTensorMeta& other) const override;
 
-  const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const { return dtype_; }
   Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  size_t CalcHashValue() const;
+  void set_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
+    parallel_distribution_ = val;
+  }
+
+  void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; } 
+
+  size_t CalcHashValue() const override;
 
  private:
-  std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
   Symbol<cfg::ParallelDistribution> parallel_distribution_;
   Symbol<ParallelDesc> parallel_desc_;
 };

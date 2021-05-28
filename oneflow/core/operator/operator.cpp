@@ -1073,6 +1073,12 @@ std::pair<std::string, int32_t> GenUnRepeatedBn(const std::string& bn) {
   return GetFieldNameAndIndex4StrVal(bn);
 }
 
+bool IsCpuOnly(const std::string& user_op_type_name) {
+  auto* registration_val = user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_type_name);
+  CHECK_NOTNULL(registration_val);
+  return registration_val->cpu_only_supported;
+}
+
 bool IsCpuOnly(const OperatorConf& op_conf) {
   OperatorConf::OpTypeCase op_type_case = op_conf.op_type_case();
   using CpuOnly = OnlyCpuSupportPredicator;
@@ -1080,10 +1086,7 @@ bool IsCpuOnly(const OperatorConf& op_conf) {
   CHECK(ptr != nullptr) << "op_conf\n" << op_conf.DebugString();
   if (*std::unique_ptr<CpuOnly>(ptr)) { return true; }
   if (!op_conf.has_user_conf()) { return false; }
-  auto* registration_val =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_conf.user_conf().op_type_name());
-  CHECK_NOTNULL(registration_val);
-  return registration_val->cpu_only_supported;
+  return IsCpuOnly(op_conf.user_conf().op_type_name());
 }
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {

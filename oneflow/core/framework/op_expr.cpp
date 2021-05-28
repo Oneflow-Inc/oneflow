@@ -154,18 +154,31 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(base_attrs) {
-  const auto* registry =
+      base_attrs_(base_attrs) { }
+
+Maybe<void> UserOpExpr::Init() {
+  const auto* registery =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
-  if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  CHECK_NOTNULL_OR_RETURN(registery);
+  device_infer_fn_ = registery->device_infer_fn;
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-  return std::shared_ptr<UserOpExpr>(
-      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+  auto* ptr = new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns);
+  JUST(ptr->Init());
+  return std::shared_ptr<UserOpExpr>(ptr);
+}
+
+Maybe<void> UserOpExpr::InferShapeAndDType(const AttrMap& attrs,
+      const std::function<const TensorMeta&(int64_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int64_t)>& TensorMeta4OutputIndex) const {
+  UserOpExprInferContext infer_ctx(this, attrs, &TensorMeta4InputIndex, &TensorMeta4OutputIndex);
+  JUST(dtype_infer_);
+  return Maybe<void>::Ok();
 }
 
 Maybe<const Device> UserOpExpr::InferDevices(

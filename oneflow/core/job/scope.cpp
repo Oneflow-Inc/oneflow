@@ -76,7 +76,7 @@ Maybe<int64_t> Scope::GetParallelDescSymbolId(const OperatorConf& op_conf) const
 }
 
 Maybe<Symbol<ParallelDesc>> Scope::GetParallelDesc(const OperatorConf& op_conf) const {
-  return placement_scope_->GetParallelDesc(op_conf);
+  return placement_scope_->GetParallelDesc(op_conf.device_tag(), op_conf);
 }
 
 const AttrValue& Scope::GetAttrValue(const std::string& attr_name) const {

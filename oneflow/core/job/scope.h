@@ -44,7 +44,10 @@ class Scope final {
   int64_t auto_increment_id() { return ++auto_increment_id_; }
   int64_t session_id() const { return scope_proto().session_id(); }
   const std::shared_ptr<JobDesc>& job_desc_symbol() const { return job_desc_; }
-  Symbol<ParallelDesc> device_parallel_desc_symbol() const { return placement_scope_->device_parallel_desc(); }
+  Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
+  Symbol<ParallelDesc> device_parallel_desc_symbol() const {
+    return placement_scope_->device_parallel_desc();
+  }
   const std::shared_ptr<Scope>& parent_scope_symbol() const { return parent_scope_symbol_; }
   Maybe<cfg::ScopeProto> MakeChildScopeProto() const;
 

@@ -128,6 +128,9 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
+  Maybe<void> InferShapeAndDType(const AttrMap& attrs,
+      const std::function<const TensorMeta&(int64_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int64_t)>& TensorMeta4OutputIndex) const;
   Maybe<const Device> InferDevices(
       const AttrMap& attrs, const TensorTuple& inputs,
       std::vector<std::shared_ptr<const Device>>* outputs_devices) const;
@@ -136,6 +139,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
+  Maybe<void> Init();
   AttrMap base_attrs_;
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;

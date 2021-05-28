@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/job/placement_scope.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
 
@@ -31,11 +32,13 @@ namespace one {
 
 class InputConsistentTensorMeta final {
  public:
-  InputConsistentTensorMeta(
-      Symbol<ConsistentTensorMeta> tensor_meta,
-      Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution)
-    : tensor_meta_(tensor_meta),
-      consumer_forced_parallel_distribution_(consumer_forced_parallel_distribution) {}
+  InputConsistentTensorMeta()
+      : tensor_meta_(nullptr),
+        consumer_forced_parallel_distribution_(consumer_forced_parallel_distribution) {}
+  InputConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
+                            Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution)
+      : tensor_meta_(tensor_meta),
+        consumer_forced_parallel_distribution_(consumer_forced_parallel_distribution) {}
 
   InputConsistentTensorMeta(const InputConsistentTensorMeta&) = default;
   InputConsistentTensorMeta(InputConsistentTensorMeta&&) = default;
@@ -43,17 +46,24 @@ class InputConsistentTensorMeta final {
 
   size_t hash_value() const {
     return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
-      ^ std::hash<Symbol<cfg::ParallelDistribution>>()(consumer_forced_parallel_distribution());
+           ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
+               consumer_forced_parallel_distribution());
   }
 
   bool operator==(const InputConsistentTensorMeta& other) const {
     return this->tensor_meta() == other.tensor_meta()
-      && this->consumer_forced_parallel_distribution() == other.consumer_forced_parallel_distribution();
+           && this->consumer_forced_parallel_distribution()
+                  == other.consumer_forced_parallel_distribution();
   }
 
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
   Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution() const {
     return consumer_forced_parallel_distribution_;
+  }
+  void assign(Symbol<ConsistentTensorMeta> tensor_meta,
+              Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution) {
+    tensor_meta_ = tensor_meta;
+    consumer_forced_parallel_distribution_ = consumer_forced_parallel_distribution;
   }
 
  private:
@@ -61,32 +71,63 @@ class InputConsistentTensorMeta final {
   Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution_;
 };
 
-std::vector<InputConsistentTensorMeta> MakeInputConsistentTensorMetas(const TensorTuple& input_tensors) {
-  std::vector<InputConsistentTensorMeta> vec;
-  vec.reserve(input_tensors.size());
-  for (const auto& tensor : input_tensors) {
-    vec.emplace_back(tensor->tensor_meta, tensor->consumer_forced_parallel_distribution());
-  }
-  return vec;
-}
-
-class ConsistentTensorMetaInferArg final {
+class ConsistentTensorMetaInferArgs final {
  public:
-  ConsistentTensorMetaInferArg(
-      const TensorTuple& input_tensors,
-      Symbol<ParallelDesc> scope_parallel_desc, const AttrMap& attrs)
-    : input_consistent_tensor_metas_(MakeInputConsistentTensorMetas(input_tensors)),
-      scope_parallel_desc_(scope_parallel_desc), attrs_(attrs) {}
+  ConsistentTensorMetaInferArgs(size_t input_tensor_size, Symbol<PlacementScope> placement_scope,
+                                const AttrMap& attrs)
+      : input_consistent_tensor_metas_(input_tensor_size),
+        placement_scope_(placement_scope),
+        attrs_(attrs) {}
 
-  ConsistentTensorMetaInferArg(const ConsistentTensorMetaInferArg&) = default;
-  ConsistentTensorMetaInferArg(ConsistentTensorMetaInferArg&&) = default;
-  ~ConsistentTensorMetaInferArg() = default;
+  ConsistentTensorMetaInferArgs(const ConsistentTensorMetaInferArgs&) = default;
+  ConsistentTensorMetaInferArgs(ConsistentTensorMetaInferArgs&&) = default;
+  ~ConsistentTensorMetaInferArgs() = default;
+
+  const std::vector<InputConsistentTensorMeta>& input_consistent_tensor_metas() const {
+    return input_consistent_tensor_metas_;
+  }
+  Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
+  const AttrMap& attrs() const { return attrs_; }
+  size_t hash_value() const {
+    size_t hash_value = std::hash<Symbol<PlacementScope>>()(placement_scope_);
+    hash_value ^= std::hash<AttrMap>()(attrs_);
+    const auto& tensor_meta_hash_functor = std::hash<InputConsistentTensorMeta>();
+    for (const auto& tensor_meta : input_consistent_tensor_metas_) {
+      HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
+    }
+    return hash_value;
+  }
+
+  bool operator==(const ConsistentTensorMetaInferArgs& other) const {
+    return this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_
+           && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_;
+  }
+
+  void InitInputConsistentTensorMetas(const TensorTuple& input_tensors) {
+    CHECK_EQ(input_consistent_tensor_metas_.size(), input_tensors.size());
+    for (const auto& tensor : input_tensors) {
+      input_consistent_tensor_metas_.assign(tensor->tensor_meta(),
+                                            tensor->consumer_forced_parallel_distribution());
+    }
+  }
 
  private:
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
-  Symbol<ParallelDesc> op_parallel_desc_;
+  Symbol<PlacementScope> placement_scope_;
   AttrMap attrs_;
 };
+
+class ConsistentTensorMetaInferResult final {
+ public:
+ private:
+  std::shared_ptr<TensorTuple> output_tensors_;
+};
+
+std::shared_ptr<ConsistentTensorMetaInferResult> Infer(
+    const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
+  TODO();
+  return std::shared_ptr<ConsistentTensorMetaInferResult>();
+}
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
@@ -148,4 +189,11 @@ struct hash<oneflow::one::InputConsistentTensorMeta> final {
   }
 };
 
-}
+template<>
+struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
+  size_t operator()(const oneflow::one::ConsistentTensorMetaInferArgs& val) const {
+    return val.hash_value();
+  }
+};
+
+}  // namespace std
