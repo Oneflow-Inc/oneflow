@@ -306,7 +306,7 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         np_arr = np.random.randn(2,3,4,5)
@@ -872,7 +872,7 @@ class Std(Module):
             return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
-                self.reduce_count = x.nelemenet()
+                self.reduce_count = x.nelement()
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]

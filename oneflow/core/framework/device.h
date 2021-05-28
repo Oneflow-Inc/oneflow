@@ -37,6 +37,7 @@ class Device final : public std::enable_shared_from_this<Device> {
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
+  std::string ToRepr() const;
   size_t hash_value() const { return hash_value_; }
   bool operator==(const Device& device) const {
     return type_ == device.type() && device_id_ == device.device_id();
