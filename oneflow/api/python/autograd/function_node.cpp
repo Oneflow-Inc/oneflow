@@ -29,7 +29,7 @@ struct FunctionNodeUtil final {
   static std::string ToString(const one::FunctionNode& func_node) {
     std::stringstream ss;
     ss << "<";
-    ss << func_node.GetOpName();
+    ss << func_node.GetOpTypeName();
     ss << " at " << &func_node;
     ss << ">";
     return ss.str();
@@ -49,7 +49,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("metadata", []() { TODO(); })
       .def_property_readonly("requires_grad", []() { TODO(); })
       .def("register_hook", []() { TODO(); })
-      .def("name", [](const one::FunctionNode& func_node) { return func_node.GetOpName(); });
+      .def("name", [](const one::FunctionNode& func_node) { return func_node.GetOpTypeName(); });
 }
 
 }  // namespace oneflow

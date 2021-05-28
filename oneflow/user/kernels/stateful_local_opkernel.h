@@ -162,8 +162,17 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
+  const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
+  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+    return const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
@@ -279,10 +288,6 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object() const {
-    return compute_local_dep_object_;
-  }
-
   Maybe<void> InferTensorDesc(const EagerBlobObjectListPtr& inputs,
                               const EagerBlobObjectListPtr& outputs,
                               LocalUserOpInferContext* op_infer_ctx);
@@ -290,14 +295,20 @@ class StatefulLocalOpKernel final {
                             const EagerBlobObjectListPtr& outputs,
                             LocalUserOpInferContext* op_infer_ctx);
 
-  void ResetDynamicOpAttrs(const AttrMap& attrs);
-
-  LocalUserOpInferContext* op_infer_ctx_for_thread_a() const {
-    return op_infer_ctx_for_thread_a_.get();
+  ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
+    return composed_attrs_for_scheduler_thread_.get();
   }
 
-  LocalUserOpInferContext* op_infer_ctx_for_thread_b() const {
-    return op_infer_ctx_for_thread_b_.get();
+  ComposedAttrMap* composed_attrs_for_main_thread() const {
+    return composed_attrs_for_main_thread_.get();
+  }
+
+  LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
+    return op_infer_ctx_for_scheduler_thread_.get();
+  }
+
+  LocalUserOpInferContext* op_infer_ctx_for_main_thread() const {
+    return op_infer_ctx_for_main_thread_.get();
   }
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
@@ -330,13 +341,14 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
+  std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   std::shared_ptr<const Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_a_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_thread_b_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_main_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
@@ -352,7 +364,6 @@ class StatefulLocalOpKernel final {
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;
   std::vector<int64_t> output_tuple_indexes4mut_obns_;
   std::vector<int64_t> output_tuple_indexes4mut2_obns_;
-  std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace one
