@@ -163,7 +163,7 @@ struct CoshFunctor<float> {
   static OF_DEVICE_FUNC const float Forward(const float x) { return MATH_FUNC_F(cosh, x); }
 
   static OF_DEVICE_FUNC const float Backward(const float x, const float dy) {
-    return dy * (MATH_FUNC_F(exp, x) + MATH_FUNC_F(exp, -x)) / 2.0f;
+    return dy * MATH_FUNC_F(sinh, x);
   }
 };
 
@@ -447,7 +447,7 @@ struct CoshFunctor<double> {
   static OF_DEVICE_FUNC const double Forward(const double x) { return MATH_FUNC_D(cosh, x); }
 
   static OF_DEVICE_FUNC const double Backward(const double x, const double dy) {
-    return dy * (MATH_FUNC_D(exp, x) + MATH_FUNC_D(exp, -x)) / 2.0;
+    return dy * MATH_FUNC_D(sinh, x);
   }
 };
 
@@ -752,7 +752,7 @@ struct CoshFunctor<half> {
   static OF_HALF_FUNC const half Forward(const half x) { return MATH_FUNC_H(cosh, x); }
 
   static OF_HALF_FUNC const half Backward(const half x, const half dy) {
-    return __hmul(dy, __hdiv(__hadd(hexp(x), hexp(__hneg(x))), HALF_VAL_TWO));
+    return __hmul(dy, MATH_FUNC_H(sinh, x));
   }
 };
 
