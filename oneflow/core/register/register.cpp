@@ -31,7 +31,7 @@ Regst::Regst() {
 }
 
 Regst::~Regst() {
-  if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
+  if (comm_net_token_) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
 }
 
 Blob* Regst::GetBlobByOrdinal(int64_t ordinal) { return sorted_blob_vec_.at(ordinal).get(); }
@@ -65,6 +65,22 @@ Blob* Regst::GetMutSoleBlob() {
 const Blob* Regst::GetSoleBlob() const {
   CHECK_EQ(GetBlobSize(), 1);
   return sorted_blob_vec_.front().get();
+}
+
+void* Regst::comm_net_token() {
+  void* token = comm_net_token_;
+  if (token != nullptr) { return token; }
+  {
+    std::lock_guard<std::mutex> lock(comm_net_token_mutex_);
+    token = comm_net_token_;
+    if (token != nullptr) { return token; }
+    CHECK(main_mem_ptr() != nullptr);
+    CHECK(separated_header_mem_ptr() == nullptr);
+    token = Global<CommNet>::Get()->RegisterMemory(main_mem_ptr(),
+                                                   this->regst_desc()->MainByteSize4OneRegst());
+    comm_net_token_ = token;
+    return token;
+  }
 }
 
 }  // namespace oneflow

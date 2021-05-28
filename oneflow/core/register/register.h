@@ -49,11 +49,16 @@ class Regst final {
   const Blob* GetSoleBlob() const;
   Blob* GetMutSoleBlob();
   int64_t GetBlobSize() const { return sorted_blob_vec_.size(); }
-  void* comm_net_token() const { return comm_net_token_; }
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
+
+  void* main_mem_ptr() const { return main_mem_ptr_; }
+  void set_main_mem_ptr(void* ptr) { main_mem_ptr_ = ptr; }
+  void* separated_header_mem_ptr() const { return separated_header_mem_ptr_; }
+  void set_separated_header_mem_ptr(void* ptr) { separated_header_mem_ptr_ = ptr; }
+  void* comm_net_token();
 
  private:
   friend class RegstMgr;
@@ -62,10 +67,14 @@ class Regst final {
   void set_regst_desc(const RtRegstDesc* regst_desc);
   void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
-  void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
+  void* main_mem_ptr_;
+  void* separated_header_mem_ptr_;
+
+  std::atomic<void*> comm_net_token_;
+  std::mutex comm_net_token_mutex_;
 };
 
 }  // namespace oneflow
