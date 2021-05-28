@@ -38,6 +38,7 @@ def _test_asinh(test_case, shape, device):
 
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
+
 def _test_arcsinh(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -54,6 +55,7 @@ def _test_arcsinh(test_case, shape, device):
 
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -66,6 +68,7 @@ class TestAsinh(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_asinh(test_case, *arg)
             _test_arcsinh(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

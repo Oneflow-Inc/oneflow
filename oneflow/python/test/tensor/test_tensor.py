@@ -453,7 +453,9 @@ class TestTensor(flow.unittest.TestCase):
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = input.asin()
         np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
@@ -463,7 +465,9 @@ class TestTensor(flow.unittest.TestCase):
         input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
         of_out = input.arcsin()
         np_out = np.arcsin(input.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))    
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
