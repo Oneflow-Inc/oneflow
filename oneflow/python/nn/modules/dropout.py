@@ -93,7 +93,7 @@ class Dropout(_DropoutNd):
         _DropoutNd.__init__(self, p, inplace)
 
         if self.p == 1.0:
-            scale = 1
+            scale = 1.0
         else:
             scale = float(1.0 / (1.0 - self.p))
 
