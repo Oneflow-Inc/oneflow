@@ -547,15 +547,101 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Build();
 }
 
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
+  return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
+}
+Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name) {
+  return one::OpBuilder("dim_scatter_add_like", name)
+      .Input("like")
+      .Input("input")
+      .Input("index")
+      .Output("output")
+      .Attr<int32_t>("dim", dim)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm) {
   return TransposeOp(perm, UniqueOpName("transpose"));
 }
-
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::string& name) {
   return one::OpBuilder("transpose", name)
       .Input("input")
       .Output("output")
       .Attr<std::vector<int32_t>>("perm", perm)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis) {
+  return SplitLikeOp(n, axis, UniqueOpName("split_like"));
+}
+Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::string& name) {
+  return one::OpBuilder("split_like", name)
+      .Input("in")
+      .Input("like", n)
+      .Output("out", n)
+      .Attr<int64_t>("axis", axis)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride) {
+  return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
+}
+Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
+                                    const std::vector<int32_t>& stride, const std::string& name) {
+  return one::OpBuilder("expand_grad", name)
+      .Input("in")
+      .Output("out")
+      .Attr<std::vector<int32_t>>("out_shape", out_shape)
+      .Attr<std::vector<int32_t>>("stride", stride)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type) {
+  return UnaryGradOp(unary_op_type, UniqueOpName(unary_op_type + "_grad"));
+}
+Maybe<one::UserOpExpr> UnaryGradOp(const std::string& unary_op_type, const std::string& name) {
+  return one::OpBuilder(unary_op_type + "_grad", name).Input("x").Input("dy").Output("dx").Build();
+}
+
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type) {
+  return BinaryXGradOp(binary_op_type, UniqueOpName(binary_op_type + "_x_grad"));
+}
+Maybe<one::UserOpExpr> BinaryXGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_x_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dx")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type) {
+  return BinaryYGradOp(binary_op_type, UniqueOpName(binary_op_type + "_y_grad"));
+}
+Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const std::string& name) {
+  return one::OpBuilder(binary_op_type + "_y_grad", name)
+      .Input("x")
+      .Input("y")
+      .Input("dz")
+      .Output("dy")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha) {
+  return MatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
+}
+
+Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                const double& alpha, const std::string& name) {
+  return one::OpBuilder("matmul", name)
+      .Input("a")
+      .Input("b")
+      .Output("out")
+      .Attr<bool>("transpose_a", transpose_a)
+      .Attr<bool>("transpose_b", transpose_b)
+      .Attr<double>("alpha", alpha)
       .Build();
 }
 

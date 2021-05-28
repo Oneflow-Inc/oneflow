@@ -474,7 +474,7 @@ def FeedValueToVariable(
     )
 
     if isinstance(var_blob, oneflow.Tensor):
-        var_blob_object = var_blob._blob_object
+        raise ValueError("Tensor object arguments are not supported")
     else:
         assert isinstance(var_blob, EagerBlobTrait)
         var_blob_object = var_blob.blob_object
@@ -585,7 +585,7 @@ def init_by_initializer_conf(
         vals = generate_values_by_initializer(initializer, shape, var_blob.dtype)
 
         if isinstance(var_blob, oneflow.Tensor):
-            var_blob_object = var_blob._blob_object
+            raise ValueError("Tensor object arguments are not supported")
         else:
             assert isinstance(var_blob, EagerBlobTrait)
             var_blob_object = var_blob.blob_object
