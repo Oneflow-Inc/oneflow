@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
 #include "oneflow/core/graph/boxing/boxing_logger.h"
+#include "oneflow/core/memory/memory_zone.h"
 
 namespace oneflow {
 
@@ -53,6 +54,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi, int64_t dst_machine_id,
                          int64_t dst_mem_zone_id);
+
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
+                         int64_t dst_machine_id, const MemZoneId& dst_mem_zone_id);
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                          const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
