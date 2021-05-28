@@ -341,27 +341,14 @@ class BroadcastSub(Module):
 
 
 class ScalarAdd(Module):
-    def __init__(self, operand) -> None:
+    def __init__(self, alpha) -> None:
         super().__init__()
-        if not isinstance(operand, int) and not isinstance(operand, float):
+        if not isinstance(alpha, int) and not isinstance(alpha, float):
             raise ValueError("operand type can only be int or float")
-        self.operand = operand
+        self.alpha = alpha
 
     def forward(self, x):
-        if isinstance(self.operand, int):
-            return flow.F.add_scalar(
-                x,
-                int_operand=self.operand,
-                has_int_operand=True,
-                has_float_operand=False,
-            )
-        else:
-            return flow.F.add_scalar(
-                x,
-                float_operand=self.operand,
-                has_int_operand=False,
-                has_float_operand=True,
-            )
+        return flow.F.add_scalar(x, self.alpha)
 
 
 @oneflow_export("sub")
