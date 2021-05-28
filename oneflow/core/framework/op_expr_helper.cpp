@@ -645,5 +645,17 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
       .Build();
 }
 
+Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
+  return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
+}
+Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
+  return one::OpBuilder("dropout_grad", name)
+      .Input("dy")
+      .Input("mask")
+      .Output("dx")
+      .Attr<float>("scale", scale)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
