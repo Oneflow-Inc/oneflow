@@ -188,6 +188,12 @@ Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm, const std::
 Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis);
 Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::string& name);
 
+Maybe<one::UserOpExpr> ZeroLikeOp();
+Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name);
+
+Maybe<one::UserOpExpr> WhereOp();
+Maybe<one::UserOpExpr> WhereOp(const std::string& name);
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride);
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,

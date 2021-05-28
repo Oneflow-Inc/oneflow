@@ -583,6 +583,28 @@ Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::s
       .Build();
 }
 
+Maybe<one::UserOpExpr> ZeroLikeOp(){
+  return ZeroLikeOp(UniqueOpName("zero_like"));
+}
+Maybe<one::UserOpExpr> ZeroLikeOp(const std::string& name){
+  return one::OpBuilder("zero_like", name)
+    .Input("like")
+    .Output("out")
+    .Build();
+}
+
+Maybe<one::UserOpExpr> WhereOp(){
+  return WhereOp(UniqueOpName("where"));
+}
+Maybe<one::UserOpExpr> WhereOp(const std::string& name){
+  return one::OpBuilder("where", name)
+    .Input("condition")
+    .Input("x")
+    .Input("y")
+    .Output("out")
+    .Build();
+}
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride) {
   return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
