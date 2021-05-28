@@ -14,9 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
 
 import numpy as np
-import oneflow as flow
+
+import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_slice(test_case, device):
+    np_arr = np.random.randn(3, 6, 9).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
+    y = flow.slice(x, slice_tup_list=tup_list)
+    tmp = np_arr[0:3, 0:5, 0:6]
+    np_out = tmp[::1, ::2, ::3]
+    test_case.assertTrue(np.array_equal(y.numpy(), np_out))
+
+
+def _test_slice_backward(test_case, device):
+    np_arr = np.random.randn(3, 6, 9).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
+    tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
+    y = flow.slice(x, slice_tup_list=tup_list)
+    z = y.sum()
+    z.backward()
+
+    np_grad = np.zeros((3, 6, 9))
+    np_grad[0:3, 0:5, 0:6][::1, ::2, ::3] = 1
+    test_case.assertTrue(np.array_equal(x.grad.numpy(), np_grad))
 
 
 @unittest.skipIf(
@@ -25,11 +51,11 @@ import oneflow as flow
 )
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
-        x = np.random.randn(3, 6, 9).astype(np.float32)
-        input = flow.Tensor(x)
-        tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
-        y = flow.experimental.slice(input, slice_tup_list=tup_list)
-        test_case.assertEqual(y.shape, flow.Size([3, 3, 2]))
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_slice, _test_slice_backward]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 @unittest.skipIf(
@@ -42,7 +68,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
         input = flow.Tensor(x)
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        y = flow.experimental.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+        y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
 
@@ -56,9 +82,7 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         input = flow.Tensor(x)
         update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-        flow.experimental.tmp.logical_slice_assign(
-            input, update, slice_tup_list=[[1, 4, 1]]
-        )
+        flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
 
 
