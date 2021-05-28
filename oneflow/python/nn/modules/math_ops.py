@@ -958,3 +958,33 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+class Lgamma(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._lgamma_op = flow.builtin_op("lgamma").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._lgamma_op(x)[0]
+
+
+@oneflow_export("lgamma")
+@register_tensor_op("lgamma")
+@experimental_api
+def lgamma_op(tensor):
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
+    exponent can be either a single float number or a single int number.
+    
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        
+        x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))
+        out = flow.pow(x, 2).numpy()
+        print(out) # [1, 4, 9, 16, 25, 36]
+        
+    """
+    return Lgamma()(tensor)
