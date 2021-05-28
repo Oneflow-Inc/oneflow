@@ -29,8 +29,8 @@ struct WhereInterpState : public OpExprInterpState {
 class Where : public OpExprGradFunction<WhereInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(WhereInterpState* ctx, const TensorTuple& inputs,
-                      const TensorTuple& outputs, const AttrMap& attrs) const override;
+  Maybe<void> Capture(WhereInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override;
   Maybe<void> Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
@@ -47,25 +47,25 @@ Maybe<void> Where::Init(const OpExpr& op) {
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   zero_like_op_ = JUST(op_expr_helper::ZeroLikeOp("zeros_like_" + GradientOpName(op_name)));
-  where_op_x_ =JUST(op_expr_helper::WhereOp("where_x_" + GradientOpName(op_name)));
-  where_op_y_ =JUST(op_expr_helper::WhereOp("where_y_" + GradientOpName(op_name)));
+  where_op_x_ = JUST(op_expr_helper::WhereOp("where_x_" + GradientOpName(op_name)));
+  where_op_y_ = JUST(op_expr_helper::WhereOp("where_y_" + GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
-                             const TensorTuple& outputs, const AttrMap& attrs) const {
+                           const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(1)->requires_grad() || inputs.at(2)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->SaveTensorForBackward(inputs.at(0)); //condition
-  ctx->SaveTensorForBackward(inputs.at(1)); //x
-  ctx->SaveTensorForBackward(inputs.at(2)); //y
+  ctx->SaveTensorForBackward(inputs.at(0));  // condition
+  ctx->SaveTensorForBackward(inputs.at(1));  // x
+  ctx->SaveTensorForBackward(inputs.at(2));  // y
   return Maybe<void>::Ok();
 }
 
 Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
-                           TensorTuple* in_grads) const {
+                         TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   MutableAttrMap attrs;
@@ -73,10 +73,13 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
   const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(2);
 
-  std::shared_ptr<oneflow::one::Tensor> zero_out = JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
+  std::shared_ptr<oneflow::one::Tensor> zero_out =
+      JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
   in_grads->resize(3);
-  in_grads->at(1) = JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
-  in_grads->at(2) = JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion,  zero_out, out_grads.at(0)}));
+  in_grads->at(1) =
+      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
+  in_grads->at(2) =
+      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, zero_out, out_grads.at(0)}));
   return Maybe<void>::Ok();
 }
 

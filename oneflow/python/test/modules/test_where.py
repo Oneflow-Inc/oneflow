@@ -28,11 +28,16 @@ def _test_where(test_case, device):
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32, device=flow.device(device))
-    condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device))
+    y = flow.Tensor(
+        np.ones(shape=(3, 2)), dtype=flow.float32, device=flow.device(device)
+    )
+    condition = flow.Tensor(
+        np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device)
+    )
     of_out = flow.where(condition, x, y)
     np_out = np.array([[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
 
 def _test_where_broadcast(test_case, device):
     x = flow.Tensor(
@@ -40,8 +45,14 @@ def _test_where_broadcast(test_case, device):
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(np.ones(shape=(3, 3, 2)), dtype=flow.float32, device=flow.device(device))
-    condition = flow.Tensor(np.array([[[0, 1], [1, 0], [1, 0]]]), dtype=flow.int32, device=flow.device(device))
+    y = flow.Tensor(
+        np.ones(shape=(3, 3, 2)), dtype=flow.float32, device=flow.device(device)
+    )
+    condition = flow.Tensor(
+        np.array([[[0, 1], [1, 0], [1, 0]]]),
+        dtype=flow.int32,
+        device=flow.device(device),
+    )
     of_out = flow.where(condition, x, y)
     np_out = np.array(
         [
@@ -52,6 +63,7 @@ def _test_where_broadcast(test_case, device):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 def _test_where_scalar(test_case, device):
     x = 0.5
     y = 2.0
@@ -60,19 +72,80 @@ def _test_where_scalar(test_case, device):
     np_out = np.array([0.5])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
+
 def _test_where_dim4(test_case, device):
     x = flow.Tensor(
         np.array([[[[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]]),
         dtype=flow.float32,
         device=flow.device(device),
     )
-    y = flow.Tensor(np.ones(shape=(1, 1, 3, 2)), dtype=flow.float32, device=flow.device(device))
+    y = flow.Tensor(
+        np.ones(shape=(1, 1, 3, 2)), dtype=flow.float32, device=flow.device(device)
+    )
     condition = flow.Tensor(
-        np.array([[[[0, 1], [1, 0], [1, 0]]]]), dtype=flow.int32, device=flow.device(device)
+        np.array([[[[0, 1], [1, 0], [1, 0]]]]),
+        dtype=flow.int32,
+        device=flow.device(device),
     )
     of_out = flow.where(condition, x, y)
     np_out = np.array([[[[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+
+def _test_where_backward(test_case, device):
+    x = flow.Tensor(
+        np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.Tensor(
+        np.ones(shape=(3, 2)),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    condition = flow.Tensor(
+        np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device)
+    )
+    of_out = flow.where(condition, x, y)
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), condition.numpy() == 1, 1e-5, 1e-5)
+    )
+    test_case.assertTrue(
+        np.allclose(y.grad.numpy(), condition.numpy() == 0, 1e-5, 1e-5)
+    )
+
+
+def _test_where_broadcast_backward(test_case, device):
+    x = flow.Tensor(
+        np.array([[[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.Tensor(
+        np.ones(shape=(3, 3, 2)),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    condition = flow.Tensor(
+        np.array([[[0, 1], [1, 0], [1, 0]]]),
+        dtype=flow.int32,
+        device=flow.device(device),
+    )
+    of_out = flow.where(condition, x, y)
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), condition.numpy() == 1, 1e-5, 1e-5)
+    )
+    test_case.assertTrue(
+        np.allclose(y.grad.numpy(), condition.numpy() == 0, 1e-5, 1e-5)
+    )
 
 
 @unittest.skipIf(
@@ -87,6 +160,8 @@ class TestWhere(flow.unittest.TestCase):
             _test_where_broadcast,
             _test_where_scalar,
             _test_where_dim4,
+            _test_where_backward,
+            _test_where_broadcast_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
