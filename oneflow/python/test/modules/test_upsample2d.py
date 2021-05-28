@@ -23,8 +23,7 @@ from test_util import GenArgList
 
 
 def _test_upsample2d(test_case, device):
-    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
     of_out = m(input)
     np_out = np.array(
@@ -43,8 +42,7 @@ def _test_upsample2d(test_case, device):
 
 
 def _test_upsample2d_bilinear(test_case, device):
-    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
     of_out = m(input)
     np_out = np.array(
@@ -63,8 +61,7 @@ def _test_upsample2d_bilinear(test_case, device):
 
 
 def _test_upsample2d_bilinear_aligncorner(test_case, device):
-    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
     of_out = m(input)
     np_out = np.array(
@@ -83,8 +80,7 @@ def _test_upsample2d_bilinear_aligncorner(test_case, device):
 
 
 def _test_UpsamplingNearest2d(test_case, device):
-    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
     of_out = m(input)
     np_out = np.array(
@@ -103,8 +99,7 @@ def _test_UpsamplingNearest2d(test_case, device):
 
 
 def _test_UpsamplingBilinear2d(test_case, device):
-    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
     of_out = m(input)
     np_out = np.array(
@@ -123,8 +118,7 @@ def _test_UpsamplingBilinear2d(test_case, device):
 
 
 def _test_upsample2d_4dim(test_case, device):
-    input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
     of_out = m(input)
     np_out = np.array(
@@ -171,8 +165,7 @@ def _test_upsample2d_4dim(test_case, device):
 
 
 def _test_upsample2d_bilinear_4dim(test_case, device):
-    input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), dtype=flow.float32)
-    input = input.to(device)
+    input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), device=flow.device(device), dtype=flow.float32)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
     of_out = m(input)
     np_out = np.array(
@@ -218,6 +211,27 @@ def _test_upsample2d_bilinear_4dim(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+def _test_upsample2d_backward(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+    of_out = m(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[4.0, 4.0], [4.0, 4.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
+    input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), device=flow.device(device), dtype=flow.float32, requires_grad=True)
+    m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
+    of_out = m(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[3.999999523162842, 4.000000476837158], [3.999999761581421, 4.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -233,6 +247,8 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_UpsamplingBilinear2d,
             _test_upsample2d_4dim,
             _test_upsample2d_bilinear_4dim,
+            _test_upsample2d_backward,
+            _test_upsample2d_bilinear_aligncorner_backward,
         ]
         arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
