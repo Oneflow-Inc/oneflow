@@ -217,5 +217,12 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
 
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step);
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
