@@ -547,6 +547,26 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Build();
 }
 
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation) {
+  return UpsampleGradOp(height_scale, width_scale, align_corners, data_format, interpolation,
+                        UniqueOpName("upsample_grad"));
+}
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation, const std::string& name) {
+  return one::OpBuilder("upsample_grad", name)
+      .Input("dy")
+      .Output("dx")
+      .Attr<float>("height_scale", height_scale)
+      .Attr<float>("width_scale", width_scale)
+      .Attr<bool>("align_corners", align_corners)
+      .Attr<std::string>("data_format", data_format)
+      .Attr<std::string>("interpolation", interpolation)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
   return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
 }
