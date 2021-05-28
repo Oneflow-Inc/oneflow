@@ -34,6 +34,8 @@ struct MatmulInterpState : public OpExprInterpState {
 
 class Matmul : public OpExprGradFunction<MatmulInterpState> {
  public:
+  std::shared_ptr<OpExpr> grad_a_op_;
+  std::shared_ptr<OpExpr> grad_b_op_;
   Maybe<void> Init(const OpExpr& op) override;
   Maybe<void> Capture(MatmulInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
@@ -42,8 +44,6 @@ class Matmul : public OpExprGradFunction<MatmulInterpState> {
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_a_op_;
-  std::shared_ptr<OpExpr> grad_b_op_;
 };
 
 Maybe<void> Matmul::Init(const OpExpr& op) {
@@ -117,6 +117,45 @@ Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_g
 }
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("matmul", Matmul);
+
+class BatchMatmul : public Matmul{
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Capture(MatmulInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+                      const AttrMap& attrs) const override;
+  Maybe<void> Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+  std::shared_ptr<OpExpr> grad_a_op_;
+  std::shared_ptr<OpExpr> grad_b_op_;
+};
+
+Maybe<void> BatchMatmul::Init(const OpExpr& op) {
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  const std::string& op_name = fw_op_expr->op_name();
+
+  Matmul::grad_a_op_ = JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
+                                                  /*alpha=*/1.0, GradientOpName(op_name + "_a")));
+  Matmul::grad_b_op_ = JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
+                                                  /*alpha=*/1.0, GradientOpName(op_name + "_b")));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BatchMatmul::Capture(MatmulInterpState* ctx, const TensorTuple& inputs,
+                            const TensorTuple& outputs, const AttrMap& attrs) const {
+    return Matmul::Capture(ctx, inputs, outputs, attrs);
+}
+
+Maybe<void> BatchMatmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+                          TensorTuple* in_grads) const {
+    return Matmul::Apply(ctx, out_grads, in_grads);
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", BatchMatmul);
 
 }  // namespace one
 }  // namespace oneflow
