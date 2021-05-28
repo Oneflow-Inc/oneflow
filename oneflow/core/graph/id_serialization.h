@@ -26,9 +26,6 @@ StreamId DeserializeStreamIdFromInt64(int64_t);
 int64_t SerializeTaskIdToInt64(const TaskId&);
 TaskId DeserializeTaskIdFromInt64(int64_t);
 
-int64_t EncodeMemZoneIdToInt64(const MemZoneId&);
-MemZoneId DecodeMemZoneIdFromInt64(int64_t);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_ID_SERIALIZATION_H_
