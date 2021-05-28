@@ -977,6 +977,12 @@ def erf_op(input):
 
     .. math::
             \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
     
     For example:
 
@@ -1011,7 +1017,13 @@ def erfc_op(input):
 
     .. math::
             \operatorname{erfc}(x)=1-\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
-    
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
     For example:
 
     .. code-block:: python
