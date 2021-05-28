@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/framework/vm_local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/instruction_replay.h"
 
 namespace oneflow {
 
@@ -1578,6 +1579,11 @@ Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) 
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   Build(&instructions_builder);
+  if (RecordingInstruction()) {
+    OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
+      RecordInstruction(instruction_msg);
+    }
+  }
   JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
       instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
   return Maybe<void>::Ok();
