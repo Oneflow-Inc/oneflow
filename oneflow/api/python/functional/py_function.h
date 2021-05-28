@@ -27,13 +27,12 @@ namespace functional {
 template<typename SchemaT>
 inline py::object PyFunction(py::args args, py::kwargs kwargs) {
   // TODO(): Support multiple function signatures.
-  using FType = typename SchemaT::FType;
-  using R = typename SchemaT::R;
   CHECK_LE(args.size(), SchemaT::max_positionals)
       << "The maximum count of positional arguments is " << SchemaT::max_positionals;
   CHECK_LE(kwargs.size(), SchemaT::max_keywords)
       << "The maximum count of keyword arguments is " << SchemaT::max_keywords;
 
+  // TODO(): Check argument types.
   std::vector<PythonArg> _args(SchemaT::max_args);
   for (int i = 0; i < args.size(); ++i) { _args[i] = PythonArg(args[i]); }
   for (int i = args.size(); i < SchemaT::max_args; ++i) {
@@ -41,11 +40,15 @@ inline py::object PyFunction(py::args args, py::kwargs kwargs) {
     if (kwargs.contains(arg.name.c_str())) {
       _args[i] = PythonArg(kwargs[arg.name.c_str()]);
     } else {
-      CHECK(arg.has_default_value) << "Argument " << arg.name << " is required";
+      CHECK(arg.has_default_value)
+          << "Argument " << arg.name << " is required, and the function def is \""
+          << SchemaT::signature << "\".";
       _args[i] = PythonArg(arg.default_value);
     }
   }
-  return py::cast(detail::unpack_call<FType, R, PythonArg>::apply(*SchemaT::func, _args));
+  using F = typename SchemaT::FType;
+  using R = typename SchemaT::R;
+  return py::cast(detail::unpack_call<F, R, PythonArg>::apply(*SchemaT::func, _args));
 }
 
 }  // namespace functional

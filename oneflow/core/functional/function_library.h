@@ -28,15 +28,22 @@ class FunctionLibrary {
   virtual ~FunctionLibrary() = default;
 
   template<typename Func>
-  void add_functor(const std::string& name) {
+  void add_functor(const std::string& func_name) {
     Func func;
-    auto packed_func = PackedFunctor::Make(name, std::move(func));
-    functors_.emplace(name, packed_func);
+    add_functor(func_name, std::move(func));
   }
 
-  Maybe<PackedFunctor> find(const std::string& name) {
-    const auto& it = functors_.find(name);
-    CHECK_OR_RETURN(it != functors_.end());
+  template<typename Func>
+  void add_functor(const std::string& func_name, const Func& func) {
+    auto packed_func = PackedFunctor::Make(func_name, func);
+    functors_.emplace(func_name, packed_func);
+  }
+
+  Maybe<PackedFunctor> find(const std::string& func_name) {
+    const auto& it = functors_.find(func_name);
+    CHECK_OR_RETURN(it != functors_.end())
+        << "Functor was not found for op " << func_name
+        << ", please check whether the functor has been registered correctly or not.";
     return std::make_shared<PackedFunctor>(it->second);
   }
 
@@ -47,6 +54,9 @@ class FunctionLibrary {
 
  private:
   FunctionLibrary() = default;
+
+  // The reason for not using `std::shared_ptr<PackedFunctor>` is that
+  // the functor maybe stateful.
   HashMap<std::string, PackedFunctor> functors_;
 };
 

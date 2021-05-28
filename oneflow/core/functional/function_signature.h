@@ -69,11 +69,10 @@ inline FunctionSignature PackFunctionSignatureImpl() {
 }
 
 template<typename T>
-class PackFunctionSignature;
+struct PackFunctionSignature;
 
 template<typename R, typename... Args>
-class PackFunctionSignature<R(Args...)> {
- public:
+struct PackFunctionSignature<R(Args...)> {
   static FunctionSignature pack() {
     static auto signature = PackFunctionSignatureImpl<R, Args...>();
     return signature;

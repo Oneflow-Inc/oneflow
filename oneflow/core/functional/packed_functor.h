@@ -29,8 +29,6 @@ namespace functional {
 
 class FunctionBody {
  public:
-  FunctionBody() = default;
-  virtual ~FunctionBody() = default;
   virtual operator void*() = 0;
 };
 
@@ -40,22 +38,19 @@ class FunctionBodyImpl;
 template<typename R, typename... Args>
 class FunctionBodyImpl<R(Args...)> : public FunctionBody {
  public:
-  template<typename Func>
-  FunctionBodyImpl(Func func);
+  template<typename Func,
+           typename std::enable_if<
+               std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
+               int>::type = 0>
+  FunctionBodyImpl(const Func& func) {
+    func_ = [func](Args... args) { return func(std::forward<Args>(args)...); };
+  }
 
   operator void*() override { return &func_; }
 
  private:
   std::function<R(Args...)> func_;
 };
-
-template<typename R, typename... Args>
-template<typename Func>
-FunctionBodyImpl<R(Args...)>::FunctionBodyImpl(Func func) {
-  using FuncType = typename function_traits<Func>::func_type;
-  static_assert(std::is_same<FuncType, R(Args...)>::value);
-  func_ = [func](Args... args) { return func(std::forward<Args>(args)...); };
-}
 
 class Functor {
  public:
@@ -69,7 +64,7 @@ class Functor {
     }
     using FuncType = std::function<R(Args...)>;
     auto* func = reinterpret_cast<FuncType*>(body_->operator void*());
-    return func->operator()(std::forward<Args>(args)...);
+    return (*func)(std::forward<Args>(args)...);
   }
 
  private:
@@ -82,7 +77,7 @@ class PackedFunctor {
   virtual ~PackedFunctor() = default;
 
   template<typename Func>
-  static PackedFunctor Make(const std::string& func_name, Func func);
+  static PackedFunctor Make(const std::string& func_name, const Func& func);
 
   template<typename R, typename... Args>
   R call(Args... args) const {
@@ -98,7 +93,7 @@ class PackedFunctor {
 };
 
 template<typename Func>
-/*static*/ PackedFunctor PackedFunctor::Make(const std::string& func_name, Func func) {
+/*static*/ PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
   // static_assert(is_callable(func));
   using func_type = typename function_traits<Func>::func_type;
   auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);

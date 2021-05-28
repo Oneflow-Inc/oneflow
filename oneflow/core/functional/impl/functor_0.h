@@ -64,9 +64,7 @@ class NormalizationFunctor {
                            const std::shared_ptr<one::Tensor>& gamma,
                            const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
-                           const bool& is_training) const {
-    UNIMPLEMENTED_THEN_RETURN();
-  }
+                           const bool& is_training) const;
 };
 
 }  // namespace impl

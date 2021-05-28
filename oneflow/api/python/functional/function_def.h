@@ -32,19 +32,19 @@ namespace functional {
 
 struct ReturnDef {
   ReturnDef() : type(kINVALID) {}
-  ReturnDef(const ValueType& _type) : type(_type) {}
+  ReturnDef(const ValueType& t) : type(t) {}
   ValueType type;
 };
 
 struct ArgumentDef {
   ArgumentDef() : name(""), type(kINVALID), has_default_value(false) {}
-  ArgumentDef(const std::string& _name, const ValueType& _type)
-      : name(_name), type(_type), has_default_value(false) {}
+  ArgumentDef(const std::string& n, const ValueType& t)
+      : name(n), type(t), has_default_value(false) {}
 
   template<typename T>
-  ArgumentDef(const std::string& _name, const T& _default_value)
-      : name(_name), type(ValueTypeOf<T>()), has_default_value(true) {
-    default_value = std::make_shared<detail::ValueImpl<T>>(_default_value);
+  ArgumentDef(const std::string& n, const T& v)
+      : name(n), type(ValueTypeOf<T>()), has_default_value(true) {
+    default_value = std::make_shared<detail::ValueImpl<T>>(v);
   }
 
   std::string name;

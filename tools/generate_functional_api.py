@@ -33,7 +33,9 @@ distributed under the License is distributed on an \"AS IS\" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/"""
+*/
+
+// Generated from oneflow/core/functional/functional_api.yaml. DO NOT EDIT!"""
 
 header_fmt = (
     license
@@ -77,6 +79,7 @@ namespace functional {{
 schema_source_fmt = (
     license
     + """
+
 #include <vector>
 #include <pybind11/pybind11.h>
 
@@ -235,7 +238,7 @@ class Argument:
         return self._default_value is not None
 
     def to_string(self, to_cpp=False):
-        fmt = "{0} {1}".format(self._cpp_type if to_cpp else self.type, self._name)
+        fmt = "{0} {1}".format(self._cpp_type if to_cpp else self._type, self._name)
         if not to_cpp and self.has_default_value:
             fmt += "={0}".format(self._default_value)
         return fmt
@@ -286,7 +289,15 @@ class FunctionSignature:
 
     def to_string(self, to_cpp=False):
         fmt = "{0} {1}(".format(self._ret.to_string(to_cpp=to_cpp), self._name)
-        fmt += ", ".join([arg.to_string(to_cpp=to_cpp) for arg in self._args])
+        keyword_start = False
+        for i, arg in enumerate(self._args):
+            if i > 0 and i < len(self._args):
+                fmt += ", "
+            if not keyword_start and arg._keyword_allowed:
+                keyword_start = True
+                if not to_cpp:
+                    fmt += "*, "
+            fmt += arg.to_string(to_cpp=to_cpp)
         fmt += ")"
         return fmt
 
@@ -298,7 +309,7 @@ class Block:
         self._bind_python = bind_python
 
 
-class FunctionGenerator:
+class FunctionalGenerator:
     def __init__(self, input_file):
         self._blocks = {}
         with open(input_file) as f:
@@ -344,13 +355,12 @@ class FunctionGenerator:
         with open(target_source_file, "w") as f:
             f.write(source_fmt.format(fmt))
 
-    def generate_function_schema_for_python(self, target_schema_source_file):
+    def generate_schema_for_python(self, target_schema_source_file):
         schema_fmt = ""
         module_fmt = ""
         for name, block in self._blocks.items():
             if not block._bind_python:
                 continue
-
             signature = block._signature
             return_type = signature._ret._cpp_type
             schema_fmt += "\n"
@@ -371,6 +381,9 @@ class FunctionGenerator:
             )
             schema_fmt += "  static constexpr size_t max_keywords = {0};\n".format(
                 signature._max_keyword_args_count
+            )
+            schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
+                signature.to_string()
             )
             schema_fmt += "  static ReturnDef return_def;\n"
             schema_fmt += "  static std::vector<ArgumentDef> argument_def;\n"
@@ -414,22 +427,19 @@ if __name__ == "__main__":
     assert os.path.isfile(yaml_file), (
         "It is not a regular file for the yaml file which path is " + yaml_file
     )
-    g = FunctionGenerator(yaml_file)
+    g = FunctionalGenerator(yaml_file)
 
     # Create api generated directory if needed.
     directory = os.path.join(api_generate_dir, "generated")
     if not os.path.exists(directory):
         os.makedirs(directory)
-
-    # Generate functional api header and source file.
     target_header_file = os.path.join(directory, "functional_api.h")
     g.generate_cpp_header_file(target_header_file)
     target_source_file = os.path.join(directory, "functional_api.cpp")
     g.generate_cpp_source_file(target_source_file)
 
-    # Create schema generated directory if needed.
     directory = os.path.join(schema_generate_dir, "generated")
     if not os.path.exists(directory):
         os.makedirs(directory)
     target_schema_source_file = os.path.join(directory, "functional_schema.cpp")
-    g.generate_function_schema_for_python(target_schema_source_file)
+    g.generate_schema_for_python(target_schema_source_file)

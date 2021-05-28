@@ -29,11 +29,11 @@ namespace functional {
 #define INSTANCE_CAST_OBJECT_AS(T)                             \
   template<>                                                   \
   T PythonArg::ObjectAs<T>() const {                           \
-    return py::cast<T>(Borrow());                              \
+    return detail::cast<T>(Borrow());                          \
   }                                                            \
   template<>                                                   \
   std::vector<T> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return detail::CastToList<T>(Borrow());                    \
+    return detail::cast<std::vector<T>>(Borrow());             \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_CAST_OBJECT_AS,
@@ -45,34 +45,34 @@ template<>
 Scalar PythonArg::ObjectAs<Scalar>() const {
   py::object obj = Borrow();
   if (detail::isinstance<int32_t>(obj)) {
-    return Scalar(py::cast<int32_t>(obj));
+    return Scalar(detail::cast<int32_t>(obj));
   } else if (detail::isinstance<int64_t>(obj)) {
-    return Scalar(py::cast<int64_t>(obj));
+    return Scalar(detail::cast<int64_t>(obj));
   } else if (detail::isinstance<float>(obj)) {
-    return Scalar(py::cast<float>(obj));
+    return Scalar(detail::cast<float>(obj));
   } else if (detail::isinstance<double>(obj)) {
-    return Scalar(py::cast<double>(obj));
+    return Scalar(detail::cast<double>(obj));
   } else if (detail::isinstance<bool>(obj)) {
-    return Scalar(py::cast<bool>(obj));
+    return Scalar(detail::cast<bool>(obj));
   } else {
     UNIMPLEMENTED() << "Can not convert to scalar from python object whose type is "
-                    << py::cast<std::string>(py::str(py::type::of(obj)));
+                    << detail::cast<std::string>(py::str(py::type::of(obj)));
     return Scalar(0);
   }
 }
 
 template<>
 std::shared_ptr<one::Tensor> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
-  return py::cast<std::shared_ptr<one::Tensor>>(Borrow());
+  return detail::cast<std::shared_ptr<one::Tensor>>(Borrow());
 }
 
 template<>
 std::shared_ptr<one::TensorTuple> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>() const {
   py::object obj = Borrow();
   if (detail::isinstance<one::TensorTuple>(obj)) {
-    return py::cast<std::shared_ptr<one::TensorTuple>>(obj);
+    return detail::cast<std::shared_ptr<one::TensorTuple>>(obj);
   }
-  auto v = detail::CastToList<std::shared_ptr<one::Tensor>>(obj);
+  auto v = detail::cast<std::vector<std::shared_ptr<one::Tensor>>>(obj);
   auto values = std::make_shared<one::TensorTuple>(v.size());
   for (int i = 0; i < v.size(); ++i) { values->at(i) = v[i]; }
   return values;
@@ -88,16 +88,16 @@ std::shared_ptr<cfg::AttrValue> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrVal
   // TODO()
   py::object obj = Borrow();
   if (detail::isinstance<cfg::AttrValue>(obj)) {
-    return py::cast<std::shared_ptr<cfg::AttrValue>>(obj);
+    return detail::cast<std::shared_ptr<cfg::AttrValue>>(obj);
   }
   auto attr_value = std::make_shared<cfg::AttrValue>();
   if (detail::isinstance<int32_t>(obj)) {
-    attr_value->set_at_int32(py::cast<int32_t>(obj));
+    attr_value->set_at_int32(detail::cast<int32_t>(obj));
   } else if (detail::isinstance<double>(obj)) {
-    attr_value->set_at_double(py::cast<double>(obj));
+    attr_value->set_at_double(detail::cast<double>(obj));
   } else {
     LOG(FATAL) << "The attribute type was not supported which is "
-               << py::cast<std::string>(py::str(py::type::of(obj)));
+               << detail::cast<std::string>(py::str(py::type::of(obj)));
   }
   return attr_value;
 }
@@ -106,7 +106,7 @@ template<>
 AttrMap PythonArg::ObjectAs<AttrMap>() const {
   py::object obj = Borrow();
   CHECK(detail::isinstance<MutableCfgAttrMap>(obj));
-  return *(py::cast<std::shared_ptr<MutableCfgAttrMap>>(obj));
+  return *(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(obj));
 }
 
 }  // namespace functional
