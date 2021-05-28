@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/op_expr_grad_function.h"
-#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -78,6 +76,7 @@ class Slice : public OpExprGradFunction<SliceOpExprInterpState> {
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("slice", Slice);
+REGISTER_OP_EXPR_GRAD_FUNCTION("slice_update", Slice);
 
 }  // namespace one
 }  // namespace oneflow
