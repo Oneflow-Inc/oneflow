@@ -22,9 +22,9 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_upsample2d(test_case):
+def _test_upsample2d(test_case, device):
     input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
     of_out = m(input)
     np_out = np.array(
@@ -41,9 +41,10 @@ def _test_upsample2d(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-def _test_upsample2d_bilinear(test_case):
+
+def _test_upsample2d_bilinear(test_case, device):
     input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
     of_out = m(input)
     np_out = np.array(
@@ -60,9 +61,10 @@ def _test_upsample2d_bilinear(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-def _test_upsample2d_bilinear_aligncorner(test_case):
+
+def _test_upsample2d_bilinear_aligncorner(test_case, device):
     input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear", align_corners=True)
     of_out = m(input)
     np_out = np.array(
@@ -79,9 +81,10 @@ def _test_upsample2d_bilinear_aligncorner(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
 
-def _test_UpsamplingNearest2d(test_case):
+
+def _test_UpsamplingNearest2d(test_case, device):
     input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
     of_out = m(input)
     np_out = np.array(
@@ -98,9 +101,10 @@ def _test_UpsamplingNearest2d(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-def _test_UpsamplingBilinear2d(test_case):
+
+def _test_UpsamplingBilinear2d(test_case, device):
     input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
     of_out = m(input)
     np_out = np.array(
@@ -117,9 +121,10 @@ def _test_UpsamplingBilinear2d(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-3, 1e-3))
 
-def _test_upsample2d_4dim(test_case):
+
+def _test_upsample2d_4dim(test_case, device):
     input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
     of_out = m(input)
     np_out = np.array(
@@ -164,9 +169,10 @@ def _test_upsample2d_4dim(test_case):
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-def _test_upsample2d_bilinear_4dim(test_case):
+
+def _test_upsample2d_bilinear_4dim(test_case, device):
     input = flow.Tensor(np.arange(1, 37).reshape((2, 2, 3, 3)), dtype=flow.float32)
-    input = input.to("cuda")
+    input = input.to(device)
     m = flow.nn.Upsample(scale_factor=2.0, mode="bilinear")
     of_out = m(input)
     np_out = np.array(
@@ -210,6 +216,7 @@ def _test_upsample2d_bilinear_4dim(test_case):
         ]
     )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
