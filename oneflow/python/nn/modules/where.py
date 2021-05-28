@@ -34,7 +34,7 @@ class Where(Module):
     def forward(self, condition, x, y):
         assert condition.dtype == flow.int32 or condition.dtype == flow.int8
         if isinstance(x, int) or isinstance(x, float):
-            x = flow.Tensor([float(x)], dtype=flow.float32)
+            x = flow.Tensor([float(x)], dtype=flow.float32,)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor([float(y)], dtype=flow.float32)
         broadcast_cond = condition
@@ -57,7 +57,7 @@ class Where(Module):
                 broadcast_y_axes.append(i)
 
         broadcast_like_tensor = flow.experimental.zeros(
-            tuple(broadcast_like_shape), dtype=flow.float32
+            tuple(broadcast_like_shape), dtype=flow.float32,
         )
 
         if len(broadcast_condition_axes) != 0:

@@ -560,6 +560,20 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(tensor.dtype, flow.float32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_where(test_case):
+        x = flow.Tensor(
+            np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
+            dtype=flow.float32,
+        )
+        y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+        of_out = condition.where(x, y)
+        np_out = np.array([[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]])
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 if __name__ == "__main__":
     unittest.main()
