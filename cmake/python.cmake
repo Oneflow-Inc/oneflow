@@ -1,6 +1,6 @@
 if (NOT DEFINED Python3_EXECUTABLE)
   if (DEFINED ENV{CONDA_PREFIX})
-    message(STATUS "Using Python3 from conda: " $ENV{CONDA_PREFIX}/bin/python3)
+    message(STATUS "Using Python3 from Conda: " $ENV{CONDA_PREFIX}/bin/python3)
     set(Python3_EXECUTABLE $ENV{CONDA_PREFIX}/bin/python3)
   endif()
 endif()
