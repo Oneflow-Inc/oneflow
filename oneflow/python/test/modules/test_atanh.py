@@ -22,6 +22,7 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _test_atanh_impl(test_case, shape, device):
     np_input = np.random.random(size=shape)
     of_input = flow.Tensor(
@@ -30,12 +31,16 @@ def _test_atanh_impl(test_case, shape, device):
 
     of_out = flow.atanh(of_input)
     np_out = np.arctanh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+    )
 
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = 1.0 / (1 - np.square(np_input))
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 @unittest.skipIf(
