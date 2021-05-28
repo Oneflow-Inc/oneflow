@@ -29,7 +29,7 @@ def _test_where(test_case, device):
         device=flow.device(device),
     )
     y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32, device=flow.device(device))
-    condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+    condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32, device=flow.device(device))
     of_out = flow.where(condition, x, y)
     np_out = np.array([[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
@@ -84,9 +84,9 @@ class TestWhere(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_where,
-            # _test_where_broadcast,
-            # _test_where_scalar,
-            # _test_where_dim4,
+            _test_where_broadcast,
+            _test_where_scalar,
+            _test_where_dim4,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
