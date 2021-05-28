@@ -78,22 +78,22 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Query(int32_
   CHECK(ibv::IsAvailable());
   ibv_device_attr device_attr{};
   if (ibv::wrapper.ibv_query_device(context, &device_attr) != 0) {
-    LOG(WARNING) << "Unable to query device: " << context->device->name;
+    LOG(INFO) << "Unable to query device: " << context->device->name;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
   ibv_port_attr port_attr{};
   if (ibv::wrapper.ibv_query_port_wrap(context, port, &port_attr) != 0) {
-    LOG(WARNING) << "Unable to query port: device " << context->device->name << " port " << port;
+    LOG(INFO) << "Unable to query port: device " << context->device->name << " port " << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
   if (port_attr.state != IBV_PORT_ACTIVE) {
-    LOG(WARNING) << "Inactivate port: device " << context->device->name << " port " << port;
+    LOG(INFO) << "Inactivate port: device " << context->device->name << " port " << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
   // TODO(liujuncheng): Add IBV_LINK_LAYER_ETHERNET support
   if (port_attr.link_layer != IBV_LINK_LAYER_INFINIBAND) {
-    LOG(WARNING) << "Link layer is not supported: device " << context->device->name << " port "
-                 << port;
+    LOG(INFO) << "Link layer is not supported: device " << context->device->name << " port "
+              << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
   auto* desc = new NetIBDeviceDescriptor();
