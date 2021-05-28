@@ -66,72 +66,6 @@ REGISTER_USER_OP("summa_matmul")
           return Maybe<void>::Ok();
         });
 
-REGISTER_USER_OP_GRAD("summa_matmul")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> void {
-      double alpha = ctx->FwOp().attr<double>("alpha");
-      std::string a_grad_op_name = ctx->FwOp().op_name() + "_a_grad";
-      bool transpose_a = ctx->FwOp().attr<bool>("transpose_a");
-      bool transpose_b = ctx->FwOp().attr<bool>("transpose_b");
-      if (transpose_a && transpose_b) { UNIMPLEMENTED(); }
-      if (transpose_a) {
-        ctx->DefineOp(a_grad_op_name,
-                      [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                        return builder.OpTypeName("summa_matmul")
-                            .InputBind("a", ctx->FwOp().input("b", 0))
-                            .InputBind("b", ctx->FwOp().output_grad("out", 0))
-                            .Attr<double>("alpha", alpha)
-                            .Attr<bool>("transpose_a", false)
-                            .Attr<bool>("transpose_b", true)
-                            .Output("out")
-                            .Build();
-                      });
-      } else {
-        ctx->DefineOp(a_grad_op_name,
-                      [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                        return builder.OpTypeName("summa_matmul")
-                            .InputBind("a", ctx->FwOp().output_grad("out", 0))
-                            .InputBind("b", ctx->FwOp().input("b", 0))
-                            .Attr<double>("alpha", alpha)
-                            .Attr<bool>("transpose_a", false)
-                            .Attr<bool>("transpose_b", true)
-                            .Output("out")
-                            .Build();
-                      });
-      }
-      ctx->FwOp().InputGradBind(user_op::OpArg("a", 0), [&]() -> const std::string& {
-        return ctx->GetOp(a_grad_op_name).output("out", 0);
-      });
-      std::string b_grad_op_name = ctx->FwOp().op_name() + "_b_grad";
-      if (transpose_b) {
-        ctx->DefineOp(b_grad_op_name,
-                      [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                        return builder.OpTypeName("summa_matmul")
-                            .InputBind("a", ctx->FwOp().output_grad("out", 0))
-                            .InputBind("b", ctx->FwOp().input("a", 0))
-                            .Attr<double>("alpha", alpha)
-                            .Attr<bool>("transpose_a", true)
-                            .Attr<bool>("transpose_b", false)
-                            .Output("out")
-                            .Build();
-                      });
-      } else {
-        ctx->DefineOp(b_grad_op_name,
-                      [&](user_op::BackwardOpBuilder& builder) -> user_op::UserOpConfWrapper {
-                        return builder.OpTypeName("summa_matmul")
-                            .InputBind("a", ctx->FwOp().input("a", 0))
-                            .InputBind("b", ctx->FwOp().output_grad("out", 0))
-                            .Attr<double>("alpha", alpha)
-                            .Attr<bool>("transpose_a", true)
-                            .Attr<bool>("transpose_b", false)
-                            .Output("out")
-                            .Build();
-                      });
-      }
-      ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
-        return ctx->GetOp(b_grad_op_name).output("out", 0);
-      });
-    });
-
 REGISTER_USER_OP("summa_matmul_placeholder")
     .Input("a")
     .Input("b")
@@ -236,7 +170,7 @@ REGISTER_USER_OP_GRAD("summa_matmul_placeholder")
                             .InputBind("a", ctx->FwOp().input("a", 0))
                             .InputBind("b", ctx->FwOp().output_grad("out", 0))
                             .Attr<double>("alpha", alpha)
-                            .Attr<bool>("transpose_a", true)
+                            .Attr<bool>("transpose_a", false)
                             .Attr<bool>("transpose_b", false)
                             .Output("out")
                             .Build();

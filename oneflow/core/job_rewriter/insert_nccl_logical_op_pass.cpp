@@ -416,7 +416,14 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
       nccl_summa_op.mutable_user_conf()->set_op_type_name("summa_matmul");
       if (nccl_op_confs->size() >= 1) {
         const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
-        nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name);
+        bool ctrl_in_op_name_exist = false;
+        for (const auto& ctrl_in_op_name : nccl_summa_op.ctrl_in_op_name()) {
+          if (ctrl_in_op_name == pre_nccl_op_name) {
+            ctrl_in_op_name_exist = true;
+            break;
+          }
+        }
+        if (!ctrl_in_op_name_exist) { nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name); }
       }
       nccl_op_confs->push_back(nccl_summa_op);
       nccl_op_parallel_confs->push_back(src_node->parallel_desc().parallel_conf());
@@ -493,7 +500,14 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
       nccl_summa_op.mutable_user_conf()->set_op_type_name("summa_matmul");
       if (nccl_op_confs->size() >= 1) {
         const std::string& pre_nccl_op_name = nccl_op_confs->at(nccl_op_confs->size() - 1).name();
-        nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name);
+        bool ctrl_in_op_name_exist = false;
+        for (const auto& ctrl_in_op_name : nccl_summa_op.ctrl_in_op_name()) {
+          if (ctrl_in_op_name == pre_nccl_op_name) {
+            ctrl_in_op_name_exist = true;
+            break;
+          }
+        }
+        if (!ctrl_in_op_name_exist) { nccl_summa_op.add_ctrl_in_op_name(pre_nccl_op_name); }
       }
       nccl_op_confs->push_back(nccl_summa_op);
       nccl_op_parallel_confs->push_back(dst_node->parallel_desc().parallel_conf());

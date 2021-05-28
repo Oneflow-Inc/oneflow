@@ -83,7 +83,9 @@ def summa_matmul_atbt(a, b, name):
 
 
 flow.config.gpu_device_num(4)
-flow.config.disable_group_boxing_by_dst_parallel(False)
+flow.config.enable_legacy_model_io()
+flow.config.enable_model_io_v2(True)
+flow.config.disable_group_boxing_by_dst_parallel(True)
 flow.config.nccl_use_compute_stream(True)
 func_config = flow.FunctionConfig()
 func_config.default_data_type(flow.float)
@@ -159,29 +161,29 @@ b_trans_shape = (n, k)
 #   return out
 
 
-@flow.global_function(type="predict", function_config=func_config)
-def FlowJob5(
-    a: oft.Numpy.Placeholder(a_trans_shape, dtype=flow.float),
-    b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
-):
-    with flow.scope.placement("gpu", "0:0-3", (2, 2)):
-        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(0)"])
-        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
-        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(0)"])
-        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
-        out = summa_matmul_atb(a, b, "summa_trans")
-    out = flow.hierarchical_parallel_cast(out, parallel_distribution=["S(0)"])
-    return out
-
-
-@flow.global_function(type="predict", function_config=func_config)
-def FlowJob6(
-    a: oft.Numpy.Placeholder(a_trans_shape, dtype=flow.float),
-    b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
-):
-    with flow.scope.placement("gpu", "0:0-3"):
-        out = flow.matmul(a, b, transpose_a=True)
-    return out
+# @flow.global_function(type="predict", function_config=func_config)
+# def FlowJob5(
+#    a: oft.Numpy.Placeholder(a_trans_shape, dtype=flow.float),
+#    b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
+# ):
+#    with flow.scope.placement("gpu", "0:0-3", (2, 2)):
+#        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(0)"])
+#        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
+#        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(0)"])
+#        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
+#        out = summa_matmul_atb(a, b, "summa_trans")
+#    out = flow.hierarchical_parallel_cast(out, parallel_distribution=["S(0)"])
+#    return out
+#
+#
+# @flow.global_function(type="predict", function_config=func_config)
+# def FlowJob6(
+#    a: oft.Numpy.Placeholder(a_trans_shape, dtype=flow.float),
+#    b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
+# ):
+#    with flow.scope.placement("gpu", "0:0-3"):
+#        out = flow.matmul(a, b, transpose_a=True)
+#    return out
 
 
 # @flow.global_function(type="predict", function_config=func_config)
@@ -209,6 +211,48 @@ def FlowJob6(
 #    return out
 
 
+@flow.global_function(type="train", function_config=func_config)
+def FlowJobTrain(
+    a: oft.Numpy.Placeholder(a_trans_shape, dtype=flow.float),
+    b: oft.Numpy.Placeholder(b_shape, dtype=flow.float),
+):
+    with flow.scope.placement("gpu", "0:0-3", (2, 2)):
+        v1 = flow.get_variable(
+            "a",
+            shape=a_trans_shape,
+            dtype=flow.float,
+            initializer=flow.zeros_initializer(),  # flow.random_uniform_initializer(minval=0, maxval=1),
+            trainable=True,
+            parallel_distribution=["S(0)", "S(1)"],
+        )
+        v2 = flow.get_variable(
+            "b",
+            shape=b_shape,
+            dtype=flow.float,
+            initializer=flow.zeros_initializer(),  # flow.random_uniform_initializer(minval=0, maxval=1),
+            trainable=True,
+            parallel_distribution=["S(0)", "S(1)"],
+        )
+        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(0)"])
+        a = flow.hierarchical_parallel_cast(a, parallel_distribution=["S(0)", "S(1)"])
+        a = a + v1
+        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(0)"])
+        b = flow.hierarchical_parallel_cast(b, parallel_distribution=["S(0)", "S(1)"])
+        b = b + v2
+        out = summa_matmul_atb(a, b, "summa_trans")
+        out = flow.hierarchical_parallel_cast(
+            out, parallel_distribution=["S(0)", "S(0)"]
+        )
+    out = flow.hierarchical_parallel_cast(out, parallel_distribution=["S(0)"])
+    flow.optimizer.SGD(
+        flow.optimizer.PiecewiseConstantScheduler([], [1]), momentum=0
+    ).minimize(out)
+    return out
+
+
+check_point = flow.train.CheckPoint()
+check_point.init()
+
 for i in range(10):
     # test ab
     # a = np.random.randn(*a_shape).astype(np.float32)
@@ -227,12 +271,12 @@ for i in range(10):
     # print(diff.max(), diff.min())
 
     # test atb
-    a = np.random.randn(*a_trans_shape).astype(np.float32)
-    b = np.random.randn(*b_shape).astype(np.float32)
-    c5 = FlowJob5(a, b).get()
-    c6 = FlowJob6(a, b).get()
-    diff = c6 - c5
-    print(diff.max(), diff.min())
+    # a = np.random.randn(*a_trans_shape).astype(np.float32)
+    # b = np.random.randn(*b_shape).astype(np.float32)
+    # c5 = FlowJob5(a, b).get()
+    # c6 = FlowJob6(a, b).get()
+    # diff = c6 - c5
+    # print(diff.max(), diff.min())
 
     # test atb
     # a = np.random.randn(*a_trans_shape).astype(np.float32)
@@ -243,3 +287,9 @@ for i in range(10):
     # print(c8.numpy())
     # diff = c8 - c7
     # print(diff.max(), diff.min())
+    a = np.load("a_trans.npy")
+    b = np.load("b.npy")
+    # a = np.random.randn(*a_trans_shape).astype(np.float32)
+    # b = np.random.randn(*b_shape).astype(np.float32)
+    c = FlowJobTrain(a, b).get()
+    print(c.numpy().flatten()[0:10])
