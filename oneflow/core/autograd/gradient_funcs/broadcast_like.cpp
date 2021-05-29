@@ -65,14 +65,15 @@ Maybe<void> BroadCastLike::Capture(BroadCastLikeInterpState* ctx, const TensorTu
 
 Maybe<void> BroadCastLike::Apply(const BroadCastLikeInterpState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
-  printf("enter apply");
+  printf("enter apply\n");
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  printf("%d\n", out_grads.size());
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", ctx->broadcast_axes));
-  in_grads->resize(3);
+  in_grads->resize(2);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), x}, attrs));
   return Maybe<void>::Ok();
 }
