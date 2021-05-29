@@ -19,19 +19,19 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class LogSigmoid(Module):
+class Xlogy(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("log_sigmoid").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("xlogy").Input("x").Input("y").Output("z").Build()
     
-    def forward(self, x):
-        return self._op(x)[0]
+    def forward(self, x, y):
+        return self._op(x, y)[0]
 
 
-@oneflow_export("log_sigmoid", "lsigmoid")
-@register_tensor_op("log_sigmoid")
+@oneflow_export("xlogy", "xlogy")
+@register_tensor_op("xlogy")
 @experimental_api
-def log_sigmoid_op(x):
+def xlogy_op(x, y):
     """This operator computes the log sigmoid value of input Blob.
 
     Args:
@@ -48,12 +48,16 @@ def log_sigmoid_op(x):
         import numpy as np
         import oneflow.typing as tp
 
-        input = flow.Tensor(
-            np.array([1.3, 1.5, 2.7]).astype(np.float32), dtype=flow.float32
+        x = flow.Tensor(
+            np.array([2, 2, 2]).astype(np.float32), dtype=flow.float32
         )
-        out = flow.log_sigmoid(input).numpy()
+        y = flow.Tensor(
+            np.array([4, 8, 16]).astype(np.float32), dtype=flow.float32
+        )
+        out = flow.xlogy(x, y).numpy()
 
-        # out [-0.24100842 -0.20141333 -0.0650436 ]
+        # out [2.7725887 4.158883  5.5451775]
 
     """
-    return LogSigmoid()(x)
+    return Xlogy()(x, y)
+
