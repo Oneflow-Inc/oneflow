@@ -84,6 +84,9 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const T* scale_ptr = scale->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
+    auto origin_round_mode = std::fegetround();
+    std::fesetround(FE_TONEAREST);
+
     if (quantization_formula == "google") {
       int64_t outer_num = 1;
       int64_t inner_num = in->shape().elem_cnt();
@@ -114,6 +117,8 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
+
+    std::fesetround(origin_round_mode);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

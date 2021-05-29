@@ -118,6 +118,9 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     const int64_t panel_size = in->shape().Count(1);
     const int64_t scale_size = scale->shape().elem_cnt();
 
+    auto origin_round_mode = std::fegetround();
+    std::fesetround(FE_TONEAREST);
+
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
         RUN_CUDA_KERNEL((FakeQuantizationSymmetric<T>), ctx->device_ctx(), elements, in->dptr<T>(),
@@ -135,6 +138,8 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
+
+    std::fesetround(origin_round_mode);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
