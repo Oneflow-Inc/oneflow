@@ -27,8 +27,7 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-class FunctionBody {
- public:
+struct FunctionBody {
   virtual operator void*() = 0;
 };
 
@@ -93,8 +92,7 @@ class PackedFunctor {
 };
 
 template<typename Func>
-/*static*/ PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
-  // static_assert(is_callable(func));
+PackedFunctor PackedFunctor::Make(const std::string& func_name, const Func& func) {
   using func_type = typename function_traits<Func>::func_type;
   auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
   FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();

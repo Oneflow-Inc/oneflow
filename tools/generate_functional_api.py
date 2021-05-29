@@ -14,10 +14,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import argparse
 import yaml
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--yaml_file_path",
+    type=str,
+    default="oneflow/core/functional/functional_api.yaml",
+    help="The yaml format file that helps to generate the functional api or pybind cpp.",
+)
+parser.add_argument(
+    "--generate_pybind",
+    action="store_true",
+    default=False,
+    help="Enable to generate functional pybind cpp files.",
+)
+args = parser.parse_args()
+
 api_generate_dir = "oneflow/core/functional"
-schema_generate_dir = "oneflow/api/python/functional"
+pybind_generate_dir = "oneflow/api/python/functional"
 
 license = """/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
@@ -63,20 +79,20 @@ source_fmt = (
     license
     + """
 
-#include "oneflow/core/functional/generated/functional_api.h"
+#include "{0}/functional_api.yaml.h"
 #include "oneflow/core/functional/function_library.h"
 
 namespace oneflow {{
 namespace one {{
 namespace functional {{
-{0}
+{1}
 }}  // namespace functional
 }}  // namespace one
 }}  // namespace oneflow
 """
 )
 
-schema_source_fmt = (
+pybind_fmt = (
     license
     + """
 
@@ -84,23 +100,22 @@ schema_source_fmt = (
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/of_api_registry.h"
-
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/functional/generated/functional_api.h"
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/py_function.h"
+#include "oneflow/core/common/maybe.h"
+#include "{0}/functional_api.yaml.h"
 
 namespace oneflow {{
 namespace one {{
 namespace functional {{
-{0}
+{1}
 }}  // namespace functional
 }}  // namespace one
 
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {{
-{1}
+{2}
 }}
 
 }}  // namespace oneflow
@@ -353,9 +368,9 @@ class FunctionalGenerator:
             fmt += "}\n"
 
         with open(target_source_file, "w") as f:
-            f.write(source_fmt.format(fmt))
+            f.write(source_fmt.format(api_generate_dir, fmt))
 
-    def generate_schema_for_python(self, target_schema_source_file):
+    def generate_pybind_for_python(self, target_pybind_source_file):
         schema_fmt = ""
         module_fmt = ""
         for name, block in self._blocks.items():
@@ -415,31 +430,30 @@ class FunctionalGenerator:
                 name, signature._name
             )
 
-        with open(target_schema_source_file, "w") as f:
-            f.write(schema_source_fmt.format(schema_fmt, module_fmt))
+        with open(target_pybind_source_file, "w") as f:
+            f.write(pybind_fmt.format(api_generate_dir, schema_fmt, module_fmt))
 
 
 if __name__ == "__main__":
-    yaml_file = os.path.join(api_generate_dir, "functional_api.yaml")
-    assert os.path.isdir(api_generate_dir), (
-        "Could not locate the api generate directory which path is " + api_generate_dir
+    assert os.path.isfile(args.yaml_file_path), (
+        "It is not a regular file for the yaml file which is " + args.yaml_file_path
     )
-    assert os.path.isfile(yaml_file), (
-        "It is not a regular file for the yaml file which path is " + yaml_file
-    )
-    g = FunctionalGenerator(yaml_file)
+    g = FunctionalGenerator(args.yaml_file_path)
 
-    # Create api generated directory if needed.
-    directory = os.path.join(api_generate_dir, "generated")
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    target_header_file = os.path.join(directory, "functional_api.h")
+    assert os.path.isdir(api_generate_dir), (
+        "Could not locate the api generate directory which is " + api_generate_dir
+    )
+    target_header_file = os.path.join(api_generate_dir, "functional_api.yaml.h")
     g.generate_cpp_header_file(target_header_file)
-    target_source_file = os.path.join(directory, "functional_api.cpp")
+    target_source_file = os.path.join(api_generate_dir, "functional_api.yaml.cpp")
     g.generate_cpp_source_file(target_source_file)
 
-    directory = os.path.join(schema_generate_dir, "generated")
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    target_schema_source_file = os.path.join(directory, "functional_schema.cpp")
-    g.generate_schema_for_python(target_schema_source_file)
+    if args.generate_pybind:
+        assert os.path.isdir(pybind_generate_dir), (
+            "Could not locate the pybind generate directory which is "
+            + pybind_generate_dir
+        )
+        target_pybind_source_file = os.path.join(
+            pybind_generate_dir, "functional_api.yaml.pybind.cpp"
+        )
+        g.generate_pybind_for_python(target_pybind_source_file)

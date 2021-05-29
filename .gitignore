@@ -32,5 +32,3 @@ compile_commands.json
 /serving-tmp
 test_tmp_dir
 oneflow/python/version.py
-/oneflow/core/functional/generated/
-/oneflow/api/python/functional/generated/
