@@ -30,7 +30,7 @@ __global__ void FakeQuantizationSymmetric(const T* in_ptr, const T* scale_ptr,
   int64_t step = gridDim.x * blockDim.x;
 
   T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound;
+  T lower_bound = -upper_bound - 1;
 
   while (gid < elements) {
     int64_t channel_index = gid / panel_size;
@@ -38,7 +38,7 @@ __global__ void FakeQuantizationSymmetric(const T* in_ptr, const T* scale_ptr,
 
     T scale = scale_ptr[scale_idx];
 
-    T out = round(in_ptr[gid] / scale);
+    T out = nearbyint(in_ptr[gid] / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[gid] = out * scale;
@@ -65,7 +65,7 @@ __global__ void FakeQuantizationAffine(const T* in_ptr, const T* scale_ptr, cons
     T scale = scale_ptr[scale_idx];
     T zero_point = zero_point_ptr[scale_idx];
 
-    T out = round(in_ptr[gid] / scale + zero_point);
+    T out = nearbyint(in_ptr[gid] / scale + zero_point);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[gid] = (out - zero_point) * scale;
@@ -82,12 +82,12 @@ __global__ void FakeQuantizationCambricon(const T* in_ptr, const T* shift, const
   int64_t step = gridDim.x * blockDim.x;
 
   T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound;
+  T lower_bound = -upper_bound - 1;
 
   T scale = static_cast<T>(pow(2.0, static_cast<int32_t>(shift[0])));
 
   while (gid < elements) {
-    T out = round(in_ptr[gid] / scale);
+    T out = nearbyint(in_ptr[gid] / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[gid] = out * scale;
