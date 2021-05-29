@@ -22,14 +22,14 @@ limitations under the License.
 
 namespace oneflow {
 
-class CtrlServer final : public RpcServer {
+class GrpcCtrlServer final : public RpcServer {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CtrlServer);
-  ~CtrlServer() override {}
+  OF_DISALLOW_COPY_AND_MOVE(GrpcCtrlServer);
+  ~GrpcCtrlServer() override {}
 
-  CtrlServer();
+  GrpcCtrlServer();
   // port may be configured in bootstrap_conf
-  CtrlServer(int ctrl_port);
+  GrpcCtrlServer(int ctrl_port);
 
   int64_t port() const { return port_; }
 

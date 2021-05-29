@@ -54,15 +54,15 @@ Resource GetResource() {
 
 }  // namespace
 
-TEST(CtrlServer, new_delete) {
+TEST(GrpcCtrlServer, new_delete) {
   int port = CtrlUtil().FindAvailablePort();
   if (port == -1) { return; }
   EnvProto env_proto = GetEnvProto(port);
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
+  Global<GrpcCtrlServer>::New();
   Global<ProcessCtx>::New();
   CHECK_JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-                 .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+                 .InitProcessCtx(Global<GrpcCtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
   Global<CtrlClient>::SetAllocated(client);
   Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
@@ -75,7 +75,7 @@ TEST(CtrlServer, new_delete) {
   Global<ResourceDesc, ForEnv>::Delete();
   Global<CtrlClient>::Delete();
   Global<ProcessCtx>::Delete();
-  Global<CtrlServer>::Delete();
+  Global<GrpcCtrlServer>::Delete();
   Global<EnvDesc>::Delete();
 }
 

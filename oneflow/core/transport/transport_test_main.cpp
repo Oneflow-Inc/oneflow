@@ -294,10 +294,10 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
                                     const std::string& second_machine_ip, int32_t ctrl_port) {
   EnvProto env_proto = GetEnvProto(first_machine_ip, second_machine_ip, ctrl_port);
   Global<EnvDesc>::New(env_proto);
-  Global<CtrlServer>::New();
+  Global<GrpcCtrlServer>::New();
   Global<ProcessCtx>::New();
   JUST(HostListCtrlBootstrap(*Global<EnvDesc>::Get())
-           .InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
+           .InitProcessCtx(Global<GrpcCtrlServer>::Get()->port(), Global<ProcessCtx>::Get()));
   auto* client = new GrpcCtrlClient(*Global<ProcessCtx>::Get());
   Global<CtrlClient>::SetAllocated(client);
   Global<ResourceDesc, ForEnv>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
@@ -330,7 +330,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
   Global<ResourceDesc, ForEnv>::Delete();
   Global<CtrlClient>::Delete();
   Global<ProcessCtx>::Delete();
-  Global<CtrlServer>::Delete();
+  Global<GrpcCtrlServer>::Delete();
   Global<EnvDesc>::Delete();
   std::cout << "All Done!" << std::endl;
   return Maybe<void>::Ok();
@@ -347,7 +347,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
  */
 DEFINE_string(first_machine_ip, "192.168.1.15", "IP address for first machine.");
 DEFINE_string(second_machine_ip, "192.168.1.16", "IP address for second machine.");
-DEFINE_int32(ctrl_port, 12143, "the control port for init CtrlServer/Client.");
+DEFINE_int32(ctrl_port, 12143, "the control port for init GrpcCtrlServer/Client.");
 
 int main(int argc, char* argv[]) {
   using namespace oneflow;

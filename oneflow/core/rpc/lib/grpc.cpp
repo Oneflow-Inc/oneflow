@@ -41,12 +41,12 @@ Maybe<void> GrpcRpcManager::Bootstrap() {
   } else {
     ctrl_bootstrap.reset(new HostListCtrlBootstrap(env_desc));
   }
-  ctrl_bootstrap->InitProcessCtx(Global<CtrlServer>::Get()->port(), Global<ProcessCtx>::Get());
+  ctrl_bootstrap->InitProcessCtx(Global<GrpcCtrlServer>::Get()->port(), Global<ProcessCtx>::Get());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GrpcRpcManager::CreateServer() {
-  Global<CtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
+  Global<GrpcCtrlServer>::New(JUST(GetCtrlPort(*Global<EnvDesc>::Get())));
   return Maybe<void>::Ok();
 }
 
@@ -58,8 +58,8 @@ Maybe<void> GrpcRpcManager::CreateClient() {
 
 GrpcRpcManager::~GrpcRpcManager() {
   Global<CtrlClient>::Delete();
-  CHECK_NOTNULL(Global<CtrlServer>::Get());
-  Global<CtrlServer>::Delete();
+  CHECK_NOTNULL(Global<GrpcCtrlServer>::Get());
+  Global<GrpcCtrlServer>::Delete();
 }
 
 }  // namespace oneflow
