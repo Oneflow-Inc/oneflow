@@ -402,7 +402,7 @@ def _check_fake_quantize(
     # test_case.assertTrue(np.mean(np.abs(out_of - out_np)) < 1e-5)
     #
     # NOTE(Liu Peihong)
-    # The reason of the problem above mentioned by Depeng is that 
+    # The reason of the problem above mentioned by Depeng is that
     # std::round is not equivalent to np.round. So std::round should be
     # replaced by std::nearbyint in user/kernels/fake_quantization_kernel.cpp|.cu.
 
