@@ -347,7 +347,7 @@ Maybe<void> TestTransportOn2Machine(const std::string& first_machine_ip,
  */
 DEFINE_string(first_machine_ip, "192.168.1.15", "IP address for first machine.");
 DEFINE_string(second_machine_ip, "192.168.1.16", "IP address for second machine.");
-DEFINE_int32(ctrl_port, 12143, "the control port for init GrpcCtrlServer/Client.");
+DEFINE_int32(ctrl_port, 12143, "the control port for init CtrlServer/Client.");
 
 int main(int argc, char* argv[]) {
   using namespace oneflow;
