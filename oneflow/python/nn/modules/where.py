@@ -108,7 +108,7 @@ def where_op(condition, x, y):
 
     .. code-block:: python
 
-        import flow.experimental as flow
+        import oneflow.experimental as flow
 
         x = flow.Tensor(
             np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
