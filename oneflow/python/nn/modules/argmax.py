@@ -90,7 +90,7 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         x = np.array([[1, 3, 8, 7, 2],
