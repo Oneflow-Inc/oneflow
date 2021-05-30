@@ -21,7 +21,7 @@ import operator
 import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 from typing import Optional, Sequence, List
 
 
@@ -200,6 +200,7 @@ def gen_tensor_buffer(
 
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
+@stable_api
 def tensor_buffer_to_list_of_tensors(
     x: oneflow._oneflow_internal.BlobDesc,
     out_shape: Sequence[int],
