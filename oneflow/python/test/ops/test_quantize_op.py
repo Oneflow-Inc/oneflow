@@ -93,7 +93,7 @@ def _check_min_max_observer(
     test_case.assertTrue(np.allclose(scale_of, scale_np, rtol=1e-3))
     test_case.assertTrue(
         np.allclose(
-            zero_point_of.astype( np.int), zero_point_np.astype(np.int), rtol=1e-3
+            zero_point_of.astype(np.int), zero_point_np.astype(np.int), rtol=1e-3
         )
     )
 
