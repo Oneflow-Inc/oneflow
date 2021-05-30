@@ -71,6 +71,7 @@ del env_util
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+atexit.register(oneflow._oneflow_internal.eager.single_client.Sync)
 del atexit
 
 import sys
