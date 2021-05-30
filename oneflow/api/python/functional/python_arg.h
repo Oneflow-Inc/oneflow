@@ -34,17 +34,17 @@ namespace functional {
 
 namespace detail {
 
-struct Value {
-  virtual ValueType type() const = 0;
+struct AnyDataBase {
+  virtual ValueType value_type() const = 0;
   virtual const void* Ptr() const = 0;
 };
 
 template<typename T>
-struct ValueImpl : public Value {
+struct AnyData : public AnyDataBase {
   T content;
-  explicit ValueImpl(const T& v) : content(v) {}
+  explicit AnyData(const T& v) : content(v) {}
 
-  ValueType type() const override { return ValueTypeOf<T>(); }
+  ValueType value_type() const override { return ValueTypeOf<T>(); }
   const void* Ptr() const override { return &content; }
 };
 
@@ -55,22 +55,22 @@ class PythonArg {
   PythonArg() = default;
   PythonArg(py::object object) : object_(object.ptr()), active_tag_(HAS_OBJECT) {}
 
-  PythonArg(const std::shared_ptr<const detail::Value>& value)
-      : value_(value), active_tag_(HAS_VALUE) {}
+  PythonArg(const std::shared_ptr<const detail::AnyDataBase>& value)
+      : immediate_(value), active_tag_(HAS_IMMEDIATE) {}
 
   template<typename T, typename std::enable_if<!py::detail::is_pyobject<T>::value, int>::type = 0>
   PythonArg(const T& value)
-      : value_(std::make_shared<detail::ValueImpl<T>>(value)), active_tag_(HAS_VALUE) {}
+      : immediate_(std::make_shared<detail::AnyData<T>>(value)), active_tag_(HAS_IMMEDIATE) {}
 
   virtual ~PythonArg() = default;
 
   template<typename T>
   operator T() const {
-    if (active_tag_ == HAS_VALUE) {
-      CHECK_EQ(ValueTypeOf<T>(), value_->type())
-          << "Could not convert value from type " << value_->type() << " to type "
-          << ValueTypeOf<T>();
-      return *reinterpret_cast<const T*>(value_->Ptr());
+    if (active_tag_ == HAS_IMMEDIATE) {
+      CHECK_EQ(ValueTypeOf<T>(), immediate_->value_type())
+          << "Could not convert immediate value from type " << immediate_->value_type()
+          << " to type " << ValueTypeOf<T>();
+      return *reinterpret_cast<const T*>(immediate_->Ptr());
     }
     CHECK_EQ(active_tag_, HAS_OBJECT);
     return this->ObjectAs<  // NOLINT
@@ -83,9 +83,9 @@ class PythonArg {
   py::object Borrow() const { return py::reinterpret_borrow<py::object>(object_); }
 
   PyObject* object_;
+  std::shared_ptr<const detail::AnyDataBase> immediate_;
 
-  std::shared_ptr<const detail::Value> value_;
-  enum { HAS_OBJECT, HAS_VALUE, HAS_NONE } active_tag_;
+  enum { HAS_OBJECT, HAS_IMMEDIATE, HAS_NONE } active_tag_;
 };
 
 }  // namespace functional

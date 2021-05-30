@@ -20,7 +20,8 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
              "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp"
       COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py
               --yaml_file_path ${YAML_FILE} --generate_pybind
-      DEPENDS ${Python_EXECUTABLE} create_functional_api_dir create_functional_pybind_dir ${YAML_FILE}
+      DEPENDS ${Python_EXECUTABLE} create_functional_api_dir create_functional_pybind_dir
+              ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py ${YAML_FILE}
       VERBATIM)
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)

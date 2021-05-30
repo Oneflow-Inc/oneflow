@@ -103,19 +103,19 @@ pybind_fmt = (
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/py_function.h"
 #include "oneflow/core/common/maybe.h"
-#include "{0}/functional_api.yaml.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {{
 namespace one {{
 namespace functional {{
-{1}
+{0}
 }}  // namespace functional
 }}  // namespace one
 
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("F", m) {{
-{2}
+{1}
 }}
 
 }}  // namespace oneflow
@@ -431,7 +431,7 @@ class FunctionalGenerator:
             )
 
         with open(target_pybind_source_file, "w") as f:
-            f.write(pybind_fmt.format(api_generate_dir, schema_fmt, module_fmt))
+            f.write(pybind_fmt.format(schema_fmt, module_fmt))
 
 
 if __name__ == "__main__":

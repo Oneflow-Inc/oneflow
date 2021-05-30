@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTION_H_
-#define ONEFLOW_CORE_FUNCTIONAL_FUNCTION_H_
+#ifndef ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
+#define ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_
 
-#include "oneflow/core/functional/generated/functional_api.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 
-#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTION_H_
+#endif  // ONEFLOW_CORE_FUNCTIONAL_FUNCTIONAL_H_

@@ -101,36 +101,6 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self._training_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
-            .Attr("training", True)
-            .Build()
-        )
-        self._testing_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Attr("training", False)
-            .Build()
-        )
 
     def forward(self, x):
         self._check_input_dim(x)
@@ -191,15 +161,17 @@ class _BatchNorm(_NormBase):
             return affined
 
         else:
-            if self.training:
-                res = self._training_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
-            else:
-                res = self._testing_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
-            return res
+            return flow.F.normalization(
+                x,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias,
+                axis=1,
+                epsilon=self.eps,
+                momentum=self.momentum,
+                is_training=self.training,
+            )
 
 
 @oneflow_export("nn.BatchNorm1d")

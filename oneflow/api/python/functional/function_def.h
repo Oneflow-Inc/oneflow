@@ -44,14 +44,14 @@ struct ArgumentDef {
   template<typename T>
   ArgumentDef(const std::string& n, const T& v)
       : name(n), type(ValueTypeOf<T>()), has_default_value(true) {
-    default_value = std::make_shared<detail::ValueImpl<T>>(v);
+    default_value = std::make_shared<detail::AnyData<T>>(v);
   }
 
   std::string name;
   ValueType type;
 
   bool has_default_value;
-  std::shared_ptr<const detail::Value> default_value;
+  std::shared_ptr<const detail::AnyDataBase> default_value;
 };
 
 struct FunctionDef {
