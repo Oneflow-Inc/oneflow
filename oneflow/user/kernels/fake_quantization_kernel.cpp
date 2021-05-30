@@ -84,6 +84,7 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const T* scale_ptr = scale->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
 
+    // round to even
     auto origin_round_mode = std::fegetround();
     std::fesetround(FE_TONEAREST);
 

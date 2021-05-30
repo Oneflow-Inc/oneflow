@@ -118,6 +118,7 @@ class GpuFakeQuantizationKernel final : public user_op::OpKernel {
     const int64_t panel_size = in->shape().Count(1);
     const int64_t scale_size = scale->shape().elem_cnt();
 
+    // round to even
     auto origin_round_mode = std::fegetround();
     std::fesetround(FE_TONEAREST);
 
