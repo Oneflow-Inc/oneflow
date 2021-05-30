@@ -150,6 +150,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  Global<vm::VirtualMachineScope>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
@@ -159,7 +160,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
-  Global<vm::VirtualMachineScope>::Delete();
   Global<ThreadPool>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
