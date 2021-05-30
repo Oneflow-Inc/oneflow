@@ -211,7 +211,7 @@ void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token
   msg.request_write_msg.dst_machine_id = GlobalProcessCtx::Rank();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
-  GetSocketHelper(src_machine_id)->AsyncWrite(msg);
+  GetSocketHelper( src_machine_id)->AsyncWrite(msg);
 }
 
 }  // namespace oneflow
