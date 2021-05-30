@@ -128,8 +128,6 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   OfBlob ofblob(device_ctx, ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
-  // Always records instruction-complete event.
-  instruction->set_has_event_record(true);
 }
 
 }  // namespace vm

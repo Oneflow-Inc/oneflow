@@ -17,9 +17,7 @@ from __future__ import absolute_import
 
 import os
 import sys
-import getpass
 import imp
-import inspect
 import socket
 from contextlib import closing
 import uuid
@@ -33,7 +31,6 @@ from oneflow.core.job.env_pb2 import EnvProto
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Any, Dict, Callable
 import subprocess
-import platform
 
 
 class _ClearDefaultSession(object):
@@ -169,6 +166,55 @@ _unittest_env_initilized = False
 _unittest_worker_initilized = False
 
 
+def worker_agent_port():
+    port_txt = os.getenv("ONEFLOW_TEST_WORKER_AGENT_PORT")
+    if port_txt:
+        return int(port_txt)
+    else:
+        return None
+
+
+def worker_agent_authkey():
+    key = os.getenv("ONEFLOW_TEST_WORKER_AGENT_AUTHKEY")
+    assert key
+    return key
+
+
+def use_worker_agent():
+    return worker_agent_port() is not None
+
+
+def cast(conn=None, cmd=None, msg=None):
+    cmd = "cast/" + cmd
+    print("[unittest]", f"[{cmd}]", msg)
+    conn.send(cmd.encode())
+    conn.send(msg.encode())
+
+
+def call(conn=None, cmd=None, msg=None):
+    cmd = "call/" + cmd
+    print("[unittest]", f"[{cmd}]", msg)
+    conn.send(cmd.encode())
+    msg_ = ""
+    if msg is not None:
+        msg_ = msg
+    conn.send(msg_.encode())
+    return conn.recv().decode()
+
+
+def launch_worker_via_agent(host=None, env_proto=None):
+    print("[unittest]", "launching worker via agent at", host)
+    from multiprocessing.connection import Client
+
+    address = ("localhost", worker_agent_port())
+    conn = Client(address, authkey=worker_agent_authkey().encode())
+    cast(conn=conn, cmd="host", msg=host)
+    cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
+    assert call(conn=conn, cmd="start_worker") == "ok"
+    print("[unittest]", "worker launched via agent at", host)
+    conn.close()
+
+
 @oneflow_export("unittest.TestCase")
 class TestCase(unittest.TestCase):
     def setUp(self):
@@ -180,18 +226,20 @@ class TestCase(unittest.TestCase):
                 master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
                 assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
                 oneflow.env.ctrl_port(int(master_port))
+                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
+                if data_port:
+                    oneflow.env.data_port(int(data_port))
                 if enable_init_by_host_list():
                     oneflow.env.machine(node_list())
                     data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                    if data_port:
-                        oneflow.env.data_port(int(data_port))
-                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
                     print("initializing worker...")
-                    oneflow.deprecated.init_worker(
-                        scp_binary=True, use_uuid=True, ssh_port=int(ssh_port)
-                    )
-                    atexit.register(oneflow.deprecated.delete_worker, ssh_port=ssh_port)
-                    _unittest_worker_initilized = True
+                    for machine in env_util.default_env_proto.machine:
+                        if machine.id == 0:
+                            pass
+                        else:
+                            launch_worker_via_agent(
+                                host=machine.addr, env_proto=env_util.default_env_proto
+                            )
                 else:
                     ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
                     config_rank_ctrl_port = -1
@@ -215,23 +263,19 @@ class TestCase(unittest.TestCase):
                         config_rank_ctrl_port,
                         config_node_size,
                     )
-
-                    data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                    if data_port:
-                        oneflow.env.data_port(int(data_port))
-
-                    ssh_port = os.getenv("ONEFLOW_TEST_SSH_PORT")
-                    print("initializing worker...")
-                    oneflow.deprecated.init_worker(
-                        scp_binary=True,
-                        use_uuid=True,
-                        ssh_port=int(ssh_port),
-                        bootstrap_conf_list=bootstrap_conf_list,
-                    )
-                    atexit.register(
-                        oneflow.deprecated.delete_worker_by_bootstrap, ssh_port=ssh_port
-                    )
-                    _unittest_worker_initilized = True
+                    worker_env_proto = EnvProto()
+                    worker_env_proto.CopyFrom(env_util.default_env_proto)
+                    worker_env_proto.ClearField("ctrl_bootstrap_conf")
+                    for bootstrap_conf in bootstrap_conf_list:
+                        if bootstrap_conf.rank == 0:
+                            continue
+                        # set ctrl_bootstrap_conf of worker
+                        assert bootstrap_conf.HasField("host")
+                        worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
+                        launch_worker_via_agent(
+                            host=bootstrap_conf.host, env_proto=worker_env_proto
+                        )
+                _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()
             oneflow.env.ctrl_port(master_port)

@@ -16,6 +16,9 @@ limitations under the License.
 import oneflow.experimental as flow
 import unittest
 import numpy as np
+from collections import OrderedDict
+
+from test_util import GenArgList
 
 
 @unittest.skipIf(
@@ -213,6 +216,58 @@ class TestPow(flow.unittest.TestCase):
         of_out = input.pow(2.1)
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_cosh_forward(test_case, device):
+    input = flow.Tensor(np.random.randn(2, 6, 5, 3), device=flow.device(device))
+    of_out = flow.cosh(input)
+    np_out = np.cosh(input.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_cosh_tensor_function_forward(test_case, device):
+    input = flow.Tensor(np.random.randn(8, 11, 9, 7), device=flow.device(device))
+    of_out = input.cosh()
+    np_out = np.cosh(input.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_cosh_backward(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), requires_grad=True, device=flow.device(device)
+    )
+    of_out = flow.cosh(input).sum()
+    of_out.backward()
+    np_grad = np.sinh(input.numpy())
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_cosh_tensor_function_backward(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
+    )
+    of_out = input.cosh().sum()
+    of_out.backward()
+    np_grad = np.sinh(input.numpy())
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestCosh(flow.unittest.TestCase):
+    def test_cosh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_cosh_forward,
+            _test_cosh_tensor_function_forward,
+            _test_cosh_backward,
+            _test_cosh_tensor_function_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

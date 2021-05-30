@@ -24,6 +24,10 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
 
 
+def _build_math_binary_elementwise_op(math_op):
+    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
+
+
 class Sum(Module):
     def __init__(
         self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
@@ -302,7 +306,7 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         np_arr = np.random.randn(2,3,4,5)
@@ -850,7 +854,7 @@ class Std(Module):
             return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
-                self.reduce_count = x.nelemenet()
+                self.reduce_count = x.nelement()
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
@@ -904,10 +908,16 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+        self._scalar_pow_op = (
+            flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
+        )
+        self._elementwise_pow_op = _build_math_binary_elementwise_op("pow")
 
-    def forward(self, x, exponent: Union[int, float]):
-        return self._op(x, exponent=float(exponent))[0]
+    def forward(self, x, y):
+        if isinstance(y, (int, float)):
+            return self._scalar_pow_op(x, exponent=float(y))[0]
+        else:
+            return self._elementwise_pow_op(x, y)[0]
 
 
 @oneflow_export("pow")
@@ -930,3 +940,39 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+
+class Cosh(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("cosh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("cosh")
+@register_tensor_op("cosh")
+@experimental_api
+def cosh_op(tensor):
+    r"""
+    Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \cosh(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cosh(input)
+        # [1.0133467 1.7859949 1.2535787 1.2804903]
+
+    """
+    return Cosh()(tensor)

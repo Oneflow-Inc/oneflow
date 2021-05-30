@@ -376,6 +376,11 @@ void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_p
                       OpBlobArgPairs* identical_sbp_oba_pairs) {
   HashSet<OpBlobArg> split_paralleled_obas;
   op_graph.ForEachNode([&](OpNode* op_node) {
+    if (op_node->op().op_conf().has_user_conf()
+        && (op_node->op().op_conf().user_conf().op_type_name() == "hierarchical_parallel_cast"
+            || op_node->op().op_conf().user_conf().op_type_name() == "parallel_cast")) {
+      return;
+    }
     auto TryInserSplitParalleledObas = [&](const std::string& bn) {
       const auto& lbi = op_node->op().BnInOp2Lbi(bn);
       const auto& fw_parallel_distribution = op_node->ParallelDistribution4Lbi(lbi);

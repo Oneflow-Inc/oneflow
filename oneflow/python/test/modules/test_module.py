@@ -17,6 +17,7 @@ import collections.abc
 from itertools import repeat
 import unittest
 from typing import Tuple, Union
+import tempfile
 
 import numpy as np
 
@@ -165,6 +166,27 @@ class TestModule(flow.unittest.TestCase):
         net.apply(get_module_num)
 
         test_case.assertEqual(module_num, 2)
+
+    def test_save_state_dict(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param1 = flow.nn.Parameter(flow.Tensor(32, 1024, 1024))
+                self.param2 = flow.nn.Parameter(flow.Tensor(32, 1024, 1024))
+
+            def forward(self):
+                return self.param1 + self.param2
+
+        m = CustomModule()
+
+        res1 = m()
+        state_dict = m.state_dict()
+        with tempfile.TemporaryDirectory() as save_dir:
+            flow.save(state_dict, save_dir)
+            loaded_state_dict = flow.load(save_dir)
+            m.load_state_dict(loaded_state_dict)
+        res2 = m()
+        test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
 
 if __name__ == "__main__":

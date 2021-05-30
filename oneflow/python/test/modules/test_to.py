@@ -61,6 +61,24 @@ class TestTo(flow.unittest.TestCase):
             np.allclose(input.numpy(), output.numpy(), rtol=1e-04, atol=1e-04)
         )
 
+    def test_tensor_to_cast(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        output = input.to(dtype=flow.int)
+        test_case.assertEqual(output.dtype, flow.int)
+
+    def test_tensor_to_cast_h2d(test_case):
+        input = flow.Tensor(np.random.randn(2, 3, 4, 5))
+        output = input.to(device=flow.device("cuda"), dtype=flow.int)
+        test_case.assertEqual(output.dtype, flow.int)
+        test_case.assertEqual(output.device, flow.device("cuda"))
+
+    def test_tensor_using_tensor(test_case):
+        tensor = flow.Tensor(np.random.randn(2, 3, 4, 5), device="cuda", dtype=flow.int)
+        input = flow.Tensor(np.random.randn(2, 3))
+        output = input.to(tensor)
+        test_case.assertEqual(output.dtype, flow.int)
+        test_case.assertEqual(output.device, flow.device("cuda"))
+
 
 if __name__ == "__main__":
     unittest.main()
