@@ -56,10 +56,10 @@ class Scalar {
     }
   }
 
-  bool IsIntegral() const { return IsSigned() || IsUnsigned(); }
-  bool IsSigned() const { return active_tag_ == HAS_S; }
-  bool IsUnsigned() const { return active_tag_ == HAS_U; }
+  bool IsIntegral() const { return active_tag_ == HAS_S || active_tag_ == HAS_U; }
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
+  bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
+  bool IsUnsigned() const { return active_tag_ == HAS_U; }
 
  private:
   ValueType value_type_;
