@@ -616,27 +616,29 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
-Maybe<one::UserOpExpr> PoolNdOp(const std::string& mode, const std::string& data_format,
-                                const std::string& padding,
-                                const std::vector<int32_t>& padding_before,
-                                const std::vector<int32_t>& padding_after,
-                                const std::vector<int32_t>& pool_size,
-                                const std::vector<int32_t>& strides, const bool& ceil_mode) {
-  return PoolNdOp(mode, data_format, padding, padding_before, padding_after, pool_size, strides,
-                  ceil_mode, UniqueOpName(mode + "_pool_nd"));
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode) {
+  return PoolNdGradOp(mode, data_format, padding, padding_before, padding_after, pool_size, strides,
+                      ceil_mode, UniqueOpName(mode + "_pool_nd_grad"));
 }
-Maybe<one::UserOpExpr> PoolNdOp(const std::string& mode, const std::string& data_format,
-                                const std::string& padding,
-                                const std::vector<int32_t>& padding_before,
-                                const std::vector<int32_t>& padding_after,
-                                const std::vector<int32_t>& pool_size,
-                                const std::vector<int32_t>& strides, const bool& ceil_mode,
-                                const std::string& name) {
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode,
+                                    const std::string& name) {
   int ndims = pool_size.size();
-  std::string op_type_name = mode + "_pool_" + std::to_string(ndims) + "d";
+  std::string op_type_name = mode + "_pool_" + std::to_string(ndims) + "d_grad";
   return one::OpBuilder(op_type_name, name)
       .Input("x")
-      .Output("y")
+      .Input("y")
+      .Input("dy")
+      .Output("dx")
       .Attr<std::string>("data_format", data_format)
       .Attr<std::string>("padding", padding)
       .Attr<std::vector<int32_t>>("padding_before", padding_before)

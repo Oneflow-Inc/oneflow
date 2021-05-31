@@ -62,14 +62,16 @@ Maybe<void> MaxPoolNd::Init(const OpExpr& op) {
   CHECK_EQ_OR_RETURN(ndims, strides_->size());
   CHECK_EQ_OR_RETURN(ndims, padding_before_->size());
   CHECK_EQ_OR_RETURN(ndims, padding_after_->size());
-  grad_op_ = JUST(op_expr_helper::PoolNdOp(mode, *data_format_, *padding_, *padding_before_,
-                                           *padding_after_, *pool_size_, *strides_, ceil_mode_));
+  grad_op_ =
+      JUST(op_expr_helper::PoolNdGradOp(mode, *data_format_, *padding_, *padding_before_,
+                                        *padding_after_, *pool_size_, *strides_, ceil_mode_));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MaxPoolNd::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->SaveTensorForBackward(inputs.at(0));
+  ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
@@ -77,8 +79,8 @@ Maybe<void> MaxPoolNd::Apply(const OpExprInterpState* ctx, const TensorTuple& ou
                              TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
   in_grads->resize(1);
-  in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), saved_tensors.at(0)}, /*attrs=*/{}));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(
+      *grad_op_, {saved_tensors.at(0), saved_tensors.at(1), out_grads.at(0)}, /*attrs=*/{}));
   return Maybe<void>::Ok();
 }
 
