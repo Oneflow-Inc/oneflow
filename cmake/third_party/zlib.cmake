@@ -22,7 +22,7 @@ else()
         message(FATAL_ERROR "${CMAKE_SHARED_LIBRARY_SUFFIX} not support for zlib")
       endif()
     else()
-        set(ZLIB_LIBRARY_NAMES libz.a)
+      set(ZLIB_LIBRARY_NAMES libz.a)
     endif()
 endif()
 
