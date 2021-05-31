@@ -119,14 +119,15 @@ OperatorConf SliceBoxingTaskNode::GetBoxingOpConf() {
 }
 
 void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (Global<IDMgr>::Get()->IsCpuMemZone(mem_zone_id_)) {
+  auto mem_zone_id = DecodeMemZoneIdFromInt64(mem_zone_id_);
+  if (mem_zone_id.device_type() == DeviceType::kCPU) {
     HostMemory* host_mem = mem_case->mutable_host_mem();
-    if (device_type() == DeviceType::kGPU) {
-      host_mem->mutable_cuda_pinned_mem()->set_device_id(GpuPhyId());
+    StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id());
+    if (stream_id.device_id().device_type() == DeviceType::kGPU) {
+      host_mem->mutable_cuda_pinned_mem()->set_device_id(stream_id.device_id().device_index());
     }
-  } else if (Global<IDMgr>::Get()->IsGpuMemZone(mem_zone_id_)) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(mem_zone_id_));
+  } else if (mem_zone_id.device_type() == DeviceType::kGPU) {
+    mem_case->mutable_device_cuda_mem()->set_device_id(mem_zone_id.device_index());
   } else {
     UNIMPLEMENTED();
   }
