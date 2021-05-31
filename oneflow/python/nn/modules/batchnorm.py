@@ -169,9 +169,9 @@ class _BatchNorm(_NormBase):
                 mean = mean.reshape(shape=nd_params_shape)
                 variance = variance.reshape(shape=nd_params_shape)
 
-                if self.weight and params_shape[0] == self.weight.nelemenet():
+                if self.weight and params_shape[0] == self.weight.nelement():
                     weight = self.weight.reshape(shape=nd_params_shape)
-                if self.bias and params_shape[0] == self.bias.nelemenet():
+                if self.bias and params_shape[0] == self.bias.nelement():
                     bias = self.bias.reshape(shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass

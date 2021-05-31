@@ -87,7 +87,7 @@ class Linear(Module):
     .. code-block:: python 
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         linear = flow.nn.Linear(3, 8, False)
         input_arr = np.array(
