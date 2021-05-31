@@ -87,9 +87,8 @@ def _test_broadcast_like_backward(test_case, device):
     of_out = of_out.sum()
     of_out.backward()
     np_grad = [[[9.0]], [[9.0]], [[9.0]]]
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5)
-    )
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
