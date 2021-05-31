@@ -28,11 +28,15 @@ namespace {
 BlobDesc* FindValidBlobDescOfBnsInOp(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const PbRpf<std::string>& bn_in_ops) {
+  BlobDesc* valid_blob_desc = nullptr;
   for (const std::string& bn_in_op : bn_in_ops) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { return blob_desc; }
+    if (blob_desc) {
+      valid_blob_desc = blob_desc;
+      if (blob_desc->is_dynamic()) { break; }
+    }
   }
-  return nullptr;
+  return valid_blob_desc;
 }
 
 user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
