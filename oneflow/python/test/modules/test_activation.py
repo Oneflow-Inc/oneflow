@@ -526,18 +526,38 @@ class TestLogSoftmax(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+def _test_logsigmoid(test_case, device):
+    m = flow.nn.LogSigmoid()
+    arr = np.array([1.0, 2.0, 3.0, 10.2, 7.6])
+    np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        0.2689414213699951,
+        0.11920292202211764,
+        0.04742587317756669,
+        3.716893710287265e-05,
+        0.0005002011070795276,
+    ]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestLogSigmoidModule(flow.unittest.TestCase):
     def test_logsigmoid(test_case):
-        m = flow.nn.LogSigmoid()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_logsigmoid,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 def _test_softplus(test_case, device):
