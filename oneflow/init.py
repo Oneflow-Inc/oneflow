@@ -68,9 +68,11 @@ import oneflow.python.framework.env_util as env_util
 env_util.init_default_physical_env()
 del env_util
 
+
 def SyncOnMaster():
     if oneflow.distributed.get_rank() == 0:
         oneflow._oneflow_internal.eager.single_client.Sync
+
 
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
