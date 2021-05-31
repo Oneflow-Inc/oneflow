@@ -52,7 +52,6 @@ namespace cfg {
 class ParallelDistribution;
 }
 class Device;
-class DType;
 
 namespace one {
 
@@ -64,7 +63,7 @@ class Tensor {
 
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual const std::shared_ptr<const DType>& dtype() const = 0;
+  virtual DataType dtype() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<const Device> device() const = 0;
@@ -164,7 +163,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
+  DataType dtype() const override { return impl_->dtype(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
   }
@@ -220,8 +219,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                          const std::shared_ptr<const DType>& dtype,
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
 
@@ -244,7 +242,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
+  DataType dtype() const override { return impl_->dtype(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();
   }
@@ -295,7 +293,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<Tensor> detach() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            const std::shared_ptr<const DType>& dtype,
+                                            DataType dtype,
                                             Symbol<cfg::ParallelDistribution> parallel_distribution,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);

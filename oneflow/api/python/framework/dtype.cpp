@@ -24,41 +24,49 @@ namespace oneflow {
 namespace {
 
 struct DTypeExportUtil final {
-  static bool is_signed(const DType& dtype) { return dtype.is_signed().GetOrThrow(); }
-  static bool is_complex(const DType& dtype) { return dtype.is_complex().GetOrThrow(); }
-  static bool is_floating_point(const DType& dtype) {
-    return dtype.is_floating_point().GetOrThrow();
+  static bool IsEqual(const DType& dtype, const py::object& py_obj) {
+    std::shared_ptr<DType> other;
+    if (py::isinstance<DType>(py_obj)) {
+      other = std::make_shared<DType>(py_obj.cast<DType>());
+    } else {
+      return false;
+    }
+    if (other->data_type() != dtype.data_type()) { return false; }
+    return true;
   }
-  static const std::string& name(const DType& dtype) { return dtype.name().GetOrThrow(); }
-  static size_t bytes(const DType& dtype) { return dtype.bytes().GetOrThrow(); }
+
+  static size_t Hash(const DType& dtype) { return std::hash<DType>()(dtype); }
 };
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<DType, std::shared_ptr<DType>>(m, "dtype")
-      .def_property_readonly("is_signed", &DTypeExportUtil::is_signed)
-      .def_property_readonly("is_complex", &DTypeExportUtil::is_complex)
-      .def_property_readonly("is_floating_point", &DTypeExportUtil::is_floating_point)
-      .def("__str__", &DTypeExportUtil::name)
-      .def("__repr__", &DTypeExportUtil::name)
-      .def_property_readonly("bytes", &DTypeExportUtil::bytes);
+      .def_property_readonly("is_signed", &DType::is_signed)
+      .def_property_readonly("is_complex", &DType::is_complex)
+      .def_property_readonly("is_floating_point", &DType::is_floating_point)
+      .def("__str__", &DType::name)
+      .def("__repr__", &DType::name)
+      .def("__eq__", &DTypeExportUtil::IsEqual)
+      .def("__hash__", &DTypeExportUtil::Hash)
+      .def_property_readonly("bytes",
+                             [](const DType& dtype) { return dtype.bytes().GetOrThrow(); });
 
-  m.attr("char") = DType::Char().GetPtrOrThrow();
-  m.attr("float16") = DType::Float16().GetPtrOrThrow();
-  m.attr("float") = DType::Float().GetPtrOrThrow();
+  m.attr("char") = DType::Char();
+  m.attr("float16") = DType::Float16();
+  m.attr("float") = DType::Float();
 
-  m.attr("float32") = DType::Float().GetPtrOrThrow();
-  m.attr("double") = DType::Double().GetPtrOrThrow();
-  m.attr("float64") = DType::Double().GetPtrOrThrow();
+  m.attr("float32") = DType::Float();
+  m.attr("double") = DType::Double();
+  m.attr("float64") = DType::Double();
 
-  m.attr("int8") = DType::Int8().GetPtrOrThrow();
-  m.attr("int32") = DType::Int32().GetPtrOrThrow();
-  m.attr("int64") = DType::Int64().GetPtrOrThrow();
+  m.attr("int8") = DType::Int8();
+  m.attr("int32") = DType::Int32();
+  m.attr("int64") = DType::Int64();
 
-  m.attr("uint8") = DType::UInt8().GetPtrOrThrow();
-  m.attr("record") = DType::OFRecord().GetPtrOrThrow();
-  m.attr("tensor_buffer") = DType::TensorBuffer().GetPtrOrThrow();
+  m.attr("uint8") = DType::UInt8();
+  m.attr("record") = DType::OFRecord();
+  m.attr("tensor_buffer") = DType::TensorBuffer();
 }
 
 }  // namespace oneflow
