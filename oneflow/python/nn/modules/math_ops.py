@@ -1032,3 +1032,14 @@ def atanh_op(input):
     """
 
     return Atanh()(input)
+
+@oneflow_export("arctanh")
+@register_tensor_op("arctanh")
+@experimental_api
+def arctanh_op(input):
+    r"""
+
+    Alias for :func:`oneflow.experimental.arctanh`
+    """
+
+    return Atanh()(input)
