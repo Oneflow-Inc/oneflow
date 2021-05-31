@@ -118,44 +118,87 @@ Maybe<void> Matmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_g
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("matmul", Matmul);
 
-class BatchMatmul : public Matmul{
+class BatchMatmul : public Matmul {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(MatmulInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
-                      const AttrMap& attrs) const override;
-  Maybe<void> Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
-  std::shared_ptr<OpExpr> grad_a_op_;
-  std::shared_ptr<OpExpr> grad_b_op_;
 };
 
 Maybe<void> BatchMatmul::Init(const OpExpr& op) {
+  JUST(Matmul::Init(op));
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
 
-  Matmul::grad_a_op_ = JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
-                                                  /*alpha=*/1.0, GradientOpName(op_name + "_a")));
-  Matmul::grad_b_op_ = JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
-                                                  /*alpha=*/1.0, GradientOpName(op_name + "_b")));
+  Matmul::grad_a_op_ =
+      JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
+                                         /*alpha=*/1.0, GradientOpName(op_name + "_a")));
+  Matmul::grad_b_op_ =
+      JUST(op_expr_helper::BatchMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
+                                         /*alpha=*/1.0, GradientOpName(op_name + "_b")));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BatchMatmul::Capture(MatmulInterpState* ctx, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const AttrMap& attrs) const {
-    return Matmul::Capture(ctx, inputs, outputs, attrs);
-}
-
-Maybe<void> BatchMatmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const {
-    return Matmul::Apply(ctx, out_grads, in_grads);
-}
-
 REGISTER_OP_EXPR_GRAD_FUNCTION("batch_matmul", BatchMatmul);
+
+class BroadcastMatmul : public Matmul {
+ public:
+  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override;
+
+ private:
+  AttrMap base_attrs_;
+};
+
+Maybe<void> BroadcastMatmul::Init(const OpExpr& op) {
+  JUST(Matmul::Init(op));
+  const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+  CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  const std::string& op_name = fw_op_expr->op_name();
+
+  Matmul::grad_a_op_ =
+      JUST(op_expr_helper::BroadcastMatmulOp(/*transpose_a=*/false, /*transpose_b=*/false,
+                                             /*alpha=*/1.0, GradientOpName(op_name + "_a")));
+  Matmul::grad_b_op_ =
+      JUST(op_expr_helper::BroadcastMatmulGradBOp(/*alpha=*/1.0, GradientOpName(op_name + "_b")));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BroadcastMatmul::Apply(const MatmulInterpState* ctx, const TensorTuple& out_grads,
+                                   TensorTuple* in_grads) const {
+  if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
+  CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+  MutableAttrMap attrs_a;
+  MutableAttrMap attrs_b;
+
+  const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+  const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+  JUST(attrs_a.SetAttr<double>("alpha", ctx->alpha));
+  JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
+
+  in_grads->resize(2);
+  JUST(attrs_a.SetAttr<bool>("transpose_a", ctx->transpose_a));
+  JUST(attrs_a.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
+  in_grads->at(0) = JUST(
+      OpInterpUtil::Dispatch<Tensor>(*(Matmul::grad_a_op_), {out_grads.at(0), input_b}, attrs_a));
+
+  if (!ctx->transpose_b) {
+    in_grads->at(1) = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*(Matmul::grad_b_op_), {input_a, out_grads.at(0)}, attrs_b));
+  } else {
+    in_grads->at(1) = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*(Matmul::grad_b_op_), {out_grads.at(0), input_a}, attrs_b));
+  }
+
+  return Maybe<void>::Ok();
+}
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("broadcast_matmul", BroadcastMatmul);
 
 }  // namespace one
 }  // namespace oneflow
