@@ -18,16 +18,104 @@
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList", "BoolList"
 # }
 
-- name: "add"
-  signature: "Tensor Add(Tensor x, Tensor y)"
-  bind_python: True
-
 - name: "add_n"
   signature: "Tensor AddN(TensorTuple inputs)"
   bind_python: True
 
+- name: "add"
+  signature: "Tensor Add(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "add_scalar"
-  signature: "Tensor AddScalar(Tensor x, *, Scalar alpha)"
+  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "add_scalar_by_tensor"
+  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_add"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "sub_scalar_by_tensor"
+  signature: "Tensor ScalarSubByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_sub"
+  signature: "Tensor BroadcastSub(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "mul"
+  signature: "Tensor Multiply(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "mul_scalar"
+  signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "mul_scalar_by_tensor"
+  signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_mul"
+  signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "div_scalar_by_tensor"
+  signature: "Tensor ScalarDivByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_div"
+  signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "pow"
+  signature: "Tensor Pow(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "pow_scalar"
+  signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "reduce_sum"
+  signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims)"
+  bind_python: True
+
+- name: "reciprocal"
+  signature: "Tensor Reciprocal(Tensor x)"
+  bind_python: True
+
+- name: "reciprocal_no_nan"
+  signature: "Tensor ReciprocalNoNan(Tensor x)"
+  bind_python: True
+
+- name: "sin"
+  signature: "Tensor Sin(Tensor x)"
+  bind_python: True
+
+- name: "cos"
+  signature: "Tensor Cos(Tensor x)"
+  bind_python: True
+
+- name: "cosh"
+  signature: "Tensor Cosh(Tensor x)"
+  bind_python: True
+
+- name: "log"
+  signature: "Tensor Log(Tensor x)"
+  bind_python: True
+
+- name: "sqrt"
+  signature: "Tensor Sqrt(Tensor x)"
+  bind_python: True
+
+- name: "rsqrt"
+  signature: "Tensor Rsqrt(Tensor x)"
+  bind_python: True
+
+- name: "square"
+  signature: "Tensor Square(Tensor x)"
   bind_python: True
 
 - name: "normalization"
