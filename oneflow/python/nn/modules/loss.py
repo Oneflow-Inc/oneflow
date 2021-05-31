@@ -196,22 +196,25 @@ class NLLLoss(Module):
 
     .. code-block:: python 
         
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
 
-        input = flow.Tensor(
-            [[-0.1664078, -1.7256707, -0.14690138],
-                [-0.21474946, 0.53737473, 0.99684894],
-                [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
-        target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
-        out = flow.nn.NLLLoss(reduction="none")(input, target)
-        # out: [0.80199665 1.1166505  0.35826027]
+        >>> input = flow.Tensor(
+        ... [[-0.1664078, -1.7256707, -0.14690138],
+        ... [-0.21474946, 0.53737473, 0.99684894],
+        ... [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
+        >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+        >>> m = flow.nn.NLLLoss(reduction="none")
+        >>> out = m(input, target).numpy()
+        # [0.80199665 1.1166505  0.35826027]
 
-        out_sum = flow.nn.NLLLoss(reduction="sum")(input, target)
-        # out_sum: [2.2769074]
+        >>> m = flow.nn.NLLLoss(reduction="sum")
+        >>> out = m(input, target).numpy()
+        [2.2769074]
         
-        out_mean = flow.nn.NLLLoss(reduction="mean")(input, target)
-        # out_mean: [0.7589692]
+        >>> m = flow.nn.NLLLoss(reduction="mean")
+        >>> out = m(input, target).numpy()
+        [0.7589692]
     
     """
 
@@ -282,3 +285,9 @@ class NLLLoss(Module):
             return res.sum()
         else:
             return res.mean()
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
