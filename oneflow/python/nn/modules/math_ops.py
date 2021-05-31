@@ -984,14 +984,13 @@ def tan_op(input):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import oneflow as flow
+        >>> import numpy as np
 
-        np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
-        input = flow.Tensor(np_arr)
-        output = flow.tan(input)  # output [-1.  0.  1.]
-        # equal to np.tan(np_arr)
-
+        >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.tan(input)
+        [-1.  0.  1.]
     """
 
     return Tan()(input)
@@ -1021,14 +1020,13 @@ def atanh_op(input):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import oneflow as flow
+        >>> import numpy as np
 
-        np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        input = flow.Tensor(np_arr)
-        output = flow.atanh(input)  # out [0.54930615 0.6931472  0.8673005 ]
-        # equal to np.arctanh(np_arr)
-
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.atanh(input)
+        [0.54930615 0.6931472  0.8673005 ]
     """
 
     return Atanh()(input)
@@ -1039,7 +1037,7 @@ def atanh_op(input):
 def arctanh_op(input):
     r"""
 
-    Alias for :func:`oneflow.experimental.arctanh`
+    Alias for :func:`oneflow.experimental.atanh`
     """
 
     return Atanh()(input)
