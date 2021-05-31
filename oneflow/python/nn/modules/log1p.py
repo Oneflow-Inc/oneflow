@@ -16,8 +16,18 @@ limitations under the License.
 
 
 import oneflow as flow
+from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
+
+
+class Log1p(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("log1p").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
 
 
 @oneflow_export("log1p")
@@ -33,12 +43,19 @@ def log1p_op(input):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        
-        x = flow.Tensor(np.array([[1.3, 1.5, 2.7]))
-        out = flow.log1p(x).numpy()
-        print(out) # [0.8329091  0.91629076 1.3083328]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+        >>> out = flow.log1p(x).numpy()
+        >>> out
+        array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
         
     """
     return Log1p()(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

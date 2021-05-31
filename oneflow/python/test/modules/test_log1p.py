@@ -13,15 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.experimental as flow
+
 import unittest
+from collections import OrderedDict
+
+import oneflow.experimental as flow
 import numpy as np
 
+from test_util import GenArgList
 
-def _test_log1p(test_case):
+
+def _test_log1p(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     np_out = np.log1p(input_arr)
-    x = flow.Tensor(input_arr, requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.log1p(x)
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
@@ -36,10 +43,12 @@ def _test_log1p(test_case):
     )
 
 
-def _test_log1p_tensor_function(test_case):
+def _test_log1p_tensor_function(test_case, shape, device):
     input_arr = np.random.randn(*shape)
     np_out = np.log1p(input_arr)
-    x = flow.Tensor(input_arr, requires_grad=True)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     of_out = x.log1p()
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
@@ -59,12 +68,13 @@ def _test_log1p_tensor_function(test_case):
     ".numpy() doesn't work in lazy mode",
 )
 class TestLog1p(flow.unittest.TestCase):
-    rg_dict = OrderedDict()
-    arg_dict["test_fun"] = [_test_log1p, _test_log1p_tensor_function]
-    arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
-    arg_dict["device"] = ["cpu", "cuda"]
-    for arg in GenArgList(arg_dict):
-        arg[0](test_case, *arg[1:])
+    def test_log1p(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_log1p, _test_log1p_tensor_function]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
