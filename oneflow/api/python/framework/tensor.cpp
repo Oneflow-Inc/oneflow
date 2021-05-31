@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -158,12 +160,40 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
 }
 
+std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDTypes(
+    const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<Shape> shapes;
+  std::vector<DType> dtypes;
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const");
+  });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    while (!synced) {}
+  });
+
+  const Blob& blob = CHECK_JUST(tensor->eager_blob_object())->blob();
+  const Shape& blob_shape = blob.static_shape();
+  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
+  for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
+    const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
+    shapes.push_back(tensor_buffer->shape());
+    dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
+  }
+
+  return std::make_tuple(shapes, dtypes);
+}
+
 }  // namespace
 
 void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredTensor>>* api) {
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
+  api->def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
