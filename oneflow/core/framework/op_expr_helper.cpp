@@ -648,6 +648,16 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+#define MATMUL_SERIES_OPS(op_type_name)       \
+  return one::OpBuilder(op_type_name, name)   \
+      .Input("a")                             \
+      .Input("b")                             \
+      .Output("out")                          \
+      .Attr<bool>("transpose_a", transpose_a) \
+      .Attr<bool>("transpose_b", transpose_b) \
+      .Attr<double>("alpha", alpha)           \
+      .Build();
+
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha) {
   return MatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
@@ -677,6 +687,8 @@ Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& tr
                                          const double& alpha, const std::string& name) {
   MATMUL_SERIES_OPS("broadcast_matmul");
 }
+
+#undef MATMUL_SERIES_OPS
 
 Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha) {
   return BroadcastMatmulGradBOp(alpha, UniqueOpName("broadcast_matmul_grad_b"));
