@@ -582,6 +582,11 @@ void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
     }
     compute_instr_msg_list->MoveToDstBack(compute_instr_msg, &new_instr_msg_list);
   }
+  static const int64_t kHighWaterMark = 500;
+  static const int64_t kLowWaterMark = 200;
+  if (*mut_flying_instruction_cnt() > kHighWaterMark) {
+    while (*mut_flying_instruction_cnt() > kLowWaterMark) {}
+  }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
 }
 
@@ -656,6 +661,9 @@ void VirtualMachine::Schedule() {
     new_instruction_list.MoveTo(waiting_instruction_list);
   }
   DispatchAndPrescheduleInstructions(ready_instruction_list);
+  *mut_flying_instruction_cnt() = mut_waiting_instruction_list()->size()
+                                  + mut_ready_instruction_list()->size()
+                                  + mutable_vm_stat_running_instruction_list()->size();
 }
 
 bool VirtualMachine::Empty() const {
