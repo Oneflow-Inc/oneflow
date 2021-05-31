@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -44,7 +46,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad,
                                                     bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf);
+    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -52,11 +55,12 @@ template<>
 struct TensorExportUtil<ConsistentTensor> final {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
       const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-      const std::shared_ptr<const compatible_py::Distribute>& distribute,
+      const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, distribute, parallel_desc, is_lazy,
-                                        requires_grad, is_leaf);
+    return ConsistentTensor::MakeTensor(shape, dtype, SymbolOf(*parallel_distribution),
+                                        SymbolOf(*parallel_desc), is_lazy, requires_grad, is_leaf)
+        .GetPtrOrThrow();
   }
 };
 
@@ -153,7 +157,34 @@ std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
 }
 
 std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
-  return tensor.parallel_desc().GetPtrOrThrow();
+  return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
+}
+
+std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDTypes(
+    const std::shared_ptr<MirroredTensor>& tensor) {
+  std::vector<Shape> shapes;
+  std::vector<DType> dtypes;
+  std::atomic<bool> synced(false);
+
+  PhysicalRun([&](InstructionsBuilder* builder) {
+    builder->AccessBlobByCallback(
+        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const");
+  });
+
+  Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
+    while (!synced) {}
+  });
+
+  const Blob& blob = CHECK_JUST(tensor->eager_blob_object())->blob();
+  const Shape& blob_shape = blob.static_shape();
+  const auto* tensor_buffer_ptr = blob.dptr<TensorBuffer>();
+  for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
+    const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
+    shapes.push_back(tensor_buffer->shape());
+    dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
+  }
+
+  return std::make_tuple(shapes, dtypes);
 }
 
 }  // namespace
@@ -162,6 +193,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   using T = MirroredTensor;
   api->def_property_readonly("device", &TensorGetDevice);
   api->def_property_readonly("data", &T::data);
+  api->def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes);
 #define DEFINE_TENSOR_METHOD(T, type_proto)                         \
   api->def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>); \
   api->def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>);
@@ -190,8 +222,16 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
-      .def_property_readonly("requires_grad", &T::requires_grad)
       .def_property_readonly("is_leaf", &T::is_leaf)
+      .def_property(
+          "requires_grad", &T::requires_grad,
+          [](T& t, bool requires_grad) {
+            if (t.is_leaf()) {
+              t.set_requires_grad(requires_grad);
+            } else {
+              throw std::runtime_error("You can only change requires_grad flags of leaf tensors.");
+            }
+          })
       // Methods of pytorch
       .def("retain_grad",
            [](T& t) {
@@ -200,9 +240,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &T::is_lazy)
-      .def_property_readonly("is_consistent", &T::is_consistent)
-      // OneFlow tensor methods other than pytorch tensor
-      .def("_set_requires_grad", &T::set_requires_grad);
+      .def_property_readonly("is_consistent", &T::is_consistent);
   SpecializedDef(&tensor_api);
 }
 
