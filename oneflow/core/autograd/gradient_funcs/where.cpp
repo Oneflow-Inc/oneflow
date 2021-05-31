@@ -60,7 +60,6 @@ Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->SaveTensorForBackward(inputs.at(0));  // condition
   ctx->SaveTensorForBackward(inputs.at(1));  // x
-  ctx->SaveTensorForBackward(inputs.at(2));  // y
   return Maybe<void>::Ok();
 }
 
@@ -71,7 +70,6 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   MutableAttrMap attrs;
   const std::shared_ptr<oneflow::one::Tensor>& condtion = ctx->SavedTensors().at(0);
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(1);
-  const std::shared_ptr<oneflow::one::Tensor>& y = ctx->SavedTensors().at(2);
 
   std::shared_ptr<oneflow::one::Tensor> zero_out =
       JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
