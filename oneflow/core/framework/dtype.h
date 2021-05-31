@@ -51,7 +51,7 @@ class DType final {
   const std::string& name() const;
   Maybe<size_t> bytes() const;
 
-  static Maybe<const DType> Get(DataType);
+  static Maybe<const std::shared_ptr<const DType>&> Get(DataType);
 
 #define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
   static const std::shared_ptr<const DType>& data_type();

@@ -37,8 +37,8 @@ namespace one {
 namespace {
 
 template<typename T>
-std::shared_ptr<const DType> GetTensorDType(const T& tensor) {
-  return DType::Get(tensor.dtype()).GetPtrOrThrow();
+const std::shared_ptr<const DType>& GetTensorDType(const T& tensor) {
+  return DType::Get(tensor.dtype()).GetOrThrow();
 }
 
 template<typename T>
@@ -166,10 +166,10 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
 }
 
-std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDTypes(
-    const std::shared_ptr<MirroredTensor>& tensor) {
+std::tuple<std::vector<Shape>, std::vector<std::shared_ptr<const DType>>>
+GetTensorBufferShapesAndDTypes(const std::shared_ptr<MirroredTensor>& tensor) {
   std::vector<Shape> shapes;
-  std::vector<DType> dtypes;
+  std::vector<std::shared_ptr<const DType>> dtypes;
   std::atomic<bool> synced(false);
 
   PhysicalRun([&](InstructionsBuilder* builder) {
@@ -187,7 +187,7 @@ std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDType
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
+    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow());
   }
 
   return std::make_tuple(shapes, dtypes);
