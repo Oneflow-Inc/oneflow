@@ -36,7 +36,7 @@ def _test_where(test_case, device):
     )
     of_out = flow.where(condition, x, y)
     np_out = np.array([[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_where_broadcast(test_case, device):
@@ -61,7 +61,7 @@ def _test_where_broadcast(test_case, device):
             [[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]],
         ]
     )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_where_scalar(test_case, device):
@@ -70,7 +70,7 @@ def _test_where_scalar(test_case, device):
     condition = flow.Tensor(np.array([1]), dtype=flow.int32)
     of_out = flow.where(condition, x, y)
     np_out = np.array([0.5])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_where_dim4(test_case, device):
@@ -89,7 +89,7 @@ def _test_where_dim4(test_case, device):
     )
     of_out = flow.where(condition, x, y)
     np_out = np.array([[[[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]]]])
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_where_backward(test_case, device):
