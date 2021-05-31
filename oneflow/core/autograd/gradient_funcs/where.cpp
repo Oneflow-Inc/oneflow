@@ -77,7 +77,7 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   in_grads->at(1) =
       JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
   in_grads->at(2) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, zero_out, out_grads.at(0)}));
+      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_y_, {condtion, zero_out, out_grads.at(0)}));
   return Maybe<void>::Ok();
 }
 

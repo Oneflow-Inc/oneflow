@@ -150,6 +150,28 @@ def _test_where_broadcast_backward(test_case, device):
     test_case.assertTrue(np.allclose(y.grad.numpy(), y_grad, 1e-5, 1e-5))
 
 
+def _test_where_broadcast_x_backward(test_case, device):
+    x = flow.Tensor(
+        np.array([[[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]]),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    y = flow.Tensor(
+        np.ones(shape=(3, 3, 2)), dtype=flow.float32, device=flow.device(device),
+    )
+    condition = flow.Tensor(
+        np.array([[[0, 1], [1, 0], [1, 0]]]),
+        dtype=flow.int32,
+        device=flow.device(device),
+    )
+    of_out = flow.where(condition, x, y)
+    of_out = of_out.sum()
+    of_out.backward()
+    x_grad = [[[0.0, 3.0], [3.0, 0.0], [3.0, 0.0]]]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -164,6 +186,7 @@ class TestWhere(flow.unittest.TestCase):
             _test_where_dim4,
             _test_where_backward,
             _test_where_broadcast_backward,
+            _test_where_broadcast_x_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
