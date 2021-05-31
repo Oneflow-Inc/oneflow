@@ -642,20 +642,34 @@ class TestHardtanhModule(flow.unittest.TestCase):
             _test_hardtanh_impl(test_case, *arg)
 
 
+def _test_leakyrelu_impl(test_case, shape, device):
+    negative_slope = 0.2
+    m = flow.nn.LeakyReLU(negative_slope=negative_slope)
+    arr = np.random.randn(*shape)
+
+    np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    np_grad = np.where(arr < 0, 1.0 * negative_slope, 1.0)
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5)
+    )
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestLeakyReLUModule(flow.unittest.TestCase):
     def test_leaky_relu(test_case):
-        negative_slope = 0.2
-        m = flow.nn.LeakyReLU(negative_slope=negative_slope)
-        arr = np.random.randn(2, 3, 4, 5)
-
-        np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_leakyrelu_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
