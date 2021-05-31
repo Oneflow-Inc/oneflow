@@ -18,7 +18,6 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
-import functools
 import re
 import copy
 
