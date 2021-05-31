@@ -37,24 +37,31 @@ Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& 
   return Maybe<void>::Ok();
 }
 
+namespace {
+
+std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
+  const auto& shape = std::make_shared<Shape>();
+  const auto& dtype = Dtype::InvalidDataType();
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
+}
+
+}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl()
+  : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), NewAutogradMeta(false, false)) {}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+    const std::shared_ptr<AutogradMeta>& autograd_meta)
+    : MirroredTensorImpl(tensor_meta, autograd_meta) { }
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)) { }
+
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, const std::shared_ptr<AutogradMeta>& autograd_meta)
-    : MirroredTensorImpl(device, autograd_meta), eager_blob_object_(eager_blob_object) {
-  Init();
-}
-
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
-    : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
-      eager_blob_object_(eager_blob_object) {
-  Init();
-}
-
-void EagerMirroredTensorImpl::Init() {
+void EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   dtype_ = CHECK_JUST(DType::New(eager_blob_object->blob_desc().data_type()));
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
@@ -69,6 +76,14 @@ void EagerMirroredTensorImpl::Init() {
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return eager_blob_object_->compute_local_dep_object();
+}
+
+void EagerMirroredTensorImpl::set_eager_blob_object(
+    std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
+  eager_blob_object_ = eager_blob_object;
+  CHECK(eager_blob_object_->blob_desc().shape_ptr().get() == tensor_meta()->shape().get());
+  CHECK(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype()->data_type());
+  UpdateTensorStorage();
 }
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
@@ -90,13 +105,27 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   return eager_blob_object_->blob_desc().shape_ptr();
 }
 
+bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
+  // It's correct to ignore is_dynamic_ field.
+  return *this->shape() == *other.shape() && *this->dtype() == *other.dtype()
+         && *this->device() == *other.device();
+}
+
+size_t MirroredTensorMeta::CalcHashValue() const {
+  // It's correct to ignore is_dynamic_ field.
+  return std::hash<Shape>()(*shape()) ^ std::hash<DType>()(*dtype())
+         ^ std::hash<Device>()(*device()) ;
+}
+
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
+  // It's correct to ignore is_dynamic_ field.
   return *this->shape() == *other.shape() && *this->dtype() == *other.dtype()
          && this->parallel_distribution() == other.parallel_distribution()
          && this->parallel_desc() == other.parallel_desc();
 }
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
+  // It's correct to ignore is_dynamic_ field.
   return std::hash<Shape>()(*shape()) ^ std::hash<DType>()(*dtype())
          ^ std::hash<Symbol<cfg::ParallelDistribution>>()(parallel_distribution())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());

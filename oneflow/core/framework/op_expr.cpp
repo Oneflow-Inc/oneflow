@@ -127,12 +127,11 @@ namespace {
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
  public:
   UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors,
-                               std::vector<std::shared_ptr<const Device>>* output_devices)
+                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         input_tensors_(&input_tensors),
-        output_devices_(output_devices) {}
+        output_tensors_(output_tensors) {}
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return user_op_expr_->indexed_input_pairs();
@@ -147,7 +146,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return &output_devices_->at(tuple_index);
+    return CHECK_JUST(output_tensors_->at(tuple_index)->mut_device());
   }
 
   std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
@@ -166,7 +165,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const TensorTuple* input_tensors_;
-  std::vector<std::shared_ptr<const Device>>* output_devices_;
+  TensorTuple* output_tensors_;
 };
 
 }  // namespace
@@ -189,9 +188,14 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
 }
 
+Maybe<void> UserOpExpr::InferShapeAndDType(
+    const AttrMap& attrs, const TensorTuple& input_tensors, TensorTuple* output_tensors) const {
+  TODO();
+  return Maybe<void>::Ok();
+}
+
 Maybe<const Device> UserOpExpr::InferDevices(
-    const AttrMap& attrs, const TensorTuple& input_tensors,
-    std::vector<std::shared_ptr<const Device>>* output_devices) const {
+    const AttrMap& attrs, const TensorTuple& input_tensors, TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_devices);
   return TRY(device_infer_fn_(&device_infer_ctx));

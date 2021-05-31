@@ -28,16 +28,20 @@ Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Sha
                                                  const std::shared_ptr<const DType>& dtype,
                                                  const std::shared_ptr<const Device>& device,
                                                  bool is_lazy, bool requires_grad, bool is_leaf) {
-  std::shared_ptr<MirroredTensorImpl> impl;
   if (is_lazy) {
-    impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
+    const auto& impl =
+      std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
+    return std::make_shared<MirroredTensor>(impl);
   } else {
-    const auto eager_blob_object =
-        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape, device));
-    impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
-                                                     is_leaf);
+    const auto& tensor_meta = std::make_shared<MirroredTensorMeta>(
+        std::make_shared<Shape>(*shape), std::make_shared<DType>(*dtype), device);
+    const auto& impl =
+      std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& tensor = std::make_shared<MirroredTensor>(impl);
+    const auto& outputs = std::make_shared<TensorTuple>({tensor});
+    JUST(GenerateAllocatedEagerBlobObject(outputs.get()));
+    return tensor;
   }
-  return std::make_shared<MirroredTensor>(impl);
 }
 
 std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
