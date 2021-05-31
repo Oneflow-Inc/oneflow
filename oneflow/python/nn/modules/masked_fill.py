@@ -71,10 +71,19 @@ def masked_fill_op(tensor, mask, value):
         >>> mask = flow.Tensor((in_arr > 0).astype(np.int8), dtype=flow.int)
         >>> output = flow.masked_fill(input, mask, fill_value)
 
+        # tensor([[[-0.1317,  8.7654,  8.7654,  8.7654],
+        #  [-1.5195,  8.7654, -0.533 ,  8.7654],
+        #  [-1.3824, -2.6345,  8.7654, -0.6714]],
+
+        # [[ 8.7654,  8.7654,  8.7654, -1.7691],
+        #  [ 8.7654, -0.7051, -0.7648, -0.7323],
+        #  [-1.9009,  8.7654,  8.7654,  8.7654]]], dtype=oneflow.float32)
+
     """
     return MaskedFill(value)(tensor, mask)
 
+
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
 
+    doctest.testmod()
