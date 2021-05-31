@@ -23,13 +23,22 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-class MaxPoolNd : public OpExprGradFunction<OpExprInterpState> {
+namespace {
+
+struct PoolInterpState : public OpExprInterpState {
+  bool requires_grad;
+};
+
+class PoolNdGrad : public OpExprGradFunction<PoolInterpState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(OpExprInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
+  Maybe<void> Capture(PoolInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
-  Maybe<void> Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const PoolInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
+
+ protected:
+  std::shared_ptr<std::string> mode_;
 
  private:
   std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
@@ -44,7 +53,7 @@ class MaxPoolNd : public OpExprGradFunction<OpExprInterpState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
-Maybe<void> MaxPoolNd::Init(const OpExpr& op) {
+Maybe<void> PoolNdGrad::Init(const OpExpr& op) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
@@ -57,25 +66,24 @@ Maybe<void> MaxPoolNd::Init(const OpExpr& op) {
   pool_size_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("pool_size"));
   strides_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("strides"));
   ceil_mode_ = JUST(op_trait_->GetAttr<bool>("ceil_mode"));
-  const std::string mode = "max";
   int32_t ndims = pool_size_->size();
   CHECK_EQ_OR_RETURN(ndims, strides_->size());
   CHECK_EQ_OR_RETURN(ndims, padding_before_->size());
   CHECK_EQ_OR_RETURN(ndims, padding_after_->size());
   grad_op_ =
-      JUST(op_expr_helper::PoolNdGradOp(mode, *data_format_, *padding_, *padding_before_,
+      JUST(op_expr_helper::PoolNdGradOp(*mode_, *data_format_, *padding_, *padding_before_,
                                         *padding_after_, *pool_size_, *strides_, ceil_mode_));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxPoolNd::Capture(OpExprInterpState* ctx, const TensorTuple& inputs,
+Maybe<void> PoolNdGrad::Capture(PoolInterpState* ctx, const TensorTuple& inputs,
                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->SaveTensorForBackward(inputs.at(0));
   ctx->SaveTensorForBackward(outputs.at(0));
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MaxPoolNd::Apply(const OpExprInterpState* ctx, const TensorTuple& out_grads,
+Maybe<void> PoolNdGrad::Apply(const PoolInterpState* ctx, const TensorTuple& out_grads,
                              TensorTuple* in_grads) const {
   const auto& saved_tensors = ctx->SavedTensors();
   in_grads->resize(1);
@@ -84,9 +92,31 @@ Maybe<void> MaxPoolNd::Apply(const OpExprInterpState* ctx, const TensorTuple& ou
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_1d", MaxPoolNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_2d", MaxPoolNd);
-REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_3d", MaxPoolNd);
+}  // namespace
+
+class MaxPoolNdGrad final : public PoolNdGrad {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    mode_.reset(new std::string("max"));
+    return PoolNdGrad::Init(op);
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_1d", MaxPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_2d", MaxPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_3d", MaxPoolNdGrad);
+
+class AvgPoolNdGrad final : public PoolNdGrad {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    mode_.reset(new std::string("avg"));
+    return PoolNdGrad::Init(op);
+  }
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_1d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_2d", AvgPoolNdGrad);
+REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_3d", AvgPoolNdGrad);
 
 }  // namespace one
 }  // namespace oneflow
