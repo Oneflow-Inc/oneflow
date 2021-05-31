@@ -844,7 +844,7 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
 
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
   int64_t dst_machine_id = dst_node->machine_id();
-  int64_t dst_mem_zone_id = dst_node->MemZoneId121();
+  auto dst_mem_zone_id = dst_node->MemZoneId121();
   TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_machine_id, dst_mem_zone_id);
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }

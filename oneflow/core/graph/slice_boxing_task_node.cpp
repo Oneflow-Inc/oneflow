@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -33,17 +34,9 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
 void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& out_slice,
                                const SliceBoxingTaskMode mode, int64_t machine_id,
                                int64_t thrd_id) {
-  IDMgr* global_id_mgr = Global<IDMgr>::Get();
-  DeviceType device_type = global_id_mgr->GetDeviceTypeFromThrdId(thrd_id);
-  int64_t mem_zone_id;
-  if (device_type == DeviceType::kCPU) {
-    mem_zone_id = global_id_mgr->CpuMemZoneId();
-  } else if (device_type == DeviceType::kGPU) {
-    mem_zone_id = global_id_mgr->GpuMemZoneId(global_id_mgr->GetGpuPhyIdFromThrdId(thrd_id));
-  } else {
-    UNIMPLEMENTED();
-  }
-  Init(lbi, out_slice, mode, machine_id, thrd_id, mem_zone_id);
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
+  MemZoneId mem_zone_id{stream_id.device_id().device_type(), stream_id.device_id().device_index()};
+  Init(lbi, out_slice, mode, machine_id, thrd_id, EncodeMemZoneIdToInt64(mem_zone_id));
 }
 
 void SliceBoxingTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -137,6 +130,10 @@ void SliceBoxingTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   } else {
     UNIMPLEMENTED();
   }
+}
+
+MemZoneId SliceBoxingTaskNode::MemZoneId121() const {
+  return DecodeMemZoneIdFromInt64(mem_zone_id_);
 }
 
 }  // namespace oneflow

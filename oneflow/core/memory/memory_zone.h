@@ -46,6 +46,7 @@ int64_t EncodeMemZoneIdToInt64(const MemZoneId&);
 MemZoneId DecodeMemZoneIdFromInt64(int64_t);
 
 extern const MemZoneId kCPUMemZoneId;
+extern const MemZoneId kInvalidMemZoneId;
 
 }  // namespace oneflow
 
