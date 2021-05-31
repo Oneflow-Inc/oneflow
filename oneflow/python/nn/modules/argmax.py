@@ -53,11 +53,13 @@ class Argmax(Module):
             input = self._flatten(input)[0]
             self.dim = 0
 
+        print(input.requires_grad)
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
             x = self._op_softmax_last_dim(input)[0]
+            print(x.requires_grad)
             if self.keepdim == True:
                 x = flow.experimental.unsqueeze(x, -1)
             return x

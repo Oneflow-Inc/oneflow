@@ -655,9 +655,8 @@ def _test_leakyrelu_impl(test_case, shape, device):
     np_grad = np.where(arr < 0, 1.0 * negative_slope, 1.0)
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5)
-    )
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
