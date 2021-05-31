@@ -380,8 +380,8 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
   CHECK_NE(src_instruction, dst_instruction);
   auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
                                                      src_instruction, dst_instruction);
-  src_instruction->mut_out_edges()->EmplaceBack(std::move(edge.Mutable()));
-  dst_instruction->mut_in_edges()->EmplaceBack(std::move(edge.Mutable()));
+  src_instruction->mut_out_edges()->EmplaceBack(std::move(edge));
+  dst_instruction->mut_in_edges()->EmplaceBack(std::move(edge));
 }
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
