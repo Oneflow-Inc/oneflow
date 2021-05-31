@@ -36,7 +36,7 @@ def _test_atanh_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = 1.0 / (1 - np.square(np_input))
+    np_out_grad = 1.0 / (1.0 - np.square(np_input))
     test_case.assertTrue(
         np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
