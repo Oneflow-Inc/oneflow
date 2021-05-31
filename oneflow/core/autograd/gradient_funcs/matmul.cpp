@@ -175,9 +175,9 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulInterpState* ctx, const TensorTup
   MutableAttrMap attrs_a;
   MutableAttrMap attrs_b;
   JUST(attrs_a.SetAttr<double>("alpha", ctx->alpha));
-  JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
   JUST(attrs_a.SetAttr<bool>("transpose_a", ctx->transpose_a));
   JUST(attrs_a.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
+  JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
   if (ctx->requires_grad_b) {
