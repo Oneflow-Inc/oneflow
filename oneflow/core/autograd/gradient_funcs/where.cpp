@@ -23,7 +23,8 @@ namespace oneflow {
 namespace one {
 
 struct WhereInterpState : public OpExprInterpState {
-  bool requires_grad;
+  bool requires_grad_x;
+  bool requires_grad_y;
 };
 
 class Where : public OpExprGradFunction<WhereInterpState> {
@@ -54,8 +55,9 @@ Maybe<void> Where::Init(const OpExpr& op) {
 
 Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
                            const TensorTuple& outputs, const AttrMap& attrs) const {
-  ctx->requires_grad = inputs.at(1)->requires_grad() || inputs.at(2)->requires_grad();
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  ctx->requires_grad_x = inputs.at(1)->requires_grad();
+  ctx->requires_grad_y = inputs.at(2)->requires_grad();
+  if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->SaveTensorForBackward(inputs.at(0));  // condition
@@ -65,7 +67,7 @@ Maybe<void> Where::Capture(WhereInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_grads,
                          TensorTuple* in_grads) const {
-  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+  if ((!ctx->requires_grad_x) && (!ctx->requires_grad_y)) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   MutableAttrMap attrs;
   const std::shared_ptr<oneflow::one::Tensor>& condtion = ctx->SavedTensors().at(0);
@@ -74,10 +76,12 @@ Maybe<void> Where::Apply(const WhereInterpState* ctx, const TensorTuple& out_gra
   std::shared_ptr<oneflow::one::Tensor> zero_out =
       JUST(OpInterpUtil::Dispatch<Tensor>(*zero_like_op_, {x}));
   in_grads->resize(3);
-  in_grads->at(1) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
-  in_grads->at(2) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_y_, {condtion, zero_out, out_grads.at(0)}));
+  if (ctx->requires_grad_x)
+    in_grads->at(1) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_x_, {condtion, out_grads.at(0), zero_out}));
+  if (ctx->requires_grad_y)
+    in_grads->at(2) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*where_op_y_, {condtion, zero_out, out_grads.at(0)}));
   return Maybe<void>::Ok();
 }
 
