@@ -89,7 +89,7 @@ class TestArgmax(flow.unittest.TestCase):
             _test_argmax_keepdims,
             _test_argmax_dim_equal_none,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

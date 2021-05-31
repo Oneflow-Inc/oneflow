@@ -540,38 +540,61 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+def _test_softplus(test_case, device):
+    m = flow.nn.Softplus()
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+def _test_softplus_beta(test_case, device):
+    m = flow.nn.Softplus(beta=1.11)
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(
+        arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+    )
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+def _test_softplus_threshold(test_case, device):
+    m = flow.nn.Softplus(beta=1.11, threshold=1.55)
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(
+        arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+    )
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+def _test_softplus_backward(test_case, device):
+    m = flow.nn.Softplus()
+    arr = np.array([1.0, 2.0, 21.0, 20.0, 4.0])
+    np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [0.7310585786300049, 0.8807970779778824, 1.0, 1.0, 0.9820137900379085]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus(test_case):
-        m = flow.nn.Softplus()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_softplus_beta(test_case):
-        m = flow.nn.Softplus(beta=1.11)
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(
-            arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
-        )
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_softplus_threshold(test_case):
-        m = flow.nn.Softplus(beta=1.11, threshold=1.55)
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(
-            arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
-        )
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_softplus,
+            _test_softplus_beta,
+            _test_softplus_threshold,
+        ]
+        arg_dict["device"] = ["cpu"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 def _test_hardswish_impl(test_case, shape, device):
