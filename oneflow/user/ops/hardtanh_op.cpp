@@ -25,9 +25,9 @@ REGISTER_USER_OP("hardtanh")
     .Attr<double>("max_val")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      *out_shape = in_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
       CHECK_LE(min_val, max_val);
