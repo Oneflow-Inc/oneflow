@@ -73,7 +73,7 @@ class Where(Module):
             tuple(broadcast_like_shape), dtype=flow.float32
         )
         broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
-        broadcast_like_tensor.requires_grad = x.requires_grad
+        broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
 
         if len(broadcast_condition_axes) != 0:
             condition = flow.experimental.cast(condition, flow.float32)
