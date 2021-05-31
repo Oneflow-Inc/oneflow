@@ -159,6 +159,49 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       }
     });
 
+REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
+    .Input("in")
+    .OutputWithMinimum("out", 1)
+    .Attr<std::vector<Shape>>("out_shapes")
+    .Attr<std::vector<DataType>>("out_dtypes")
+    .Attr<bool>("dynamic_out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in->shape().elem_cnt(), 0);
+      CHECK_OR_RETURN(!in->is_dynamic());
+      const std::vector<Shape>& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
+      const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
+      int64_t num_tensor_buffers = in->shape().elem_cnt();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        *out_i->mut_shape() = out_shapes[i];
+        out_i->set_is_dynamic(dynamic_out);
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+      const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
+      int64_t num_tensor_buffers = ctx->outputs().size();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        CHECK_OR_RETURN(IsPODDataType(out_dtypes[i]));
+        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        *out_i->mut_data_type() = out_dtypes[i];
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      if (conf.attr<bool>("dynamic_out")) {
+        FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
+          user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
+          CHECK(out_i_modifier != nullptr);
+          out_i_modifier->set_header_infered_before_compute(false);
+        }
+      }
+    });
+
 }  // namespace
 
 }  // namespace oneflow
