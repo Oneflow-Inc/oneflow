@@ -380,8 +380,8 @@ void VirtualMachine::ConnectInstruction(Instruction* src_instruction,
   CHECK_NE(src_instruction, dst_instruction);
   auto edge = ObjectMsgPtr<InstructionEdge>::NewFrom(mut_vm_thread_only_allocator(),
                                                      src_instruction, dst_instruction);
-  src_instruction->mut_out_edges()->EmplaceBack(std::move(edge));
-  dst_instruction->mut_in_edges()->EmplaceBack(std::move(edge));
+  src_instruction->mut_out_edges()->PushBack(edge.Mutable());
+  dst_instruction->mut_in_edges()->PushBack(edge.Mutable());
 }
 
 void VirtualMachine::ConsumeMirroredObjects(Id2LogicalObject* id2logical_object,
@@ -537,7 +537,7 @@ void VirtualMachine::TryMoveWaitingToReady(Instruction* instruction, ReadyList* 
   auto* wait_instruction_list = mut_waiting_instruction_list();
   auto* out_edges = instruction->mut_out_edges();
   OBJECT_MSG_LIST_FOR_EACH_PTR(out_edges, out_edge) {
-    Instruction* out_instruction = out_edge->dst_instruction();
+    Instruction* out_instruction = out_edge->mut_dst_instruction();
     if (!IsEdgeReady(out_instruction)) { continue; }
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
