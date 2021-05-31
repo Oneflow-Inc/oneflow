@@ -68,7 +68,7 @@ template<>
                                                                   const TensorTuple& inputs,
                                                                   const AttrMap& attrs) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs));
   return outputs;
 }
 
