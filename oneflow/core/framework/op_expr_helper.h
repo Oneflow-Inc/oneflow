@@ -180,6 +180,13 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> PReLUGradOp();
 Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation);
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation, const std::string& name);
+
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim);
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim, const std::string& name);
 Maybe<one::UserOpExpr> TransposeOp(const std::vector<int32_t>& perm);
@@ -209,6 +216,13 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
+
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step);
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow
