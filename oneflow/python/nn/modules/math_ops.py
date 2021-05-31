@@ -1018,7 +1018,20 @@ def clamp_op(tensor, min = None, max = None):
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
         >>> output = flow.clamp(input, min=-0.5, max=0.5).numpy()
-        np.array([0.2, 0.5, -0.5, -0.3])
+        >>> output
+        array([ 0.2,  0.5, -0.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=None, max=0.5).numpy()
+        >>> output
+        array([ 0.2,  0.5, -1.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=None).numpy()
+        >>> output
+        array([ 0.2,  0.6, -0.5, -0.3], dtype=float32)
 
     """
     return Clamp(min, max)(tensor)
