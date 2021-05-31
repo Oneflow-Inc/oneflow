@@ -55,8 +55,12 @@ Maybe<void> MatmulBase::Capture(MatmulInterpState* ctx, const TensorTuple& input
   ctx->transpose_a = JUST(composed_attrs.GetAttr<bool>("transpose_a"));
   ctx->transpose_b = JUST(composed_attrs.GetAttr<bool>("transpose_b"));
   ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-  ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
-  ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
+  if (ctx->requires_grad_a) {
+    ctx->b_index = ctx->SaveTensorForBackward(inputs.at(1));  // input b
+  }
+  if (ctx->requires_grad_b) {
+    ctx->a_index = ctx->SaveTensorForBackward(inputs.at(0));  // input a
+  }
   return Maybe<void>::Ok();
 }
 
@@ -64,38 +68,39 @@ Maybe<void> MatmulBase::Apply(const MatmulInterpState* ctx, const TensorTuple& o
                               TensorTuple* in_grads) const {
   if (!ctx->requires_grad_a && !ctx->requires_grad_b) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-  MutableAttrMap attrs;
-
-  const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-  const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
-  JUST(attrs.SetAttr<double>("alpha", ctx->alpha));
+  MutableAttrMap attrs_a;
+  MutableAttrMap attrs_b;
+  JUST(attrs_a.SetAttr<double>("alpha", ctx->alpha));
+  JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
 
   in_grads->resize(2);
   if (ctx->requires_grad_a) {
+    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
     if (ctx->transpose_a) {
-      JUST(attrs.SetAttr<bool>("transpose_a", ctx->transpose_b));
-      JUST(attrs.SetAttr<bool>("transpose_b", true));
+      JUST(attrs_a.SetAttr<bool>("transpose_a", ctx->transpose_b));
+      JUST(attrs_a.SetAttr<bool>("transpose_b", true));
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {input_b, out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {input_b, out_grads.at(0)}, attrs_a));
     } else {
-      JUST(attrs.SetAttr<bool>("transpose_a", false));
-      JUST(attrs.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
+      JUST(attrs_a.SetAttr<bool>("transpose_a", false));
+      JUST(attrs_a.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
       in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
     }
   }
 
   if (ctx->requires_grad_b) {
+    const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
     if (ctx->transpose_b) {
-      JUST(attrs.SetAttr<bool>("transpose_a", true));
-      JUST(attrs.SetAttr<bool>("transpose_b", ctx->transpose_a));
+      JUST(attrs_b.SetAttr<bool>("transpose_a", true));
+      JUST(attrs_b.SetAttr<bool>("transpose_b", ctx->transpose_a));
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs_b));
     } else {
-      JUST(attrs.SetAttr<bool>("transpose_a", !(ctx->transpose_a)));
-      JUST(attrs.SetAttr<bool>("transpose_b", false));
+      JUST(attrs_b.SetAttr<bool>("transpose_a", !(ctx->transpose_a)));
+      JUST(attrs_b.SetAttr<bool>("transpose_b", false));
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs_b));
     }
   }
 
@@ -169,26 +174,28 @@ Maybe<void> BroadcastMatmul::Apply(const MatmulInterpState* ctx, const TensorTup
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   MutableAttrMap attrs_a;
   MutableAttrMap attrs_b;
-
-  const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
-  const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
   JUST(attrs_a.SetAttr<double>("alpha", ctx->alpha));
   JUST(attrs_b.SetAttr<double>("alpha", ctx->alpha));
-
-  in_grads->resize(2);
   JUST(attrs_a.SetAttr<bool>("transpose_a", ctx->transpose_a));
   JUST(attrs_a.SetAttr<bool>("transpose_b", !(ctx->transpose_b)));
-  in_grads->at(0) =
-      JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
 
-  if (!ctx->transpose_b) {
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs_b));
-  } else {
-    in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs_b));
+  in_grads->resize(2);
+  if (ctx->requires_grad_b) {
+    const auto& input_b = ctx->SavedTensors().at(ctx->b_index);
+    in_grads->at(0) =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*grad_a_op_, {out_grads.at(0), input_b}, attrs_a));
   }
 
+  if (ctx->requires_grad_a) {
+    const auto& input_a = ctx->SavedTensors().at(ctx->a_index);
+    if (!ctx->transpose_b) {
+      in_grads->at(1) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {input_a, out_grads.at(0)}, attrs_b));
+    } else {
+      in_grads->at(1) =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*grad_b_op_, {out_grads.at(0), input_a}, attrs_b));
+    }
+  }
   return Maybe<void>::Ok();
 }
 
