@@ -1012,13 +1012,13 @@ def clamp_op(tensor, min = None, max = None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        arr = np.random.randn(2, 6, 5, 3)
-        input = flow.Tensor(arr)
-        flow.clamp(input, min=-0.5, max=0.5)
-        # output equal to np.clip(arr, a_min=-0.5, a_max=0.5)
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=0.5).numpy()
+        np.array([0.2, 0.5, -0.5, -0.3])
 
     """
     return Clamp(min, max)(tensor)
