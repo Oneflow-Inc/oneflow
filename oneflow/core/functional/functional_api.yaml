@@ -79,7 +79,11 @@
   bind_python: True
 
 - name: "reduce_sum"
-  signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims)"
+  signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
+- name: "transpose"
+  signature: "Tensor Transpose(Tensor x, *, Int32List permute)"
   bind_python: True
 
 - name: "reciprocal"
@@ -117,6 +121,58 @@
 - name: "square"
   signature: "Tensor Square(Tensor x)"
   bind_python: True
+
+- name: "relu"
+  signature: "Tensor Relu(Tensor x)"
+  bind_python: True
+
+- name: "hardtanh"
+  signature: "Tensor HardTanh(Tensor x, *, Double min_val, Double max_val)"
+  bind_python: True
+
+- name: "hardtanh_grad"
+  signature: "Tensor HardTanhGrad(Tensor y, Tensor dy, *, Double min_val, Double max_val)"
+  bind_python: False
+
+- name: "tanh"
+  signature: "Tensor Tanh(Tensor x)"
+  bind_python: True
+
+- name: "elu"
+  signature: "Tensor Elu(Tensor x, *, Double alpha)"
+  bind_python: True
+
+- name: "elu_grad"
+  signature: "Tensor EluGrad(Tensor x, Tensor dy, *, Double alpha)"
+  bind_python: False
+
+- name: "gelu"
+  signature: "Tensor Gelu(Tensor x)"
+  bind_python: True
+
+- name: "sigmoid"
+  signature: "Tensor Sigmoid(Tensor x)"
+  bind_python: True
+
+- name: "hardsigmoid"
+  signature: "Tensor HardSigmoid(Tensor x)"
+  bind_python: True
+
+- name: "softmax"
+  signature: "Tensor Softmax(Tensor x)"
+  bind_python: True
+
+- name: "hardswish"
+  signature: "Tensor HardSwish(Tensor x)"
+  bind_python: True
+
+- name: "leaky_relu"
+  signature: "Tensor LeakyRelu(Tensor x, *, Float alpha)"
+  bind_python: True
+
+- name: "leaky_relu_grad"
+  signature: "Tensor LeakyReluGrad(Tensor x, Tensor dy, *, Float alpha)"
+  bind_python: False
 
 - name: "normalization"
   signature: "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
