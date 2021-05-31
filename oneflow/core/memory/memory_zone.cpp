@@ -1,4 +1,5 @@
 #include "oneflow/core/memory/memory_zone.h"
+#include "oneflow/core/common/device_type.pb.h"
 // #include <climits>
 
 namespace oneflow {
@@ -24,6 +25,8 @@ constexpr int64_t kMemZoneIdDeviceTypeInt64Mask = ((int64_t{1} << MemZoneId::kDe
 constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDeviceIndexBits) - 1;
 
 const MemZoneId kCPUMemZoneId = MemZoneId{DeviceType::kCPU, MemZoneId::kCPUDeviceIndex};
+
+const MemZoneId kInvalidMemZoneId = MemZoneId{DeviceType::kInvalidDevice, 0};
 
 }  // namespace
 
