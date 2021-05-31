@@ -478,6 +478,8 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, FETCH 
                                                      const int64_t rows, const int64_t cols) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
+  constexpr int block_size_conf_3 = 512;
+  constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(typename GetComputeType<T>::type);
   int max_active_blocks_conf_1;
   int max_active_blocks_conf_2;
@@ -491,8 +493,28 @@ inline bool TryDispatchSoftmaxBlockSMemImplBlockSize(cudaStream_t stream, FETCH 
       SoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>, block_size_conf_2,
       smem));
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>(stream, fetch, store,
-                                                                              smem, rows, cols);
+    int max_active_blocks_conf_3;
+    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_3,
+        SoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_3>, block_size_conf_3,
+        smem));
+    if (max_active_blocks_conf_3 == max_active_blocks_conf_2) {
+      int max_active_blocks_conf_4;
+      OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+          &max_active_blocks_conf_4,
+          SoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_4>, block_size_conf_4,
+          smem));
+      if (max_active_blocks_conf_4 == max_active_blocks_conf_3) {
+        LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_4>(
+            stream, fetch, store, smem, rows, cols);
+      } else {
+        LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_3>(
+            stream, fetch, store, smem, rows, cols);
+      }
+    } else {
+      LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_2>(
+          stream, fetch, store, smem, rows, cols);
+    }
   } else {
     LaunchSoftmaxBlockSMemImpl<FETCH, STORE, T, pack_size, block_size_conf_1>(stream, fetch, store,
                                                                               smem, rows, cols);
@@ -908,6 +930,8 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, FE
                                                          const int64_t rows, const int64_t cols) {
   constexpr int block_size_conf_1 = 128;
   constexpr int block_size_conf_2 = 256;
+  constexpr int block_size_conf_3 = 512;
+  constexpr int block_size_conf_4 = 1024;
   const size_t smem = cols * sizeof(typename GetComputeType<T>::type) * 2;
   int max_active_blocks_conf_1;
   int max_active_blocks_conf_2;
@@ -921,8 +945,28 @@ inline bool TryDispatchSoftmaxGradBlockSMemImplBlockSize(cudaStream_t stream, FE
       SoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_2>,
       block_size_conf_2, smem));
   if (max_active_blocks_conf_2 == max_active_blocks_conf_1) {
-    LaunchSoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_2>(
-        stream, fetch_y, fetch_dy, store, smem, rows, cols);
+    int max_active_blocks_conf_3;
+    OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+        &max_active_blocks_conf_3,
+        SoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_3>,
+        block_size_conf_3, smem));
+    if (max_active_blocks_conf_3 == max_active_blocks_conf_2) {
+      int max_active_blocks_conf_4;
+      OF_CUDA_CHECK(cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+          &max_active_blocks_conf_4,
+          SoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_4>,
+          block_size_conf_4, smem));
+      if (max_active_blocks_conf_4 == max_active_blocks_conf_3) {
+        LaunchSoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_4>(
+            stream, fetch_y, fetch_dy, store, smem, rows, cols);
+      } else {
+        LaunchSoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_3>(
+            stream, fetch_y, fetch_dy, store, smem, rows, cols);
+      }
+    } else {
+      LaunchSoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_2>(
+          stream, fetch_y, fetch_dy, store, smem, rows, cols);
+    }
   } else {
     LaunchSoftmaxGradBlockSMemImpl<FETCH_Y, FETCH_DY, STORE, T, pack_size, block_size_conf_1>(
         stream, fetch_y, fetch_dy, store, smem, rows, cols);
