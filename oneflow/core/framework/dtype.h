@@ -37,29 +37,30 @@ namespace oneflow {
 
 class DType final {
  public:
-  DType(DataType data_type) : data_type_(data_type) {}
-  DType(const DType&) = default;
-  DType(DType&&) = default;
+  DType(const DType&) = delete;
+  DType(DType&&) = delete;
   ~DType() = default;
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
 
+  operator DataType() const { return data_type_; }
   DataType data_type() const { return data_type_; }
-  Maybe<bool> is_signed() const;
-  Maybe<bool> is_complex() const;
-  Maybe<bool> is_floating_point() const;
-  Maybe<const std::string&> name() const;
+  bool is_signed() const;
+  bool is_complex() const;
+  bool is_floating_point() const;
+  const std::string& name() const;
   Maybe<size_t> bytes() const;
 
-  DataType* mut_data_type() { return &data_type_; }
+  static Maybe<const DType> Get(DataType);
 
-  static Maybe<DType> New(DataType);
-
-#define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) static Maybe<DType> data_type();
+#define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
+  static const std::shared_ptr<const DType>& data_type();
   OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DECLARE_GET_DATA_TYPE_FUNCTION
 
  private:
+  explicit DType(DataType data_type) : data_type_(data_type) {}
+
   DataType data_type_;
 };
 

@@ -103,7 +103,7 @@ template<>
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
     const bool is_lazy) {
-  const auto& dtype = JUST(DType::New(DataType(blob_attr->get_dtype())));
+  const auto& dtype = DataType(blob_attr->get_dtype());
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));

@@ -35,6 +35,11 @@ namespace one {
 namespace {
 
 template<typename T>
+std::shared_ptr<const DType> GetTensorDType(const T& tensor) {
+  return DType::Get(tensor.dtype()).GetPtrOrThrow();
+}
+
+template<typename T>
 struct TensorExportUtil final {};
 
 template<>
@@ -44,7 +49,8 @@ struct TensorExportUtil<MirroredTensor> final {
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad,
                                                     bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf)
+    return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
+                                      is_leaf)
         .GetPtrOrThrow();
   }
 };
@@ -56,7 +62,7 @@ struct TensorExportUtil<ConsistentTensor> final {
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, SymbolOf(*parallel_distribution),
+    return ConsistentTensor::MakeTensor(shape, dtype->data_type(), SymbolOf(*parallel_distribution),
                                         SymbolOf(*parallel_desc), is_lazy, requires_grad, is_leaf)
         .GetPtrOrThrow();
   }
@@ -120,7 +126,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<MirroredTensor>& tenso
       .GetOrThrow();
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
+Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -128,14 +134,14 @@ Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
 }
 
 const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorToNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
-Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(const DType& dtype) {
+Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -143,11 +149,11 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(const DType& dtype) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
 }
 
 const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
 std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
@@ -188,7 +194,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
-      .def_property_readonly("dtype", &T::dtype)
+      .def_property_readonly("dtype", &GetTensorDType<T>)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)

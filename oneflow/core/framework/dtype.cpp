@@ -77,9 +77,13 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
 
 }  // namespace
 
-Maybe<DType> DType::New(DataType data_type) {
-  JUST(DTypeMeta4DataType(data_type));
-  return std::make_shared<DType>(data_type);
+Maybe<const DType> DType::Get(DataType data_type) {
+  static HashMap<DataType, std::shared_ptr<const DType>> data_type2dtype{
+#define MAKE_ENTRY(data_type) {OF_PP_CAT(DataType::k, data_type), data_type()},
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DTYPE_SEQ)
+#undef MAKE_ENTRY
+  };
+  return JUST(MapAt(data_type2dtype, data_type));
 }
 
 Maybe<size_t> DType::bytes() const {
@@ -91,20 +95,21 @@ Maybe<size_t> DType::bytes() const {
   return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
-Maybe<bool> DType::is_signed() const { return JUST(DTypeMeta4DataType(data_type_)).is_signed(); }
+bool DType::is_signed() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_signed(); }
 
-Maybe<bool> DType::is_complex() const { return JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
+bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
 
-Maybe<bool> DType::is_floating_point() const {
-  return JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
+bool DType::is_floating_point() const {
+  return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
 }
 
-Maybe<const std::string&> DType::name() const {
-  return JUST(DTypeMeta4DataType(data_type_)).name();
-}
+const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type) \
-  Maybe<DType> DType::data_type() { return New(OF_PP_CAT(DataType::k, data_type)); }
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                                   \
+  const std::shared_ptr<const DType>& DType::data_type() {                                         \
+    static const std::shared_ptr<const DType> dtype(new DType(OF_PP_CAT(DataType::k, data_type))); \
+    return dtype;                                                                                  \
+  }
 OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
 #undef DEFINE_GET_DATA_TYPE_FUNCTION
 
