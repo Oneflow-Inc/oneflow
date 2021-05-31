@@ -548,6 +548,7 @@ def _test_softplus(test_case, device):
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_softplus_beta(test_case, device):
     m = flow.nn.Softplus(beta=1.11)
     arr = np.random.randn(2, 3, 4, 5)
@@ -558,6 +559,7 @@ def _test_softplus_beta(test_case, device):
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_softplus_threshold(test_case, device):
     m = flow.nn.Softplus(beta=1.11, threshold=1.55)
     arr = np.random.randn(2, 3, 4, 5)
@@ -567,6 +569,7 @@ def _test_softplus_threshold(test_case, device):
     x = flow.Tensor(arr, device=flow.device(device))
     of_out = m(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
 
 def _test_softplus_backward(test_case, device):
     m = flow.nn.Softplus()
