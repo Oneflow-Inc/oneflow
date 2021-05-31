@@ -137,7 +137,10 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
+  Maybe<void> Init();
   AttrMap base_attrs_;
+  user_op::TensorDescInferFn shape_infer_fn_;
+  user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };

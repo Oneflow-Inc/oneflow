@@ -174,30 +174,42 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(base_attrs) {
+      base_attrs_(base_attrs) { }
+
+Maybe<void> UserOpExpr::Init() {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
-  if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  CHECK_NOTNULL_OR_RETURN(registry);
+  shape_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
+  dtype_infer_fn_ = registry->data_type_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
+  if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-  return std::shared_ptr<UserOpExpr>(
+  std::shared_ptr<UserOpExpr> op_expr(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+  JUST(op_expr->Init());
+  return op_expr;
 }
 
 Maybe<void> UserOpExpr::InferShapeAndDType(
     const AttrMap& attrs, const TensorTuple& input_tensors, TensorTuple* output_tensors) const {
-  TODO();
+  UserOpExprInferContext infer_ctx(this, attrs, input_tensors, output_tensors);
+  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<const Device> UserOpExpr::InferDevices(
     const AttrMap& attrs, const TensorTuple& input_tensors, TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_devices);
+  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
