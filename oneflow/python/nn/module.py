@@ -37,6 +37,7 @@ from oneflow._oneflow_internal.one import (
     CastFromConsistentOpExpr,
     OpExpr,
 )
+import oneflow._oneflow_internal
 
 
 class _IncompatibleKeys(
@@ -62,6 +63,7 @@ def _make_cast_consistent_ops(
     op_expr: OpExpr,
     name: Optional[str] = None,
 ) -> None:
+    assert len(sbp_signature) == len(placement)
     cast_consistent_op = OrderedDict()
     for i in range(len(sbp_signature)):
         parallel_distribution = sbp_signature[i]
@@ -95,8 +97,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-        self._cast_to_consistent_ops = OrderedDict()
-        self._cast_from_consistent_ops = OrderedDict()
 
     @property
     def consistent(self):
@@ -104,6 +104,7 @@ class Module(object):
 
     def consistent_cast(self, parallel_distribution, placement_signature):
         def cast_input_to_consistent(*args):
+            # first arg is self
             args = list(args[1])
             sess = session_ctx.GetDefaultSession()
             cast_to_consistent_ops = _make_cast_consistent_ops(
@@ -120,7 +121,15 @@ class Module(object):
             return tuple(args)
 
         def cast_output_from_consistent(*args):
-            args = [args[1]]
+            # first arg is self
+            args = args[1]
+            # assume type of output is TensorTuple or Tensor
+            if isinstance(args, oneflow._oneflow_internal.TensorTuple):
+                args = list(args)
+            elif isinstance(args, oneflow._oneflow_internal.Tensor):
+                args = [args]
+            else:
+                raise NotImplementedError
             sess = session_ctx.GetDefaultSession()
             cast_from_consistent_ops = _make_cast_consistent_ops(
                 parallel_distribution[1],
@@ -170,44 +179,6 @@ class Module(object):
             if result is not None:
                 res = result
         return res
-
-    def _register_cast_to_consistent_ops(
-        self,
-        inputs_sbp_signature: List[Union[Tuple[str], str]],
-        inputs_placement: List[flow.placement],
-    ) -> None:
-        for i in range(len(inputs_sbp_signature)):
-            parallel_distribution = inputs_sbp_signature[i]
-            if isinstance(parallel_distribution, str):
-                parallel_distribution = [parallel_distribution]
-            else:
-                assert isinstance(parallel_distribution, tuple)
-                parallel_distribution = list(parallel_distribution)
-            cast_to_consistent_op_expr = CastToConsistentOpExpr(
-                id_util.UniqueStr("cast_to_consistent_op"),
-                parallel_distribution,
-                inputs_placement[i],
-            )
-            self._cast_to_consistent_ops[i] = cast_to_consistent_op_expr
-
-    def _register_cast_from_consistent_ops(
-        self,
-        outputs_sbp_signature: List[Union[Tuple[str], str]],
-        outputs_placement: List[flow.placement],
-    ) -> None:
-        for i in range(len(outputs_sbp_signature)):
-            parallel_distribution = outputs_sbp_signature[i]
-            if isinstance(parallel_distribution, str):
-                parallel_distribution = [parallel_distribution]
-            else:
-                assert isinstance(parallel_distribution, tuple)
-                parallel_distribution = list(parallel_distribution)
-            cast_from_consistent_op_expr = CastFromConsistentOpExpr(
-                id_util.UniqueStr("cast_from_consistent_op"),
-                parallel_distribution,
-                outputs_placement[i],
-            )
-            self._cast_from_consistent_ops[i] = cast_from_consistent_op_expr
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
         r"""Adds a child module to the current module.
