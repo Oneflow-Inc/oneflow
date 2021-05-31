@@ -24,9 +24,9 @@ void FakeQuantizationPerLayerSymmetric(const T* in_ptr, const T scale,
                                        const int32_t quantization_bit, const int64_t num_elements,
                                        T* out_ptr) {
   T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound;
+  T lower_bound = -upper_bound - 1;
   FOR_RANGE(int64_t, i, 0, num_elements) {
-    T out = std::round(in_ptr[i] / scale);
+    T out = std::nearbyint(in_ptr[i] / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[i] = out * scale;
@@ -41,7 +41,7 @@ void FakeQuantizationPerLayerAffine(const T* in_ptr, const T scale, const T zero
   T lower_bound = 0;
   uint8_t zero_point_uint8 = static_cast<uint8_t>(std::round(zero_point));
   FOR_RANGE(int64_t, i, 0, num_elements) {
-    T out = std::round(in_ptr[i] / scale + zero_point_uint8);
+    T out = std::nearbyint(in_ptr[i] / scale + zero_point_uint8);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[i] = (out - zero_point_uint8) * scale;
@@ -53,10 +53,10 @@ void FakeQuantizationPerLayerCambricon(const T* in_ptr, const T shift,
                                        const int32_t quantization_bit, const int64_t num_elements,
                                        T* out_ptr) {
   T upper_bound = static_cast<T>(pow(2.0, quantization_bit - 1)) - 1;
-  T lower_bound = -upper_bound;
+  T lower_bound = -upper_bound - 1;
   T scale = static_cast<T>(pow(2.0, static_cast<int32_t>(shift)));
   FOR_RANGE(int64_t, i, 0, num_elements) {
-    T out = std::round(in_ptr[i] / scale);
+    T out = std::nearbyint(in_ptr[i] / scale);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
     out_ptr[i] = out * scale;
@@ -83,6 +83,10 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     const T* in_ptr = in->dptr<T>();
     const T* scale_ptr = scale->dptr<T>();
     T* out_ptr = out->mut_dptr<T>();
+
+    // round to even
+    auto origin_round_mode = std::fegetround();
+    std::fesetround(FE_TONEAREST);
 
     if (quantization_formula == "google") {
       int64_t outer_num = 1;
@@ -114,6 +118,8 @@ class CpuFakeQuantizationKernel final : public user_op::OpKernel {
     } else {
       UNIMPLEMENTED();
     }
+
+    std::fesetround(origin_round_mode);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
