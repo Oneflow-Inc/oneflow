@@ -140,12 +140,14 @@ def _test_where_broadcast_backward(test_case, device):
     of_out = flow.where(condition, x, y)
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), condition.numpy() == 1, 1e-5, 1e-5)
-    )
-    test_case.assertTrue(
-        np.allclose(y.grad.numpy(), condition.numpy() == 0, 1e-5, 1e-5)
-    )
+    x_grad = [[[0.0, 3.0], [3.0, 0.0], [3.0, 0.0]]]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
+    y_grad = [
+        [[1.0, 0.0], [0.0, 1.0], [0.0, 1.0]],
+        [[1.0, 0.0], [0.0, 1.0], [0.0, 1.0]],
+        [[1.0, 0.0], [0.0, 1.0], [0.0, 1.0]],
+    ]
+    test_case.assertTrue(np.allclose(y.grad.numpy(), y_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
