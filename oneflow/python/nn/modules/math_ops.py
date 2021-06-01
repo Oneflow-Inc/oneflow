@@ -1144,6 +1144,8 @@ def cosh_op(tensor):
     """
     return Cosh()(tensor)
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(name="asinh_op")
