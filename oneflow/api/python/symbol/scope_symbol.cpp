@@ -40,7 +40,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("session_id", &Scope::session_id)
       .def_property_readonly("job_desc_symbol", &Scope::job_desc_symbol)
-      .def_property_readonly("device_parallel_desc_symbol", &Scope::device_parallel_desc_symbol)
+      .def_property_readonly(
+          "device_parallel_desc_symbol",
+          [](const Scope& x) { return x.device_parallel_desc_symbol().shared_from_symbol(); })
       .def_property_readonly("parent_scope_symbol", &Scope::parent_scope_symbol)
       .def("MakeChildScopeProto",
            [](const Scope& scope) { return scope.MakeChildScopeProto().GetOrThrow(); });
