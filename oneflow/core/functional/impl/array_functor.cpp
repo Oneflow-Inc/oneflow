@@ -20,8 +20,9 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
@@ -115,6 +116,29 @@ class BroadcastLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ConcatFunctor {
+ public:
+  ConcatFunctor() {
+    ops_.resize(kMaxInputCount);
+    for (int n = 2; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n).Output("out").Build());
+    }
+  }
+  Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& axis,
+                           const int64_t& max_dim_size) const {
+    CHECK_GE_OR_RETURN(inputs.size(), 2);
+    CHECK_LT_OR_RETURN(inputs.size(), ops_.size())
+        << "The maximum number supported of inputs is " << ops_.size();
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
+    return OpInterpUtil::Dispatch<Tensor>(*ops_.at(inputs.size()), inputs, attrs);
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -124,6 +148,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
+  m.add_functor<impl::ConcatFunctor>("Concat");
 };
 
 }  // namespace functional

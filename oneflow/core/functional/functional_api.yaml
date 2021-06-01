@@ -205,7 +205,7 @@
   bind_python: True
 
 - name: "constant"
-  signature: "Tensor Constant(Shape shape, Scalar value, DataType dtype)"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
   bind_python: True
 
 - name: "zeros_like"
@@ -214,4 +214,18 @@
 
 - name: "ones_like"
   signature: "Tensor OnesLike(Tensor x)"
+  bind_python: True
+
+- name: "concat"
+  signature: "Tensor Concat(TensorTuple inputs, *, Int64 axis, Int64 max_dim_size)"
+  bind_python: True
+
+- name: "bias_add"
+  signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
+  bind_python: True
+
+- name: "conv2d"
+  signature: "Tensor Conv2D(Tensor x, Tensor weght, *, Int32 filters, Int32List kernel_size,
+                            Int32List strides, Int32List padding_before, Int32List dilation_rate,
+                            Int32 groups, String data_format)"
   bind_python: True

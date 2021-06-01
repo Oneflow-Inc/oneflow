@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 
@@ -33,7 +34,7 @@ namespace impl {
 class AddNFunctor {
  public:
   AddNFunctor() {
-    op_.resize(128 /*the maximum number of inputs*/);
+    op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 2; n < op_.size(); ++n) {
       op_[n] = CHECK_JUST(one::OpBuilder("add_n").Input("in", n).Output("out").Build());
     }
