@@ -641,12 +641,23 @@ def asin_op(input):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([-0.5962,  1.4985, -0.4396,  1.4525])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.asin(input)
-        # [-0.6387,     nan, -0.4552,     nan]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.asin(input)
+        >>> print(output.shape)
+        flow.Size([4])
+        >>> print(output.numpy())
+        [-0.5235988        nan  0.         0.9272952]
+        
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.asin()
+        >>> print(output1.shape)
+        flow.Size([2, 2])
+        >>> print(output1.numpy())
+        [[ 0.9272952   1.5707964 ]
+         [-0.64350116         nan]]
     """
     return Asin()(input)
 
@@ -1120,3 +1131,7 @@ def cosh_op(tensor):
 
     """
     return Cosh()(tensor)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(name="asin_op")
