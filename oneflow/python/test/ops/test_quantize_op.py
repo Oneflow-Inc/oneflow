@@ -394,11 +394,7 @@ def _check_fake_quantize(
             input_flatten, quantization_bit, scale_np[0]
         )
 
-    # NOTE(Liang Depeng):
-    # The slightly different rounding results between C++ and Python will make
-    # the dequantize results very differently. So enlarge the tolerant to
-    # avoid the test failure.
-    test_case.assertTrue(np.mean(np.abs(out_of - out_np)) < 1e-5)
+    test_case.assertTrue(np.allclose(out_of, out_np, rtol=1e-3))
     test_case.assertTrue(np.allclose(input_diff_of, input_diff_np, rtol=1e-3))
 
 

@@ -70,7 +70,7 @@ class LayerNorm(Module):
     .. code-block:: python 
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         input_arr = np.array(
             [
