@@ -55,17 +55,18 @@ def acosh_op(x):
     .. code-block:: python
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> import oneflow.typing as tp
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> out1 = flow.math.acosh(x1)
-        >>> out1.numpy()
-        [1.316958 1.7627473  2.063437 ]
+        >>> out1 = flow.acosh(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS
+        array([1.3169... , 1.7627..., 2.0634... ], dtype=float32)
 
     """
 
     return Acosh()(x)
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
