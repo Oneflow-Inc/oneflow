@@ -128,10 +128,10 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
-  Maybe<void> InferShapeAndDType(
-      const AttrMap& attrs, const TensorTuple& inputs, TensorTuple* outputs) const;
-  Maybe<const Device> InferDevices(
-      const AttrMap& attrs, const TensorTuple& inputs, TensorTuple* outputs) const;
+  Maybe<void> InferLogicalShapeAndDType(const AttrMap& attrs, const std::string& device_tag,
+                                        const TensorTuple& inputs, TensorTuple* outputs) const;
+  Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
+                                   TensorTuple* outputs) const;
 
  private:
   UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,

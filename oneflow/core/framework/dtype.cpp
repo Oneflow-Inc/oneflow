@@ -77,13 +77,13 @@ Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
 
 }  // namespace
 
-Maybe<const DType> DType::Get(DataType data_type) {
+Maybe<const std::shared_ptr<const DType>&> DType::Get(DataType data_type) {
   static HashMap<DataType, std::shared_ptr<const DType>> data_type2dtype{
 #define MAKE_ENTRY(data_type) {OF_PP_CAT(DataType::k, data_type), data_type()},
       OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DTYPE_SEQ)
 #undef MAKE_ENTRY
   };
-  return JUST(MapAt(data_type2dtype, data_type));
+  return MapAt(data_type2dtype, data_type);
 }
 
 Maybe<size_t> DType::bytes() const {

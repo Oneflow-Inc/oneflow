@@ -35,6 +35,10 @@ class ParallelConf;
 
 }  // namespace cfg
 
+namespace user_op {
+class TensorMeta;
+}
+
 class Tensor {
  public:
   virtual ~Tensor() = default;
@@ -99,6 +103,8 @@ class Tensor {
   virtual std::shared_ptr<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
+
+  virtual user_op::TensorDesc* mut_tensor_meta() = 0;
 
  protected:
   Tensor() = default;
@@ -190,15 +196,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
 
   // Setters
-  Maybe<void> set_device(const std::shared_ptr<const Device>& device) {
-    return impl_->set_device(device);
-  }
   Maybe<void> set_consumer_forced_parallel_distribution(
       Symbol<cfg::ParallelDistribution> val) override {
     OF_UNIMPLEMENTED();
-  }
-  Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
-    return impl_->set_eager_blob_object(eager_blob_object);
   }
 
   // Getters for autograd
@@ -223,11 +223,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
 
-  static std::shared_ptr<MirroredTensor> MakeEagerTensor(
-      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-      const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf);
-
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
+  user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -299,6 +296,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
                                             bool requires_grad, bool is_leaf);
 
   ConsistentTensorImpl* mut_impl() { return impl_.get(); }
+
+  user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
  private:
   std::shared_ptr<ConsistentTensorImpl> impl_;

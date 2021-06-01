@@ -64,15 +64,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
-  const auto& MakeEagerBlobObject = [&](
-      EagerMirroredTensorImpl* tensor_impl,
-      const std::shared_ptr<const Device>& op_device,
-      const std::shared_ptr<const ParallelDesc>& tensor_parallel_desc) {
+  const auto& MakeEagerBlobObject =
+      [&](EagerMirroredTensorImpl* tensor_impl, const std::shared_ptr<const Device>& op_device,
+          const std::shared_ptr<const ParallelDesc>& tensor_parallel_desc, int i) -> Maybe<void> {
+    const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_impl->shape());
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        op_device->mem_case(), tensor_impl->shape(), tensor_impl->dtype()->data_type(),
+        op_device->mem_case(), mut_shape, tensor_impl->dtype(),
         std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
     output_eager_blob_objects->at(i) = eager_blob_object;
-    tensor_impl->set_eager_blob_object(eager_blob_object);
+    JUST(tensor_impl->set_eager_blob_object(eager_blob_object));
+    return Maybe<void>::Ok();
   };
   std::shared_ptr<const Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
@@ -83,8 +84,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *tensor_impl->mut_device() = default_device;
-      MakeEagerBlobObject(tensor_impl, op_device, op_parallel_desc);
+      *JUST(tensor_impl->mut_device()) = default_device;
+      MakeEagerBlobObject(tensor_impl, op_device, op_parallel_desc, i);
     }
   } else {
     need_check_mem_case = false;
@@ -98,11 +99,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       const auto& tensor_device = tensor_impl->device();
       CHECK_OR_RETURN(static_cast<bool>(tensor_device));
-      MakeEagerBlobObject(tensor_impl, op_device, tensor_device->parallel_desc_ptr());
+      MakeEagerBlobObject(tensor_impl, op_device, tensor_device->parallel_desc_ptr(), i);
     }
   }
 
-  JUST(user_op_expr.InferShapeAndDType(attrs, inputs, outputs));
+  const auto& device_tag = JUST(op_device->of_type());
+  JUST(user_op_expr.InferLogicalShapeAndDType(attrs, device_tag, inputs, outputs));
 
   const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
@@ -129,17 +131,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                           const std::shared_ptr<EagerBlobObjectList>& output_eager_blob_objects,
-                           const AttrMap& attrs,
-                           std::vector<std::shared_ptr<const Device>>* out_devices) {
-}
-
 Maybe<void> GenerateAllocatedEagerBlobObject(TensorTuple* outputs) {
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
   const auto& shape = tensor_impl->shape();
-  const auto& data_type = tensor_impl->dtype()->data_type(); 
+  const auto& data_type = tensor_impl->dtype();
   const auto& device = tensor_impl->device();
   const auto empty_expr = JUST(op_expr_helper::EmptyOp(*shape, data_type));
   std::shared_ptr<TensorTuple> inputs = std::make_shared<TensorTuple>();
@@ -149,7 +145,7 @@ Maybe<void> GenerateAllocatedEagerBlobObject(TensorTuple* outputs) {
 
 static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrMap& attrs) {
-  CHECK_EQ_OR_RETURN(outputs.size(), user_op_expr.output_size());
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
   std::shared_ptr<const Device> default_device;
   if (inputs.empty()) {
     default_device = JUST(GetDefaultDevice());
