@@ -122,12 +122,14 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 ### Advanced features
 <details>
 <summary>XRT</summary>
-  You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
+
+- You can check this [doc](oneflow/xrt/README.md) to obtain more details about how to use XLA and TensorRT with OneFlow.
 </details>
 
 ## Getting Started
 <details>
 <summary>3 minutes to run MNIST.</summary>
+
 1. Clone the demo code from OneFlow documentation
 ```
 git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
