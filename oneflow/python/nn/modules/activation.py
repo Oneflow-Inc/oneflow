@@ -769,13 +769,16 @@ class Hardtanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        m = flow.nn.Hardtanh()
-        arr = np.random.randn(2, 3, 4, 5)
-        x = flow.Tensor(arr)
-        out = m(x)
-    
+        >>> m = flow.nn.Hardtanh()
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 1.  1. ]
     """
 
     def __init__(
