@@ -78,25 +78,23 @@ def repeat_op(x, sizes):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        x = np.array([[[[0, 1]],
-                       [[2, 3]],
-                       [[4, 5]]]]).astype(np.int32)
+        >>> x = np.array([[[[0, 1]],
+        ...               [[2, 3]],
+        ...               [[4, 5]]]]).astype(np.int32)
 
-        input = flow.Tensor(x)
-
-        out = flow.repeat(input, sizes=[1, 1, 2, 2]).numpy()
-
-        # out shape: [1, 3, 2, 4]
-        # [[[[0. 1. 0. 1.]
-        # [0. 1. 0. 1.]]
-
-        # [[2. 3. 2. 3.]
-        # [2. 3. 2. 3.]]
-
-        # [[4. 5. 4. 5.]
-        # [4. 5. 4. 5.]]]]
+        >>> input = flow.Tensor(x)
+        >>> out = input.repeat(sizes=(1, 1, 2, 2)).numpy()
+        >>> print(out.shape)
+        (1, 3, 2, 4)
     """
     return Repeat(sizes=sizes)(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
