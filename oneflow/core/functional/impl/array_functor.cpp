@@ -46,9 +46,28 @@ class FlattenFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ArgWhereFunctor {
+ public:
+  ArgWhereFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FlattenFunctor>("Flatten"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::FlattenFunctor>("Flatten");
+  m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+};
 
 }  // namespace functional
 }  // namespace one

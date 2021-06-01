@@ -26,17 +26,10 @@ class Argwhere(Module):
         super().__init__()
         if dtype == None:
             dtype = flow.int32
-        self._op = (
-            flow.builtin_op("argwhere")
-            .Input("input")
-            .Output("output")
-            .Output("output_size")
-            .Attr("dtype", dtype)
-            .Build()
-        )
+        self.dtype = dtype
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.argwhere(x, dtype=self.dtype)
 
 
 @oneflow_export("argwhere")

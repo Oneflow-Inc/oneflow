@@ -192,3 +192,6 @@
   signature: "Tensor ArgMax(Tensor x)"
   bind_python: True
 
+- name: "argwhere"
+  signature: "Tensor ArgWhere(Tensor x, *, DataType dtype=kInt32)"
+  bind_python: True
