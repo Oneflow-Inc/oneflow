@@ -737,6 +737,16 @@ def asinh_op(input):
     return Asinh()(input)
 
 
+@oneflow_export("arcsinh")
+@experimental_api
+def arcsinh_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+    
+
 @register_tensor_op("asinh")
 @experimental_api
 def asinh_op_tensor(input):
@@ -747,19 +757,9 @@ def asinh_op_tensor(input):
     return Asinh()(input)
 
 
-@oneflow_export("arcsinh")
-@experimental_api
-def arcsin_op(input):
-    r"""
-  
-    Alias for :func:`oneflow.experimental.asinh`
-    """
-    return Asinh()(input)
-
-
 @register_tensor_op("arcsinh")
 @experimental_api
-def arcsin_op_tensor(input):
+def arcsinh_op_tensor(input):
     r"""
 
     See :func:`oneflow.experimental.asinh`
