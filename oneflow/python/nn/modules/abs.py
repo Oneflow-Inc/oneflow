@@ -46,7 +46,7 @@ def abs_op(x):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        
+
         >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
@@ -57,3 +57,4 @@ def abs_op(x):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    
