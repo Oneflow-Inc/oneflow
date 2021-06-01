@@ -14,10 +14,43 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
 import numpy as np
 import oneflow.experimental as flow
 from scipy import special
+from collections import OrderedDict
+import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+
+def _test_erfc_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.erfc(of_input)
+    np_out = special.erfc(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), -(2/np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())), 1e-5, 1e-5))
+
+
+def _test_tensor_erfc_impl(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = of_input.erfc()
+    np_out = special.erfc(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), -(2/np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())), 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -26,20 +59,12 @@ from scipy import special
 )
 class TestErfcModule(flow.unittest.TestCase):
     def test_erfc(test_case):
-        input = flow.Tensor(
-            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
-        )
-        of_out = flow.erfc(input)
-        np_out = special.erfc(input.numpy())
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-
-    def test_tensor_erfc(test_case):
-        input = flow.Tensor(
-            np.array([1.0, -1.3, 2.3]).astype(np.float32), dtype=flow.float32
-        )
-        of_out = input.erfc()
-        np_out = special.erfc(input.numpy())
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, ), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_erfc_impl(test_case, *arg)
+            _test_tensor_erfc_impl(test_case, *arg)
 
 
 if __name__ == "__main__":

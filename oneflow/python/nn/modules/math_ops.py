@@ -960,30 +960,6 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
-class Erf(Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
-
-    def forward(self, input):
-        return self.erf_op(input)[0]
-
-
-@oneflow_export("erf")
-@register_tensor_op("erf")
-@experimental_api
-def erf_op(input):
-    r"""Computes the error function of each element. The error function is defined as follows:
-
-    .. math::
-            \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
-
-    Args:
-        x (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: The result Tensor
-    
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1015,7 +991,38 @@ def cosh_op(tensor):
         x = flow.Tensor(np.array([0, -1., 10.]))
         out = flow.erf(x).numpy()
         print(out) # [0., -0.8427008, 1.]
-        
+        arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cosh(input)
+        # [1.0133467 1.7859949 1.2535787 1.2804903]
+
+    """
+    return Cosh()(tensor)
+
+
+class Erf(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erf_op(input)[0]
+
+
+@oneflow_export("erf")
+@register_tensor_op("erf")
+@experimental_api
+def erf_op(input):
+    r"""Computes the error function of each element. The error function is defined as follows:
+
+    .. math::
+            \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor   
     """
     return Erf()(input)
 
@@ -1058,10 +1065,3 @@ def erfc_op(input):
         
     """
     return Erfc()(input)
-        arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.cosh(input)
-        # [1.0133467 1.7859949 1.2535787 1.2804903]
-
-    """
-    return Cosh()(tensor)
