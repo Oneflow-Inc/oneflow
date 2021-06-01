@@ -694,7 +694,7 @@ class Asinh(Module):
 @experimental_api
 def asinh_op(input):
     r"""
-    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+    Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
