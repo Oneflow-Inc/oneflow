@@ -52,7 +52,6 @@ namespace cfg {
 class ParallelDistribution;
 }
 class Device;
-class DType;
 
 namespace one {
 
@@ -64,7 +63,7 @@ class Tensor {
 
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual const std::shared_ptr<const DType>& dtype() const = 0;
+  virtual DataType dtype() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<const Device> device() const = 0;
@@ -79,7 +78,7 @@ class Tensor {
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
-  virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
+  virtual void set_dtype(DataType dtype) = 0;
   virtual Maybe<void> set_consumer_forced_parallel_distribution(
       Symbol<cfg::ParallelDistribution> val) = 0;
 
@@ -165,7 +164,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
+  DataType dtype() const override { return impl_->dtype(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     OF_UNIMPLEMENTED();
   }
@@ -192,7 +191,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
+  void set_dtype(DataType dtype) override { impl_->set_dtype(dtype); }
   Maybe<void> set_device(const std::shared_ptr<const Device>& device) {
     return impl_->set_device(device);
   }
@@ -222,8 +221,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   // Operators for tensor
   std::shared_ptr<Tensor> detach() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                          const std::shared_ptr<const DType>& dtype,
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
 
@@ -244,7 +242,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  const std::shared_ptr<const DType>& dtype() const override { return impl_->dtype(); }
+  DataType dtype() const override { return impl_->dtype(); }
   Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const override {
     return impl_->parallel_distribution();
   }
@@ -271,7 +269,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { impl_->set_dtype(dtype); }
+  void set_dtype(DataType dtype) override { impl_->set_dtype(dtype); }
   Maybe<void> set_consumer_forced_parallel_distribution(
       Symbol<cfg::ParallelDistribution> val) override {
     impl_->set_consumer_forced_parallel_distribution(val);
@@ -297,7 +295,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<Tensor> detach() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            const std::shared_ptr<const DType>& dtype,
+                                            DataType dtype,
                                             Symbol<cfg::ParallelDistribution> parallel_distribution,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);
