@@ -62,6 +62,7 @@ def exp_op(x):
     """
     return Exp()(x)
 
+
 if __name__ == "__main__":
     import doctest
 

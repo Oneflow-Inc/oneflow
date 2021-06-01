@@ -272,6 +272,7 @@ class UpsamplingBilinear2d(Upsample):
             size, scale_factor, mode="bilinear", align_corners=True
         )
 
+
 if __name__ == "__main__":
     import doctest
 

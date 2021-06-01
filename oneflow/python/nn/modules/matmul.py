@@ -108,6 +108,5 @@ def matmul_op(a, b):
 
 if __name__ == "__main__":
     import doctest
-    
-    doctest.testmod()
 
+    doctest.testmod()

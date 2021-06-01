@@ -100,6 +100,7 @@ def expand_op(x, *sizes):
     """
     return Expand(sizes)(x)
 
+
 if __name__ == "__main__":
     import doctest
 

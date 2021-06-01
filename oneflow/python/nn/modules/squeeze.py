@@ -71,6 +71,7 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         dim = [dim]
     return Squeeze(dim=dim)(input)
 
+
 if __name__ == "__main__":
     import doctest
 

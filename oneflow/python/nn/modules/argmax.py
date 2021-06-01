@@ -107,6 +107,7 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
     """
     return Argmax(dim=dim, keepdim=keepdim)(input)
 
+
 if __name__ == "__main__":
     import doctest
 
