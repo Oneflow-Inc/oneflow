@@ -58,14 +58,17 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.ReLU()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # equal to np.maximum(0, arr)
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> relu = flow.nn.ReLU()
+
+        >>> out = relu(input).numpy()
+        >>> print(out)
+        [0.  0.  0.5]
 
     """
 
@@ -103,14 +106,17 @@ class ReLU6(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.ReLU6()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # equal to np.minimum(np.maximum(0, arr), 6.0)
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> relu6 = flow.nn.ReLU6()
+
+        >>> out = relu6(input).numpy()
+        >>> print(out)
+        [0.  0.  0.5]
 
     """
 
@@ -234,11 +240,17 @@ class ELU(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.ELU()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> elu = flow.nn.ELU()
+
+        >>> out = elu(input).numpy()
+        >>> print(out)
+        [-0.39346933  0.          0.5       ]
 
     """
 
@@ -634,11 +646,17 @@ class LogSigmoid(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.LogSigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> logsigmoid = flow.nn.LogSigmoid()
+
+        >>> out = logsigmoid(input).numpy()
+        >>> print(out)
+        [-0.974077   -0.6931472  -0.47407696]
 
     """
 
@@ -678,12 +696,17 @@ class Softplus(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.Softplus()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softplus = flow.nn.Softplus()
+
+        >>> out = softplus(input).numpy()
+        >>> print(out)
+        [0.474077  0.6931472 0.974077 ]
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
