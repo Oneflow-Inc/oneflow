@@ -42,6 +42,7 @@ jobs:
             "cu102",
             "cu110",
             "cu111",
+            "cu112",
             "cu100_xla",
             "cu101_xla",
             "cu102_xla",
@@ -84,6 +85,9 @@ jobs:
           elif [ "${{ matrix.compute_platform }}" == "cu111" ]; then
               cuda_version="11.1"
               cache_dir_name="11.1"
+          elif [ "${{ matrix.compute_platform }}" == "cu112" ]; then
+              cuda_version="11.2"
+              cache_dir_name="11.2"
           elif [ "${{ matrix.compute_platform }}" == "cu100_xla" ]; then
               cuda_version="10.0"
               extra_flags="--xla"
