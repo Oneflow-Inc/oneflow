@@ -62,11 +62,29 @@ class ArgWhereFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class BroadcastLikeFunctor {
+ public:
+  BroadcastLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_like").Input("x").Input("like").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& like,
+                           const std::vector<int32_t>& broadcast_axes) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", broadcast_axes));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
+  m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
 };
 
 }  // namespace functional
