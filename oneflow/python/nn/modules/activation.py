@@ -321,16 +321,17 @@ def gelu_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
-        
-        out = gelu(input)
-        # out [-0.15426877, 0., 0.34573123]
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
+
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
     """
     return GELU()(x)
 
@@ -439,10 +440,17 @@ class Hardsigmoid(Module):
     
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.Hardsigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardsigmoid = flow.nn.Hardsigmoid()
+
+        >>> out = hardsigmoid(input).numpy()
+        >>> print(out)
+        [0.41666666 0.5        0.5833333 ]
     
     """
 
@@ -715,11 +723,17 @@ class Hardswish(Module):
         - Output: :math:`(N, *)`, same shape as the input
 
     .. code-block:: python
-        import oneflow.experimental as flow
-        
-        m = flow.nn.Hardswish()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardswish = flow.nn.Hardswish()
+
+        >>> out = hardswish(input).numpy()
+        >>> print(out)
+        [-0.20833333  0.          0.29166666]
     
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
@@ -843,10 +857,16 @@ class LeakyReLU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.LeakyReLU(0.1)
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> m = flow.nn.LeakyReLU(0.1)
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 3.  4. ]
     """
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
