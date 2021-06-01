@@ -4,7 +4,7 @@
 
   ### System Requirements
 
-  - Python >= 3.6
+  - Python 3.6, 3.7, 3.8
   - CUDA Toolkit Linux x86_64 Driver
 
     - CUDA runtime is statically linked into OneFlow. OneFlow will work on a minimum supported driver, and any driver beyond. For more information, please refer to [CUDA compatibility documentation](https://docs.nvidia.com/deploy/cuda-compatibility/index.html).
