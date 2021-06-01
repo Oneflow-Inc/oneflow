@@ -715,12 +715,24 @@ def asinh_op(input):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([2, 3, 4])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.asinh(input)
-        # [1.44363548, 1.81844646, 2.09471255]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
+        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> output = flow.asinh(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [1.4436355 1.8184465 2.0947125]
+
+        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> output1 = input1.asinh()
+        >>> print(output1.shape)
+        flow.Size([2, 3])
+        >>> print(output1.numpy())
+        [[-0.8813736   0.         -0.39003533]
+         [ 2.3124382   2.6441207   0.7326682 ]]
+
     """
     return Asinh()(input)
 
@@ -1134,4 +1146,4 @@ def cosh_op(tensor):
 
 if __name__ == "__main__":
     import doctest
-    doctest.testmod(name="asin_op")
+    doctest.testmod(name="asinh_op")
