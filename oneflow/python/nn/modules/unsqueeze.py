@@ -57,7 +57,7 @@ def unsqueeze_op(input, dim):
     .. code-block:: python 
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         x = flow.Tensor(np.random.rand(2, 3, 4))
         y = x.unsqueeze(2)
