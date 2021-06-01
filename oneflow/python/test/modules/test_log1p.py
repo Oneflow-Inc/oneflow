@@ -24,7 +24,7 @@ from test_util import GenArgList
 
 
 def _test_log1p(test_case, shape, device):
-    input_arr = np.random.randn(*shape)
+    input_arr = np.exp(np.random.randn(*shape)) -1
     np_out = np.log1p(input_arr)
     x = flow.Tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -36,27 +36,25 @@ def _test_log1p(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    print(of_out.numpy())
     np_out_grad = 1.0 / (1 + input_arr)
     test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
 
 
 def _test_log1p_tensor_function(test_case, shape, device):
-    input_arr = np.random.randn(*shape)
+    input_arr = np.exp(np.random.randn(*shape)) -1
     np_out = np.log1p(input_arr)
     x = flow.Tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = x.log1p()
     test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
 
     of_out = of_out.sum()
     of_out.backward()
-    print(of_out.numpy())
     np_out_grad = 1.0 / (1 + input_arr)
     test_case.assertTrue(
         np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
