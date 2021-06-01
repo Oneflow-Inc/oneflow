@@ -31,6 +31,7 @@ from typing import Optional, Any, Union, Tuple, List
 import inspect
 import numpy as np
 
+import oneflow._oneflow_internal
 from oneflow.python.framework.check_point_v2 import (
     LoadVariables,
     SaveVarDict,
@@ -39,10 +40,12 @@ from oneflow.python.framework.check_point_v2 import (
 from oneflow.python.framework.function_util import api_oneflow_function
 from oneflow.python.framework.function_util import FunctionConfig as ExecutionConfig
 from oneflow.python.framework.local_blob import LocalBlob
-from oneflow.python.nn.module import Module
 from oneflow.python.framework.session_util import api_clear_default_session
+from oneflow.python.framework.tensor import Tensor
+from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.ops.optimizer import Optimizer
+from oneflow.python.nn.optimizer.optimizer import Optimizer as OOPOptimizer
 import oneflow.python.framework.typing as oneflow_typing
 import oneflow.python.framework.dtype as dtype_util
 
@@ -52,7 +55,7 @@ class DataModule(Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
 
-    def forward(self):
+    def forward(self, step_idx: int = 0, optimizer_idx: int = 0):
         # Do nothing, to be overrided by subclass.
         pass
 
@@ -96,7 +99,7 @@ class NumpyDataModule(DataModule):
 class TrainingConfig:
     def __init__(self):
         super().__init__()
-        self.exe_cfg = None
+        self.exe_cfg = ExecutionConfig()
         self.data = None
         self.error_msg = ""
 
@@ -109,9 +112,6 @@ class TrainingConfig:
     def check_valid(self):
         is_valid = True
         self.error_msg = ""
-        if self.exe_cfg is None:
-            self.error_msg += "model.TrainingConfig exe_cfg is None;"
-            is_valid = False
         if not isinstance(self.exe_cfg, ExecutionConfig):
             self.error_msg += "model.TrainingConfig exe_cfg is not ExecutionConfig;"
             is_valid = False
@@ -128,7 +128,7 @@ class TrainingConfig:
 class ValidationConfig:
     def __init__(self):
         super().__init__()
-        self.exe_cfg = None
+        self.exe_cfg = ExecutionConfig()
         self.data = None
         self.step_interval = 10
         self.error_msg = ""
@@ -145,20 +145,16 @@ class ValidationConfig:
     def check_valid(self):
         is_valid = True
         self.error_msg = ""
-        if self.exe_cfg is None:
-            self.error_msg += "model.ValidationConfig exe_cfg is None;"
-            is_valid = False
-        if not isinstance(self.exe_cfg, ExecutionConfig):
-            self.error_msg += "model.ValidationConfig exe_cfg is not ExecutionConfig;"
-            is_valid = False
         if self.data is None:
             self.error_msg += "model.ValidationConfig data is None;"
             is_valid = False
         if not isinstance(self.data, DataModule):
             self.error_msg += "model.ValidationConfig data is not DataModule;"
             is_valid = False
-        if self.step_interval <= 0:
-            self.error_msg += "model.ValidationConfig step_interval is <= 0;"
+        if self.step_interval <= 0 or not isinstance(self.step_interval, int):
+            self.error_msg += (
+                "model.ValidationConfig step_interval is <= 0 or is not int;"
+            )
             is_valid = False
         return is_valid
 
@@ -184,9 +180,10 @@ class CheckpointConfig(object):
         assert dirpath is not None, "dirpath should not be None"
         self.save_step_interval = step_interval
         assert step_interval > 0, "step_interval should not <= 0"
+        assert isinstance(step_interval, int), "step_interval should be int"
 
     def check_valid(self):
-        # Reserved interface for future use
+        # Configs has already been checked
         is_valid = True
         self.error_msg = ""
         return is_valid
@@ -199,7 +196,9 @@ class Callback(ABC):
 
     def on_training_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
+        outputs: Optional[
+            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
+        ],
         step_idx: int = 0,
         optimizer_idx: int = 0,
     ):
@@ -208,7 +207,9 @@ class Callback(ABC):
 
     def on_validation_step_end(
         self,
-        outputs: Optional[Union[LocalBlob, Tuple[LocalBlob, ...]]],
+        outputs: Optional[
+            Union[LocalBlob, Tuple[LocalBlob, ...], Tensor, Tuple[Tensor, ...]]
+        ],
         step_idx: int = 0,
     ):
         # Do nothing, to be overrided by subclass.
@@ -230,8 +231,6 @@ class Model(
             if "is_deprecated_function_style" in kwargs
             else False
         )
-        if not self._is_deprecated_function_style:
-            raise NotImplementedError
 
     def forward(self, *args, **kwargs):
         r"""Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
@@ -281,9 +280,7 @@ class Model(
                     sub_model.step(step_idx)
                 except Exception as e:
                     print(
-                        "Model step_idx {} sub-model {} failed.".format(
-                            step_idx, sub_model.name
-                        )
+                        "Model step_idx {} {} failed.".format(step_idx, sub_model.name)
                     )
                     raise e
 
@@ -299,36 +296,59 @@ class Model(
     ):
         sub_models = []
 
-        self._train_model = TrainModel(training_config, self, callbacks)
+        self._train_model = (
+            TrainModel(training_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else TrainModelOOPStyle(training_config, self, callbacks)
+        )
         if self._train_model.is_valid:
             sub_models.append(self._train_model)
         else:
-            print(
-                self._train_model.error_msg,
-                " {}'s fit() will not do training.".format(self.__class__.__name__),
-            )
+            if training_config is not None:
+                print(
+                    self._train_model.error_msg,
+                    "{}'s fit() will not do training.".format(self.__class__.__name__),
+                )
 
-        self._val_model = ValidateModel(validation_config, self, callbacks)
+        self._val_model = (
+            ValidateModel(validation_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else ValidateModelOOPStyle(validation_config, self, callbacks)
+        )
         if self._val_model.is_valid:
             sub_models.append(self._val_model)
         else:
-            print(
-                self._val_model.error_msg,
-                " {}'s fit() will not do validation.".format(self.__class__.__name__),
-            )
+            if validation_config is not None:
+                print(
+                    self._val_model.error_msg,
+                    "{}'s fit() will not do validation.".format(
+                        self.__class__.__name__
+                    ),
+                )
 
         if len(sub_models) == 0:
-            print(" {}'s fit() will do nothing.".format(self.__class__.__name__))
+            print(
+                "{}'s fit() will do nothing because there has no valid configuration.".format(
+                    self.__class__.__name__
+                )
+            )
             return sub_models
 
-        self._checkpoint_model = CheckpointModel(checkpoint_config, self, callbacks)
+        self._checkpoint_model = (
+            CheckpointModel(checkpoint_config, self, callbacks)
+            if self._is_deprecated_function_style
+            else CheckpointModelOOPStyle(checkpoint_config, self, callbacks)
+        )
         if self._checkpoint_model.is_valid:
             sub_models.append(self._checkpoint_model)
         else:
-            print(
-                self._checkpoint_model.error_msg,
-                " {}'s fit() will not do checkpoint.".format(self.__class__.__name__),
-            )
+            if checkpoint_config is not None:
+                print(
+                    self._checkpoint_model.error_msg,
+                    "{}'s fit() will not do checkpoint.".format(
+                        self.__class__.__name__
+                    ),
+                )
 
         return sub_models
 
@@ -342,7 +362,9 @@ class SubModel(ABC):
 
         self.name = name
         self.is_valid = True
-        self.error_msg = self._model.__class__.__name__ + " " + self.name + " "
+        self.error_msg = (
+            self._model.__class__.__name__ + " " + self.name + " error message: "
+        )
 
         if not self._get_and_check_cfg():
             self.is_valid = False
@@ -397,7 +419,7 @@ class TrainModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("train_model", cfg, model, callbacks)
+        super().__init__("training", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -532,7 +554,7 @@ class ValidateModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("validate_model", cfg, model, callbacks)
+        super().__init__("validation", cfg, model, callbacks)
 
         if not self._get_and_check_step():
             self.is_valid = False
@@ -549,7 +571,7 @@ class ValidateModel(SubModel):
                 if step_idx == 0:
                     batch = self._first_numpy_batch
                 else:
-                    batch = self._cfg.data(step_idx)
+                    batch = self._cfg.data(step_idx, 0)
                 outputs = self._job(*batch).get()
             else:
                 outputs = self._job().get()
@@ -573,7 +595,7 @@ class ValidateModel(SubModel):
         if not self._is_numpy_input:
             self._job = self._construct_job()
         else:
-            batch = self._cfg.data(0)
+            batch = self._cfg.data(0, 0)
             self._first_numpy_batch = batch
             self._job = self._construct_numpy_job(batch)
 
@@ -581,7 +603,7 @@ class ValidateModel(SubModel):
 
     def _construct_job(self):
         def job():
-            batch = self._cfg.data()
+            batch = self._cfg.data(0, 0)
             return self._model.validation_step(batch)
 
         job.__name__ = self._model.__class__.__name__ + "_Model_eval_job"
@@ -606,7 +628,7 @@ class CheckpointModel(SubModel):
         model: Model = None,
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
     ):
-        super().__init__("checkpoint_model", cfg, model, callbacks)
+        super().__init__("checkpointing", cfg, model, callbacks)
 
     def load(self):
         assert self.is_valid
@@ -634,6 +656,151 @@ class CheckpointModel(SubModel):
         r"""Save model states as a checkpoint.
         """
         SaveVarDict(path=dirpath)
+
+
+class TrainModelOOPStyle(SubModel):
+    def __init__(
+        self,
+        cfg: TrainingConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("training", cfg, model, callbacks)
+
+        if not self._get_and_check_step():
+            self.is_valid = False
+
+        if not self._get_and_check_opts():
+            self.is_valid = False
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid, self.error_msg
+        for optimizer_idx in range(0, len(self._opts)):
+            batch = self._cfg.data(step_idx, optimizer_idx)
+            outputs = self._model.training_step(
+                batch=batch, optimizer_idx=optimizer_idx
+            )
+            loss = None
+            if isinstance(outputs, tuple) and len(outputs) > 0:
+                loss = outputs[0]
+            else:
+                loss = outputs
+
+            loss.backward()
+            opt = self._opts[optimizer_idx]
+            opt.step()
+            opt.zero_grad()
+
+            self._method_callback(
+                "on_training_step_end",
+                outputs=outputs,
+                step_idx=step_idx,
+                optimizer_idx=optimizer_idx,
+            )
+
+    def _get_and_check_step(self):
+        if not self._model.method_overrided("training_step"):
+            self.error_msg += "model.training_step() is empty;"
+            return False
+        else:
+            return True
+
+    def _get_and_check_opts(self):
+        self._opts = []
+        if not self._model.method_overrided("configure_optimizers"):
+            self.error_msg += "model.configure_optimizers() is empty;"
+            return False
+
+        opt_conf = self._model.configure_optimizers()
+        if isinstance(opt_conf, OOPOptimizer):
+            self._opts = [opt_conf]
+        elif isinstance(opt_conf, (list, tuple)):
+            for opt in opt_conf:
+                assert isinstance(
+                    opt, OOPOptimizer
+                ), "model.configure_optimizers() must return Optimizer \
+                    or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+            self._opts = opt_conf
+        else:
+            assert (
+                False
+            ), "model.configure_optimizers() must return Optimizer \
+                or List[Optimizer, ...] or Tuple[Optimizer, ...]"
+
+        return True
+
+
+class ValidateModelOOPStyle(SubModel):
+    def __init__(
+        self,
+        cfg: ValidationConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("validation", cfg, model, callbacks)
+
+        if not self._get_and_check_step():
+            self.is_valid = False
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid
+        if (step_idx + 1) % self._cfg.step_interval == 0:
+            outputs = None
+            with oneflow._oneflow_internal.autograd.no_grad():
+                inputs = self._cfg.data(step_idx, 0)
+                model_previous_mode = self._model.training
+                self._model.train()
+                outputs = self._model.validation_step(inputs)
+                self._model.train(model_previous_mode)
+            self._method_callback(
+                "on_validation_step_end", step_idx=step_idx, outputs=outputs,
+            )
+
+    def _get_and_check_step(self):
+        if not self._model.method_overrided("validation_step"):
+            self.error_msg += "model.validation_step() is empty;"
+            return False
+        else:
+            return True
+
+
+class CheckpointModelOOPStyle(SubModel):
+    def __init__(
+        self,
+        cfg: CheckpointConfig = None,
+        model: Model = None,
+        callbacks: Optional[Union[Callback, List[Callback]]] = None,
+    ):
+        super().__init__("checkpointing", cfg, model, callbacks)
+
+    def load(self):
+        assert self.is_valid
+        if self._cfg.need_load:
+            self._load_checkpoint(self._cfg.load_dirpath)
+
+    def step(self, step_idx: int = 0):
+        assert self.is_valid
+        if self._cfg.need_save:
+            if (step_idx + 1) % self._cfg.save_step_interval == 0:
+                self._save_checkpoint(
+                    dirpath=self._cfg.save_dirpath + "-" + str(step_idx)
+                )
+
+    def _load_checkpoint(
+        self, dirpath: str,
+    ):
+        r"""Load model states from a checkpoint.
+        """
+        stat_dict = GetCheckpoint(path=dirpath)
+        self._model.load_state_dict(stat_dict)
+
+    def _save_checkpoint(
+        self, dirpath: str,
+    ):
+        r"""Save model states as a checkpoint.
+        """
+        stat_dict = self._model.state_dict()
+        SaveVarDict(path=dirpath, var_dict=stat_dict)
 
 
 def _infer_job_signature(data_module, batch, optimizer_idx, job):
