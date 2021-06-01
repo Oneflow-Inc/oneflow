@@ -111,5 +111,3 @@ del custom_exit
 del sys
 del absolute_import
 del oneflow
-del python
-del python_gen
