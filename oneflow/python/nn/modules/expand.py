@@ -21,10 +21,10 @@ from typing import Optional
 
 
 class Expand(Module):
-    def __init__(self, expand_size) -> None:
+    def __init__(self, *sizes) -> None:
         super().__init__()
         self._op = flow.builtin_op("expand").Input("in").Output("out").Build()
-        self.expand_size = list(expand_size)
+        self.expand_size = list(*sizes)
 
     def forward(self, x):
         expand_size = self.expand_size
@@ -62,10 +62,9 @@ class Expand(Module):
         )[0]
 
 
-@oneflow_export("expand")
 @register_tensor_op("expand")
 @experimental_api
-def expand_op(x, expand_size):
+def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.
     
     Passing -1 as the size for a dimension means not changing the size of that dimension.
@@ -76,7 +75,7 @@ def expand_op(x, expand_size):
 
     Args:
         x (oneflow.Tensor): The input Tensor. 
-        expand_size (Sequence[int]): The desired expanded size.
+        *sizes  (flow.Size or int): The desired expanded size.
 
     Returns:
         oneflow.Tensor: The result Tensor. 
@@ -94,7 +93,7 @@ def expand_op(x, expand_size):
 
         input = flow.Tensor(x)
 
-        out = flow.expand(input, expand_size=[1, 3, 2, 2])
+        out = flow.expand(input, 1, 3, 2, 2)
 
         # out shape: [1, 3, 2, 2]
         # [[[[0, 1],
@@ -104,4 +103,4 @@ def expand_op(x, expand_size):
         #   [[4, 5],
         #    [4, 5]]]]
     """
-    return Expand(expand_size=expand_size)(x)
+    return Expand(sizes)(x)

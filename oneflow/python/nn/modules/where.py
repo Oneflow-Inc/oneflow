@@ -34,9 +34,22 @@ class Where(Module):
     def forward(self, condition, x, y):
         assert condition.dtype == flow.int32 or condition.dtype == flow.int8
         if isinstance(x, int) or isinstance(x, float):
-            x = flow.Tensor([float(x)], dtype=flow.float32)
+            x = flow.Tensor(
+                [float(x)],
+                dtype=flow.float32,
+                device=flow.device(condition.device.type),
+            )
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
+            y = flow.Tensor(
+                [float(y)],
+                dtype=flow.float32,
+                device=flow.device(condition.device.type),
+            )
+
+        assert (
+            condition.device.type == x.device.type
+            and condition.device.type == y.device.type
+        )
         broadcast_cond = condition
         broadcast_x = x
         broadcast_y = y
@@ -59,6 +72,8 @@ class Where(Module):
         broadcast_like_tensor = flow.experimental.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32
         )
+        broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
+        broadcast_like_tensor.requires_grad = x.requires_grad or y.requires_grad
 
         if len(broadcast_condition_axes) != 0:
             condition = flow.experimental.cast(condition, flow.float32)
@@ -108,7 +123,7 @@ def where_op(condition, x, y):
 
     .. code-block:: python
 
-        import flow.experimental as flow
+        import oneflow.experimental as flow
 
         x = flow.Tensor(
             np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),

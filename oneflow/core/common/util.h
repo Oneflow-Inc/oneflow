@@ -56,6 +56,15 @@ struct hash<std::pair<T0, T1>> {
   }
 };
 
+template<typename T>
+struct hash<std::vector<T>> {
+  std::size_t operator()(const std::vector<T>& vec) const {
+    std::size_t hash_value = 0;
+    for (const auto& elem : vec) { hash_value ^= std::hash<T>()(elem); }
+    return hash_value;
+  }
+};
+
 }  // namespace std
 
 namespace oneflow {
