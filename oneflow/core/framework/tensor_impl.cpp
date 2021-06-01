@@ -115,7 +115,7 @@ size_t MirroredTensorMeta::CalcHashValue() const {
 
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
-  return this->shape() == other.shape() && this->dtype() == other.dtype()
+  return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
          && this->parallel_distribution() == other.parallel_distribution()
          && this->parallel_desc() == other.parallel_desc();
 }
