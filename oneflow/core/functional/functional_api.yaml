@@ -199,3 +199,19 @@
 - name: "broadcast_like"
   signature: "Tensor BroadcastLike(Tensor x, Tensor like, *, Int32List broadcast_axes)"
   bind_python: True
+
+- name: "cast"
+  signature: "Tensor Cast(Tensor x, *, DataType dtype)"
+  bind_python: True
+
+- name: "constant"
+  signature: "Tensor Constant(Shape shape, Scalar value, DataType dtype)"
+  bind_python: True
+
+- name: "zeros_like"
+  signature: "Tensor ZerosLike(Tensor x)"
+  bind_python: True
+
+- name: "ones_like"
+  signature: "Tensor OnesLike(Tensor x)"
+  bind_python: True

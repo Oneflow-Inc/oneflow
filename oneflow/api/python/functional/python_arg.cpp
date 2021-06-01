@@ -131,6 +131,24 @@ DataType PythonArg::ObjectAs<DataType>() const {
   return kInvalidDataType;
 }
 
+template<>
+Shape PythonArg::ObjectAs<Shape>() const {
+  py::object obj = Borrow();
+  if (detail::isinstance<Shape>(obj)) {
+    auto shape = detail::cast<std::shared_ptr<Shape>>(obj);
+    return *shape;
+  } else if (detail::isinstance<py::list>(obj) || detail::isinstance<py::tuple>(obj)) {
+    auto shape = ObjectAs<std::vector<int64_t>>();
+    DimVector dim_vec(shape.size());
+    for (int i = 0; i < shape.size(); ++i) { dim_vec[i] = shape[i]; }
+    return Shape(std::move(dim_vec));
+  } else {
+    UNIMPLEMENTED() << "Can not convert object to Shape from "
+                    << detail::cast<std::string>(py::str(py::type::of(obj)));
+  }
+  return Shape();
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

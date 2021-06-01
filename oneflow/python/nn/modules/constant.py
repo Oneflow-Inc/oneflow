@@ -74,9 +74,14 @@ class _ConstantBase(Module):
             .Attr("shape", size)
             .Build()
         )
+        # TODO(): Transfer to functional constant once constant kernel changed to be stateless.
+        # self.shape = size
+        # self.value = value
+        # self.dtype = dtype
 
     def forward(self):
         return self._op()[0]
+        # flow.F.constant(self.shape, self.value, self.dtype)
 
 
 class Ones(_ConstantBase):
@@ -144,10 +149,9 @@ def zeros_op(size, dtype=None):
 class ZerosLike(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("zero_like").Input("like").Output("out").Build()
 
     def forward(self, other):
-        return self._op(other)[0]
+        return flow.F.zeros_like(other)
 
 
 @oneflow_export("zeros_like")
@@ -178,10 +182,9 @@ def zeros_like_op(other):
 class OnesLike(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("ones_like").Input("like").Output("out").Build()
 
     def forward(self, other):
-        return self._op(other)[0]
+        return flow.F.ones_like(other)
 
 
 @oneflow_export("ones_like")

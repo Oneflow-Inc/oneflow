@@ -172,6 +172,19 @@ class ArgMaxFunctor : public UnaryFunctor {
   ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
 };
 
+class CastFunctor {
+ public:
+  CastFunctor() { op_ = CHECK_JUST(one::OpBuilder("cast").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -183,6 +196,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TransposeFunctor>("Transpose");
   m.add_functor<impl::RangeFunctor>("Range");
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
+  m.add_functor<impl::CastFunctor>("Cast");
 };
 
 }  // namespace functional

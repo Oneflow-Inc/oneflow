@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/scalar.h"
 
@@ -28,6 +29,41 @@ namespace one {
 namespace functional {
 
 namespace impl {
+
+class ConstantFunctor {
+ public:
+  ConstantFunctor() { op_ = CHECK_JUST(one::OpBuilder("constant").Output("out").Build()); }
+  Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    if (IsIntegralDataType(dtype)) {
+      JUST(attrs.SetAttr<bool>("is_floating_value", false));
+      JUST(attrs.SetAttr<int64_t>("integer_value", JUST(value.As<int64_t>())));
+    } else {
+      JUST(attrs.SetAttr<bool>("is_floating_value", true));
+      JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ZerosLikeFunctor : public UnaryFunctor {
+ public:
+  ZerosLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("zero_like").Input("like").Output("out").Build());
+  }
+};
+
+class OnesLikeFunctor : public UnaryFunctor {
+ public:
+  OnesLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("ones_like").Input("like").Output("out").Build());
+  }
+};
 
 class FlattenFunctor {
  public:
@@ -82,6 +118,9 @@ class BroadcastLikeFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
+  m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
