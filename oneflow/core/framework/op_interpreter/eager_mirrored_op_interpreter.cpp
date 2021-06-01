@@ -93,11 +93,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  kernel->ResetDynamicOpAttrs(attrs);
+  kernel->composed_attrs_for_main_thread()->ResetPrior(attrs);
   JUST(kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
-                             kernel->op_infer_ctx_for_thread_b()));
+                             kernel->op_infer_ctx_for_main_thread()));
   JUST(kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
-                               kernel->op_infer_ctx_for_thread_b()));
+                               kernel->op_infer_ctx_for_main_thread()));
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
