@@ -55,6 +55,7 @@ OBJECT_MSG_BEGIN(VirtualMachine);
   // fields
   OBJECT_MSG_DEFINE_OPTIONAL(VmResourceDesc, vm_resource_desc);
   OBJECT_MSG_DEFINE_STRUCT(Range, machine_id_range);
+  OBJECT_MSG_DEFINE_STRUCT(std::atomic<int64_t>, flying_instruction_cnt);
   OBJECT_MSG_DEFINE_PTR(ObjectMsgAllocator, vm_thread_only_allocator);
 
   // heads
