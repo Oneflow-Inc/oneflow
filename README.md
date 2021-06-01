@@ -130,26 +130,26 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 <details>
 <summary>3 minutes to run MNIST.</summary>
 
-1. Clone the demo code from OneFlow documentation
-```
-git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
-cd oneflow-documentation/cn/docs/code/quick_start/
-```
-2. Run it in Python
-```
-python mlp_mnist.py
-```
+- Clone the demo code from OneFlow documentation
+  ```
+  git clone https://github.com/Oneflow-Inc/oneflow-documentation.git
+  cd oneflow-documentation/cn/docs/code/quick_start/
+  ```
+- Run it in Python
+  ```
+  python mlp_mnist.py
+  ```
 
-3. Oneflow is running and you got the training loss
-```
-2.7290366
-0.81281316
-0.50629824
-0.35949975
-0.35245502
-...
-```
-More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
+- Oneflow is running and you got the training loss
+  ```
+  2.7290366
+  0.81281316
+  0.50629824
+  0.35949975
+  0.35245502
+  ...
+  ```
+- More info on this demo, please refer to [doc on quick start](http://docs.oneflow.org/quick_start/quickstart_in_3_min.html).
 </details>
 
 ## Documentation
