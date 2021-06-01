@@ -99,10 +99,12 @@ def ones_op(size, dtype=None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        y = flow.ones(5)
-        # [1. 1. 1. 1. 1. ]
+        >>> y = flow.ones(5)
+        >>> y
+        tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
     return Ones(size, dtype)()
@@ -128,10 +130,12 @@ def zeros_op(size, dtype=None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        y = flow.zeros(5)
-        # [0. 0. 0. 0. 0. ]
+        >>> y = flow.zeros(5)
+        >>> y
+        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
     return Zeros(size, dtype)()
@@ -203,3 +207,9 @@ def ones_like_op(other):
 
     """
     return OnesLike()(other)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
