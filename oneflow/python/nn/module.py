@@ -113,7 +113,7 @@ class Module(object):
                 id_util.UniqueStr("cast_to_consistent_op"),
             )
             assert len(args) == len(cast_to_consistent_ops)
-            with sess.ConsistentScope():
+            with sess.consistent_scope():
                 for i in range(0, len(args)):
                     if not args[i].is_consistent:
                         args[i] = cast_to_consistent_ops[i](args[i])[0]
@@ -137,7 +137,7 @@ class Module(object):
                 id_util.UniqueStr("cast_from_consistent_op"),
             )
             assert len(args) == len(cast_from_consistent_ops)
-            with sess.ConsistentScope():
+            with sess.consistent_scope():
                 for i in range(0, len(args)):
                     if args[i].is_consistent:
                         args[i] = cast_from_consistent_ops[i](args[i])[0]
@@ -171,7 +171,7 @@ class Module(object):
             res = self.forward(*args)
         else:
             sess = session_ctx.GetDefaultSession()
-            with sess.ConsistentScope():
+            with sess.consistent_scope():
                 res = self.consistent_forward(*args)
         for hook in itertools.chain(self._forward_hooks.values()):
             result = hook(self, res)

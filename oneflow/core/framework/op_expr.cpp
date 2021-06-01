@@ -57,13 +57,13 @@ const std::string BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
 }
 
 const std::string CastToConsistentOpExpr::op_type_name() const {
-  static const std::string op_type_name = "cast_to_consistent";
-  return op_type_name;
+  static const std::string kOpTypeName = "cast_to_consistent";
+  return kOpTypeName;
 }
 
 const std::string CastFromConsistentOpExpr::op_type_name() const {
-  static const std::string op_type_name = "cast_from_consistent";
-  return op_type_name;
+  static const std::string kOpTypeName = "cast_from_consistent";
+  return kOpTypeName;
 }
 
 #define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \

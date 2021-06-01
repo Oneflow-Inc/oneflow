@@ -18,32 +18,19 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-class Empty(flow.nn.Module):
-    r"""Do nothing
-    return input
-
-    """
-
-    def __init__(self, inplace: bool = False):
-        super().__init__()
-
-    def forward(self, x):
-        return x
-
-
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestConsistentCastReLUModule(flow.unittest.TestCase):
-    def test_relu(test_case):
+class TestConsistentCastModule(flow.unittest.TestCase):
+    def test_consistent_cast(test_case):
         relu = flow.nn.ReLU()
-        empty = Empty()
+        identity = flow.nn.Identity()
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
-        consisitent_empty = flow.consistent_cast(
-            empty,
+        consisitent_identity = flow.consistent_cast(
+            identity,
             (["S(0)"], ["S(0)"]),
             (
                 [flow.placement("cpu", ["0:0"], None)],
@@ -51,7 +38,7 @@ class TestConsistentCastReLUModule(flow.unittest.TestCase):
             ),
         )
         x = flow.Tensor(arr)
-        y = consisitent_empty(x)
+        y = consisitent_identity(x)
         of_out = relu(y)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
 

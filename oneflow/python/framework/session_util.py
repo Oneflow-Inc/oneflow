@@ -402,7 +402,7 @@ class Session(object):
         return self.sess_.is_consistent_strategy_enabled()
 
     @contextmanager
-    def ConsistentScope(self):
+    def consistent_scope(self):
         self.push_mirrored_strategy_enabled(False)
         yield
         self.pop_mirrored_strategy_enabled()
