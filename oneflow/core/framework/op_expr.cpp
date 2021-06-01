@@ -33,10 +33,11 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
-#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)             \
-  template<>                                                      \
-  const std::string BuiltinOpExprImpl<_T>::op_type_name() const { \
-    return _op_type_name;                                         \
+#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)              \
+  template<>                                                       \
+  const std::string& BuiltinOpExprImpl<_T>::op_type_name() const { \
+    static const std::string& name(_op_type_name);                 \
+    return name;                                                   \
   }
 
 DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
@@ -50,7 +51,7 @@ DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 #undef DEFINE_OPEXPR_OP_TYPE_NAME
 
 template<>
-const std::string BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
+const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
 }
 
@@ -147,12 +148,12 @@ class UserOpExprInferContext : public user_op::InferContext {
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) override {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
-      std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) { return output_tensors_->at(tuple_index)->mut_tensor_meta(); }
     }
     {
       const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
-      std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) { return input_tensors_->at(tuple_index)->mut_tensor_meta(); }
     }
     UNIMPLEMENTED();
@@ -268,7 +269,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
                                                                     int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
-    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return CHECK_JUST(output_tensors_->at(tuple_index)->mut_device());
   }
@@ -276,7 +277,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
                                                                   int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
-    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return CHECK_JUST(input_tensors_->at(tuple_index)->device());
   }
