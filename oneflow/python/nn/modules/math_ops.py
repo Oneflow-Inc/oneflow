@@ -676,7 +676,7 @@ def arcsin_op(input):
 def arcsin_op_tensor(input):
     r"""
 
-    See for :func:`oneflow.experimental.asin`
+    See :func:`oneflow.experimental.asin`
     """
     return Asin()(input)
 
@@ -739,7 +739,7 @@ def arcsin_op(input):
 def arcsin_op_tensor(input):
     r"""
 
-    See for :func:`oneflow.experimental.asinh`
+    See :func:`oneflow.experimental.asinh`
     """
     return Asinh()(input)
 
