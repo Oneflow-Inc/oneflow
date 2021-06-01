@@ -70,6 +70,40 @@ __inline__ __device__ double Inf<double>() {
   return CUDART_INF;
 }
 
+template<typename T>
+__inline__ __device__ T Exp(T x);
+
+template<>
+__inline__ __device__ float Exp<float>(float x) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __expf(x);
+#else
+  return exp(x);
+#endif
+}
+
+template<>
+__inline__ __device__ double Exp<double>(double x) {
+  return exp(x);
+}
+
+template<typename T>
+__inline__ __device__ T Div(T a, T b);
+
+template<>
+__inline__ __device__ float Div<float>(float a, float b) {
+#ifdef OF_SOFTMAX_USE_FAST_MATH
+  return __fdividef(a, b);
+#else
+  return a / b;
+#endif
+}
+
+template<>
+__inline__ __device__ double Div<double>(double a, double b) {
+  return a / b;
+}
+
 inline int GetNumBlocks(int64_t block_size, int64_t max_blocks, int64_t waves) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
@@ -182,12 +216,12 @@ __global__ void SoftmaxWarpImpl(FETCH fetch, STORE store, const int64_t rows, co
     ComputeType thread_sum = 0;
 #pragma unroll
     for (int i = 0; i < cols_per_thread; ++i) {
-      buf[i] = exp(buf[i] - warp_max);
+      buf[i] = Exp(buf[i] - warp_max);
       thread_sum += buf[i];
     }
     const ComputeType warp_sum = WarpAllReduce<SumOp, ComputeType>(thread_sum);
 #pragma unroll
-    for (int i = 0; i < cols_per_thread; ++i) { buf[i] = buf[i] / warp_sum; }
+    for (int i = 0; i < cols_per_thread; ++i) { buf[i] = Div(buf[i], warp_sum); }
 #pragma unroll
     for (int i = 0; i < num_packs; ++i) {
       const int col = (i * kWarpSize + lane_id) * pack_size;
@@ -352,7 +386,7 @@ __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t row
     const ComputeType row_max = BlockAllReduce<MaxOp, ComputeType, block_size>(thread_max);
     ComputeType thread_sum = 0;
     for (int col = tid; col < cols; col += block_size) {
-      const ComputeType exp_x = exp(buf[col] - row_max);
+      const ComputeType exp_x = Exp(buf[col] - row_max);
       buf[col] = exp_x;
       thread_sum += exp_x;
     }
@@ -361,7 +395,7 @@ __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t row
       ComputeType pack[pack_size];
 #pragma unroll
       for (int i = 0; i < pack_size; ++i) {
-        pack[i] = buf[i * num_packs + pack_id] / row_sum;
+        pack[i] = Div(buf[i * num_packs + pack_id], row_sum);
         thread_max = max(thread_max, pack[i]);
       }
       store.template store<ComputeType, pack_size>(pack, row, pack_id * pack_size);
@@ -456,14 +490,14 @@ __global__ void SoftmaxBlockUncachedImpl(FETCH fetch, STORE store, const int64_t
       ComputeType pack[pack_size];
       fetch.template fetch<ComputeType, pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { thread_sum += exp(pack[i] - row_max); }
+      for (int i = 0; i < pack_size; ++i) { thread_sum += Exp(pack[i] - row_max); }
     }
     const ComputeType row_sum = BlockAllReduce<SumOp, ComputeType, block_size>(thread_sum);
     for (int pack_id = tid; pack_id < num_packs; pack_id += block_size) {
       ComputeType pack[pack_size];
       fetch.template fetch<ComputeType, pack_size>(pack, row, pack_id * pack_size);
 #pragma unroll
-      for (int i = 0; i < pack_size; ++i) { pack[i] = exp(pack[i] - row_max) / row_sum; }
+      for (int i = 0; i < pack_size; ++i) { pack[i] = Div(Exp(pack[i] - row_max), row_sum); }
       store.template store<ComputeType, pack_size>(pack, row, pack_id * pack_size);
     }
   }
