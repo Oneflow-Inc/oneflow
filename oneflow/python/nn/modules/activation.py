@@ -669,20 +669,14 @@ class Softplus(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-
-        m = flow.nn.Softplus()
-        input = flow.randn(2)
-        output = m(input)
-
-    >>> import oneflow.experimental as flow
-    >>> import numpy as np
-    >>> flow.enable_eager_execution()
-    >>> relu = flow.nn.ReLU()
-    >>> ndarr = np.asarray([1, -2, 3])
-    >>> x = flow.Tensor(ndarr)
-    >>> relu(x).numpy()
-    array([1., 0., 3.], dtype=float32)
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> relu = flow.nn.ReLU()
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> x = flow.Tensor(ndarr)
+        >>> relu(x).numpy()
+        array([1., 0., 3.], dtype=float32)
 
     """
 
