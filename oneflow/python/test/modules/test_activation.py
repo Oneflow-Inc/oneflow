@@ -526,18 +526,81 @@ class TestLogSoftmax(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+def _test_logsigmoid(test_case, device):
+    m = flow.nn.LogSigmoid()
+    arr = np.array([1.0, 2.0, 3.0, 10.2, 7.6])
+    np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        0.2689414213699951,
+        0.11920292202211764,
+        0.04742587317756669,
+        3.716893710287265e-05,
+        0.0005002011070795276,
+    ]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestLogSigmoidModule(flow.unittest.TestCase):
     def test_logsigmoid(test_case):
-        m = flow.nn.LogSigmoid()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.log(1.0 / (1.0 + np.exp(-arr)))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["fun"] = [
+            _test_logsigmoid,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
+def _test_softplus(test_case, device):
+    m = flow.nn.Softplus()
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_softplus_beta(test_case, device):
+    m = flow.nn.Softplus(beta=1.11)
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(
+        arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+    )
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_softplus_threshold(test_case, device):
+    m = flow.nn.Softplus(beta=1.11, threshold=1.55)
+    arr = np.random.randn(2, 3, 4, 5)
+    np_out = np.where(
+        arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
+    )
+    x = flow.Tensor(arr, device=flow.device(device))
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_softplus_backward(test_case, device):
+    m = flow.nn.Softplus()
+    arr = np.array([1.0, 2.0, 21.0, 20.0, 4.0])
+    np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [0.7310585786300049, 0.8807970779778824, 1.0, 1.0, 0.9820137900379085]
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -546,32 +609,16 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
 )
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus(test_case):
-        m = flow.nn.Softplus()
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(arr > 20, arr, np.log(1.0 + np.exp(1.0 * arr)))
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_softplus_beta(test_case):
-        m = flow.nn.Softplus(beta=1.11)
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(
-            arr * 1.11 > 20, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
-        )
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    def test_softplus_threshold(test_case):
-        m = flow.nn.Softplus(beta=1.11, threshold=1.55)
-        arr = np.random.randn(2, 3, 4, 5)
-        np_out = np.where(
-            arr * 1.11 > 1.55, arr, 1.0 / 1.11 * np.log(1.0 + np.exp(1.11 * arr))
-        )
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_softplus,
+            _test_softplus_beta,
+            _test_softplus_threshold,
+            _test_softplus_backward,
+        ]
+        arg_dict["device"] = ["cpu"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 def _test_hardswish_impl(test_case, shape, device):
@@ -642,20 +689,33 @@ class TestHardtanhModule(flow.unittest.TestCase):
             _test_hardtanh_impl(test_case, *arg)
 
 
+def _test_leakyrelu_impl(test_case, shape, device):
+    negative_slope = 0.2
+    m = flow.nn.LeakyReLU(negative_slope=negative_slope)
+    arr = np.random.randn(*shape)
+
+    np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
+    x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
+    of_out = m(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    np_grad = np.where(arr < 0, 1.0 * negative_slope, 1.0)
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestLeakyReLUModule(flow.unittest.TestCase):
     def test_leaky_relu(test_case):
-        negative_slope = 0.2
-        m = flow.nn.LeakyReLU(negative_slope=negative_slope)
-        arr = np.random.randn(2, 3, 4, 5)
-
-        np_out = np.maximum(0, arr) + negative_slope * np.minimum(0, arr)
-        x = flow.Tensor(arr)
-        of_out = m(x)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_leakyrelu_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
