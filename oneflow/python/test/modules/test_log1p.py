@@ -17,14 +17,14 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
-import oneflow.experimental as flow
 import numpy as np
 
+import oneflow.experimental as flow
 from test_util import GenArgList
 
 
 def _test_log1p(test_case, shape, device):
-    input_arr = np.exp(np.random.randn(*shape)) -1
+    input_arr = np.exp(np.random.randn(*shape)) - 1
     np_out = np.log1p(input_arr)
     x = flow.Tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -43,7 +43,7 @@ def _test_log1p(test_case, shape, device):
 
 
 def _test_log1p_tensor_function(test_case, shape, device):
-    input_arr = np.exp(np.random.randn(*shape)) -1
+    input_arr = np.exp(np.random.randn(*shape)) - 1
     np_out = np.log1p(input_arr)
     x = flow.Tensor(
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
