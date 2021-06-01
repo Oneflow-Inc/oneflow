@@ -53,16 +53,19 @@ def acosh_op(x):
         input (Tensor): the input tensor.
     For example:
     .. code-block:: python
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-        @flow.global_function()
-        def acosh_Job(x: tp.Numpy.Placeholder((3,))
-        ) -> tp.Numpy:
-            return flow.math.acosh(x)
-        x = np.array([1.5, 2.5, 3.5]).astype(np.float32)
-        out = acosh_Job(x)
-        # out [0.96242365 1.56679924  1.9248473 ]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.typing as tp
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        >>> out1 = flow.math.acosh(x1)
+        >>> out1.numpy()
+        [1.316958 1.7627473  2.063437 ]
+
     """
 
     return Acosh()(x)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
