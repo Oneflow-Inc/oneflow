@@ -197,6 +197,7 @@ class NLLLoss(Module):
     .. code-block:: python 
         
         >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         >>> import numpy as np
 
         >>> input = flow.Tensor(
@@ -206,15 +207,18 @@ class NLLLoss(Module):
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> m = flow.nn.NLLLoss(reduction="none")
         >>> out = m(input, target).numpy()
-        # [0.80199665 1.1166505  0.35826027]
+        >>> print(out)
+        [ 0.1664078  -0.53737473 -0.7645404 ]
 
         >>> m = flow.nn.NLLLoss(reduction="sum")
         >>> out = m(input, target).numpy()
-        [2.2769074]
+        >>> print(out)
+        [-1.1355073]
         
         >>> m = flow.nn.NLLLoss(reduction="mean")
         >>> out = m(input, target).numpy()
-        [0.7589692]
+        >>> print(out)
+        [-0.37850246]
     
     """
 
