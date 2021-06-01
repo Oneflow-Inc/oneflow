@@ -65,10 +65,13 @@ class Gather(Module):
 @experimental_api
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.
+
     For a 3-D tensor the output is specified by::
 
     out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+
     out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+    
     out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
 
     :attr:`input` and :attr:`index` must have the same number of dimensions.
@@ -85,14 +88,21 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 
     .. code-block:: python
         
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        input = np.random.randn(3, 4, 3, 5)
-        index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
-        output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
-
-        # output.shape (3, 4, 3, 5)
+        >>> input = np.random.randn(3, 4, 3, 5)
+        >>> index = np.random.choice(np.arange(3), size=180, replace=True).reshape((3, 4, 3, 5))
+        >>> output = flow.gather(flow.Tensor(input), flow.Tensor(index, dtype=flow.int), dim=1)
+        >>> print(output.shape)
+        flow.Size([3, 4, 3, 5])
 
     """
     return Gather(dim, sparse_grad)(input, index)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
