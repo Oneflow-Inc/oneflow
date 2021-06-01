@@ -151,15 +151,16 @@ class Tanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-1, 0, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        tanh = flow.nn.Tanh()
-        out = tanh(input).numpy()
-
-        # out [-0.7615942  0.         0.7615942]
+        >>> x = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> tanh = flow.nn.Tanh()
+        >>> out = tanh(input).numpy()
+        >>> print(out)
+        [-0.7615942  0.         0.7615942]
 
     """
 
@@ -858,3 +859,9 @@ class LeakyReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
