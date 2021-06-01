@@ -108,9 +108,9 @@ set(oneflow_exe_third_party_libs
 )
 
 set(oneflow_third_party_libs
+    ${PROTOBUF_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
-    ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
