@@ -171,7 +171,10 @@ class GpuDecodeHandle final : public DecodeHandle {
                         size_t dst_max_length, int* dst_width, int* dst_height);
   void Decode(const unsigned char* data, size_t length, unsigned char* dst, size_t dst_max_length,
               int* dst_width, int* dst_height);
-  void Resize(RandomCropGenerator* crop_generator, const unsigned char* src, int src_width, int src_height, unsigned char* dst,
+  void RandomCropResize(const unsigned char* src, int src_width, int src_height,
+                        RandomCropGenerator* crop_generator, unsigned char* dst, int dst_width,
+                        int dst_height);
+  void Resize(const unsigned char* src, int src_width, int src_height, unsigned char* dst,
               int dst_width, int dst_height);
 
   cudaStream_t cuda_stream_ = nullptr;
@@ -186,17 +189,28 @@ class GpuDecodeHandle final : public DecodeHandle {
   nvjpegDevAllocator_t dev_allocator_{};
   nvjpegPinnedAllocator_t pinned_allocator_{};
   bool warmup_done_;
+  bool use_hardware_acceleration_;
 };
 
-GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false) {
+GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false), use_hardware_acceleration_(false) {
   OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, cudaStreamNonBlocking));
   dev_allocator_.dev_malloc = &GpuDeviceMalloc;
   dev_allocator_.dev_free = &GpuDeviceFree;
   pinned_allocator_.pinned_malloc = &GpuPinnedMalloc;
   pinned_allocator_.pinned_free = &GpuPinnedFree;
-  OF_NVJPEG_CHECK(nvjpegCreateEx(NVJPEG_BACKEND_HARDWARE, &dev_allocator_, &pinned_allocator_, 0,
-                                 &jpeg_handle_));
-  OF_NVJPEG_CHECK(nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_HARDWARE, &jpeg_decoder_));
+  nvjpegBackend_t backend = NVJPEG_BACKEND_DEFAULT;
+#if NVJPEG_VER_MAJOR >= 11
+  if (nvjpegCreateEx(NVJPEG_BACKEND_HARDWARE, &dev_allocator_, &pinned_allocator_, 0, &jpeg_handle_)
+      == NVJPEG_STATUS_SUCCESS) {
+    backend = NVJPEG_BACKEND_HARDWARE;
+    use_hardware_acceleration_ = true;
+  } else {
+    OF_NVJPEG_CHECK(nvjpegCreateEx(backend, &dev_allocator_, &pinned_allocator_, 0, &jpeg_handle_));
+  }
+#else
+  OF_NVJPEG_CHECK(nvjpegCreateEx(backend, &dev_allocator_, &pinned_allocator_, 0, &jpeg_handle_));
+#endif
+  OF_NVJPEG_CHECK(nvjpegDecoderCreate(jpeg_handle_, backend, &jpeg_decoder_));
   OF_NVJPEG_CHECK(nvjpegDecoderStateCreate(jpeg_handle_, jpeg_decoder_, &jpeg_state_));
   OF_NVJPEG_CHECK(nvjpegBufferPinnedCreate(jpeg_handle_, &pinned_allocator_, &jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegBufferDeviceCreate(jpeg_handle_, &dev_allocator_, &jpeg_device_buffer_));
@@ -232,6 +246,8 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   if (crop_generator) {
     GenerateRandomCropRoi(crop_generator, static_cast<int>(orig_width),
                           static_cast<int>(orig_height), &roi_x, &roi_y, &roi_width, &roi_height);
+    OF_NVJPEG_CHECK(
+        nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi_x, roi_y, roi_width, roi_height));
   } else {
     roi_x = 0;
     roi_y = 0;
@@ -243,8 +259,6 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   image.channel[0] = dst;
   image.pitch[0] = roi_width * kNumChannels;
   OF_NVJPEG_CHECK(nvjpegDecodeParamsSetOutputFormat(jpeg_decode_params_, NVJPEG_OUTPUT_RGBI));
-  //OF_NVJPEG_CHECK(
-  //    nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi_x, roi_y, roi_width, roi_height));
   OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state_, jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state_, jpeg_device_buffer_));
   OF_NVJPEG_CHECK(nvjpegDecodeJpegHost(jpeg_handle_, jpeg_decoder_, jpeg_state_,
@@ -262,8 +276,9 @@ void GpuDecodeHandle::Decode(const unsigned char* data, size_t length, unsigned 
   DecodeRandomCrop(data, length, nullptr, dst, dst_max_length, dst_width, dst_height);
 }
 
-void GpuDecodeHandle::Resize(RandomCropGenerator* crop_generator, const unsigned char* src, int src_width, int src_height,
-                             unsigned char* dst, int dst_width, int dst_height) {
+void GpuDecodeHandle::RandomCropResize(const unsigned char* src, int src_width, int src_height,
+                                       RandomCropGenerator* crop_generator, unsigned char* dst,
+                                       int dst_width, int dst_height) {
   const NppiSize src_size{
       .width = src_width,
       .height = src_height,
@@ -273,8 +288,8 @@ void GpuDecodeHandle::Resize(RandomCropGenerator* crop_generator, const unsigned
   int roi_width;
   int roi_height;
   if (crop_generator) {
-    GenerateRandomCropRoi(crop_generator, static_cast<int>(src_width),
-                          static_cast<int>(src_height), &roi_x, &roi_y, &roi_width, &roi_height);
+    GenerateRandomCropRoi(crop_generator, static_cast<int>(src_width), static_cast<int>(src_height),
+                          &roi_x, &roi_y, &roi_width, &roi_height);
   } else {
     roi_x = 0;
     roi_y = 0;
@@ -303,6 +318,11 @@ void GpuDecodeHandle::Resize(RandomCropGenerator* crop_generator, const unsigned
   CHECK_GE(status, NPP_SUCCESS);
 }
 
+void GpuDecodeHandle::Resize(const unsigned char* src, int src_width, int src_height,
+                             unsigned char* dst, int dst_width, int dst_height) {
+  RandomCropResize(src, src_width, src_height, nullptr, dst, dst_width, dst_height);
+}
+
 void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
                                              RandomCropGenerator* crop_generator,
                                              unsigned char* workspace, size_t workspace_size,
@@ -310,8 +330,13 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              int target_height) {
   int width;
   int height;
-  DecodeRandomCrop(data, length, nullptr, workspace, workspace_size, &width, &height);
-  Resize(crop_generator, workspace, width, height, dst, target_width, target_height);
+  if (use_hardware_acceleration_) {
+    Decode(data, length, workspace, workspace_size, &width, &height);
+    RandomCropResize(workspace, width, height, crop_generator, dst, target_width, target_height);
+  } else {
+    DecodeRandomCrop(data, length, crop_generator, workspace, workspace_size, &width, &height);
+    Resize(workspace, width, height, dst, target_width, target_height);
+  }
 }
 
 void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) {
