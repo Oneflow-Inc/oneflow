@@ -683,6 +683,7 @@ class Softplus(Module):
     >>> x = flow.Tensor(ndarr)
     >>> relu(x).numpy()
     array([1., 0., 3.], dtype=float32)
+
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
