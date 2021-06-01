@@ -745,7 +745,7 @@ def arcsinh_op(input):
     Alias for :func:`oneflow.experimental.asinh`
     """
     return Asinh()(input)
-    
+
 
 @register_tensor_op("asinh")
 @experimental_api
