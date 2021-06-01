@@ -158,7 +158,17 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
-ModuleOp Fuse(Operation* op) { return {}; }
+// turn matched DAG into a JIT op
+// a JIT op generates its oneflow op/kernel
+// a JIT op contains a module could be converted to LLVM
+// a JIT module has a function with memref arg and runtime calls generated kernel with blob ptr
+// ultimate goal: end user of oneflow only need to write pdl or its python wrapper to test out fuse
+ModuleOp Fuse(ModuleOp* op) {
+  return {
+      // match scale and cast
+      // create JIT op and kernel
+  };
+}
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
 
