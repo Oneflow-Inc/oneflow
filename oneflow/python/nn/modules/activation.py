@@ -277,17 +277,17 @@ class GELU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
 
-        out = gelu(input)
-
-        # out [-0.15426877, 0., 0.34573123]
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
 
     """
 
