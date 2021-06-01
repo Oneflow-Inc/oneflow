@@ -13,7 +13,7 @@ on:
         required: false
       compute_platforms:
         description: ""
-        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
+        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
       package_name:
         description: ""
