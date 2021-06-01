@@ -69,26 +69,27 @@ class LayerNorm(Module):
 
     .. code-block:: python 
 
-        import numpy as np
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input_arr = np.array(
-            [
-                [
-                    [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
-                    [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
-                ],
-                [
-                    [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
-                    [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
-                ],
-            ],
-            dtype=np.float32,
-        )
+        >>> input_arr = np.array(
+        ...     [
+        ...         [
+        ...             [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
+        ...             [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
+        ...         ],
+        ...         [
+        ...             [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
+        ...             [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
+        ...         ],
+        ...     ],
+        ...     dtype=np.float32,
+        ... )
 
-        x = flow.Tensor(input_arr)
-        m = flow.nn.LayerNorm(2)
-        y = m(x)
+        >>> x = flow.Tensor(input_arr)
+        >>> m = flow.nn.LayerNorm(2)
+        >>> y = m(x)
 
         # [[[[ 0.99997395 -0.99997395]
         # [-0.999947    0.999947  ]]
@@ -242,3 +243,9 @@ class LayerNorm(Module):
             "{normalized_shape}, eps={eps}, "
             "elementwise_affine={elementwise_affine}".format(**self.__dict__)
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
