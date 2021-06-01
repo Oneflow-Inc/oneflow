@@ -26,7 +26,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("experimental.unique_with_counts")
@@ -34,7 +34,7 @@ def unique_with_counts(
     x: input_blob_util.ArgBlobDef,
     out_idx: flow.dtype = flow.int32,
     name: Optional[str] = None,
-) -> Tuple[oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     op = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("UniqueWithCounts_")

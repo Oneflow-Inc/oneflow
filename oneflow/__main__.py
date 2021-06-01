@@ -22,37 +22,16 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--start_worker", default=False, action="store_true", required=False
 )
-parser.add_argument("--env_proto", type=str, required=True)
+parser.add_argument("--env_proto", type=str, required=False)
+parser.add_argument("--doctor", default=False, action="store_true", required=False)
 
 args = parser.parse_args()
 
 
-def import_secondary_module(name, path):
-    import importlib.machinery
-    import importlib.util
-
-    loader = importlib.machinery.ExtensionFileLoader(name, path)
-    spec = importlib.util.spec_from_loader(name, loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-    return module
-
-
-def import_oneflow_internal2():
-    import oneflow
-    from os.path import dirname
-    import imp
-
-    fp, pathname, description = imp.find_module(
-        "_oneflow_internal", [dirname(__file__)]
-    )
-    assert os.path.isfile(pathname)
-    return import_secondary_module("oneflow_api", pathname)
-
-
 def StartWorker(env_proto):
-    oneflow_api = import_oneflow_internal2()
-    oneflow_api.InitEnv(env_proto)
+    import oneflow._oneflow_internal
+
+    oneflow._oneflow_internal.InitEnv(env_proto)
 
 
 def main():
@@ -64,6 +43,11 @@ def main():
         ), "env_proto not found, please check your env_proto path: {}".format(env_proto)
         with open(env_proto, "rb") as f:
             StartWorker(f.read())
+    if args.doctor:
+        import oneflow
+
+        print("path:", oneflow.__path__)
+        print("version:", oneflow.__version__)
 
 
 if __name__ == "__main__":

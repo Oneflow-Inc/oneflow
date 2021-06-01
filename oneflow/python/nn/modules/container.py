@@ -20,7 +20,7 @@ from itertools import islice
 import operator
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
 from typing import (
@@ -40,12 +40,15 @@ T = TypeVar("T")
 
 
 @oneflow_export("nn.Sequential")
+@experimental_api
 class Sequential(Module):
     r"""A sequential container.
     Modules will be added to it in the order they are passed in the constructor.
     Alternatively, an ordered dict of modules can also be passed in.
 
-    To make it easier to understand, here is a small example::
+    To make it easier to understand, here is a small 
+    
+    For example::
 
         # Example of using Sequential
         model = nn.Sequential(
@@ -126,6 +129,7 @@ class Sequential(Module):
 
 
 @oneflow_export("nn.ParameterList")
+@experimental_api
 class ParameterList(Module):
     def __init__(self, parameters: Optional[Iterable["Parameter"]] = None) -> None:
         super(ParameterList, self).__init__()
@@ -237,6 +241,7 @@ class ParameterList(Module):
 
 
 @oneflow_export("nn.ParameterDict")
+@experimental_api
 class ParameterDict(Module):
     def __init__(self, parameters: Optional[Mapping[str, "Parameter"]] = None) -> None:
         super(ParameterDict, self).__init__()
@@ -280,6 +285,7 @@ class ParameterDict(Module):
 
 
 @oneflow_export("nn.ModuleList")
+@experimental_api
 class ModuleList(Module):
     def __init__(self, modules: Optional[Iterable[Module]] = None) -> None:
         super(ModuleList, self).__init__()
@@ -370,6 +376,7 @@ class ModuleList(Module):
 
 
 @oneflow_export("nn.ModuleDict")
+@experimental_api
 class ModuleDict(Module):
     def __init__(self, modules: Optional[Mapping[str, Module]] = None) -> None:
         super(ModuleDict, self).__init__()

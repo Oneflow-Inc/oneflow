@@ -77,15 +77,6 @@ TEST(SequentialInstruction, front_seq_compute) {
         std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
     list.EmplaceBack(std::move(instruction));
   }
-  bool infer_finished = false;
-  {
-    auto instruction = NewInstruction("CtrlInferRankFrontSeqCallback");
-    instruction->add_int64_operand(GlobalProcessCtx::Rank());
-    const auto Callback = [&]() { infer_finished = true; };
-    *instruction->mutable_phy_instr_operand() =
-        std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
-    list.EmplaceBack(std::move(instruction));
-  }
   bool compute_finished = false;
   bool is_666 = false;
   {
@@ -101,7 +92,7 @@ TEST(SequentialInstruction, front_seq_compute) {
   }
   BlockingCounter bc(1);
   std::thread t([&]() {
-    while (!(infer_finished && compute_finished)) {
+    while (!compute_finished) {
       vm->Schedule();
       OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
     }

@@ -56,6 +56,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (op_reg_result->same_output_regst_num > 0) {
       mem_block_num = op_reg_result->same_output_regst_num;
     }
+    if (op_type_name == "identity_buffer") {
+      mem_block_num = user_op::UserOpConfWrapper(sole_op->op_conf()).attr<int64_t>("buffer_size");
+    }
   }
   // when output blob num > 1 and task node on out edge is all NormalForwardCompTaskNode ,
   // create multi out regst by output blob name in op

@@ -82,7 +82,7 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       CHECK(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);

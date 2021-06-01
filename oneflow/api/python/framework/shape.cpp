@@ -42,6 +42,13 @@ struct ShapeExportUtil final {
     }
   }
 
+  static int GetItem(const Shape& shape, int idx) {
+    const int len = shape.dim_vec().size();
+    if (idx < -len || idx >= len) { throw py::index_error("flow.Size index out of range"); }
+    if (idx < 0) { idx += len; }
+    return shape.At(idx);
+  }
+
   static std::shared_ptr<Shape> Slicing(const Shape& shape, const py::slice& slice) {
     size_t start, stop, step, slicelength;
     if (!slice.compute(shape.dim_vec().size(), &start, &stop, &step, &slicelength)) {
@@ -102,7 +109,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init(&ShapeExportUtil::ApiMakeShape))
       .def("__str__", &ShapeExportUtil::ToString)
       .def("__repr__", &ShapeExportUtil::ToString)
-      .def("__getitem__", [](const Shape& shape, int idx) { return shape.At(idx); })
+      .def("__getitem__", &ShapeExportUtil::GetItem)
       .def("__getitem__", &ShapeExportUtil::Slicing)
       .def(
           "__iter__",

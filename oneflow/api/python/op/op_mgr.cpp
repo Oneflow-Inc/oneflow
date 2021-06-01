@@ -28,7 +28,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   });
 
   m.def("InferOpConf", &InferOpConf);
-  m.def("GetSerializedOpAttributes", &GetSerializedOpAttributes);
+  m.def("GetSerializedInterfaceOpAttributes", &GetSerializedInterfaceOpAttributes);
   m.def("IsInterfaceOpTypeCase", &IsInterfaceOpTypeCase);
 
   m.def("GetOpParallelSymbolId", &GetOpParallelSymbolId);

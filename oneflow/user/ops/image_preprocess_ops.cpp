@@ -63,7 +63,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kTensorBuffer);
 
@@ -130,7 +130,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kUInt8);
 
@@ -174,7 +174,7 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       ctx->NewBuilder().Split(user_op::OpArg("out", 0), 0).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_tensor->mut_data_type() = DataType::kInt8;
       return Maybe<void>::Ok();
@@ -202,7 +202,7 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = in_tensor->data_type();

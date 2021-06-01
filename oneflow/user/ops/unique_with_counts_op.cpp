@@ -44,7 +44,7 @@ REGISTER_USER_OP("unique_with_counts")
       *num_unique->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       auto out_idx = ctx->Attr<DataType>("out_idx");
       CHECK_OR_RETURN(IsIndexDataType(out_idx));

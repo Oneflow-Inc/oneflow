@@ -20,40 +20,40 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("categorical_ordinal_encode")
 def categorical_ordinal_encode(
-    table: oneflow_api.BlobDesc,
-    size: oneflow_api.BlobDesc,
-    input_tensor: oneflow_api.BlobDesc,
+    table: oneflow._oneflow_internal.BlobDesc,
+    size: oneflow._oneflow_internal.BlobDesc,
+    input_tensor: oneflow._oneflow_internal.BlobDesc,
     hash_precomputed: bool = True,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    """This operator maintains a hash table to encode the categorical ordinal Blob. It converts a discrete input value into a continuous integer ID. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator maintains a hash table to encode the categorical ordinal Blob. It converts a discrete input value into a continuous integer ID.
 
     Args:
-        table (oneflow_api.BlobDesc): The hash table, you can assign it as a variable. 
-        size (oneflow_api.BlobDesc): The size of hash table. 
-        input_tensor (oneflow_api.BlobDesc): The input Blob. 
+        table (oneflow._oneflow_internal.BlobDesc): The hash table, you can assign it as a variable.
+        size (oneflow._oneflow_internal.BlobDesc): The size of hash table.
+        input_tensor (oneflow._oneflow_internal.BlobDesc): The input Blob.
         hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
-        import numpy as np 
-        import oneflow.typing as tp 
+        import numpy as np
+        import oneflow.typing as tp
 
         @flow.global_function()
         def categorical_ordinal_encode_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)
-        ) -> tp.Numpy: 
+        ) -> tp.Numpy:
             dtype = x.dtype
             with flow.scope.namespace("categorical_ordinal_encode"):
                 table = flow.get_variable(
@@ -76,8 +76,8 @@ def categorical_ordinal_encode(
                     table=table, size=size, input_tensor=x, name="Encode",
                 )
 
-        x = np.array([[7, 0, 2], 
-                    [1, 7, 2], 
+        x = np.array([[7, 0, 2],
+                    [1, 7, 2],
                     [0, 1, 7]]).astype(np.int32)
 
         out = categorical_ordinal_encode_Job(x)
@@ -104,37 +104,37 @@ def categorical_ordinal_encode(
 
 @oneflow_export("layers.categorical_ordinal_encoder")
 def categorical_ordinal_encoder(
-    input_tensor: oneflow_api.BlobDesc,
+    input_tensor: oneflow._oneflow_internal.BlobDesc,
     capacity: int,
     hash_precomputed: bool = True,
     name: str = "CategoricalOrdinalEncoder",
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator uses `oneflow.categorical_ordinal_encode` to encapsulate a categorical_ordinal_encoder. More details please refer to `oneflow.categorical_ordinal_encode`
 
     Args:
-        input_tensor (oneflow_api.BlobDesc): The input Blob. 
-        capacity (int): The capacity of hash table. 
+        input_tensor (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        capacity (int): The capacity of hash table.
         hash_precomputed (bool, optional): We currently only support the 'True' mode. The internal hash value will no longer be computed. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "CategoricalOrdinalEncoder".
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
-        import numpy as np 
-        import oneflow.typing as tp 
+        import numpy as np
+        import oneflow.typing as tp
 
         @flow.global_function()
         def categorical_ordinal_encoder_Job(x: tp.Numpy.Placeholder((3, 3), dtype=flow.int32)
-        ) -> tp.Numpy: 
+        ) -> tp.Numpy:
             return flow.layers.categorical_ordinal_encoder(x, 16)
 
-        x = np.array([[7, 0, 2], 
-                    [1, 7, 2], 
+        x = np.array([[7, 0, 2],
+                    [1, 7, 2],
                     [0, 1, 7]]).astype(np.int32)
 
         out = categorical_ordinal_encoder_Job(x)

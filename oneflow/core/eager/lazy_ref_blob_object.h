@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/blob_object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 class LazyRefBlobObject final : public BlobObject {
  public:
@@ -28,9 +28,7 @@ class LazyRefBlobObject final : public BlobObject {
   LazyRefBlobObject(Blob* blob)
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()),
                    std::make_shared<Shape>(blob->static_shape()), blob->data_type()) {
-    const auto& rt_blob_desc = blob->blob_desc();
-    blob_desc_ =
-        BlobDesc(rt_blob_desc.body_shape(), rt_blob_desc.data_type(), rt_blob_desc.is_dynamic());
+    blob_desc_ = blob->blob_desc();
     ref_blob_ = blob;
   }
   ~LazyRefBlobObject() override = default;
@@ -59,7 +57,7 @@ class LazyRefBlobObject final : public BlobObject {
   Blob* ref_blob_ = nullptr;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_LAZY_REF_BLOB_OBJECT_H_

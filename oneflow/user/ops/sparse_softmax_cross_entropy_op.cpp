@@ -168,7 +168,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
         label_modifier->set_requires_grad(false);                                      \
       })                                                                               \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
-      .SetInferDataTypeFn(InferDataType);
+      .SetDataTypeInferFn(InferDataType);
 
 #define REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_GRAD_USER_OP(op_name, sbp_sig) \
   REGISTER_USER_OP(op_name)                                                  \
@@ -179,7 +179,7 @@ void GenBackwardOpConf4SparseSoftmaxCrossEntropy(const std::string& op_type_name
       .Attr<int64_t>("depth")                                                \
       .SetTensorDescInferFn(InferGradTensorDescFn)                           \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                        \
-      .SetInferDataTypeFn(InferDataTypeGrad);
+      .SetDataTypeInferFn(InferDataTypeGrad);
 
 REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_USER_OP("sparse_softmax_cross_entropy", AddSignature);
 REGISTER_SPAESE_SOFTMAX_CROSS_ENTROPY_USER_OP("sparse_softmax_cross_entropy_ms", AddMsSignature);

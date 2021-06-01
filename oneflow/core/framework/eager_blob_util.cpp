@@ -34,7 +34,7 @@ EagerPhysicalBlob::EagerPhysicalBlob(
     const std::function<std::shared_ptr<EagerPhysicalBlobHeader>(std::shared_ptr<BlobObject>)>&
         get_pysical_blob_header_cache)
     : blob_name_(blob_name),
-      blob_object_(blob_register->GetObject4BlobName(blob_name)),
+      blob_object_(CHECK_JUST(blob_register->GetObject4BlobName(blob_name))),
       blob_register_(blob_register),
       get_pysical_blob_header_cache_(get_pysical_blob_header_cache) {}
 

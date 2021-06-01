@@ -19,22 +19,22 @@ import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 from typing import Optional
 
 
 @oneflow_export("smooth_l1_loss")
 def smooth_l1_loss(
-    prediction: oneflow_api.BlobDesc,
-    label: oneflow_api.BlobDesc,
+    prediction: oneflow._oneflow_internal.BlobDesc,
+    label: oneflow._oneflow_internal.BlobDesc,
     beta: float = 1.0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""This operator computes the smooth l1 loss. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator computes the smooth l1 loss.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         & out = \frac{(\beta*x)^2}{2}, \left|x\right|<\frac{1}{{\beta}^2}
 
@@ -42,17 +42,17 @@ def smooth_l1_loss(
 
 
     Args:
-        prediction (oneflow_api.BlobDesc): The prediction Blob
-        label (oneflow_api.BlobDesc): The label Blob
+        prediction (oneflow._oneflow_internal.BlobDesc): The prediction Blob
+        label (oneflow._oneflow_internal.BlobDesc): The label Blob
         beta (float, optional): The :math:`\beta` in the equation. Defaults to 1.0.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob 
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -89,35 +89,35 @@ def smooth_l1_loss(
 
 @oneflow_export("ctc_loss")
 def ctc_loss(
-    log_probs: oneflow_api.BlobDesc,
-    targets: oneflow_api.BlobDesc,
-    input_lengths: oneflow_api.BlobDesc,
-    target_lengths: oneflow_api.BlobDesc,
+    log_probs: oneflow._oneflow_internal.BlobDesc,
+    targets: oneflow._oneflow_internal.BlobDesc,
+    input_lengths: oneflow._oneflow_internal.BlobDesc,
+    target_lengths: oneflow._oneflow_internal.BlobDesc,
     blank: int = 0,
     reduction: str = "mean",
     zero_infinity: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Computes the CTC(Connectionist Temporal Classification) loss.
     This operator implements the CTC loss as presented in (Graves et al., 2006).
 
 
     Args:
-        log_probs (oneflow_api.BlobDesc): A Blob of shape [input_length, batch_size, num_labels]. The logarithmized probabilities of the outputs (e.g. obtained with flow.nn.logsoftmax()).
-        targets (oneflow_api.BlobDesc): A Blob of shape [batch_size, max_target_length]. It represent the target sequences. Each element in the target sequence is a class index. And the target index cannot be blank (default=0).
-        input_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size]. It represent the lengths of the inputs. And the lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
-        target_lengths (oneflow_api.BlobDesc): A Blob of shape [batch_size]. It represent lengths of the targets. Lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
+        log_probs (oneflow._oneflow_internal.BlobDesc): A Blob of shape [input_length, batch_size, num_labels]. The logarithmized probabilities of the outputs (e.g. obtained with flow.nn.logsoftmax()).
+        targets (oneflow._oneflow_internal.BlobDesc): A Blob of shape [batch_size, max_target_length]. It represent the target sequences. Each element in the target sequence is a class index. And the target index cannot be blank (default=0).
+        input_lengths (oneflow._oneflow_internal.BlobDesc): A Blob of shape [batch_size]. It represent the lengths of the inputs. And the lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
+        target_lengths (oneflow._oneflow_internal.BlobDesc): A Blob of shape [batch_size]. It represent lengths of the targets. Lengths are specified for each sequence to achieve masking under the assumption that sequences are padded to equal lengths.
         blank (int, optional): Blank label. Defaults to 0.
         reduction (str, optional): The reduce type, it can be the one of "none", "mean", "sum". "none": no reduction will be applied, "mean": the output losses will be divided by the target lengths and then the mean over the batch is taken, "sum": the output will be summed. Defaults to "mean".
         zero_infinity (bool, optional):  Whether to zero infinite losses and the associated gradients. Infinite losses mainly occur when the inputs are too short to be aligned to the targets. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob.
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp

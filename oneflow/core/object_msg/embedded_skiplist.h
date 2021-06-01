@@ -175,7 +175,7 @@ struct EmbeddedSkipListKey {
     return offsetof(self_type, link_);
   }
   static int32_t RandomNumLevels(int size_shift) {
-    std::mt19937 rand{std::random_device{}()};
+    std::minstd_rand rand{std::random_device{}()};
     int32_t max_num_levels = std::min(size_shift, N);
     int32_t num_levels = 1;
     for (int i = 1; (rand() % 2 == 0) && i < max_num_levels; ++i) { ++num_levels; }

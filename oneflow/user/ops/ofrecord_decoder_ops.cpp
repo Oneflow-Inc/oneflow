@@ -50,7 +50,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
@@ -76,7 +76,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
       in_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in->data_type() == DataType::kOFRecord);
@@ -109,7 +109,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
@@ -147,7 +147,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);

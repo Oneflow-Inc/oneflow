@@ -370,7 +370,7 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
     const int64_t bias_size = a_tensor->shape().At(bias_add_axis);
     const int64_t inner_size = a_tensor->shape().Count(bias_add_axis + 1);
     const auto n = a_tensor->shape().elem_cnt();
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<int8_t>(),
                                                            addend->dptr<T>(), scale);

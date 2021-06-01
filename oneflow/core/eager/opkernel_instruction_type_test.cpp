@@ -37,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_node_signature.pb.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
 
 namespace {
@@ -404,5 +404,5 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
@@ -39,9 +39,9 @@ class RtRegstDesc {
 
   int64_t lbi_num() const { return sorted_lbi_vec_.size(); }
   int64_t GetOrdinalForLbi(const LogicalBlobId& lbi) const;
-  const RtBlobDesc* GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const;
-  const RtBlobDesc* GetRtBlobDescByOrdinal(int64_t ordinal) const;
-  const RtBlobDesc* GetSoleRtBlobDesc() const;
+  const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
+  const BlobDesc* GetBlobDescByOrdinal(int64_t ordinal) const;
+  const BlobDesc* GetSoleBlobDesc() const;
   const LogicalBlobId& GetLbiByOrdinal(int64_t ordinal) const;
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
@@ -51,7 +51,7 @@ class RtRegstDesc {
   const Shape& data_regst_time_shape() const;
 
   void ForEachBlobDescOffsetInOnRegst(
-      const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,
+      const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const BlobDesc* desc,
                                int64_t body_offset, int64_t header_offset)>& Handler) const;
 
  private:
@@ -63,7 +63,7 @@ class RtRegstDesc {
   MemoryCase mem_case_;
   HashMap<LogicalBlobId, int64_t> lbi2blob_desc_ordinal_;
   std::unique_ptr<Shape> data_regst_time_shape_;
-  std::vector<std::unique_ptr<RtBlobDesc>> sorted_blob_desc_vec_;
+  std::vector<std::unique_ptr<const BlobDesc>> sorted_blob_desc_vec_;
   std::vector<LogicalBlobId> sorted_lbi_vec_;
 };
 

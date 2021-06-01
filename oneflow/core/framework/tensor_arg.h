@@ -25,23 +25,24 @@ namespace oneflow {
 namespace one {
 
 class Tensor;
+class OpExpr;
 
 // This class will be used in TensorImpl and Autograd. It will share data with different
 // FunctionNodes.
 class TensorArg final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TensorArg);
-  TensorArg() = default;
+  TensorArg();
   ~TensorArg() = default;
 
   bool Empty() const;
   void Release();
-  void PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor);
+  Maybe<void> PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor);
   Maybe<Tensor> GetAccTensor();
 
  private:
-  std::vector<std::shared_ptr<Tensor>> partial_sum_tensors_;
   std::shared_ptr<Tensor> acc_tensor_;
+  std::shared_ptr<OpExpr> add2_op_;
 };
 
 }  // namespace one

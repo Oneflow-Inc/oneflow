@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace eager {
+namespace vm {
 
 class RemoveForeignCallbackInstructionType : public vm::InstructionType {
  public:
@@ -43,6 +43,6 @@ class RemoveForeignCallbackInstructionType : public vm::InstructionType {
 
 COMMAND(vm::RegisterInstructionType<RemoveForeignCallbackInstructionType>("RemoveForeignCallback"));
 
-}  // namespace eager
+}  // namespace vm
 
 }  // namespace oneflow

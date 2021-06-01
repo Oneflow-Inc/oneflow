@@ -198,8 +198,8 @@ void GenMemChainTasksAndRegsts(
                                          std::string* op_name) -> bool {
     if (task_proto->task_type() == TaskType::kNormalForward
         && task_proto->exec_sequence().exec_node_size() == 1) {
-      *op_name = PlanUtil::GeOpAttribute(plan, task_proto->job_id(),
-                                         task_proto->exec_sequence().exec_node(0).kernel_conf())
+      *op_name = PlanUtil::GetOpAttribute(plan, task_proto->job_id(),
+                                          task_proto->exec_sequence().exec_node(0).kernel_conf())
                      .op_conf()
                      .name();
       return true;
@@ -221,6 +221,9 @@ void GenMemChainTasksAndRegsts(
 
   int64_t mem_chain_id = 0;
 
+  bool enable_mem_chain_merge =
+      Global<ResourceDesc, ForSession>::Get()->resource().enable_mem_chain_merge();
+
   for (auto& device_chain_pair : device2chain2mem_chain) {
     if (device_chain_pair.second.empty()) { continue; }
     // sort
@@ -233,10 +236,14 @@ void GenMemChainTasksAndRegsts(
       CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
       return lhs_order_in_graph < rhs_order_in_graph;
     });
-    for (MemoryChain* mem_chain : mem_chains) {
-      if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
-        merged_chains.push_back(mem_chain);
+    if (enable_mem_chain_merge) {
+      for (MemoryChain* mem_chain : mem_chains) {
+        if (!TryMergeMemChain2MergedChains(&merged_chains, mem_chain, IsStrictOrderL2R)) {
+          merged_chains.push_back(mem_chain);
+        }
       }
+    } else {
+      merged_chains.swap(mem_chains);
     }
     for (MemoryChain* merged_chain : merged_chains) {
       std::vector<TaskProto*>* sorted_tasks = &((*mem_chain2sorted_tasks)[mem_chain_id]);

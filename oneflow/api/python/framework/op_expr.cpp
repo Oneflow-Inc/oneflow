@@ -17,7 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/framework/attr_value_map.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -32,11 +32,11 @@ namespace oneflow {
 namespace {
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple& inputs,
-                                  const AttrValueMap& attrs) {
-  CHECK_EQ_OR_RETURN(op.input_num(), inputs.size())
-      << "The operation requires " << op.input_num() << " inputs, but " << inputs.size()
+                                  const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(op.input_size(), inputs.size())
+      << "The operation requires " << op.input_size() << " inputs, but " << inputs.size()
       << " is given.";
-  auto outputs = std::make_shared<one::TensorTuple>(op.output_num());
+  auto outputs = std::make_shared<one::TensorTuple>(op.output_size());
   auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
   JUST(interperter->Apply(op, inputs, outputs.get(), attrs));
   return outputs;
@@ -44,7 +44,7 @@ Maybe<one::TensorTuple> Interpret(const one::OpExpr& op, const one::TensorTuple&
 
 Maybe<one::TensorTuple> Interpret(const one::OpExpr& op,
                                   const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-                                  const AttrValueMap& attrs) {
+                                  const AttrMap& attrs) {
   one::TensorTuple input_list(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) { input_list[i] = inputs[i]; }
   return JUST(Interpret(op, input_list, attrs));
@@ -61,7 +61,8 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
                        const std::vector<std::string>& indexed_obns) {
         typename std::decay<ProtoConfT>::type proto_op_conf;
         op_conf->ToProto(&proto_op_conf);
-        return std::make_shared<OpT>(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns);
+        return OpT::New(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns)
+            .GetPtrOrThrow();
       }))
       .def_property_readonly("proto",
                              [](const OpT& op) { return std::make_shared<ConfT>(op.proto()); });
@@ -71,16 +72,16 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::OpExpr, std::shared_ptr<one::OpExpr>>(m, "OpExpr")
-      .def_property_readonly("type", &one::OpExpr::type)
-      .def_property_readonly("input_num", &one::OpExpr::input_num)
-      .def_property_readonly("output_num", &one::OpExpr::output_num)
+      .def_property_readonly("type_name", &one::OpExpr::type_name)
+      .def_property_readonly("input_size", &one::OpExpr::input_size)
+      .def_property_readonly("output_size", &one::OpExpr::output_size)
       .def("apply",
            [](const one::OpExpr& op_expr, const std::vector<std::shared_ptr<one::Tensor>>& inputs,
-              const AttrValueMap& attrs) {
+              const MutableCfgAttrMap& attrs) {
              return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
            })
       .def("apply", [](const one::OpExpr& op_expr, const one::TensorTuple& inputs,
-                       const AttrValueMap& attrs) {
+                       const MutableCfgAttrMap& attrs) {
         return Interpret(op_expr, inputs, attrs).GetPtrOrThrow();
       });
 

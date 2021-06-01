@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 
@@ -177,5 +177,5 @@ Maybe<void> ReceiveBlobInstructionType::Receive(int64_t src_machine_id, uint64_t
 COMMAND(vm::RegisterInstructionType<SendBlobInstructionType>("SendBlob"));
 COMMAND(vm::RegisterInstructionType<ReceiveBlobInstructionType>("ReceiveBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

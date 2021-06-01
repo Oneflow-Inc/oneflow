@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/blob_object.h"
+#include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"
@@ -31,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 
@@ -113,7 +114,7 @@ Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) cons
       &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
   Blob* blob = Global<RegstMgr>::Get()->Blob4LbiAndParallelId(GenLogicalBlobId(lbn),
                                                               parallel_ctx.parallel_id());
-  eager_blob_rw->Init<eager::LazyRefBlobObject>(blob);
+  eager_blob_rw->Init<vm::LazyRefBlobObject>(blob);
   return Maybe<void>::Ok();
 }
 
@@ -129,5 +130,5 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

@@ -67,7 +67,7 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(
 
 std::string CompTaskNode::VisualStr() const { return op_node_->op().op_name(); }
 
-void CompTaskNode::ToProto(TaskProto* task_proto) {
+void CompTaskNode::ToProto(TaskProto* task_proto) const {
   TaskNode::ToProto(task_proto);
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
 }

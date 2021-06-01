@@ -16,14 +16,14 @@ limitations under the License.
 from __future__ import absolute_import
 
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("profiler.range_push")
 def RangePush(range_name):
-    oneflow_api.profiler.RangePush(range_name)
+    oneflow._oneflow_internal.profiler.RangePush(range_name)
 
 
 @oneflow_export("profiler.range_pop")
 def RangePop():
-    oneflow_api.profiler.RangePop()
+    oneflow._oneflow_internal.profiler.RangePop()

@@ -30,6 +30,8 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
  public:
   NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
+        has_independent_stream_(ctx->op_conf().has_stream_index_hint()),
+        stream_index_(ctx->op_conf().stream_index_hint()),
         parallel_desc_(ctx->parallel_desc()),
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
   ~NcclLogical2DSameDim0KernelCommState() = default;
@@ -62,12 +64,19 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
       const int64_t device_id = CHECK_JUST(parallel_desc_.DeviceId4ParallelId(parallel_id));
       device_set.emplace(std::make_pair(machine_id, device_id));
     }
-    comm_ = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get())->GetCommForDevice(device_set);
+    EagerNcclCommMgr* comm_mgr = CHECK_NOTNULL(Global<EagerNcclCommMgr>::Get());
+    if (has_independent_stream_) {
+      comm_ = comm_mgr->GetCommForDeviceAndStreamId(device_set, stream_index_);
+    } else {
+      comm_ = comm_mgr->GetCommForDevice(device_set);
+    }
     num_ranks_ = group_size;
     is_init_ = true;
   }
 
   bool is_init_;
+  bool has_independent_stream_;
+  int32_t stream_index_;
   ParallelDesc parallel_desc_;
   int64_t this_parallel_id_;
   int64_t num_ranks_;
@@ -144,7 +153,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t dtype_size = GetSizeOfDataType(in->data_type());
-    int64_t data_size = GetCudaAlignedSize(in->shape().elem_cnt() * dtype_size);
+    int64_t data_size = GetCudaAlignedSize(out->shape().elem_cnt() * dtype_size);
     void* unpack_from_ptr = tmp_buffer->mut_dptr();
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
 
@@ -188,9 +197,9 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 };
 
 size_t Infer2DSameDim0AllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  return GetCudaAlignedSize(in_tensor->shape().elem_cnt()
-                            * GetSizeOfDataType(in_tensor->data_type()));
+  const user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  return GetCudaAlignedSize(out_tensor->shape().elem_cnt()
+                            * GetSizeOfDataType(out_tensor->data_type()));
 }
 
 template<typename T>

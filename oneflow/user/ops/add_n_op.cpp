@@ -41,7 +41,7 @@ REGISTER_USER_OP("add_n")
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(user_op::OpArg("out", 0)).Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* in_0 = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       auto* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_NOTNULL_OR_RETURN(in_0);

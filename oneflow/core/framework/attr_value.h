@@ -79,7 +79,33 @@ struct GetCppType;
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_ATTR_TYPE, ATTR_SEQ);
 #undef SPECIALIZE_GET_ATTR_TYPE
 
+class AttrVal {
+ public:
+  AttrVal() = default;
+  virtual ~AttrVal() = default;
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(AttrVal)
+};
+
+template<typename T>
+class TypedAttrVal final : public AttrVal {
+ public:
+  TypedAttrVal(T v) : val_(v) {}
+  ~TypedAttrVal() = default;
+
+  const T& val() const { return val_; }
+
+ private:
+  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal)
+
+  T val_;
+};
+
 }  // namespace user_op
+
+template<typename T>
+const T& AttrValueCast(const user_op::AttrVal& val);
 
 }  // namespace oneflow
 

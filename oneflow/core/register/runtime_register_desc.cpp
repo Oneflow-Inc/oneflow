@@ -35,14 +35,14 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     sorted_lbi_vec_.reserve(lbi_pairs.size());
     for (int64_t i = 0; i < lbi_pairs.size(); ++i) {
       const LbiBlobDescPair& pair = lbi_pairs.at(i);
-      sorted_blob_desc_vec_.push_back(std::make_unique<RtBlobDesc>(pair.blob_desc()));
+      sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(pair.blob_desc()));
       sorted_lbi_vec_.push_back(pair.lbi());
       lbi2blob_desc_ordinal_.emplace(pair.lbi(), i);
     }
     CHECK(data_regst_desc.has_time_shape());
     data_regst_time_shape_.reset(new Shape(data_regst_desc.time_shape()));
   } else {
-    sorted_blob_desc_vec_.push_back(std::make_unique<RtBlobDesc>(BlobDesc(DataType::kChar)));
+    sorted_blob_desc_vec_.push_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
 }
 
@@ -55,16 +55,16 @@ int64_t RtRegstDesc::GetOrdinalForLbi(const LogicalBlobId& lbi) const {
   }
 }
 
-const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const {
+const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {
   auto it = lbi2blob_desc_ordinal_.find(lbi);
   if (it == lbi2blob_desc_ordinal_.end()) {
     return nullptr;
   } else {
-    return GetRtBlobDescByOrdinal(it->second);
+    return GetBlobDescByOrdinal(it->second);
   }
 }
 
-const RtBlobDesc* RtRegstDesc::GetRtBlobDescByOrdinal(int64_t ordinal) const {
+const BlobDesc* RtRegstDesc::GetBlobDescByOrdinal(int64_t ordinal) const {
   return sorted_blob_desc_vec_.at(ordinal).get();
 }
 
@@ -72,13 +72,13 @@ const LogicalBlobId& RtRegstDesc::GetLbiByOrdinal(int64_t ordinal) const {
   return sorted_lbi_vec_.at(ordinal);
 }
 
-const RtBlobDesc* RtRegstDesc::GetSoleRtBlobDesc() const {
+const BlobDesc* RtRegstDesc::GetSoleBlobDesc() const {
   CHECK_EQ(sorted_blob_desc_vec_.size(), 1);
   return sorted_blob_desc_vec_.at(0).get();
 }
 
 size_t RtRegstDesc::TotalByteSize4AllRegst() const {
-  return GetSoleRtBlobDesc()->AlignedTotalByteSize() * register_num_;
+  return GetSoleBlobDesc()->AlignedTotalByteSize() * register_num_;
 }
 
 size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
@@ -87,9 +87,9 @@ size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
 
 size_t RtRegstDesc::MainByteSize4OneRegst() const {
   if (mem_case_.has_device_cuda_mem()) {
-    return GetSoleRtBlobDesc()->AlignedByteSizeOfBlobBody();
+    return GetSoleBlobDesc()->AlignedByteSizeOfBlobBody();
   } else {
-    return GetSoleRtBlobDesc()->AlignedTotalByteSize();
+    return GetSoleBlobDesc()->AlignedTotalByteSize();
   }
 }
 
@@ -99,7 +99,7 @@ size_t RtRegstDesc::TotalSeparatedHeaderByteSize4AllRegst() const {
 
 size_t RtRegstDesc::SeparatedHeaderByteSize4OneRegst() const {
   if (mem_case_.has_device_cuda_mem()) {
-    return GetSoleRtBlobDesc()->ByteSizeOfBlobHeader();
+    return GetSoleBlobDesc()->ByteSizeOfBlobHeader();
   } else {
     return 0;
   }
@@ -112,12 +112,12 @@ const Shape& RtRegstDesc::data_regst_time_shape() const {
 }
 
 void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
-    const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const RtBlobDesc* desc,
+    const std::function<void(int64_t ordinal, const LogicalBlobId& lbi, const BlobDesc* desc,
                              int64_t body_offset, int64_t header_offset)>& Handler) const {
   int64_t cur_body_offset = 0;
   int64_t cur_header_offset = 0;
   for (int64_t i = 0; i < sorted_blob_desc_vec_.size(); ++i) {
-    const RtBlobDesc* blob_desc = sorted_blob_desc_vec_.at(i).get();
+    const BlobDesc* blob_desc = sorted_blob_desc_vec_.at(i).get();
     const LogicalBlobId& lbi = sorted_lbi_vec_.at(i);
     Handler(i, lbi, blob_desc, cur_body_offset, cur_header_offset);
     cur_body_offset += blob_desc->AlignedByteSizeOfBlobBody();

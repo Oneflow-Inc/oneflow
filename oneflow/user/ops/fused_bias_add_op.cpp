@@ -34,7 +34,7 @@ REGISTER_USER_OP("fused_bias_add_gelu")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();
@@ -76,7 +76,7 @@ REGISTER_USER_OP("fused_bias_add_gelu_grad")
       *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       *ctx->Dtype4ArgNameAndIndex("dx", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();
@@ -161,7 +161,7 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();

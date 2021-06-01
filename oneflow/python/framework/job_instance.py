@@ -19,7 +19,7 @@ import sys
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def MakeUserJobInstance(job_name, finish_cb=None):
@@ -73,7 +73,7 @@ def MakeJobInstance(*arg, **kw):
     return job_instance
 
 
-class JobInstance(oneflow_api.ForeignJobInstance):
+class JobInstance(oneflow._oneflow_internal.ForeignJobInstance):
     def __init__(
         self,
         job_name,
@@ -83,7 +83,7 @@ class JobInstance(oneflow_api.ForeignJobInstance):
         pull_cb=None,
         finish_cb=None,
     ):
-        oneflow_api.ForeignJobInstance.__init__(self)
+        oneflow._oneflow_internal.ForeignJobInstance.__init__(self)
         self.thisown = 0
         self.job_name_ = str(job_name)
         self.sole_input_op_name_in_user_job_ = str(sole_input_op_name_in_user_job)

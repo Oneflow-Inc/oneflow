@@ -28,20 +28,18 @@ class ForeignBoxingUtil {
   virtual ~ForeignBoxingUtil() = default;
 
   virtual std::shared_ptr<compatible_py::BlobObject> BoxingTo(
-      const std::shared_ptr<InstructionsBuilder>& builder,
-      const std::shared_ptr<compatible_py::BlobObject>& blob_object,
+      InstructionsBuilder* builder, const std::shared_ptr<compatible_py::BlobObject>& blob_object,
       const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr) const {
     UNIMPLEMENTED();
   }
 
   virtual std::shared_ptr<ParallelDesc> TryReplaceDeviceTag(
-      const std::shared_ptr<InstructionsBuilder>& builder,
-      const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
+      InstructionsBuilder* builder, const std::shared_ptr<ParallelDesc>& parallel_desc_symbol,
       const std::string& device_tag) const {
     UNIMPLEMENTED();
   }
 
-  virtual void Assign(const std::shared_ptr<InstructionsBuilder>& builder,
+  virtual void Assign(InstructionsBuilder* builder,
                       const std::shared_ptr<compatible_py::BlobObject>& target_blob_object,
                       const std::shared_ptr<compatible_py::BlobObject>& source_blob_object) const {
     UNIMPLEMENTED();

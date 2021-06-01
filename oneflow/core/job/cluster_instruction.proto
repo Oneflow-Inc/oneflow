@@ -11,7 +11,7 @@ message ClusterInstructionProto {
   oneof instruction_type {
     ClusterCtrlSessionStart cluster_ctrl_session_start = 1;
     ClusterCtrlHalt cluster_ctrl_halt = 2; // normal exit
-    eager.EagerInstruction eager_instruction = 3;
+    vm.EagerInstruction eager_instruction = 3;
     ClusterCtrlAbort cluster_ctrl_abort = 5; // error exit
   }
 }

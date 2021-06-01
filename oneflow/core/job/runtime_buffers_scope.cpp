@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-RuntimeBuffersScope::RuntimeBuffersScope(const Plan& plan) {
+RuntimeBuffersScope::RuntimeBuffersScope(const JobConfs& job_confs) {
   size_t job_size = Global<JobName2JobId>::Get()->size();
   Global<BufferMgr<int64_t>>::Get()->NewBuffer(kBufferNameGlobalWaitJobId, job_size);
   auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<ForeignJobInstance>>>::Get();
-  for (const auto& pair : plan.job_confs().job_id2job_conf()) {
+  for (const auto& pair : job_confs.job_id2job_conf()) {
     const auto& job_name = pair.second.job_name();
     CHECK_EQ(pair.first, Global<JobName2JobId>::Get()->at(job_name));
     buffer_mgr->NewBuffer(GetForeignInputBufferName(job_name), 2);

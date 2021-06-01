@@ -366,7 +366,7 @@ REGISTER_USER_OP("slice")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceOpTensorDesc)
-    .SetInferDataTypeFn(InferSliceOpDataType)
+    .SetDataTypeInferFn(InferSliceOpDataType)
     .SetGetSbpFn(GetSliceOpSbpSignature);
 
 REGISTER_USER_OP("slice_grad")
@@ -377,7 +377,7 @@ REGISTER_USER_OP("slice_grad")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceGradOpTensorDesc)
-    .SetInferDataTypeFn(InferSliceGradDataType)
+    .SetDataTypeInferFn(InferSliceGradDataType)
     .SetGetSbpFn(GetSliceGradOpSbpSignature)
     .SetInputArgModifyFn(InferSliceGradInputArgModifier);
 
@@ -388,7 +388,7 @@ REGISTER_USER_OP("logical_slice_assign")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferLogicalSliceAssignTensorDesc)
-    .SetInferDataTypeFn(InferLogicalSliceAssignDataType)
+    .SetDataTypeInferFn(InferLogicalSliceAssignDataType)
     .SetGetSbpFn(GetLogicalSliceAssignSbpSignatures)
     .SetInputArgModifyFn(InferLogicalSliceAssignInputArgModifier);
 
@@ -399,7 +399,7 @@ REGISTER_USER_OP("logical_slice")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferLogicalSliceTensorDesc)
-    .SetInferDataTypeFn(InferLogicalSliceDataType)
+    .SetDataTypeInferFn(InferLogicalSliceDataType)
     .SetGetSbpFn(GetLogicalSliceSbpSignatures);
 
 REGISTER_USER_OP_GRAD("slice").SetGenBackwardOpConfFn(GenSliceGradOp);
@@ -412,7 +412,7 @@ REGISTER_USER_OP("slice_update")
     .Attr<std::vector<int64_t>>("stop")
     .Attr<std::vector<int64_t>>("step")
     .SetTensorDescInferFn(InferSliceUpdateOpTensorDesc)
-    .SetInferDataTypeFn(InferSliceUpdateOpDataType)
+    .SetDataTypeInferFn(InferSliceUpdateOpDataType)
     .SetGetSbpFn(GetSliceUpdateOpSbpSignature);
 
 REGISTER_USER_OP_GRAD("slice_update").SetBackwardOpConfGenFn(GenSliceUpdateGradOp);

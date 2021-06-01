@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const {
   CHECK_OR_RETURN(parallel_desc.HasMachineId(machine_id))
@@ -39,5 +39,5 @@ Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t 
   return Maybe<void>::Ok();
 }
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

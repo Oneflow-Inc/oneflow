@@ -54,6 +54,8 @@ class TestSize(flow.unittest.TestCase):
         test_case.assertTrue(size[0] == 4)
         test_case.assertTrue(size[2] == 10)
         test_case.assertTrue(len(size) == 4)
+        test_case.assertTrue(size[-1] == 5)
+        test_case.assertTrue(size[-4] == 4)
 
     def test_unpack(test_case):
         one, two, three, four = flow.Size((1, 2, 3, 4))

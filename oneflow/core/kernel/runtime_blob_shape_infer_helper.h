@@ -22,7 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 class Blob;
-class RtBlobDesc;
+class BlobDesc;
 
 class RuntimeBlobShapeInferHelper final {
  public:
@@ -34,7 +34,7 @@ class RuntimeBlobShapeInferHelper final {
 
  private:
   void UpdateInputBlobDescs7OpInferCacheKey(std::function<Blob*(const std::string&)> BnInOp2Blob);
-  BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op, const RtBlobDesc& rt_blob_desc);
+  BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op, const BlobDesc& rt_blob_desc);
 
   std::shared_ptr<Operator> op_;
   HashSet<std::string> ibns_;

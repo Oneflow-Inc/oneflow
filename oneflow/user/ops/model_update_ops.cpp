@@ -40,13 +40,17 @@ Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const Da
 }
 
 Maybe<void> CheckLearningRateShape(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-  JUST(CheckScalarShape(learning_rate));
+  if (ctx->has_input("learning_rate", 0)) {
+    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+    JUST(CheckScalarShape(learning_rate));
+  }
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-  JUST(CheckScalarDataType(learning_rate, DataType::kFloat));
+  if (ctx->has_input("learning_rate", 0)) {
+    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
+    JUST(CheckScalarDataType(learning_rate, DataType::kFloat));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -81,7 +85,7 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
@@ -89,7 +93,7 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
 }
 Maybe<void> InferSGDUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckLearningRateDataType(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
     JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
@@ -125,7 +129,7 @@ Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
   JUST(CheckShapeLike(momentum, model));
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
@@ -136,7 +140,7 @@ Maybe<void> InferMomentumUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
   JUST(CheckDataTypeLike(momentum, model));
   JUST(CheckLearningRateDataType(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
   }
@@ -178,7 +182,7 @@ Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
   JUST(CheckShapeLike(v, model));
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
@@ -191,7 +195,7 @@ Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
   JUST(CheckDataTypeLike(v, model));
   JUST(CheckLearningRateDataType(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
   }
@@ -240,7 +244,7 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
   JUST(CheckScalarShape(beta1_t));
   JUST(CheckScalarShape(beta2_t));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
@@ -259,7 +263,7 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckScalarDataType(beta1_t, data_type));
   JUST(CheckScalarDataType(beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
   }
@@ -297,16 +301,16 @@ Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* mean_square = ctx->TensorDesc4ArgNameAndIndex("mean_square", 0);
   JUST(CheckShapeLike(mean_square, model));
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
   if (ctx->Attr<bool>("centered")) {
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("mean_gradient", 0));
+    CHECK_OR_RETURN(ctx->has_input("mean_gradient", 0));
     const user_op::TensorDesc* mean_gradient = ctx->TensorDesc4ArgNameAndIndex("mean_gradient", 0);
     JUST(CheckShapeLike(mean_gradient, model));
   } else {
-    CHECK_OR_RETURN(!ctx->user_op_conf().has_input("mean_gradient", 0));
+    CHECK_OR_RETURN(!ctx->has_input("mean_gradient", 0));
   }
   return Maybe<void>::Ok();
 }
@@ -317,12 +321,12 @@ Maybe<void> InferRmsPropUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(mean_square, model));
   JUST(CheckLearningRateDataType(ctx));
   const DataType data_type = model->data_type();
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarDataType(scale_by_tensor, data_type));
   }
   if (ctx->Attr<bool>("centered")) {
-    CHECK_OR_RETURN(ctx->user_op_conf().has_input("mean_gradient", 0));
+    CHECK_OR_RETURN(ctx->has_input("mean_gradient", 0));
     const user_op::TensorDesc* mean_gradient = ctx->TensorDesc4ArgNameAndIndex("mean_gradient", 0);
     JUST(CheckDataTypeLike(mean_gradient, model));
   }
@@ -337,7 +341,7 @@ Maybe<void> InferLarsUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
   JUST(CheckShapeLike(momentum, model));
   JUST(CheckLearningRateShape(ctx));
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarShape(scale_by_tensor));
   }
@@ -349,7 +353,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(momentum, model));
   JUST(CheckLearningRateDataType(ctx));
   const DataType data_type = model->data_type();
-  if (ctx->user_op_conf().has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("scale_by_tensor", 0)) {
     const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
     JUST(CheckScalarDataType(scale_by_tensor, data_type));
   }
@@ -358,9 +362,10 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 REGISTER_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -381,7 +386,7 @@ REGISTER_USER_OP("sgd_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
-    .SetInferDataTypeFn(InferSGDUpdateDataType);
+    .SetDataTypeInferFn(InferSGDUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_sgd_update")
     .Input("model")
@@ -415,15 +420,16 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
                             const user_op::UserOpConfWrapper& conf) -> void {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
-    .SetInferDataTypeFn(InferIndexedSlicesSGDUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
 
 REGISTER_USER_OP("momentum_update")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
     .Input("momentum")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -447,7 +453,7 @@ REGISTER_USER_OP("momentum_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferMomentumUpdateDataType);
+    .SetDataTypeInferFn(InferMomentumUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_momentum_update")
     .Input("model")
@@ -486,16 +492,17 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferIndexedSlicesMomentumUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 
 REGISTER_USER_OP("adam_update")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
     .Input("m")
     .Input("v")
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -518,7 +525,7 @@ REGISTER_USER_OP("adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetInferDataTypeFn(InferAdamUpdateDataType);
+    .SetDataTypeInferFn(InferAdamUpdateDataType);
 
 REGISTER_USER_OP("indexed_slices_adam_update")
     .Input("model")
@@ -559,7 +566,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn(AdamInputArgModifyFn)
-    .SetInferDataTypeFn(InferIndexedSlicesAdamUpdateDataType);
+    .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
 REGISTER_USER_OP("lamb_update")
     .Input("m")
@@ -581,7 +588,7 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     // every bn has sbp broadcast signature
     .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetInferDataTypeFn(InferLambUpdateDataType);
+    .SetDataTypeInferFn(InferLambUpdateDataType);
 
 REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Input("learning_rate")
@@ -595,7 +602,7 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
           *ctx->IsDynamic4ArgNameAndIndex("learning_rate", 0);
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("learning_rate", 0);
       return Maybe<void>::Ok();
     });
@@ -605,11 +612,12 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
 REGISTER_USER_OP("rmsprop_update")
     .Input("model")
     .Input("model_diff")
-    .Input("learning_rate")
+    .OptionalInput("learning_rate")
     .OptionalInput("scale_by_tensor")
     .OptionalInput("skip_if")
     .Input("mean_square")
     .OptionalInput("mean_gradient")
+    .Attr<float>("learning_rate_val", 0.0)
     .Attr<double>("scale", 1.0)
     .Attr<float>("l1", 0.0)
     .Attr<float>("l2", 0.0)
@@ -649,7 +657,7 @@ REGISTER_USER_OP("rmsprop_update")
         SetInputArgModifierMutable(GetInputArgModifierFn, "mean_gradient", 0);
       }
     })
-    .SetInferDataTypeFn(InferRmsPropUpdateDataType);
+    .SetDataTypeInferFn(InferRmsPropUpdateDataType);
 
 REGISTER_USER_OP("lars_update")
     .Input("model")
@@ -683,7 +691,7 @@ REGISTER_USER_OP("lars_update")
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
-    .SetInferDataTypeFn(InferLarsUpdateDataType);
+    .SetDataTypeInferFn(InferLarsUpdateDataType);
 
 }  // namespace
 

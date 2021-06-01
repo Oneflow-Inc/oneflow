@@ -75,7 +75,7 @@ REGISTER_USER_OP("clip_by_scalar")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetGetSbpFn(GetClipSbpSignature)
-    .SetInferDataTypeFn(InferClipTensorDataType);
+    .SetDataTypeInferFn(InferClipTensorDataType);
 
 REGISTER_USER_OP("clip_by_scalar_min")
     .Input("x")
@@ -84,7 +84,7 @@ REGISTER_USER_OP("clip_by_scalar_min")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetGetSbpFn(GetClipSbpSignature)
-    .SetInferDataTypeFn(InferClipTensorDataType);
+    .SetDataTypeInferFn(InferClipTensorDataType);
 
 REGISTER_USER_OP("clip_by_scalar_max")
     .Input("x")
@@ -93,7 +93,7 @@ REGISTER_USER_OP("clip_by_scalar_max")
     .Output("y")
     .SetTensorDescInferFn(InferClipTensorDesc)
     .SetGetSbpFn(GetClipSbpSignature)
-    .SetInferDataTypeFn(InferClipTensorDataType);
+    .SetDataTypeInferFn(InferClipTensorDataType);
 
 REGISTER_USER_OP("clip_by_scalar_grad")
     .Input("dy")
@@ -105,7 +105,7 @@ REGISTER_USER_OP("clip_by_scalar_grad")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetInferDataTypeFn(InferClipGradDataType);
+    .SetDataTypeInferFn(InferClipGradDataType);
 
 REGISTER_USER_OP("clip_by_scalar_min_grad")
     .Input("dy")
@@ -115,7 +115,7 @@ REGISTER_USER_OP("clip_by_scalar_min_grad")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetInferDataTypeFn(InferClipGradDataType);
+    .SetDataTypeInferFn(InferClipGradDataType);
 
 REGISTER_USER_OP("clip_by_scalar_max_grad")
     .Input("dy")
@@ -125,7 +125,7 @@ REGISTER_USER_OP("clip_by_scalar_max_grad")
     .Output("dx")
     .SetTensorDescInferFn(InferClipGradTensorDesc)
     .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetInferDataTypeFn(InferClipGradDataType);
+    .SetDataTypeInferFn(InferClipGradDataType);
 
 REGISTER_USER_OP_GRAD("clip_by_scalar")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

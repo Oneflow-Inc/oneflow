@@ -29,10 +29,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  DEPRECATED static void Init(const Plan& plan) {
-    Global<CommNet>::SetAllocated(new EpollCommNet(plan));
-  }
-
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
@@ -44,7 +40,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   friend class Global<EpollCommNet>;
   EpollCommNet();
-  DEPRECATED EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;

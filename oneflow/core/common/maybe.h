@@ -271,16 +271,17 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
     maybe;                                                                     \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 #define CHECK_JUST(...)                                                        \
-  ({                                                                           \
+  ([&](const char* func_name) {                                                \
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                                       \
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
       stack_frame->set_location(MAYBE_FAILED_LOC);                             \
-      stack_frame->set_function(__FUNCTION__);                                 \
+      stack_frame->set_function(func_name);                                    \
       LOG(FATAL) << maybe.GetSerializedError();                                \
     }                                                                          \
-    maybe;                                                                     \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+    return maybe;                                                              \
+  })(__FUNCTION__)                                                             \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
 

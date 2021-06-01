@@ -43,7 +43,7 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       *num_unique->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_indices = ctx->TensorDesc4ArgNameAndIndex("x_indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(x_indices->data_type()));
       user_op::TensorDesc* num_unique = ctx->TensorDesc4ArgNameAndIndex("num_unique", 0);

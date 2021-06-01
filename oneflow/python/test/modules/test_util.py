@@ -20,9 +20,6 @@ from collections.abc import Iterable
 
 import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
-
-import test_global_storage
 
 
 def GenCartesianProduct(sets):

@@ -83,14 +83,7 @@ class Module(object):
                     result = (result,)
                 args = result
 
-        res = None
-
-        @global_function_or_identity()
-        def job():
-            nonlocal res
-            res = self.forward(*args)
-
-        job()
+        res = self.forward(*args)
 
         return res
 
@@ -387,11 +380,12 @@ class Module(object):
                     )
                     continue
                 try:
-                    # TODO(jianhao): uncomment these lines when autograd is ready
+                    # TODO(jianhao): uncomment this line when autograd is ready
                     # with torch.no_grad():
-                    # param.copy_(input_param)
-                    with param._placement_scope():
-                        FeedValueToVariable(param, input_param, None)
+                    param.copy_(input_param)
+                    # TODO(jianhao): uncomment these lines when consistent <-> local conversion is ready
+                    # with param._placement_scope():
+                    # FeedValueToVariable(param, input_param, None)
                 except Exception as ex:
                     error_msgs.append(
                         'While copying the parameter named "{}", '
@@ -503,17 +497,24 @@ class Module(object):
             if param is not None:
                 assert isinstance(param, Parameter)
                 assert param.is_leaf
+                with flow.no_grad():
+                    # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                    param_applied = Tensor(fn(param))
                 self._parameters[key] = Parameter(param_applied, param.requires_grad)
 
                 if param.grad is not None:
                     assert param.grad.is_leaf
+                    with flow.no_grad():
+                        # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                        grad_applied = Tensor(fn(param.grad))
                     self._parameters[key].grad = grad_applied.requires_grad_(
                         param.grad.requires_grad
                     )
 
         for key, buf in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                # TODO(xuxiaoyu): remove Tensor convert after Tensor refactoring
+                self._buffers[key] = Tensor(fn(buf))
 
         return self
 
@@ -522,3 +523,9 @@ class Module(object):
             module.apply(fn)
         fn(self)
         return self
+
+    def to(self, device: Optional[Union[str, flow.device]] = None):
+        def convert(t):
+            return t.to(device)
+
+        return self._apply(convert)

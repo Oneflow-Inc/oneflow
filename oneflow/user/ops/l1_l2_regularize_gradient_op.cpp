@@ -46,7 +46,7 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
     .Attr<float>("l2", 0)
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(GetSbpSignatures)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
       const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
       CHECK_EQ_OR_RETURN(model_diff->data_type(), model->data_type());

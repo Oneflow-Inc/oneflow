@@ -34,15 +34,15 @@ from oneflow.core.job.lbi_diff_watcher_info_pb2 import LbiAndDiffWatcherUuidPair
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.eager as eager_util
 import oneflow
-from oneflow_api import ConsistentBlob, MirroredBlob
-import oneflow_api
+import oneflow._oneflow_internal
+from oneflow._oneflow_internal import ConsistentBlob, MirroredBlob
 import inspect
 import numpy as np
 
 
 @oneflow_export("watch")
 def Watch(
-    blob_watched: oneflow_api.BlobDesc,
+    blob_watched: oneflow._oneflow_internal.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for a blob. The callback function will be called after the computation produce the blob finishes. We can use it to watch the values of Blob.
@@ -168,7 +168,7 @@ def LazyConsistentWatch(blob_watched, handler):
 
 @oneflow_export("watch_diff")
 def WatchDiff(
-    blob_watched: oneflow_api.BlobDesc,
+    blob_watched: oneflow._oneflow_internal.BlobDesc,
     handler_or_prompt: Optional[Union[Callable, str]] = None,
 ) -> None:
     r"""Register callback for gradient of a blob. The callback will be called after the computation produce the gradient blob finishes.

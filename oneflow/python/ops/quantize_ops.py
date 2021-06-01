@@ -20,18 +20,18 @@ from oneflow.python.oneflow_export import oneflow_export
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("quantization.min_max_observer")
 def min_max_observer(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
     quantization_formula: str = "google",
     per_layer_quantization: bool = True,
     name: Optional[str] = None,
-) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     r"""Compute the quantization parameters of the input tensor.
 
     First compute the max and min values of input tensor:
@@ -44,12 +44,12 @@ def min_max_observer(
 
     Then compute the scale and zero_point with the following equations:
 
-        if quantization_scheme == "symmetric": 
+        if quantization_scheme == "symmetric":
 
         .. math::
 
             & denom = 2^{quantization\_to\_bit - 1} - 1
-            
+
             & scale = max(|max\_value|,|min\_value|) / denom
 
             & zero\_point = 0
@@ -59,27 +59,27 @@ def min_max_observer(
         .. math::
 
             & denom = 2^{quantization\_to\_bit} - 1
-            
+
             & scale = (max\_value - min\_value) / denom
 
             & zero\_point = -min\_value / scale
-    
+
     If per_layer_quantization is False, then the shape of scale and zero_point will be (input.shape[0],).
 
     Args:
-        input (oneflow_api.BlobDesc): input tensor.
-        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        input (oneflow._oneflow_internal.BlobDesc): input tensor.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
         per_layer_quantization (bool): True or False, means per-layer / per-channel quantization. Defaults to True.
         name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
-        Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]: The scale and zero_point of input tensor.
-    
-    For example: 
+        Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]: The scale and zero_point of input tensor.
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -129,18 +129,18 @@ def min_max_observer(
 
 @oneflow_export("quantization.moving_average_min_max_observer")
 def moving_average_min_max_observer(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
     quantization_formula: str = "google",
     momentum: float = 0.95,
     name: Optional[str] = None,
-) -> Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]:
     r"""Compute the quantization parameters based on the moving average of the input tensor's min and max values.
 
     First compute the moving\_max and moving\_min value of input tensor:
 
-        if quantization_scheme == "symmetric": 
+        if quantization_scheme == "symmetric":
 
         .. math::
 
@@ -160,12 +160,12 @@ def moving_average_min_max_observer(
 
     Then compute the scale and zero_point with the following equations:
 
-        if quantization_scheme == "symmetric": 
+        if quantization_scheme == "symmetric":
 
         .. math::
 
             & denom = 2^{quantization\_to\_bit - 1} - 1
-            
+
             & scale = moving\_max / denom
 
             & zero\_point = 0
@@ -175,25 +175,25 @@ def moving_average_min_max_observer(
         .. math::
 
             & denom = 2^{quantization\_to\_bit} - 1
-            
+
             & scale = (moving\_max - moving\_min) / denom
 
             & zero\_point = -moving\_min / scale
-    
+
     Args:
-        input (oneflow_api.BlobDesc): input tensor.
-        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        input (oneflow._oneflow_internal.BlobDesc): input tensor.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
         momentum (float): Smoothing parameter for exponential moving average operation. Defaults to 0.95.
         name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
-        Tuple[oneflow_api.BlobDesc, oneflow_api.BlobDesc]: The scale and zero_point of input tensor.
-    
-    For example: 
+        Tuple[oneflow._oneflow_internal.BlobDesc, oneflow._oneflow_internal.BlobDesc]: The scale and zero_point of input tensor.
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -270,24 +270,24 @@ def moving_average_min_max_observer(
 
 @oneflow_export("quantization.fake_quantization")
 def fake_quantization(
-    input: oneflow_api.BlobDesc,
-    scale: oneflow_api.BlobDesc,
-    zero_point: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
+    scale: oneflow._oneflow_internal.BlobDesc,
+    zero_point: oneflow._oneflow_internal.BlobDesc,
     quantization_bit: int = 8,
     quantization_scheme: str = "symmetric",
     quantization_formula: str = "google",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Simulate the quantize and dequantize operations in training time.
 
     The output will be computed as:
 
-        if quantization_scheme == "symmetric": 
+        if quantization_scheme == "symmetric":
 
         .. math::
 
             & quant\_max = 2^{quantization\_to\_bit - 1} - 1
-            
+
             & quant\_min = -quant\_max
 
             & clamp(round(x / scale), quant\_min, quant\_max) * scale
@@ -297,26 +297,26 @@ def fake_quantization(
         .. math::
 
             & quant\_max = 2^{quantization\_to\_bit} - 1
-            
+
             & quant\_min = 0
 
             & (clamp(round(x / scale + zero\_point), quant\_min, quant\_max) - zero\_point) * scale
 
     Args:
-        input (oneflow_api.BlobDesc): input tensor.
-        scale (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
-        zero_point (oneflow_api.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
-        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8. 
-        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric". 
+        input (oneflow._oneflow_internal.BlobDesc): input tensor.
+        scale (oneflow._oneflow_internal.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
+        zero_point (oneflow._oneflow_internal.BlobDesc): Computed by min_max_observer or moving_average_min_max_observer op.
+        quantization_bit (int): Quantize input to uintX / intX, X can be in range [2, 8]. Defaults to 8.
+        quantization_scheme (str): "symmetric" or "affine", quantize to signed / unsigned integer. Defaults to "symmetric".
         quantization_formula (str): Support "google" or "cambricon".
         name (Optional[str]): This operator's name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: Input tensor after quantize and dequantize operations.
+        oneflow._oneflow_internal.BlobDesc: Input tensor after quantize and dequantize operations.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np

@@ -24,14 +24,14 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 from typing import Optional, Union, Sequence
 
 
 @oneflow_export("count_not_finite")
 def count_not_finite(
-    x: oneflow_api.BlobDesc, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("CountNotFinite_")
@@ -47,8 +47,9 @@ def count_not_finite(
 
 @oneflow_export("multi_count_not_finite")
 def multi_count_not_finite(
-    x: Optional[Sequence[oneflow_api.BlobDesc]] = None, name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+    x: Optional[Sequence[oneflow._oneflow_internal.BlobDesc]] = None,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
 
     return (
         flow.user_op_builder(

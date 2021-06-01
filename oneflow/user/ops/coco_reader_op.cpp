@@ -121,7 +121,7 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
       CHECK(gt_segm_index_modifier != nullptr);
       gt_segm_index_modifier->set_header_infered_before_compute(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
       *image_desc->mut_data_type() = DataType::kTensorBuffer;
       user_op::TensorDesc* image_id_desc = ctx->TensorDesc4ArgNameAndIndex("image_id", 0);

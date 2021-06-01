@@ -42,7 +42,7 @@ REGISTER_USER_OP("acc")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferOutputBlobTimeShapeFn(
+    .SetOutputBlobTimeShapeInferFn(
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           const int32_t max_acc_num = ctx->user_op_conf().attr<int32_t>("max_acc_num");
           const Shape& in_time_shape = ctx->TimeShape4InputArgNameAndIndex("in", 0);
@@ -60,7 +60,7 @@ REGISTER_USER_OP("acc")
           *ctx->mut_output_blob_time_shape() = Shape(time_shape_dim_vec);
           return Maybe<void>::Ok();
         })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });

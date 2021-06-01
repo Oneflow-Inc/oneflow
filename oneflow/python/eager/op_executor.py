@@ -30,16 +30,16 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.scope_util as scope_util
 import oneflow.python.eager.op_infer_util as op_infer_util
 import oneflow.python.eager.blob_register as blob_register_util
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api.oneflow.core.register.logical_blob_id as lbi_util
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.register.logical_blob_id as lbi_util
 from google.protobuf import text_format
 
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 import numpy as np
 import os
 
-default_blob_register = oneflow_api.GetDefaultBlobRegister()
+default_blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
 
 
 def Interpret(op_attribute, parallel_conf, blob_register):
@@ -68,7 +68,7 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
                 str(op_attribute)
             )
             builder.StatefulCall(
@@ -78,7 +78,7 @@ def OpKernelCall(opkernel_object, op_attribute, blob_register):
                 boxing_util.BoxingTo,
             )
 
-    oneflow_api.deprecated.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
 
 def MirroredCast(op_attribute, blob_register):
@@ -88,7 +88,7 @@ def MirroredCast(op_attribute, blob_register):
         ) as bn_in_op2blob_object:
             in_blob_object = bn_in_op2blob_object["in"]
             parallel_desc_symbol = in_blob_object.parallel_desc_symbol
-            op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+            op_arg_parallel_attr = oneflow._oneflow_internal.GetOpArgParallelAttribute(
                 parallel_desc_symbol, str(op_attribute), "out"
             )
             out_blob_object = builder.MakeReferenceBlobObject(
@@ -96,7 +96,7 @@ def MirroredCast(op_attribute, blob_register):
             )
             bn_in_op2blob_object["out"] = out_blob_object
 
-    oneflow_api.deprecated.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
 
 def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
@@ -104,8 +104,10 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
 
     def GetInBlobObject(builder, ibn, bn_in_op2blob_object):
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
-        in_op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+        in_op_parallel_desc_sym = oneflow._oneflow_internal.GetPlacementSymbol(
+            parallel_sig[ibn]
+        )
+        in_op_arg_parallel_attr = oneflow._oneflow_internal.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, str(op_attribute), ibn
         )
         return boxing_util.BoxingTo(
@@ -122,25 +124,29 @@ def DistributeSplitOrClone(op_attribute, parallel_conf, blob_register):
             for i, blob_object in enumerate(physical_out_blob_objects):
                 bn_in_op2blob_object["out_%s" % i] = blob_object
 
-    oneflow_api.deprecated.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
 
 def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
-    op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(
+    op_parallel_desc_sym = oneflow._oneflow_internal.GetPlacementSymbol(
         op_attribute.parallel_signature.op_parallel_desc_symbol_id
     )
     parallel_size = len(op_attribute.input_bns)
-    op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+    op_arg_parallel_attr = oneflow._oneflow_internal.GetOpArgParallelAttribute(
         op_parallel_desc_sym, str(op_attribute), "out"
     )
-    op_arg_blob_attr = oneflow_api.GetOpArgBlobAttribute(str(op_attribute), "out")
+    op_arg_blob_attr = oneflow._oneflow_internal.GetOpArgBlobAttribute(
+        str(op_attribute), "out"
+    )
     parallel_sig = op_attribute.parallel_signature.bn_in_op2parallel_desc_symbol_id
 
     def GetInBlobObject(builder, i, bn_in_op2blob_object):
         ibn = "in_%s" % i
         origin_blob_object = bn_in_op2blob_object[ibn]
-        in_op_parallel_desc_sym = oneflow_api.GetPlacementSymbol(parallel_sig[ibn])
-        in_op_arg_parallel_attr = oneflow_api.GetOpArgParallelAttribute(
+        in_op_parallel_desc_sym = oneflow._oneflow_internal.GetPlacementSymbol(
+            parallel_sig[ibn]
+        )
+        in_op_arg_parallel_attr = oneflow._oneflow_internal.GetOpArgParallelAttribute(
             in_op_parallel_desc_sym, str(op_attribute), ibn
         )
         return boxing_util.BoxingTo(
@@ -160,11 +166,11 @@ def DistributeConcatOrAdd(op_attribute, parallel_conf, blob_register):
                 in_blob_objects, op_arg_parallel_attr, op_arg_blob_attr
             )
 
-    oneflow_api.deprecated.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
 
 def _FindOrCreateVarBlobObject(op_attribute, parallel_conf, blob_register):
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     name = name_scope.GetJobNameScopePrefix(job_name) + op_attribute.op_conf.name
     sess = session_ctx.GetDefaultSession()
     var_blob, _ = sess.TryGetVariableBlobOfJobFromStash(job_name, name)
@@ -191,9 +197,11 @@ def _Watch(op_attribute, parallel_conf, blob_register):
         cfg_lbi.set_blob_name(lbi.blob_name)
         lbi = cfg_lbi
     if in_blob_object.op_arg_parallel_attr.is_mirrored():
-        blob = oneflow_api.EagerMirroredBlob(lbi, in_blob_object, default_blob_register)
+        blob = oneflow._oneflow_internal.EagerMirroredBlob(
+            lbi, in_blob_object, default_blob_register
+        )
     else:
-        blob = oneflow_api.EagerConsistentBlob(
+        blob = oneflow._oneflow_internal.EagerConsistentBlob(
             lbi, in_blob_object, default_blob_register
         )
     uuid2watch_handler = session_ctx.GetDefaultSession().uuid2watch_handler
@@ -207,7 +215,7 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
         with blob_register_util.BnInOp2BlobObjectScope(
             blob_register, op_attribute
         ) as bn_in_op2blob_object:
-            cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+            cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
                 str(op_attribute)
             )
             builder.StatelessCall(
@@ -217,7 +225,7 @@ def _NaiveInterpret(op_attribute, parallel_conf, blob_register):
                 boxing_util.BoxingTo,
             )
 
-    oneflow_api.deprecated.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
 
 
 def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
@@ -232,9 +240,13 @@ def _MakeEagerLogicalBlob(op_attribute, obn, blob_register):
         cfg_lbi.set_blob_name(lbi.blob_name)
         lbi = cfg_lbi
     if mirrored_sig_map[obn].HasField("mirrored_parallel"):
-        return oneflow_api.EagerMirroredBlob(lbi, blob_object, default_blob_register)
+        return oneflow._oneflow_internal.EagerMirroredBlob(
+            lbi, blob_object, default_blob_register
+        )
     else:
-        return oneflow_api.EagerConsistentBlob(lbi, blob_object, default_blob_register)
+        return oneflow._oneflow_internal.EagerConsistentBlob(
+            lbi, blob_object, default_blob_register
+        )
 
 
 def EagerInitVariableBlob(sess, var_op_conf, var_blob):
@@ -259,7 +271,7 @@ def _Assign(var_blob_object, value_blob_object):
         new_parallel_desc_symbol = boxing_util.TryReplaceDeviceTag(
             builder, var_blob_object.parallel_desc_symbol, "cpu"
         )
-        consumer_op_arg_parallel_attr = oneflow_api.OpArgParallelAttribute(
+        consumer_op_arg_parallel_attr = oneflow._oneflow_internal.OpArgParallelAttribute(
             new_parallel_desc_symbol,
             str(var_blob_object.op_arg_parallel_attr.sbp_parallel),
             str(var_blob_object.op_arg_parallel_attr.opt_mirrored_parallel),
@@ -269,7 +281,7 @@ def _Assign(var_blob_object, value_blob_object):
         )
         boxing_util.Assign(builder, var_blob_object, tmp_blob_object)
 
-    oneflow_api.deprecated.LogicalRun(BuildAssignInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildAssignInstruction)
 
 
 def _BuildNotMirroredScope(old_scope, builder):
@@ -278,7 +290,7 @@ def _BuildNotMirroredScope(old_scope, builder):
 
 def _EagerRunModelInit(var_op_conf):
     op_conf, _ = _GenModelInitOpConfAndRetLbi(var_op_conf)
-    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
 
     def BuildModelInitInstruction(builder):
         upstream_signature = op_node_signature_pb.OpNodeSignature()
@@ -287,7 +299,7 @@ def _EagerRunModelInit(var_op_conf):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
         builder.StatelessCall(
@@ -296,7 +308,7 @@ def _EagerRunModelInit(var_op_conf):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        oneflow_api.deprecated.LogicalRun(BuildModelInitInstruction)
+        oneflow._oneflow_internal.deprecated.LogicalRun(BuildModelInitInstruction)
 
     return bn_in_op2blob_object["out_0"]
 
@@ -307,7 +319,7 @@ def _MakeModelIOPathInputBuilds(op_conf, path, bn_in_op2blob_object):
         parallel_conf = (
             oneflow.current_scope().device_parallel_desc_symbol.parallel_conf
         )
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
         builder.StatelessCall(
@@ -346,7 +358,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
     )
 
     model_load_op_conf, _ = _GenModelLoadOpConfAndRetLbi(var_op_conf, path_lbi)
-    model_load_blob_objects = oneflow_api.deprecated.BnInOp2BlobObject()
+    model_load_blob_objects = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
 
     def BuildModelLoadInstruction(builder):
         path_blob_object = path_input_blob_objects["out"]
@@ -355,7 +367,7 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
             model_load_op_conf, ibn2blob_object=model_load_blob_objects
         )
         parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
         builder.StatelessCall(
@@ -367,16 +379,18 @@ def _EagerRunModelLoad(var_op_conf, snapshot_path):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        oneflow_api.deprecated.LogicalRun(BuildModelIOPathInputInstruction)
-        oneflow_api.deprecated.LogicalRun(BuildFeedPathInstruction)
-        oneflow_api.deprecated.LogicalRun(BuildModelLoadInstruction)
+        oneflow._oneflow_internal.deprecated.LogicalRun(
+            BuildModelIOPathInputInstruction
+        )
+        oneflow._oneflow_internal.deprecated.LogicalRun(BuildFeedPathInstruction)
+        oneflow._oneflow_internal.deprecated.LogicalRun(BuildModelLoadInstruction)
 
     return model_load_blob_objects["out_0"]
 
 
 def _EagerRunModelSave(var_blobs, snapshot_path):
     path_input_op_conf, path_lbi = _GenModelIOPathInputOpConfAndRetLbi()
-    path_input_blob_objects = {}
+    path_input_blob_objects = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
     (
         BuildModelIOPathInputInstruction,
         BuildFeedPathInstruction,
@@ -385,7 +399,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
     )
 
     model_save_op_conf = _GenModelSaveOpConf(var_blobs, path_lbi)
-    model_save_blob_objects = oneflow_api.deprecated.BnInOp2BlobObject()
+    model_save_blob_objects = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
 
     def BuildModelSaveInstruction(builder):
         path_blob_object = path_input_blob_objects["out"]
@@ -397,7 +411,7 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
             model_save_op_conf, ibn2blob_object=model_save_blob_objects
         )
         parallel_conf = path_blob_object.parallel_desc_symbol.parallel_conf
-        cfg_op_attribute = oneflow_api.deprecated.MakeOpAttributeByString(
+        cfg_op_attribute = oneflow._oneflow_internal.deprecated.MakeOpAttributeByString(
             str(op_attribute)
         )
         builder.StatelessCall(
@@ -409,9 +423,11 @@ def _EagerRunModelSave(var_blobs, snapshot_path):
 
     sess = session_ctx.GetDefaultSession()
     with scope_util.ScopeContext(scope_util.MakeScope(_BuildNotMirroredScope)):
-        oneflow_api.deprecated.LogicalRun(BuildModelIOPathInputInstruction)
-        oneflow_api.deprecated.LogicalRun(BuildFeedPathInstruction)
-        oneflow_api.deprecated.LogicalRun(BuildModelSaveInstruction)
+        oneflow._oneflow_internal.deprecated.LogicalRun(
+            BuildModelIOPathInputInstruction
+        )
+        oneflow._oneflow_internal.deprecated.LogicalRun(BuildFeedPathInstruction)
+        oneflow._oneflow_internal.deprecated.LogicalRun(BuildModelSaveInstruction)
 
 
 def _GenModelInitOpConfAndRetLbi(var_op_conf):
@@ -455,7 +471,9 @@ def _GenModelIOPathInputOpConfAndRetLbi():
 
     blob_conf = inter_face_blob_conf_util.InterfaceBlobConf()
     blob_conf.shape.dim.append(65536)
-    blob_conf.data_type = oneflow_api.deprecated.GetProtoDtype4OfDtype(oneflow.int8)
+    blob_conf.data_type = oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(
+        oneflow.int8
+    )
     blob_conf.is_dynamic = True
     op_conf.input_conf.blob_conf.CopyFrom(blob_conf)
 

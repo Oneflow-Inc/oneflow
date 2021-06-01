@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-namespace oneflow {
+#ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_MODE_H_
+#define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_MODE_H_
 
+namespace oneflow {
 namespace autograd {
 
 struct GradMode {
@@ -35,6 +37,12 @@ class AutoGradMode {
   bool prev_mode_;
 };
 
-}  // namespace autograd
+class NoGradGuard : public AutoGradMode {
+ public:
+  NoGradGuard() : AutoGradMode(false){};
+};
 
+}  // namespace autograd
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_MODE_H_

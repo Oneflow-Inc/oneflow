@@ -26,13 +26,14 @@ class FusedCastScaleCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
+    const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const double scale_val = ctx->Attr<double>("scale");
     const int64_t n = x->shape().elem_cnt();
-    const auto scalar_val = *(scalar->dptr<T>());
+    const T scale = *(scale_by_tensor->dptr<T>()) * scale_val;
     const U* x_ptr = x->dptr<U>();
     T* y_ptr = y->mut_dptr<T>();
-    FOR_RANGE(int64_t, i, 0, n) { y_ptr[i] = static_cast<T>(x_ptr[i]) * scalar_val; }
+    FOR_RANGE(int64_t, i, 0, n) { y_ptr[i] = static_cast<T>(x_ptr[i]) * scale; }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

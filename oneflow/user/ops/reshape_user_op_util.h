@@ -18,11 +18,11 @@ limitations under the License.
 
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/user_op_conf.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
 struct ReshapeUserOpUtil {
-  static Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape,
-                                             const ShapeProto& reshape_proto);
+  static Maybe<Shape> GetLogicalOutBlobShape(const Shape& in_shape, const Shape& reshape);
   static Maybe<void> Squeeze(const Shape& origin, Shape* shape,
                              HashMap<int, int>* squeezed_axis2origin_axis);
   static Maybe<void> GetGroupStartInAxis2OutAxis(const Shape& in_shape, const Shape& out_shape,
@@ -31,7 +31,11 @@ struct ReshapeUserOpUtil {
   static Maybe<void> GetReshapeUserOpSbpSignatures(const Shape& in_shape, const Shape& out_shape,
                                                    std::vector<user_op::OpArg> in_args,
                                                    std::vector<user_op::OpArg> out_args,
-                                                   user_op::SbpContext* ctx);
+                                                   const int64_t parallel_num,
+                                                   user_op::UserOpSbpSignatureBuilder* builder);
+  static Maybe<void> InferParallelDistribution(user_op::InferParallelDistributionFnContext* ctx,
+                                               const Shape& logical_in_shape,
+                                               const Shape& logical_out_shape);
 };
 }  // namespace oneflow
 

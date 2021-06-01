@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
 
 namespace {
@@ -304,5 +304,5 @@ TEST(SendReceiveInstructionType, naive) {
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

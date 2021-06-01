@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 
 namespace oneflow {
 
@@ -25,20 +26,28 @@ namespace one {
 
 std::shared_ptr<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
-    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf,
-    bool retain_grad) {
+    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<MirroredTensorImpl> impl;
   if (is_lazy) {
-    impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf,
-                                                    retain_grad);
+    impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
   } else {
-    impl = std::make_shared<EagerMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf,
-                                                     retain_grad);
+    const auto eager_blob_object =
+        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape, device));
+    impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
+                                                     is_leaf);
   }
   return std::make_shared<MirroredTensor>(impl);
 }
 
-bool MirroredTensor::is_cuda() const { return device()->type() == "cuda"; }
+std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf) {
+  std::shared_ptr<MirroredTensorImpl> impl =
+      std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad, is_leaf);
+  return std::make_shared<MirroredTensor>(impl);
+}
+
+bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
 
@@ -47,9 +56,7 @@ int64_t MirroredTensor::dim(int64_t index) const { return shape()->At(index); }
 int64_t MirroredTensor::nelement() const { return shape()->elem_cnt(); }
 
 std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
-  std::shared_ptr<MirroredTensor> t =
-      MakeTensor(shape(), dtype(), device(), is_lazy(), false, is_leaf(), false);
-  t->set_blob_object(blob_object());
+  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
   return t;
 }
 
@@ -62,20 +69,20 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
     const std::shared_ptr<const compatible_py::Distribute>& distribute,
     const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
-    bool is_leaf, bool retain_grad) {
+    bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
   if (is_lazy) {
     impl = std::make_shared<LazyConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
-                                                      requires_grad, is_leaf, retain_grad);
+                                                      requires_grad, is_leaf);
   } else {
     impl = std::make_shared<EagerConsistentTensorImpl>(shape, dtype, distribute, parallel_desc,
-                                                       requires_grad, is_leaf, retain_grad);
+                                                       requires_grad, is_leaf);
   }
   return std::make_shared<ConsistentTensor>(impl);
 }
 
 bool ConsistentTensor::is_cuda() const {
-  return parallel_desc()->device_type() == DeviceType::kGPU;
+  return CHECK_JUST(parallel_desc())->device_type() == DeviceType::kGPU;
 }
 
 int64_t ConsistentTensor::dim(int64_t index) const { return shape()->At(index); }
@@ -85,9 +92,7 @@ int64_t ConsistentTensor::nelement() const { return shape()->elem_cnt(); }
 int64_t ConsistentTensor::ndim() const { return shape()->NumAxes(); }
 
 std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
-  std::shared_ptr<ConsistentTensor> t = MakeTensor(shape(), dtype(), distribute(), parallel_desc(),
-                                                   is_lazy(), false, is_leaf(), false);
-  t->set_blob_object(blob_object());
+  std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
 

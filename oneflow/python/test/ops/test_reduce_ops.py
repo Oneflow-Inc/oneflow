@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import tensorflow as tf
 from test_util import GenArgList
 import oneflow.typing as oft

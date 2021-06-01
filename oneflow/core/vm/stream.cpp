@@ -43,7 +43,7 @@ const StreamTypeId& Stream::stream_type_id() const {
 }
 
 ObjectMsgPtr<Instruction> Stream::NewInstruction(
-    InstructionMsg* instr_msg, const std::shared_ptr<ParallelDesc>& parallel_desc) {
+    InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   if (free_instruction_list().empty()) {
     return ObjectMsgPtr<Instruction>::NewFrom(mut_allocator(), instr_msg, this, parallel_desc);
   }
@@ -54,6 +54,7 @@ ObjectMsgPtr<Instruction> Stream::NewInstruction(
 
 void Stream::MoveToFreeList(ObjectMsgPtr<Instruction>&& instruction) {
   CHECK_EQ(instruction->ref_cnt(), 1);
+  instruction->clear_instr_msg();
   auto* instruction_ptr = instruction.Mutable();
   mut_free_instruction_list()->EmplaceBack(std::move(instruction));
   instruction_ptr->__Delete__();

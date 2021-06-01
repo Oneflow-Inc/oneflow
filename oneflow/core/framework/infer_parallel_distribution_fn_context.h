@@ -27,7 +27,8 @@ class InferParallelDistributionFnContext {
   InferParallelDistributionFnContext() = default;
   virtual ~InferParallelDistributionFnContext() = default;
   InferParallelDistributionFnContext(const InferParallelDistributionFnContext&) = delete;
-
+  virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
+      const std::string& input_arg_name, int32_t index) const = 0;
   virtual ParallelDistribution* ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
                                                                      int32_t index) = 0;
   virtual const ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(

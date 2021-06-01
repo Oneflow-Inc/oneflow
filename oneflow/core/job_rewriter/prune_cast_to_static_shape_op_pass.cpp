@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 

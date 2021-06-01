@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/graph/id_serialization.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -49,6 +49,17 @@ bool IsConnectToTickOp(const TaskNode* node) {
   return false;
 }
 
+std::string GetOpConfCalculationPassName(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_scope_symbol_id());
+  int64_t scope_symbol_id = op_conf.scope_symbol_id();
+  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
+      << " Error! op : \n " << op_conf.DebugString()
+      << " has error scope_symbol_id = " << scope_symbol_id
+      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
+  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
+  return scope.scope_proto().calculation_pass_name();
+}
+
 bool IsOptimizerPassOp(const Operator* op) {
   // NOTE(chengcheng): use scope::calculation_pass_name instead of area_id to not merge optimizer
   // ops with fw/bw ops
@@ -57,13 +68,7 @@ bool IsOptimizerPassOp(const Operator* op) {
     // optimizer subgraph ops.
     return false;
   }
-  int64_t scope_symbol_id = op->op_conf().scope_symbol_id();
-  CHECK(Global<symbol::Storage<Scope>>::Get()->Has(scope_symbol_id))
-      << " Error! op : \n " << op->op_conf().DebugString()
-      << " has error scope_symbol_id = " << scope_symbol_id
-      << " which cannot find in Global<symbol::Storage<Scope>>::Get()\n";
-  const Scope& scope = Global<symbol::Storage<Scope>>::Get()->Get(scope_symbol_id);
-  return scope.scope_proto().calculation_pass_name() == kOptimizerPass;
+  return GetOpConfCalculationPassName(op->op_conf()) == kOptimizerPass;
 }
 
 bool IsSubsetTickOpConf(const OperatorConf& op_conf) {
@@ -81,6 +86,13 @@ bool IsSpecialOpNotConsiderMergeInChain(const Operator* op) {
       || op_conf.has_source_tick_conf() || op_conf.has_sink_tick_conf()
       || op_conf.has_acc_tick_conf()) {
     return true;
+  }
+  if (op_conf.has_user_conf()) {
+    const std::string& user_type_name = op_conf.user_conf().op_type_name();
+    if (user_type_name == "repeat" || user_type_name == "acc" || user_type_name == "pack"
+        || user_type_name == "unpack" || user_type_name == "identity_buffer") {
+      return true;
+    }
   }
   // NOTE(chengcheng): ONLY nccl_use_compute_stream = false will exclude optimizer pass ops
   if (!Global<ResourceDesc, ForSession>::Get()->nccl_use_compute_stream()
@@ -108,10 +120,17 @@ bool CanBeMergedInChain(const TaskNode* node) {
   return true;
 }
 
+std::shared_ptr<const Shape> GetTaskNodeTimeShape(const TaskNode* node) {
+  const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
+  CHECK(fw_comp_node != nullptr);
+  return CHECK_JUST(fw_comp_node->op()->GetOpTimeShape());
+}
+
 void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_t this_chain_id) {
   CHECK_NE(this_chain_id, -1);
   CHECK_EQ(this_node->chain_id(), -1);
   // bfs search all node can be merged in this chain
+  std::shared_ptr<const Shape> seed_time_shape = GetTaskNodeTimeShape(this_node);
   HashSet<TaskNode*> visited_nodes;
   std::queue<TaskNode*> queued_nodes;
   queued_nodes.push(this_node);
@@ -123,9 +142,10 @@ void TraverseConnectedSubGraphMergeInThisChain(TaskNode* this_node, const int64_
     CHECK_EQ(cur_node->chain_id(), -1);
     cur_node->set_chain_id(this_chain_id);
 
-    cur_node->ForEachNodeOnInOutEdge([&](TaskNode* next_node) {
+    cur_node->ForEachNodeOnInOutDataEdge([&](TaskNode* next_node) {
       if (visited_nodes.find(next_node) == visited_nodes.end() && CanBeMergedInChain(next_node)
-          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()) {
+          && this_node->GlobalWorkStreamId() == next_node->GlobalWorkStreamId()
+          && (*GetTaskNodeTimeShape(next_node)) == (*seed_time_shape)) {
         if (next_node->chain_id() == -1) {
           queued_nodes.push(next_node);
           visited_nodes.insert(next_node);
@@ -263,9 +283,15 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index =
-          StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
-              device_id, comp_task_node->GetTaskType());
+      StreamId::stream_index_t stream_index;
+      if (op_node->op().op_conf().has_stream_index_hint()) {
+        int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
+        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
+        stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
+      } else {
+        stream_index = StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
+            device_id, comp_task_node->GetTaskType());
+      }
       comp_task_node->set_thrd_id(SerializeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
       sorted_comp_tasks->push_back(comp_task_node);

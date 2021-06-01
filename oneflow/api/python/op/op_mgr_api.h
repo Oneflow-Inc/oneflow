@@ -35,8 +35,8 @@ inline std::string InferOpConf(const std::string& serialized_op_conf,
   return oneflow::InferOpConf(serialized_op_conf, serialized_op_input_signature).GetOrThrow();
 }
 
-inline std::string GetSerializedOpAttributes() {
-  return oneflow::GetSerializedOpAttributes().GetOrThrow();
+inline std::string GetSerializedInterfaceOpAttributes() {
+  return oneflow::GetSerializedInterfaceOpAttributes().GetOrThrow();
 }
 
 inline bool IsInterfaceOpTypeCase(int64_t op_type_case) {

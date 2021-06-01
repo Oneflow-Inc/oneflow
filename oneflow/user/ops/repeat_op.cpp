@@ -42,14 +42,14 @@ REGISTER_USER_OP("repeat")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferOutputBlobTimeShapeFn(
+    .SetOutputBlobTimeShapeInferFn(
         [](user_op::InferOutputBlobTimeShapeFnContext* ctx) -> Maybe<void> {
           DimVector dim_vec(ctx->TimeShape4InputArgNameAndIndex("in", 0).dim_vec());
           dim_vec.push_back(ctx->user_op_conf().attr<int32_t>("repeat_num"));
           *ctx->mut_output_blob_time_shape() = Shape(dim_vec);
           return Maybe<void>::Ok();
         })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });

@@ -64,7 +64,7 @@ inline Maybe<std::string> InferOpConf(const std::string& op_conf_str,
   return PbMessage2TxtString(*op_attribute);
 }
 
-inline Maybe<std::string> GetSerializedOpAttributes() {
+inline Maybe<std::string> GetSerializedInterfaceOpAttributes() {
   OpAttributeList op_attribute_list;
   const JobSet& job_set = JUST(GetJobSet());
   for (int i = 0; i < job_set.job_size(); i++) {
@@ -72,8 +72,12 @@ inline Maybe<std::string> GetSerializedOpAttributes() {
     auto scope = std::make_unique<GlobalJobDescScope>(job.job_conf(), i);
     const auto& op_graph = JUST(OpGraph::New(job));
     op_graph->ForEachNode([&op_attribute_list](OpNode* op_node) {
-      const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
-      op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
+      const auto& op_type_case = op_node->op().op_conf().op_type_case();
+      if (oneflow::IsClassRegistered<int32_t, oneflow::IsInterfaceOpConf4OpTypeCase>(
+              op_type_case)) {
+        const auto& op_attribute = op_node->op().GetOpAttributeWithoutOpNameAndLbn();
+        op_attribute_list.mutable_op_attribute()->Add()->CopyFrom(*op_attribute);
+      }
     });
   }
   return PbMessage2TxtString(op_attribute_list);

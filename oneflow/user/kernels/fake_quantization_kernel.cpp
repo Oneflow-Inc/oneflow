@@ -39,11 +39,12 @@ void FakeQuantizationPerLayerAffine(const T* in_ptr, const T scale, const T zero
                                     T* out_ptr) {
   T upper_bound = static_cast<T>(pow(2.0, quantization_bit)) - 1;
   T lower_bound = 0;
+  uint8_t zero_point_uint8 = static_cast<uint8_t>(std::round(zero_point));
   FOR_RANGE(int64_t, i, 0, num_elements) {
-    T out = std::round(in_ptr[i] / scale + zero_point);
+    T out = std::round(in_ptr[i] / scale + zero_point_uint8);
     out = out > upper_bound ? upper_bound : out;
     out = out < lower_bound ? lower_bound : out;
-    out_ptr[i] = (out - zero_point) * scale;
+    out_ptr[i] = (out - zero_point_uint8) * scale;
   }
 }
 

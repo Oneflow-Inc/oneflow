@@ -36,7 +36,7 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
         gpu_num = os.cpu_count()
     if gpu_num > 0:
         proc2gpu_ids = {}
-        while len(cmds):
+        while True:
 
             def available_slots():
                 occupied_gpu_ids = set({})
@@ -99,6 +99,8 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     pass
             for proc in procs_to_release:
                 proc2gpu_ids.pop(proc)
+            if len(proc2gpu_ids) == 0 and len(cmds) == 0:
+                break
     else:
         raise NotImplementedError
 

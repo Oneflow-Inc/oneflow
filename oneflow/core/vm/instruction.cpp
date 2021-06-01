@@ -78,6 +78,7 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
   __Init__();
   mutable_instr_type_id()->CopyFrom(instr_msg.instr_type_id());
   *mutable_instr_type_name() = instr_msg.instr_type_name();
+  if (instr_msg.parallel_desc()) { *mut_parallel_desc() = instr_msg.parallel_desc(); }
   if (instr_msg.has_parallel_desc_symbol_id()) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
@@ -314,7 +315,7 @@ const MirroredObject* Instruction::GetMirroredObject(const Operand& operand,
 int64_t Instruction::GetOperandDefaultGlobalDeviceId() const { return stream().global_device_id(); }
 
 void Instruction::__Init__(InstructionMsg* instr_msg, Stream* stream,
-                           const std::shared_ptr<ParallelDesc>& parallel_desc) {
+                           const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   mutable_status_buffer();
   reset_instr_msg(instr_msg);
   set_stream(stream);
@@ -330,6 +331,10 @@ void Instruction::__Delete__() {
 
 bool Instruction::Done() const {
   return stream_type().QueryInstructionStatusDone(stream(), status_buffer());
+}
+
+void Instruction::set_has_event_record(bool val) {
+  return stream_type().set_has_event_record(mut_status_buffer(), val);
 }
 
 const StreamType& Instruction::stream_type() const { return stream().stream_type(); }

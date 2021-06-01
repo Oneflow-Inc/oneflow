@@ -43,7 +43,7 @@ REGISTER_CPU_ONLY_USER_OP("image_flip")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* flip_code_desc = ctx->TensorDesc4ArgNameAndIndex("flip_code", 0);
@@ -73,7 +73,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* bbox_desc = ctx->TensorDesc4ArgNameAndIndex("bbox", 0);
       CHECK_EQ_OR_RETURN(bbox_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
@@ -101,7 +101,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* bbox_desc = ctx->TensorDesc4ArgNameAndIndex("bbox", 0);
       CHECK_EQ_OR_RETURN(bbox_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
@@ -131,7 +131,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* poly_desc = ctx->TensorDesc4ArgNameAndIndex("poly", 0);
       CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
@@ -159,7 +159,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* poly_desc = ctx->TensorDesc4ArgNameAndIndex("poly", 0);
       CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
@@ -181,7 +181,7 @@ REGISTER_CPU_ONLY_USER_OP("image_normalize")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
@@ -210,7 +210,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* poly_desc = ctx->TensorDesc4ArgNameAndIndex("poly", 0);
       CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* poly_index_desc = ctx->TensorDesc4ArgNameAndIndex("poly_index", 0);

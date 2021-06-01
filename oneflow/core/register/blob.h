@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -48,16 +48,16 @@ class BlobAccessCheckerIf final : public BlobAccessChecker {
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr);
-  Blob(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
+  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
   const char* header_ptr() const { return header_ptr_; }
   char* mut_header_ptr() { return header_ptr_; }
   char* mut_contiguous_header_ptr();
-  const RtBlobDesc& blob_desc() const { return *blob_desc_; }
-  const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
+  const BlobDesc& blob_desc() const { return *blob_desc_; }
+  const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -75,7 +75,7 @@ class Blob final {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
-  const Shape& static_shape() const { return blob_desc_->body_shape(); }
+  const Shape& static_shape() const { return blob_desc_->shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
   MutShapeView* mut_shape_view() {
@@ -105,12 +105,12 @@ class Blob final {
   const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
-  void Init(const MemoryCase& mem_case, const RtBlobDesc* blob_desc, char* header_ptr,
+  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
             char* body_ptr);
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
-  const RtBlobDesc* blob_desc_;
+  const BlobDesc* blob_desc_;
   void* dptr_;
   char* header_ptr_;
   std::unique_ptr<ShapeView> shape_view_;

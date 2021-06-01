@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 

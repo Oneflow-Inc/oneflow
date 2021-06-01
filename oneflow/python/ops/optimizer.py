@@ -26,7 +26,7 @@ import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def GetVariablesForCurrentJob() -> List[Text]:
@@ -35,7 +35,7 @@ def GetVariablesForCurrentJob() -> List[Text]:
         rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
     ), "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
     # TODO(): Use new api when new GetCurrentJobName api is ready.
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
 
 
@@ -1028,7 +1028,11 @@ class Optimizer:
         return train_conf
 
     def minimize(
-        self, loss: Union[Sequence[oneflow_api.BlobDesc], oneflow_api.BlobDesc]
+        self,
+        loss: Union[
+            Sequence[oneflow._oneflow_internal.BlobDesc],
+            oneflow._oneflow_internal.BlobDesc,
+        ],
     ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]

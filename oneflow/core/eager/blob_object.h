@@ -24,7 +24,7 @@ namespace oneflow {
 
 class ParallelDesc;
 
-namespace eager {
+namespace vm {
 
 class BlobObject : public vm::Object {
  public:
@@ -53,7 +53,7 @@ class BlobObject : public vm::Object {
   BlobDesc blob_desc_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_BLOB_OBJECT_H_

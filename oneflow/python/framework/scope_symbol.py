@@ -17,9 +17,9 @@ from __future__ import absolute_import
 
 from oneflow.python.eager.symbol import Symbol
 import oneflow.python.eager.symbol_storage as symbol_storage
-import oneflow_api.oneflow.core.job.scope as scope_cfg
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal
 import collections
 import re
 
@@ -28,13 +28,13 @@ class ScopeSymbol(Symbol):
     def __init__(self, symbol_id, scope_proto, parent_scope_symbol=None):
         Symbol.__init__(self, symbol_id, scope_proto)
         self.parent_scope_symbol_ = parent_scope_symbol
-        self.job_desc_symbol_ = oneflow_api.GetJobConfSymbol(
+        self.job_desc_symbol_ = oneflow._oneflow_internal.GetJobConfSymbol(
             scope_proto.job_desc_symbol_id()
         )
-        self.device_parallel_desc_symbol_ = oneflow_api.GetPlacementSymbol(
+        self.device_parallel_desc_symbol_ = oneflow._oneflow_internal.GetPlacementSymbol(
             scope_proto.device_parallel_desc_symbol_id()
         )
-        self.host_parallel_desc_symbol_ = oneflow_api.GetPlacementSymbol(
+        self.host_parallel_desc_symbol_ = oneflow._oneflow_internal.GetPlacementSymbol(
             scope_proto.host_parallel_desc_symbol_id()
         )
         self.auto_increment_id_ = 0
@@ -93,7 +93,9 @@ class ScopeSymbol(Symbol):
             device_tag,
             machine_device_ids,
             hierarchy,
-        ) = oneflow_api.GetDeviceTagAndMachineDeviceIdsAndHierarchy(parallel_conf)
+        ) = oneflow._oneflow_internal.GetDeviceTagAndMachineDeviceIdsAndHierarchy(
+            parallel_conf
+        )
         return self.BuildWithNewParallelDesc(
             instruction_builder, device_tag, machine_device_ids
         )

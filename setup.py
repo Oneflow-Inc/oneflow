@@ -31,8 +31,12 @@ parser.add_argument("--build_dir", type=str, default="build")
 parser.add_argument("--package_name", type=str, default="oneflow")
 args, remain_args = parser.parse_known_args()
 sys.argv = ["setup.py"] + remain_args
+build_dir_from_env = os.getenv("ONEFLOW_CMAKE_BUILD_DIR")
+build_dir = args.build_dir
+if build_dir_from_env:
+    build_dir = build_dir_from_env
 
-
+print("using cmake build dir:", build_dir)
 REQUIRED_PACKAGES = [
     "numpy",
     "protobuf>=3.9.2",
@@ -52,17 +56,17 @@ class BinaryDistribution(Distribution):
         return True
 
 
-python_scripts_dir = os.path.join(args.build_dir, "python_scripts")
+python_scripts_dir = os.path.join(build_dir, "python_scripts")
 packages = find_packages(python_scripts_dir)
 package_dir = {
     "": python_scripts_dir,
 }
 
 include_files = glob.glob(
-    "{}/python_scripts/oneflow/include/**/*".format(args.build_dir), recursive=True
+    "{}/python_scripts/oneflow/include/**/*".format(build_dir), recursive=True
 )
 include_files = [
-    os.path.relpath(p, "{}/python_scripts/oneflow".format(args.build_dir))
+    os.path.relpath(p, "{}/python_scripts/oneflow".format(build_dir))
     for p in include_files
 ]
 
@@ -71,10 +75,10 @@ def get_oneflow_internal_so_path():
     import imp
 
     fp, pathname, description = imp.find_module(
-        "_oneflow_internal", ["{}/python_scripts/oneflow".format(args.build_dir)]
+        "_oneflow_internal", ["{}/python_scripts/oneflow".format(build_dir)]
     )
     assert os.path.isfile(pathname)
-    return os.path.relpath(pathname, "{}/python_scripts/oneflow".format(args.build_dir))
+    return os.path.relpath(pathname, "{}/python_scripts/oneflow".format(build_dir))
 
 
 package_data = {"oneflow": [get_oneflow_internal_so_path()] + include_files}

@@ -59,7 +59,7 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
       CHECK(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);

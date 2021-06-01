@@ -25,7 +25,7 @@ import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -144,8 +144,8 @@ class BlobConf(object):
             self.preprocessors = []
 
     def decode_blob(
-        self, input_blob: oneflow_api.BlobDesc, batch_size: int
-    ) -> oneflow_api.BlobDesc:
+        self, input_blob: oneflow._oneflow_internal.BlobDesc, batch_size: int
+    ) -> oneflow._oneflow_internal.BlobDesc:
         if isinstance(self.codec, ImageCodec):
             color_space = self.codec.color_space()
             image = flow.data.ofrecord_image_decoder(
@@ -202,7 +202,7 @@ def decode_ofrecord(
     shuffle: bool = False,
     buffer_size: int = 1024,
     name: str = None,
-) -> Tuple[oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     print(
         "WARNING:",
         "oneflow.data.decode_ofrecord is deprecated, and NOT work in eager mode, please use: \n",
@@ -243,7 +243,7 @@ def ofrecord_loader(
     shuffle: bool = False,
     shuffle_buffer_size: int = 1024,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     print(
         "WARNING:",
         "oneflow.data.ofrecord_loader is deprecated, and NOT work in eager mode, please use: \n",
@@ -274,7 +274,7 @@ def ofrecord_reader(
     shuffle_buffer_size: int = 1024,
     shuffle_after_epoch: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r"""Get ofrecord object from ofrecord dataset.
 
     Args:
@@ -289,7 +289,7 @@ def ofrecord_reader(
         name (Optional[str], optional): Optional name. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
     For example:
 
@@ -361,9 +361,9 @@ def decode_random(
     dtype: flow.dtype,
     batch_size: int = 1,
     initializer: Optional[initializer_conf_util.InitializerConf] = None,
-    tick: Optional[oneflow_api.BlobDesc] = None,
+    tick: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     op_conf = op_conf_util.OperatorConf()
 
     if name is None:
@@ -378,7 +378,7 @@ def decode_random(
     setattr(
         op_conf.decode_random_conf,
         "data_type",
-        oneflow_api.deprecated.GetProtoDtype4OfDtype(dtype),
+        oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(dtype),
     )
 
     op_conf.decode_random_conf.batch_size = batch_size
@@ -406,7 +406,7 @@ def decode_random(
     "data.image_decoder_random_crop_resize", "data.ImageDecoderRandomCropResize"
 )
 def image_decoder_random_crop_resize(
-    input_blob: oneflow_api.BlobDesc,
+    input_blob: oneflow._oneflow_internal.BlobDesc,
     target_width: int,
     target_height: int,
     num_attempts: Optional[int] = None,
@@ -417,7 +417,7 @@ def image_decoder_random_crop_resize(
     warmup_size: Optional[int] = None,
     max_num_pixels: Optional[int] = None,
     name: Optional[str] = None,
-) -> Tuple[oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     if name is None:
         name = id_util.UniqueStr("ImageDecoderRandomCropResize_")
 

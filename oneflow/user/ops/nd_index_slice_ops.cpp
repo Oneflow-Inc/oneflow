@@ -163,7 +163,7 @@ REGISTER_USER_OP("gather_nd")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
       return Maybe<void>::Ok();
     });
@@ -174,7 +174,7 @@ REGISTER_USER_OP("scatter_nd")
     .Output("out")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn(InferScatterNdTensorDesc)
-    .SetInferDataTypeFn(InferScatterNdDataType)
+    .SetDataTypeInferFn(InferScatterNdDataType)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
@@ -216,7 +216,7 @@ REGISTER_USER_OP("scatter_nd_like")
     .Input("updates")
     .Output("out")
     .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
-    .SetInferDataTypeFn(InferScatterNdLikeDataType)
+    .SetDataTypeInferFn(InferScatterNdLikeDataType)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& indices_tensor =
           ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
@@ -255,7 +255,7 @@ REGISTER_USER_OP("tensor_scatter_nd_update")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetInferDataTypeFn(InferTensorScatterNdOptDataType)
+    .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
@@ -270,7 +270,7 @@ REGISTER_USER_OP("tensor_scatter_nd_add")
     .Input("indices")
     .Output("out")
     .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetInferDataTypeFn(InferTensorScatterNdOptDataType)
+    .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
     .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {

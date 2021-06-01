@@ -47,7 +47,7 @@ REGISTER_USER_OP("transpose")
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     })
@@ -61,7 +61,7 @@ REGISTER_USER_OP("transpose")
         if (axis < 0) { axis += perm.size(); }
         CHECK_GE(axis, 0);
         CHECK_LT(axis, perm.size());
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
+        ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();

@@ -64,7 +64,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       CHECK_OR_RETURN(op_conf.attr<bool>("hash_precomputed"));
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(IsIndexDataType(data_type));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);

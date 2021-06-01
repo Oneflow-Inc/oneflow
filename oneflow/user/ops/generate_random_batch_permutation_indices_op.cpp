@@ -40,7 +40,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
       }
       return Maybe<void>::Ok();
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("y", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });

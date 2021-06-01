@@ -23,44 +23,44 @@ import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 import oneflow.core.job.regularizer_conf_pb2 as regularizer_conf_util
 import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("layers.prelu")
 def prelu(
-    inputs: oneflow_api.BlobDesc,
+    inputs: oneflow._oneflow_internal.BlobDesc,
     alpha_initializer: Optional[initializer_conf_util.InitializerConf] = None,
     alpha_regularizer: Optional[regularizer_conf_util.RegularizerConf] = None,
     shared_axes: Optional[Sequence[int]] = None,
     trainable: bool = True,
     name: str = "PRelu",
-    model_distribute: oneflow_api.distribute.Distribute = oneflow_api.distribute.broadcast(),
-) -> oneflow_api.BlobDesc:
-    r"""The Prelu(Parametric Rectified Linear Unit) activation. 
-    
+    model_distribute: oneflow._oneflow_internal.distribute.Distribute = oneflow._oneflow_internal.distribute.broadcast(),
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""The Prelu(Parametric Rectified Linear Unit) activation.
+
     The :math:`\alpha` is a parameter that can be trained in network
 
     The equation is
 
-    .. math:: 
+    .. math::
 
         out = max(0, x) + \alpha*min(0, x)
 
     Args:
-        inputs (oneflow_api.BlobDesc): The input Blob. 
+        inputs (oneflow._oneflow_internal.BlobDesc): The input Blob.
         alpha_initializer (Optional[initializer_conf_util.InitializerConf], optional): The initializer of alpha. Defaults to None.
         alpha_regularizer (Optional[regularizer_conf_util.RegularizerConf], optional): The regularizer of alpha. Defaults to None.
         shared_axes (Optional[Sequence[int]], optional): The axis along which to share learnable parameters for the prelu activation function. Defaults to None.
         trainable (bool, optional): Whether to train the parameter :math:`\alpha`. Defaults to True.
         name (str, optional): The name for the operation. Defaults to "PRelu".
-        model_distribute (oneflow_api.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow_api.distribute.broadcast().
+        model_distribute (oneflow._oneflow_internal.distribute.Distribute, optional): Define the way to ditribute the model. Defaults to oneflow._oneflow_internal.distribute.broadcast().
 
     Returns:
-        oneflow_api.BlobDesc: The activated Blob
+        oneflow._oneflow_internal.BlobDesc: The activated Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp

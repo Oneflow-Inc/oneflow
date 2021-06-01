@@ -56,7 +56,7 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       CHECK(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
     })
-    .SetInferDataTypeFn([](user_op::InferContext* ctx) -> Maybe<void> {
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kOFRecord;
       return Maybe<void>::Ok();
     });

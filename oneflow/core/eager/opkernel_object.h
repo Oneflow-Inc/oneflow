@@ -28,7 +28,7 @@ class KernelCtx;
 class Blob;
 class ParallelContext;
 
-namespace eager {
+namespace vm {
 
 class OpKernelObject : public vm::Object {
  public:
@@ -117,7 +117,7 @@ class SystemOpKernelObject : public vm::Object {
   std::unique_ptr<const Kernel> kernel_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_OPKERNEL_OBJECT_H_

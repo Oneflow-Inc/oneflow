@@ -18,11 +18,11 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
-import oneflow_api.oneflow.core.operator.op_attribute as op_attribute_cfg
-import oneflow_api.oneflow.core.job.placement as placement_cfg
-import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
-import oneflow_api.oneflow.core.job.scope as scope_cfg
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+import oneflow._oneflow_internal
 
 
 def GetIdForRegisteredCallback(cb):
@@ -38,9 +38,9 @@ def DeleteRegisteredCallback(cb):
     del unique_id2handler[id(cb)]
 
 
-class PythonCallback(oneflow_api.ForeignCallback):
+class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
     def __init__(self):
-        oneflow_api.ForeignCallback.__init__(self)
+        oneflow._oneflow_internal.ForeignCallback.__init__(self)
 
     def OfBlobCall(self, unique_id, of_blob_ptr):
         try:

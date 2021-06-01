@@ -24,7 +24,7 @@ import oneflow.python.framework.distribute as distribute_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.input_blob_def as input_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Tuple
 
@@ -34,7 +34,7 @@ def indexed_slices_reduce_sum(
     indices: input_blob_util.ArgBlobDef,
     values: input_blob_util.ArgBlobDef,
     name: Optional[str] = None,
-) -> Tuple[oneflow_api.BlobDesc]:
+) -> Tuple[oneflow._oneflow_internal.BlobDesc]:
     op = (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("IndexedSlicesReduceSum_")

@@ -17,7 +17,9 @@ from __future__ import absolute_import
 
 import oneflow.python.framework.python_callback as python_callback
 import oneflow.python.eager.interpreter_callback as interpreter_callback
-import oneflow_api
+import oneflow._oneflow_internal
 
 python_callback.interpreter_callback = interpreter_callback
-oneflow_api.RegisterForeignCallbackOnlyOnce(python_callback.global_python_callback)
+oneflow._oneflow_internal.RegisterForeignCallbackOnlyOnce(
+    python_callback.global_python_callback
+)

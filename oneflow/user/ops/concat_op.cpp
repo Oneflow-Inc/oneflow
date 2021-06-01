@@ -113,7 +113,7 @@ REGISTER_USER_OP("concat")
     .Attr<int64_t>("max_dim_size")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(GetSbpSignature)
-    .SetInferDataTypeFn(InferDataType);
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
 

@@ -71,7 +71,7 @@ struct SwitchUtil {
 };
 
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
-  const std::string& device_tag = ctx->user_op_conf().op_conf().device_tag();
+  const std::string& device_tag = ctx->device_tag();
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
   DataType input_dtype = *ctx->Dtype4ArgNameAndIndex("input", 0);
