@@ -994,3 +994,60 @@ def cosh_op(tensor):
 
     """
     return Cosh()(tensor)
+
+class Lgamma(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._lgamma_op = flow.builtin_op("lgamma").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._lgamma_op(x)[0]
+
+
+@oneflow_export("lgamma")
+@experimental_api
+def lgamma_op(tensor):
+    r"""Computes the logarithm of the gamma function on :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \log \Gamma(\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> arr = np.array([0.5, 1, 1.5], dtype = np.float32)
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.lgamma(input).numpy()
+        >>> output
+        array([ 0.5723649 ,  0.        , -0.12078223], dtype=float32)
+
+        >>> output = input.lgamma().numpy()
+        >>> output
+        array([ 0.5723649 ,  0.        , -0.12078223], dtype=float32)
+
+        >>> arr = np.array(np.array([[2.1, 3, 2.5],[3, 7, 4.35]]), dtype = np.float32)
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.lgamma(input).numpy()
+        >>> output
+        array([[0.04543769, 0.6931472 , 0.28468287],
+               [0.6931472 , 6.5792513 , 2.2482393 ]], dtype=float32)
+
+    """
+    return Lgamma()(tensor)
+
+
+@register_tensor_op("lgamma")
+@experimental_api
+def lgamma_op_tensor(tensor):
+    r"""
+    See :func:`oneflow.experimental.lgamma`
+    """
+    return Lgamma()(tensor)
