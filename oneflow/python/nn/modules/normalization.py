@@ -70,7 +70,7 @@ class LayerNorm(Module):
     .. code-block:: python 
 
         import numpy as np
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         input_arr = np.array(
             [
@@ -187,9 +187,9 @@ class LayerNorm(Module):
                 mean = mean.reshape(shape=nd_params_shape)
                 variance = variance.reshape(shape=nd_params_shape)
 
-                if self.weight and params_shape[0] == self.weight.nelemenet():
+                if self.weight and params_shape[0] == self.weight.nelement():
                     weight = self.weight.reshape(shape=nd_params_shape)
-                if self.bias and params_shape[0] == self.bias.nelemenet():
+                if self.bias and params_shape[0] == self.bias.nelement():
                     bias = self.bias.reshape(shape=nd_params_shape)
             elif len(mean.shape) == len(x.shape):
                 pass

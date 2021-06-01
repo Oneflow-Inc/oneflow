@@ -306,7 +306,7 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         np_arr = np.random.randn(2,3,4,5)
@@ -872,7 +872,7 @@ class Std(Module):
             return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
-                self.reduce_count = x.nelemenet()
+                self.reduce_count = x.nelement()
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
@@ -960,39 +960,4 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
-class Abs(Module):
-    def __init__(self):
-        super().__init__()
-        self._op = flow.builtin_op("abs").Input("x").Output("y").Build()
 
-    def forward(self, x):
-        res = self._op(x)[0]
-        return res
-
-
-@oneflow_export("abs")
-@register_tensor_op("abs")
-@experimental_api
-def abs_op(x):
-    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-        
-        import oneflow.experimental as flow
-        import numpy as np
-
-        x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
-        y = flow.abs(x)
-
-        x = np.array([-1, 2, -3]).astype(np.float32)
-        out = np.abs(x)
-
-        # out [1. 2. 3.]
-    
-    """
-    return Abs()(x)
