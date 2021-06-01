@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/api/python/functional/python_arg.h"
 
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/common/data_type.cfg.h"
+#include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 
@@ -107,6 +109,26 @@ AttrMap PythonArg::ObjectAs<AttrMap>() const {
   py::object obj = Borrow();
   CHECK(detail::isinstance<MutableCfgAttrMap>(obj));
   return *(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(obj));
+}
+
+template<>
+DataType PythonArg::ObjectAs<DataType>() const {
+  py::object obj = Borrow();
+  if (detail::isinstance<cfg::DataType>(obj)) {
+    auto dtype = detail::cast<std::shared_ptr<cfg::DataType>>(obj);
+    return static_cast<DataType>(*dtype);
+  } else if (detail::isinstance<DType>(obj)) {
+    auto dtype = detail::cast<std::shared_ptr<DType>>(obj);
+    return dtype->data_type();
+  } else if (detail::isinstance<int32_t>(obj)) {
+    return static_cast<DataType>(detail::cast<int32_t>(obj));
+  } else if (detail::isinstance<int64_t>(obj)) {
+    return static_cast<DataType>(detail::cast<int64_t>(obj));
+  } else {
+    UNIMPLEMENTED() << "Can not convert object to DataType from "
+                    << detail::cast<std::string>(py::str(py::type::of(obj)));
+  }
+  return kInvalidDataType;
 }
 
 }  // namespace functional

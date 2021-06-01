@@ -141,6 +141,8 @@ types_allowed = {
     "DoubleList",
     "StringList",
     "BoolList",
+    "DataType",
+    "Shape",
 }
 
 generic_type_aliases = {
@@ -165,6 +167,8 @@ argument_type_aliases = {
     "String": "const std::string&",
     "StringList": "const std::vector<std::string>&",
     "BoolList": "const std::vector<bool>&",
+    "DataType": "const DataType&",
+    "Shape": "const Shape&",
     **generic_type_aliases,
 }
 

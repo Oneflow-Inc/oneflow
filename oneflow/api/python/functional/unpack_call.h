@@ -70,7 +70,7 @@ struct unpack_call {
 INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>,
                            ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
 INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>,
-                           ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
+                           ([](const Maybe<one::TensorTuple>& t) { return t.GetPtrOrThrow(); }));
 
 #undef INSTANCE_MAYBE_UNPACK_CALL
 
