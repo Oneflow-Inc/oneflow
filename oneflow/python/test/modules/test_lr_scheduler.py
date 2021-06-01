@@ -73,6 +73,30 @@ class TestLrScheduler(flow.unittest.TestCase):
             new_lr = step_lr_step(TestLrScheduler.base_lr, i, step_size, gamma)
             test_case.assertAlmostEqual(step_lr.get_last_lr()[0], new_lr, places=5)
 
+    def test_lambda_lr(test_case):
+        optimizer = flow.optim.SGD(
+            [
+                {"params": [Parameter(flow.Tensor([1.0]))]},
+                {"params": [Parameter(flow.Tensor([1.0]))]},
+            ],
+            lr=TestLrScheduler.base_lr,
+        )
+        lambdas = [lambda step: step // 30, lambda step: 0.95 * step]
+
+        def lambda_lr_step(base_lrs, current_step):
+            return [
+                base_lr * lmbda(current_step)
+                for base_lr, lmbda in zip(base_lrs, lambdas)
+            ]
+
+        lambda_lr = flow.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambdas)
+
+        for i in range(1, 21):
+            lambda_lr.step()
+            new_lrs = lambda_lr_step(lambda_lr.base_lrs, i)
+            for lr1, lr2 in zip(lambda_lr.get_last_lr(), new_lrs):
+                test_case.assertAlmostEqual(lr1, lr2, places=5)
+
 
 if __name__ == "__main__":
     unittest.main()
