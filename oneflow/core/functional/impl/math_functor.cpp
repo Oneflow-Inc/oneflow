@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
@@ -149,6 +150,28 @@ class TransposeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class RangeFunctor {
+ public:
+  RangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
+  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
+                           const DataType& dtype) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("start", start));
+    JUST(attrs.SetAttr<int64_t>("limit", limit));
+    JUST(attrs.SetAttr<int64_t>("delta", delta));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ArgMaxFunctor : public UnaryFunctor {
+ public:
+  ArgMaxFunctor() { op_ = CHECK_JUST(one::OpBuilder("argmax").Input("in").Output("out").Build()); }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -158,6 +181,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScalarPowFunctor>("ScalarPow");
   m.add_functor<impl::ReduceSumFunctor>("ReduceSum");
   m.add_functor<impl::TransposeFunctor>("Transpose");
+  m.add_functor<impl::RangeFunctor>("Range");
+  m.add_functor<impl::ArgMaxFunctor>("ArgMax");
 };
 
 }  // namespace functional

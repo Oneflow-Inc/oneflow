@@ -29,17 +29,17 @@ namespace functional {
 
 namespace impl {
 
-class RangeFunctor {
+class FlattenFunctor {
  public:
-  RangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("range").Output("out").Build()); }
-  Maybe<Tensor> operator()(const int64_t& start, const int64_t& limit, const int64_t& delta,
-                           const DataType& dtype) const {
+  FlattenFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("flatten").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& start_dim,
+                           const int32_t& end_dim) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("limit", limit));
-    JUST(attrs.SetAttr<int64_t>("delta", delta));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    JUST(attrs.SetAttr<int32_t>("start_dim", start_dim));
+    JUST(attrs.SetAttr<int32_t>("end_dim", end_dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -48,7 +48,7 @@ class RangeFunctor {
 
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::RangeFunctor>("Range"); };
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::FlattenFunctor>("Flatten"); };
 
 }  // namespace functional
 }  // namespace one
