@@ -140,7 +140,7 @@ class Conv2d(Module):
 
     .. code-block:: python 
 
-        import oneflow as flow
+        import oneflow.experimental as flow
 
         m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
         input = flow.randn(20, 16, 50, 100)
