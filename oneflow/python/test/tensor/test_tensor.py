@@ -18,6 +18,7 @@ import random
 from collections import OrderedDict
 
 import numpy as np
+from scipy import special as S
 
 import oneflow.experimental as flow
 import oneflow.typing as oft
@@ -559,6 +560,17 @@ class TestTensor(flow.unittest.TestCase):
         tensor = flow.tensor(scalar)
         test_case.assertEqual(tensor.dtype, flow.float32)
         test_case.assertTrue(np.allclose(tensor.numpy(), np.array(scalar), 1e-4, 1e-4))
+    
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def _test_lgamma(test_case):
+        shape = (2, 3)
+        arr = np.random.randn(*shape)
+        x = flow.Tensor(arr, dtype=flow.float32)
+        x.lgamma()
+        test_case.assertTrue(np.allclose(x.numpy(), S.gammaln(arr), 1e-5, 1e-5))
 
 
 if __name__ == "__main__":

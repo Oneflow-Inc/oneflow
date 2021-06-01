@@ -18,32 +18,25 @@ from collections import OrderedDict
 import math as math
 
 import numpy as np
+from scipy import special as S
 
 import oneflow.experimental as flow
+from torch import per_tensor_affine
 from test_util import GenArgList
 
 
 def _test_lgamma(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
-    )
+    arr = np.array([0, 0.5, 1, 4.5, -4, -5.6])
+    input = flow.Tensor(arr, dtype=flow.float32, requires_grad = True, device=flow.device(device))
+    
     of_out = flow.lgamma(input)
-    print(of_out.numpy())
-    np_out = np.fromiter((map(math.lgamma, np.nditer(input.numpy()))), dtype = np.float32)
-    # test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+    np_out = S.gammaln(arr)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-# def _test_lgamma_backward(test_case, shape, device):
-#     input = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-
-#     of_out = flow.lgamma(input)
-#     of_out.backward()
-#     test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
-
-#     input = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-#     of_out = input.ceil()
-#     of_out.backward()
-#     test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
-
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad_out = S.digamma(arr)
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad_out, 1e-5, 1e-5))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -51,13 +44,10 @@ def _test_lgamma(test_case, device):
 )
 class TestLess(flow.unittest.TestCase):
     def test_lgamma(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_lgamma,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            arg_dict = OrderedDict()
+            arg_dict["device"] = ["cpu", "cuda"]
+            for arg in GenArgList(arg_dict):
+                _test_lgamma(test_case, *arg)
 
 
 if __name__ == "__main__":

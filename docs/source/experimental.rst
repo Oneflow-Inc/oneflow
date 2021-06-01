@@ -128,3 +128,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.lgamma
+.. autofunction:: oneflow.experimental.Tensor.lgamma
