@@ -24,7 +24,6 @@ limitations under the License.
 namespace oneflow {
 
 class Shape;
-class DType;
 
 namespace one {
 
@@ -80,7 +79,7 @@ class TensorInfo final {
 
  private:
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
+  DataType dtype_;
   // TODO: Add device info
 };
 
