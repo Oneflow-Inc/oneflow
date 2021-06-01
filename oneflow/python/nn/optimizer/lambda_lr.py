@@ -66,6 +66,13 @@ class LambdaLR(LrScheduler):
         super().__init__(optimizer, last_step, verbose)
 
     def state_dict(self):
+        """Returns the state of the scheduler as a :class:`dict`.
+
+        It contains an entry for every variable in self.__dict__ which
+        is not the optimizer.
+        The learning rate lambda functions will only be saved if they are callable objects
+        and not if they are functions or lambdas.
+        """
         state_dict = {
             key: value
             for key, value in self.__dict__.items()
@@ -80,6 +87,12 @@ class LambdaLR(LrScheduler):
         return state_dict
 
     def load_state_dict(self, state_dict):
+        """Loads the schedulers state.
+
+        Arguments:
+            state_dict (dict): scheduler state. Should be an object returned
+                from a call to :meth:`state_dict`.
+        """
         lr_lambdas = state_dict.pop("lr_lambdas")
         self.__dict__.update(state_dict)
         state_dict["lr_lambdas"] = lr_lambdas
