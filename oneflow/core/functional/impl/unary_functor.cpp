@@ -80,6 +80,11 @@ class SquareFunctor : public UnaryFunctor {
   SquareFunctor() { op_ = CHECK_JUST(one::OpBuilder("square").Input("x").Output("y").Build()); }
 };
 
+class ExpFunctor : public UnaryFunctor {
+ public:
+  ExpFunctor() { op_ = CHECK_JUST(one::OpBuilder("exp").Input("x").Output("y").Build()); }
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -92,6 +97,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqrtFunctor>("Sqrt");
   m.add_functor<impl::RsqrtFunctor>("Rsqrt");
   m.add_functor<impl::SquareFunctor>("Square");
+  m.add_functor<impl::ExpFunctor>("Exp");
 };
 
 }  // namespace functional

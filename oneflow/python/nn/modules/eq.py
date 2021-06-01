@@ -40,8 +40,7 @@ class Eq(Module):
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
             )
-
-        return self.eq_op(input, other)[0]
+        return flow.F.broadcast_equal(input, other)
 
 
 @oneflow_export("eq", "equal")

@@ -70,6 +70,18 @@
   signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_equal"
+  signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_greater"
+  signature: "Tensor BroadcastGreater(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_less"
+  signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "pow"
   signature: "Tensor Pow(Tensor x, Tensor y)"
   bind_python: True
@@ -229,3 +241,30 @@
                             Int32List strides, Int32List padding_before, Int32List dilation_rate,
                             Int32 groups, String data_format)"
   bind_python: True
+
+- name: "expand"
+  signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  bind_python: True
+
+- name: "exp"
+  signature: "Tensor Exp(Tensor x)"
+  bind_python: True
+
+- name: "gather"
+  signature: "Tensor Gather(Tensor x, Tensor indices, *, Int64 axis)"
+  bind_python: True
+
+- name: "dim_gather"
+  signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
+  bind_python: True
+
+- name: "matmul"
+  signature: "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                            Double alpha=1.0)"
+  bind_python: True
+
+- name: "broadcast_matmul"
+  signature: "Tensor BroadcastMatMul(Tensor a, Tensor b, *, Bool transpose_a=False,
+                                     Bool transpose_b=False, Double alpha=1.0)"
+  bind_python: True
+

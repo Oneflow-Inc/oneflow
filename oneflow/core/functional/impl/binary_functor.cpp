@@ -78,6 +78,27 @@ class BroadcastDivFunctor : public BinaryFunctor {
   }
 };
 
+class BroadcastEqualFunctor : public BinaryFunctor {
+ public:
+  BroadcastEqualFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_equal").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastGreaterFunctor : public BinaryFunctor {
+ public:
+  BroadcastGreaterFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_greater").Input("x").Input("y").Output("z").Build());
+  }
+};
+
+class BroadcastLessFunctor : public BinaryFunctor {
+ public:
+  BroadcastLessFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("broadcast_less").Input("x").Input("y").Output("z").Build());
+  }
+};
+
 class ScalarAddByTensorFunctor : public BinaryFunctor {
  public:
   ScalarAddByTensorFunctor() {
@@ -120,6 +141,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastSubFunctor>("BroadcastSub");
   m.add_functor<impl::BroadcastMulFunctor>("BroadcastMul");
   m.add_functor<impl::BroadcastDivFunctor>("BroadcastDiv");
+  m.add_functor<impl::BroadcastEqualFunctor>("BroadcastEqual");
+  m.add_functor<impl::BroadcastGreaterFunctor>("BroadcastGreater");
+  m.add_functor<impl::BroadcastLessFunctor>("BroadcastLess");
   m.add_functor<impl::ScalarAddByTensorFunctor>("ScalarAddByTensor");
   m.add_functor<impl::ScalarSubByTensorFunctor>("ScalarSubByTensor");
   m.add_functor<impl::ScalarMulByTensorFunctor>("ScalarMulByTensor");

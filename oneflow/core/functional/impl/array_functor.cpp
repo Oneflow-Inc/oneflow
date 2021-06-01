@@ -139,6 +139,57 @@ class ConcatFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_;
 };
 
+class ExpandFunctor {
+ public:
+  ExpandFunctor() { op_ = CHECK_JUST(one::OpBuilder("expand").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& in_shape,
+                           const std::vector<int32_t>& out_shape,
+                           const std::vector<int32_t>& stride) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("in_shape", in_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("out_shape", out_shape));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class GatherFunctor {
+ public:
+  GatherFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("gather").Input("in").Input("indices").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& indices, const int64_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class DimGatherFunctor {
+ public:
+  DimGatherFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("dim_gather").Input("input").Input("index").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& indices, const int32_t& dim) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, indices}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -149,6 +200,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
+  m.add_functor<impl::ExpandFunctor>("Expand");
+  m.add_functor<impl::GatherFunctor>("Gather");
+  m.add_functor<impl::DimGatherFunctor>("DimGather");
 };
 
 }  // namespace functional

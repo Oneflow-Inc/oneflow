@@ -74,11 +74,52 @@ class Conv2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MatMulFunctor {
+ public:
+  MatMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class BroadcastMatMulFunctor {
+ public:
+  BroadcastMatMulFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::MatMulFunctor>("MatMul");
+  m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
 };
 
 }  // namespace functional

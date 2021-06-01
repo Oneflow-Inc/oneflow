@@ -31,15 +31,6 @@ class Gather(Module):
         assert sparse_grad is False, "Only support bool = False for now!"
         self.dim = dim
 
-        self._gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", int(dim))
-            .Build()
-        )
-
     def forward(self, input, index):
         assert self.dim < len(
             index.shape
@@ -56,8 +47,7 @@ class Gather(Module):
                     input.shape[i] == index.shape[i]
                 ), "Dimensions of input and index should be same except at dim"
 
-        res = self._gather_op(input, index)[0]
-        return res
+        return flow.F.dim_gather(input, index, dim=self.dim)
 
 
 @oneflow_export("gather")
