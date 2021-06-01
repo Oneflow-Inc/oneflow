@@ -21,9 +21,8 @@ import numpy as np
 import oneflow.experimental as flow
 
 
-
-
 from test_util import GenArgList
+
 
 def _test_abs_forward(test_case, device):
     input = flow.Tensor(np.random.randn(2, 3).astype(np.float32))
@@ -79,4 +78,3 @@ class TestAbs(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
