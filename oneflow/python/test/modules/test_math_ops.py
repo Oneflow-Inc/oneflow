@@ -16,8 +16,7 @@ limitations under the License.
 import oneflow.experimental as flow
 import unittest
 import numpy as np
-from collections import OrderedDict
-from test_util import GenArgList
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -196,58 +195,6 @@ class TestSquare(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
         )
-
-
-def _test_acos_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), device=flow.device(device))
-    of_out = flow.acos(input)
-    np_out = np.arccos(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
-
-
-def _test_acos_tensor_function_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(8, 11, 9, 7), device=flow.device(device))
-    of_out = input.acos()
-    np_out = np.arccos(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
-
-
-def _test_acos_backward(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
-    )
-    of_out = flow.acos(input).sum()
-    of_out.backward()
-    np_grad = -1.0 / np.sqrt( 1 - np.square(input.numpy()))
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True))
-
-
-def _test_acos_tensor_function_backward(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
-    )
-    of_out = input.acos().sum()
-    of_out.backward()
-    np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True))
-
-
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-class TestAcos(flow.unittest.TestCase):
-    def test_acos(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_acos_forward,
-            _test_acos_tensor_function_forward,
-            _test_acos_backward,
-            _test_acos_tensor_function_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
