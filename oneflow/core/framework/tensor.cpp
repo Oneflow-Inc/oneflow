@@ -25,7 +25,7 @@ namespace oneflow {
 namespace one {
 
 Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                 const std::shared_ptr<const DType>& dtype,
+                                                 DataType dtype,
                                                  const std::shared_ptr<const Device>& device,
                                                  bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<MirroredTensorImpl> impl;
@@ -33,7 +33,7 @@ Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Sha
     impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
   } else {
     const auto eager_blob_object =
-        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape, device));
+        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype, *shape, device));
     impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
                                                      is_leaf);
   }
@@ -67,7 +67,7 @@ std::shared_ptr<Tensor> MirroredTensor::detach() const {
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
