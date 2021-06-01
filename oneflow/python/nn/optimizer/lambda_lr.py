@@ -29,15 +29,29 @@ class LambdaLR(LrScheduler):
 
     .. math::
 
-        & learning\_rate = base\_learning\_rate*lambda(last\_step)
+        learning\_rate = base\_learning\_rate*lambda(last\_step)
 
     Args:
         optimizer(Optimizer): Wrapped optimizer.
-        lambda_lr(function or list): A function which computes a multiplicative factor given an integer
-
+        lr_lambda(function or list): A function which computes a multiplicative factor given an integer
             parameter epoch, or a list of such functions, one for each group in optimizer.param_groups.
         last_step (int, optional): The index of last step. (default: -1)
         verbose (bool, optional): If ``True``, prints a message to stdout for each update. (default: ``False``)
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+
+        ...
+        lambda1 = lambda step: step // 30
+        lambda2 = lambda step: 0.95 * step
+        lambda_lr = flow.optim.lr_scheduler.LambdaLR(optimizer, [lambda1, lambda2])
+        for epoch in range(num_epoch):
+            train(...)
+            lambda_lr.step()
+
     """
 
     def __init__(self, optimizer, lr_lambda, last_step=-1, verbose=False):
