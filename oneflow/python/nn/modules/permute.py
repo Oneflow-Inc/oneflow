@@ -58,13 +58,20 @@ def permute_op(tensor, *dims):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        of_out = input.permute(1, 0, 2, 3)
-
-        # of_out.numpy().shape (6, 2, 5, 3)
+        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = input.permute(1, 0, 2, 3).numpy().shape
+        >>> print(out)
+        (6, 2, 5, 3)
 
     """
     return Permute(dims)(tensor)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
