@@ -52,8 +52,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
-                         int64_t dst_machine_id, const MemZoneId& dst_mem_zone_id);
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi, int64_t dst_machine_id,
+                         const MemZoneId& dst_mem_zone_id);
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                          const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
