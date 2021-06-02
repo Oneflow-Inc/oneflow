@@ -89,8 +89,14 @@ class MinMaxObserver:
             raise ValueError("invalid quantization formula: " + formula)
 
         ctx.RemoveNode(node.name)
-        ctx.MakeConst(node.output_tensor_names[0], scale)
-        ctx.MakeConst(node.output_tensor_names[1], zero_point)
+        ctx.MakeConst(
+            node.output_tensor_names[0],
+            scale.squeeze() if formula == "cambricon" or per_layer else scale,
+        )
+        ctx.MakeConst(
+            node.output_tensor_names[1],
+            zero_point.squeeze() if formula == "cambricon" or per_layer else zero_point,
+        )
 
     @classmethod
     def Version_10(cls, ctx: Graph, node: Node, **kwargs):
