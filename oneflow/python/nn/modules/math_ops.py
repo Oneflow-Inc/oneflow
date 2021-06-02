@@ -420,15 +420,6 @@ def _sub(x, y):
     else:
         return BroadcastSub()(x, y)
 
-@oneflow_export("subtract")
-@register_tensor_op("subtract")
-@experimental_api
-def _subtract(x, y):
-    """ Alias for `oneflow.experimental.sub`
-   
-    """
-    return _sub(x, y)
-
 
 class BroadcastDiv(Module):
     def __init__(self) -> None:
@@ -671,14 +662,15 @@ class Cos(Module):
 
 
 @oneflow_export("cos")
-@register_tensor_op("cos")
 @experimental_api
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
     
     .. math::
+
         \text{out}_{i} = \cos(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -692,9 +684,34 @@ def cos_op(tensor):
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.cos(input)
         # [0.13944048 0.29570782 0.6553126  0.5573547 ]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> out1 = flow.cos(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS 
+        array([ 0.8545...,  0.9909..., -0.9151...,  0.9625...], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.cos(x2)
+        >>> out2.numpy() #doctest: +ELLIPSIS
+        array([ 0.1699..., -0.8568..., -0.8481...], dtype=float32)
         
     """
     return Cos()(tensor)
+
+
+@register_tensor_op("cos")
+@experimental_api
+def cos_op_tensor(x):
+    r"""
+
+    cos() -> Tensor
+
+    See :func:`oneflow.experimental.cos`
+    
+    """
+
+    return Cos()(x)
 
 
 class Log(Module):
@@ -967,3 +984,7 @@ def pow_op(tensor, exponent):
         
     """
     return Pow()(tensor, exponent)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

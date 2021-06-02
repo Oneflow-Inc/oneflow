@@ -29,7 +29,6 @@ class Exp(Module):
 
 
 @oneflow_export("exp")
-@register_tensor_op("exp")
 @experimental_api
 def exp_op(x):
     """This operator computes the exponential of Tensor.
@@ -57,6 +56,36 @@ def exp_op(x):
         y = x.exp().numpy()
 
         # y [ 2.7182817  7.389056  20.085537 ]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([-2, 0, 2]).astype(np.float32))
+        >>> out1 = flow.exp(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS 
+        array([0.1353..., 1..., 7.3890...], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([3.2, 4.5, -1]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.exp(x2)
+        >>> out2.numpy()  #doctest: +ELLIPSIS
+        array([24.5325..., 90.0171...,  0.3678...], dtype=float32)
 
     """
     return Exp()(x)
+
+
+@register_tensor_op("exp")
+@experimental_api
+def exp_op_tensor(x):
+    r"""
+
+    exp() -> Tensor
+    
+    See :func:`oneflow.experimental.exp`
+    
+    """
+
+    return Exp()(x)
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

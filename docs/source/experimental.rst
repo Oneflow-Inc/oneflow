@@ -51,6 +51,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.eq
 .. autofunction:: oneflow.experimental.exp
 .. autofunction:: oneflow.experimental.Tensor.exp
+.. autofunction:: oneflow.experimental.round
+.. autofunction:: oneflow.experimental.Tensor.round
 .. autofunction:: oneflow.experimental.expand
 .. autofunction:: oneflow.experimental.Tensor.expand
 .. autofunction:: oneflow.experimental.nn.Flatten
