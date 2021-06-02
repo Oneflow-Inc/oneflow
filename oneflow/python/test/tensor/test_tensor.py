@@ -450,7 +450,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_asin(test_case):
-        input = flow.Tensor(2 * np.random.random((4, 5, 6)) -1, dtype=flow.float32)
+        input = flow.Tensor(2 * np.random.random((4, 5, 6)) - 1, dtype=flow.float32)
         of_out = input.asin()
         np_out = np.arcsin(input.numpy())
         test_case.assertTrue(
@@ -462,7 +462,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_arcsin(test_case):
-        input = flow.Tensor(2 * np.random.random((4, 5, 6)) -1, dtype=flow.float32)
+        input = flow.Tensor(2 * np.random.random((4, 5, 6)) - 1, dtype=flow.float32)
         of_out = input.arcsin()
         np_out = np.arcsin(input.numpy())
         test_case.assertTrue(
