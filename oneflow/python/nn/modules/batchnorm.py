@@ -265,12 +265,13 @@ class BatchNorm1d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.random.randn(20, 100))
-        m = flow.nn.BatchNorm1d(100)
-        y = m(x)
+        >>> x = flow.Tensor(np.random.randn(20, 100))
+        >>> m = flow.nn.BatchNorm1d(100)
+        >>> y = m(x)
 
     """
 
@@ -344,15 +345,22 @@ class BatchNorm2d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.random.randn(4, 2, 8, 3))
-        m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
-        y = m(x)
+        >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3))
+        >>> m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
+        >>> y = m(x)
 
     """
 
     def _check_input_dim(self, input):
         if input.ndim != 4:
             raise ValueError("expected 4D input (got {}D input)".format(input.ndim()))
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

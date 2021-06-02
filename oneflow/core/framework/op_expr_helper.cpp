@@ -547,6 +547,26 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Build();
 }
 
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation) {
+  return UpsampleGradOp(height_scale, width_scale, align_corners, data_format, interpolation,
+                        UniqueOpName("upsample_grad"));
+}
+Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
+                                      const bool& align_corners, const std::string& data_format,
+                                      const std::string& interpolation, const std::string& name) {
+  return one::OpBuilder("upsample_grad", name)
+      .Input("dy")
+      .Output("dx")
+      .Attr<float>("height_scale", height_scale)
+      .Attr<float>("width_scale", width_scale)
+      .Attr<bool>("align_corners", align_corners)
+      .Attr<std::string>("data_format", data_format)
+      .Attr<std::string>("interpolation", interpolation)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> DimScatterAddLikeOp(const int32_t dim) {
   return DimScatterAddLikeOp(dim, UniqueOpName("dim_scatter_add_like"));
 }
@@ -580,6 +600,16 @@ Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::s
       .Input("like", n)
       .Output("out", n)
       .Attr<int64_t>("axis", axis)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> WhereOp() { return WhereOp(UniqueOpName("where")); }
+Maybe<one::UserOpExpr> WhereOp(const std::string& name) {
+  return one::OpBuilder("where", name)
+      .Input("condition")
+      .Input("x")
+      .Input("y")
+      .Output("out")
       .Build();
 }
 
@@ -628,6 +658,16 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+#define MATMUL_SERIES_OPS(op_type_name)       \
+  return one::OpBuilder(op_type_name, name)   \
+      .Input("a")                             \
+      .Input("b")                             \
+      .Output("out")                          \
+      .Attr<bool>("transpose_a", transpose_a) \
+      .Attr<bool>("transpose_b", transpose_b) \
+      .Attr<double>("alpha", alpha)           \
+      .Build();
+
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha) {
   return MatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
@@ -635,12 +675,39 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha, const std::string& name) {
-  return one::OpBuilder("matmul", name)
+  MATMUL_SERIES_OPS("matmul");
+}
+
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha) {
+  return BatchMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("batch_matmul"));
+}
+
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha, const std::string& name) {
+  MATMUL_SERIES_OPS("batch_matmul");
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha) {
+  return BroadcastMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("broadcast_matmul"));
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha, const std::string& name) {
+  MATMUL_SERIES_OPS("broadcast_matmul");
+}
+
+#undef MATMUL_SERIES_OPS
+
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha) {
+  return BroadcastMatmulGradBOp(alpha, UniqueOpName("broadcast_matmul_grad_b"));
+}
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name) {
+  return one::OpBuilder("broadcast_matmul_grad_b", name)
       .Input("a")
       .Input("b")
       .Output("out")
-      .Attr<bool>("transpose_a", transpose_a)
-      .Attr<bool>("transpose_b", transpose_b)
       .Attr<double>("alpha", alpha)
       .Build();
 }
@@ -648,12 +715,32 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale) {
   return DropoutGradOp(scale, UniqueOpName("dropout_grad"));
 }
+
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name) {
   return one::OpBuilder("dropout_grad", name)
       .Input("dy")
       .Input("mask")
       .Output("dx")
       .Attr<float>("scale", scale)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step) {
+  return SliceGradOp(start, stop, step, UniqueOpName("slice_grad"));
+}
+
+Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
+                                   const std::vector<int64_t>& stop,
+                                   const std::vector<int64_t>& step, const std::string& name) {
+  return one::OpBuilder("slice_grad", name)
+      .Input("dy")
+      .Input("like")
+      .Attr<std::vector<int64_t>>("start", start)
+      .Attr<std::vector<int64_t>>("stop", stop)
+      .Attr<std::vector<int64_t>>("step", step)
+      .Output("dx")
       .Build();
 }
 

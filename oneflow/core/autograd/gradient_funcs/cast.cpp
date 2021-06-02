@@ -40,7 +40,7 @@ class Cast : public OpExprGradFunction<CastOpExprInterpState> {
 
   Maybe<void> Capture(CastOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->data_type = inputs.at(0)->dtype()->data_type();
+    ctx->data_type = inputs.at(0)->dtype();
     return Maybe<void>::Ok();
   }
 
