@@ -142,7 +142,6 @@ class MNIST(VisionDataset):
         return img, target
 
     def __len__(self) -> int:
-        # return len(self.data)
         return self.data.size(0)
 
     @property
@@ -230,6 +229,7 @@ class FashionMNIST(MNIST):
 SN3_PASCALVINCENT_TYPEMAP = {
     8: (flow.uint8, np.uint8, np.uint8),
     9: (flow.int8, np.int8, np.int8),
+    11: (flow.int32, np.dtype('>i2'), 'i2'),
     12: (flow.int32, np.dtype('>i4'), 'i4'),
     13: (flow.float32, np.dtype('>f4'), 'f4'),
     14: (flow.float64, np.dtype('>f8'), 'f8')
@@ -257,22 +257,20 @@ def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> flow.Tensor
     s = [get_int(data[4 * (i + 1): 4 * (i + 2)]) for i in range(nd)]
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
     assert parsed.shape[0] == np.prod(s) or not strict 
-    # NOTE:flow.dtype=m[0]
-    res = flow.Tensor(parsed.astype(m[2], copy=False)).reshape(shape=s)
+    res = flow.Tensor(parsed.astype(m[2]), dtype=m[0], device=flow.device("cuda")).reshape(shape=s)
     return res
 
 
 def read_label_file(path: str) -> flow.Tensor:
     x = read_sn3_pascalvincent_tensor(path, strict=False)
-    x = x.to(dtype=flow.uint8)
     assert(x.dtype == flow.uint8)
     assert(x.ndimension() == 1)
+    x = x.to(dtype=flow.int64)
     return x
 
 
 def read_image_file(path: str) -> flow.Tensor:
     x = read_sn3_pascalvincent_tensor(path, strict=False)
-    x = x.to(dtype=flow.uint8)
     assert(x.dtype == flow.uint8)
     assert(x.ndimension() == 3)
     return x

@@ -5,6 +5,7 @@ import transforms as transforms
 import oneflow.python.utils.data as data
 from datasets.mnist import FashionMNIST
 import os
+from time import time
 
 flow.enable_eager_execution()
 
@@ -94,7 +95,9 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size,
               params=None, lr=None, optimizer=None):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
+        start = time()
         for X, y in train_iter:
+            iter_start = time()
             X.requires_grad=True
             X = X.to(flow.device('cuda'))
             y = y.to(flow.device('cuda'))
@@ -113,6 +116,9 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size,
             train_l_sum += l.numpy()
             train_acc_sum += (y_hat.argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
+            print("iter cost >>>>>>> "+str(time()-iter_start) + "s")
+        
+        print("epoch:" + str(epoch+1) + " cost >>>>>>> "+str(time()-start) + "s")
         test_acc = evaluate_accuracy(test_iter, net)
         print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f'
               % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc))
