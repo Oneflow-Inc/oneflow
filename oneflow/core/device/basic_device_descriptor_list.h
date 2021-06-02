@@ -29,6 +29,7 @@ class BasicDeviceDescriptorList : public DeviceDescriptorList {
  public:
   explicit BasicDeviceDescriptorList(
       std::vector<std::shared_ptr<const DeviceDescriptor>> device_descriptor_list);
+  BasicDeviceDescriptorList();
   ~BasicDeviceDescriptorList() override;
 
   size_t DeviceCount() const override;

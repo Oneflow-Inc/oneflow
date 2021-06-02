@@ -55,11 +55,15 @@ class PReLU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = nn.PReLU()
-        input = flow.randn(2)
-        output = m(input)
+        >>> m = flow.nn.PReLU()
+        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = m(input).numpy().shape
+        >>> print(out)
+        (6, 2, 5, 3)
 
     """
 
@@ -74,3 +78,9 @@ class PReLU(Module):
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
         return self.op(x, self.weight)[0]
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

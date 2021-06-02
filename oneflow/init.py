@@ -68,9 +68,28 @@ import oneflow.python.framework.env_util as env_util
 env_util.init_default_physical_env()
 del env_util
 
+
+# capture oneflow methods so that they can be still accessed after `del oneflow`
+def _SyncOnMasterFn(get_rank, sync):
+    def SyncOnMaster():
+        if get_rank() == 0:
+            sync()
+
+    return SyncOnMaster
+
+
 atexit.register(oneflow._oneflow_internal.SetShuttingDown)
 atexit.register(oneflow._oneflow_internal.DestroyEnv)
 atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
+# Global<ResourceDesc, ForSession>::Get(), used by vm in background thread,
+# will be set to nullptr by TryCloseDefaultSession,
+# so sync vm in advance to avoid data race
+atexit.register(
+    _SyncOnMasterFn(
+        oneflow.python.framework.distribute.get_rank,
+        oneflow._oneflow_internal.eager.single_client.Sync,
+    )
+)
 del atexit
 
 import sys
@@ -92,5 +111,3 @@ del custom_exit
 del sys
 del absolute_import
 del oneflow
-del python
-del python_gen
