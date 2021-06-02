@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
 
 
 def nll_loss_1d(logs, targets, reduction="none"):
