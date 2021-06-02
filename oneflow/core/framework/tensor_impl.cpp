@@ -72,6 +72,18 @@ Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() cons
   return eager_blob_object_->compute_local_dep_object();
 }
 
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
+    const std::shared_ptr<MemoryCase>& mem_case) {
+  const auto& tensor_device = device();
+  CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+  const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(),
+      tensor_device->parallel_desc_ptr());
+  JUST(set_eager_blob_object(eager_blob_object));
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
