@@ -41,18 +41,21 @@ class Acosh(Module):
 
 
 @oneflow_export("acosh")
-@register_tensor_op("acosh")
 @experimental_api
 def acosh_op(x):
     r"""Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
     
     .. math::
 
-        \text{out}_{i} = \acosh^{-1}(\text{input}_{i})
+        \text{out}_{i} = cosh^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
+
     .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -60,9 +63,53 @@ def acosh_op(x):
         >>> out1 = flow.acosh(x1)
         >>> out1.numpy() #doctest: +ELLIPSIS
         array([1.3169... , 1.7627..., 2.0634... ], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32))
+        >>> out2 = flow.acosh(x2)
+        >>> out2.numpy() #doctest: +ELLIPSIS
+        array([0.9624..., 1.6094..., 1.9826... ], dtype=float32)
 
     """
 
+    return Acosh()(x)
+
+
+@register_tensor_op("acosh")
+@experimental_api
+def acosh_op_tensor(x):
+    r"""
+
+    acosh() -> Tensor
+
+    See :func:`oneflow.experimental.acosh`
+    
+    """
+
+    return Acosh()(x)
+
+
+@oneflow_export("arccosh")
+@experimental_api
+def arccosh_op(x):
+    r"""
+
+    See :func:`oneflow.experimental.acosh`
+    
+    """
+    
+    return Acosh()(x)
+
+
+@register_tensor_op("arccosh")
+@experimental_api
+def arccosh_op_tensor(x):
+    r"""
+
+    arccosh() -> Tensor
+
+    See :func:`oneflow.experimental.acosh`
+    
+    """
+    
     return Acosh()(x)
 
 

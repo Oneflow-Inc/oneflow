@@ -23,7 +23,7 @@ from test_util import GenArgList
 
 
 def _test_acosh_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape)
+    np_input = np.random.randn(*shape) + 2
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
