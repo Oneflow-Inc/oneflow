@@ -329,8 +329,8 @@ class TestModule(flow.unittest.TestCase):
             _test_matmul_backward,
             _test_matmul_backward_x_grad,
             _test_matmul_backward_y_grad,
-            _test_broadcast_matmul_backward,
             _test_batch_matmul_backward,
+            _test_broadcast_matmul_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
