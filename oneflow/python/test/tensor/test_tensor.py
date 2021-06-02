@@ -619,7 +619,6 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.array([[1.0000, 0.3139], [0.3898, 1.0000], [0.0478, 1.0000]])
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-<<<<<<< HEAD
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
@@ -632,8 +631,6 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy()))
 
 
-=======
->>>>>>> 7ee63b026fcf7f24bbecc019392b96a6cbb36011
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
