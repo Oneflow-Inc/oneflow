@@ -363,6 +363,10 @@ foreach(cc ${of_transport_test_cc})
   oneflow_add_executable(${transport_test_exe_name} ${cc})
   target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
   set_target_properties(${transport_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+  if (BUILD_SHARED_LIBS)
+    get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
+    set_target_properties(${transport_test_exe_name} PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
+  endif()
 endforeach()
 
 
