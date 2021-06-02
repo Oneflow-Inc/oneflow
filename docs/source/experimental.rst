@@ -107,7 +107,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.negative
 .. autofunction:: oneflow.experimental.nn.LayerNorm
 .. autofunction:: oneflow.experimental.nn.AvgPool2d
+.. autofunction:: oneflow.experimental.nn.MaxPool1d
 .. autofunction:: oneflow.experimental.nn.MaxPool2d
+.. autofunction:: oneflow.experimental.nn.MaxPool3d
 .. autofunction:: oneflow.experimental.repeat
 .. autofunction:: oneflow.experimental.Tensor.repeat
 .. autofunction:: oneflow.experimental.reshape
