@@ -256,9 +256,8 @@ def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> flow.Tensor
     m = SN3_PASCALVINCENT_TYPEMAP[ty]
     s = [get_int(data[4 * (i + 1): 4 * (i + 2)]) for i in range(nd)]
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
-    assert parsed.shape[0] == np.prod(s) or not strict    
+    assert parsed.shape[0] == np.prod(s) or not strict 
     # NOTE:flow.dtype=m[0]
-    print("shape s>>>>>>>>>>>>>>> ", s)
     res = flow.Tensor(parsed.astype(m[2], copy=False)).reshape(shape=s)
     return res
 

@@ -6,8 +6,10 @@ import transforms as transforms
 import oneflow.python.utils.data as data
 from datasets.mnist import FashionMNIST
 import time
-import sys
 
+flow.enable_eager_execution()
+
+# see:http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.5_fashion-mnist
 
 mnist_train = FashionMNIST(root='./test/FashionMNIST', train=True, download=True, transform=transforms.ToTensor())
 mnist_test = FashionMNIST(root='./test/FashionMNIST', train=False, download=True, transform=transforms.ToTensor())
