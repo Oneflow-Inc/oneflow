@@ -42,7 +42,8 @@ class CosineScheduler(LrScheduler):
         learning\_rate = {base\_learning\_rate}*{\alpha}
 
     Args:
-        steps (int): The decay steps in the scheduler
+        optimizer(Optimizer): Wrapped optimizer.
+        steps (int): The decay steps in the scheduler.
         alpha (float, optional): The learning rate scale factor (:math:`\alpha`). (default: 0.0)
         last_step (int, optional): The index of last step. (default: -1)
         verbose (bool, optional): If ``True``, prints a message to stdout for each update. (default: ``False``)
@@ -74,6 +75,6 @@ class CosineScheduler(LrScheduler):
         if self.last_step < self.steps:
             cos_decay = 0.5 * (1 + math.cos(math.pi * self.last_step / self.steps))
             decay_factor = (1 - self.alpha) * cos_decay + self.alpha
-            return [base_lr * decay_factor for base_lr in self.base_lr]
+            return [base_lr * decay_factor for base_lr in self.base_lrs]
         else:
-            return [base_lr * self.alpha for base_lr in self.base_lr]
+            return [base_lr * self.alpha for base_lr in self.base_lrs]

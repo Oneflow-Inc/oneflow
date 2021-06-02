@@ -51,15 +51,22 @@ def less_op(x, y):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
         
-        out = flow.gt(input1, input2).numpy
-
-        # out [0 0 1]
+        >>> out = flow.lt(input1, input2).numpy()
+        >>> print(out)
+        [0 0 1]
 
     """
     return Less()(x, y)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
