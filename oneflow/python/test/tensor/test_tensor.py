@@ -630,7 +630,6 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy()))
 
-
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
