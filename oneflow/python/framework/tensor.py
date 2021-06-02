@@ -298,6 +298,7 @@ class Tensor:
     def ndimension(self):
         return self.ndim
 
+    @register_local_tensor_method()
     @_auto_determine
     def detach(self):
         if self._local_or_consistent_tensor is not None:
