@@ -48,7 +48,7 @@ class Regst final {
   Blob* GetBlobByLbi(const LogicalBlobId& lbi);
   const Blob* GetSoleBlob() const;
   Blob* GetMutSoleBlob();
-  int64_t GetBlobSize() const { return sorted_blob_vec_.size(); }
+  int64_t GetBlobSize() const { return static_cast<int64_t>(sorted_blob_vec_.size()); }
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
@@ -67,7 +67,7 @@ class Regst final {
   void set_regst_desc(const RtRegstDesc* regst_desc);
   void SetBlobByOrdinal(int64_t ordinal, std::unique_ptr<Blob>&& blob);
 
-  RegstStatus status_;
+  RegstStatus status_{};
   const RtRegstDesc* regst_desc_;
   std::vector<std::unique_ptr<Blob>> sorted_blob_vec_;
   void* main_mem_ptr_;

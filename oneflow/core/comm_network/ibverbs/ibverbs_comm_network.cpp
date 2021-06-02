@@ -58,8 +58,7 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   ActorMsg new_msg = msg;
-  if (msg.msg_type() == ActorMsgType::kRegstMsg && msg.IsRegstMsgToConsumer()
-      && msg.regst()->regst_desc()->regst_desc_type().has_data_regst_desc()) {
+  if (msg.IsDataRegstMsgToConsumer()) {
     CHECK_EQ(msg.user_data_size(), 0);
     auto* mem_desc = reinterpret_cast<IBVerbsMemDesc*>(msg.regst()->comm_net_token());
     CHECK(mem_desc != nullptr);
@@ -75,8 +74,7 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 
 void IBVerbsCommNet::RecvActorMsg(const ActorMsg& msg) {
   ActorMsg new_msg = msg;
-  if (msg.msg_type() == ActorMsgType::kRegstMsg && msg.IsRegstMsgToConsumer()
-      && msg.user_data_size() != 0) {
+  if (msg.IsDataRegstMsgToConsumer()) {
     std::lock_guard<std::mutex> lock(remote_regst2rma_desc_mutex_);
     auto& desc = remote_regst2rma_desc_[std::make_pair(msg.src_actor_id(),
                                                        reinterpret_cast<uint64_t>(msg.regst()))];
