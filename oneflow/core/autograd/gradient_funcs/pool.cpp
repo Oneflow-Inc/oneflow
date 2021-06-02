@@ -77,7 +77,7 @@ Maybe<void> PoolNdGrad::Init(const OpExpr& op) {
 }
 
 Maybe<void> PoolNdGrad::Capture(PoolInterpState* ctx, const TensorTuple& inputs,
-                               const TensorTuple& outputs, const AttrMap& attrs) const {
+                                const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -87,7 +87,7 @@ Maybe<void> PoolNdGrad::Capture(PoolInterpState* ctx, const TensorTuple& inputs,
 }
 
 Maybe<void> PoolNdGrad::Apply(const PoolInterpState* ctx, const TensorTuple& out_grads,
-                             TensorTuple* in_grads) const {
+                              TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 

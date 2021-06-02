@@ -162,12 +162,34 @@ class MaxPool2d(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        kernel_size, stride, padding = (4, 4), (1, 1), (1, 2)
-        m = flow.nn.MaxPool2d(kernel_size, stride, padding)
-        x = flow.Tensor(np.random.rand(6, 4, 7, 9))
-        y = m(x)
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> kernel_size, stride, padding = (3, 3), (1, 1), (1, 2)
+        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        >>> np.random.seed(0)
+        >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
+        >>> y = m(x)
+        >>> print(y.numpy()) #doctest: +ELLIPSIS
+        [[[[0.5488135  0.71518934 0.71518934 0.71518934 0.6458941 ]
+           ...
+           [0.56804454 0.92559665 0.92559665 0.92559665 0.5288949 ]]]]
+
+        >>> kernel_size, stride, padding = (2, 3), (4, 5), (1, 2)
+        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        >>> x = flow.Tensor(np.random.randn(9, 7, 32, 20))
+        >>> y = m(x)
+        >>> print(y.size())
+        flow.Size([9, 7, 9, 5])
+
+        >>> kernel_size, stride, padding = (5, 5), (5, 5), (2, 2)
+        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
+        >>> x = flow.Tensor(-1.23456 * np.ones((1, 1, 1, 1), dtype=np.float))
+        >>> y = m(x)
+        >>> print(y.numpy())
+        [[[[-1.23456]]]]
+
     """
 
     def __init__(
@@ -219,3 +241,9 @@ class MaxPool2d(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

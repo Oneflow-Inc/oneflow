@@ -24,22 +24,23 @@ from test_util import GenArgList
 
 
 def _nd_tuple_to_dhw(nd_tuple, dim, prefix=1, dhw_offset=0):
-    assert(dim <= 3)
-    assert(dim == len(nd_tuple) - dhw_offset)
+    assert dim <= 3
+    assert dim == len(nd_tuple) - dhw_offset
     nd_tuple = list(nd_tuple)
     dhw_tuple = nd_tuple[:dhw_offset]
     dhw_tuple.extend([prefix for _ in range(3 - dim)])
     dhw_tuple.extend(nd_tuple[dhw_offset:])
     return tuple(dhw_tuple)
 
+
 def _dhw_tuple_to_nd(dhw_tuple, dim, prefix=1, dhw_offset=0):
-    assert(dim <= 3)
-    assert(3 == len(dhw_tuple) - dhw_offset)
+    assert dim <= 3
+    assert 3 == len(dhw_tuple) - dhw_offset
     dhw_tuple = list(dhw_tuple)
     nd_tuple = dhw_tuple[:dhw_offset]
     nd_offset = dhw_offset + 3 - dim
     for i in dhw_tuple[dhw_offset:nd_offset]:
-        assert(prefix == i)
+        assert prefix == i
     nd_tuple.extend(dhw_tuple[nd_offset:])
     return tuple(nd_tuple)
 
@@ -94,7 +95,13 @@ class MaxPoolNumpy:
         )
 
         out = np.zeros(
-            (self.in_batch, self.in_channel, self.pad_out_depth, self.pad_out_height, self.pad_out_width)
+            (
+                self.in_batch,
+                self.in_channel,
+                self.pad_out_depth,
+                self.pad_out_height,
+                self.pad_out_width,
+            )
         )
         self.arg_max = np.zeros_like(out, dtype=np.int32)
         for n in range(self.in_batch):
@@ -137,9 +144,9 @@ class MaxPoolNumpy:
                             index = np.unravel_index(
                                 self.arg_max[n, c, i, j, k], self.kernel_size
                             )
-                            dx[n, c, start_i:end_i, start_j:end_j, start_k:end_k][index] += d_loss[
-                                n, c, i, j, k
-                            ]
+                            dx[n, c, start_i:end_i, start_j:end_j, start_k:end_k][
+                                index
+                            ] += d_loss[n, c, i, j, k]
         dx = dx[
             :,
             :,
@@ -165,6 +172,7 @@ def _test_maxpool2d(test_case, device):
     output = m(x)
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
+
 def _test_maxpool2d_special_kernel_size(test_case, device):
     dim = 2
     input_arr = np.random.randn(1, 1, 6, 6)
@@ -178,6 +186,7 @@ def _test_maxpool2d_special_kernel_size(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     output = m(x)
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
 
 def _test_maxpool2d_diff_kernel_stride(test_case, device):
     dim = 2
@@ -193,6 +202,7 @@ def _test_maxpool2d_diff_kernel_stride(test_case, device):
     output = m(x)
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
+
 def _test_maxpool2d_negative_input(test_case, device):
     dim = 2
     input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float)
@@ -206,6 +216,7 @@ def _test_maxpool2d_negative_input(test_case, device):
     x = flow.Tensor(input_arr, device=flow.device(device))
     output = m(x)
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
+
 
 def _test_maxpool2d_backward(test_case, device):
     dim = 2
@@ -226,6 +237,7 @@ def _test_maxpool2d_backward(test_case, device):
     numpy_grad = m_numpy.backward(doutput)
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
+
 def _test_maxpool2d_special_kernel_size_backward(test_case, device):
     dim = 2
     input_arr = np.random.randn(1, 1, 6, 6)
@@ -244,6 +256,7 @@ def _test_maxpool2d_special_kernel_size_backward(test_case, device):
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+
 
 def _test_maxpool2d_diff_kernel_stride_backward(test_case, device):
     dim = 2
@@ -264,6 +277,7 @@ def _test_maxpool2d_diff_kernel_stride_backward(test_case, device):
     numpy_grad = m_numpy.backward(doutput)
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
+
 def _test_maxpool2d_negative_input_backward(test_case, device):
     dim = 2
     input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float)
@@ -282,6 +296,7 @@ def _test_maxpool2d_negative_input_backward(test_case, device):
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
