@@ -90,15 +90,25 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([[1, 3, 8, 7, 2],
-                    [1, 9, 4, 3, 2]], dtype=np.float32)
+        >>> x = np.array([[1, 3, 8, 7, 2],
+        ...            [1, 9, 4, 3, 2]], dtype=np.float32)
 
-        out = flow.argmax(flow.Tensor(x))
-
-        # out [2 1]
+        >>> out = flow.argmax(flow.Tensor(x))
+        >>> print(out.numpy())
+        [6]
+        >>> out = flow.argmax(flow.Tensor(x), dim=1)
+        >>> print(out.numpy())
+        [2 1]
 
     """
     return Argmax(dim=dim, keepdim=keepdim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
