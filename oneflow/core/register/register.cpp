@@ -22,16 +22,18 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
   return regst_desc_->consumers_actor_id();
 }
 
-Regst::Regst() {
+Regst::Regst()
+    : regst_desc_(nullptr),
+      main_mem_ptr_(nullptr),
+      separated_header_mem_ptr_(nullptr),
+      comm_net_token_(nullptr) {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
   status_.act_id = -1;
-  regst_desc_ = nullptr;
-  comm_net_token_ = nullptr;
 }
 
 Regst::~Regst() {
-  if (comm_net_token_) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
+  if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
 }
 
 Blob* Regst::GetBlobByOrdinal(int64_t ordinal) { return sorted_blob_vec_.at(ordinal).get(); }

@@ -61,7 +61,7 @@ class ActorMsg final {
   void AddUserData(uint8_t size, const void* data);
   uint8_t user_data_size() const;
   const void* user_data() const;
-  bool IsRegstMsgToConsumer() const;
+  bool IsDataRegstMsgToConsumer() const;
 
   // Serialize
   template<typename StreamT>
@@ -79,6 +79,7 @@ class ActorMsg final {
     void* comm_net_token;
     RegstStatus regst_status;
     bool has_sole_empty_blob;
+    bool is_data_regst_to_consumer;
   };
 
   int64_t src_actor_id_;

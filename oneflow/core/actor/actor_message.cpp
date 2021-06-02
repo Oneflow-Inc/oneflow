@@ -46,6 +46,8 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   msg.regst_wrapper_.regst_status.regst_desc_id = regst_raw_ptr->regst_desc_id();
   msg.regst_wrapper_.has_sole_empty_blob = IsSoleBlobAndDynamicEmpty(regst_raw_ptr);
+  msg.regst_wrapper_.is_data_regst_to_consumer =
+      regst_raw_ptr->regst_desc()->regst_desc_type().has_data_regst_desc();
   return msg;
 }
 
@@ -60,6 +62,7 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.regst_wrapper_.comm_net_token = nullptr;
   // you can NOT access the regst ptr when multi nodes, because the address is in another machine
   msg.regst_wrapper_.has_sole_empty_blob = false;
+  msg.regst_wrapper_.is_data_regst_to_consumer = false;
   return msg;
 }
 
@@ -145,8 +148,8 @@ uint8_t ActorMsg::user_data_size() const { return user_data_size_; }
 
 const void* ActorMsg::user_data() const { return user_data_; }
 
-bool ActorMsg::IsRegstMsgToConsumer() const {
-  return msg_type_ == ActorMsgType::kRegstMsg && regst_wrapper_.regst_status.regst_desc_id != -1;
+bool ActorMsg::IsDataRegstMsgToConsumer() const {
+  return msg_type_ == ActorMsgType::kRegstMsg && regst_wrapper_.is_data_regst_to_consumer;
 }
 
 }  // namespace oneflow
