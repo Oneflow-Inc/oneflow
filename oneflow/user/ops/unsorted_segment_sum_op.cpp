@@ -28,14 +28,14 @@ REGISTER_USER_OP("unsorted_segment_sum")
       const int64_t axis = ctx->Attr<int64_t>("axis");
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
+      const Shape& segment_ids_shape = ctx->InputShape("segment_ids", 0);
 
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), data_shape.dim_vec().cbegin(),
                      data_shape.dim_vec().cbegin() + axis);
       dim_vec.push_back(num_segments);
       dim_vec.insert(dim_vec.end(),
-                     data_shape.dim_vec().cbegin() + axis + segment_ids_shape->NumAxes(),
+                     data_shape.dim_vec().cbegin() + axis + segment_ids_shape.NumAxes(),
                      data_shape.dim_vec().end());
       *out_shape = Shape(dim_vec);
       return Maybe<void>::Ok();

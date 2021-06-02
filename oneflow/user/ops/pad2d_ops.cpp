@@ -55,24 +55,24 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
       .Attr<double>("floating_value")                                                        \
       .Attr<int64_t>("integral_value")                                                       \
       .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                  \
-        const Shape& x_shape = ctx->InputShape("x", 0);                                 \
+        const Shape& x_shape = ctx->InputShape("x", 0);                                      \
         const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
-        CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());                              \
+        CHECK_EQ_OR_RETURN(padding.size(), x_shape.NumAxes());                               \
         const int64_t n_idx = 0;                                                             \
         const int64_t c_idx = 1;                                                             \
         const int64_t h_idx = 2;                                                             \
         const int64_t w_idx = 3;                                                             \
-        CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));                                  \
-        CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));                                  \
-        CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));                                  \
-        CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));                                  \
+        CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));                                   \
+        CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));                                   \
+        CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));                                   \
+        CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));                                   \
                                                                                              \
-        DimVector y_dim_vec(x_shape.NumAxes());                                             \
-        const int64_t h_x = x_shape.At(h_idx);                                              \
-        const int64_t w_x = x_shape.At(w_idx);                                              \
+        DimVector y_dim_vec(x_shape.NumAxes());                                              \
+        const int64_t h_x = x_shape.At(h_idx);                                               \
+        const int64_t w_x = x_shape.At(w_idx);                                               \
                                                                                              \
-        y_dim_vec[n_idx] = x_shape.At(n_idx);                                               \
-        y_dim_vec[c_idx] = x_shape.At(c_idx);                                               \
+        y_dim_vec[n_idx] = x_shape.At(n_idx);                                                \
+        y_dim_vec[c_idx] = x_shape.At(c_idx);                                                \
         y_dim_vec[h_idx] = h_x + padding[2] + padding[3];                                    \
         y_dim_vec[w_idx] = w_x + padding[0] + padding[1];                                    \
                                                                                              \
@@ -102,21 +102,21 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
       .Attr<double>("floating_value")                                                        \
       .Attr<int64_t>("integral_value")                                                       \
       .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                  \
-        const Shape& dy_shape = ctx->InputShape("dy", 0);                               \
+        const Shape& dy_shape = ctx->InputShape("dy", 0);                                    \
         const auto& padding = ctx->Attr<std::vector<int64_t>>("padding");                    \
-        CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());                             \
+        CHECK_EQ_OR_RETURN(padding.size(), dy_shape.NumAxes());                              \
         const int64_t n_idx = 0;                                                             \
         const int64_t c_idx = 1;                                                             \
         const int64_t h_idx = 2;                                                             \
         const int64_t w_idx = 3;                                                             \
                                                                                              \
-        DimVector dx_dim_vec(dy_shape.NumAxes());                                           \
+        DimVector dx_dim_vec(dy_shape.NumAxes());                                            \
         int64_t h_dy, w_dy;                                                                  \
-        h_dy = dy_shape.At(h_idx);                                                          \
-        w_dy = dy_shape.At(w_idx);                                                          \
+        h_dy = dy_shape.At(h_idx);                                                           \
+        w_dy = dy_shape.At(w_idx);                                                           \
                                                                                              \
-        dx_dim_vec[n_idx] = dy_shape.At(0);                                                 \
-        dx_dim_vec[c_idx] = dy_shape.At(1);                                                 \
+        dx_dim_vec[n_idx] = dy_shape.At(0);                                                  \
+        dx_dim_vec[c_idx] = dy_shape.At(1);                                                  \
         dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];                                  \
         dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];                                  \
                                                                                              \
