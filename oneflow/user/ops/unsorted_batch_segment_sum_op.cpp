@@ -17,6 +17,29 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+/*
+Unsorted Batch Segment Sum Computation Cost 
+= Batch Gather Backward Cost
+= batch_num * indices_num * （idx + from + to + transform)
+= batch_num * indices_num * （2 + 4 + 4 + instance_size)
+= data.Count(0,axis) * data.At(axis) * (8 + data.Count(axis+1))
+where axis = segment_idx.NumAxes - 1
+*/
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
+  const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
+  const int64_t axis = segment_ids->shape().NumAxes() - 1;
+  double cost = data->shape().Count(0, axis) * data->shape().At(axis) * (8 + data->shape().Count(axis + 1));
+  if (ctx->SbpParallel4ArgNameAndIndex("data", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+}  // namespace
+
 REGISTER_USER_OP("unsorted_batch_segment_sum")
     .Input("data")
     .Input("segment_ids")
@@ -73,7 +96,8 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
       return Maybe<void>::Ok();
-    });
+    })
+    .SetComputeComplexityFn(GetComputationCostFn);
 
 REGISTER_USER_OP_GRAD("unsorted_batch_segment_sum")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

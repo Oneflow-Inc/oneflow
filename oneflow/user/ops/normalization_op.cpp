@@ -156,19 +156,39 @@ user_op::TensorDescInferFn MakeFwTensorDescInferFn() {
 /*
 Example for normalization:
 
-ComputationCost
-= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m
-= 5|x| +4|x|/m
-≈ 5|x|
+ComputationCost (mean(|x|), variance (2|x|), moving mean(|x|), moving variance (2|x|), nomalization (2|x|))
+= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m + 2|x|
+= 7|x| +4|x|/m
+≈ 7|x|
 */
 Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  double cost = x->shape().elem_cnt() * 5;
+  double cost = x->shape().elem_cnt() * 7;
+
   if (ctx->SbpParallel4ArgNameAndIndex("y", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
   return cost;
 }
+
+/*
+Example for normalization add relu:
+
+ComputationCost (mean(|x|), variance (2|x|), moving mean(|x|), moving variance (2|x|), nomalization (2|x|), relu (|x|))
+= |x| + |x|/m + 2|x| + |x|/m + 2|x| + 2|x|/m + 2|x| + |x|
+= 8|x| +4|x|/m
+≈ 8|x|
+*/
+Maybe<double> GetAddReluComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  double cost = x->shape().elem_cnt() * 8;
+  if (ctx->SbpParallel4ArgNameAndIndex("y", 0).has_split_parallel()) {
+    return cost / ctx->parallel_desc().parallel_num();
+  }
+  return cost;
+}
+
+
 
 REGISTER_USER_OP("normalization")
     .Input("x")
@@ -216,7 +236,7 @@ REGISTER_USER_OP("normalization_add_relu")
         }))
     .SetBatchAxisInferFn(FwBatchAxisInferFn)
     .SetGetSbpFn(FwGetSbpFn)
-    .SetComputeComplexityFn(GetComputationCostFn);
+    .SetComputeComplexityFn(GetAddReluComputationCostFn);
 
 #if defined(WITH_CUDA) && (CUDNN_VERSION >= 7401)
 
@@ -345,7 +365,8 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<double> BwGetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  double cost = x->shape().elem_cnt() * 5;
+  double cost = x->shape().elem_cnt() * 7;
+
   if (ctx->SbpParallel4ArgNameAndIndex("dy", 0).has_split_parallel()) {
     return cost / ctx->parallel_desc().parallel_num();
   }
