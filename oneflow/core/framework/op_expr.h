@@ -176,7 +176,7 @@ class CastConsistentOpExpr : public OpExpr {
 class CastToConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   CastToConsistentOpExpr() = default;
-  virtual ~CastToConsistentOpExpr() = default;
+  ~CastToConsistentOpExpr() = default;
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
                                            const std::vector<std::string>& sbp_parallels,
@@ -198,7 +198,7 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
 class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   CastFromConsistentOpExpr() = default;
-  virtual ~CastFromConsistentOpExpr() = default;
+  ~CastFromConsistentOpExpr() = default;
 
   static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
                                              const std::vector<std::string>& sbp_parallels,
