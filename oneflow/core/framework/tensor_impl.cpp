@@ -186,10 +186,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
     auto cur_rank_phy_tensor_impl =
         std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, autograd_meta);
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        device->mem_case(), cur_rank_phy_shape, dtype, std::make_shared<vm::TensorBuffer>(),
-        device->parallel_desc_ptr());
-    JUST(cur_rank_phy_tensor_impl->set_eager_blob_object(eager_blob_object));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(device->mem_case()));
     cur_rank_phy_tensor.reset(new MirroredTensor(cur_rank_phy_tensor_impl));
   }
   return std::shared_ptr<EagerConsistentTensorImpl>(
