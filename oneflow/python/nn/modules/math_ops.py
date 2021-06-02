@@ -644,20 +644,19 @@ def asin_op(input):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> print(output.shape)
         flow.Size([4])
         >>> print(output.numpy())
-        [-0.5235988        nan  0.         0.9272952]
-        
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        [-0.5235988  0.9272952  1.5707964 -0.9272952]
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> print(output1.shape)
         flow.Size([2, 2])
         >>> print(output1.numpy())
         [[ 0.9272952   1.5707964 ]
-         [-0.64350116         nan]]
+         [-0.64350116 -1.5707964 ]]
     """
     return Asin()(input)
 
