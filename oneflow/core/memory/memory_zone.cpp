@@ -1,18 +1,7 @@
 #include "oneflow/core/memory/memory_zone.h"
 #include "oneflow/core/common/device_type.pb.h"
-// #include <climits>
 
 namespace oneflow {
-
-// TaskId encode (may be extended to 128 bit in future)
-// |            rank            | device_type | device_index  |                           |
-// | ----------- 19 ----------- | ---- 5 ---- | ----- 7 ----- |                           |
-// |                        DeviceId                          | stream_index |            |
-// | ------------------------- 31 --------------------------- | ---- 12 ---- |            |
-// |                               StreamId                                  | task_index |
-// | -------------------------------- 43 ----------------------------------- | --- 21 --- |
-// |                                      TaskId                                          |
-// | ----------------------------------- 64 bit ----------------------------------------- |
 
 namespace {
 
