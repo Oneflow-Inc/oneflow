@@ -24,11 +24,11 @@ constexpr int64_t kMemZoneIdDeviceTypeInt64Mask = ((int64_t{1} << MemZoneId::kDe
                                                   << kMemZoneIdDeviceTypeShift;
 constexpr int64_t kMemZoneIdDeviceIndexInt64Mask = (int64_t{1} << MemZoneId::kDeviceIndexBits) - 1;
 
+}  // namespace
+
 const MemZoneId kCPUMemZoneId = MemZoneId{DeviceType::kCPU, MemZoneId::kCPUDeviceIndex};
 
 const MemZoneId kInvalidMemZoneId = MemZoneId{DeviceType::kInvalidDevice, 0};
-
-}  // namespace
 
 int64_t EncodeMemZoneIdToInt64(const MemZoneId& mem_zone_id) {
   int64_t id = static_cast<int64_t>(mem_zone_id.device_index());
