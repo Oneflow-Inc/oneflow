@@ -1,5 +1,5 @@
 from oneflow.python.utils.data import IterDataPipe
-from torch.utils.data.datapipes.utils.common import validate_pathname_binary_tuple
+from oneflow.python.utils.data.datapipes.utils.common import validate_pathname_binary_tuple
 from typing import Iterable, Iterator, Tuple, Optional, IO, cast
 from io import BufferedIOBase
 
