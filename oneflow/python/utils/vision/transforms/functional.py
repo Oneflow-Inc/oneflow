@@ -48,7 +48,7 @@ def to_tensor(pic):
         # handle numpy array
         if pic.ndim == 2:
             pic = pic[:, :, None]
-
+        
         img = flow.Tensor(pic.transpose((2, 0, 1)))
         # backward compatibility
         if isinstance(img, flow.ByteTensor):
@@ -71,8 +71,7 @@ def to_tensor(pic):
         img = 255 * img
     img = img.reshape(shape=(pic.size[1], pic.size[0], len(pic.getbands())))
     # put it from HWC to CHW format
-    img = img.permute((2, 0, 1))
-    if isinstance(img, flow.ByteTensor):
-        return img.to(dtype=default_float_dtype).div(255)
-    else:
-        return img
+    img = img.permute(2, 0, 1)
+    # if isinstance(img.dtype, flow.ByteTensor):
+    #     return img.to(dtype=default_float_dtype).div(255)
+    return img

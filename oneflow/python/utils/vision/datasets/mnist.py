@@ -93,7 +93,6 @@ class MNIST(VisionDataset):
         self.data, self.targets = self._load_data()
 
     def _check_legacy_exist(self):
-        print("self.processed_folder >>>>>>>>>>> ", self.processed_folder)
         processed_folder_exists = os.path.exists(self.processed_folder)
         if not processed_folder_exists:
             return False
@@ -124,15 +123,18 @@ class MNIST(VisionDataset):
         Returns:
             tuple: (image, target) where target is index of the target class.
         """
-        print("self.targets[index] >>>>>>>>>>>>>> ", self.targets[index].numpy())
+    
         img, target = self.data[index], int(self.targets[index].numpy())
+        # print("img.shape >>>>>>>>>>>>>>>>>>>>> 1", img.shape)
 
         # doing this so that it is consistent with all other datasets
         # to return a PIL Image
+        img = img.reshape(shape=[img.size(1), img.size(2)])
         img = Image.fromarray(img.numpy(), mode='L')
 
         if self.transform is not None:
             img = self.transform(img)
+        # print("img.shape >>>>>>>>>>>>>>>>>>>>> 2", img.shape)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
@@ -256,7 +258,9 @@ def read_sn3_pascalvincent_tensor(path: str, strict: bool = True) -> flow.Tensor
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
     assert parsed.shape[0] == np.prod(s) or not strict    
     # NOTE:flow.dtype=m[0]
-    return flow.Tensor(parsed.astype(m[2], copy=False)).reshape(shape=s)
+    print("shape s>>>>>>>>>>>>>>> ", s)
+    res = flow.Tensor(parsed.astype(m[2], copy=False)).reshape(shape=s)
+    return res
 
 
 def read_label_file(path: str) -> flow.Tensor:
@@ -269,6 +273,7 @@ def read_label_file(path: str) -> flow.Tensor:
 
 def read_image_file(path: str) -> flow.Tensor:
     x = read_sn3_pascalvincent_tensor(path, strict=False)
-    # assert(x.dtype == flow.uint8)
+    x = x.to(dtype=flow.uint8)
+    assert(x.dtype == flow.uint8)
     assert(x.ndimension() == 3)
     return x

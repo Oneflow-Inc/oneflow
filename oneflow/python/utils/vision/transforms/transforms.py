@@ -1,8 +1,4 @@
-
-
-
-
-
+from . import functional as F
 
 class ToTensor:
     """Convert a ``PIL Image`` or ``numpy.ndarray`` to tensor. This transform does not support torchscript.
