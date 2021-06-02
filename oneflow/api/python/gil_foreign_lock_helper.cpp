@@ -24,13 +24,21 @@ namespace py = pybind11;
 namespace oneflow {
 class GILForeignLockHelper final : public ForeignLockHelper {
   void WithScopedRelease(const std::function<void()>& callback) const override {
-    py::gil_scoped_release release;
-    callback();
+    if (PyGILState_Check()) {
+      py::gil_scoped_release release;
+      callback();
+    } else {
+      callback();
+    }
   }
 
   void WithScopedAcquire(const std::function<void()>& callback) const override {
-    py::gil_scoped_acquire acquire;
-    callback();
+    if (!PyGILState_Check()) {
+      py::gil_scoped_acquire acquire;
+      callback();
+    } else {
+      callback();
+    }
   }
 };
 
