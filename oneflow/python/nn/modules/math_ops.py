@@ -744,7 +744,7 @@ def arcsinh_op(input):
     Alias for :func:`oneflow.experimental.asinh`
     """
     return Asinh()(input)
-    
+  
 
 @register_tensor_op("asinh")
 @experimental_api
@@ -1142,3 +1142,9 @@ def cosh_op(tensor):
 
     """
     return Cosh()(tensor)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(name="asinh_op")
