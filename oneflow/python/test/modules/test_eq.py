@@ -34,7 +34,7 @@ def _test_eq(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
     test_case.assertTrue(np.array_equal(of_out2.numpy(), np_out))
 
-    
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",

@@ -53,7 +53,9 @@ def _test_div_impl(test_case, shape, device):
     np_out = np.divide(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
     y = flow.Tensor(np.array([5.0]), device=flow.device(device), requires_grad=True)
     of_out = flow.div(x, y)
     np_out = np.divide(x.numpy(), y.numpy())
@@ -62,7 +64,6 @@ def _test_div_impl(test_case, shape, device):
     of_out.backward()
     np_grad_x = np.full(shape, 0.2)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-4, 1e-4))
-
 
 
 @unittest.skipIf(
