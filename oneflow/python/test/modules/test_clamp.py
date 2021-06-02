@@ -23,39 +23,55 @@ from test_util import GenArgList
 
 
 def _test_clamp(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.clamp(input, 0.1, 0.5)
     np_out = np.clip(input.numpy(), 0.1, 0.5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_tensor_clamp(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = input.clamp(0.1, 0.5)
     np_out = np.clip(input.numpy(), 0.1, 0.5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_clamp_scalar_min(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.clamp(input, 0.1, None)
     np_out = np.clip(input.numpy(), 0.1, None)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_clamp_scalar_max(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.clamp(input, None, 0.5)
     np_out = np.clip(input.numpy(), None, 0.5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _test_clamp_integral(test_case, device):
-    input = flow.Tensor(np.random.randint(3, 10, (2, 6, 5, 3)), device = flow.device(device))
+    input = flow.Tensor(
+        np.random.randint(3, 10, (2, 6, 5, 3)), device=flow.device(device)
+    )
     of_out = flow.clamp(input, 1, 5)
     np_out = np.clip(input.numpy(), 1, 5)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 def _numpy_clamp_grad(arr, min, max):
     grad = np.zeros_like(arr)
-    grad[arr.clip(min,max) == arr] += 1
+    grad[arr.clip(min, max) == arr] += 1
     return grad
+
 
 def _test_clamp_backward(test_case, device):
     x = flow.Tensor(
@@ -66,7 +82,9 @@ def _test_clamp_backward(test_case, device):
     )
     y = flow.clamp(x, 0.1, 0.5).sum()
     y.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), _numpy_clamp_grad(x.numpy(), 0.1, 0.5), 1e-5, 1e-5))
+    test_case.assertTrue(
+        np.allclose(x.grad.numpy(), _numpy_clamp_grad(x.numpy(), 0.1, 0.5), 1e-5, 1e-5)
+    )
 
 
 @unittest.skipIf(
@@ -74,7 +92,7 @@ def _test_clamp_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestClampModule(flow.unittest.TestCase):
-     def test_clamp(test_case):
+    def test_clamp(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
             _test_clamp,
@@ -82,12 +100,12 @@ class TestClampModule(flow.unittest.TestCase):
             _test_clamp_scalar_min,
             _test_clamp_scalar_max,
             _test_clamp_integral,
-            _test_clamp_backward
+            _test_clamp_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-    
+
 
 if __name__ == "__main__":
     unittest.main()

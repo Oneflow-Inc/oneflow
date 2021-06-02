@@ -1110,7 +1110,7 @@ def pow_op(tensor, exponent):
 
 
 class Clamp(Module):
-    def __init__(self, min_value = None, max_value = None) -> None:
+    def __init__(self, min_value=None, max_value=None) -> None:
         super().__init__()
         if min_value is not None:
             floating_min_value = float(min_value)
@@ -1120,14 +1120,38 @@ class Clamp(Module):
             integral_max_value = int(max_value)
 
         if min_value is not None and max_value is not None:
-            self._op = flow.builtin_op("clip_by_scalar").Input("x").Output("y").Attr("floating_min", floating_min_value).Attr("integral_min", integral_min_value).Attr("floating_max", floating_max_value).Attr("integral_max", integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         elif min_value is not None:
-            self._op = flow.builtin_op("clip_by_scalar_min").Input("x").Output("y").Attr("floating_min", floating_min_value).Attr("integral_min", integral_min_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_min")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Build()
+            )
         elif max_value is not None:
-            self._op = flow.builtin_op("clip_by_scalar_max").Input("x").Output("y").Attr("floating_max", floating_max_value).Attr("integral_max", integral_max_value).Build()
+            self._op = (
+                flow.builtin_op("clip_by_scalar_max")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
         else:
             raise ValueError("min_value and max_value cannot be None at the same time")
-        
+
+
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1166,7 +1190,7 @@ def cosh_op(tensor):
 
 @oneflow_export("clamp")
 @experimental_api
-def clamp_op(tensor, min = None, max = None):
+def clamp_op(tensor, min=None, max=None):
     r"""
     Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
     a resulting tensor:
@@ -1216,25 +1240,28 @@ def clamp_op(tensor, min = None, max = None):
     """
     return Clamp(min, max)(tensor)
 
+
 @register_tensor_op("clamp")
 @experimental_api
-def clamp_op_tensor(tensor, min = None, max = None):
+def clamp_op_tensor(tensor, min=None, max=None):
     r"""
     See :func:`oneflow.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
 
+
 @oneflow_export("clip")
 @experimental_api
-def clip_op(tensor, min = None, max = None):
+def clip_op(tensor, min=None, max=None):
     r"""
     Alias for :func:`oneflow.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
 
+
 @register_tensor_op("clip")
 @experimental_api
-def clip_op_tensor(tensor, min = None, max = None):
+def clip_op_tensor(tensor, min=None, max=None):
     r"""
     See :func:`oneflow.experimental.clamp`
     """
