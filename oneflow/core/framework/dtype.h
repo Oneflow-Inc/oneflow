@@ -37,35 +37,31 @@ namespace oneflow {
 
 class DType final {
  public:
-  DType(const DataType& data_type, const std::string& name, bool is_signed, bool is_floating_point,
-        bool is_complex)
-      : data_type_(data_type),
-        name_(name),
-        is_signed_(is_signed),
-        is_floating_point_(is_floating_point),
-        is_complex_(is_complex) {}
+  DType(const DType&) = delete;
+  DType(DType&&) = delete;
+  ~DType() = default;
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
 
+  operator DataType() const { return data_type_; }
   DataType data_type() const { return data_type_; }
-  bool is_signed() const { return is_signed_; }
-  bool is_complex() const { return is_complex_; }
-  bool is_floating_point() const { return is_floating_point_; }
-  const std::string& name() const { return name_; }
+  bool is_signed() const;
+  bool is_complex() const;
+  bool is_floating_point() const;
+  const std::string& name() const;
   Maybe<size_t> bytes() const;
 
-  static Maybe<DType> GetDTypeByDataType(const DataType&);
+  static Maybe<const std::shared_ptr<const DType>&> Get(DataType);
 
-#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type) static Maybe<DType> data_type();
-  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
-#undef DEFINE_GET_DATA_TYPE_FUNCTION
+#define DECLARE_GET_DATA_TYPE_FUNCTION(data_type) \
+  static const std::shared_ptr<const DType>& data_type();
+  OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
+#undef DECLARE_GET_DATA_TYPE_FUNCTION
 
  private:
-  const DataType data_type_;
-  const std::string name_;
-  const bool is_signed_;
-  const bool is_floating_point_;
-  const bool is_complex_;
+  explicit DType(DataType data_type) : data_type_(data_type) {}
+
+  DataType data_type_;
 };
 
 }  // namespace oneflow

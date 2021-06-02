@@ -91,12 +91,21 @@ def arange_op(
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
-        y = flow.arange(0, 5)
-        # [0, 1, 2, 3, 4]
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> y = flow.arange(0, 5)
+        >>> print(y)
+        tensor([0, 1, 2, 3, 4], dtype=oneflow.int64)
 
     """
     if end is None:
         end = start
         start = 0
     return Arange(start, end, step, dtype, device, requires_grad)()
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -68,18 +68,19 @@ class Upsample(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-        output = m(input)
-
-        # output.numpy()
-        # [[[[1.0, 1.0, 2.0, 2.0],
-        # [1.0, 1.0, 2.0, 2.0],
-        # [3.0, 3.0, 4.0, 4.0],
-        # [3.0, 3.0, 4.0, 4.0],]]]
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1. 1. 2. 2.]
+           [1. 1. 2. 2.]
+           [3. 3. 4. 4.]
+           [3. 3. 4. 4.]]]]
     
     """
 
@@ -188,18 +189,20 @@ class UpsamplingNearest2d(Upsample):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
-        output = m(input)
-
-        # output.numpy()
-        # [[[[1.0, 1.0, 2.0, 2.0],
-        # [1.0, 1.0, 2.0, 2.0],
-        # [3.0, 3.0, 4.0, 4.0],
-        # [3.0, 3.0, 4.0, 4.0],]]]
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1. 1. 2. 2.]
+           [1. 1. 2. 2.]
+           [3. 3. 4. 4.]
+           [3. 3. 4. 4.]]]]
+        
     """
 
     def __init__(
@@ -244,18 +247,20 @@ class UpsamplingBilinear2d(Upsample):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
-        output = m(input)
-
-        # output.numpy()
-        # [[[[1.0000,  1.3333,  1.6667,  2.0000],
-        # [1.6667,  2.0000,  2.3333,  2.6667],
-        # [2.3333,  2.6667,  3.0000,  3.3333],
-        # [3.0000,  3.3333,  3.6667,  4.0000],]]]
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1.        1.3333334 1.6666667 2.       ]
+           [1.6666667 2.        2.3333335 2.6666667]
+           [2.3333335 2.6666667 3.        3.3333335]
+           [3.        3.3333333 3.6666667 4.       ]]]]
+        
     """
 
     def __init__(
@@ -266,3 +271,9 @@ class UpsamplingBilinear2d(Upsample):
         super(UpsamplingBilinear2d, self).__init__(
             size, scale_factor, mode="bilinear", align_corners=True
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
