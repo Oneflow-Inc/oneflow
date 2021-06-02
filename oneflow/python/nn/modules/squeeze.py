@@ -57,15 +57,22 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        out = flow.squeeze(input, dim=[1, 2]).numpy().shape
-
-        # out.shape (1, 3)
+        >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
+        >>> out = flow.squeeze(input, dim=[1, 2]).numpy().shape
+        >>> print(out)
+        (1, 3)
 
     """
     if type(dim) == int:
         dim = [dim]
     return Squeeze(dim=dim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

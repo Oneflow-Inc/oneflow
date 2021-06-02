@@ -43,11 +43,6 @@ Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
   return std::make_shared<cfg::OpAttribute>(op_attribute);
 }
 
-Maybe<int> GetProtoDtype4OfDtype(const std::shared_ptr<DType>& x) {
-  // int is the compatible data type of DType used in python code.
-  return static_cast<int>(x->data_type());
-}
-
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
@@ -57,11 +52,10 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("MakeOpAttributeByString",
         [](const std::string& str) { return MakeOpAttribute(str).GetPtrOrThrow(); });
 
-  m.def("GetProtoDtype4OfDtype",
-        [](const std::shared_ptr<DType>& x) { return GetProtoDtype4OfDtype(x).GetOrThrow(); });
+  m.def("GetProtoDtype4OfDtype", [](const DType& x) { return static_cast<int>(x.data_type()); });
 
   m.def("GetDTypeByDataType", [](int data_type) {
-    return DType::GetDTypeByDataType(static_cast<DataType>(data_type)).GetPtrOrThrow();
+    return DType::Get(static_cast<DataType>(data_type)).GetOrThrow().get();
   });
 }
 
