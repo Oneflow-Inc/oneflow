@@ -1393,6 +1393,7 @@ def tensor_scatter_nd_add(
 
 
 @oneflow_export("argwhere")
+@stable_api
 def argwhere(
     condition: oneflow._oneflow_internal.BlobDesc,
     dtype: Optional[flow.dtype] = None,

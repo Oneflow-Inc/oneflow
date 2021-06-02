@@ -23,10 +23,10 @@ from test_util import GenArgList
 
 
 def _test_clamp(test_case, device):
-        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
-        of_out = flow.clamp(input, 0.1, 0.5)
-        np_out = np.clip(input.numpy(), 0.1, 0.5)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))
+    of_out = flow.clamp(input, 0.1, 0.5)
+    np_out = np.clip(input.numpy(), 0.1, 0.5)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 def _test_tensor_clamp(test_case, device):
     input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype = flow.float32, device = flow.device(device))

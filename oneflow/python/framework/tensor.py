@@ -29,6 +29,7 @@ import oneflow.python.framework.ofblob as ofblob_util
 import oneflow.python.lib.core.async_util as async_util
 import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.dtype as dtype_util
+import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
 
@@ -46,6 +47,12 @@ def register_local_tensor_method(name=None):
 
 @register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
+    if eager_local_tensor.dtype == flow.tensor_buffer:
+        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
+        tensors = flow.experimental.tensor_buffer_to_list_of_tensors(
+            Tensor(eager_local_tensor), shapes, dtypes
+        )
+        return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
     ndarray = np.empty(
@@ -307,11 +314,16 @@ class Tensor:
         else:
             return self._undetermined_tensor.device
 
-    def nelemenet(self):
+    @register_local_tensor_method()
+    def nelement(self):
         prod = 1
         for dim in self.shape:
             prod *= dim
         return prod
+
+    @register_local_tensor_method()
+    def numel(self):
+        return self.nelement()
 
     def retain_grad(self):
         assert self.is_determined
@@ -331,8 +343,9 @@ class Tensor:
 
         raise NotImplementedError()
 
+    @register_local_tensor_method()
     def tolist(self):
-        TODO()
+        return self.numpy().tolist()
 
     @_auto_determine
     @register_local_tensor_method()
@@ -407,11 +420,13 @@ class Tensor:
         )
         return self
 
+    @register_local_tensor_method()
     def __str__(self):
         return self.__repr__()
 
+    @register_local_tensor_method()
     def __repr__(self):
-        return "[Tensor shape={} dtype={}]".format(self.shape, self.dtype)
+        return tensor_str_util._gen_tensor_str(self)
 
     @register_local_tensor_method()
     def __gt__(self, other):

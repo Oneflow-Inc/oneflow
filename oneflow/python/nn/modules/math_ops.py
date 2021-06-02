@@ -306,7 +306,7 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow as flow
+        import oneflow.experimental as flow
         import numpy as np
 
         np_arr = np.random.randn(2,3,4,5)
@@ -618,6 +618,155 @@ def _add(x, y):
         return BroadcastAdd()(x, y)
 
 
+class Asin(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("asin").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("asin")
+@experimental_api
+def asin_op(input):
+    r"""
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> output = flow.asin(input)
+        >>> print(output.shape)
+        flow.Size([4])
+        >>> print(output.numpy())
+        [-0.5235988        nan  0.         0.9272952]
+        
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        >>> output1 = input1.asin()
+        >>> print(output1.shape)
+        flow.Size([2, 2])
+        >>> print(output1.numpy())
+        [[ 0.9272952   1.5707964 ]
+         [-0.64350116         nan]]
+    """
+    return Asin()(input)
+
+
+@register_tensor_op("asin")
+@experimental_api
+def asin_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+@oneflow_export("arcsin")
+@experimental_api
+def arcsin_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+@register_tensor_op("arcsin")
+@experimental_api
+def arcsin_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asin`
+    """
+    return Asin()(input)
+
+
+class Asinh(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("asinh").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("asinh")
+@experimental_api
+def asinh_op(input):
+    r"""
+    Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
+        >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
+        >>> output = flow.asinh(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [1.4436355 1.8184465 2.0947125]
+
+        >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> output1 = input1.asinh()
+        >>> print(output1.shape)
+        flow.Size([2, 3])
+        >>> print(output1.numpy())
+        [[-0.8813736   0.         -0.39003533]
+         [ 2.3124382   2.6441207   0.7326682 ]]
+
+    """
+    return Asinh()(input)
+
+
+@oneflow_export("arcsinh")
+@experimental_api
+def arcsinh_op(input):
+    r"""
+  
+    Alias for :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
+@register_tensor_op("asinh")
+@experimental_api
+def asinh_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
+@register_tensor_op("arcsinh")
+@experimental_api
+def arcsinh_op_tensor(input):
+    r"""
+
+    See :func:`oneflow.experimental.asinh`
+    """
+    return Asinh()(input)
+
+
 class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -872,7 +1021,7 @@ class Std(Module):
             return flow.experimental.zeros(size=x.shape)
         else:
             if len(self.axis) == 0:
-                self.reduce_count = x.nelemenet()
+                self.reduce_count = x.nelement()
             else:
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
@@ -979,9 +1128,40 @@ class Clamp(Module):
         else:
             raise ValueError("min_value and max_value cannot be None at the same time")
         
+class Cosh(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("cosh").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
+
+
+@oneflow_export("cosh")
+@register_tensor_op("cosh")
+@experimental_api
+def cosh_op(tensor):
+    r"""
+    Returns a new tensor with the hyperbolic cosine of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \cosh(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        import numpy as np
+        arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
+        input = flow.Tensor(arr, dtype=flow.float32)
+        output = flow.cosh(input)
+        # [1.0133467 1.7859949 1.2535787 1.2804903]
+
+    """
+    return Cosh()(tensor)
 
 
 @oneflow_export("clamp")
@@ -1059,4 +1239,3 @@ def clip_op_tensor(tensor, min = None, max = None):
     See :func:`oneflow.experimental.clamp`
     """
     return Clamp(min, max)(tensor)
-
