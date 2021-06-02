@@ -9,6 +9,14 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Tanh
 .. autofunction:: oneflow.experimental.tanh
 .. autofunction:: oneflow.experimental.Tensor.tanh
+.. autofunction:: oneflow.experimental.asin
+.. autofunction:: oneflow.experimental.Tensor.asin
+.. autofunction:: oneflow.experimental.arcsin
+.. autofunction:: oneflow.experimental.Tensor.arcsin
+.. autofunction:: oneflow.experimental.asinh
+.. autofunction:: oneflow.experimental.Tensor.asinh
+.. autofunction:: oneflow.experimental.arcsinh
+.. autofunction:: oneflow.experimental.Tensor.arcsinh
 .. autofunction:: oneflow.experimental.nn.ELU
 .. autofunction:: oneflow.experimental.nn.GELU
 .. autofunction:: oneflow.experimental.gelu
@@ -98,6 +106,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.std
 .. autofunction:: oneflow.experimental.pow
 .. autofunction:: oneflow.experimental.Tensor.pow
+.. autofunction:: oneflow.experimental.cosh
+.. autofunction:: oneflow.experimental.Tensor.cosh
 .. autofunction:: oneflow.experimental.matmul
 .. autofunction:: oneflow.experimental.Tensor.matmul
 .. autofunction:: oneflow.experimental.negative

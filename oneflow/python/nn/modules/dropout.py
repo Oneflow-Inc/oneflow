@@ -69,23 +69,25 @@ class Dropout(_DropoutNd):
 
     .. code-block:: python 
 
-        import numpy as np
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.Dropout(p=0.5)
-        arr = np.array(
-            [
-                [-0.7797, 0.2264, 0.2458, 0.4163],
-                [0.4299, 0.3626, -0.4892, 0.4141],
-                [-1.4115, 1.2183, -0.5503, 0.6520],
-            ]
-        )
-        x = flow.Tensor(arr)
-        y = m(x)
-        # likely output:
-        # [[-0.      0.      0.4916  0.8326]
-        # [ 0.8598  0.     -0.      0.8282]
-        # [-2.823   2.4366 -0.      1.304 ]]
+        >>> m = flow.nn.Dropout(p=0)
+        >>> arr = np.array(
+        ...    [
+        ...        [-0.7797, 0.2264, 0.2458, 0.4163],
+        ...        [0.4299, 0.3626, -0.4892, 0.4141],
+        ...        [-1.4115, 1.2183, -0.5503, 0.6520],
+        ...    ]
+        ... )
+        >>> x = flow.Tensor(arr)
+        >>> y = m(x)
+
+        # tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
+        # [ 0.4299,  0.3626, -0.4892,  0.4141],
+        # [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
+
 
     """
 
@@ -120,3 +122,9 @@ class Dropout(_DropoutNd):
             return x
         mask = self._mask_op(x)[0]
         return self._op(x, mask)[0]
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

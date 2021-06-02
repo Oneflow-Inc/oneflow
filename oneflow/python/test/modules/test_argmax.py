@@ -80,7 +80,7 @@ def _test_argmax_dim_equal_none(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestArgmax(flow.unittest.TestCase):
-    def test_transpose(test_case):
+    def test_argmax(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_argmax_aixs_negative,
