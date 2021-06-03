@@ -61,8 +61,11 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
+Maybe<MirroredTensor> MirroredTensor::api_detach() const {
+  const auto& eager_blob_object = JUST(impl_->eager_blob_object());
+  const auto& device = impl_->device();
+  std::shared_ptr<MirroredTensor> t =
+      MirroredTensor::MakeEagerTensor(eager_blob_object, device, false, true);
   return t;
 }
 
@@ -97,7 +100,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::detach() const {
+Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }

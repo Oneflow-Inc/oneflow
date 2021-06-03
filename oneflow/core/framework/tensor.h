@@ -89,7 +89,7 @@ class Tensor {
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
-  virtual std::shared_ptr<Tensor> detach() const = 0;
+  virtual Maybe<Tensor> detach() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -135,12 +135,13 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
 
+  Maybe<Tensor> detach() const override {
+    return std::static_pointer_cast<Tensor>(JUST(api_detach()));
+  }
+
   // Operators for tensor
   // used by pybind11 only
-  Maybe<DerivedT> api_detach() const {
-    const std::shared_ptr<Tensor>& tensor = detach();
-    return cast_for_api(tensor);
-  }
+  virtual Maybe<DerivedT> api_detach() const = 0;
 
  protected:
   TensorIf() = default;
@@ -219,7 +220,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
   // Operators for tensor
-  std::shared_ptr<Tensor> detach() const override;
+  Maybe<MirroredTensor> api_detach() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
@@ -292,7 +293,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
   // Operators for tensor
-  std::shared_ptr<Tensor> detach() const override;
+  virtual Maybe<ConsistentTensor> api_detach() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype,
