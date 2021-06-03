@@ -13,7 +13,7 @@ on:
         required: false
       compute_platforms:
         description: ""
-        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
+        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
         required: false
       package_name:
         description: ""
@@ -42,6 +42,7 @@ jobs:
             "cu102",
             "cu110",
             "cu111",
+            "cu112",
             "cu100_xla",
             "cu101_xla",
             "cu102_xla",
@@ -84,6 +85,9 @@ jobs:
           elif [ "${{ matrix.compute_platform }}" == "cu111" ]; then
               cuda_version="11.1"
               cache_dir_name="11.1"
+          elif [ "${{ matrix.compute_platform }}" == "cu112" ]; then
+              cuda_version="11.2"
+              cache_dir_name="11.2"
           elif [ "${{ matrix.compute_platform }}" == "cu100_xla" ]; then
               cuda_version="10.0"
               extra_flags="--xla"
@@ -117,7 +121,7 @@ jobs:
 
           python3 ci/build/ensure_img.py
           python_version=${python_version:-"3.6,3.7,3.8"}
-          compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
+          compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
           if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
               extra_flags+=" --package_name=${{ matrix.package_name }}"
           fi
