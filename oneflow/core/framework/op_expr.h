@@ -132,7 +132,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
   Maybe<void> InferLogicalShapeAndDType(
       const AttrMap& attrs, const std::string& device_tag,
-      const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                    TensorTuple* outputs) const;

@@ -96,8 +96,13 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
   JUST(user_op_expr.InferLogicalShapeAndDType(
-      attrs, device_tag, [&](int32_t i) { return inputs.at(i)->tensor_meta(); },
-      [&](int32_t i) { return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta(); }));
+      attrs, device_tag,
+      [&](int32_t i) -> const TensorMeta* {
+        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
+      },
+      [&](int32_t i) -> TensorMeta* {
+        return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
+      }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
