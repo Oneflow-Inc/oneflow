@@ -23,8 +23,12 @@ from test_util import GenArgList
 
 
 def _test_mul_impl(test_case, device):
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device), requires_grad=True)
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
+    )
+    y = flow.Tensor(
+        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
+    )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))

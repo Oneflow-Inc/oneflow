@@ -623,18 +623,6 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-    def test_cast(test_case):
-        shape = (2, 3, 4, 5)
-        np_arr = np.random.randn(*shape).astype(np.float32)
-        input = flow.Tensor(np_arr, dtype=flow.float32)
-        output = input.cast(flow.int8)
-        np_out = np_arr.astype(np.int8)
-        test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-
-    @unittest.skipIf(
-        not flow.unittest.env.eager_execution_enabled(),
-        "numpy doesn't work in lazy mode",
-    )
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(
