@@ -59,11 +59,17 @@ def _test_sub_impl(test_case, shape, device):
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    x = flow.Tensor(np.random.randn(1, 1))
-    y = flow.Tensor(np.array([5.0]))
+    x = flow.Tensor(np.random.randn(1, 1), requires_grad=True)
+    y = flow.Tensor(np.array([5.0]), requires_grad=True)
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad_x = np.ones((1, 1))
+    np_grad_y = -np.ones(1)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
