@@ -642,6 +642,20 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_equal(test_case):
+        arr1 = np.random.randint(1, 10, size=(2, 3, 4, 5))
+        arr2 = np.random.randint(1, 10, size=(2, 3, 4, 5))
+        input = flow.Tensor(arr1, dtype=flow.float32)
+        other = flow.Tensor(arr2, dtype=flow.float32)
+
+        of_out = input.eq(other)
+        np_out = np.equal(arr1, arr2)
+        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(
