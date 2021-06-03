@@ -628,9 +628,8 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(
             np.random.randn(*shape), dtype=flow.float32, requires_grad=True,
         )
-        y = x.detach()
-        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-4, 1e-4))
-        test_case.assertEqual(y.requires_grad, False)
+        test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy(), 1e-4, 1e-4))
+        test_case.assertEqual(x.detach().requires_grad, False)
         y = x * 2
         z = y.detach()
         test_case.assertEqual(z.is_leaf, True)

@@ -75,6 +75,7 @@ class Tensor {
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<TensorStorage> tensor_storage() const = 0;
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
@@ -189,6 +190,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
+  Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }
@@ -202,6 +204,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
     return impl_->set_eager_blob_object(eager_blob_object);
+  }
+  Maybe<void> set_tensor_storage(const std::shared_ptr<TensorStorage>& tensor_storage) {
+    return impl_->set_tensor_storage(tensor_storage);
   }
 
   // Getters for autograd
@@ -229,6 +234,11 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   static std::shared_ptr<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
       const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf);
+
+  static std::shared_ptr<MirroredTensor> MakeEagerTensor(
+      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+      const std::shared_ptr<const Device>& device,
+      const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf);
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -267,6 +277,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
+  Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { impl_->set_shape(shape); }

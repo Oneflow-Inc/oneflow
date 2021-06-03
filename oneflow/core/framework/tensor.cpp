@@ -48,6 +48,15 @@ std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
   return std::make_shared<MirroredTensor>(impl);
 }
 
+std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device,
+    const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad, bool is_leaf) {
+  std::shared_ptr<MirroredTensorImpl> impl = std::make_shared<EagerMirroredTensorImpl>(
+      eager_blob_object, device, tensor_storage, requires_grad, is_leaf);
+  return std::make_shared<MirroredTensor>(impl);
+}
+
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
 
 int64_t MirroredTensor::ndim() const { return shape()->NumAxes(); }
@@ -64,8 +73,8 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
 Maybe<MirroredTensor> MirroredTensor::api_detach() const {
   const auto& eager_blob_object = JUST(impl_->eager_blob_object());
   const auto& device = impl_->device();
-  std::shared_ptr<MirroredTensor> t =
-      MirroredTensor::MakeEagerTensor(eager_blob_object, device, false, true);
+  std::shared_ptr<MirroredTensor> t = MirroredTensor::MakeEagerTensor(
+      eager_blob_object, device, JUST(this->tensor_storage()), false, true);
   return t;
 }
 
