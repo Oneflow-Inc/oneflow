@@ -37,7 +37,6 @@ class ParallelDistribution;
 
 class Shape;
 class Device;
-class DType;
 
 namespace vm {
 class EagerBlobObject;
@@ -54,7 +53,7 @@ class TensorImpl {
 
   // Getters
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
-  virtual const std::shared_ptr<const DType>& dtype() const = 0;
+  virtual DataType dtype() const = 0;
   virtual bool is_lazy() const = 0;
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -70,7 +69,7 @@ class TensorImpl {
 
   // Setters
   virtual void set_shape(const std::shared_ptr<const Shape>& shape) = 0;
-  virtual void set_dtype(const std::shared_ptr<const DType>& dtype) = 0;
+  virtual void set_dtype(DataType dtype) = 0;
 
   // Setters for autograd
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) { autograd_meta_->set_acc_grad(grad); }
@@ -111,8 +110,7 @@ class MirroredTensorImpl : public TensorImpl {
 
 class ConsistentTensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape,
-                       const std::shared_ptr<const DType>& dtype,
+  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                        Symbol<cfg::ParallelDistribution> parallel_distribution,
                        Symbol<ParallelDesc> parallel_desc)
       : shape_(shape),
@@ -126,7 +124,7 @@ class ConsistentTensorMeta {
   bool operator==(const ConsistentTensorMeta& other) const;
 
   const std::shared_ptr<const Shape>& shape() const { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const { return dtype_; }
+  DataType dtype() const { return dtype_; }
   Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
@@ -134,7 +132,7 @@ class ConsistentTensorMeta {
 
  private:
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
+  DataType dtype_;
   Symbol<cfg::ParallelDistribution> parallel_distribution_;
   Symbol<ParallelDesc> parallel_desc_;
 };
@@ -145,7 +143,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape(); }
-  const std::shared_ptr<const DType>& dtype() const override { return tensor_meta_->dtype(); }
+  DataType dtype() const override { return tensor_meta_->dtype(); }
   Symbol<cfg::ParallelDistribution> parallel_distribution() const {
     return tensor_meta_->parallel_distribution();
   }
@@ -156,7 +154,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { UNIMPLEMENTED(); }
+  void set_dtype(DataType dtype) override { UNIMPLEMENTED(); }
   void set_consumer_forced_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
     consumer_forced_parallel_distribution_ = val;
   }
@@ -179,8 +177,7 @@ class ConsistentTensorImpl : public TensorImpl {
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyMirroredTensorImpl);
-  LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape,
-                         const std::shared_ptr<const DType>& dtype,
+  LazyMirroredTensorImpl(const std::shared_ptr<const Shape>& shape, DataType dtype,
                          const std::shared_ptr<const Device>& device, bool requires_grad,
                          bool is_leaf)
       : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
@@ -190,7 +187,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
+  DataType dtype() const override { return dtype_; }
   const std::shared_ptr<const Device>& device() const { return device_; }
   bool is_lazy() const override { return true; }
 
@@ -200,7 +197,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { shape_ = shape; }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { dtype_ = dtype; }
+  void set_dtype(DataType dtype) override { dtype_ = dtype; }
   Maybe<void> set_eager_blob_object(
       std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override {
     return Error::Unimplemented();
@@ -208,7 +205,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
 
  private:
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
+  DataType dtype_;
 };
 
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
@@ -224,7 +221,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override;
-  const std::shared_ptr<const DType>& dtype() const override { return dtype_; }
+  DataType dtype() const override { return dtype_; }
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -233,7 +230,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
-  void set_dtype(const std::shared_ptr<const DType>& dtype) override { UNIMPLEMENTED(); }
+  void set_dtype(DataType dtype) override { UNIMPLEMENTED(); }
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
   Maybe<void> set_eager_blob_object(
       std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override {
@@ -245,7 +242,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   void Init();
 
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
+  DataType dtype_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
 };

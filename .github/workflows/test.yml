@@ -411,6 +411,13 @@ jobs:
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+      - name: Doctest
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run \
+            $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/doctest.sh"
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
@@ -489,6 +496,11 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+      - name: Query system status
+        if: ${{ failure() }}
+        run: |
+          nvidia-smi
+          docker ps
       - name: Remove container
         if: always()
         run: |

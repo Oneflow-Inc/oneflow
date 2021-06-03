@@ -13,54 +13,46 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import oneflow as flow
-from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Exp(Module):
-    def __init__(self) -> None:
+class Abs(Module):
+    def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("exp").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("abs").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        res = self._op(x)[0]
+        return res
 
 
-@oneflow_export("exp")
-@register_tensor_op("exp")
+@oneflow_export("abs")
+@register_tensor_op("abs")
 @experimental_api
-def exp_op(x):
-    """This operator computes the exponential of Tensor.
-
-    The equation is: 
-
-    .. math:: 
-
-        out = e^x
+def abs_op(x):
+    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
-        x (oneflow.Tensor): A Tensor
+        input (Tensor): the input tensor.
 
-    Returns:
-        oneflow.Tensor: The result Tensor
+    For example:
 
-    For example: 
+    .. code-block:: python
 
-    .. code-block:: python 
-
-        >>> import numpy as np
         >>> import oneflow.experimental as flow
+        >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = x.exp().numpy()
-
-        [ 2.7182817  7.389056  20.085537 ]
-
+        >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
+        >>> flow.abs(x)
+        tensor([1., 2., 3., 4.], dtype=oneflow.float32)
+    
     """
-    return Exp()(x)
+    return Abs()(x)
 
 
 if __name__ == "__main__":
