@@ -228,7 +228,7 @@ class NLLLoss(Module):
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "none",
+        self, weight=None, ignore_index: int = None, reduction: str = "mean",
     ) -> None:
         super().__init__()
         if weight != None:
