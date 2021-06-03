@@ -69,6 +69,7 @@ def matmul_op(a, b):
         >>> of_out = flow.matmul(input1, input2)
         >>> print(of_out.shape)
         flow.Size([2, 5])
+
     """
     return MatMul()(a, b)
 

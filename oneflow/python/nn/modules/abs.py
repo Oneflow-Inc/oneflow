@@ -13,54 +13,44 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import oneflow as flow
-from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Less(Module):
-    def __init__(self) -> None:
+class Abs(Module):
+    def __init__(self):
         super().__init__()
 
-    def forward(self, x, y):
-        if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
-                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
-            )
-        return flow.F.broadcast_less(x, y)
+    def forward(self, x):
+        return flow.F.abs(x)
 
 
-@oneflow_export("lt")
-@register_tensor_op("lt")
+@oneflow_export("abs")
+@register_tensor_op("abs")
 @experimental_api
-def less_op(x, y):
-    r"""Returns the truth value of :math:`x < y` element-wise.
+def abs_op(x):
+    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
-        x (oneflow.Tensor): A Tensor
-        y (oneflow.Tensor): A Tensor
-
-    Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        input (Tensor): the input tensor.
 
     For example:
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow.experimental as flow
+        >>> import numpy as np
         >>> flow.enable_eager_execution()
-        
-        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
-        
-        >>> out = flow.lt(input1, input2).numpy()
-        >>> print(out)
-        [0 0 1]
 
+        >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
+        >>> flow.abs(x)
+        tensor([1., 2., 3., 4.], dtype=oneflow.float32)
+    
     """
-    return Less()(x, y)
+    return Abs()(x)
 
 
 if __name__ == "__main__":

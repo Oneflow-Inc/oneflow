@@ -90,6 +90,7 @@ class Linear(Module):
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
 
+
         >>> m = flow.nn.Linear(20, 30, False)
         >>> input = flow.Tensor(np.random.randn(128, 20))
         >>> output = m(input)

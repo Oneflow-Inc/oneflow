@@ -101,14 +101,17 @@ class ReLU6(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.ReLU6()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # equal to np.minimum(np.maximum(0, arr), 6.0)
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> relu6 = flow.nn.ReLU6()
+
+        >>> out = relu6(input).numpy()
+        >>> print(out)
+        [0.  0.  0.5]
 
     """
 
@@ -140,15 +143,16 @@ class Tanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-1, 0, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        tanh = flow.nn.Tanh()
-        out = tanh(input).numpy()
-
-        # out [-0.7615942  0.         0.7615942]
+        >>> x = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> tanh = flow.nn.Tanh()
+        >>> out = tanh(input).numpy()
+        >>> print(out)
+        [-0.7615942  0.         0.7615942]
 
     """
 
@@ -220,11 +224,18 @@ class ELU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
 
-        m = flow.nn.ELU()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> elu = flow.nn.ELU()
+
+        >>> out = elu(input).numpy()
+        >>> print(out)
+        [-0.39346933  0.          0.5       ]
 
     """
 
@@ -256,17 +267,17 @@ class GELU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
 
-        out = gelu(input)
-
-        # out [-0.15426877, 0., 0.34573123]
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
 
     """
 
@@ -298,16 +309,18 @@ def gelu_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
 
-        out = gelu(input)
-        # out [-0.15426877, 0., 0.34573123]
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
+
     """
     return GELU()(x)
 
@@ -415,10 +428,18 @@ class Hardsigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.Hardsigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardsigmoid = flow.nn.Hardsigmoid()
+
+        >>> out = hardsigmoid(input).numpy()
+        >>> print(out)
+        [0.41666666 0.5        0.5833333 ]
+    
 
     """
 
@@ -585,11 +606,18 @@ class LogSigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
 
-        m = flow.nn.LogSigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> logsigmoid = flow.nn.LogSigmoid()
+
+        >>> out = logsigmoid(input).numpy()
+        >>> print(out)
+        [-0.974077   -0.6931472  -0.47407696]
 
     """
 
@@ -629,12 +657,17 @@ class Softplus(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.Softplus()
-        input = flow.randn(2)
-        output = m(input)
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softplus = flow.nn.Softplus()
 
+        >>> out = softplus(input).numpy()
+        >>> print(out)
+        [0.474077  0.6931472 0.974077 ]
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
@@ -674,12 +707,19 @@ class Hardswish(Module):
         - Output: :math:`(N, *)`, same shape as the input
 
     .. code-block:: python
-        import oneflow.experimental as flow
 
-        m = flow.nn.Hardswish()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardswish = flow.nn.Hardswish()
+
+        >>> out = hardswish(input).numpy()
+        >>> print(out)
+        [-0.20833333  0.          0.29166666]
+    
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
     """
@@ -726,12 +766,17 @@ class Hardtanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
 
-        m = flow.nn.Hardtanh()
-        arr = np.random.randn(2, 3, 4, 5)
-        x = flow.Tensor(arr)
-        out = m(x)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        
+        >>> m = flow.nn.Hardtanh()
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 1.  1. ]
 
     """
 
@@ -791,10 +836,16 @@ class LeakyReLU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.LeakyReLU(0.1)
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> m = flow.nn.LeakyReLU(0.1)
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 3.  4. ]
     """
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
@@ -803,3 +854,9 @@ class LeakyReLU(Module):
 
     def forward(self, x):
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

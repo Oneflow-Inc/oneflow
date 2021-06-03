@@ -376,3 +376,79 @@
     "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
                      String interpolation, String data_format=\"channels_first\")"
   bind_python: True
+
+- name: "abs"
+  signature: "Tensor Abs(Tensor x)"
+  bind_python: True
+
+- name: "acos"
+  signature: "Tensor Acos(Tensor x)"
+  bind_python: True
+
+- name: "acosh"
+  signature: "Tensor Acosh(Tensor x)"
+  bind_python: True
+
+- name: "asin"
+  signature: "Tensor Asin(Tensor x)"
+  bind_python: True
+
+- name: "asinh"
+  signature: "Tensor Asinh(Tensor x)"
+  bind_python: True
+
+- name: "atan"
+  signature: "Tensor Atan(Tensor x)"
+  bind_python: True
+
+- name: "atanh"
+  signature: "Tensor Atanh(Tensor x)"
+  bind_python: True
+
+- name: "ceil"
+  signature: "Tensor Ceil(Tensor x)"
+  bind_python: True
+
+- name: "erf"
+  signature: "Tensor Erf(Tensor x)"
+  bind_python: True
+
+- name: "expm1"
+  signature: "Tensor Expm1(Tensor x)"
+  bind_python: True
+
+- name: "floor"
+  signature: "Tensor Floor(Tensor x)"
+  bind_python: True
+
+- name: "lgamma"
+  signature: "Tensor Lgamma(Tensor x)"
+  bind_python: True
+
+- name: "log1p"
+  signature: "Tensor Log1p(Tensor x)"
+  bind_python: True
+
+- name: "log_sigmoid"
+  signature: "Tensor LogSigmoid(Tensor x)"
+  bind_python: True
+
+- name: "rint"
+  signature: "Tensor Rint(Tensor x)"
+  bind_python: True
+
+- name: "round"
+  signature: "Tensor Round(Tensor x)"
+  bind_python: True
+
+- name: "sign"
+  signature: "Tensor Sign(Tensor x)"
+  bind_python: True
+
+- name: "sinh"
+  signature: "Tensor Sinh(Tensor x)"
+  bind_python: True
+
+- name: "softplus"
+  signature: "Tensor Softplus(Tensor x)"
+  bind_python: True

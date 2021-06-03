@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/api/foreign_lock_helper.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
 #include "oneflow/core/vm/infer_stream_type.h"
@@ -584,7 +585,9 @@ void VirtualMachine::Receive(InstructionMsgList* compute_instr_msg_list) {
   static const int64_t kHighWaterMark = 500;
   static const int64_t kLowWaterMark = 200;
   if (*mut_flying_instruction_cnt() > kHighWaterMark) {
-    while (*mut_flying_instruction_cnt() > kLowWaterMark) {}
+    Global<ForeignLockHelper>::Get()->WithScopedRelease([this]() {
+      while (*mut_flying_instruction_cnt() > kLowWaterMark) {}
+    });
   }
   mut_pending_msg_list()->MoveFrom(&new_instr_msg_list);
 }
