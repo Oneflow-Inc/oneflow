@@ -90,9 +90,9 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
                        & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))       \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))        \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
-        const Shape* prediction_shape = ctx->Shape4ArgNameAndIndex("prediction", 0);               \
-        const int64_t num_classes = prediction_shape->At(prediction_shape->NumAxes() - 1);         \
-        const int64_t num_instances = prediction_shape->Count(0, prediction_shape->NumAxes() - 1); \
+        const Shape& prediction_shape = ctx->InputShape("prediction", 0);               \
+        const int64_t num_classes = prediction_shape.At(prediction_shape.NumAxes() - 1);         \
+        const int64_t num_instances = prediction_shape.Count(0, prediction_shape.NumAxes() - 1); \
         return SoftmaxKernelUtil<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>::                    \
             GetComputeProbTempStorageSizeInBytes(num_instances, num_classes);                      \
       });

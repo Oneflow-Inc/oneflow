@@ -102,8 +102,8 @@ class TopKCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                \
                        & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                     \
-        return ctx->Attr<int32_t>("k") > 1 ? in_shape->elem_cnt() * sizeof(int32_t) : 0; \
+        const Shape& in_shape = ctx->InputShape("in", 0);                     \
+        return ctx->Attr<int32_t>("k") > 1 ? in_shape.elem_cnt() * sizeof(int32_t) : 0; \
       });
 
 REGISTER_CPU_TOP_K_KERNEL(float)

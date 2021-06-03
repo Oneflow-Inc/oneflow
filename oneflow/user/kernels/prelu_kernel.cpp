@@ -52,8 +52,8 @@ class CpuPReluKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                   \
-        return GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));              \
+        const Shape& in_shape = ctx->InputShape("x", 0);                   \
+        return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));              \
       });
 
 REGISTER_CPU_PRELU_KERNEL(float)
@@ -105,8 +105,8 @@ class CpuPReluGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);                    \
-        return 3 * GetCudaAlignedSize(in_shape->elem_cnt() * sizeof(dtype));           \
+        const Shape& in_shape = ctx->InputShape("x", 0);                    \
+        return 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));           \
       });
 
 REGISTER_CPU_PRELU_GRAD_KERNEL(float)
