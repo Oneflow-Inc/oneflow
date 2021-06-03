@@ -47,17 +47,24 @@ def _test_flatten(test_case, device):
     test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
 
 
+def _test_flatten_backward(test_case, device):
+    m = flow.nn.Flatten().to(flow.device(device))
+    x = flow.Tensor(2, 3, 4, 5, device=flow.device(device), requires_grad=True)
+    flow.nn.init.uniform_(x)
+    y = m(x)
+    z = y.sum()
+    z.backward()
+    test_case.assertTrue(np.array_equal(np.ones(shape=(2, 3, 4, 5)), x.grad.numpy()))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
 class TestFlattenModule(flow.unittest.TestCase):
-    # NOTE:
     def test_cast(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_flatten, 
-        ]
+        arg_dict["test_fun"] = [_test_flatten, _test_flatten_backward]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

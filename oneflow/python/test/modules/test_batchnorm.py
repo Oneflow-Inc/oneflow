@@ -43,10 +43,13 @@ def _test_batchnorm1d_2d_input(test_case, device):
         dtype=np.float32,
     )
 
-    m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1).to(device=flow.device(device))
+    m = flow.nn.BatchNorm1d(num_features=5, eps=1e-5, momentum=0.1).to(
+        device=flow.device(device)
+    )
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
+
 
 def _test_batchnorm1d_3d_input(test_case, device):
     input_arr = np.array(
@@ -81,10 +84,13 @@ def _test_batchnorm1d_3d_input(test_case, device):
         dtype=np.float32,
     )
 
-    m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1).to(device=flow.device(device))
+    m = flow.nn.BatchNorm1d(num_features=3, eps=1e-5, momentum=0.1).to(
+        device=flow.device(device)
+    )
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output_arr, rtol=1e-04, atol=1e-04))
+
 
 def _test_batchnorm2d(test_case, device):
     input_arr = np.array(
@@ -147,10 +153,13 @@ def _test_batchnorm2d(test_case, device):
         dtype=np.float32,
     )
 
-    m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(device=flow.device(device))
+    m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(
+        device=flow.device(device)
+    )
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-04, 1e-04))
+
 
 def _test_batchnorm2d_4d_input(test_case, device):
     input_arr = np.array(
@@ -220,6 +229,7 @@ def _test_batchnorm2d_4d_input(test_case, device):
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-04, 1e-04))
 
+
 def test_batchnorm2d_infer(test_case, device):
     input_arr = np.array(
         [
@@ -281,11 +291,14 @@ def test_batchnorm2d_infer(test_case, device):
         dtype=np.float32,
     )
 
-    m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(device=flow.device(device))
+    m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to(
+        device=flow.device(device)
+    )
     m.eval()
     x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output_arr, 1e-04, 1e-04))
+
 
 def test_batchnorm2d_infer_4d_input(test_case, device):
     input_arr = np.array(
@@ -352,7 +365,7 @@ def test_batchnorm2d_infer_4d_input(test_case, device):
         device=flow.device(device)
     )
     m.eval()
-    x = flow.Tensor(input_arr,device=flow.device(device))
+    x = flow.Tensor(input_arr, device=flow.device(device))
     y = m(x)
     test_case.assertTrue(np.allclose(y.numpy(), output_arr, 1e-04, 1e-04))
 

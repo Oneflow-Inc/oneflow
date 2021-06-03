@@ -32,6 +32,7 @@ def _test_ones(test_case, device, shape):
     y3 = flow.ones(10, dtype=flow.float64)
     test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.float64), y3.numpy()))
 
+
 def _test_zeros(test_case, device, shape):
     y = flow.zeros(shape)
     test_case.assertTrue(np.array_equal(np.zeros(shape), y.numpy()))
@@ -41,6 +42,7 @@ def _test_zeros(test_case, device, shape):
 
     y3 = flow.zeros(10, dtype=flow.int)
     test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
+
 
 def _test_ones_like(test_case, device, shape):
     x = flow.Tensor(np.ones(shape, dtype=np.float64))
@@ -52,6 +54,7 @@ def _test_ones_like(test_case, device, shape):
     test_case.assertTrue(
         np.array_equal(np.ones_like(x2.numpy()), flow.ones_like(x2).numpy())
     )
+
 
 def _test_zeros_like(test_case, device, shape):
     x = flow.Tensor(np.ones(shape, dtype=np.float64))
@@ -73,10 +76,10 @@ class TestConstantModule(flow.unittest.TestCase):
     def test_cast(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_ones, 
+            _test_ones,
             _test_zeros,
             _test_ones_like,
-            _test_zeros_like
+            _test_zeros_like,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
