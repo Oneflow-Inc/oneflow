@@ -33,6 +33,12 @@ class Round(Module):
 def round_op(x):
     """This operator rounds the value of Blob to the nearest integer.
 
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
     For example:
 
     .. code-block:: python
