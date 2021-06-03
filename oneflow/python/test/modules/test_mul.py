@@ -21,6 +21,7 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _test_mul_impl(test_case, device):
     x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
     y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
@@ -40,8 +41,12 @@ def _test_mul_impl(test_case, device):
     np_out = np.multiply(x.numpy(), y)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-    x = flow.Tensor(np.random.randn(1, 1), device=flow.device(device), requires_grad=True)
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
+    )
+    y = flow.Tensor(
+        np.random.randn(2, 3), device=flow.device(device), requires_grad=True
+    )
     of_out = flow.mul(x, y)
     np_out = np.multiply(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
