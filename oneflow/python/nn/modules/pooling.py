@@ -188,46 +188,8 @@ class MaxPool1d(Module):
         return_indices: bool = False,
         ceil_mode: bool = False,
     ):
-        super().__init__()
-        kernel_size = _single(kernel_size)
-        strides = _single(stride) if (stride is not None) else kernel_size
-        data_format = "NCW"
-        channel_pos = "channels_last" if data_format == "NWC" else "channels_first"
-
-        assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1 or dilation == (1,), "Only support dilation==1 for now!"
-
-        padding = _single(padding)
-        if len(padding) == 1:
-            if data_format == "NCW":
-                padding = (0, 0, padding[0])
-            else:
-                raise ValueError("error padding param!")
-        else:
-            raise ValueError("error padding param!")
-
-        padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(channel_pos), 1
-        )
-        padding_before = [pad[0] for pad in pads_list]
-        padding_after = [pad[1] for pad in pads_list]
-
-        self._op = (
-            flow.builtin_op("max_pool_1d")
-            .Attr("data_format", channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", strides)
-            .Attr("ceil_mode", ceil_mode)
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Input("x")
-            .Output("y")
-            .Build()
-        )
-
-    def forward(self, x):
-        return self._op(x)[0]
+        # TODO: fix cuDNN bugs in pooling_1d
+        raise NotImplementedError
 
 
 @oneflow_export("nn.MaxPool2d")
