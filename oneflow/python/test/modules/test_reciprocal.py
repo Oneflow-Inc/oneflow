@@ -13,9 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import unittest
 from collections import OrderedDict
 
-import unittest
 import numpy as np
 
 import oneflow.experimental as flow
@@ -28,7 +28,7 @@ def _test_reciprocal_impl(test_case, shape, device):
     )
     of_out = flow.reciprocal(x)
     np_out = np.reciprocal(x.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
