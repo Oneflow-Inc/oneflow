@@ -102,9 +102,8 @@ class Module(object):
         return self._consistent
 
     def consistent_cast(self, parallel_distribution, placement_signature):
-        def cast_input_to_consistent(*args):
-            # first arg is self
-            args = list(args[1])
+        def cast_input_to_consistent(self, input_tensors):
+            input_tensors = list(input_tensors)
             sess = session_ctx.GetDefaultSession()
             cast_to_consistent_ops = _make_cast_consistent_ops(
                 parallel_distribution[0],
@@ -112,21 +111,21 @@ class Module(object):
                 CastToConsistentOpExpr,
                 id_util.UniqueStr("cast_to_consistent_op"),
             )
-            assert len(args) == len(cast_to_consistent_ops)
+            assert len(input_tensors) == len(cast_to_consistent_ops)
             with sess.consistent_scope():
-                for i in range(0, len(args)):
-                    if not args[i].is_consistent:
-                        args[i] = cast_to_consistent_ops[i](args[i])[0]
-            return tuple(args)
+                for i in range(0, len(input_tensors)):
+                    if not input_tensors[i].is_consistent:
+                        input_tensors[i] = cast_to_consistent_ops[i](input_tensors[i])[
+                            0
+                        ]
+            return tuple(input_tensors)
 
-        def cast_output_from_consistent(*args):
-            # first arg is self
-            args = args[1]
-            # assume type of output is TensorTuple or Tensor
-            if isinstance(args, oneflow._oneflow_internal.TensorTuple):
-                args = list(args)
-            elif isinstance(args, oneflow._oneflow_internal.Tensor):
-                args = [args]
+        def cast_output_from_consistent(self, output_tensors):
+            # assume type of output_tensors is TensorTuple or Tensor
+            if isinstance(output_tensors, oneflow._oneflow_internal.TensorTuple):
+                output_tensors = list(output_tensors)
+            elif isinstance(output_tensors, oneflow._oneflow_internal.Tensor):
+                output_tensors = [output_tensors]
             else:
                 raise NotImplementedError
             sess = session_ctx.GetDefaultSession()
@@ -136,19 +135,25 @@ class Module(object):
                 CastFromConsistentOpExpr,
                 id_util.UniqueStr("cast_from_consistent_op"),
             )
-            assert len(args) == len(cast_from_consistent_ops)
+            assert len(output_tensors) == len(cast_from_consistent_ops)
             with sess.consistent_scope():
-                for i in range(0, len(args)):
-                    if args[i].is_consistent:
-                        args[i] = cast_from_consistent_ops[i](args[i])[0]
-            return args[0] if len(args) == 1 else tuple(args)
+                for i in range(0, len(output_tensors)):
+                    if output_tensors[i].is_consistent:
+                        output_tensors[i] = cast_from_consistent_ops[i](
+                            output_tensors[i]
+                        )[0]
+            return (
+                output_tensors[0] if len(output_tensors) == 1 else tuple(output_tensors)
+            )
 
         consisitent_module = copy.deepcopy(self)
         consisitent_module.register_forward_pre_hook(cast_input_to_consistent)
         consisitent_module.register_forward_hook(cast_output_from_consistent)
-        consisitent_module._consistent = True
-        for module in consisitent_module._modules.values():
+
+        def set_consistent(module):
             module._consistent = True
+
+        consisitent_module.apply(set_consistent)
         return consisitent_module
 
     def forward(self, *args):
