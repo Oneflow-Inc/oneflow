@@ -418,3 +418,6 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_m
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 
 add_dependencies(pip_install of_include_copy)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/c)
+target_link_libraries(oneflow of_ccobj)
