@@ -35,7 +35,7 @@ def check_file(path):
     with open(path) as f:
         content = f.read()
         txt = get_txt(path)
-        if content.count("The OneFlow Authors") > 1:
+        if content.count("The OneFlow Authors. All rights reserved.") > 1:
             return ("duplicated", content)
         if content.startswith(txt) or (not content):
             return ("ok", content)
