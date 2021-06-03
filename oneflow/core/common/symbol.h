@@ -20,6 +20,7 @@ limitations under the License.
 #include <memory>
 #include <unordered_map>
 #include <glog/logging.h>
+#include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/hash_eq_trait_ptr.h"
 
 namespace oneflow {
@@ -55,8 +56,12 @@ class Symbol final {
   const T* ptr_;
 };
 
-namespace sym {
+template<typename T>
+struct IsScalarType<Symbol<T>> final {
+  static const bool value = true;
+};
 
+namespace sym {
 template<typename T>
 using SymbolTable = std::unordered_map<HashEqTraitPtr<const T>, std::shared_ptr<const T>>;
 

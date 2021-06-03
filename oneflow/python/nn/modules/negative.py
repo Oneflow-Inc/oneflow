@@ -44,15 +44,22 @@ def negative_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(
-            np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
-        )
-        out = flow.negative(input).numpy()
-
-        # out [-1.0, 1.0, -2.3]
+        >>> input = flow.Tensor(
+        ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
+        ... )
+        >>> out = flow.negative(input).numpy()
+        >>> print(out)
+        [-1.   1.  -2.3]
 
     """
     return Negative()(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
