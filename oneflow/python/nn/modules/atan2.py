@@ -78,6 +78,7 @@ def atan2_op(input, other):
     """
     return Atan2()(input, other)
 
+
 @register_tensor_op("atan2")
 @experimental_api
 def atan2_op_tensor(input, other):
@@ -87,7 +88,8 @@ def atan2_op_tensor(input, other):
 
     See :func:`oneflow.experimental.atan2`
     """
-    return Atan2()(input,other)
+    return Atan2()(input, other)
+
 
 if __name__ == "__main__":
     import doctest
