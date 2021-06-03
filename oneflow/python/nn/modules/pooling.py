@@ -114,8 +114,11 @@ class AvgPool2d(Module):
 @oneflow_export("nn.MaxPool1d")
 @experimental_api
 class MaxPool1d(Module):
-    r"""Applies a 1D max pooling over an input signal composed of several input
-    planes.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
+
+    Applies a 1D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, L)`
     and output :math:`(N, C, L_{out})` can be precisely described as:
@@ -124,7 +127,7 @@ class MaxPool1d(Module):
         out(N_i, C_j, k) = \max_{m=0, \ldots, \text{kernel\_size} - 1}
                 input(N_i, C_j, stride \times k + m)
 
-    If :attr:`padding` is non-zero, then the input is implicitly padded with negative infinity on both sides
+    If :attr:`padding` is non-zero, then the input is implicitly padded with minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` is the stride between the elements within the
     sliding window. This `link`_ has a nice visualization of the pooling parameters.
 
@@ -148,7 +151,7 @@ class MaxPool1d(Module):
 
           .. math::
               L_{out} = \left\lfloor \frac{L_{in} + 2 \times \text{padding} - \text{dilation}
-                    \times (\text{kernel\_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
+                    \times (\text{kernel_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
 
     For example:
 
@@ -230,7 +233,12 @@ class MaxPool1d(Module):
 @oneflow_export("nn.MaxPool2d")
 @experimental_api
 class MaxPool2d(Module):
-    r"""Applies a 2D max pooling over an input signal composed of several input planes.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
+
+    Applies a 2D max pooling over an input signal composed of several input planes.
+
     In the simplest case, the output value of the layer with input size :math:`(N, C, H, W)`,
     output :math:`(N, C, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kH, kW)`
     can be precisely described as:
@@ -241,7 +249,7 @@ class MaxPool2d(Module):
                                     & \text{input}(N_i, C_j, \text{stride[0]} \times h + m,
                                                    \text{stride[1]} \times w + n)
         \end{aligned}
-    
+
     If :attr:`padding` is non-zero, then the input is implicitly minimum value padded on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
@@ -355,8 +363,11 @@ class MaxPool2d(Module):
 @oneflow_export("nn.MaxPool3d")
 @experimental_api
 class MaxPool3d(Module):
-    r"""Applies a 3D max pooling over an input signal composed of several input
-    planes.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
+
+    Applies a 3D max pooling over an input signal composed of several input planes.
 
     In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
     output :math:`(N, C, D_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kD, kH, kW)`
@@ -369,7 +380,7 @@ class MaxPool3d(Module):
                                                              \text{stride[1]} \times h + m, \text{stride[2]} \times w + n)
         \end{aligned}
 
-    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+    If :attr:`padding` is non-zero, then the input is implicitly minimum value on both sides
     for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
     It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
 
@@ -386,7 +397,7 @@ class MaxPool3d(Module):
     Args:
         kernel_size: the size of the window to take a max over
         stride: the stride of the window. Default value is :attr:`kernel_size`
-        padding: implicit zero padding to be added on all three sides
+        padding: implicit minimum value padding to be added on all three sides
         dilation: a parameter that controls the stride of elements in the window
         return_indices: if ``True``, will return the max indices along with the outputs.
                         Useful for :class:`torch.nn.MaxUnpool3d` later
@@ -398,15 +409,15 @@ class MaxPool3d(Module):
 
           .. math::
               D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{dilation}[0] \times
-                (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+                (\text{kernel_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
 
           .. math::
               H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{dilation}[1] \times
-                (\text{kernel\_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+                (\text{kernel_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
 
           .. math::
               W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{dilation}[2] \times
-                (\text{kernel\_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
+                (\text{kernel_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
 
     For example:
 
