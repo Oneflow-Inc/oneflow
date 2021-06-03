@@ -335,8 +335,8 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp() {
 Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
   return one::OpBuilder("broadcast_div_grad", name)
       .Input("dz")
-      .Input("y")
       .Input("z")
+      .Input("y")
       .Output("dy")
       .Build();
 }
