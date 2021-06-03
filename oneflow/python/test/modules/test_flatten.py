@@ -14,9 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
+
 import numpy as np
 
 import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_flatten(test_case, device):
+    m = flow.nn.Flatten()
+    x = flow.Tensor(32, 2, 5, 5, device=flow.device(device))
+    flow.nn.init.uniform_(x)
+    y = m(x)
+    test_case.assertTrue(y.shape == flow.Size((32, 50)))
+    test_case.assertTrue(np.array_equal(y.numpy().flatten(), x.numpy().flatten()))
+
+    y2 = flow.flatten(x, start_dim=2)
+    test_case.assertTrue(y2.shape == flow.Size((32, 2, 25)))
+    test_case.assertTrue(np.array_equal(y2.numpy().flatten(), x.numpy().flatten()))
+
+    y3 = x.flatten(start_dim=1)
+    test_case.assertTrue(y3.shape == flow.Size((32, 50)))
+    test_case.assertTrue(np.array_equal(y3.numpy().flatten(), x.numpy().flatten()))
+
+    y4 = x.flatten(start_dim=1, end_dim=2)
+    test_case.assertTrue(y4.shape == flow.Size((32, 10, 5)))
+    test_case.assertTrue(np.array_equal(y4.numpy().flatten(), x.numpy().flatten()))
+
+    y5 = flow.flatten(x)
+    test_case.assertTrue(y5.shape == flow.Size((1600,)))
+    test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
 
 
 @unittest.skipIf(
@@ -24,29 +52,15 @@ import oneflow.experimental as flow
     ".numpy() doesn't work in lazy mode",
 )
 class TestFlattenModule(flow.unittest.TestCase):
-    def test_flatten(test_case):
-        m = flow.nn.Flatten()
-        x = flow.Tensor(32, 2, 5, 5)
-        flow.nn.init.uniform_(x)
-        y = m(x)
-        test_case.assertTrue(y.shape == flow.Size((32, 50)))
-        test_case.assertTrue(np.array_equal(y.numpy().flatten(), x.numpy().flatten()))
-
-        y2 = flow.flatten(x, start_dim=2)
-        test_case.assertTrue(y2.shape == flow.Size((32, 2, 25)))
-        test_case.assertTrue(np.array_equal(y2.numpy().flatten(), x.numpy().flatten()))
-
-        y3 = x.flatten(start_dim=1)
-        test_case.assertTrue(y3.shape == flow.Size((32, 50)))
-        test_case.assertTrue(np.array_equal(y3.numpy().flatten(), x.numpy().flatten()))
-
-        y4 = x.flatten(start_dim=1, end_dim=2)
-        test_case.assertTrue(y4.shape == flow.Size((32, 10, 5)))
-        test_case.assertTrue(np.array_equal(y4.numpy().flatten(), x.numpy().flatten()))
-
-        y5 = flow.flatten(x)
-        test_case.assertTrue(y5.shape == flow.Size((1600,)))
-        test_case.assertTrue(np.array_equal(y5.numpy().flatten(), x.numpy().flatten()))
+    # NOTE:
+    def test_cast(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_flatten, 
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
