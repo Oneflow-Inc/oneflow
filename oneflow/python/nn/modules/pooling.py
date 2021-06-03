@@ -192,7 +192,7 @@ class MaxPool1d(Module):
         channel_pos = "channels_last" if data_format == "NWC" else "channels_first"
 
         assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1, "Only support dilation==1 for now!"
+        assert dilation == 1 or dilation == (1,), "Only support dilation==1 for now!"
 
         padding = _single(padding)
         if len(padding) == 1:
@@ -299,13 +299,6 @@ class MaxPool2d(Module):
         >>> print(y.size())
         flow.Size([9, 7, 9, 5])
 
-        >>> kernel_size, stride, padding = (5, 5), (5, 5), (2, 2)
-        >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
-        >>> x = flow.Tensor(-1.23456 * np.ones((1, 1, 1, 1), dtype=np.float))
-        >>> y = m(x)
-        >>> print(y.numpy())
-        [[[[-1.23456]]]]
-
     """
 
     def __init__(
@@ -324,7 +317,7 @@ class MaxPool2d(Module):
         channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
 
         assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1, "Only support dilation==1 for now!"
+        assert dilation == 1 or dilation == (1, 1), "Only support dilation==1 for now!"
 
         padding = _pair(padding)
         if len(padding) == 2:
@@ -343,6 +336,140 @@ class MaxPool2d(Module):
 
         self._op = (
             flow.builtin_op("max_pool_2d")
+            .Attr("data_format", channel_pos)
+            .Attr("pool_size", kernel_size)
+            .Attr("strides", strides)
+            .Attr("ceil_mode", ceil_mode)
+            .Attr("padding", padding_type)
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("nn.MaxPool3d")
+@experimental_api
+class MaxPool3d(Module):
+    r"""Applies a 3D max pooling over an input signal composed of several input
+    planes.
+
+    In the simplest case, the output value of the layer with input size :math:`(N, C, D, H, W)`,
+    output :math:`(N, C, D_{out}, H_{out}, W_{out})` and :attr:`kernel_size` :math:`(kD, kH, kW)`
+    can be precisely described as:
+
+    .. math::
+        \begin{aligned}
+            \text{out}(N_i, C_j, d, h, w) ={} & \max_{k=0, \ldots, kD-1} \max_{m=0, \ldots, kH-1} \max_{n=0, \ldots, kW-1} \\
+                                              & \text{input}(N_i, C_j, \text{stride[0]} \times d + k,
+                                                             \text{stride[1]} \times h + m, \text{stride[2]} \times w + n)
+        \end{aligned}
+
+    If :attr:`padding` is non-zero, then the input is implicitly zero-padded on both sides
+    for :attr:`padding` number of points. :attr:`dilation` controls the spacing between the kernel points.
+    It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
+
+    Note:
+        When ceil_mode=True, sliding windows are allowed to go off-bounds if they start within the left padding
+        or the input. Sliding windows that would start in the right padded region are ignored.
+
+    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+
+        - a single ``int`` -- in which case the same value is used for the depth, height and width dimension
+        - a ``tuple`` of three ints -- in which case, the first `int` is used for the depth dimension,
+          the second `int` for the height dimension and the third `int` for the width dimension
+
+    Args:
+        kernel_size: the size of the window to take a max over
+        stride: the stride of the window. Default value is :attr:`kernel_size`
+        padding: implicit zero padding to be added on all three sides
+        dilation: a parameter that controls the stride of elements in the window
+        return_indices: if ``True``, will return the max indices along with the outputs.
+                        Useful for :class:`torch.nn.MaxUnpool3d` later
+        ceil_mode: when True, will use `ceil` instead of `floor` to compute the output shape
+
+    Shape:
+        - Input: :math:`(N, C, D_{in}, H_{in}, W_{in})`
+        - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
+
+          .. math::
+              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{dilation}[0] \times
+                (\text{kernel\_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+
+          .. math::
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{dilation}[1] \times
+                (\text{kernel\_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+
+          .. math::
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{dilation}[2] \times
+                (\text{kernel\_size}[2] - 1) - 1}{\text{stride}[2]} + 1\right\rfloor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> kernel_size, stride, padding = (3, 3, 3), (1, 1, 1), (1, 1, 2)
+        >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
+        >>> np.random.seed(0)
+        >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
+        >>> y = m(x)
+        >>> print(y.numpy()) #doctest: +ELLIPSIS
+        [[[[[0.77815676 0.87001216 0.9786183  0.9786183  0.9786183 ]
+            ...
+            [0.9446689  0.9446689  0.9446689  0.6667667  0.6667667 ]]]]]
+
+        >>> kernel_size, stride, padding = (2, 2, 3), (3, 4, 5), (2, 1, 2)
+        >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
+        >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
+        >>> y = m(x)
+        >>> print(y.size())
+        flow.Size([9, 7, 5, 9, 5])
+
+    """
+
+    def __init__(
+        self,
+        kernel_size: _size_3_t,
+        stride: Optional[_size_3_t] = None,
+        padding: _size_3_t = 0,
+        dilation: _size_3_t = 1,
+        return_indices: bool = False,
+        ceil_mode: bool = False,
+    ):
+        super().__init__()
+        kernel_size = _triple(kernel_size)
+        strides =_triple(stride) if (stride is not None) else kernel_size
+        data_format = "NCDHW"
+        channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
+
+        assert return_indices is False, "Only support return_indices==False for now!"
+        assert dilation == 1 or dilation == (1, 1, 1), "Only support dilation==1 for now!"
+
+        padding =_triple(padding)
+        if len(padding) == 3:
+            if data_format == "NCDHW":
+                padding = (0, 0, padding[0], padding[1], padding[2])
+            else:
+                raise ValueError("error padding param!")
+        else:
+            raise ValueError("error padding param!")
+
+        padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(channel_pos), 3
+        )
+        padding_before = [pad[0] for pad in pads_list]
+        padding_after = [pad[1] for pad in pads_list]
+
+        self._op = (
+            flow.builtin_op("max_pool_3d")
             .Attr("data_format", channel_pos)
             .Attr("pool_size", kernel_size)
             .Attr("strides", strides)
