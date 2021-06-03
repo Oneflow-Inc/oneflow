@@ -40,12 +40,7 @@ Maybe<const Device> GetDefaultDevice() { return Device::New("cpu", 0); }
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
-  auto* tensor_ptr = dynamic_cast<MirroredTensor*>(tensor.get());
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr);
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr->mut_impl());
-  auto* tensor_impl = dynamic_cast<EagerMirroredTensorImpl*>(tensor_ptr->mut_impl());
-  CHECK_NOTNULL_OR_RETURN(tensor_impl);
-  return tensor_impl;
+  return tensor->mut_eager_mirrored_tensor_impl();
 }
 
 }  // namespace
@@ -95,7 +90,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer shapes and dtypes
   const auto& device_tag = JUST(op_device->of_type());
-  JUST(user_op_expr.InferLogicalShapeAndDType(attrs, device_tag, inputs, outputs));
+  JUST(user_op_expr.InferLogicalShapeAndDType(
+      attrs, device_tag, [&](int32_t i) { return inputs.at(i)->tensor_meta(); },
+      [&](int32_t i) { return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta(); }));
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));

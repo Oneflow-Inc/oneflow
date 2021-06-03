@@ -121,10 +121,10 @@ class ConsistentTensorMetaInferArgs final {
   Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors) {
     CHECK_EQ_OR_RETURN(input_consistent_tensor_metas_.size(), input_tensors.size());
     for (int i = 0; i < input_tensors.size(); ++i) {
-      auto* tensor_ptr = dynamic_cast<ConsistentTensor*>(input_tensors.at(i).get());
-      CHECK_NOTNULL_OR_RETURN(tensor_ptr);
-      input_consistent_tensor_metas_.at(i).assign(
-          tensor_ptr->tensor_meta(), tensor_ptr->consumer_forced_parallel_distribution());
+      const auto& tensor = *input_tensors.at(i);
+      const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
+      const auto& constraints = JUST(tensor.consumer_forced_parallel_distribution());
+      input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraints);
     }
     return Maybe<void>::Ok();
   }
