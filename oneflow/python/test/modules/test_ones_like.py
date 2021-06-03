@@ -55,7 +55,7 @@ class TestModule(flow.unittest.TestCase):
             _test_ones_like_float,
             _test_ones_like_int,
         ]
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
