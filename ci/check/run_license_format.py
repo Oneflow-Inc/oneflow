@@ -103,5 +103,5 @@ if __name__ == "__main__":
                 exit(1)
         if args.fix:
             for (p, formatted_result) in p.map(do_format, files):
-                if formatted_result == False:
+                if formatted_result == "ok":
                     print("license added:", p)
