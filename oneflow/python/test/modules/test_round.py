@@ -34,7 +34,9 @@ def _test_round_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np.zeros(shape), 1e-4, 1e-4)
+    )
 
 
 @unittest.skipIf(

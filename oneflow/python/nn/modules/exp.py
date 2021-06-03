@@ -88,4 +88,5 @@ def exp_op_tensor(x):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
