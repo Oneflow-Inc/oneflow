@@ -16,6 +16,9 @@ limitations under the License.
 import oneflow.experimental as flow
 import unittest
 import numpy as np
+from collections import OrderedDict
+
+from test_util import GenArgList
 
 
 @unittest.skipIf(
