@@ -67,7 +67,7 @@ Maybe<void> SparseSoftmaxCrossEntropy::Apply(const SparseSoftmaxCrossEntropyInte
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
-  const auto& dy = out_grads.at(1);
+  const auto& dy = out_grads.at(0);
   const auto& prob = ctx->SavedTensors().at(0);
   const auto& label = ctx->SavedTensors().at(1);
   MutableAttrMap attrs;
