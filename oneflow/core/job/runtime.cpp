@@ -150,12 +150,14 @@ void Runtime::DeleteAllGlobal() {
 #ifdef __linux__
     if (Global<ResourceDesc, ForSession>::Get()->use_rdma()) {
 #ifdef WITH_RDMA
-      CHECK(Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get()));
-      // NOTE(chengcheng): it means that
-      // Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
-      // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
-      // then need delete both.
-      Global<CommNet>::Delete();
+      if (ibv::IsAvailable()) {
+        CHECK(Global<EpollCommNet>::Get() != static_cast<EpollCommNet*>(Global<CommNet>::Get()));
+        // NOTE(chengcheng): it means that
+        // Global<CommNet>::SetAllocated(Global<IBVerbsCommNet>::Get())
+        // so the Global<CommNet> and Global<EpollCommNet> are NOT same global object
+        // then need delete both.
+        Global<CommNet>::Delete();
+      }
 #else
       LOG(FATAL) << "RDMA components not found";
 #endif

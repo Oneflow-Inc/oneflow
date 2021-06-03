@@ -449,7 +449,8 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
                                       const ParallelDistribution& in_parallel_distribution,
                                       const ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
-    if (in_parallel_desc.hierarchy()->NumAxes() == 1
+    if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
+        && in_parallel_desc.hierarchy()->NumAxes() == 1
         && out_parallel_desc.hierarchy()->NumAxes() == 2) {
       ParallelConf intermediate_parallel_conf = in_parallel_desc.parallel_conf();
       out_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
@@ -462,7 +463,8 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks,
           ParallelDesc(intermediate_parallel_conf), out_parallel_desc, lbi, logical_blob_desc,
           intermediate_parallel_distribution, out_parallel_distribution, time_shape);
-    } else if (in_parallel_desc.hierarchy()->NumAxes() == 2
+    } else if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
+               && in_parallel_desc.hierarchy()->NumAxes() == 2
                && out_parallel_desc.hierarchy()->NumAxes() == 1) {
       ParallelConf intermediate_parallel_conf = out_parallel_desc.parallel_conf();
       in_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
@@ -533,11 +535,15 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
           reduced_out_parallel_distribution, time_shape);
-    } else {
+    } else if (in_hierarchy->elem_cnt() == out_hierarchy->elem_cnt()
+               && ((in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 2)
+                   || (in_hierarchy->NumAxes() == 2 && out_hierarchy->NumAxes() == 1))) {
       return impl_->expand_to_same_2d_hierarchy_sub_tsk_gph_builder_->Build(
           ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
           reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_parallel_distribution,
           reduced_out_parallel_distribution, time_shape);
+    } else {
+      return Error::BoxingNotSupportedError();
     }
   }
   return Error::BoxingNotSupportedError();

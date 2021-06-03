@@ -33,7 +33,7 @@ class LrScheduler(object):
                     f"param_groups[{i}] when resuming an optimizer"
                 )
 
-        self.base_lr = [
+        self.base_lrs = [
             group.options["initial_lr"] for group in self._optimizer._param_groups
         ]
         self.last_lr = list()
