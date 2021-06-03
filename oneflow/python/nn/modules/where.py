@@ -22,14 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Where(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._where_op = (
-            flow.builtin_op("where")
-            .Input("condition")
-            .Input("x")
-            .Input("y")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, condition, x, y):
         assert condition.dtype == flow.int32 or condition.dtype == flow.int8
@@ -92,7 +84,7 @@ class Where(Module):
                 y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
             )
 
-        return self._where_op(broadcast_cond, broadcast_x, broadcast_y)[0]
+        return flow.F.where(broadcast_cond, broadcast_x, broadcast_y)
 
 
 @oneflow_export("where")

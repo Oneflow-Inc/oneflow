@@ -55,7 +55,7 @@ class Transpose(Module):
             perm.append(i)
         perm[dim0], perm[dim1] = perm[dim1], perm[dim0]
 
-        return flow.F.transpose(x, permute=perm)
+        return flow.F.transpose(x, perm=perm)
 
 
 @oneflow_export("transpose")

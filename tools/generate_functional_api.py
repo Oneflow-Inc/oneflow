@@ -124,6 +124,7 @@ ONEFLOW_API_PYBIND11_MODULE("F", m) {{
 )
 
 types_allowed = {
+    "Void",
     "Tensor",
     "TensorTuple",
     "Scalar",
@@ -174,10 +175,11 @@ argument_type_aliases = {
 }
 
 return_type_aliases = {
+    "Void": "Maybe<void>",
     "Tensor": "Maybe<one::Tensor>",
     "TensorTuple": "Maybe<one::TensorTuple>",
-    "String": "std::string",
-    **generic_type_aliases,
+    "String": "Maybe<std::string>",
+    **{k: "Maybe<{0}>".format(v) for k, v in generic_type_aliases.items()},
 }
 
 value_aliases = {

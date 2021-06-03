@@ -95,14 +95,6 @@ class Embedding(Module):
             self.weight = flow.nn.Parameter(_weight)
 
         self.sparse = sparse
-        self._gather_op = (
-            flow.builtin_op("gather")
-            .Input("in")
-            .Input("indices")
-            .Output("out")
-            .Attr("axis", int(0))
-            .Build()
-        )
 
     def reset_parameters(self) -> None:
         flow.nn.init.normal_(self.weight)
@@ -115,5 +107,5 @@ class Embedding(Module):
                 self.weight[self.padding_idx].fill_(0)
 
     def forward(self, indices):
-        res = self._gather_op(self.weight, indices)[0]
+        res = flow.F.gather(self.weight, indices, axis=0)
         return res

@@ -12,10 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The following data types are allowed:
+# The following data types are allowed,
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
-#   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList", "BoolList"
+#   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
+#   "BoolList", DataType, Shape
 # }
 
 - name: "add_n"
@@ -95,7 +96,7 @@
   bind_python: True
 
 - name: "transpose"
-  signature: "Tensor Transpose(Tensor x, *, Int32List permute)"
+  signature: "Tensor Transpose(Tensor x, *, Int32List perm)"
   bind_python: True
 
 - name: "reciprocal"
@@ -187,9 +188,10 @@
   bind_python: False
 
 - name: "normalization"
-  signature: "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
-                                   Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
-                                   Float momentum=0.9, Bool is_training=False)"
+  signature:
+    "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
+                          Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
+                          Float momentum=0.9, Bool is_training=False)"
   bind_python: True
 
 - name: "range"
@@ -237,13 +239,37 @@
   bind_python: True
 
 - name: "conv2d"
-  signature: "Tensor Conv2D(Tensor x, Tensor weght, *, Int32 filters, Int32List kernel_size,
-                            Int32List strides, Int32List padding_before, Int32List dilation_rate,
-                            Int32 groups, String data_format)"
+  signature:
+    "Tensor Conv2D(Tensor x, Tensor weght, *, Int32 filters, Int32List kernel_size,
+                   Int32List strides, Int32List padding_before, Int32List dilation_rate,
+                   Int32 groups=1, String data_format=\"channels_first\")"
   bind_python: True
+
+- name: "conv_data_grad"
+  signature:
+    "Tensor ConvDataGrad(Tensor dy, Tensor weght, Tensor x, *, Int32 num_spatial_dims,
+                         Int32List kernel_size, Int32List strides, Int32List padding_before,
+                         Int32List dilation_rate, Int32 groups=1,
+                         String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_filter_grad"
+  signature:
+    "Tensor ConvFilterGrad(Tensor dy, Tensor x, *, Int32 num_spatial_dims, Int32List kernel_size,
+                           Int32List strides, Int32List padding_before, Int32List dilation_rate,
+                           Int32 groups=1, String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_bias_grad"
+  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  bind_python: False
 
 - name: "expand"
   signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  bind_python: True
+
+- name: "expand_dims"
+  signature: "Tensor ExpandDims(Tensor x, *, Int32 axis)"
   bind_python: True
 
 - name: "exp"
@@ -259,12 +285,94 @@
   bind_python: True
 
 - name: "matmul"
-  signature: "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
-                            Double alpha=1.0)"
+  signature:
+    "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                   Double alpha=1.0)"
   bind_python: True
 
 - name: "broadcast_matmul"
-  signature: "Tensor BroadcastMatMul(Tensor a, Tensor b, *, Bool transpose_a=False,
-                                     Bool transpose_b=False, Double alpha=1.0)"
+  signature:
+    "Tensor BroadcastMatMul(Tensor a, Tensor b, *, Bool transpose_a=False,
+                            Bool transpose_b=False, Double alpha=1.0)"
   bind_python: True
 
+- name: "sparse_softmax_cross_entropy"
+  signature: "Tensor SparseSoftmaxCrossEntropy(Tensor logits, Tensor label, *, Int64 depth)"
+  bind_python: True
+
+- name: "where"
+  signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "batch_matmul"
+  signature:
+    "Tensor BatchMatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                        Double alpha=1.0)"
+  bind_python: True
+
+- name: "negative"
+  signature: "Tensor Negative(Tensor x)"
+  bind_python: True
+
+- name: "layer_norm_affine"
+  signature:
+    "Tensor LayerNormAffine(Tensor x, Tensor beta, Tensor gamma, Int64 begin_norm_axis,
+                            Int64 begin_params_axis, Double epsilon)"
+  bind_python: True
+
+- name: "layer_norm"
+  signature:
+    "Tensor LayerNorm(Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon)"
+  bind_python: True
+
+- name: "avg_pool_2d"
+  signature:
+    "Tensor AvgPool2D(Tensor x, *, Int32List kernel_size, Int32List stride, String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      String data_format=\"channels_first\", Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "max_pool_2d"
+  signature:
+    "Tensor MaxPool2D(Tensor x, *, Int32List kernel_size, Int32List stride, String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      String data_format=\"channels_first\", Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "prelu"
+  signature: "Tensor PRelu(Tensor x, Tensor alpha)"
+  bind_python: True
+
+- name: "reshape"
+  signature: "Tensor Reshape(Tensor x, *, Shape shape)"
+  bind_python: True
+
+- name: "slice"
+  signature: "Tensor Slice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "slice_update"
+  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice"
+  signature: "Tensor LogicalSlice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice_assign"
+  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "squeeze"
+  signature: "Tensor Squeeze(Tensor x, *, Int32List dim)"
+  bind_python: True
+
+- name: "copy"
+  signature: "Tensor Copy(Tensor x, *, String device_type, Int64 device_id)"
+  bind_python: True
+
+- name: "upsample"
+  signature:
+    "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String interpolation, String data_format=\"channels_first\")"
+  bind_python: True

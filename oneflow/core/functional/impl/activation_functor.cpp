@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/functional/impl/binary_functor.h"
 
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -34,6 +35,13 @@ namespace impl {
 class ReluFunctor : public UnaryFunctor {
  public:
   ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("in").Output("out").Build()); }
+};
+
+class PReluFunctor : public BinaryFunctor {
+ public:
+  PReluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
+  }
 };
 
 class HardTanhFunctor {
@@ -71,11 +79,6 @@ class HardTanhGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class TanhFunctor : public UnaryFunctor {
- public:
-  TanhFunctor() { op_ = CHECK_JUST(one::OpBuilder("tanh").Input("x").Output("y").Build()); }
-};
-
 class EluFunctor {
  public:
   EluFunctor() { op_ = CHECK_JUST(one::OpBuilder("elu").Input("in").Output("out").Build()); }
@@ -108,13 +111,6 @@ class EluGradFunctor {
 class GeluFunctor : public UnaryFunctor {
  public:
   GeluFunctor() { op_ = CHECK_JUST(one::OpBuilder("gelu").Input("in").Output("out").Build()); }
-};
-
-class SigmoidFunctor : public UnaryFunctor {
- public:
-  SigmoidFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("sigmoid").Input("in").Output("out").Build());
-  }
 };
 
 class HardSigmoidFunctor : public UnaryFunctor {
@@ -173,13 +169,12 @@ class LeakyReluGradFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReluFunctor>("Relu");
+  m.add_functor<impl::PReluFunctor>("PRelu");
   m.add_functor<impl::HardTanhFunctor>("HardTanh");
   m.add_functor<impl::HardTanhGradFunctor>("HardTanhGrad");
-  m.add_functor<impl::TanhFunctor>("Tanh");
   m.add_functor<impl::EluFunctor>("Elu");
   m.add_functor<impl::EluGradFunctor>("EluGrad");
   m.add_functor<impl::GeluFunctor>("Gelu");
-  m.add_functor<impl::SigmoidFunctor>("Sigmoid");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
   m.add_functor<impl::HardSwishFunctor>("HardSwish");

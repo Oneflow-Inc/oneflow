@@ -24,17 +24,10 @@ from typing import Optional, Sequence
 class Squeeze(Module):
     def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
-
-        self._op = (
-            flow.builtin_op("squeeze")
-            .Input("in")
-            .Output("out")
-            .Attr("axes", dim)
-            .Build()
-        )
+        self.dim = dim
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.squeeze(x, dim=self.dim)
 
 
 @oneflow_export("squeeze")

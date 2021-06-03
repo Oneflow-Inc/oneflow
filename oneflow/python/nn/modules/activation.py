@@ -439,11 +439,11 @@ class Softmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = flow.F.transpose(x, permute=permute)
+            x = flow.F.transpose(x, perm=permute)
 
         res = flow.F.softmax(x)
         if need_transpose:
-            res = flow.F.transpose(res, permute=permute)
+            res = flow.F.transpose(res, perm=permute)
         return res
 
 
@@ -554,13 +554,13 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = flow.F.transpose(x, permute=permute)
+            x = flow.F.transpose(x, perm=permute)
 
         x = x.softmax()
         res = x.log()
 
         if need_transpose:
-            res = flow.F.transpose(res, permute=permute)
+            res = flow.F.transpose(res, perm=permute)
 
         return res
 

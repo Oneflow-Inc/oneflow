@@ -22,9 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Eq(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.eq_op = (
-            flow.builtin_op("broadcast_equal").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, input, other):
         if isinstance(other, flow.Tensor):

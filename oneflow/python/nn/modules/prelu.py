@@ -67,10 +67,9 @@ class PReLU(Module):
         super().__init__()
         self.num_parameters = num_parameters
         self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
-        self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
         assert (
             self.num_parameters == 1 or self.num_parameters == x.shape[1]
         ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
-        return self.op(x, self.weight)[0]
+        return flow.F.prelu(x, self.weight)

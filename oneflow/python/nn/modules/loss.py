@@ -96,21 +96,6 @@ class CrossEntropyLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
-        self._op = (
-            flow.builtin_op("sparse_softmax_cross_entropy")
-            .Input("prediction")
-            .Input("label")
-            .Output("prob")
-            .Output("out")
-            .Build()
-        )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
@@ -118,18 +103,20 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
             raise NotImplemented
 
-        prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
+        out = flow.F.sparse_softmax_cross_entropy(
+            input, target, depth=input.shape[len(input.shape) - 1]
+        )
         if self.reduction == "mean":
             return flow.experimental.mean(out)
         elif self.reduction == "sum":
@@ -231,26 +218,11 @@ class NLLLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.reduction = reduction
-        self._dim_gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", 1)
-            .Build()
-        )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def nllloss_1d(self, input, target):
-        target = flow.experimental.reshape(target, (target.shape[0], 1))
-        res = self._dim_gather_op(input, target)[0]
-        res = flow.experimental.squeeze(res, dim=[1])
+        target = flow.F.reshape(target, shape=(target.shape[0], 1))
+        res = flow.F.dim_gather(input, target, dim=1)
+        res = flow.F.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
@@ -261,14 +233,14 @@ class NLLLoss(Module):
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
             res = res.reshape((b, h))
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)

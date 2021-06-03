@@ -157,6 +157,21 @@ class ExpandFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ExpandDimsFunctor {
+ public:
+  ExpandDimsFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("expand_dims").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class GatherFunctor {
  public:
   GatherFunctor() {
@@ -190,6 +205,142 @@ class DimGatherFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReshapeFunctor {
+ public:
+  ReshapeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SliceBaseFunctor {
+ public:
+  SliceBaseFunctor() = default;
+  virtual ~SliceBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
+                           const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SliceFunctor : public SliceBaseFunctor {
+ public:
+  SliceFunctor() { op_ = CHECK_JUST(one::OpBuilder("slice").Input("x").Output("y").Build()); }
+};
+
+class LogicalSliceFunctor : public SliceBaseFunctor {
+ public:
+  LogicalSliceFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logical_slice").Input("x").Output("y").Build());
+  }
+};
+
+class LogicalSliceAssignFunctor {
+ public:
+  LogicalSliceAssignFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("logical_slice_assign").Input("ref").Input("value").Build());
+  }
+  Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
+                         const std::shared_ptr<one::Tensor>& value,
+                         const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                         const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SliceUpdateFunctor {
+ public:
+  SliceUpdateFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& update,
+                           const std::vector<int64_t>& start, const std::vector<int64_t>& stop,
+                           const std::vector<int64_t>& step) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
+    JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SqueezeFunctor {
+ public:
+  SqueezeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& axes) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", axes));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class CopyFunctor {
+ public:
+  CopyFunctor() { op_ = CHECK_JUST(one::OpBuilder("copy").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::string& device_type,
+                           const int64_t& device_id) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("device_type", device_type));
+    JUST(attrs.SetAttr<int64_t>("device_id", device_id));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UpsampleFunctor {
+ public:
+  UpsampleFunctor() { op_ = CHECK_JUST(one::OpBuilder("upsample").Input("x").Output("y").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& height_scale,
+                           const float& width_scale, const bool& align_corners,
+                           const std::string& interpolation, const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<float>("height_scale", height_scale));
+    JUST(attrs.SetAttr<float>("width_scale", width_scale));
+    JUST(attrs.SetAttr<bool>("align_corners", align_corners));
+    JUST(attrs.SetAttr<std::string>("interpolation", interpolation));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -203,6 +354,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
+  m.add_functor<impl::ReshapeFunctor>("Reshape");
+  m.add_functor<impl::SliceFunctor>("Slice");
+  m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
+  m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
+  m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
+  m.add_functor<impl::SqueezeFunctor>("Squeeze");
+  m.add_functor<impl::CopyFunctor>("Copy");
+  m.add_functor<impl::UpsampleFunctor>("Upsample");
 };
 
 }  // namespace functional
