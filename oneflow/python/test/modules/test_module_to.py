@@ -14,11 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
 import numpy as np
 
-import oneflow.experimental as flow
 from oneflow.python.nn.module import Module
+import oneflow.experimental as flow
 
 dummy_val = np.random.randn(2, 3)
 in_val = np.full((2, 3), -2)
