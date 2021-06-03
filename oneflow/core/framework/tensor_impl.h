@@ -138,7 +138,7 @@ class MirroredTensorImpl : public TensorImpl {
   const std::shared_ptr<const Device>& device() const { return tensor_meta_->device(); }
   const std::shared_ptr<const MirroredTensorMeta>& tensor_meta() const { return tensor_meta_; }
 
-  // Getters
+  // Setters
   MirroredTensorMeta* mut_tensor_meta() {
     return const_cast<MirroredTensorMeta*>(tensor_meta_.get());
   }
@@ -190,15 +190,16 @@ class ConsistentTensorImpl : public TensorImpl {
   Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution() const {
     return consumer_forced_parallel_distribution_;
   }
+  Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
+
+  // Getters valid only for EagerMirroredTensorImpl
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
   void set_consumer_forced_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
     consumer_forced_parallel_distribution_ = val;
   }
-
-  // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
-  Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     UNIMPLEMENTED();

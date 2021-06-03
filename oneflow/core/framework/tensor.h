@@ -35,10 +35,6 @@ class ParallelConf;
 
 }  // namespace cfg
 
-namespace user_op {
-class TensorMeta;
-}
-
 class Tensor {
  public:
   virtual ~Tensor() = default;
@@ -76,6 +72,7 @@ class Tensor {
   virtual bool is_lazy() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution()
       const = 0;
+  virtual const TensorMeta& tensor_meta() const = 0;
 
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
@@ -186,6 +183,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   int64_t dim(int64_t index) const override;
   int64_t nelement() const override;
   std::shared_ptr<MirroredTensor> data() const;
+  const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -263,6 +261,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
+  const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
   // Setters
   Maybe<void> set_consumer_forced_parallel_distribution(

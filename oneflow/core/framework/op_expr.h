@@ -79,6 +79,8 @@ class BuiltinOpExpr : public OpExpr {
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
 };
 
+class TensorMeta;
+
 template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
@@ -128,8 +130,10 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
-  Maybe<void> InferLogicalShapeAndDType(const AttrMap& attrs, const std::string& device_tag,
-                                        const TensorTuple& inputs, TensorTuple* outputs) const;
+  Maybe<void> InferLogicalShapeAndDType(
+      const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                    TensorTuple* outputs) const;
 

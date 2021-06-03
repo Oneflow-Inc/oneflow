@@ -128,13 +128,14 @@ namespace {
 class UserOpExprInferContext : public user_op::InferContext {
  public:
   UserOpExprInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                         const std::string* device_tag, const TensorTuple& input_tensors,
-                         TensorTuple* output_tensors)
+                         const std::string& device_tag,
+                         const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+                         const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         device_tag_(device_tag),
-        input_tensors_(const_cast<TensorTuple*>(&input_tensors)),
-        output_tensors_(output_tensors) {}
+        tensor_meta4input_index_(TensorMeta4InputIndex),
+        tensor_meta4output_index_(TensorMeta4OutputIndex) {}
   ~UserOpExprInferContext() = default;
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
@@ -149,12 +150,14 @@ class UserOpExprInferContext : public user_op::InferContext {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
-      if (tuple_index >= 0) { return output_tensors_->at(tuple_index)->mut_tensor_meta(); }
+      if (tuple_index >= 0) { return tensor_meta4output_index_(tuple_index); }
     }
     {
       const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
-      if (tuple_index >= 0) { return input_tensors_->at(tuple_index)->mut_tensor_meta(); }
+      if (tuple_index >= 0) {
+        return const_cast<TensorMeta*>(&tensor_meta4input_index_(tuple_index));
+      }
     }
     UNIMPLEMENTED();
     return nullptr;
@@ -201,7 +204,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const std::string& op_name() const override { return user_op_expr_->op_name(); }
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
-  const std::string& device_tag() const override { return *device_tag_; }
+  const std::string& device_tag() const override { return device_tag_; }
 
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
@@ -210,9 +213,9 @@ class UserOpExprInferContext : public user_op::InferContext {
   }
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
-  const std::string* device_tag_;
-  TensorTuple* input_tensors_;
-  TensorTuple* output_tensors_;
+  const std::string& device_tag_;
+  const std::function<const TensorMeta&(int32_t)>& tensor_meta4input_index_;
+  const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
 };
 
 class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
@@ -323,11 +326,12 @@ Maybe<void> UserOpExpr::Init() {
   return op_expr;
 }
 
-Maybe<void> UserOpExpr::InferLogicalShapeAndDType(const AttrMap& attrs,
-                                                  const std::string& device_tag,
-                                                  const TensorTuple& input_tensors,
-                                                  TensorTuple* output_tensors) const {
-  UserOpExprLogicalInferContext infer_ctx(this, attrs, &device_tag, input_tensors, output_tensors);
+Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
+    const AttrMap& attrs, const std::string& device_tag,
+    const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+    const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
+  UserOpExprLogicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
+                                          TensorMeta4OutputIndex);
   JUST(shape_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
