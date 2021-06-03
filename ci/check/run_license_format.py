@@ -102,6 +102,9 @@ if __name__ == "__main__":
             if any_absence:
                 exit(1)
         if args.fix:
-            for (p, formatted_result) in p.map(do_format, files):
-                if formatted_result == "ok":
-                    print("license added:", p)
+            for (p, format_result) in p.map(do_format, files):
+                if format_result == True:
+                    if args.verbose:
+                        print("license already added:", p)
+                else:
+                    print("license just added:", p)
