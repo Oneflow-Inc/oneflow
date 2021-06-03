@@ -24,8 +24,14 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
 
 
-def _build_math_binary_elementwise_op(math_op):
-    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
+def _build_reduce_op(op_type_name, keepdims):
+    return (
+        flow.builtin_op(op_type_name)
+        .Input("input_tensor")
+        .Output("output_tensor")
+        .Attr("keepdims", keepdims)
+        .Build()
+    )
 
 
 class Sum(Module):
@@ -36,13 +42,7 @@ class Sum(Module):
 
         self.axis = axis
         self.keepdims = keepdims
-        self._op = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-            .Build()
-        )
+        self._op = _build_reduce_op("reduce_sum", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
@@ -61,9 +61,13 @@ def _sum(input, dim=None, keepdims=False):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = flow.sum(input, dim=(2,1))
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([1.3, 0.5, 2.7]))
+        >>> out = flow.sum(input)
+        >>> out
+        tensor([4.5], dtype=oneflow.float32)
 
     """
 
@@ -78,13 +82,7 @@ class Min(Module):
 
         self.axis = axis
         self.keepdims = keepdims
-        self._op = (
-            flow.builtin_op("reduce_min")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-            .Build()
-        )
+        self._op = _build_reduce_op("reduce_min", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
@@ -97,15 +95,19 @@ class Min(Module):
 @register_tensor_op("min")
 @experimental_api
 def _min(input, dim=None, keepdims=False):
-    r"""Computes the min of row of elements in a tensor in the given axis, if the axis is None, min of all elements will be caculated.
+    r"""Computes the minimum value of all elements in the input tensor.
     
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = flow.min(input, dim=(2,1))
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([1.3, 0.5, 2.7]))
+        >>> out = flow.min(input)
+        >>> out
+        tensor([0.5], dtype=oneflow.float32)
 
     """
 
@@ -120,13 +122,7 @@ class Max(Module):
 
         self.axis = axis
         self.keepdims = keepdims
-        self._op = (
-            flow.builtin_op("reduce_max")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-            .Build()
-        )
+        self._op = _build_reduce_op("reduce_max", keepdims)
 
     def forward(self, input):
         axis_checked = _check_axis(self.axis, input.shape)
@@ -139,16 +135,26 @@ class Max(Module):
 @register_tensor_op("max")
 @experimental_api
 def _max(input, dim=None, keepdims=False):
-    r"""Computes the max of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    r"""Computes the maximum value of all elements in the input tensor.
     
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = flow.max(input, dim=(2,1))
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([1.3, 0.5, 2.7]))
+        >>> out = flow.max(input)
+        >>> out
+        tensor([2.7], dtype=oneflow.float32)
 
     """
 
     return Max(dim, keepdims)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

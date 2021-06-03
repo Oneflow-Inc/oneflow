@@ -24,27 +24,17 @@ import numpy as np
 )
 class TestSumModule(flow.unittest.TestCase):
     def test_sum(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.sum(input, dim=0)
-        np_out = np.sum(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.sum(input, dim=0)
-        np_out = np.sum(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.sum(input, dim=1)
-        of_out2 = input.sum(dim=1)
-        np_out = np.sum(input.numpy(), axis=1)
-        test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-4, 1e-4))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        input = flow.Tensor(
+            np.random.randn(4, 5, 6), dtype=flow.float32, requires_grad=True
+        )
         of_out = flow.sum(input, dim=(2, 1))
         np_out = np.sum(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        print(input.grad.numpy())
 
 
 @unittest.skipIf(
@@ -53,29 +43,17 @@ class TestSumModule(flow.unittest.TestCase):
 )
 class TestMinModule(flow.unittest.TestCase):
     def test_min(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.min(input, dim=0)
-        np_out = np.min(input.numpy(), axis=0)
-        print(input)
-        print(of_out.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.min(input, dim=0)
-        np_out = np.min(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.min(input, dim=1)
-        of_out2 = input.min(dim=1)
-        np_out = np.min(input.numpy(), axis=1)
-        test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-4, 1e-4))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        input = flow.Tensor(
+            np.random.randn(4, 5, 6), dtype=flow.float32, requires_grad=True
+        )
         of_out = flow.min(input, dim=(2, 1))
         np_out = np.min(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        print(input.grad.numpy())
 
 
 @unittest.skipIf(
@@ -84,29 +62,17 @@ class TestMinModule(flow.unittest.TestCase):
 )
 class TestMaxModule(flow.unittest.TestCase):
     def test_max(test_case):
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.max(input, dim=0)
-        np_out = np.max(input.numpy(), axis=0)
-        print(input)
-        print(of_out.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.max(input, dim=0)
-        np_out = np.max(input.numpy(), axis=0)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
-        of_out = flow.max(input, dim=1)
-        of_out2 = input.max(dim=1)
-        np_out = np.max(input.numpy(), axis=1)
-        test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-4, 1e-4))
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        input = flow.Tensor(
+            np.random.randn(4, 5, 6), dtype=flow.float32, requires_grad=True
+        )
         of_out = flow.max(input, dim=(2, 1))
         np_out = np.max(input.numpy(), axis=(2, 1))
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        print(input.grad.numpy())
 
 
 if __name__ == "__main__":
