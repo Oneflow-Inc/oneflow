@@ -159,7 +159,6 @@ class UserOpExprInferContext : public user_op::InferContext {
         return const_cast<TensorMeta*>(&tensor_meta4input_index_(tuple_index));
       }
     }
-    UNIMPLEMENTED();
     return nullptr;
   }
 
