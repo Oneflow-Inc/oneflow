@@ -107,7 +107,7 @@ def _test_gather_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGather(flow.unittest.TestCase):
-    def test_argwhere(test_case):
+    def test_gather(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_gather,
