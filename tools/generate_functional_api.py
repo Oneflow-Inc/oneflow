@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import re
 import argparse
 import yaml
 
@@ -185,24 +186,24 @@ value_aliases = {
 }
 
 
-def normalize(fmt):
-    fmt = fmt.strip()
-    import re
+def _escape_quote(fmt):
+    return re.sub(r"\"|\'", '\\"', fmt)
 
+
+def _normalize(fmt):
+    fmt = fmt.strip()
     return re.sub(r"\s+", " ", fmt)
 
 
-def std_decay(fmt):
+def _std_decay(fmt):
     fmt = fmt.strip()
-    import re
-
     fmt = re.sub(r"(const|&)", "", fmt)
-    return normalize(fmt)
+    return _normalize(fmt)
 
 
 def parse_function_params(fmt):
     params = []
-    fmt = normalize(fmt)
+    fmt = _normalize(fmt)
     if not fmt.endswith(")"):
         raise ValueError('Function def should end with ")": ' + fmt)
     open_paren = fmt.find("(")
@@ -220,7 +221,7 @@ def parse_function_params(fmt):
     # TODO(): Parse the parameter list more comprehensively.
     items = tail.split(",")
     for param in items:
-        params.append(normalize(param))
+        params.append(_normalize(param))
     return function_name, params
 
 
@@ -231,26 +232,26 @@ class Argument:
         self._name = None
         self._default_value = None
 
-        fmt = normalize(fmt)
+        fmt = _normalize(fmt)
         sp = fmt.find(" ")
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
-        self._type = normalize(fmt[0:sp])
+        self._type = _normalize(fmt[0:sp])
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         if self._type in argument_type_aliases:
             self._cpp_type = argument_type_aliases[self._type]
         else:
             self._cpp_type = self._type
-        self._name = normalize(fmt[sp + 1 :])
+        self._name = _normalize(fmt[sp + 1 :])
         sp = self._name.find("=")
         if sp != -1:
-            self._default_value = normalize(self._name[sp + 1 :])
+            self._default_value = _normalize(self._name[sp + 1 :])
             if self._default_value in value_aliases:
                 self._default_cpp_value = value_aliases[self._default_value]
             else:
                 self._default_cpp_value = self._default_value
-            self._name = normalize(self._name[0:sp])
+            self._name = _normalize(self._name[0:sp])
 
     @property
     def has_default_value(self):
@@ -265,7 +266,7 @@ class Argument:
 
 class Return:
     def __init__(self, fmt):
-        self._type = normalize(fmt)
+        self._type = _normalize(fmt)
         assert self._type in types_allowed, "Unknow type: " + self._type
 
         if self._type in return_type_aliases:
@@ -402,7 +403,7 @@ class FunctionalGenerator:
                 signature._max_keyword_args_count
             )
             schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
-                signature.to_string()
+                _escape_quote(signature.to_string())
             )
             schema_fmt += "  static ReturnDef return_def;\n"
             schema_fmt += "  static std::vector<ArgumentDef> argument_def;\n"
@@ -417,13 +418,13 @@ class FunctionalGenerator:
                 if arg.has_default_value:
                     argument_def.append(
                         'ArgumentDef("{0}", {1}({2}))'.format(
-                            arg._name, std_decay(arg._cpp_type), arg._default_cpp_value
+                            arg._name, _std_decay(arg._cpp_type), arg._default_cpp_value
                         )
                     )
                 else:
                     argument_def.append(
                         'ArgumentDef("{0}", ValueTypeOf<{1}>())'.format(
-                            arg._name, std_decay(arg._cpp_type)
+                            arg._name, _std_decay(arg._cpp_type)
                         )
                     )
 
