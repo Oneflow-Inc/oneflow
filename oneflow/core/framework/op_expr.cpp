@@ -156,7 +156,6 @@ class UserOpExprInferContext : public user_op::InferContext {
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) { return input_tensors_->at(tuple_index)->mut_tensor_meta(); }
     }
-    UNIMPLEMENTED();
     return nullptr;
   }
 
