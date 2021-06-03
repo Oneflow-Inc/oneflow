@@ -608,6 +608,25 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_round(test_case):
+        shape = (2, 3)
+        np_input = np.random.randn(*shape)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+
+        of_out = flow.round(of_input)
+        np_out = np.round(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np.zeros(shape), 1e-4, 1e-4)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_where(test_case):
         x = flow.Tensor(
             np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
