@@ -35,29 +35,33 @@ def check_file(path):
     with open(path) as f:
         content = f.read()
         txt = get_txt(path)
+        if content.count("The OneFlow Authors") > 1:
+            return ("duplicated", content)
         if content.startswith(txt) or (not content):
-            return (True, content)
+            return ("ok", content)
         else:
-            return (False, content)
+            return ("absent", content)
 
 
 def format_file(path):
     txt = get_txt(path)
     with open(path, "r", encoding="utf-8") as r:
         content = r.read()
-    is_formatted, content = check_file(path)
-    if is_formatted:
+    formatted_result, content = check_file(path)
+    if formatted_result == "ok":
         return True
-    else:
+    elif formatted_result == "absent":
         with open(path, "w") as w:
             new_content = txt + content
             w.write(new_content)
         return False
+    else:
+        raise ValueError(f"license {formatted_result} {path}")
 
 
 def do_check(x):
-    is_formatted, _ = check_file(x)
-    return (x, is_formatted)
+    formatted_result, _ = check_file(x)
+    return (x, formatted_result)
 
 
 def do_format(x):
@@ -91,13 +95,13 @@ if __name__ == "__main__":
     with Pool(10) as p:
         if args.check:
             any_absence = False
-            for (p, is_formatted) in p.map(do_check, files):
-                if is_formatted == False:
-                    print("license absent:", p)
+            for (p, formatted_result) in p.map(do_check, files):
+                if formatted_result != "ok":
+                    print(f"license {formatted_result}:", p)
                     any_absence = True
             if any_absence:
                 exit(1)
         if args.fix:
-            for (p, is_formatted) in p.map(do_format, files):
-                if is_formatted == False:
+            for (p, formatted_result) in p.map(do_format, files):
+                if formatted_result == False:
                     print("license added:", p)
