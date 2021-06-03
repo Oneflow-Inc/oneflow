@@ -24,6 +24,7 @@ from test_util import GenArgList
 
 def _test_asin(test_case, shape, device):
     np_input = 2 * np.random.random(shape) - 1 
+
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
