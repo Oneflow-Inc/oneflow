@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
@@ -32,22 +33,43 @@ BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
-#define DEFINE_OPEXPR_TYPE_NAME(_T, _type_name)                \
-  template<>                                                   \
-  const std::string BuiltinOpExprImpl<_T>::type_name() const { \
-    return _type_name;                                         \
+#define DEFINE_OPEXPR_OP_TYPE_NAME(_T, _op_type_name)              \
+  template<>                                                       \
+  const std::string& BuiltinOpExprImpl<_T>::op_type_name() const { \
+    static const std::string& name(_op_type_name);                 \
+    return name;                                                   \
   }
 
-DEFINE_OPEXPR_TYPE_NAME(UserOpConf, "user");
-DEFINE_OPEXPR_TYPE_NAME(VariableOpConf, "variable");
-DEFINE_OPEXPR_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
-DEFINE_OPEXPR_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
-DEFINE_OPEXPR_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
-DEFINE_OPEXPR_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
-DEFINE_OPEXPR_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
-DEFINE_OPEXPR_TYPE_NAME(DistributeAddOpConf, "distribute_add");
+DEFINE_OPEXPR_OP_TYPE_NAME(VariableOpConf, "variable");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastToMirroredOpConf, "cast_to_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(CastFromMirroredOpConf, "cast_from_mirrored");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeSplitOpConf, "distribute_split");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeCloneOpConf, "distribute_clone");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeConcatOpConf, "distribute_concat");
+DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 
-#undef DEFINE_OPEXPR_TYPE_NAME
+#undef DEFINE_OPEXPR_OP_TYPE_NAME
+
+template<>
+const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
+  return op_proto_.op_type_name();
+}
+
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
+  template<>                                                    \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
+    return _bool;                                               \
+  }
+
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeSplitOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeCloneOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeConcatOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
+
+#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -103,15 +125,138 @@ Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure
 
 namespace {
 
+class UserOpExprInferContext : public user_op::InferContext {
+ public:
+  UserOpExprInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
+                         const std::string* device_tag, const TensorTuple& input_tensors,
+                         TensorTuple* output_tensors)
+      : user_op_expr_(user_op_expr),
+        composed_attrs_(attrs, user_op_expr->base_attrs()),
+        device_tag_(device_tag),
+        input_tensors_(const_cast<TensorTuple*>(&input_tensors)),
+        output_tensors_(output_tensors) {}
+  ~UserOpExprInferContext() = default;
+
+  const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
+    return user_op_expr_->indexed_input_pairs();
+  }
+
+  const std::vector<std::pair<std::string, int32_t>>& outputs() const override {
+    return user_op_expr_->indexed_output_pairs();
+  }
+
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) override {
+    {
+      const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      if (tuple_index >= 0) { return output_tensors_->at(tuple_index)->mut_tensor_meta(); }
+    }
+    {
+      const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+      int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+      if (tuple_index >= 0) { return input_tensors_->at(tuple_index)->mut_tensor_meta(); }
+    }
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
+  }
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(arg_name, index);
+    CHECK_GE(tuple_index, 0);
+    return arg_tuple.indexed_bns().at(tuple_index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(arg_name, index);
+    CHECK_GE(tuple_index, 0);
+    return arg_tuple.indexed_bns().at(tuple_index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(arg_name, index);
+    return tuple_index >= 0;
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(arg_name, index);
+    return tuple_index >= 0;
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
+    return arg_tuple.arg_name2bn_index2tensor_tuple_index().at(arg_name).size();
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
+    return arg_tuple.arg_name2bn_index2tensor_tuple_index().at(arg_name).size();
+  }
+  const std::string& op_name() const override { return user_op_expr_->op_name(); }
+  const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
+  const std::string& device_tag() const override { return *device_tag_; }
+
+ private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_.Attr4Name(attr_name);
+  }
+  const UserOpExpr* user_op_expr_;
+  const ComposedAttrMap composed_attrs_;
+  const std::string* device_tag_;
+  TensorTuple* input_tensors_;
+  TensorTuple* output_tensors_;
+};
+
+class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
+ public:
+  using UserOpExprInferContext::UserOpExprInferContext;
+  ~UserOpExprLogicalInferContext() = default;
+
+  const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
+                                                               int32_t index) const override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  const ParallelContext& parallel_ctx() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelContext*)nullptr;
+  }
+  const ParallelDesc& parallel_desc() const override {
+    UNIMPLEMENTED();
+    return *(const ParallelDesc*)nullptr;
+  }
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+    UNIMPLEMENTED();
+    return *(const SbpParallel*)nullptr;
+  }
+  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                   int32_t) const override {
+    UNIMPLEMENTED();
+    return *(const ParallelDistribution*)nullptr;
+  }
+  int64_t parallel_num() const override {
+    UNIMPLEMENTED();
+    return 1;
+  }
+};
+
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
  public:
   UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors,
-                               std::vector<std::shared_ptr<const Device>>* output_devices)
+                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         input_tensors_(&input_tensors),
-        output_devices_(output_devices) {}
+        output_tensors_(output_tensors) {}
 
   const std::vector<std::pair<std::string, int32_t>>& inputs() const override {
     return user_op_expr_->indexed_input_pairs();
@@ -124,15 +269,15 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
                                                                     int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
-    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
-    return &output_devices_->at(tuple_index);
+    return CHECK_JUST(output_tensors_->at(tuple_index)->mut_device());
   }
 
   std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
                                                                   int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
-    std::size_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
+    int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return CHECK_JUST(input_tensors_->at(tuple_index)->device());
   }
@@ -145,7 +290,7 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const TensorTuple* input_tensors_;
-  std::vector<std::shared_ptr<const Device>>* output_devices_;
+  TensorTuple* output_tensors_;
 };
 
 }  // namespace
@@ -154,13 +299,17 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(base_attrs) { }
+      base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init() {
-  const auto* registery =
+  const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
-  CHECK_NOTNULL_OR_RETURN(registery);
-  device_infer_fn_ = registery->device_infer_fn;
+  CHECK_NOTNULL_OR_RETURN(registry);
+  shape_infer_fn_ = registry->logical_tensor_desc_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
+  dtype_infer_fn_ = registry->data_type_infer_fn;
+  CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
+  if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
   return Maybe<void>::Ok();
 }
 
@@ -168,24 +317,26 @@ Maybe<void> UserOpExpr::Init() {
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-  auto* ptr = new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns);
-  JUST(ptr->Init());
-  return std::shared_ptr<UserOpExpr>(ptr);
+  std::shared_ptr<UserOpExpr> op_expr(
+      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+  JUST(op_expr->Init());
+  return op_expr;
 }
 
-Maybe<void> UserOpExpr::InferShapeAndDType(const AttrMap& attrs,
-      const std::function<const TensorMeta&(int64_t)>& TensorMeta4InputIndex,
-      const std::function<TensorMeta*(int64_t)>& TensorMeta4OutputIndex) const {
-  UserOpExprInferContext infer_ctx(this, attrs, &TensorMeta4InputIndex, &TensorMeta4OutputIndex);
-  JUST(dtype_infer_);
+Maybe<void> UserOpExpr::InferLogicalShapeAndDType(const AttrMap& attrs,
+                                                  const std::string& device_tag,
+                                                  const TensorTuple& input_tensors,
+                                                  TensorTuple* output_tensors) const {
+  UserOpExprLogicalInferContext infer_ctx(this, attrs, &device_tag, input_tensors, output_tensors);
+  JUST(shape_infer_fn_(&infer_ctx));
+  JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();
 }
 
-Maybe<const Device> UserOpExpr::InferDevices(
-    const AttrMap& attrs, const TensorTuple& input_tensors,
-    std::vector<std::shared_ptr<const Device>>* output_devices) const {
+Maybe<const Device> UserOpExpr::InferDevices(const AttrMap& attrs, const TensorTuple& input_tensors,
+                                             TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_devices);
+  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
@@ -196,11 +347,6 @@ Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf
   *(op_conf->mutable_name()) = op_name_;
   *(op_conf->mutable_variable_conf()) = op_proto_;
   return Maybe<void>::Ok();
-}
-
-template<>
-Maybe<bool> BuiltinOpExprImpl<VariableOpConf>::IsGradDisabled() const {
-  return true;
 }
 
 template<>

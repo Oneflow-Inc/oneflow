@@ -32,9 +32,7 @@ namespace one {
 
 class InputConsistentTensorMeta final {
  public:
-  InputConsistentTensorMeta()
-      : tensor_meta_(nullptr),
-        consumer_forced_parallel_distribution_(consumer_forced_parallel_distribution) {}
+  InputConsistentTensorMeta() : tensor_meta_(), consumer_forced_parallel_distribution_() {}
   InputConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
                             Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution)
       : tensor_meta_(tensor_meta),
@@ -71,6 +69,23 @@ class InputConsistentTensorMeta final {
   Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution_;
 };
 
+}  // namespace one
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::one::InputConsistentTensorMeta> final {
+  size_t operator()(const oneflow::one::InputConsistentTensorMeta& val) const {
+    return val.hash_value();
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+namespace one {
+
 class ConsistentTensorMetaInferArgs final {
  public:
   ConsistentTensorMetaInferArgs(size_t input_tensor_size, Symbol<PlacementScope> placement_scope,
@@ -103,12 +118,15 @@ class ConsistentTensorMetaInferArgs final {
            && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_;
   }
 
-  void InitInputConsistentTensorMetas(const TensorTuple& input_tensors) {
-    CHECK_EQ(input_consistent_tensor_metas_.size(), input_tensors.size());
-    for (const auto& tensor : input_tensors) {
-      input_consistent_tensor_metas_.assign(tensor->tensor_meta(),
-                                            tensor->consumer_forced_parallel_distribution());
+  Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors) {
+    CHECK_EQ_OR_RETURN(input_consistent_tensor_metas_.size(), input_tensors.size());
+    for (int i = 0; i < input_tensors.size(); ++i) {
+      auto* tensor_ptr = dynamic_cast<ConsistentTensor*>(input_tensors.at(i).get());
+      CHECK_NOTNULL_OR_RETURN(tensor_ptr);
+      input_consistent_tensor_metas_.at(i).assign(
+          tensor_ptr->tensor_meta(), tensor_ptr->consumer_forced_parallel_distribution());
     }
+    return Maybe<void>::Ok();
   }
 
  private:
@@ -122,6 +140,23 @@ class ConsistentTensorMetaInferResult final {
  private:
   std::shared_ptr<TensorTuple> output_tensors_;
 };
+
+}  // namespace one
+}  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
+  size_t operator()(const oneflow::one::ConsistentTensorMetaInferArgs& val) const {
+    return val.hash_value();
+  }
+};
+
+}  // namespace std
+
+namespace oneflow {
+namespace one {
 
 std::shared_ptr<ConsistentTensorMetaInferResult> Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
@@ -179,21 +214,3 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const DistributeAddOpExpr& op_
 
 }  // namespace one
 }  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::one::InputConsistentTensorMeta> final {
-  size_t operator()(const oneflow::one::InputConsistentTensorMeta& val) const {
-    return val.hash_value();
-  }
-};
-
-template<>
-struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
-  size_t operator()(const oneflow::one::ConsistentTensorMetaInferArgs& val) const {
-    return val.hash_value();
-  }
-};
-
-}  // namespace std

@@ -22,8 +22,6 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
-class cudaDeviceProp;
-
 namespace oneflow {
 
 namespace device {

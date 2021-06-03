@@ -68,7 +68,7 @@ template<>
                                                                   const TensorTuple& inputs,
                                                                   const AttrMap& attrs) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs));
   return outputs;
 }
 
@@ -103,7 +103,7 @@ template<>
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
     const bool is_lazy) {
-  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
+  const auto& dtype = DataType(blob_attr->get_dtype());
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
@@ -119,14 +119,6 @@ template<>
                                      /*requires_grad=*/false, /*is_leaf=*/false));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
-}
-
-/*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const Device>& device) {
-  auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
-                                                /* requires_grad */ false, /* is_leaf */ false);
-  return std::static_pointer_cast<Tensor>(tensor);
 }
 
 }  // namespace one
