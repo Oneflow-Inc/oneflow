@@ -38,14 +38,6 @@ def _test_cast_int2float(test_case, device, shape):
     test_case.assertTrue(np.array_equal(output.numpy(), np_out))
 
 
-def _test_cast_tensor_function(test_case, device, shape):
-    np_arr = np.random.randn(*shape).astype(np.float32)
-    input = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    output = input.cast(flow.int8)
-    np_out = np_arr.astype(np.int8)
-    test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-
-
 def _test_cast_backward(test_case, device, shape):
     np_arr = np.random.randn(*shape).astype(np.float32)
     x = flow.Tensor(
@@ -68,7 +60,6 @@ class TestCast(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_cast_float2int,
             _test_cast_int2float,
-            _test_cast_tensor_function,
             _test_cast_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
