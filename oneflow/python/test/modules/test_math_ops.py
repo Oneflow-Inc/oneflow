@@ -219,7 +219,7 @@ class TestPow(flow.unittest.TestCase):
 
 
 def _test_asin(test_case, shape, device):
-    np_input = 2 * np.random.random(shape) - 1 
+    np_input = 2 * np.random.random(shape) - 1
 
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -227,17 +227,13 @@ def _test_asin(test_case, shape, device):
 
     of_out = flow.asin(of_input)
     np_out = np.arcsin(np_input)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5)
-    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
 
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4)
-    )
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
 def _test_arcsin(test_case, shape, device):
@@ -248,17 +244,13 @@ def _test_arcsin(test_case, shape, device):
 
     of_out = flow.arcsin(of_input)
     np_out = np.arcsin(np_input)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5)
-    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
 
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4)
-    )
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
