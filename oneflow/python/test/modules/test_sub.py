@@ -23,41 +23,47 @@ from test_util import GenArgList
 
 
 def _test_sub_impl(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
+    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad_x = np.ones(shape)
+    np_grad_y = -np.ones(shape)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad_x, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), np_grad_y, 1e-5, 1e-5))
 
     x = 5
-    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.sub(x, y)
     np_out = np.subtract(x, y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     y = 5
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     y = flow.Tensor(np.random.randn(1, 1), device=flow.device(device))
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     x = flow.Tensor(np.array([5.0]))
     y = flow.Tensor(np.random.randn(1, 1))
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     x = flow.Tensor(np.random.randn(1, 1))
     y = flow.Tensor(np.array([5.0]))
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
