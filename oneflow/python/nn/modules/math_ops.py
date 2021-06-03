@@ -663,7 +663,7 @@ def sin_op(tensor):
 
 @register_tensor_op("sin")
 @experimental_api
-def sin_op_tensor(x):
+def sin_op_tensor(tensor):
     r"""
 
     sin() -> Tensor
@@ -672,7 +672,7 @@ def sin_op_tensor(x):
     
     """
 
-    return Sin()(x)
+    return Sin()(tensor)
 
 
 class Cos(Module):
