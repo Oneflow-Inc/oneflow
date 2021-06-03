@@ -479,7 +479,7 @@ class TestPoolingModule(flow.unittest.TestCase):
             _test_maxpool1d_diff_kernel_stride_backward,
             _test_maxpool1d_negative_input_backward,
         ]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
