@@ -644,20 +644,19 @@ def asin_op(input):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
+        >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
         >>> print(output.shape)
         flow.Size([4])
         >>> print(output.numpy())
-        [-0.5235988        nan  0.         0.9272952]
-        
-        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
+        [-0.5235988  0.9272952  1.5707964 -0.9272952]
+        >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
         >>> print(output1.shape)
         flow.Size([2, 2])
         >>> print(output1.numpy())
         [[ 0.9272952   1.5707964 ]
-         [-0.64350116         nan]]
+         [-0.64350116 -1.5707964 ]]
     """
     return Asin()(input)
 
@@ -777,27 +776,50 @@ class Sin(Module):
 
 
 @oneflow_export("sin")
-@register_tensor_op("sin")
 @experimental_api
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
     .. math::
+
         \text{out}_{i} = \sin(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.sin(input)
-        # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> out1 = flow.sin(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS
+        array([-0.5193...,  0.1342..., -0.4031..., -0.2711...], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.sin(x2)
+        >>> out2.numpy() #doctest: +ELLIPSIS
+        array([-0.9854...,  0.5155..., -0.5298...], dtype=float32)
+
     """
+
+    return Sin()(tensor)
+
+
+@register_tensor_op("sin")
+@experimental_api
+def sin_op_tensor(tensor):
+    r"""
+
+    sin() -> Tensor
+
+    See :func:`oneflow.experimental.sin`
+    
+    """
+
     return Sin()(tensor)
 
 
@@ -1148,4 +1170,4 @@ def cosh_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(name="asinh_op")
+    doctest.testmod()
