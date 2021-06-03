@@ -30,6 +30,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.LogSigmoid
 .. autofunction:: oneflow.experimental.nn.Softplus
 .. autofunction:: oneflow.experimental.nn.LogSoftmax
+.. autofunction:: oneflow.experimental.acosh
+.. autofunction:: oneflow.experimental.Tensor.acosh
+.. autofunction:: oneflow.experimental.arccosh
+.. autofunction:: oneflow.experimental.Tensor.arccosh
 .. autofunction:: oneflow.experimental.arange
 .. autofunction:: oneflow.experimental.argwhere
 .. autofunction:: oneflow.experimental.Tensor.argwhere
@@ -94,6 +98,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.reciprocal
 .. autofunction:: oneflow.experimental.add
 .. autofunction:: oneflow.experimental.Tensor.add
+.. autofunction:: oneflow.experimental.sign
+.. autofunction:: oneflow.experimental.Tensor.sign
 .. autofunction:: oneflow.experimental.sin
 .. autofunction:: oneflow.experimental.Tensor.sin
 .. autofunction:: oneflow.experimental.cos
