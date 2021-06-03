@@ -32,11 +32,11 @@ namespace one {
 
 class InputConsistentTensorMeta final {
  public:
-  InputConsistentTensorMeta() : tensor_meta_(), consumer_forced_parallel_distribution_() {}
+  InputConsistentTensorMeta() : tensor_meta_(), consumer_parallel_distribution_constraint_() {}
   InputConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
-                            Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution)
+                            Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint)
       : tensor_meta_(tensor_meta),
-        consumer_forced_parallel_distribution_(consumer_forced_parallel_distribution) {}
+        consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint) {}
 
   InputConsistentTensorMeta(const InputConsistentTensorMeta&) = default;
   InputConsistentTensorMeta(InputConsistentTensorMeta&&) = default;
@@ -45,28 +45,28 @@ class InputConsistentTensorMeta final {
   size_t hash_value() const {
     return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
            ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
-               consumer_forced_parallel_distribution());
+               consumer_parallel_distribution_constraint());
   }
 
   bool operator==(const InputConsistentTensorMeta& other) const {
     return this->tensor_meta() == other.tensor_meta()
-           && this->consumer_forced_parallel_distribution()
-                  == other.consumer_forced_parallel_distribution();
+           && this->consumer_parallel_distribution_constraint()
+                  == other.consumer_parallel_distribution_constraint();
   }
 
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
-  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution() const {
-    return consumer_forced_parallel_distribution_;
+  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
+    return consumer_parallel_distribution_constraint_;
   }
   void assign(Symbol<ConsistentTensorMeta> tensor_meta,
-              Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution) {
+              Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint) {
     tensor_meta_ = tensor_meta;
-    consumer_forced_parallel_distribution_ = consumer_forced_parallel_distribution;
+    consumer_parallel_distribution_constraint_ = consumer_parallel_distribution_constraint;
   }
 
  private:
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution_;
+  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
 };
 
 }  // namespace one
@@ -123,7 +123,7 @@ class ConsistentTensorMetaInferArgs final {
     for (int i = 0; i < input_tensors.size(); ++i) {
       const auto& tensor = *input_tensors.at(i);
       const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
-      const auto& constraints = JUST(tensor.consumer_forced_parallel_distribution());
+      const auto& constraints = JUST(tensor.consumer_parallel_distribution_constraint());
       input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraints);
     }
     return Maybe<void>::Ok();
@@ -135,9 +135,57 @@ class ConsistentTensorMetaInferArgs final {
   AttrMap attrs_;
 };
 
+class OpArgConsistentTensorMeta final {
+ public:
+  OpArgConsistentTensorMeta() : tensor_meta_(), parallel_distribution_() {}
+  OpArgConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
+                            Symbol<cfg::ParallelDistribution> parallel_distribution)
+      : tensor_meta_(tensor_meta),
+        parallel_distribution_(parallel_distribution) {}
+
+  OpArgConsistentTensorMeta(const OpArgConsistentTensorMeta&) = default;
+  OpArgConsistentTensorMeta(OpArgConsistentTensorMeta&&) = default;
+  ~OpArgConsistentTensorMeta() = default;
+
+  size_t hash_value() const {
+    return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
+           ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
+               parallel_distribution());
+  }
+
+  bool operator==(const OpArgConsistentTensorMeta& other) const {
+    return this->tensor_meta() == other.tensor_meta()
+           && this->parallel_distribution()
+                  == other.parallel_distribution();
+  }
+
+  Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
+    return parallel_distribution_;
+  }
+  void assign(Symbol<ConsistentTensorMeta> tensor_meta,
+              Symbol<cfg::ParallelDistribution> parallel_distribution) {
+    tensor_meta_ = tensor_meta;
+    parallel_distribution_ = parallel_distribution;
+  }
+
+ private:
+  Symbol<ConsistentTensorMeta> tensor_meta_;
+  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+};
+
 class ConsistentTensorMetaInferResult final {
  public:
+  ConsistentTensorMetaInferResult(size_t output_size):
+    output_tensors_(std::make_shared<TensorTuple>(output_size)) {}
+
+  const std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>>& output_tensor_meta() const {
+    return output_tensor_meta_;
+  }
+  const std::shared_ptr<TensorTuple> output_tensors() const { return output_tensors(); }
+
  private:
+  std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>> output_tensor_meta_;
   std::shared_ptr<TensorTuple> output_tensors_;
 };
 
@@ -158,10 +206,33 @@ struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
 namespace oneflow {
 namespace one {
 
-std::shared_ptr<ConsistentTensorMetaInferResult> Infer(
+namespace {
+
+class OpArgMutConsistentTensorMeta final {
+ public:
+  OpArgMutConsistentTensorMeta()
+    : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType),
+      parallel_distribution_() {}
+
+  OpArgMutConsistentTensorMeta(const OpArgMutConsistentTensorMeta&) = default;
+  OpArgMutConsistentTensorMeta(OpArgMutConsistentTensorMeta&&) = default;
+  ~OpArgMutConsistentTensorMeta() = default;
+
+  TensorMeta* mut_tensor_meta() { return tensor_meta_; }
+  ParallelDistribution* mut_parallel_distribution() { return parallel_distribution_; }
+
+ private:
+  TensorMeta tensor_meta_;
+  ParallelDistribution parallel_distribution_;
+};
+
+std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>> Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
+  std::vector<OpArgMutConsistentTensorMeta> output_mut_tensor_meta(user_op_expr.output_size());
   TODO();
-  return std::shared_ptr<ConsistentTensorMetaInferResult>();
+  return std::shared_ptr<std::vector<OpArgConsistentTensorMeta>>();
+}
+
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,

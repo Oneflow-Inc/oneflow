@@ -196,8 +196,8 @@ class ConsistentTensorImpl : public TensorImpl {
     return tensor_meta_->parallel_distribution();
   }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution() const {
-    return consumer_forced_parallel_distribution_;
+  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
+    return consumer_parallel_distribution_constraint_;
   }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
 
@@ -206,8 +206,8 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
 
   // Setters
-  void set_consumer_forced_parallel_distribution(Symbol<cfg::ParallelDistribution> val) {
-    consumer_forced_parallel_distribution_ = val;
+  void set_consumer_parallel_distribution_constraint(Symbol<cfg::ParallelDistribution> val) {
+    consumer_parallel_distribution_constraint_ = val;
   }
 
   ConsistentTensorMeta* mut_tensor_meta() {
@@ -220,10 +220,10 @@ class ConsistentTensorImpl : public TensorImpl {
                        const std::shared_ptr<AutogradMeta>& autograd_meta)
       : TensorImpl(autograd_meta),
         tensor_meta_(tensor_meta),
-        consumer_forced_parallel_distribution_() {}
+        consumer_parallel_distribution_constraint_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Symbol<cfg::ParallelDistribution> consumer_forced_parallel_distribution_;
+  Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint_;
 };
 
 class LazyMirroredTensorImpl final : public MirroredTensorImpl {

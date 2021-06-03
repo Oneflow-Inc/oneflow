@@ -76,12 +76,12 @@ class Tensor {
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const {
+  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint() const {
     OF_UNIMPLEMENTED();
   }
 
   // Setters
-  virtual Maybe<void> set_consumer_forced_parallel_distribution(
+  virtual Maybe<void> set_consumer_parallel_distribution_constraint(
       Symbol<cfg::ParallelDistribution> val) {
     OF_UNIMPLEMENTED();
   }
@@ -243,8 +243,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<const Device> device() const override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
-    return impl_->consumer_forced_parallel_distribution();
+  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint() const override {
+    return impl_->consumer_parallel_distribution_constraint();
   }
   int64_t ndim() const override;
   bool is_cuda() const override;
@@ -262,9 +262,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
 
   // Setters
-  Maybe<void> set_consumer_forced_parallel_distribution(
+  Maybe<void> set_consumer_parallel_distribution_constraint(
       Symbol<cfg::ParallelDistribution> val) override {
-    impl_->set_consumer_forced_parallel_distribution(val);
+    impl_->set_consumer_parallel_distribution_constraint(val);
     return Maybe<void>::Ok();
   }
 
