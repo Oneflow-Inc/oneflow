@@ -21,25 +21,37 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
+
 def _test_sum_impl(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    input = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+    )
     of_out = flow.sum(input, dim=1)
     of_out2 = input.sum(dim=1)
     np_out = np.sum(input.numpy(), axis=1)
     test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-5, 1e-5))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-    input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    input = flow.Tensor(
+        np.random.randn(4, 5, 6),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
     of_out = flow.sum(input, dim=(2, 1))
     np_out = np.sum(input.numpy(), axis=(2, 1))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
@@ -59,6 +71,7 @@ class TestSumModule(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

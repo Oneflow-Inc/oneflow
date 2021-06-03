@@ -23,8 +23,12 @@ from test_util import GenArgList
 
 
 def _test_sub_impl(test_case, shape, device):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
-    y = flow.Tensor(np.random.randn(*shape), device=flow.device(device), requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
+    y = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
     of_out = flow.sub(x, y)
     np_out = np.subtract(x.numpy(), y.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
