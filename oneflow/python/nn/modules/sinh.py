@@ -73,7 +73,7 @@ def sinh_op_tensor(x):
     See :func:`oneflow.experimental.sinh`
 
     """
-    
+
     return Sinh()(x)
 
 
