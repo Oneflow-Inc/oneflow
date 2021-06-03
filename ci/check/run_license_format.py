@@ -47,21 +47,21 @@ def format_file(path):
     txt = get_txt(path)
     with open(path, "r", encoding="utf-8") as r:
         content = r.read()
-    formatted_result, content = check_file(path)
-    if formatted_result == "ok":
+    format_status, content = check_file(path)
+    if format_status == "ok":
         return True
-    elif formatted_result == "absent":
+    elif format_status == "absent":
         with open(path, "w") as w:
             new_content = txt + content
             w.write(new_content)
         return False
     else:
-        raise ValueError(f"license {formatted_result} {path}")
+        raise ValueError(f"license {format_status} {path}")
 
 
 def do_check(x):
-    formatted_result, _ = check_file(x)
-    return (x, formatted_result)
+    format_status, _ = check_file(x)
+    return (x, format_status)
 
 
 def do_format(x):
@@ -95,9 +95,9 @@ if __name__ == "__main__":
     with Pool(10) as p:
         if args.check:
             any_absence = False
-            for (p, formatted_result) in p.map(do_check, files):
-                if formatted_result != "ok":
-                    print(f"license {formatted_result}:", p)
+            for (p, format_status) in p.map(do_check, files):
+                if format_status != "ok":
+                    print(f"license {format_status}:", p)
                     any_absence = True
             if any_absence:
                 exit(1)
