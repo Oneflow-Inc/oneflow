@@ -15,6 +15,11 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.arcsin
 .. autofunction:: oneflow.experimental.asinh
 .. autofunction:: oneflow.experimental.Tensor.asinh
+.. autofunction:: oneflow.experimental.sinh
+.. autofunction:: oneflow.experimental.Tensor.sinh
+.. autofunction:: oneflow.experimental.atan2
+.. autofunction:: oneflow.experimental.Tensor.atan2
+.. autofunction:: oneflow.experimental.softplus
 .. autofunction:: oneflow.experimental.arcsinh
 .. autofunction:: oneflow.experimental.Tensor.arcsinh
 .. autofunction:: oneflow.experimental.nn.ELU
@@ -144,3 +149,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.log1p
+.. autofunction:: oneflow.experimental.Tensor.log1p
