@@ -241,8 +241,6 @@ class TestLayerNorm(flow.unittest.TestCase):
                 ).minimize(z)
                 return y
 
-            check_point = flow.train.CheckPoint()
-            check_point.init()
             y = test_job(x).get()
 
             assert y.numpy().shape == y_tf.numpy().shape, (

@@ -63,6 +63,13 @@ Error Error::DeviceTagNotFoundError() {
   return error;
 }
 
+Error Error::ValueError(const std::string& error_summary) {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->set_error_summary(error_summary);
+  error->mutable_value_error();
+  return error;
+}
+
 Error Error::JobNameExistError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_job_name_exist_error();
@@ -245,6 +252,15 @@ Error Error::SymbolIdUninitialized() {
 Error Error::CompileOptionWrong() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_compile_option_wrong_error();
+  return error;
+}
+
+Error Error::InputDeviceNotMatchError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
+  input_device_not_match_error->add_info(
+      std::string("The devices of input tensors are inconsistent，please try to use tensor.to or "
+                  "module.to to correct it."));
   return error;
 }
 

@@ -37,16 +37,6 @@ REGISTER_USER_OP("l2_normalize")
       square_x_sum_shape->Set(axis, 1);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      if (ctx->BatchAxis4ArgNameAndIndex("x", 0)->value() != ctx->Attr<int32_t>("axis")) {
-        *ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0) =
-            *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("square_x_sum", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
@@ -59,6 +49,11 @@ REGISTER_USER_OP("l2_normalize")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -90,10 +85,6 @@ REGISTER_USER_OP("l2_normalize_grad")
       *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       const int32_t axis = ctx->Attr<int32_t>("axis");
@@ -107,6 +98,13 @@ REGISTER_USER_OP("l2_normalize_grad")
               .Build();
         }
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("y", 0),
+                         *ctx->Dtype4ArgNameAndIndex("square_x_sum", 0));
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     });
 

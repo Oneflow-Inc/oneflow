@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/env_desc.h"
 
 namespace oneflow {
@@ -70,7 +70,7 @@ void OccasionallyClearCtrlKV(const std::string& key) {
   // 1 instead of 0 is better for avoid clearing no ctrl kv
   if ((seq++) % interval == 1) {
     OF_ENV_BARRIER();
-    if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    if (GlobalProcessCtx::IsThisProcessMaster()) {
       Global<ObsoleteCtrlKeys>::Get()->ForEach(
           [](const std::string& k) { Global<CtrlClient>::Get()->ClearMasterKV(k); });
     }
@@ -81,14 +81,12 @@ void OccasionallyClearCtrlKV(const std::string& key) {
 
 void PushClusterInstruction(const ClusterInstructionProto& cluster_instruction) {
   const std::string& key = GetClusterInstructionKey();
-  LOG(INFO) << key;
   Global<CtrlClient>::Get()->PushMasterKV(key, cluster_instruction);
   OccasionallyClearCtrlKV(key);
 }
 
 void PullClusterInstruction(ClusterInstructionProto* cluster_instruction) {
   const std::string& key = GetClusterInstructionKey();
-  LOG(INFO) << key;
   Global<CtrlClient>::Get()->PullMasterKV(key, cluster_instruction);
   OccasionallyClearCtrlKV(key);
 }
@@ -127,13 +125,6 @@ void ClusterInstruction::MasterSendEagerInstruction(
     const ClusterInstructionProto& cluster_instruction) {
   CHECK(cluster_instruction.has_eager_instruction());
   PushClusterInstruction(cluster_instruction);
-}
-
-void ClusterInstruction::MasterSendEagerSync() {
-  ClusterInstructionProto cluster_instruction;
-  cluster_instruction.mutable_cluster_ctrl_eager_sync();
-  PushClusterInstruction(cluster_instruction);
-  EagerSyncBarrier();
 }
 
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {

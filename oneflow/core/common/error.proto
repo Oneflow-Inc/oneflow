@@ -111,6 +111,10 @@ message UnknownError { }
 
 message CompileOptionWrongError { }
 
+message InputDeviceNotMatchError { 
+  repeated string info = 1;
+}
+
 message ErrorStackFrame {
   required string location = 1;
   required string function = 2;
@@ -118,6 +122,8 @@ message ErrorStackFrame {
 }
 
 message SymbolIdUninitializedError {}
+
+message ValueError {}
 
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
@@ -138,6 +144,7 @@ message ErrorProto {
     LossBlobNotFoundError loss_blob_not_found_error = 24;
     JobSetEmptyError job_set_empty_error = 25;
     DeviceTagNotFoundError device_tag_not_found_error = 26;
+    ValueError value_error = 27;
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;
     JobNameNotEqualError job_name_not_equal_error = 102;
@@ -158,5 +165,6 @@ message ErrorProto {
     SymbolIdUninitializedError symbol_id_uninitialized_error = 700;
     UnknownError unknown_error = 900;
     CompileOptionWrongError compile_option_wrong_error = 950;
+    InputDeviceNotMatchError input_device_not_match_error = 1000;
   }
 }

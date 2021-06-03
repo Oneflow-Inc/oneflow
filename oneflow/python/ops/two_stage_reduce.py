@@ -25,16 +25,16 @@ import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
 import oneflow.python.ops.user_op_builder as user_op_builder
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("math.two_stage_reduce_max")
 def api_two_stage_reduce_max(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([two_stage_reduce_max])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -47,11 +47,11 @@ def two_stage_reduce_max(x, axis=None, keepdims=False, name=None):
 
 @oneflow_export("math.two_stage_reduce_min")
 def api_two_stage_reduce_min(
-    x: oneflow_api.BlobDesc,
+    x: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[int, Sequence[int]]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     func = enable_if.unique([two_stage_reduce_min])
     return func(x, axis=axis, keepdims=keepdims, name=name)
 
@@ -80,7 +80,7 @@ def two_stage_reduce(x, axis=None, keepdims=False, op_type_name=None, name=None)
     ) in parallel_desc_symbol.machine_id2device_id_list.items():
         for device_id in device_ids:
             with flow.scope.placement(
-                device_tag, str(machine_id) + ":" + str(device_id)
+                device_tag, "@" + str(machine_id) + ":" + str(device_id)
             ):
                 device_stage_out, device_stage_count = reduce_device_stage(
                     x_list[parallel_id],
@@ -163,6 +163,6 @@ def _check_axis(axis, shape):
 
 def check_x_dictribute(x, axis):
     for i in axis:
-        if x.distribute is oneflow_api.distribute.split(i):
+        if x.distribute is oneflow._oneflow_internal.distribute.split(i):
             return True
     return False

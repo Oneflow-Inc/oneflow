@@ -24,7 +24,7 @@ namespace xrt {
 // TODO(hjchen2)
 class OpContext : public util::MessageAttr {
  public:
-  explicit OpContext(const PbMessage &message) : util::MessageAttr(message) {}
+  explicit OpContext(const PbMessage& message) : util::MessageAttr(message) {}
 };
 
 }  // namespace xrt

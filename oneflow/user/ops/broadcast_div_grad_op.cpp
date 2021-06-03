@@ -23,10 +23,10 @@ REGISTER_USER_OP("broadcast_div_grad")
     .Input("dz")
     .Output("dy")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("dy", 0) = *ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      *ctx->Shape4ArgNameAndIndex("dy", 0) = *ctx->Shape4ArgNameAndIndex("y", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dy", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const Shape& y_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0).shape();
       const Shape& z_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("z", 0).shape();
@@ -55,6 +55,10 @@ REGISTER_USER_OP("broadcast_div_grad")
           .PartialSum(user_op::OpArg("dz", 0))
           .Broadcast(user_op::OpArg("dy", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dy", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     });
 

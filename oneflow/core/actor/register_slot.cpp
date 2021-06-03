@@ -28,8 +28,12 @@ const std::deque<Regst*>& RegstSlot::RegstDeq4RegstDescId(int64_t regst_desc_id)
 }
 
 int RegstSlot::TryPushBackRegst(Regst* regst) {
+  return TryPushBackRegst(regst, regst->regst_desc_id());
+}
+
+int RegstSlot::TryPushBackRegst(Regst* regst, int64_t regst_desc_id) {
   CHECK(is_inited_);
-  auto it = regst_desc_id2regsts_.find(regst->regst_desc_id());
+  auto it = regst_desc_id2regsts_.find(regst_desc_id);
   if (it == regst_desc_id2regsts_.end()) { return -1; }
   if (it->second.empty()) { available_regst_desc_cnt_ += 1; }
   it->second.push_back(regst);
@@ -95,6 +99,17 @@ void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDe
   }
 }
 
+void RegstSlot::ForChosenFrontRegst(
+    std::function<bool(int64_t)> IsChosenRegstDescId,
+    std::function<void(int64_t regst_desc_id, Regst*)> Handler) const {
+  for (const auto& kv : regst_desc_id2regsts_) {
+    if (IsChosenRegstDescId(kv.first)) {
+      CHECK(kv.second.empty() == false);
+      Handler(kv.first, kv.second.front());
+    }
+  }
+}
+
 void RegstSlot::ForChosenRegstDeq(std::function<bool(int64_t)> IsChosenRegstDescId,
                                   std::function<void(const std::deque<Regst*>&)> Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
@@ -102,7 +117,20 @@ void RegstSlot::ForChosenRegstDeq(std::function<bool(int64_t)> IsChosenRegstDesc
   }
 }
 
+void RegstSlot::ForChosenRegstDeq(
+    std::function<bool(int64_t)> IsChosenRegstDescId,
+    std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)> Handler) const {
+  for (const auto& kv : regst_desc_id2regsts_) {
+    if (IsChosenRegstDescId(kv.first)) { Handler(kv.first, kv.second); }
+  }
+}
+
 void RegstSlot::ForEachFrontRegst(std::function<void(Regst*)> Handler) const {
+  ForChosenFrontRegst([](int64_t) { return true; }, Handler);
+}
+
+void RegstSlot::ForEachFrontRegst(
+    std::function<void(int64_t regst_desc_id, Regst*)> Handler) const {
   ForChosenFrontRegst([](int64_t) { return true; }, Handler);
 }
 

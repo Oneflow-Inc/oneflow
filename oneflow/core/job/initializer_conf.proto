@@ -71,6 +71,9 @@ message VarianceScalingInitializerConf {
   required string data_format = 4;
 }
 
+message EmptyInitializerConf {
+}
+
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -84,6 +87,7 @@ message InitializerConf {
     RangeInitializerConf range_conf = 9;
     IntRangeInitializerConf int_range_conf = 10;
     VarianceScalingInitializerConf variance_scaling_conf = 11;
+    EmptyInitializerConf empty_conf = 12;
   }
 }
 

@@ -192,7 +192,6 @@ void BoxingKernel<T>::VirtualKernelInit() {
   const std::string& obn_0 = op_attribute().output_bns(0);
   ibn_0_ = ConstructPbRpf(ibn_0);
   obn_0_ = ConstructPbRpf(obn_0);
-  CHECK_EQ(kernel_conf().need_do_opaque_header(), false);
 }
 
 template<typename T>

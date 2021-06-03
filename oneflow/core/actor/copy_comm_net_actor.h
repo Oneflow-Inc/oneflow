@@ -33,7 +33,7 @@ class CopyCommNetActor final : public Actor {
     Regst* regst_raw_ptr;
     int64_t producer;
     int64_t act_id;
-    bool has_sole_empty_tensor_in_sole_tensor_list;
+    bool has_sole_empty_blob;
   };
 
   void VirtualActorInit(const TaskProto&) override;

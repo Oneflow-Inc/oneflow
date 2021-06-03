@@ -107,7 +107,10 @@ class TrivialObjectMsgMutexedList {
   std::size_t size() const { return list_head_.size(); }
   bool empty() const { return list_head_.empty(); }
 
-  void __Init__() { list_head_.__Init__(); }
+  void __Init__() {
+    list_head_.__Init__();
+    new (&this->mutex_) std::mutex();
+  }
 
   void EmplaceBack(ObjectMsgPtr<value_type>&& ptr) {
     std::unique_lock<std::mutex> lock(mutex_);

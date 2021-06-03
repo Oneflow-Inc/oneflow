@@ -26,14 +26,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("RegisterWatcherOnlyOnce", &RegisterWatcherOnlyOnce);
   m.def("LaunchJob", &LaunchJob, py::call_guard<py::gil_scoped_release>());
 
-  m.def("GetSerializedInterUserJobInfo", &GetSerializedInterUserJobInfo);
-  m.def("GetSerializedJobSet", &GetSerializedJobSet);
-  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph);
+  m.def("GetSerializedInterUserJobInfo",
+        []() { return py::bytes(GetSerializedInterUserJobInfo()); });
+  m.def("GetSerializedJobSet", []() { return py::bytes(GetSerializedJobSet()); });
+  m.def("GetSerializedStructureGraph", &GetSerializedStructureGraph /* a prototxt saved to file*/);
+  m.def("GetSerializedCurrentJob", []() { return py::bytes(GetSerializedCurrentJob()); });
 
   m.def("GetFunctionConfigDef", &GetFunctionConfigDef);
   m.def("GetScopeConfigDef", &GetScopeConfigDef);
   m.def("GetMachine2DeviceIdListOFRecordFromParallelConf",
         &GetMachine2DeviceIdListOFRecordFromParallelConf);
+
+  m.def("LoadSavedModel", &LoadSavedModel);
 
   m.def("EagerExecutionEnabled", []() { return oneflow::EagerExecutionEnabled(); });
   m.def("LoadLibraryNow", &LoadLibraryNow);

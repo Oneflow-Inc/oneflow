@@ -23,18 +23,18 @@ import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
-import oneflow_api
+import oneflow._oneflow_internal
 from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):
-    assert isinstance(blob_watched, oneflow_api.ConsistentBlob)
+    assert isinstance(blob_watched, oneflow._oneflow_internal.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
-class _Watcher(oneflow_api.ForeignWatcher):
+class _Watcher(oneflow._oneflow_internal.ForeignWatcher):
     def __init__(self):
-        oneflow_api.ForeignWatcher.__init__(self)
+        oneflow._oneflow_internal.ForeignWatcher.__init__(self)
 
     def Call(self, handler_uuid, of_blob_ptr):
         try:
@@ -49,11 +49,11 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
     assert handler_uuid in uuid2handler
     blob_watched, handler = uuid2handler[handler_uuid]
     assert callable(handler)
-    ndarray_lists = ofblob.OfBlob(of_blob_ptr).CopyToNdarrayLists()
-    local_blob = local_blob_util.MakeLocalBlob(ndarray_lists, blob_watched)
+    ndarray = ofblob.OfBlob(of_blob_ptr).CopyToNdarray()
+    local_blob = local_blob_util.LocalBlob(ndarray, blob_watched.is_dynamic)
     handler(oft_util.TransformWatchedBlob(local_blob, handler))
 
 
 # static lifetime
 _global_watcher = _Watcher()
-oneflow_api.RegisterWatcherOnlyOnce(_global_watcher)
+oneflow._oneflow_internal.RegisterWatcherOnlyOnce(_global_watcher)

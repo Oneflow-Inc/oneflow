@@ -49,9 +49,12 @@ def _make_cast_to_static_shape_fn(
         x: flow.typing.ListNumpy.Placeholder(shape=shape, dtype=dtype)
     ) -> flow.typing.ListNumpy:
         x_var = flow.get_variable(
-            name="x_var", shape=(1,), dtype=dtype, initializer=flow.zeros_initializer(),
+            name="x_var",
+            shape=(1,),
+            dtype=flow.float32,
+            initializer=flow.zeros_initializer(),
         )
-        x = x + x_var
+        x = x + flow.cast(x_var, dtype=dtype)
         y = flow.cast_to_static_shape(x)
         test_case.assertFalse(y.is_dynamic)
         if require_grad:
@@ -111,7 +114,9 @@ class TestCastToStaticShape(flow.unittest.TestCase):
             _check_cast_to_static_shape(test_case, **arg)
 
 
-@flow.unittest.skip_unless_1n4d()
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestCastToStaticShapeParallel(flow.unittest.TestCase):
     def test_case_1(test_case):
         arg_dict = OrderedDict()

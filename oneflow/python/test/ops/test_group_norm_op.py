@@ -29,37 +29,52 @@ def getGroupNormOutAndGrad(input, gout, num_groups, eps):
     assert len(input.shape) >= 3
 
     # reshape to (N, C // num_groups, L)
+    channel = input.shape[1]
+    assert channel % num_groups == 0
+    orig_shape = input.shape
     input_reshape_to_1d = np.reshape(input, (input.shape[0], num_groups, -1))
     gout_reshape_to_1d = np.reshape(gout, (gout.shape[0], num_groups, -1))
 
     # compute group normalization in numpy
-    gamma = np.ones((1, input_reshape_to_1d.shape[1], 1), dtype=np.float32)
+    gamma = np.ones((1, channel, 1), dtype=np.float32)
     mean_np = np.mean(input_reshape_to_1d, axis=(2), keepdims=True)
     in_sub_mean = input_reshape_to_1d - mean_np
     var_np = np.mean(np.square(in_sub_mean), axis=(2), keepdims=True)
     invar_np = 1.0 / np.sqrt(var_np + eps)
-    out_np = in_sub_mean * invar_np * gamma
+    out_np = np.reshape(in_sub_mean * invar_np, (input.shape[0], channel, -1)) * gamma
 
     # compute the gradient of variance
     gvar = (
-        gout_reshape_to_1d * gamma * in_sub_mean * -0.5 * np.power(var_np + eps, -1.5)
+        np.reshape(
+            gout_reshape_to_1d * in_sub_mean * -0.5 * np.power(var_np + eps, -1.5),
+            (gout.shape[0], channel, -1),
+        )
+        * gamma
     )
+    gvar = np.reshape(gvar, (gout.shape[0], num_groups, -1))
     gvar = np.sum(gvar, axis=(2), keepdims=True)
     # compute the gradient of mean
-    gmean = np.sum(gout_reshape_to_1d * gamma, axis=(2), keepdims=True)
+    gmean = np.reshape(gout_reshape_to_1d, (gout.shape[0], channel, -1)) * gamma
+    gmean = np.sum(
+        np.reshape(gmean, (gout.shape[0], num_groups, -1)), axis=(2), keepdims=True
+    )
     gmean *= -invar_np
     scale = 1.0 / (input_reshape_to_1d.shape[2])
     tmp = scale * np.sum(-2.0 * in_sub_mean, axis=(2), keepdims=True) * gvar
     gmean += tmp
     # compute the gradient of input
     gin_np = (
-        gout_reshape_to_1d * gamma * invar_np
-        + gvar * scale * 2.0 * in_sub_mean
-        + gmean * scale
+        np.reshape(
+            gout_reshape_to_1d * invar_np
+            + gvar * scale * 2.0 * in_sub_mean
+            + gmean * scale,
+            (input.shape[0], channel, -1),
+        )
+        * gamma
     )
 
     # reshape back to original
-    return np.reshape(out_np, list(input.shape)), np.reshape(gin_np, list(input.shape))
+    return np.reshape(out_np, list(orig_shape)), np.reshape(gin_np, list(orig_shape))
 
 
 def _compare_group_norm_nd_with_np(

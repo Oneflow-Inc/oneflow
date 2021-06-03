@@ -23,9 +23,9 @@ namespace xrt {
 
 namespace platform {
 
-int GetDeviceId(const XrtDevice &device);
+int GetDeviceId(const XrtDevice& device);
 
-void SetDeviceId(const XrtDevice &device, const int device_id);
+void SetDeviceId(const XrtDevice& device, const int device_id);
 
 }  // namespace platform
 

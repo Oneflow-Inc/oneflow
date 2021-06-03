@@ -113,15 +113,15 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
 }
 
 void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
-  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
+  const BlobDesc& blob_desc = blob_ptr->blob_desc();
   if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    int64_t elem_cnt = blob_desc.shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
     }
   }
   if (blob_desc.data_type() == kTensorBuffer) {
-    int64_t elem_cnt = blob_desc.body_shape().elem_cnt();
+    int64_t elem_cnt = blob_desc.shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&blob_ptr->mut_dptr<TensorBuffer>()[idx]);
     }

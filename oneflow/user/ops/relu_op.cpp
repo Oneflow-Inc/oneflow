@@ -28,10 +28,6 @@ REGISTER_USER_OP("relu")
       *out_shape = *in_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
@@ -40,6 +36,10 @@ REGISTER_USER_OP("relu")
             .Split(user_op::OpArg("out", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -55,10 +55,6 @@ REGISTER_USER_OP("relu_grad")
       *dx_shape = *dy_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("y", 0);
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
       FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
@@ -68,7 +64,12 @@ REGISTER_USER_OP("relu_grad")
             .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
-
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("dy", 0), data_type);
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = data_type;
       return Maybe<void>::Ok();
     });
 

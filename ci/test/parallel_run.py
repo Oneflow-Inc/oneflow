@@ -10,9 +10,20 @@ from contextlib import closing
 import uuid
 
 
-def gen_cmds(cmd, dir):
-    paths = glob.glob(os.path.join(dir, "test_*.py"), recursive=False)
-    return ["{} {} --failfast --verbose".format(cmd, p) for p in paths]
+def gen_cmds(cmd=None, dir=None, doctest=False):
+    if doctest:
+        paths = glob.glob(os.path.join(dir, "**/*.py"), recursive=True)
+        print(paths)
+        with_doctest = []
+        for p in paths:
+            with open(p) as f:
+                content = f.read()
+                if "doctest" in content and "__" not in p:
+                    with_doctest.append("{} {} -v".format(cmd, p))
+        return with_doctest
+    else:
+        paths = glob.glob(os.path.join(dir, "test_*.py"), recursive=False)
+        return ["{} {} --failfast --verbose".format(cmd, p) for p in paths]
 
 
 def find_free_port():
@@ -31,10 +42,12 @@ def split_and_print(prefix, text):
 
 
 def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
-    "CUDA_VISIBLE_DEVICES"
+    is_cpu_only = os.getenv("ONEFLOW_TEST_CPU_ONLY")
+    if is_cpu_only:
+        gpu_num = os.cpu_count()
     if gpu_num > 0:
         proc2gpu_ids = {}
-        while len(cmds):
+        while True:
 
             def available_slots():
                 occupied_gpu_ids = set({})
@@ -63,8 +76,10 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     cmd,
                     env=dict(
                         os.environ,
-                        CUDA_VISIBLE_DEVICES=cuda_visible_devices,
-                        ONEFLOW_TEST_CTRL_PORT=str(find_free_port()),
+                        CUDA_VISIBLE_DEVICES=(
+                            "" if is_cpu_only else cuda_visible_devices
+                        ),
+                        ONEFLOW_TEST_MASTER_PORT=str(find_free_port()),
                         ONEFLOW_TEST_LOG_DIR=("./unittest-log-" + str(uuid.uuid4())),
                     ),
                     stdout=subprocess.PIPE,
@@ -95,6 +110,8 @@ def run_cmds(cmds, gpu_num=0, timeout=10, chunk=1, verbose=False):
                     pass
             for proc in procs_to_release:
                 proc2gpu_ids.pop(proc)
+            if len(proc2gpu_ids) == 0 and len(cmds) == 0:
+                break
     else:
         raise NotImplementedError
 
@@ -107,8 +124,9 @@ if __name__ == "__main__":
     parser.add_argument("--timeout", type=int, required=False, default=2)
     parser.add_argument("--chunk", type=int, required=True)
     parser.add_argument("--verbose", action="store_true", required=False, default=False)
+    parser.add_argument("--doctest", action="store_true", required=False, default=False)
     args = parser.parse_args()
-    cmds = gen_cmds(args.cmd, args.dir)
+    cmds = gen_cmds(cmd=args.cmd, dir=args.dir, doctest=args.doctest)
     start = time.time()
     run_cmds(
         cmds,

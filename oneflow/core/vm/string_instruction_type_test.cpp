@@ -33,15 +33,13 @@ namespace oneflow {
 namespace vm {
 namespace test {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 TEST(StringStreamType, init_string_object) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol", "InitStringSymbol"});
   auto vm = ObjectMsgPtr<VirtualMachine>::New(vm_desc.Get());
   InstructionMsgList list;
   int64_t symbol_id = IdUtil::NewLogicalSymbolId();
-  CHECK_JUST(Global<symbol::Storage<std::string>>::Get()->Add(symbol_id, "foobar"));
+  CHECK_JUST(Global<symbol::Storage<StringSymbol>>::Get()->Add(symbol_id, "foobar"));
   list.EmplaceBack(NewInstruction("NewSymbol")->add_int64_operand(symbol_id));
   list.EmplaceBack(NewInstruction("InitStringSymbol")->add_init_symbol_operand(symbol_id));
   vm->Receive(&list);

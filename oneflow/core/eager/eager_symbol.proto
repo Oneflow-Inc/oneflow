@@ -1,5 +1,5 @@
 syntax = "proto2";
-package oneflow.eager;
+package oneflow.vm;
 
 import "oneflow/core/job/job_conf.proto";
 import "oneflow/core/job/placement.proto";

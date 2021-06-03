@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_operand.msg.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 // clang-format off
 FLAT_MSG_VIEW_BEGIN(NewOpKernelObjectInstrOperand);
@@ -94,7 +94,7 @@ FLAT_MSG_VIEW_BEGIN(RemoveForeignCallbackInstrOperand);
 FLAT_MSG_VIEW_END(RemoveForeignCallbackInstrOperand);
 // clang-format on
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_OPKERNEL_INSTRUCTION_MSG_H_

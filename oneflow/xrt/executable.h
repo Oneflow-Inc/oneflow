@@ -27,7 +27,7 @@ namespace xrt {
 struct ExecutableRunOptions {
   // Specify stream if the engine supports multiple computation streams.
   // It will use the default computation stream if `stream` is not set.
-  void *stream = nullptr;
+  void* stream = nullptr;
 
   int32_t device_ordinal = -1;
 
@@ -59,24 +59,24 @@ struct ExecutableRunOptions {
 
 class Executable {
  public:
-  Executable(const std::string &name, const XrtEngine &engine)  // NOLINT
+  Executable(const std::string& name, const XrtEngine& engine)  // NOLINT
       : name_(name), engine_(engine) {}
   virtual ~Executable() = default;
 
-  const XrtEngine &engine() const { return engine_; }
+  const XrtEngine& engine() const { return engine_; }
 
-  const std::string &name() const { return name_; }
+  const std::string& name() const { return name_; }
 
-  virtual bool Run(const std::vector<Parameter> &inputs,     // NOLINT
-                   const ExecutableRunOptions &run_options,  // NOLINT
+  virtual bool Run(const std::vector<Parameter>& inputs,     // NOLINT
+                   const ExecutableRunOptions& run_options,  // NOLINT
                    bool block_until_done = true) = 0;
 
   bool RunAsync(const std::vector<Parameter> inputs,  // NOLINT
-                const ExecutableRunOptions &run_options) {
+                const ExecutableRunOptions& run_options) {
     return Run(inputs, run_options, false);
   }
 
-  const std::vector<Parameter> &Results() const { return results_; }
+  const std::vector<Parameter>& Results() const { return results_; }
 
  protected:
   // Executable name.

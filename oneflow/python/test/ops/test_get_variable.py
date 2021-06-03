@@ -44,8 +44,6 @@ class TestGetVariable(flow.unittest.TestCase):
         def TestJob1():
             return get_v()
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         j0_v1, j0_v2 = TestJob0().get()
         j1_v = TestJob1().get()
         test_case.assertTrue(np.array_equal(j0_v1.numpy(), j0_v2.numpy()))
@@ -78,9 +76,6 @@ class TestGetVariable(flow.unittest.TestCase):
         @flow.global_function()
         def eval():
             return get_var("var")
-
-        check_point = flow.train.CheckPoint()
-        check_point.init()
 
         variables = []
         for i in range(10):
@@ -130,9 +125,6 @@ class TestGetVariable(flow.unittest.TestCase):
             v1 = get_var("var")
             v2 = get_var("var")
             return v1, v2
-
-        check_point = flow.train.CheckPoint()
-        check_point.init()
 
         variables = []
         for i in range(10):

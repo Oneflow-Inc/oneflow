@@ -39,8 +39,6 @@ def do_test(test_case, mirrored):
         flow.optimizer.SGD(lr_scheduler, momentum=0).minimize(w)
         return w
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     r1 = Foo().get().numpy()
     test_case.assertTrue(np.all(r1 == 1.0))
     r2 = Foo().get().numpy()

@@ -27,40 +27,16 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("OfBlob_NumAxes", &OfBlob_NumAxes);
   m.def("OfBlob_IsDynamic", &OfBlob_IsDynamic);
 
-  m.def("OfBlob_IsTensorList", &OfBlob_IsTensorList);
-  m.def("OfBlob_TotalNumOfTensors", &OfBlob_TotalNumOfTensors);
-  m.def("OfBlob_NumOfTensorListSlices", &OfBlob_NumOfTensorListSlices);
-
-  m.def("OfBlob_TensorIndex4SliceId", &OfBlob_TensorIndex4SliceId);
-  m.def("OfBlob_AddTensorListSlice", &OfBlob_AddTensorListSlice);
-  m.def("OfBlob_ResetTensorIterator", &OfBlob_ResetTensorIterator);
-
-  m.def("OfBlob_IncTensorIterator", &OfBlob_IncTensorIterator);
-  m.def("OfBlob_CurTensorIteratorEqEnd", &OfBlob_CurTensorIteratorEqEnd);
-  m.def("OfBlob_ClearTensorLists", &OfBlob_ClearTensorLists);
-
-  m.def("OfBlob_AddTensor", &OfBlob_AddTensor);
-  m.def("OfBlob_CurMutTensorAvailable", &OfBlob_CurMutTensorAvailable);
-  m.def("OfBlob_CopyShapeFromNumpy", &OfBlob_CopyShapeFromNumpy);
-
-  m.def("OfBlob_CopyShapeToNumpy", &OfBlob_CopyShapeToNumpy);
+  m.def("OfBlob_CopyShapeTo", &OfBlob_CopyShapeTo);
   m.def("OfBlob_CopyStaticShapeTo", &OfBlob_CopyStaticShapeTo);
-  m.def("OfBlob_CurTensorCopyShapeTo", &OfBlob_CurTensorCopyShapeTo);
+  m.def("OfBlob_CopyShapeFrom", &OfBlob_CopyShapeFrom);
 
-  m.def("OfBlob_CurMutTensorCopyShapeFrom", &OfBlob_CurMutTensorCopyShapeFrom);
-  m.def("Dtype_GetOfBlobCurTensorCopyToBufferFuncName",
-        &Dtype_GetOfBlobCurTensorCopyToBufferFuncName);
-  m.def("Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName",
-        &Dtype_GetOfBlobCurMutTensorCopyFromBufferFuncName);
-  m.def("Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName",
-        &Dtype_GetOfBlobStaticTensorCopyFromBufferFuncName);
+  m.def("Dtype_GetOfBlobCopyToBufferFuncName", &Dtype_GetOfBlobCopyToBufferFuncName);
+  m.def("Dtype_GetOfBlobCopyFromBufferFuncName", &Dtype_GetOfBlobCopyFromBufferFuncName);
 
-#define EXPORT_COPY_DATA_API(T, type_proto)                                                     \
-  m.def("OfBlob_CurTensorCopyToBuffer_" OF_PP_STRINGIZE(T), &OfBlob_CurTensorCopyToBuffer_##T); \
-  m.def("OfBlob_CurMutTensorCopyFromBuffer_" OF_PP_STRINGIZE(T),                                \
-        &OfBlob_CurMutTensorCopyFromBuffer_##T);                                                \
-  m.def("OfBlob_StaticTensorCopyFromBuffer_" OF_PP_STRINGIZE(T),                                \
-        &OfBlob_StaticTensorCopyFromBuffer_##T);
+#define EXPORT_COPY_DATA_API(T, type_proto)                                   \
+  m.def("OfBlob_CopyToBuffer_" OF_PP_STRINGIZE(T), &OfBlob_CopyToBuffer_##T); \
+  m.def("OfBlob_CopyFromBuffer_" OF_PP_STRINGIZE(T), &OfBlob_CopyFromBuffer_##T);
 
   OF_PP_FOR_EACH_TUPLE(EXPORT_COPY_DATA_API, POD_DATA_TYPE_SEQ);
 

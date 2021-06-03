@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/device/stream_index.h"
+#include "oneflow/core/graph/task_id_generator.h"
 
 namespace oneflow {
 
@@ -28,26 +30,12 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  // Get ThrdId, TaskId, RegstDescId
-  int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
-  int64_t GetGpuH2DThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuNcclThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuDecodeH2DThrdId(int64_t dev_phy_id) const;
-  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
-  int64_t CommNetThrdId() const;
-  int64_t TickTockThrdId() const;
-  int64_t BaseIndependentThrdId() const;
-  void UpdateBaseIndependentThrdId(int64_t val);
-
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemBlockId() { return mem_block_id_count_++; }
   int64_t NewChunkId() { return chunk_id_count_++; }
 
   // MemZoneId
-  int64_t CpuMemZoneId() const { return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum(); }
+  int64_t CpuMemZoneId() const { return gpu_device_num_; }
   bool IsCpuMemZone(int64_t mem_zone_id) const { return mem_zone_id == CpuMemZoneId(); }
   bool IsGpuMemZone(int64_t mem_zone_id) const { return mem_zone_id < gpu_device_num_; }
   int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
@@ -65,14 +53,6 @@ class IDMgr final {
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 
-  // local_work_stream_id
-  // for cpu:
-  //   0: the actor thread
-  // for gpu:
-  //   0: the global cuda stream
-  int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
-  int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
   // global_thread_id
   // sign | machine_id | thrd_id | 0  | 0
   //  1   |     10     |   11    | 21 | 21
@@ -82,24 +62,22 @@ class IDMgr final {
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
   int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
-  int64_t AllocateChainId(int64_t global_work_stream_id);
   int64_t PickCpuThrdIdEvenly(int64_t machine_id);
+
+  StreamIndexGeneratorManager* GetStreamIndexGeneratorManager() { return &stream_index_gen_mgr_; }
+  TaskIdGenerator* GetTaskIdGenerator() { return &task_id_gen_; }
 
  private:
   friend class Global<IDMgr>;
   IDMgr();
-  int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
 
   int64_t gpu_device_num_;
   int64_t cpu_device_num_;
   int64_t regst_desc_id_count_;
   int64_t mem_block_id_count_;
   int64_t chunk_id_count_;
-  HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
-  HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
-  HashMap<int64_t, int64_t> stream_id2chain_cnt_;
-  int64_t base_independent_thrd_id_;
-  HashMap<int64_t, int64_t> machine_id2num_cpu_thrd_id_picked_;
+  StreamIndexGeneratorManager stream_index_gen_mgr_;
+  TaskIdGenerator task_id_gen_;
 
   //  64 bit id design:
   //   sign | machine | thread | local_work_stream | task

@@ -322,7 +322,9 @@ def _test_image_resize_with_cv(
         test_case.assertTrue(np.allclose(of_new_size, cv_new_size))
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestImageResize(flow.unittest.TestCase):
     def test_image_resize_to_fixed_size(test_case):
         image_files, _ = image_test_util.random_sample_images_from_coco()

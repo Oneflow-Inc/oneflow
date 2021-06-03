@@ -16,26 +16,33 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_TASK_GRAPH_H_
 
-#include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/register/op_blob_arg_info.h"
 #include "oneflow/core/graph/boxing/boxing_logger.h"
 
 namespace oneflow {
 
-class SubTskGphBuilder;
 class SubTskGphBuilderCtx;
+class HierarchicalSubTskGphBuilder;
+
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                \
+  (const OpEdge* op_edge, const std::vector<CompTaskNode*>& sorted_src_comp_tasks, \
+   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks)
+
+class TaskGraph;
+using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
-  TaskGraph() = delete;
-  ~TaskGraph() override = default;
+  ~TaskGraph() override;
 
-  explicit TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
+  explicit TaskGraph();
 
   const char* TypeName() const override { return "TaskGraph"; }
   void RemoveEmptyRegsts();
@@ -44,7 +51,16 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  void AcyclicTopoForEachNode(const std::function<void(TaskNode* node)>& Handler) const;
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi, int64_t dst_machine_id,
+                         int64_t dst_mem_zone_id);
+
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
+                         const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id);
+
+  TaskEdge* NewTaskEdgeWithLbi(const LogicalBlobId& lbi);
+  TaskEdge* NewTaskEdgeWithLbis(const std::vector<LogicalBlobId>& lbis);
+
+  void ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
@@ -53,37 +69,19 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBroadcastToBroadcast);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialInLbiConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByPartialOutLbiConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySrcSubsetConnect);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByDstSubsetConnect);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphNormalForwardToDecodeH2D);
 
  private:
-  void AcyclicTopoForEachNode(std::function<bool(TaskNode* node)> IsAllowedStartNode,
-                              const std::function<void(TaskNode* node)>& Handler) const;
+  void BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi);
 
-  void BuildTaskPath(
-      CompTaskNode* src, CompTaskNode* dst,
-      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-          MutBufTask,
-      bool use_buf_task_node);
-  TaskNode* BuildTaskStep(
-      TaskNode* cur_node, TaskNode* dst,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)>& GetBufTask,
-      const std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)>&
-          SetBufTask,
-      bool use_buf_task_node);
-  TaskNode* TryAddCopyH2DTaskTo(TaskNode*);
-  TaskNode* AddCopyD2HTaskFrom(TaskNode*);
-  TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
   void ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
-                        const std::vector<CompTaskNode*>& dst_task_nodes, int64_t ctrl_regst_num);
+                        const std::vector<CompTaskNode*>& dst_task_nodes);
 
-  void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void SetOrderInGraphForEachNode();
   void MergeChain();
   void BuildCtrlRegstDescInSameChain();
-
-  void GenerateIndependentThrdId(
-      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   // inplace
   void GetInplaceOpBlobArgList(
@@ -98,14 +96,35 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ForEachGpuDeviceNodes(
       const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const;
 
-  std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
-  std::shared_ptr<SubTskGphBuilder> sub_tsk_gph_builder_;
-  std::shared_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
+  std::unique_ptr<HierarchicalSubTskGphBuilder> hierarchical_sub_tsk_gph_builder_;
+  std::unique_ptr<SubTskGphBuilderCtx> sub_tsk_gph_builder_ctx_;
   std::unique_ptr<BoxingLogger> boxing_logger_;
-};
 
-bool IsBackEdge(TaskNode* src, TaskNode* dst);
+  struct ProxyKey {
+    TaskNode* src_node;
+    LogicalBlobId lbi;
+    int64_t dst_machine_id;
+    int64_t dst_mem_zone_id;
+
+    ProxyKey(TaskNode* src, const LogicalBlobId& arg_lbi, int64_t arg_machine, int64_t arg_zone)
+        : src_node(src), lbi(arg_lbi), dst_machine_id(arg_machine), dst_mem_zone_id(arg_zone) {}
+
+    bool operator==(const ProxyKey& other) const {
+      return src_node == other.src_node && lbi == other.lbi
+             && dst_machine_id == other.dst_machine_id && dst_mem_zone_id == other.dst_mem_zone_id;
+    }
+
+    struct Hasher {
+      inline size_t operator()(const ProxyKey& key) const {
+        return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
+               ^ key.dst_machine_id ^ key.dst_mem_zone_id;
+      }
+    };
+  };
+
+  HashMap<ProxyKey, TaskNode*, ProxyKey::Hasher> proxy2node;
+};
 
 }  // namespace oneflow
 

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/esac_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -24,20 +23,30 @@ void EsacOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-Maybe<void> EsacOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
+namespace {
+
+Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
+                           const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp) {
+  BlobDesc* out = BlobDesc4BnInOp("out");
   out->mut_shape() = Shape({1});
-  const DataType data_type = op_conf().esac_conf().data_type();
+  const DataType data_type = op_conf.esac_conf().data_type();
   CHECK_OR_RETURN(IsIntegralDataType(data_type));
   out->set_data_type(data_type);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EsacOp::InferBatchAxis(
-    std::function<OptInt64*(const std::string&)> BatchAxis4BnInOp) const {
-  BatchAxis4BnInOp("out")->clear_value();
-  return Maybe<void>::Ok();
+}  // namespace
+
+Maybe<void> EsacOp::InferLogicalOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
+    const ParallelDesc& parallel_desc) const {
+  return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
+}
+
+Maybe<void> EsacOp::InferOutBlobDescs(
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 Maybe<void> EsacOp::GetSbpSignatures(
@@ -45,8 +54,6 @@ Maybe<void> EsacOp::GetSbpSignatures(
     SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
-
-LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
 
 REGISTER_CPU_OP(OperatorConf::kEsacConf, EsacOp);
 

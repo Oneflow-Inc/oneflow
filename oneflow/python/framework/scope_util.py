@@ -16,10 +16,10 @@ limitations under the License.
 import traceback
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.attr_util as attr_util
-import oneflow.python.eager.vm_util as vm_util
-import oneflow_api.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 from contextlib import contextmanager
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
+import oneflow._oneflow_internal
 
 
 @oneflow_export("experimental.scope.config")
@@ -48,7 +48,7 @@ def api_scope_config(**kwargs):
 def api_current_scope():
     r""" Return current scope
     """
-    return GetCurrentScope()
+    return oneflow._oneflow_internal.GetCurrentScope()
 
 
 @oneflow_export("scope.current_scope")
@@ -68,7 +68,7 @@ def deprecated_current_scope(*args, **kwargs):
 
 def MakeScope(build_func):
     scope = None
-    old_scope = GetCurrentScope()
+    old_scope = oneflow._oneflow_internal.GetCurrentScope()
     assert old_scope is not None
 
     def BuildScope(builder):
@@ -76,21 +76,21 @@ def MakeScope(build_func):
         scope = build_func(old_scope, builder)
         assert scope is not None
 
-    vm_util.LogicalRun(BuildScope)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildScope)
     return scope
 
 
-def MakeInitialScope(job_conf, device_tag, machine_device_ids, is_mirrored):
+def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored):
     scope = None
 
     def BuildInitialScope(builder):
         nonlocal scope
         session_id = session_ctx.GetDefaultSession().id
         scope = builder.BuildInitialScope(
-            session_id, job_conf, device_tag, machine_device_ids, is_mirrored
+            session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
         )
 
-    vm_util.LogicalRun(BuildInitialScope)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInitialScope)
     return scope
 
 
@@ -98,26 +98,17 @@ def InitScopeStack():
     job_conf = job_conf_cfg.JobConfigProto()
     job_conf.mutable_predict_conf()
     job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], is_mirrored=False)
-    global scope_stack_
-    scope_stack_ = [scope]
+    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
+    oneflow._oneflow_internal.InitGlobalScopeStack(scope)
 
 
 @contextmanager
 def ScopeContext(scope):
-    old_scope = GetCurrentScope()
-    scope_stack_.append(scope)
+    old_scope = oneflow._oneflow_internal.GetCurrentScope()
+    oneflow._oneflow_internal.GlobalScopeStackPush(scope)
     try:
         yield
     finally:
-        assert GetCurrentScope() is scope
-        scope_stack_.pop()
-        assert GetCurrentScope() is old_scope
-
-
-def GetCurrentScope():
-    assert len(scope_stack_) > 0
-    return scope_stack_[-1]
-
-
-scope_stack_ = []
+        assert oneflow._oneflow_internal.GetCurrentScope() is scope
+        oneflow._oneflow_internal.GlobalScopeStackPop()
+        assert oneflow._oneflow_internal.GetCurrentScope() is old_scope

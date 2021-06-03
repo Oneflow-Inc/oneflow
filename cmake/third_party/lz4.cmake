@@ -4,6 +4,7 @@ set(LZ4_INCLUDE_DIR ${THIRD_PARTY_DIR}/lz4/include)
 set(LZ4_LIBRARY_DIR ${THIRD_PARTY_DIR}/lz4/lib)
 
 set(LZ4_URL https://github.com/lz4/lz4/archive/v1.9.2.tar.gz)
+use_mirror(VARIABLE LZ4_URL URL ${LZ4_URL})
 set(LZ4_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR}/lz4/src/lz4/lib)
 
 set(LZ4_BUILD_LIBRARY_DIR ${LZ4_BUILD_DIR})

@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/thread/cpu_thread.h"
+#include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/graph/id_serialization.h"
 
 namespace oneflow {
 
@@ -29,5 +31,11 @@ CpuThread::CpuThread(int64_t thrd_id) {
     PollMsgChannel(ctx);
   });
 }
+
+REGISTER_DEVICE_THREAD_CREATOR_WITH_STREAM_ID(DeviceType::kCPU,
+                                              ([](const StreamId& stream_id) -> Thread* {
+                                                return new CpuThread(
+                                                    SerializeStreamIdToInt64(stream_id));
+                                              }));
 
 }  // namespace oneflow

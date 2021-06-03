@@ -111,7 +111,7 @@ int32_t PersistentInStream::ReadFully(char* s, size_t n) {
   while (n) {
     if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }
     CHECK_LT(cur_buf_begin_, cur_buf_end_);
-    int64_t copy_size = std::min(cur_buf_end_ - cur_buf_begin_, static_cast<int64_t>(n));
+    int64_t copy_size = std::min<int64_t>(cur_buf_end_ - cur_buf_begin_, n);
     std::memcpy(s, cur_buf_begin_, static_cast<size_t>(copy_size));
     s += copy_size;
     cur_buf_begin_ += copy_size;

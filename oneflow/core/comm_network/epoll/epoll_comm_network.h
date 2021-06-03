@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 
+#ifdef __linux__
+
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
-
-#ifdef OF_PLATFORM_POSIX
 
 namespace oneflow {
 
@@ -28,10 +28,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
-
-  DEPRECATED static void Init(const Plan& plan) {
-    Global<CommNet>::SetAllocated(new EpollCommNet(plan));
-  }
 
   void RegisterMemoryDone() override;
 
@@ -44,7 +40,6 @@ class EpollCommNet final : public CommNetIf<SocketMemDesc> {
 
   friend class Global<EpollCommNet>;
   EpollCommNet();
-  DEPRECATED EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
   void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;

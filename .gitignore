@@ -28,3 +28,7 @@ compile_commands.json
 .cache
 /oneflow-src.zip
 /oneflow_temp
+/distributed-tmp
+/serving-tmp
+test_tmp_dir
+oneflow/python/version.py

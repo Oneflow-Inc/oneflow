@@ -19,15 +19,16 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<SubTskGphBuilderStatus> ChainSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   for (const auto& builder : builders_) {
     Maybe<SubTskGphBuilderStatus> boxing_builder_status = TRY(builder->Build(
-        ctx, sorted_src_comp_tasks, sorted_dst_comp_tasks, src_parallel_desc, dst_parallel_desc,
-        lbi, logical_blob_desc, src_sbp_parallel, dst_sbp_parallel));
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
+        out_parallel_desc, lbi, logical_blob_desc, in_sbp_parallel, out_sbp_parallel, time_shape));
     if (!boxing_builder_status.IsOk()
         && SubTskGphBuilderUtil::IsErrorBoxingNotSupported(*boxing_builder_status.error())) {
       continue;

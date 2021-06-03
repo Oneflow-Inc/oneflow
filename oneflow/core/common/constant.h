@@ -16,9 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CONSTANT_H_
 #define ONEFLOW_CORE_COMMON_CONSTANT_H_
 
+#include <string>
+
 namespace oneflow {
 
 static const int64_t kInvalidSessionId = -1;
-}
+static const std::string kNoPassTag = "";
+static const std::string kMainOp = "main_op";
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_CONSTANT_H_

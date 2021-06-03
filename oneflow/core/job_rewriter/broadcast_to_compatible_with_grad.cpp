@@ -46,6 +46,7 @@ Maybe<void> GenBroadcastToCompatibleWithGradOpConf(
             .Input("like", GenLogicalBlobName(op.BnInOp2Lbi("x")))
             .Attr<std::vector<int32_t>>("axis", reduced_axes)
             .Output("y")
+            .ScopeSymbolId(op.op_conf().scope_symbol_id())
             .Build();
     op_confs->push_back(reduce_sum_like_op.op_conf());
     *DiffLbi4BnInOp("x") = GenLogicalBlobId(reduce_sum_like_op.output("y", 0));

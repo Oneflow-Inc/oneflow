@@ -33,16 +33,16 @@ namespace tensorrt {
 class TrtExecutable : public Executable {
  public:
   explicit TrtExecutable(
-      const std::string &name, nv::unique_ptr<nvinfer1::ICudaEngine> &&engine,
-      const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> &host_weights)
+      const std::string& name, nv::unique_ptr<nvinfer1::ICudaEngine>&& engine,
+      const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>>& host_weights)
       : Executable(name, XrtEngine::TENSORRT),
         engine_(std::move(engine)),  // NOLINT
         host_weights_(host_weights) {}
 
   explicit TrtExecutable(
-      const std::string &name, nv::unique_ptr<nvinfer1::IBuilder> &&builder,
-      nv::unique_ptr<nvinfer1::INetworkDefinition> &&network,
-      const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> &host_weights)
+      const std::string& name, nv::unique_ptr<nvinfer1::IBuilder>&& builder,
+      nv::unique_ptr<nvinfer1::INetworkDefinition>&& network,
+      const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>>& host_weights)
       : Executable(name, XrtEngine::TENSORRT),
         builder_(std::move(builder)),
         network_(std::move(network)),
@@ -50,17 +50,17 @@ class TrtExecutable : public Executable {
 
   virtual ~TrtExecutable() = default;
 
-  bool Run(const std::vector<Parameter> &inputs, const ExecutableRunOptions &run_options,
+  bool Run(const std::vector<Parameter>& inputs, const ExecutableRunOptions& run_options,
            bool block_until_done = true) override;
 
  private:
-  nvinfer1::ICudaEngine *CreateExecutableEngine(const ExecutableRunOptions &run_options,
+  nvinfer1::ICudaEngine* CreateExecutableEngine(const ExecutableRunOptions& run_options,
                                                 const int batch_size = 1,
-                                                TRTInt8Calibrator *calibrator = nullptr);
+                                                TRTInt8Calibrator* calibrator = nullptr);
 
-  bool ExecuteEngine(const int batch_size, void **buffers, void *stream, bool block_until_done);
+  bool ExecuteEngine(const int batch_size, void** buffers, void* stream, bool block_until_done);
 
-  std::string LoadCalibrationTable(const std::string &calibration_path);
+  std::string LoadCalibrationTable(const std::string& calibration_path);
 
  private:
   nv::unique_ptr<nvinfer1::ICudaEngine> engine_;

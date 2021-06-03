@@ -20,9 +20,10 @@ limitations under the License.
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/transport/transport.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 
 namespace {
 
@@ -162,27 +163,19 @@ Maybe<void> ReceiveBlobInstructionType::Receive(vm::Instruction* instruction) co
 Maybe<void> SendBlobInstructionType::Send(int64_t dst_machine_id, uint64_t token,
                                           const char* mem_ptr, std::size_t size,
                                           const std::function<void()>& Callback) const {
-  // TODO(lixinqi) : Change to Global<Transport> solution
-  Global<CtrlClient>::Get()->PushKV(std::to_string(token),
-                                    [&](std::string* str) { str->assign(mem_ptr, size); });
-  Callback();
+  Global<Transport>::Get()->Send(token, dst_machine_id, mem_ptr, size, Callback);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ReceiveBlobInstructionType::Receive(int64_t src_machine_id, uint64_t token,
                                                 char* mem_ptr, std::size_t size,
                                                 const std::function<void()>& Callback) const {
-  // TODO(lixinqi) : Change to Global<Transport> solution
-  Global<CtrlClient>::Get()->PullKV(std::to_string(token), [&](const std::string& str) {
-    CHECK_LE(str.size(), size);
-    std::memcpy(mem_ptr, str.data(), str.size());
-  });
-  Callback();
+  Global<Transport>::Get()->Receive(token, src_machine_id, mem_ptr, size, Callback);
   return Maybe<void>::Ok();
 }
 
 COMMAND(vm::RegisterInstructionType<SendBlobInstructionType>("SendBlob"));
 COMMAND(vm::RegisterInstructionType<ReceiveBlobInstructionType>("ReceiveBlob"));
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

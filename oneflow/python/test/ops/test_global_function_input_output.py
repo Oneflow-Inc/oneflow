@@ -112,8 +112,6 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
             output = var + input_def
             return output
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
         input = np.arange(10).reshape(2, 5).astype(np.single)
         ret = foo_job(input).get()
         output = input + np.ones(shape=(2, 5), dtype=np.single)

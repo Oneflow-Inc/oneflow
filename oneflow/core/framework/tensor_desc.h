@@ -24,35 +24,47 @@ namespace oneflow {
 
 namespace user_op {
 
-class TensorDesc final {
+class TensorDesc {
  public:
-  TensorDesc() = default;
-  ~TensorDesc() = default;
-  TensorDesc(const TensorDesc&);
-  TensorDesc(const BlobDescProto&);
-
-  TensorDesc& operator=(const TensorDesc&);
-  TensorDesc& operator=(const BlobDescProto&);
-
+  virtual ~TensorDesc() = default;
+  TensorDesc& operator=(const TensorDesc& rhs);
   bool operator==(const TensorDesc&) const;
 
-  const Shape& shape() const { return shape_; }
-  Shape* mut_shape() { return &shape_; }
-  DataType data_type() const { return data_type_; }
-  DataType* mut_data_type() { return &data_type_; }
+  virtual const Shape& shape() const = 0;
+  virtual Shape* mut_shape() = 0;
+  virtual DataType data_type() const = 0;
+  virtual DataType* mut_data_type() = 0;
 
-  bool is_dynamic() const { return is_dynamic_; }
-  bool* mut_is_dynamic() { return &is_dynamic_; }
-  void set_is_dynamic(bool val) { is_dynamic_ = val; }
-  bool is_tensor_list() const { return is_tensor_list_; }
-  bool* mut_is_tensor_list() { return &is_tensor_list_; }
-  void set_is_tensor_list(bool val) { is_tensor_list_ = val; }
+  virtual bool is_dynamic() const = 0;
+  virtual bool* mut_is_dynamic() = 0;
+  virtual void set_is_dynamic(bool val) = 0;
+
+ protected:
+  TensorDesc() = default;
+};
+
+class NaiveTensorDesc final : public TensorDesc {
+ public:
+  NaiveTensorDesc() = default;
+  ~NaiveTensorDesc() override = default;
+  NaiveTensorDesc(const NaiveTensorDesc&);
+  NaiveTensorDesc(const BlobDescProto&);
+
+  NaiveTensorDesc& operator=(const BlobDescProto&);
+
+  const Shape& shape() const override { return shape_; }
+  Shape* mut_shape() override { return &shape_; }
+  DataType data_type() const override { return data_type_; }
+  DataType* mut_data_type() override { return &data_type_; }
+
+  bool is_dynamic() const override { return is_dynamic_; }
+  bool* mut_is_dynamic() override { return &is_dynamic_; }
+  void set_is_dynamic(bool val) override { is_dynamic_ = val; }
 
  private:
   Shape shape_;
   DataType data_type_;
   bool is_dynamic_;
-  bool is_tensor_list_;
 };
 
 }  // namespace user_op

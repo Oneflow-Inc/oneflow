@@ -1,3 +1,16 @@
+if (NOT DEFINED Python3_EXECUTABLE)
+  execute_process(
+    COMMAND which python3
+    RESULT_VARIABLE STATUS
+    OUTPUT_VARIABLE OUTPUT
+    ERROR_QUIET
+  )
+  if(STATUS EQUAL 0)
+    string(STRIP ${OUTPUT} STRIPPED)
+    message(STATUS "Using Python3 from 'which python3': ${STRIPPED}")
+    set(Python3_EXECUTABLE ${STRIPPED})
+  endif()
+endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
 set(Python_EXECUTABLE ${Python3_EXECUTABLE})

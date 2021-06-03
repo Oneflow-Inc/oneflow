@@ -30,12 +30,6 @@ REGISTER_USER_OP("ssp_variable_proxy")
       *ctx->Shape4ArgNameAndIndex("value", 0) = *var_shape;
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto& batch_axis = *ctx->BatchAxis4ArgNameAndIndex("var", 0);
-      *ctx->BatchAxis4ArgNameAndIndex("ref", 0) = batch_axis;
-      *ctx->BatchAxis4ArgNameAndIndex("value", 0) = batch_axis;
-      return Maybe<void>::Ok();
-    })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& var_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("var", 0);
       FOR_RANGE(int64_t, i, 0, var_tensor.shape().NumAxes()) {
@@ -45,6 +39,11 @@ REGISTER_USER_OP("ssp_variable_proxy")
             .Split(user_op::OpArg("value", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("ref", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
+      *ctx->Dtype4ArgNameAndIndex("value", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,

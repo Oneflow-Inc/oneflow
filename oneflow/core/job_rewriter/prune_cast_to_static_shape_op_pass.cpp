@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -48,6 +47,7 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
       ctrl_in_op_names.insert(ctrl_in_op_name);
     }
   });
+  std::vector<std::string> del_op_names;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -77,9 +77,10 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
         }
       }
     }
-    job_builder->DelOps({op_conf});
+    del_op_names.push_back(op_conf.name());
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  job_builder->DelOps(del_op_names);
   return Maybe<void>::Ok();
 }
 

@@ -42,6 +42,7 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
+  static Error ValueError(const std::string& error_summary);
   static Error JobNameExistError();
   static Error JobNameEmptyError();
   static Error JobNameNotEqualError();
@@ -79,6 +80,8 @@ class Error final {
   static Error SymbolIdUninitialized();
 
   static Error CompileOptionWrong();
+
+  static Error InputDeviceNotMatchError();
 
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;

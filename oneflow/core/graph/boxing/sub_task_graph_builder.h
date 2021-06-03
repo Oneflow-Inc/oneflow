@@ -29,11 +29,12 @@ class SubTskGphBuilder {
   virtual ~SubTskGphBuilder() = default;
 
   virtual Maybe<SubTskGphBuilderStatus> Build(
-      SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
-      const ParallelDesc& src_parallel_desc, const ParallelDesc& dst_parallel_desc,
-      const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-      const SbpParallel& src_sbp_parallel, const SbpParallel& dst_sbp_parallel) const = 0;
+      SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+      std::vector<TaskNode*>* sorted_out_tasks,
+      std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+      const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+      const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+      const SbpParallel& out_sbp_parallel, const Shape& time_shape) const = 0;
 };
 
 }  // namespace oneflow

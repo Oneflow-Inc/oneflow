@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -31,7 +30,6 @@ class PackCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InferProducedDataRegstTimeShape() override;
 };
 
 void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -42,32 +40,18 @@ void PackCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void PackCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInDataEdge()->GetSoleRegst()); }
 
 void PackCompTaskNode::BuildExecGphAndRegst() {
-  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
-  exec_node->mut_op() = op;
+  exec_node->mut_op() = op();
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
-  exec_node->BindBnWithRegst(op->SoleIbn(), in_regst);
+  exec_node->BindBnWithRegst(op()->SoleIbn(), in_regst);
 
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  out_regst->AddLbi(op->BnInOp2Lbi(op->SoleObn()));
-  exec_node->BindBnWithRegst(op->SoleObn(), out_regst);
+  out_regst->AddLbi(op()->BnInOp2Lbi(op()->SoleObn()));
+  exec_node->BindBnWithRegst(op()->SoleObn(), out_regst);
 
   exec_node->InferBlobDescs(parallel_ctx());
 }
 
-void PackCompTaskNode::InferProducedDataRegstTimeShape() {
-  auto TimeShape4Ibn = [&](const std::string& ibn) -> const Shape* {
-    return GetSoleConsumedRegst("in")->data_regst_time_shape().get();
-  };
-  std::shared_ptr<Shape> time_shape(new Shape());
-  logical_node()->SoleOp()->InferOutputBlobTimeShape(TimeShape4Ibn, parallel_ctx(),
-                                                     time_shape.get());
-  ForEachProducedDataRegst([time_shape](const std::string& name, RegstDesc* regst) {
-    *regst->mut_data_regst_time_shape() = time_shape;
-  });
-}
-
 REGISTER_USER_OP_COMP_TASK_NODE_TYPE("pack", PackCompTaskNode);
-REGISTER_USER_OP_INDEPENDENT_AREA_ID("pack")
 
 }  // namespace oneflow

@@ -219,6 +219,7 @@ def alexnet(args, images, labels, trainable=True):
 def main(args):
     flow.config.machine_num(args.num_nodes)
     flow.config.gpu_device_num(args.gpu_num_per_node)
+    flow.config.enable_legacy_model_io(True)
 
     func_config = flow.FunctionConfig()
     func_config.default_logical_view(flow.scope.consistent_view())

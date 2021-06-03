@@ -52,6 +52,7 @@ class UserOpSbpSignatureBuilder final {
 
 class SbpContextBase {
  public:
+  SbpContextBase() = default;
   virtual ~SbpContextBase() = default;
 
   virtual const TensorDesc& LogicalTensorDesc4InputArgNameAndIndex(
@@ -59,55 +60,33 @@ class SbpContextBase {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  DeviceType device_type() const { return device_type_; }
-  int64_t parallel_num() const { return parallel_num_; }
+  virtual DeviceType device_type() const = 0;
+  virtual int64_t parallel_num() const = 0;
 
   template<typename T>
   T Attr(const std::string& attr_name) const {
-    return user_op_conf_.attr<T>(attr_name);
+    return user_op_conf().attr<T>(attr_name);
   }
-  const UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
-
- protected:
-  SbpContextBase(UserOpConfWrapper&& conf, DeviceType device_type, int64_t parallel_num)
-      : user_op_conf_(conf), device_type_(device_type), parallel_num_(parallel_num) {}
-  SbpContextBase(const SbpContextBase&) = delete;
-
- private:
-  UserOpConfWrapper user_op_conf_;
-  DeviceType device_type_;
-  int64_t parallel_num_;
+  virtual const UserOpConfWrapper& user_op_conf() const = 0;
 };
 
 class SbpContext : public SbpContextBase {
  public:
-  virtual ~SbpContext() = default;
+  SbpContext() = default;
+  ~SbpContext() override = default;
 
-  UserOpSbpSignatureBuilder NewBuilder() { return UserOpSbpSignatureBuilder(sbp_sig_list_); }
-
- protected:
-  SbpContext(UserOpConfWrapper&& conf, SbpSignatureList* sbp_sig_list, DeviceType device_type,
-             int64_t parallel_num)
-      : SbpContextBase(std::move(conf), device_type, parallel_num), sbp_sig_list_(sbp_sig_list) {}
-  SbpContext(const SbpContext&) = delete;
-
- private:
-  SbpSignatureList* sbp_sig_list_;
+  virtual UserOpSbpSignatureBuilder NewBuilder() = 0;
 };
 
 class InferSbpSignatureFnContext : public SbpContextBase {
  public:
-  virtual ~InferSbpSignatureFnContext() = default;
+  InferSbpSignatureFnContext() = default;
+  ~InferSbpSignatureFnContext() override = default;
 
   virtual SbpSignature* mutable_sbp_signature() = 0;
   virtual const SbpSignature& sbp_signature_conf() const = 0;
   virtual const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
                                                                   int32_t index) const = 0;
-
- protected:
-  InferSbpSignatureFnContext(UserOpConfWrapper&& conf, DeviceType device_type, int64_t parallel_num)
-      : SbpContextBase(std::move(conf), device_type, parallel_num) {}
-  InferSbpSignatureFnContext(const SbpContext&) = delete;
 };
 
 struct GetSbpFnUtil {

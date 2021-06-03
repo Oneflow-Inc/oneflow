@@ -30,13 +30,17 @@ REGISTER_CPU_ONLY_USER_OP("create_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_CPU_ONLY_USER_OP("flush_summary_writer")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
     .Input("in")
@@ -48,7 +52,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
       CHECK_OR_RETURN(in_shape->elem_cnt() == 1 && step_shape->elem_cnt() == 1);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
     .Input("in")
@@ -58,7 +64,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
     .Input("in")
@@ -67,7 +75,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 
 REGISTER_CPU_ONLY_USER_OP("summary_write_image")
     .Input("in")
@@ -77,8 +87,9 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_image")
       CheckStepShape(ctx->Shape4ArgNameAndIndex("step", 0));
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn(user_op::BatchAxisInferFnUtil::NaiveInferBatchAxis);
-
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      return Maybe<void>::Ok();
+    });
 }  // namespace summary
 
 }  // namespace oneflow

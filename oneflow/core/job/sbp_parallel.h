@@ -26,6 +26,11 @@ bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs);
 bool operator==(const SbpSignature& lhs, const SbpSignature& rhs);
 bool operator!=(const SbpSignature& lhs, const SbpSignature& rhs);
 
+bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
+bool operator!=(const ParallelDistribution& lhs, const ParallelDistribution& rhs);
+bool operator==(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
+bool operator!=(const ParallelDistributionSignature& lhs, const ParallelDistributionSignature& rhs);
+
 SbpParallel GetDualSbpParallel(const SbpParallel&);
 
 bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& smaller);
@@ -39,6 +44,18 @@ void SortSbpSignatureListByCopyCost(
     const std::function<int32_t(const SbpSignature&)>& OrderValue4SbpSig,
     std::vector<const SbpSignature*>* sorted_sbp_signatures);
 
+bool IsValidSbpParallelString(const std::string& sbp_str);
+bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_parallel);
+std::string SbpParallelToString(const SbpParallel& sbp_parallel);
+
+void SbpSignatureToParallelDistributionSignature(
+    const SbpSignature& sbp_signature,
+    ParallelDistributionSignature* parallel_distribution_signature);
+void ParallelDistributionSignatureToSbpSignature(
+    const ParallelDistributionSignature& parallel_distribution_signature,
+    SbpSignature* sbp_signature);
+void CheckSbpSignatureAndParallelDistributionEquals(
+    const SbpSignature& sbp_sig, const ParallelDistributionSignature& parallel_distribution_sig);
 }  // namespace oneflow
 
 namespace std {

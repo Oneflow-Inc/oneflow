@@ -60,9 +60,6 @@ def _compare_ones_with_np(input_shape, device_type, machine_ids, device_counts):
 
         return of_ones
 
-    check = flow.train.CheckPoint()
-    check.init()
-
     of_out_ones = oneflow_ones()
     assert np.allclose(of_out_ones, np_out_ones)
 

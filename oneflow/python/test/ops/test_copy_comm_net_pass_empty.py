@@ -32,7 +32,9 @@ def ccrelu(x, name):
     )
 
 
-@flow.unittest.skip_unless_2n1d()
+# @flow.unittest.skip_unless_2n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestCopyCommNetPassEmpty(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_multi_node_comm_net(test_case):

@@ -27,19 +27,15 @@ REGISTER_USER_OP("dropout")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *in_shape);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
       mask->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -53,6 +49,11 @@ REGISTER_USER_OP("dropout")
       float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
       return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("dropout_grad")
@@ -62,13 +63,9 @@ REGISTER_USER_OP("dropout_grad")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("dy", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("dy", 0);
       CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *dy_shape);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -86,6 +83,11 @@ REGISTER_USER_OP("dropout_grad")
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
     });
 
@@ -112,17 +114,6 @@ REGISTER_USER_OP("random_mask_like")
     .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
-      user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
-      like_arg_modifier->set_use_header_only(true);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -141,6 +132,10 @@ REGISTER_USER_OP("random_mask_like")
       float rate = op_conf.attr<float>("rate");
       CHECK_GE_OR_RETURN(rate, 0);
       CHECK_LT_OR_RETURN(rate, 1);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 

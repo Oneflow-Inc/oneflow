@@ -33,7 +33,7 @@ using int64 = tensorflow::int64;
 
 class XlaAllocator : public se::DeviceMemoryAllocator {
  public:
-  explicit XlaAllocator(const se::Platform *platform, DeviceBufferAllocator *allocator);
+  explicit XlaAllocator(const se::Platform* platform, DeviceBufferAllocator* allocator);
   virtual ~XlaAllocator();
   using se::DeviceMemoryAllocator::Allocate;
   xla::StatusOr<se::OwningDeviceMemory> Allocate(int device_ordinal, uint64 size,
@@ -48,15 +48,14 @@ class XlaAllocator : public se::DeviceMemoryAllocator {
   void LockWorkspace();
   void UnlockWorkspace();
 
-  void PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase> &device_buffers,
-                            const std::vector<int64_t> &allocation_indices);
-  stream_executor::port::StatusOr<stream_executor::Stream *> GetStream(
-      int device_ordinal) override {
+  void PopulateDeviceMemory(const std::vector<se::DeviceMemoryBase>& device_buffers,
+                            const std::vector<int64_t>& allocation_indices);
+  stream_executor::port::StatusOr<stream_executor::Stream*> GetStream(int device_ordinal) override {
     UNIMPLEMENTED();
   };
 
  private:
-  DeviceBufferAllocator *allocator_;
+  DeviceBufferAllocator* allocator_;
   int64_t allocate_offset_;
   int64_t allocate_index_;
 

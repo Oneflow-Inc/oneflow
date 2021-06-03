@@ -6,7 +6,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
 
   set(${SRCS})
   set(${HDRS})
-  
+
   foreach(FIL ${ARGN})
     set(ABS_FIL ${ROOT_DIR}/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
@@ -29,7 +29,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
       COMMAND ${CMAKE_COMMAND}
       ARGS -E touch ${of_proto_python_dir}/${REL_DIR}/__init__.py
 
-      DEPENDS ${ABS_FIL}
+      DEPENDS ${ABS_FIL} ${PROTOBUF_COPY_TARGETS}
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"
       VERBATIM )
   endforeach()

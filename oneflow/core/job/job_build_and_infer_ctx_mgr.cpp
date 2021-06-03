@@ -102,4 +102,22 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
+Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
+  if (EagerExecutionEnabled()) {
+    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
+  } else {
+    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
+  }
+}
+
+Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(job_name);
+}
+
+Maybe<JobBuildAndInferCtx*> GetCurInferCtx() {
+  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
+  return mgr->FindJobBuildAndInferCtx(*JUST(mgr->GetCurrentJobName()));
+}
+
 }  // namespace oneflow

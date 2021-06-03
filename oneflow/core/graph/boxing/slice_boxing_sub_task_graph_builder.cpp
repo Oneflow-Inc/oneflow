@@ -18,6 +18,13 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/graph/slice_boxing_task_node.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
+#include "oneflow/core/job/parallel_distribution_util.h"
+#include "oneflow/core/common/id_util.h"
+#include "oneflow/core/graph/id_serialization.h"
+#include "oneflow/core/device/cpu_stream_index.h"
+#ifdef WITH_CUDA
+#include "oneflow/core/device/cuda_stream_index.h"
+#endif
 
 namespace oneflow {
 
@@ -54,47 +61,61 @@ bool IsSameDevice(const ParallelDesc& in_pd, const ParallelDesc& out_pd,
 }  // namespace
 
 Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
-    SubTskGphBuilderCtx* ctx, const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
-    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, const ParallelDesc& src_parallel_desc,
-    const ParallelDesc& dst_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& src_sbp_parallel,
-    const SbpParallel& dst_sbp_parallel) const {
+    SubTskGphBuilderCtx* ctx, const std::vector<TaskNode*>& sorted_in_tasks,
+    std::vector<TaskNode*>* sorted_out_tasks,
+    std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if (SubTskGphBuilderUtil::BlobHasDynamicShape(logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(src_parallel_desc)) {
+  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(in_parallel_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(dst_parallel_desc)) {
+  if (!SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(out_parallel_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(src_parallel_desc.parallel_num(), src_sbp_parallel,
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(in_parallel_desc.parallel_num(), in_sbp_parallel,
                                                  logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(dst_parallel_desc.parallel_num(), dst_sbp_parallel,
+  if (SubTskGphBuilderUtil::HasEmptySliceIfSplit(out_parallel_desc.parallel_num(), out_sbp_parallel,
                                                  logical_blob_desc)) {
     return Error::BoxingNotSupportedError();
   }
-  if (!(SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)
-        || SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel))) {
+  if (!(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)
+        || SubTskGphBuilderUtil::IsBoxingB2S(in_sbp_parallel, out_sbp_parallel))) {
     return Error::BoxingNotSupportedError();
   }
-  const auto GetBoxingGpuThrdId = [](const int64_t dev_id, CudaWorkType work_type) -> int64_t {
+
+  const auto GetBoxingGpuThrdId = [](int64_t machine_id, int64_t dev_id,
+                                     CudaWorkType work_type) -> int64_t {
+    int64_t thrd_id = -1;
 #ifdef WITH_CUDA
+    DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), DeviceType::kGPU,
+                       static_cast<DeviceId::device_index_t>(dev_id)};
+    auto* generator = dynamic_cast<CudaStreamIndexGenerator*>(
+        Global<IDMgr>::Get()->GetStreamIndexGeneratorManager()->GetGenerator(device_id));
+    CHECK_NOTNULL(generator);
+    StreamId::stream_index_t stream_index = 0;
     if (work_type == CudaWorkType::kCopyH2D) {
-      return Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_id);
+      stream_index = generator->GenerateH2DStreamIndex();
     } else if (work_type == CudaWorkType::kCopyD2H) {
-      return Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_id);
+      stream_index = generator->GenerateD2HStreamIndex();
+    } else if (work_type == CudaWorkType::kMix) {
+      stream_index = generator->GenerateMixStreamIndex();
     } else {
-      return Global<IDMgr>::Get()->GetGpuMixThrdId(dev_id);
+      UNIMPLEMENTED();
     }
+    thrd_id = SerializeStreamIdToInt64(StreamId{device_id, stream_index});
 #else
     UNIMPLEMENTED();
 #endif
+    return thrd_id;
   };
 
   const auto NewEdge = [&ctx]() -> TaskEdge* { return ctx->task_graph()->NewEdge(); };
@@ -109,8 +130,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id);
     } else if (pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      thrd_id = GetBoxingGpuThrdId(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)),
-                                   CudaWorkType::kCopyH2D);
+      int64_t dev_id = CHECK_JUST(pd.DeviceId4ParallelId(parallel_id));
+      thrd_id = GetBoxingGpuThrdId(machine_id, dev_id, CudaWorkType::kCopyH2D);
 #else
       UNIMPLEMENTED();
 #endif
@@ -130,7 +151,8 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(src_node->machine_id());
     } else if (src_node->device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-      thrd_id = GetBoxingGpuThrdId(src_node->GpuPhyId(), CudaWorkType::kCopyD2H);
+      thrd_id =
+          GetBoxingGpuThrdId(src_node->machine_id(), src_node->GpuPhyId(), CudaWorkType::kCopyD2H);
 #else
       UNIMPLEMENTED();
 #endif
@@ -142,35 +164,33 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
-  const auto BuildSubTaskGphS2B = [&ctx, &CreateBoxingNode121, &NewEdge](
-                                      const ParallelDesc& in_pd, const ParallelDesc& out_pd,
-                                      const SbpParallel& in_sbp, const SbpParallel& out_sbp,
-                                      const BlobDesc& blob_desc,
-                                      const std::vector<TaskNode*>& in_nodes,
-                                      std::vector<TaskNode*>* out_nodes) {
-    CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
-    const std::vector<TensorSliceView> in_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
-    CHECK(!ContainsEmptySlice(in_slices));
-    const TensorSliceView out_slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
-    FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
-      SliceBoxingTaskNode* out_node =
-          CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeCopy);
-      FOR_RANGE(int64_t, in_id, 0, in_pd.parallel_num()) {
-        const TensorSliceView& in_slice = in_slices.at(in_id);
-        TaskNode* in_node = in_nodes.at(in_id);
-        if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
-          out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-        } else {
-          TaskNode* proxy_node =
-              ctx->GetProxyNode(in_node, in_node->MemZoneId121(), out_node->machine_id(),
-                                Global<IDMgr>::Get()->CpuMemZoneId());
-          out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
+  const auto BuildSubTaskGphS2B =
+      [&ctx, &CreateBoxingNode121, &NewEdge, &lbi](
+          const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
+          const SbpParallel& out_sbp, const BlobDesc& blob_desc,
+          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
+        CHECK(SubTskGphBuilderUtil::IsBoxingS2B(in_sbp, out_sbp));
+        const std::vector<TensorSliceView> in_slices =
+            GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
+        CHECK(!ContainsEmptySlice(in_slices));
+        const TensorSliceView out_slice = GetBroadcastTensorSliceView(blob_desc);
+        FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
+          SliceBoxingTaskNode* out_node =
+              CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeCopy);
+          FOR_RANGE(int64_t, in_id, 0, in_pd.parallel_num()) {
+            const TensorSliceView& in_slice = in_slices.at(in_id);
+            TaskNode* in_node = in_nodes.at(in_id);
+            if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            } else {
+              TaskNode* proxy_node = ctx->task_graph()->GetProxyNode(
+                  in_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+              out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), in_slice);
+            }
+          }
+          out_nodes->push_back(out_node);
         }
-      }
-      out_nodes->push_back(out_node);
-    }
-  };
+      };
   const auto BuildSubTaskGphS2S = [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost,
                                    &GetBoxingGpuThrdId,
                                    &NewEdge](const ParallelDesc& in_pd, const ParallelDesc& out_pd,
@@ -180,10 +200,10 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                              std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingS2S(in_sbp, out_sbp));
     const std::vector<TensorSliceView> in_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
+        GetTensorSliceView(in_pd.parallel_num(), in_sbp, blob_desc);
     CHECK(!ContainsEmptySlice(in_slices));
     const std::vector<TensorSliceView> out_slices =
-        SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+        GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
     CHECK(!ContainsEmptySlice(out_slices));
     HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
     GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
@@ -238,12 +258,16 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             }
           }
         } else {
-          std::vector<TensorSliceView> intersections;
+          HashMap<int64_t, TensorSliceView> in_id2intersection;
+          std::vector<TensorSliceView> non_empty_intersections;
           for (const int64_t in_id : in_parallel_ids) {
-            intersections.push_back(out_slice.Intersect(in_slices.at(in_id)));
+            const TensorSliceView& intersection = out_slice.Intersect(in_slices.at(in_id));
+            in_id2intersection[in_id] = intersection;
+            if (!intersection.IsEmpty()) { non_empty_intersections.push_back(intersection); }
           }
+          if (non_empty_intersections.empty()) { continue; }
           const TensorSliceView concat_slice =
-              TensorSliceView::Concatenate(intersections, in_sbp.split_parallel().axis());
+              TensorSliceView::Concatenate(non_empty_intersections, in_sbp.split_parallel().axis());
           SliceBoxingTaskNode* local_concat_node =
               ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
           int64_t local_concat_thrd_id = -1;
@@ -251,9 +275,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             local_concat_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
           } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-            local_concat_thrd_id = GetBoxingGpuThrdId(
-                in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
-                CudaWorkType::kCopyD2H);
+            TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
+            local_concat_thrd_id =
+                GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyD2H);
 #else
             UNIMPLEMENTED();
 #endif
@@ -261,79 +285,80 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
                                   local_concat_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
           for (const int64_t in_id : in_parallel_ids) {
-            local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
-                                                         in_slices.at(in_id));
+            if (!in_id2intersection.at(in_id).IsEmpty()) {
+              local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
+                                                           in_slices.at(in_id));
+            }
           }
-          TaskNode* local_add_proxy_node =
-              ctx->GetProxyNode(local_concat_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* local_add_proxy_node = ctx->task_graph()->GetProxyNode(
+              local_concat_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
           out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), concat_slice);
         }
       }
       out_nodes->push_back(out_node);
     }
   };
-  const auto BuildSubTaskGphP2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge](
-          const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
-          const SbpParallel& out_sbp, const BlobDesc& blob_desc,
-          const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
-        CHECK(SubTskGphBuilderUtil::IsBoxingP2S(in_sbp, out_sbp));
-        const TensorSliceView in_slice =
-            SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
-        const std::vector<TensorSliceView> out_slices =
-            SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
-        CHECK(!ContainsEmptySlice(out_slices));
-        HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
-        GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
-        FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
-          const TensorSliceView& out_slice = out_slices.at(out_id);
-          SliceBoxingTaskNode* out_node =
-              CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeAdd);
-          for (const auto& pair : machine_id2in_parallel_ids) {
-            const int64_t in_machine_id = pair.first;
-            const std::vector<int64_t>& in_parallel_ids = pair.second;
-            if (out_node->machine_id() == in_machine_id) {
-              for (const int64_t in_id : in_parallel_ids) {
-                TaskNode* in_node = in_nodes.at(in_id);
-                if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
-                  out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-                } else if (in_pd.device_type() == DeviceType::kGPU) {
-                  SliceBoxingTaskNode* copy_to_host =
-                      CreateBoxingNodeToHost(in_node, in_slice, out_slice);
-                  out_node->ConnectToSrcNodeWithSlice(copy_to_host, NewEdge(), out_slice);
-                } else {
-                  out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-                }
-              }
+  const auto BuildSubTaskGphP2S = [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost,
+                                   &GetBoxingGpuThrdId,
+                                   &NewEdge](const ParallelDesc& in_pd, const ParallelDesc& out_pd,
+                                             const SbpParallel& in_sbp, const SbpParallel& out_sbp,
+                                             const BlobDesc& blob_desc,
+                                             const std::vector<TaskNode*>& in_nodes,
+                                             std::vector<TaskNode*>* out_nodes) {
+    CHECK(SubTskGphBuilderUtil::IsBoxingP2S(in_sbp, out_sbp));
+    const TensorSliceView in_slice = GetBroadcastTensorSliceView(blob_desc);
+    const std::vector<TensorSliceView> out_slices =
+        GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+    CHECK(!ContainsEmptySlice(out_slices));
+    HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
+    GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
+    FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
+      const TensorSliceView& out_slice = out_slices.at(out_id);
+      SliceBoxingTaskNode* out_node =
+          CreateBoxingNode121(out_pd, out_id, out_slice, kSliceBoxingTaskModeAdd);
+      for (const auto& pair : machine_id2in_parallel_ids) {
+        const int64_t in_machine_id = pair.first;
+        const std::vector<int64_t>& in_parallel_ids = pair.second;
+        if (out_node->machine_id() == in_machine_id) {
+          for (const int64_t in_id : in_parallel_ids) {
+            TaskNode* in_node = in_nodes.at(in_id);
+            if (SubTskGphBuilderUtil::IsOnSameGPU(in_node, out_node)) {
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+            } else if (in_pd.device_type() == DeviceType::kGPU) {
+              SliceBoxingTaskNode* copy_to_host =
+                  CreateBoxingNodeToHost(in_node, in_slice, out_slice);
+              out_node->ConnectToSrcNodeWithSlice(copy_to_host, NewEdge(), out_slice);
             } else {
-              auto* local_add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-              int64_t local_add_thrd_id = -1;
-              if (in_pd.device_type() == DeviceType::kCPU) {
-                local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
-              } else if (in_pd.device_type() == DeviceType::kGPU) {
-#ifdef WITH_CUDA
-                local_add_thrd_id = GetBoxingGpuThrdId(
-                    in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()))->GpuPhyId(),
-                    CudaWorkType::kCopyD2H);
-#else
-                UNIMPLEMENTED();
-#endif
-              }
-              local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
-                                   local_add_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
-              for (const int64_t in_id : in_parallel_ids) {
-                local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
-              }
-              TaskNode* local_add_proxy_node =
-                  ctx->GetProxyNode(local_add_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                    out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
-              out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), out_slice);
+              out_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
             }
           }
-          out_nodes->push_back(out_node);
+        } else {
+          auto* local_add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
+          int64_t local_add_thrd_id = -1;
+          if (in_pd.device_type() == DeviceType::kCPU) {
+            local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
+          } else if (in_pd.device_type() == DeviceType::kGPU) {
+#ifdef WITH_CUDA
+            TaskNode* node = in_nodes.at(in_parallel_ids.at(out_id % in_parallel_ids.size()));
+            local_add_thrd_id =
+                GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyD2H);
+#else
+            UNIMPLEMENTED();
+#endif
+          }
+          local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
+                               local_add_thrd_id, Global<IDMgr>::Get()->CpuMemZoneId());
+          for (const int64_t in_id : in_parallel_ids) {
+            local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
+          }
+          TaskNode* local_add_proxy_node = ctx->task_graph()->GetProxyNode(
+              local_add_node, lbi, out_node->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+          out_node->ConnectToSrcNodeWithSlice(local_add_proxy_node, NewEdge(), out_slice);
         }
-      };
+      }
+      out_nodes->push_back(out_node);
+    }
+  };
 
   const auto BuildSubTaskGphP2B = [&ctx, &lbi, &GetBoxingGpuThrdId, &NewEdge](
                                       const ParallelDesc& in_pd, const ParallelDesc& out_pd,
@@ -342,7 +367,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
                                       const std::vector<TaskNode*>& in_nodes,
                                       std::vector<TaskNode*>* out_nodes) {
     CHECK(SubTskGphBuilderUtil::IsBoxingP2B(in_sbp, out_sbp));
-    const TensorSliceView slice = SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+    const TensorSliceView slice = GetBroadcastTensorSliceView(blob_desc);
     HashMap<int64_t, std::vector<int64_t>> machine_id2in_parallel_ids;
     HashMap<int64_t, std::vector<int64_t>> machine_id2out_parallel_ids;
     GroupParallelIdByMachine(in_pd, &machine_id2in_parallel_ids);
@@ -361,8 +386,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
           local_add_thrd_id = Global<IDMgr>::Get()->PickCpuThrdIdEvenly(in_machine_id);
         } else if (in_pd.device_type() == DeviceType::kGPU) {
 #ifdef WITH_CUDA
-          local_add_thrd_id = GetBoxingGpuThrdId(in_nodes.at(in_ids_on_machine.front())->GpuPhyId(),
-                                                 CudaWorkType::kCopyH2D);
+          TaskNode* node = in_nodes.at(in_ids_on_machine.front());
+          local_add_thrd_id =
+              GetBoxingGpuThrdId(node->machine_id(), node->GpuPhyId(), CudaWorkType::kCopyH2D);
 #else
           UNIMPLEMENTED();
 #endif
@@ -380,18 +406,17 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       const int64_t out_machine_id = machine_id7out_parallel_ids.first;
       TaskNode* in_box_node = nullptr;
       if (out_box_nodes.size() == 1) {
-        in_box_node = ctx->GetProxyNode(
-            out_box_nodes.front(), out_box_nodes.front()->MemZoneId121(),
-            machine_id7out_parallel_ids.first, Global<IDMgr>::Get()->CpuMemZoneId());
+        in_box_node = ctx->task_graph()->GetProxyNode(out_box_nodes.front(), lbi,
+                                                      machine_id7out_parallel_ids.first,
+                                                      Global<IDMgr>::Get()->CpuMemZoneId());
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
         add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
                        Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
                        Global<IDMgr>::Get()->CpuMemZoneId());
         for (TaskNode* out_box_node : out_box_nodes) {
-          TaskNode* out_boxing_node_proxy =
-              ctx->GetProxyNode(out_box_node, out_box_node->MemZoneId121(), out_machine_id,
-                                Global<IDMgr>::Get()->CpuMemZoneId());
+          TaskNode* out_boxing_node_proxy = ctx->task_graph()->GetProxyNode(
+              out_box_node, lbi, out_machine_id, Global<IDMgr>::Get()->CpuMemZoneId());
           add_node->ConnectToSrcNodeWithSlice(out_boxing_node_proxy, NewEdge(), slice);
         }
         in_box_node = add_node;
@@ -406,59 +431,53 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
         } else {
           UNIMPLEMENTED();
         }
-        (*out_nodes)[out_id] = ctx->GetProxyNode(in_box_node, Global<IDMgr>::Get()->CpuMemZoneId(),
-                                                 out_machine_id, mem_zone_id);
+        (*out_nodes)[out_id] =
+            ctx->task_graph()->GetProxyNode(in_box_node, lbi, out_machine_id, mem_zone_id);
       }
     }
   };
 
   const auto BuildSubTaskGphB2S =
-      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge,
-       &sorted_src_comp_tasks, &sorted_dst_comp_tasks](
+      [&ctx, &lbi, &CreateBoxingNode121, &CreateBoxingNodeToHost, &GetBoxingGpuThrdId, &NewEdge](
           const ParallelDesc& in_pd, const ParallelDesc& out_pd, const SbpParallel& in_sbp,
           const SbpParallel& out_sbp, const BlobDesc& blob_desc,
           const std::vector<TaskNode*>& in_nodes, std::vector<TaskNode*>* out_nodes) {
         CHECK(SubTskGphBuilderUtil::IsBoxingB2S(in_sbp, out_sbp));
-        const TensorSliceView in_slice =
-            SubTskGphBuilderUtil::GetBroadcastTensorSliceView(blob_desc);
+        const TensorSliceView in_slice = GetBroadcastTensorSliceView(blob_desc);
         const std::vector<TensorSliceView> out_slices =
-            SubTskGphBuilderUtil::GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
+            GetTensorSliceView(out_pd.parallel_num(), out_sbp, blob_desc);
         CHECK(!ContainsEmptySlice(out_slices));
         FOR_RANGE(int64_t, out_id, 0, out_pd.parallel_num()) {
           const TensorSliceView& out_slice = out_slices.at(out_id);
-          CompTaskNode* dst_node = sorted_dst_comp_tasks.at(out_id);
           const int64_t nearest_idx =
-              SubTskGphBuilderUtil::FindNearestNodeIndex(sorted_src_comp_tasks, dst_node);
-          CompTaskNode* src_node = sorted_src_comp_tasks.at(nearest_idx);
+              SubTskGphBuilderUtil::FindNearestSrcParallelId(in_pd, out_pd, out_id);
+          TaskNode* in_node = in_nodes.at(nearest_idx);
           SliceBoxingTaskNode* slice_node =
               CreateBoxingNode121(in_pd, nearest_idx, out_slice, kSliceBoxingTaskModeCopy);
-          slice_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), in_slice);
-          TaskNode* out_node = ctx->GetProxyNode(slice_node, slice_node->MemZoneId121(),
-                                                 dst_node->machine_id(), dst_node->MemZoneId121());
+          slice_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+          TaskNode* out_node = ctx->task_graph()->GetProxyNode(slice_node, lbi, out_pd, out_id);
+
           out_nodes->push_back(out_node);
         }
       };
 
-  std::vector<TaskNode*> in_nodes;
-  in_nodes.assign(sorted_src_comp_tasks.begin(), sorted_src_comp_tasks.end());
-  std::vector<TaskNode*> out_nodes;
   std::string comment;
-  if (SubTskGphBuilderUtil::IsBoxingS2B(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphS2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+  if (SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphS2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphS2B";
-  } else if (SubTskGphBuilderUtil::IsBoxingS2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphS2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+  } else if (SubTskGphBuilderUtil::IsBoxingS2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphS2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphS2S";
-  } else if (SubTskGphBuilderUtil::IsBoxingP2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphP2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+  } else if (SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphP2S";
-  } else if (SubTskGphBuilderUtil::IsBoxingP2B(src_sbp_parallel, dst_sbp_parallel)) {
-    if (logical_blob_desc.shape().elem_cnt() < dst_parallel_desc.parallel_num()) {
-      BuildSubTaskGphP2B(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                         logical_blob_desc, in_nodes, &out_nodes);
+  } else if (SubTskGphBuilderUtil::IsBoxingP2B(in_sbp_parallel, out_sbp_parallel)) {
+    if (logical_blob_desc.shape().elem_cnt() < out_parallel_desc.parallel_num()) {
+      BuildSubTaskGphP2B(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
+                         logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
       comment = "BuildSubTaskGphP2B";
     } else {
       BlobDesc flat_blob_desc(logical_blob_desc.data_type());
@@ -466,30 +485,26 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       std::vector<TaskNode*> middle_nodes;
       SbpParallel middle_sbp;
       middle_sbp.mutable_split_parallel()->set_axis(0);
-      BuildSubTaskGphP2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, middle_sbp,
-                         flat_blob_desc, in_nodes, &middle_nodes);
-      BuildSubTaskGphS2B(dst_parallel_desc, dst_parallel_desc, middle_sbp, dst_sbp_parallel,
-                         flat_blob_desc, middle_nodes, &out_nodes);
+      BuildSubTaskGphP2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, middle_sbp,
+                         flat_blob_desc, sorted_in_tasks, &middle_nodes);
+      BuildSubTaskGphS2B(out_parallel_desc, out_parallel_desc, middle_sbp, out_sbp_parallel,
+                         flat_blob_desc, middle_nodes, sorted_out_tasks);
       comment = "BuildSubTaskGphP2S->BuildSubTaskGphS2B";
-      for (TaskNode* out_node : out_nodes) {
+      for (TaskNode* out_node : *sorted_out_tasks) {
         auto* slice_boxing_node = dynamic_cast<SliceBoxingTaskNode*>(out_node);
         CHECK_NOTNULL(slice_boxing_node);
         slice_boxing_node->SetOutShape(logical_blob_desc.shape());
       }
     }
 
-  } else if (SubTskGphBuilderUtil::IsBoxingB2S(src_sbp_parallel, dst_sbp_parallel)) {
-    BuildSubTaskGphB2S(src_parallel_desc, dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel,
-                       logical_blob_desc, in_nodes, &out_nodes);
+  } else if (SubTskGphBuilderUtil::IsBoxingB2S(in_sbp_parallel, out_sbp_parallel)) {
+    BuildSubTaskGphB2S(in_parallel_desc, out_parallel_desc, in_sbp_parallel, out_sbp_parallel,
+                       logical_blob_desc, sorted_in_tasks, sorted_out_tasks);
     comment = "BuildSubTaskGphB2S";
   } else {
     UNIMPLEMENTED();
   }
-  ctx->ConnectAll121(out_nodes, sorted_dst_comp_tasks);
-  return TRY(BuildSubTskGphBuilderStatus(
-      sorted_src_comp_tasks.front(), sorted_dst_comp_tasks.front(), src_parallel_desc,
-      dst_parallel_desc, src_sbp_parallel, dst_sbp_parallel, lbi, logical_blob_desc,
-      "SliceBoxingSubTskGphBuilder", comment));
+  return TRY(BuildSubTskGphBuilderStatus("SliceBoxingSubTskGphBuilder", comment));
 }
 
 }  // namespace oneflow

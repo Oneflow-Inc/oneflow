@@ -141,9 +141,6 @@ def _compare_scatter_nd_with_tf(
         indices, updates, params_shape, device_type, mirrored, compare_dy
     )
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     if mirrored:
         of_y = scatter_nd_fn([indices], [updates]).get().numpy_list()[0]
     else:
@@ -228,8 +225,6 @@ def _compare_scatter_nd_update_with_tf(
         flow.watch_diff(y, compare_dz_dy)
         return z
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_z = scatter_nd_update_grad_fn(params, indices, updates).get()
 
     if verbose is True:
@@ -296,8 +291,6 @@ def _of_tensor_scatter_nd_add(
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return (
             tensor_scatter_nd_add_fn([params], [indices], [updates])
             .get()
@@ -315,8 +308,6 @@ def _of_tensor_scatter_nd_add(
         ):
             return do_tensor_scatter_nd_add(params_def, indices_def, updates_def)
 
-        check_point = flow.train.CheckPoint()
-        check_point.init()
         return tensor_scatter_nd_add_fn(params, indices, updates).get().numpy()
 
 

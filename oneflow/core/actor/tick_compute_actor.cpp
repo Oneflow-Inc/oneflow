@@ -31,5 +31,7 @@ void TickComputeActor::VirtualAsyncSendNaiveProducedRegstMsgToConsumer() {
 
 REGISTER_ACTOR(kTick, TickComputeActor);
 REGISTER_ACTOR(kDeviceTick, TickComputeActor);
+REGISTER_ACTOR(kSrcSubsetTick, TickComputeActor);
+REGISTER_ACTOR(kDstSubsetTick, TickComputeActor);
 
 }  // namespace oneflow

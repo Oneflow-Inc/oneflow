@@ -31,34 +31,34 @@ namespace mola {
 
 class XlaExecutableRunContext {
  public:
-  XlaExecutableRunContext(const ExecutableRunOptions &run_options, const XrtDevice &device);
+  XlaExecutableRunContext(const ExecutableRunOptions& run_options, const XrtDevice& device);
 
   virtual ~XlaExecutableRunContext() = default;
 
-  const std::vector<xla::ShapedBuffer *> &PopulateInputs(
-      const std::vector<Parameter> &inputs, const std::vector<xla::Shape> &input_shapes);
+  const std::vector<xla::ShapedBuffer*>& PopulateInputs(
+      const std::vector<Parameter>& inputs, const std::vector<xla::Shape>& input_shapes);
 
   // Populate output params to reuse the buffers in allocator. This helps
   // to reduce memory occupancy and avoid extra copy between temporary
   // buffers and output buffers.
-  void PopulateResultBuffers(const std::vector<Parameter> &outputs,
-                             xla::LocalExecutable *executable);
+  void PopulateResultBuffers(const std::vector<Parameter>& outputs,
+                             xla::LocalExecutable* executable);
 
   // Returns run options.
-  const ExecutableRunOptions &run_options() const { return run_options_; }
+  const ExecutableRunOptions& run_options() const { return run_options_; }
 
   // Returns device type.
-  const XrtDevice &device() const { return device_; }
+  const XrtDevice& device() const { return device_; }
   // Returns device ordinal.
   int device_ordinal() const { return device_ordinal_; }
   // Returns xla local client.
-  xla::LocalClient *client() const { return client_; }
+  xla::LocalClient* client() const { return client_; }
   // Returns xla executing stream
-  se::Stream *stream() const { return stream_.get(); }
+  se::Stream* stream() const { return stream_.get(); }
   // Returns buffer allocator.
-  XlaAllocator *allocator() const { return allocator_.get(); }
+  XlaAllocator* allocator() const { return allocator_.get(); }
 
-  Eigen::ThreadPoolDevice *host_device() const { return host_device_; }
+  Eigen::ThreadPoolDevice* host_device() const { return host_device_; }
 
   int64_t rng_seed() const {
     return (run_options_.random_seed) == -1 ? tensorflow::GetXLARandomSeed()
@@ -80,15 +80,15 @@ class XlaExecutableRunContext {
   XrtDevice device_;
   int device_ordinal_ = -1;
 
-  xla::LocalClient *client_;
+  xla::LocalClient* client_;
 
   std::shared_ptr<se::Stream> stream_;
   std::shared_ptr<XlaAllocator> allocator_;
 
-  Eigen::ThreadPoolDevice *host_device_;
+  Eigen::ThreadPoolDevice* host_device_;
 
   std::vector<std::shared_ptr<xla::ShapedBuffer>> shaped_buffers_;
-  std::vector<xla::ShapedBuffer *> input_buffers_;
+  std::vector<xla::ShapedBuffer*> input_buffers_;
 };
 
 }  // namespace mola

@@ -23,13 +23,8 @@ REGISTER_USER_OP("cast_to_static_shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
       user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-      CHECK_OR_RETURN(!input_desc->is_tensor_list());
-      *output_desc = *input_desc;
+      *output_desc->mut_shape() = input_desc->shape();
       output_desc->set_is_dynamic(false);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -45,6 +40,10 @@ REGISTER_USER_OP("cast_to_static_shape")
           .PartialSum(user_op::OpArg("input", 0))
           .PartialSum(user_op::OpArg("output", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->Dtype4ArgNameAndIndex("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
       return Maybe<void>::Ok();
     });
 

@@ -30,10 +30,6 @@ namespace oneflow {
 
 namespace {
 
-bool IsParallelCastNode(const OpNode* node) {
-  return node->op().op_conf().has_parallel_cast_conf();
-}
-
 void VerifyAMPList(const AMPList& amp_list) {
   for (const auto& op_type : amp_list) {
     CHECK(user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type) != nullptr)
@@ -61,14 +57,7 @@ std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph&
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
     if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
-    for (const std::string& obn : node->op().output_bns()) {
-      LogicalBlobId lbi = node->op().BnInOp2Lbi(obn);
-      // TODO(niuchong): this isn't right for fw-bw-opgraph, but right for fw-opgraph
-      if (CHECK_JUST(node->BatchAxis4Lbi(lbi))->has_value()) {
-        INSERT_CHECK(allowed_set->insert(node));
-        return;
-      }
-    }
+    if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
 }
@@ -242,7 +231,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
       [&](OpNode* node) {
         return IsNodeInList(black_list_, node) || IsNodeInList(gray_list_, node);
       },
-      [&](OpNode* node) { return IsNodeInList(clear_list_, node) || IsParallelCastNode(node); },
+      [&](OpNode* node) { return IsNodeInList(clear_list_, node); },
       [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_black_and_gray, node); },
       [&](OpNode* node) {
         INSERT_CHECK(upstream_or_part_of_black_and_gray.insert(node));
@@ -269,46 +258,45 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
   auto IsWhiteAndAllowedToRunHalf = [&](OpNode* node) {
     return IsAllowedToRunWithHalf(node) && IsNodeInList(white_list_, node);
   };
-  DfsTopoGraphTraversal(op_graph, true, IsWhiteAndAllowedToRunHalf,
-                        [&](OpNode* node) {
-                          return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
-                                 && (IsNodeInList(gray_list_, node)
-                                     || IsNodeInList(clear_list_, node)
-                                     || IsParallelCastNode(node));
-                        },
-                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(upstream_or_part_of_white.insert(node));
-                          VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
-                                  << " to upstream_or_part_of_white";
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, true, IsWhiteAndAllowedToRunHalf,
+      [&](OpNode* node) {
+        return !IsKeyFound(black_set, node) && IsAllowedToRunWithHalf(node)
+               && (IsNodeInList(gray_list_, node) || IsNodeInList(clear_list_, node));
+      },
+      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode* node) {
+        INSERT_CHECK(upstream_or_part_of_white.insert(node));
+        VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name()
+                << " to upstream_or_part_of_white";
+      });
 
-  DfsTopoGraphTraversal(op_graph, false, IsWhiteAndAllowedToRunHalf,
-                        [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
-                        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                        [&](OpNode* node) {
-                          INSERT_CHECK(white_set->insert(node));
-                          VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name()
-                                  << " to white_set";
-                        });
+  DfsTopoGraphTraversal(
+      op_graph, false, IsWhiteAndAllowedToRunHalf,
+      [&](OpNode* node) { return IsKeyFound(upstream_or_part_of_white, node); },
+      [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+      [&](OpNode* node) {
+        INSERT_CHECK(white_set->insert(node));
+        VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+      });
 }
 
 void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
     const OpGraph& op_graph, std::function<bool(OpNode*)> IsAllowedToRunWithHalf,
     const HashSet<OpNode*>& black_set, HashSet<OpNode*>* white_set) const {
   auto PropagateIntoOneDirection = [&](bool is_downward) {
-    DfsTopoGraphTraversal(op_graph, !is_downward, [&](OpNode* node) { return false; },
-                          [&](OpNode* node) {
-                            return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
-                                   && (IsNodeInList(clear_list_, node) || IsParallelCastNode(node))
-                                   && IsAllowedToRunWithHalf(node);
-                          },
-                          [&](OpNode* node) { return IsKeyFound(*white_set, node); },
-                          [&](OpNode* node) {
-                            INSERT_CHECK(white_set->insert(node));
-                            VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert "
-                                    << node->op().op_name() << " to white_set";
-                          });
+    DfsTopoGraphTraversal(
+        op_graph, !is_downward, [&](OpNode* node) { return false; },
+        [&](OpNode* node) {
+          return !IsKeyFound(*white_set, node) && !IsKeyFound(black_set, node)
+                 && IsNodeInList(clear_list_, node) && IsAllowedToRunWithHalf(node);
+        },
+        [&](OpNode* node) { return IsKeyFound(*white_set, node); },
+        [&](OpNode* node) {
+          INSERT_CHECK(white_set->insert(node));
+          VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+                  << " to white_set";
+        });
   };
   PropagateIntoOneDirection(true);
   PropagateIntoOneDirection(false);

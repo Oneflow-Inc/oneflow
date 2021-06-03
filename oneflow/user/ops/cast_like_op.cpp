@@ -22,24 +22,15 @@ REGISTER_USER_OP("cast_like")
     .Input("dtype_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* input_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const user_op::TensorDesc* dtype_like_tensor_desc =
-          ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
-      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *output_tensor_desc = *input_tensor_desc;
-      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
       CHECK_NOTNULL(dtype_like_modifier);
-      dtype_like_modifier->set_use_header_only(true);
       dtype_like_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
@@ -65,6 +56,13 @@ REGISTER_USER_OP("cast_like")
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* dtype_like_tensor_desc =
+          ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
+      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     });
 

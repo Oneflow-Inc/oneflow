@@ -24,6 +24,7 @@ from test_util import (
     type_name_to_np_type,
 )
 import oneflow.typing as oft
+import os
 
 
 def _test_fused_scale_tril_fw_bw(
@@ -71,8 +72,6 @@ def _test_fused_scale_tril_fw_bw(
             flow.watch_diff(out, test_global_storage.Setter("out_diff"))
             return out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randint(low=0, high=100, size=shape)
     test_fused_scale_tril_fw_bw_job(x.astype(np_type)).get()
 
@@ -101,6 +100,7 @@ def _test_fused_scale_tril_fw_bw(
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedScaleTril(flow.unittest.TestCase):
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_fused_scale_tril_fw_bw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["gpu"]
@@ -111,13 +111,11 @@ class TestFusedScaleTril(flow.unittest.TestCase):
             "int32",
             "int64",
         ]
-        arg_dict["shape"] = [(6, 6), (3, 6, 8)]
-        arg_dict["diagonal"] = [-8, -1, 0, 1, 8]
+        arg_dict["shape"] = [(3, 6, 8)]
+        arg_dict["diagonal"] = [-8, -1, 0, 8]
         arg_dict["fill_value"] = [1.0, 0]
         arg_dict["scale"] = [5.0, 3]
         for arg in GenArgDict(arg_dict):
-            if arg["device"] == "cpu" and arg["type_name"] == "float16":
-                continue
             if isinstance(arg["fill_value"], float) and arg_dict["type_name"] not in [
                 "float32",
                 "float16",

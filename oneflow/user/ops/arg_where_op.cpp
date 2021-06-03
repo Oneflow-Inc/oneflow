@@ -21,28 +21,11 @@ namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
-  const DataType dtype = ctx->Attr<DataType>("dtype");
   user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *output_desc->mut_shape() = Shape({input_shape->elem_cnt(), input_shape->NumAxes()});
-  *output_desc->mut_data_type() = dtype;
   output_desc->set_is_dynamic(true);
   user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
   *output_size_desc->mut_shape() = Shape({1});
-  *output_size_desc->mut_data_type() = dtype;
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  const OptInt64* input_batch_axis = ctx->BatchAxis4ArgNameAndIndex("input", 0);
-  CHECK_NOTNULL_OR_RETURN(input_batch_axis);
-  if (input_batch_axis->has_value()) {
-    OptInt64* output_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output", 0);
-    CHECK_NOTNULL_OR_RETURN(output_batch_axis);
-    output_batch_axis->set_value(0);
-    OptInt64* output_size_batch_axis = ctx->BatchAxis4ArgNameAndIndex("output_size", 0);
-    CHECK_NOTNULL_OR_RETURN(output_size_batch_axis);
-    output_size_batch_axis->clear_value();
-  }
   return Maybe<void>::Ok();
 }
 
@@ -54,6 +37,13 @@ REGISTER_USER_OP("argwhere")
     .Output("output_size")
     .Attr<DataType>("dtype", DataType::kInt32)
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetBatchAxisInferFn(InferBatchAxis);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const DataType dtype = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      *output_desc->mut_data_type() = dtype;
+      user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
+      *output_size_desc->mut_data_type() = dtype;
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

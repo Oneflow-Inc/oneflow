@@ -79,7 +79,10 @@ def _make_gather_nd_fn(
 
     def do_gather_nd(x, index):
         x_var = flow.get_variable(
-            "params", shape=(1,), dtype=x_dtype, initializer=flow.zeros_initializer(),
+            "params",
+            shape=(1,),
+            dtype=x_dtype,
+            initializer=flow.constant_initializer(0, x_dtype),
         )
         x = x + flow.cast_to_current_logical_view(x_var)
         y = flow.gather_nd(x, index)
@@ -302,7 +305,9 @@ class TestGatherNd(flow.unittest.TestCase):
             _compare_with_np(test_case, **arg)
 
 
-@flow.unittest.skip_unless_1n4d()
+# @flow.unittest.skip_unless_1n4d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestGatherNdParallel(flow.unittest.TestCase):
     def test_case_1(test_case):
         arg_dict = OrderedDict()

@@ -56,7 +56,7 @@ class MultiSquareSumKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     std::vector<SquareSumParam<T>> params;
-    params.resize(ctx->user_op_conf().input_size("x"));
+    params.resize(ctx->input_size("x"));
     for (int64_t i = 0; i < params.size(); ++i) {
       const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", i);
       params[i].count = x->shape().elem_cnt();

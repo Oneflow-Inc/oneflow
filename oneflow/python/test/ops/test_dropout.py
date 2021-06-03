@@ -67,8 +67,6 @@ def of_run(device_type, x_shape, data_type, rate, seed):
             return loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = DropoutJob().get()
 
     of_out = test_global_storage.Get("out")
@@ -107,8 +105,6 @@ def of_run_module(device_type, x_shape, data_type, rate, seed):
             ).minimize(loss)
             return of_out
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     of_out = DropoutJob()
     of_out2 = DropoutJob()
 

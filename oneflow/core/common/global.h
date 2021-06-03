@@ -31,10 +31,12 @@ class Global final {
   static T* Get() { return *GetPPtr(); }
   static void SetAllocated(T* val) { *GetPPtr() = val; }
   template<typename... Args>
-  static void New(Args&&... args) {
+  static T* New(Args&&... args) {
     CHECK(Get() == nullptr);
     LOG(INFO) << "NewGlobal " << typeid(T).name();
-    *GetPPtr() = new T(std::forward<Args>(args)...);
+    T* ptr = new T(std::forward<Args>(args)...);
+    *GetPPtr() = ptr;
+    return ptr;
   }
   static void Delete() {
     if (Get() != nullptr) {

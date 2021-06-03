@@ -60,7 +60,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
   CHECK_LE_OR_RETURN(start_dim, true_end_dim);
 
-  *out_tensor_desc = *in_tensor_desc;
+  *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
 
   Shape* out_shape = out_tensor_desc->mut_shape();
 
@@ -77,33 +77,8 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
-  const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
-
-  const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-
-  CHECK_GE_OR_RETURN(start_dim, 0);
-  CHECK_LT_OR_RETURN(start_dim, in_shape.NumAxes());
-  const int32_t true_end_dim = end_dim < 0 ? end_dim + in_shape.NumAxes() : end_dim;
-  CHECK_GE_OR_RETURN(true_end_dim, 0);
-  CHECK_LT_OR_RETURN(true_end_dim, in_shape.NumAxes());
-  CHECK_LE_OR_RETURN(start_dim, true_end_dim);
-
-  const int64_t input_batch_axis = (*ctx->BatchAxis4ArgNameAndIndex("in", 0)).value();
-
-  OptInt64 output_batch_axis;
-
-  if (input_batch_axis < start_dim) {
-    output_batch_axis.set_value(input_batch_axis);
-  } else if (input_batch_axis >= start_dim && input_batch_axis <= true_end_dim) {
-    output_batch_axis.set_value(start_dim);
-  } else if (input_batch_axis > true_end_dim) {
-    output_batch_axis.set_value(input_batch_axis - (true_end_dim - start_dim));
-  }
-
-  *ctx->BatchAxis4ArgNameAndIndex("out", 0) = output_batch_axis;
-
+Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
+  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
   return Maybe<void>::Ok();
 }
 
@@ -114,7 +89,7 @@ REGISTER_USER_OP("flatten")
     .Attr<int32_t>("end_dim", -1)
     .SetTensorDescInferFn(TensorDescInferFn)
     .SetGetSbpFn(GetSbpFn)
-    .SetBatchAxisInferFn(GetBatchAxisInferFn);
+    .SetDataTypeInferFn(DataTypeInferFn);
 
 REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                                            user_op::AddOpFn AddOp) {

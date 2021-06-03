@@ -71,7 +71,8 @@ class PyForeignCallback : public ForeignCallback {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
 
-  py::class_<ForeignCallback, PyForeignCallback>(m, "ForeignCallback")
+  py::class_<ForeignCallback, PyForeignCallback, std::shared_ptr<ForeignCallback>>(
+      m, "ForeignCallback")
       .def(py::init<>())
       .def("EagerMirroredCast", &ForeignCallback::EagerMirroredCast)
       .def("EagerInterpretCompletedOp", &ForeignCallback::EagerInterpretCompletedOp)

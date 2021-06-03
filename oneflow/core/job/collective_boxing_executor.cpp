@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/control/ctrl_client.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/batch_memcpy_kernel_util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -51,7 +51,7 @@ void SortRequestsByOrder(std::vector<const RequestDesc*>* requests) {
 }
 
 bool IsDeviceOnThisMachine(const DeviceDesc& device_desc) {
-  return device_desc.machine_id() == Global<MachineCtx>::Get()->this_machine_id();
+  return device_desc.machine_id() == GlobalProcessCtx::Rank();
 }
 
 bool HasDeviceOnThisMachine(const DeviceSet& device_set) {
@@ -510,12 +510,20 @@ void NcclCollectiveBoxingExecutorBackend::Init(const CollectiveBoxingPlan& colle
 
 CollectiveBoxingExecutor::CollectiveBoxingExecutor(const Plan& plan)
     : collective_boxing_plan_(plan.collective_boxing_plan()) {
+  HashMap<int32_t, int64_t> backend2count;
+  for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
+    for (const auto& request : job_id7request_set.second.request()) {
+      backend2count[static_cast<int32_t>(request.op_desc().backend())] += 1;
+    }
+  }
 #ifdef WITH_CUDA
-  auto it =
-      backends_
-          .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
-          .first;
-  it->second->Init(collective_boxing_plan_);
+  if (backend2count.count(static_cast<int32_t>(Backend::kBackendNCCL) != 0)) {
+    auto it =
+        backends_
+            .emplace(Backend::kBackendNCCL, std::make_unique<NcclCollectiveBoxingExecutorBackend>())
+            .first;
+    it->second->Init(collective_boxing_plan_);
+  }
 #endif
   Init();
   DumpSummary();

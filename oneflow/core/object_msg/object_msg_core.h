@@ -398,13 +398,15 @@ struct ObjectMsgStructDefault final {
     ObjectMsgPtrUtil::InitRef<T>(Mutable());
   }
 
-  const T& Get() const { return msg_; }
-  T* Mutable() { return &msg_; }
+  const T& Get() const { return msg.msg_; }
+  T* Mutable() { return &msg.msg_; }
 
  private:
-  union {
+  union Msg {
     T msg_;
-  };
+    Msg() {}
+    ~Msg() {}
+  } msg;
 };
 
 template<bool is_object_msg>

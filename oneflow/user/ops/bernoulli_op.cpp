@@ -27,7 +27,6 @@ REGISTER_CPU_ONLY_USER_OP("bernoulli")
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       *out_tensor->mut_shape() = in_tensor->shape();
-      *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -37,8 +36,9 @@ REGISTER_CPU_ONLY_USER_OP("bernoulli")
       }
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      *out_tensor->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     });
 

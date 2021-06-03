@@ -29,7 +29,6 @@ REGISTER_USER_OP("unsorted_segment_sum")
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
       Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
 
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), data_shape->dim_vec().cbegin(),
@@ -39,6 +38,10 @@ REGISTER_USER_OP("unsorted_segment_sum")
                      data_shape->dim_vec().cbegin() + axis + segment_ids_shape->NumAxes(),
                      data_shape->dim_vec().end());
       *out_shape = Shape(dim_vec);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
       *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("data", 0);
       return Maybe<void>::Ok();
     })
@@ -47,26 +50,6 @@ REGISTER_USER_OP("unsorted_segment_sum")
       user_op::InputArgModifier* segment_ids_modifier = GetInputArgModifierFn("segment_ids", 0);
       CHECK_NOTNULL(segment_ids_modifier);
       segment_ids_modifier->set_requires_grad(false);
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      const auto axis = ctx->Attr<int64_t>("axis");
-      const auto data_batch_axis = ctx->BatchAxis4ArgNameAndIndex("data", 0);
-      const auto out_batch_axis = ctx->BatchAxis4ArgNameAndIndex("out", 0);
-      const auto segment_ids_num_axes =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("segment_ids", 0).shape().NumAxes();
-      if (data_batch_axis->has_value()) {
-        if (data_batch_axis->value() < axis) {
-          out_batch_axis->set_value(data_batch_axis->value());
-        } else if (data_batch_axis->value() >= axis
-                   && data_batch_axis->value() < (axis + segment_ids_num_axes)) {
-          out_batch_axis->clear_value();
-        } else if (data_batch_axis->value() >= segment_ids_num_axes) {
-          out_batch_axis->set_value(data_batch_axis->value() - segment_ids_num_axes + 1);
-        }
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
-      }
-      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const int64_t data_num_axes =
@@ -123,15 +106,10 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
     .Output("out")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const Shape* data_shape = ctx->Shape4ArgNameAndIndex("data", 0);
       const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
       const Shape* segment_ids_shape = ctx->Shape4ArgNameAndIndex("segment_ids", 0);
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
       const int64_t axis = ctx->Attr<int64_t>("axis");
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
       CHECK_GE_OR_RETURN(axis, 0);
       CHECK_LE_OR_RETURN(axis, like_shape->NumAxes());
       FOR_RANGE(int64_t, i, 0, axis) { CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i)); }
@@ -140,11 +118,16 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       FOR_RANGE(int64_t, i, axis + 1, like_shape->NumAxes()) {
         CHECK_EQ_OR_RETURN(like_shape->At(i), data_shape->At(i + segment_ids_shape->NumAxes() - 1));
       }
-      *out = *like;
+      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("like", 0);
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
+      const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
+      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
+      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -154,7 +137,6 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       segment_ids_modifier->set_requires_grad(false);
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
       CHECK_NOTNULL(like_modifier);
-      like_modifier->set_use_header_only(true);
       like_modifier->set_requires_grad(false);
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

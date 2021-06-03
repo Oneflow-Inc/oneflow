@@ -23,34 +23,36 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+from oneflow.python.oneflow_export import oneflow_export, stable_api
+import oneflow._oneflow_internal
 from typing import Optional
 
 
 @oneflow_export("matmul", "linalg.matmul")
+@stable_api
 def matmul(
-    a: oneflow_api.BlobDesc,
-    b: oneflow_api.BlobDesc,
+    a: oneflow._oneflow_internal.BlobDesc,
+    b: oneflow._oneflow_internal.BlobDesc,
     transpose_a: bool = False,
     transpose_b: bool = False,
+    alpha: float = 1.0,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
-    r"""This operator applies matrix multiplication to two Blobs. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator applies matrix multiplication to two Blobs.
 
     Args:
-        a (oneflow_api.BlobDesc): A Blob
-        b (oneflow_api.BlobDesc): A Blob
+        a (oneflow._oneflow_internal.BlobDesc): A Blob
+        b (oneflow._oneflow_internal.BlobDesc): A Blob
         transpose_a (bool, optional): Whether to transpose A Blob. Defaults to False.
         transpose_b (bool, optional): Whether to transpose B Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result Blob
+        oneflow._oneflow_internal.BlobDesc: The result Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -77,30 +79,57 @@ def matmul(
         #         [ 9. 10. 11.]]
 
     """
-    assert len(a.shape) == len(b.shape)
-    assert len(a.shape) >= 2
     if name is None:
         name = id_util.UniqueStr("Matmul_")
-    if len(a.shape) == 2:
-        op = (
-            flow.user_op_builder(name)
-            .Op("matmul")
-            .Input("a", [a])
-            .Input("b", [b])
-            .Output("out")
-            .Attr("transpose_a", transpose_a)
-            .Attr("transpose_b", transpose_b)
-            .Build()
-        )
+
+    assert len(a.shape) >= 2
+    assert len(b.shape) >= 2
+
+    if len(a.shape) == len(b.shape):
+        if len(a.shape) == 2:
+            op = (
+                flow.user_op_builder(name)
+                .Op("matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
+        else:
+            op = (
+                flow.user_op_builder(name)
+                .Op("batch_matmul")
+                .Input("a", [a])
+                .Input("b", [b])
+                .Output("out")
+                .Attr("transpose_a", transpose_a)
+                .Attr("transpose_b", transpose_b)
+                .Attr("alpha", float(alpha))
+                .Build()
+            )
     else:
+        # NOTE: support broadcast b to a only for now
+        if len(b.shape) != 2:
+            raise ValueError(
+                "don't support number of dimensions of a being less than number of dimensions of b"
+            )
+
+        if transpose_a:
+            raise ValueError("don't support tensor a to be tranpose")
+
         op = (
             flow.user_op_builder(name)
-            .Op("batch_matmul")
+            .Op("broadcast_matmul")
             .Input("a", [a])
             .Input("b", [b])
             .Output("out")
             .Attr("transpose_a", transpose_a)
             .Attr("transpose_b", transpose_b)
+            .Attr("alpha", float(alpha))
             .Build()
         )
-    return op.InferAndTryRun().RemoteBlobList()[0]
+
+    return op.InferAndTryRun().SoleOutputBlob()

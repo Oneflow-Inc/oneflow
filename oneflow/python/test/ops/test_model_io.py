@@ -62,6 +62,7 @@ def _load_snapshot_manually(path, shape, dtype):
 
 def _test_model_io(test_case, shape, dtype, lr, num_iters):
     flow.clear_default_session()
+    flow.config.enable_legacy_model_io(True)
     gen_var = _make_gen_var_func(shape, dtype, lr)
 
     model_save_root_dir = "./log/snapshot/"
