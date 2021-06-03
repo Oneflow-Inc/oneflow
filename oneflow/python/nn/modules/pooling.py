@@ -446,14 +446,18 @@ class MaxPool3d(Module):
     ):
         super().__init__()
         kernel_size = _triple(kernel_size)
-        strides =_triple(stride) if (stride is not None) else kernel_size
+        strides = _triple(stride) if (stride is not None) else kernel_size
         data_format = "NCDHW"
         channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
 
         assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1 or dilation == (1, 1, 1), "Only support dilation==1 for now!"
+        assert dilation == 1 or dilation == (
+            1,
+            1,
+            1,
+        ), "Only support dilation==1 for now!"
 
-        padding =_triple(padding)
+        padding = _triple(padding)
         if len(padding) == 3:
             if data_format == "NCDHW":
                 padding = (0, 0, padding[0], padding[1], padding[2])
