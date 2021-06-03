@@ -24,9 +24,9 @@ namespace user_op {
 namespace {
 
 void CheckParallelDistribution(const Shape& hierarchy, int64_t sum_axis,
-                               const ParallelDistribution& segment_ids_parallel_distribution,
-                               const ParallelDistribution& data_parallel_distribution,
-                               const ParallelDistribution& out_parallel_distribution) {
+                               const cfg::ParallelDistribution& segment_ids_parallel_distribution,
+                               const cfg::ParallelDistribution& data_parallel_distribution,
+                               const cfg::ParallelDistribution& out_parallel_distribution) {
   CHECK_EQ(hierarchy.NumAxes(), segment_ids_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), data_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), out_parallel_distribution.sbp_parallel_size());
@@ -57,7 +57,7 @@ std::shared_ptr<user_op::OpKernelState> CreateUnsortedSegmentSumOpKernelState(
     user_op::KernelInitContext* ctx) {
   if (ctx->parallel_ctx().parallel_num() > 1) {
     const auto axis = ctx->Attr<int64_t>("axis");
-    const ParallelDistribution& out_parallel_distribution =
+    const cfg::ParallelDistribution& out_parallel_distribution =
         ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     CheckParallelDistribution(

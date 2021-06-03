@@ -148,8 +148,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       return &(it->second);
     }
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -158,8 +158,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     return it->second;
   }
 
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_->bn_in_op2parallel_distribution();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -253,8 +253,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -262,8 +262,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_.bn_in_op2parallel_distribution();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -300,8 +300,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
-  SbpSignature sbp_signature_;
-  ParallelDistributionSignature parallel_distribution_signature_;
+  cfg::SbpSignature sbp_signature_;
+  cfg::ParallelDistributionSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;

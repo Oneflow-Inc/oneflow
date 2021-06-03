@@ -21,8 +21,7 @@ namespace oneflow {
 OpNodeSignatureDesc::OpNodeSignatureDesc(int64_t symbol_id,
                                          const OpNodeSignature& op_node_signature)
     : symbol_id_(symbol_id),
-      op_node_signature_(op_node_signature),
-      cfg_op_node_signature_(std::make_shared<cfg::OpNodeSignature>(op_node_signature)) {
+      op_node_signature_(std::make_shared<cfg::OpNodeSignature>(op_node_signature)) {
   const auto& logical_blob_desc_sig = op_node_signature.logical_blob_desc_signature();
   for (const auto& pair : logical_blob_desc_sig.bn_in_op2blob_desc()) {
     auto blob_desc = std::make_unique<BlobDesc>(pair.second);
