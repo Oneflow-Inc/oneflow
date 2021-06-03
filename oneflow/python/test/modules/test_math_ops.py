@@ -218,5 +218,110 @@ class TestPow(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
+def _test_asin(test_case, shape, device):
+    np_input = 2 * np.random.random(shape) - 1 
+
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.asin(of_input)
+    np_out = np.arcsin(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4)
+    )
+
+
+def _test_arcsin(test_case, shape, device):
+    np_input = 2 * np.random.random(shape) - 1
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.arcsin(of_input)
+    np_out = np.arcsin(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5)
+    )
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / np.sqrt(1 - np_input ** 2)
+
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4)
+    )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestAsin(flow.unittest.TestCase):
+    def test_asin(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_asin(test_case, *arg)
+            _test_arcsin(test_case, *arg)
+
+
+def _test_asinh(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.asinh(of_input)
+    np_out = np.arcsinh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
+
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+
+
+def _test_arcsinh(test_case, shape, device):
+    np_input = np.random.randn(*shape)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+
+    of_out = flow.arcsinh(of_input)
+    np_out = np.arcsinh(np_input)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
+
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestAsinh(flow.unittest.TestCase):
+    def test_asinh(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_asinh(test_case, *arg)
+            _test_arcsinh(test_case, *arg)
+
+
 if __name__ == "__main__":
     unittest.main()
