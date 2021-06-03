@@ -22,8 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 
 
-
-
 def _build_math_binary_elementwise_op(math_op):
     return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
 
