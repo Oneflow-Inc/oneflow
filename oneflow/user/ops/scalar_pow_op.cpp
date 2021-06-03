@@ -24,7 +24,7 @@ REGISTER_USER_OP("scalar_pow")
     .Attr<double>("exponent")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -48,7 +48,7 @@ REGISTER_USER_OP("scalar_pow_grad")
     .Attr<double>("exponent")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = ctx->InputShape("x", 0);
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -46,7 +46,7 @@ REGISTER_USER_OP("squeeze")
     .Attr<std::vector<int32_t>>("axes")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       AxisVector fixed_axes_vec;
       TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
                                       &fixed_axes_vec);

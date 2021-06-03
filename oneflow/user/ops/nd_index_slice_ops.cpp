@@ -41,7 +41,7 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& params_shape = ctx->Attr<Shape>("shape");
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
+  *ctx->OutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
@@ -55,7 +55,7 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& like_shape = ctx->InputShape("like", 0);
   JUST(CheckScatterNdShape(like_shape, indices_shape, updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = like_shape;
+  *ctx->OutputShape("out", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
@@ -69,7 +69,7 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
   const Shape& updates_shape = ctx->InputShape("updates", 0);
   const Shape& indices_shape = ctx->InputShape("indices", 0);
   JUST(CheckScatterNdShape(params_shape, indices_shape, updates_shape));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = params_shape;
+  *ctx->OutputShape("out", 0) = params_shape;
   return Maybe<void>::Ok();
 }
 
@@ -126,7 +126,7 @@ REGISTER_USER_OP("gather_nd")
       FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
         out_shape_vec.push_back(params_shape.At(i));
       }
-      *ctx->Shape4ArgNameAndIndex("out", 0) = Shape(out_shape_vec);
+      *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

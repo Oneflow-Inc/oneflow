@@ -112,11 +112,11 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+      *ctx->OutputShape("boxing_disabled_sampled_weight_diff", 0) =
           ctx->InputShape("sampled_weight_diff", 0);
       *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
-      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
+      *ctx->OutputShape("boxing_disabled_sampled_label", 0) =
           ctx->InputShape("sampled_label", 0);
       *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("sampled_label", 0);

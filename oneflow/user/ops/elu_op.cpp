@@ -24,7 +24,7 @@ REGISTER_USER_OP("elu")
     .Attr<double>("alpha")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -50,7 +50,7 @@ REGISTER_USER_OP("elu_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x_shape = ctx->InputShape("x", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       CHECK(dy_shape == x_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();
