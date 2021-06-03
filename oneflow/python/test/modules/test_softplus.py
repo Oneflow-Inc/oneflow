@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
-
 import numpy as np
+from collections import OrderedDict
+from test_util import GenArgList
 
 import oneflow.experimental as flow
-from test_util import GenArgList
 
 
 def _test_softplus_impl(test_case, shape, device):
@@ -30,16 +29,11 @@ def _test_softplus_impl(test_case, shape, device):
 
     np_x_grad = np.exp(np_input) / (1 + np.exp(np_input))
     of_out = flow.softplus(of_input)
-    # np_out = np.softplus(np_input)
     np_out = np.log(1 + np.exp(np_input))
-    # print("of_out:",of_out)
-    # print("np_out:",np_out)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
     of_out = of_out.sum()
     of_out.backward()
-    # print("of_grad_out:",of_input.grad.numpy())
-    # print("np_x_grad:",np_x_grad)
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 1e-4, 1e-4))
 
 

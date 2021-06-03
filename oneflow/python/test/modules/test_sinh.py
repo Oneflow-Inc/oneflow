@@ -14,12 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
-
 import numpy as np
+from collections import OrderedDict
+from test_util import GenArgList
 
 import oneflow.experimental as flow
-from test_util import GenArgList
 
 
 def _test_sinh_impl(test_case, shape, device):
