@@ -1289,6 +1289,7 @@ def clip_op_tensor(tensor, min=None, max=None):
     """
     return Clamp(min, max)(tensor)
 
+
 if __name__ == "__main__":
     import doctest
 

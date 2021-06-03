@@ -634,7 +634,6 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-
     def test_tensor_clamp_(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.clamp(0.1, 0.5)
@@ -658,7 +657,6 @@ class TestTensor(flow.unittest.TestCase):
         output = input.cast(flow.int8)
         np_out = np_arr.astype(np.int8)
         test_case.assertTrue(np.array_equal(output.numpy(), np_out))
-
 
 
 if __name__ == "__main__":
