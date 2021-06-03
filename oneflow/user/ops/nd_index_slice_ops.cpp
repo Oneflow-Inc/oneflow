@@ -121,8 +121,7 @@ REGISTER_USER_OP("gather_nd")
       const Shape& indices_shape = ctx->InputShape("indices", 0);
       int64_t index_ndims = indices_shape.At(indices_shape.NumAxes() - 1);
       CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
-      DimVector out_shape_vec(indices_shape.dim_vec().cbegin(),
-                              indices_shape.dim_vec().cend() - 1);
+      DimVector out_shape_vec(indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend() - 1);
       FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
         out_shape_vec.push_back(params_shape.At(i));
       }

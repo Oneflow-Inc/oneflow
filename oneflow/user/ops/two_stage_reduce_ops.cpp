@@ -95,8 +95,7 @@ Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputShape("out_diff", 0),
-                     ctx->InputShape("count", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputShape("out_diff", 0), ctx->InputShape("count", 0));
   *ctx->Shape4ArgNameAndIndex("in_diff", 0) = ctx->InputShape("mask", 0);
   return Maybe<void>::Ok();
 }
