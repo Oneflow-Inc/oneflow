@@ -13,10 +13,51 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow.experimental as flow
+from collections import OrderedDict
+
 import unittest
 import numpy as np
 
+import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_sub_impl(test_case, shape, device):
+    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    x = 5
+    y = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x, y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    y = 5
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x.numpy(), y)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    x = flow.Tensor(np.random.randn(2, 3), device=flow.device(device))
+    y = flow.Tensor(np.random.randn(1, 1), device=flow.device(device))
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    x = flow.Tensor(np.array([5.0]))
+    y = flow.Tensor(np.random.randn(1, 1))
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+    x = flow.Tensor(np.random.randn(1, 1))
+    y = flow.Tensor(np.array([5.0]))
+    of_out = flow.sub(x, y)
+    np_out = np.subtract(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -24,41 +65,11 @@ import numpy as np
 )
 class TestSubModule(flow.unittest.TestCase):
     def test_sub(test_case):
-        x = flow.Tensor(np.random.randn(2, 3))
-        y = flow.Tensor(np.random.randn(2, 3))
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x.numpy(), y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = 5
-        y = flow.Tensor(np.random.randn(2, 3))
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x, y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(2, 3))
-        y = 5
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x.numpy(), y)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(2, 3))
-        y = flow.Tensor(np.random.randn(1, 1))
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x.numpy(), y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.array([5.0]))
-        y = flow.Tensor(np.random.randn(1, 1))
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x.numpy(), y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-        x = flow.Tensor(np.random.randn(1, 1))
-        y = flow.Tensor(np.array([5.0]))
-        of_out = flow.sub(x, y)
-        np_out = np.subtract(x.numpy(), y.numpy())
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_sub_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
