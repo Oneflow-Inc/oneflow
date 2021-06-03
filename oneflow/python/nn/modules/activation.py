@@ -58,14 +58,14 @@ class ReLU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-
-        m = flow.nn.ReLU()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # equal to np.maximum(0, arr)
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> relu = flow.nn.ReLU()
+        >>> ndarr = np.asarray([1, -2, 3])
+        >>> x = flow.Tensor(ndarr)
+        >>> relu(x).numpy()
+        array([1., 0., 3.], dtype=float32)
 
     """
 
@@ -103,14 +103,17 @@ class ReLU6(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.ReLU6()
-        arr = np.random.randn(2, 3, 4, 5)
-        input = flow.Tensor(arr)
-        output = m(input)
-        # equal to np.minimum(np.maximum(0, arr), 6.0)
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> relu6 = flow.nn.ReLU6()
+
+        >>> out = relu6(input).numpy()
+        >>> print(out)
+        [0.  0.  0.5]
 
     """
 
@@ -151,15 +154,16 @@ class Tanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-1, 0, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        tanh = flow.nn.Tanh()
-        out = tanh(input).numpy()
-
-        # out [-0.7615942  0.         0.7615942]
+        >>> x = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> tanh = flow.nn.Tanh()
+        >>> out = tanh(input).numpy()
+        >>> print(out)
+        [-0.7615942  0.         0.7615942]
 
     """
 
@@ -178,9 +182,9 @@ class Tanh(Module):
 def tanh_op(x):
     r"""This operator computes the hyperbolic tangent value of Tensor.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
 
@@ -190,9 +194,9 @@ def tanh_op(x):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -228,16 +232,23 @@ class ELU(Module):
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.ELU()
-        input = flow.randn(2)
-        output = m(input)
+    .. code-block:: python
+
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> elu = flow.nn.ELU()
+
+        >>> out = elu(input).numpy()
+        >>> print(out)
+        [-0.39346933  0.          0.5       ]
 
     """
 
@@ -276,17 +287,17 @@ class GELU(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
 
-        out = gelu(input)
-
-        # out [-0.15426877, 0., 0.34573123]
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
 
     """
 
@@ -312,7 +323,7 @@ def gelu_op(x):
 
     Args:
         x (oneflow.Tensor): Input Tensor
- 
+
     Returns:
         oneflow.Tensor: A Tensor.
 
@@ -320,16 +331,18 @@ def gelu_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-0.5, 0, 0.5]).astype(np.float32)
-        input = flow.Tensor(x)
-        gelu = flow.nn.GELU()
-        
-        out = gelu(input)
-        # out [-0.15426877, 0., 0.34573123]
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> gelu = flow.nn.GELU()
+
+        >>> out = gelu(input).numpy()
+        >>> print(out)
+        [-0.15426877  0.          0.34573123]
+
     """
     return GELU()(x)
 
@@ -425,24 +438,32 @@ class Hardsigmoid(Module):
             1 & \text{ if } x \ge +3 \\
             \frac{x}{6} + \frac{1}{2} & \text{ otherwise } \\
         \end{cases}
-    
+
     Args:
         inplace: can optionally do the operation in-place. Default: ``False``
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
-    
+
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.Hardsigmoid()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardsigmoid = flow.nn.Hardsigmoid()
+
+        >>> out = hardsigmoid(input).numpy()
+        >>> print(out)
+        [0.41666666 0.5        0.5833333 ]
     
+
     """
 
     def __init__(self, inplace: bool = False):
@@ -509,9 +530,9 @@ def softmax_op(tensor, dim=None):
         dim (int): A dimension along which Softmax will be computed (so every slice
             along dim will sum to 1).
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -615,21 +636,28 @@ class LogSigmoid(Module):
 
     .. math::
         \text{LogSigmoid}(x) = \log\left(\frac{ 1 }{ 1 + \exp(-x)}\right)
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.LogSigmoid()
-        input = flow.randn(2)
-        output = m(input)
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> logsigmoid = flow.nn.LogSigmoid()
+
+        >>> out = logsigmoid(input).numpy()
+        >>> print(out)
+        [-0.974077   -0.6931472  -0.47407696]
 
     """
 
@@ -652,29 +680,34 @@ class Softplus(Module):
 
     SoftPlus is a smooth approximation to the ReLU function and can be used
     to constrain the output of a machine to always be positive.
-    
+
     For numerical stability the implementation reverts to the linear function
     when :math:`input \times \beta > threshold`.
-    
+
     Args:
         beta: the :math:`\beta` value for the Softplus formulation. Default: 1
         threshold: values above this revert to a linear function. Default: 20
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        m = flow.nn.Softplus()
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softplus = flow.nn.Softplus()
+
+        >>> out = softplus(input).numpy()
+        >>> print(out)
+        [0.474077  0.6931472 0.974077 ]
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
@@ -704,7 +737,7 @@ class Hardswish(Module):
             x & \text{ if } x \ge +3 \\
             x*(x+3)/6 & \text{ otherwise } \\
         \end{cases}
-    
+
     Args:
         inplace: can optionally do the operation in-place. Default: ``False``
 
@@ -714,11 +747,18 @@ class Hardswish(Module):
         - Output: :math:`(N, *)`, same shape as the input
 
     .. code-block:: python
-        import oneflow.experimental as flow
-        
-        m = flow.nn.Hardswish()
-        input = flow.randn(2)
-        output = m(input)
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardswish = flow.nn.Hardswish()
+
+        >>> out = hardswish(input).numpy()
+        >>> print(out)
+        [-0.20833333  0.          0.29166666]
     
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
@@ -768,13 +808,18 @@ class Hardtanh(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
         
-        m = flow.nn.Hardtanh()
-        arr = np.random.randn(2, 3, 4, 5)
-        x = flow.Tensor(arr)
-        out = m(x)
-    
+        >>> m = flow.nn.Hardtanh()
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 1.  1. ]
+
     """
 
     def __init__(
@@ -818,7 +863,7 @@ class LeakyReLU(Module):
     .. math::
         \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
 
-    or 
+    or
 
     .. math::
         \text{LeakyRELU}(x) = \begin{cases}
@@ -835,14 +880,20 @@ class LeakyReLU(Module):
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        m = flow.nn.LeakyReLU(0.1)
-        input = flow.randn(2)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> m = flow.nn.LeakyReLU(0.1)
+        >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
+        >>> x = flow.Tensor(arr)
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.2 0.3 3.  4. ]
     """
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
@@ -858,3 +909,9 @@ class LeakyReLU(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
