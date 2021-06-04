@@ -72,8 +72,9 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
 Maybe<MirroredTensor> MirroredTensor::api_detach() const {
   const auto& eager_blob_object = JUST(impl_->eager_blob_object());
   const auto& device = impl_->device();
+  const auto& tensor_storage = JUST(this->tensor_storage());
   std::shared_ptr<MirroredTensor> t = MirroredTensor::MakeEagerTensor(
-      eager_blob_object, device, JUST(this->tensor_storage()), false, true);
+      eager_blob_object, device, tensor_storage, false, true);
   return t;
 }
 
