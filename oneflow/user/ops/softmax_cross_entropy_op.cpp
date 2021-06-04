@@ -38,7 +38,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       FOR_RANGE(int64_t, i, 0, num_out_axes) {
         out_dim_vector.push_back(prediction_desc->shape().At(i));
       }
-      *ctx->Shape4ArgNameAndIndex("prob", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
+      *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
       *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = *ctx->IsDynamic4ArgNameAndIndex("prediction", 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
@@ -85,7 +85,7 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
         CHECK_EQ_OR_RETURN(dy_desc->shape().At(i), label_desc->shape().At(i));
       }
       CHECK_EQ_OR_RETURN(label_desc->shape(), prob_desc->shape());
-      *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = *ctx->Shape4ArgNameAndIndex("prob", 0);
+      *ctx->OutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
       *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("prob", 0);
       return Maybe<void>::Ok();
