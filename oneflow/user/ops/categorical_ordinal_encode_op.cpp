@@ -31,7 +31,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       const Shape& size_shape = ctx->InputShape("size", 0);
       CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
       CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -41,7 +41,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       const Shape& size_shape = ctx->InputShape("size", 0);
       CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
       CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
