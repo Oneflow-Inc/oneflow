@@ -240,7 +240,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   Shape* OutputShape(const std::string& arg_name, int32_t index) const override {
     return const_cast<UserKernelOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
-  } 
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
