@@ -23,9 +23,9 @@ REGISTER_USER_OP("relu")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -48,11 +48,11 @@ REGISTER_USER_OP("relu_grad")
     .Input("dy")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *y_shape);
-      *dx_shape = *dy_shape;
+      CHECK(dy_shape == y_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
