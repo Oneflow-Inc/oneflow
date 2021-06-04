@@ -13,6 +13,8 @@ runs:
   using: "composite"
   steps:
     - run: |
+        echo "${{ inputs.upload_core }}"
+        exit 1
         if [ -z "$OSS_ACCESS_KEY_ID" ]
         then
           exit 0

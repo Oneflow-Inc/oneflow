@@ -16,6 +16,15 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: actions/checkout@v2
+      - name: Upload bin to cloud, enable by adding label 'upload-wheel'
+        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'mac'
+        uses: ./.github/actions/upload_oss
+        with:
+          src_path: ${bin_dir}
+          oss_dst_path: testtest
+          oss_access_key_id: testtest
+          oss_access_key_secret: testtest
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Mirror dependencies to aliyun
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
