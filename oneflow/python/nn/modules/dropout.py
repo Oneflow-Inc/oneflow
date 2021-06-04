@@ -65,9 +65,9 @@ class Dropout(_DropoutNd):
         - Input: :math:`(*)`. Input can be of any shape
         - Output: :math:`(*)`. Output is of the same shape as input
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -127,4 +127,4 @@ class Dropout(_DropoutNd):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

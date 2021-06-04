@@ -38,11 +38,11 @@ def round_op(x):
     Returns:
         oneflow.Tensor: The result Tensor
     For example:
-    
+
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
-        >>> import numpy as np        
+        >>> import numpy as np
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([1.49999, 1.500001, 2.7]).astype(np.float32))
         >>> out1 = flow.round(x1)
@@ -52,7 +52,7 @@ def round_op(x):
         >>> out2 = flow.round(x2)
         >>> out2.numpy()
         array([2., 8., 5., 7.], dtype=float32)
-        
+
     """
 
     return Round()(x)
@@ -63,9 +63,9 @@ def round_op(x):
 def round_op_tensor(x):
     r"""
     round() -> Tensor
-    
+
     See :func:`oneflow.experimental.round`
-    
+
     """
 
     return Round()(x)
@@ -74,4 +74,4 @@ def round_op_tensor(x):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
