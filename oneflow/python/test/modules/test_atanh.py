@@ -23,7 +23,7 @@ from test_util import GenArgList
 
 
 def _test_atanh_impl(test_case, shape, device):
-    np_input = np.random.random(shape)
+    np_input = np.random.random(shape) - 0.5
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -43,7 +43,7 @@ def _test_atanh_impl(test_case, shape, device):
 
 
 def _test_arctanh_impl(test_case, shape, device):
-    np_input = np.random.random(shape)
+    np_input = np.random.random(shape) - 0.5
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
