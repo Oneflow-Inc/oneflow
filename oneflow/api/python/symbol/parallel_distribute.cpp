@@ -28,7 +28,6 @@ namespace oneflow {
 namespace {
 
 std::string ParallelDistributionSymbolToString(const Symbol<cfg::ParallelDistribution>& x) {
-  py::list sbp_parallels;
   std::stringstream ss;
   int32_t idx = 0;
   ss << "ParallelDistribution([";
