@@ -318,7 +318,7 @@ REGISTER_USER_OP("conv_data_grad")
             ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
       }
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x_like", 0);
+      *ctx->Shape4ArgNameAndIndex("dx", 0) = ctx->InputShape("x_like", 0);
       *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x_like", 0);
       return Maybe<void>::Ok();
     })
