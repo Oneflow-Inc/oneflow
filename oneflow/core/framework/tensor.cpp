@@ -24,10 +24,9 @@ namespace oneflow {
 
 namespace one {
 
-/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                 DataType dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool is_lazy, bool requires_grad, bool is_leaf) {
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
+    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<MirroredTensorImpl> impl;
   if (is_lazy) {
     impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
@@ -48,7 +47,7 @@ namespace one {
   return std::make_shared<MirroredTensor>(impl);
 }
 
-/*static*/std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+/*static*/ std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device,
     const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
