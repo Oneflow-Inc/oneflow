@@ -61,7 +61,7 @@ def tan_op_tensor(input):
     r"""
     tan() -> Tensor
     See :func:`oneflow.experimental.tan`
-    
+
     """
 
     return Tan()(input)
@@ -70,4 +70,4 @@ def tan_op_tensor(input):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

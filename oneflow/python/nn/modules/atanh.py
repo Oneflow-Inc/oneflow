@@ -61,7 +61,7 @@ def atanh_op_tensor(x):
     r"""
     atanh() -> Tensor
     See :func:`oneflow.experimental.atanh`
-    
+
     """
 
     return Atanh()(x)
@@ -92,4 +92,4 @@ def arctanh_op_tensor(input):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
