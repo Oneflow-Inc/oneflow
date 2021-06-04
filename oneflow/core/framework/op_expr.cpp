@@ -129,7 +129,7 @@ class UserOpExprInferContext : public user_op::InferContext {
  public:
   UserOpExprInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
                          const std::string& device_tag,
-                         const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+                         const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
                          const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
@@ -156,7 +156,7 @@ class UserOpExprInferContext : public user_op::InferContext {
       const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
       int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
       if (tuple_index >= 0) {
-        return const_cast<TensorMeta*>(&tensor_meta4input_index_(tuple_index));
+        return const_cast<TensorMeta*>(tensor_meta4input_index_(tuple_index));
       }
     }
     return nullptr;
@@ -213,7 +213,7 @@ class UserOpExprInferContext : public user_op::InferContext {
   const UserOpExpr* user_op_expr_;
   const ComposedAttrMap composed_attrs_;
   const std::string& device_tag_;
-  const std::function<const TensorMeta&(int32_t)>& tensor_meta4input_index_;
+  const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
   const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
 };
 
@@ -327,7 +327,7 @@ Maybe<void> UserOpExpr::Init() {
 
 Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
     const AttrMap& attrs, const std::string& device_tag,
-    const std::function<const TensorMeta&(int32_t)>& TensorMeta4InputIndex,
+    const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
   UserOpExprLogicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
                                           TensorMeta4OutputIndex);
