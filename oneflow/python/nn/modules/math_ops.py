@@ -961,7 +961,6 @@ def pow_op(tensor, exponent):
 
 
 
-
 class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -970,9 +969,7 @@ class Ceil(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-
 @oneflow_export("ceil")
-@register_tensor_op("ceil")
 @experimental_api
 def ceil_op(x):
     r"""Returns a new tensor with the ceil of the elements of :attr:`x`,
@@ -994,17 +991,56 @@ def ceil_op(x):
 
     .. code-block:: python 
         
-        import numpy as np
-        import oneflow as flow
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
         
-        x = flow.Tensor(np.array([1.0, -1.3, 2.3]).astype(np.float32)) 
-        y = flow.ceil(x)
+        >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
+        >>> y = flow.ceil(x)
+        >>> print(y.shape)
+        flow.Size([3])
+        >>> print(y.numpy())
+        [ 1. -2.  4.]
 
-        # y tensor([ 1. -1.  3.])
+
+        >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
+        >>> y = x.ceil()
+        >>> print(y.shape)
+        flow.Size([2, 3])
+        >>> print(y.numpy())
+        [[ 3.  5.  1.]
+         [ 8.  9. 10.]]
+
+
+
+
+        >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
+        >>> y = flow.ceil(x)
+        >>> print(y.shape)
+        flow.Size([2, 2, 3])
+        >>> print(y.numpy())
+        [[[ 3.  5.  7.]
+          [ 8.  9. 10.]]
+        <BLANKLINE>
+         [[11. 12. 13.]
+          [14. 15. 16.]]]
 
     """
 
     return Ceil()(x)
+
+
+@register_tensor_op("ceil")
+@experimental_api
+def ceil_op_tensor(x):
+    r"""
+    See :func:`oneflow.experimental.ceil`
+    """
+
+    return Ceil()(x)
+
+
+
 
 
 class Expm1(Module):
@@ -1017,7 +1053,6 @@ class Expm1(Module):
 
 
 @oneflow_export("expm1")
-@register_tensor_op("expm1")
 @experimental_api
 def expm1_op(x):
     """Returns a new tensor with the exponential of the elements minus 1
@@ -1039,13 +1074,59 @@ def expm1_op(x):
 
     .. code-block:: python 
         
-        import numpy as np
-        import oneflow as flow
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution() 
         
-        x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        y = flow.expm1(x)
+        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> y = flow.expm1(x)
+        >>> print(y.shape)
+        flow.Size([3])
+        >>> print(y.numpy())
+        [ 1.7182817  6.389056  19.085537 ]
 
-        # y [ 1.7182819  6.389056  19.085537 ]
+
+        >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
+        >>> y = x.expm1()
+        >>> print(y.shape)
+        flow.Size([2, 3])
+        >>> print(y.numpy())
+        [[6.3890562e+00 5.3598152e+01 4.0242880e+02]
+         [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
+
+
+
+        >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
+        >>> y = flow.expm1(x)
+        >>> print(y.shape)
+        flow.Size([2, 2, 3])
+        >>> print(y.numpy())
+        [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
+          [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
+        <BLANKLINE>
+         [[2.2025465e+04 5.9873141e+04 1.6275380e+05]
+          [4.4241238e+05 1.2026032e+06 3.2690165e+06]]]
+
 
     """
     return Expm1()(x)
+
+
+
+@register_tensor_op("expm1")
+@experimental_api
+def expm1_op_tensor(x):
+    r"""
+    See :func:`oneflow.experimental.expm1`
+    """
+
+    return Expm1()(x)
+
+
+
+
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod(name='expm1_op')
