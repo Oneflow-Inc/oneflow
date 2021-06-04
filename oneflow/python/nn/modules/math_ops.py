@@ -1194,6 +1194,47 @@ def erf_op(input):
 
     Returns:
         oneflow.Tensor: The result Tensor   
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> print(out.shape)
+        flow.Size([3])
+        >>> print(out.numpy())
+        [ 0.        -0.8427008  1.       ]
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> print(out.shape)
+        flow.Size([2, 3])
+        >>> print(out.numpy())
+        [[ 0.         -0.8427008   1.        ]
+         [ 1.          1.          0.74210095]]
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erf()
+        >>> print(out.shape)
+        flow.Size([3, 3])
+        >>> print(out.numpy())
+        [[ 0.         -0.8427008   1.        ]
+         [ 1.          1.          0.74210095]
+         [ 0.9953223   0.9999779   1.        ]]
+    """
+    return Erf()(input)
+
+
+@register_tensor_op("erf")
+@experimental_api
+def erf_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erf`
     """
     return Erf()(input)
 
@@ -1227,18 +1268,48 @@ def erfc_op(input):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        
-        x = flow.Tensor(np.array([0, -1., 10.]))
-        out = flow.erfc(x).numpy()
-        print(out) # [1.0000, 1.8427,  0.0000]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> print(out.shape)
+        flow.Size([3])
+        >>> print(out.numpy())
+        [1.0000000e+00 1.8427007e+00 2.8025969e-45]
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> print(out.shape)
+        flow.Size([2, 3])
+        >>> print(out.numpy())
+        [[1.0000000e+00 1.8427007e+00 2.8025969e-45]
+         [1.5374597e-12 4.1838257e-23 2.5789905e-01]]
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erfc()
+        >>> print(out.shape)
+        flow.Size([3, 3])
+        >>> print(out.numpy())
+        [[1.0000000e+00 1.8427007e+00 2.8025969e-45]
+         [1.5374597e-12 4.1838257e-23 2.5789905e-01]
+         [4.6777348e-03 2.2090499e-05 1.5417259e-08]]
         
     """
     return Erfc()(input)
 
-    
+
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erfc`
+    """
+    return Erfc()(input)
+
+
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(name='erf_op')

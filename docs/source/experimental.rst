@@ -70,6 +70,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.eq
 .. autofunction:: oneflow.experimental.exp
 .. autofunction:: oneflow.experimental.Tensor.exp
+.. autofunction:: oneflow.experimental.erf
+.. autofunction:: oneflow.experimental.Tensor.erf
+.. autofunction:: oneflow.experimental.erfc
+.. autofunction:: oneflow.experimental.Tensor.erfc
 .. autofunction:: oneflow.experimental.round
 .. autofunction:: oneflow.experimental.Tensor.round
 .. autofunction:: oneflow.experimental.expand
