@@ -77,6 +77,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
     ".numpy() doesn't work in lazy mode",
 )
 class TestLogicalSliceAssign(flow.unittest.TestCase):
+    # this is an in-place operation, so requires_grad should be False(no grad in backward)
     def test_logical_slice_assign(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.Tensor(x)
