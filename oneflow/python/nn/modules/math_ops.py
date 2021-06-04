@@ -968,9 +968,7 @@ class Tan(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-
 @oneflow_export("tan")
-@register_tensor_op("tan")
 @experimental_api
 def tan_op(input):
     r"""Returns  the tan value of the elements of :attr:`input`.
@@ -996,6 +994,17 @@ def tan_op(input):
 
     return Tan()(input)
 
+@register_tensor_op("tan")
+@experimental_api
+def tan_op_tensor(input):
+    r"""
+    tan() -> Tensor
+    See :func:`oneflow.experimental.tan`
+    
+    """
+
+    return Tan()(input)
+
 
 class Atanh(Module):
     def __init__(self):
@@ -1007,7 +1016,6 @@ class Atanh(Module):
 
 
 @oneflow_export("atanh")
-@register_tensor_op("atanh")
 @experimental_api
 def atanh_op(input):
     r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
@@ -1033,10 +1041,30 @@ def atanh_op(input):
 
     return Atanh()(input)
 
+@register_tensor_op("atanh")
+@experimental_api
+def atanh_op_tensor(x):
+    r"""
+    atanh() -> Tensor
+    See :func:`oneflow.experimental.atanh`
+    
+    """
+
+    return Atanh()(x)
+
 @oneflow_export("arctanh")
-@register_tensor_op("arctanh")
 @experimental_api
 def arctanh_op(input):
+    r"""
+
+    Alias for :func:`oneflow.experimental.atanh`
+    """
+
+    return Atanh()(input)
+
+@register_tensor_op("arctanh")
+@experimental_api
+def arctanh_op_tensor(input):
     r"""
 
     Alias for :func:`oneflow.experimental.atanh`
