@@ -23,7 +23,7 @@ namespace oneflow {
 namespace one {
 
 struct ScalarPowInterpState : public OpExprInterpState {
-  bool x_requires_grad;
+  bool requires_grad;
   double exponent;
 };
 
@@ -43,8 +43,8 @@ class ScalarPow : public OpExprGradFunction<ScalarPowInterpState> {
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->x_requires_grad = inputs.at(0)->requires_grad();
-    if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->exponent = JUST(composed_attrs.GetAttr<double>("exponent"));
