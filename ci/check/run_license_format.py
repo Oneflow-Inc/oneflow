@@ -35,12 +35,14 @@ def check_file(path):
     with open(path) as f:
         content = f.read()
         txt = get_txt(path)
-        if content.count("The OneFlow Authors. All rights reserved.") > 1:
-            return ("duplicated", content)
-        if content.startswith(txt) or (not content):
+        if "import doctest" in content and "raise_on_error=True" not in content:
+            return ("please add 'doctest.testmod(raise_on_error=True)'", content)
+        elif content.count("The OneFlow Authors. All rights reserved.") > 1:
+            return ("license_duplicated", content)
+        elif content.startswith(txt) or (not content):
             return ("ok", content)
         else:
-            return ("absent", content)
+            return ("license_absent", content)
 
 
 def format_file(path):
@@ -50,13 +52,13 @@ def format_file(path):
     format_status, content = check_file(path)
     if format_status == "ok":
         return True
-    elif format_status == "absent":
+    elif format_status == "license_absent":
         with open(path, "w") as w:
             new_content = txt + content
             w.write(new_content)
         return False
     else:
-        raise ValueError(f"license {format_status} {path}")
+        raise ValueError(f"{format_status} {path}")
 
 
 def do_check(x):
@@ -97,7 +99,7 @@ if __name__ == "__main__":
             any_absence = False
             for (p, format_status) in p.map(do_check, files):
                 if format_status != "ok":
-                    print(f"license {format_status}:", p)
+                    print(f"{format_status}:", p)
                     any_absence = True
             if any_absence:
                 exit(1)
