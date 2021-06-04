@@ -23,7 +23,7 @@ Maybe<void> InferWhereTensorDesc(user_op::InferContext* ctx) {
   const Shape& cond_shape = ctx->InputShape("condition", 0);
   CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("x", 0));
   CHECK_EQ_OR_RETURN(cond_shape, ctx->InputShape("y", 0));
-  *ctx->Shape4ArgNameAndIndex("out", 0) = cond_shape;
+  *ctx->OutputShape("out", 0) = cond_shape;
   return Maybe<void>::Ok();
 }
 
