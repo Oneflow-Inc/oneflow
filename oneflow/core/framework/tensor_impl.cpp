@@ -56,6 +56,12 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+    std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)),
+      tensor_storage_(tensor_storage) {}
+
 void EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());

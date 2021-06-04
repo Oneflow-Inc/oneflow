@@ -25,10 +25,9 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                 DataType dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool is_lazy, bool requires_grad, bool is_leaf) {
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
+    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
@@ -59,9 +58,8 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
-  return t;
+Maybe<MirroredTensor> MirroredTensor::api_detach() const {
+  return std::make_shared<MirroredTensor>(JUST(impl_->detach()));
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
@@ -95,7 +93,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::detach() const {
+Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }
