@@ -126,7 +126,7 @@ Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
   const auto& dy = out_grads.at(0);
 
   MutableAttrMap bcast_attrs;
-  JUST(bcast_attrs.SetAttr<std::vector<int32_t>>("axis", ctx->axis));
+  JUST(bcast_attrs.SetAttr<std::vector<int32_t>>("broadcast_axes", ctx->axis));
   const auto& bcast_like =
       JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {output, input}, bcast_attrs));
   const auto& bcast_eq =
