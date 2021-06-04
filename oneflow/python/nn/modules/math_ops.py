@@ -1158,10 +1158,6 @@ def cosh_op(tensor):
 
         import oneflow.experimental as flow
         import numpy as np
-        
-        x = flow.Tensor(np.array([0, -1., 10.]))
-        out = flow.erf(x).numpy()
-        print(out) # [0., -0.8427008, 1.]
         arr = np.array([ 0.1632,  1.1835, -0.6979, -0.7325])
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.cosh(input)
