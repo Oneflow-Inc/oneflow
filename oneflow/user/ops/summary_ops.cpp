@@ -48,8 +48,8 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_scalar")
     .Input("tag")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      const Shape* step_shape = ctx->Shape4ArgNameAndIndex("step", 0);
-      CHECK_OR_RETURN(in_shape.elem_cnt() == 1 && step_shape->elem_cnt() == 1);
+      const Shape& step_shape = ctx->InputShape("step", 0);
+      CHECK_OR_RETURN(in_shape.elem_cnt() == 1 && step_shape.elem_cnt() == 1);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
