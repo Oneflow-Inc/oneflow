@@ -106,7 +106,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-    JUST(tensor_impl->InitEagerBlobObject(op_device->mem_case()));
+    JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
     output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
   }
 
