@@ -28,8 +28,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 
 Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
-  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const int64_t ndim = x_shape->NumAxes();
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -39,7 +39,7 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
 
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
-    const int64_t dim_size = x_shape->At(i);
+    const int64_t dim_size = x_shape.At(i);
     if (dim_size == 0) {
       dim_vec[i] = 0;
       continue;
@@ -87,10 +87,10 @@ Maybe<void> GetSliceOpSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
-  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
   const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
   const int64_t ndim = dy_shape->NumAxes();
-  CHECK_EQ_OR_RETURN(like_shape->NumAxes(), ndim);
+  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
 
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
@@ -99,7 +99,7 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
+  *ctx->Shape4ArgNameAndIndex("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
@@ -280,8 +280,8 @@ void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInp
 }
 
 Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
-  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const int64_t ndim = x_shape->NumAxes();
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
