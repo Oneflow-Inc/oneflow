@@ -22,87 +22,43 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_atan(test_case, shape, device):
-    np_input = np.random.randn(*shape)
+def _test_atanh_impl(test_case, shape, device):
+    np_input = np.random.random(shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
 
-    of_out = flow.atan(of_input)
-    np_out = np.arctan(np_input)
+    of_out = flow.atanh(of_input)
+    np_out = np.arctanh(np_input)
     test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
     )
 
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = 1 / (1 + np_input ** 2)
-
+    np_out_grad = 1.0 / (1.0 - np.square(np_input))
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
 
 
-def _test_tensor_atan(test_case, shape, device):
-    np_input = np.random.randn(*shape)
+def _test_arctanh_impl(test_case, shape, device):
+    np_input = np.random.random(shape)
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
 
-    of_out = of_input.atan()
-    np_out = np.arctan(np_input)
+    of_out = flow.arctanh(of_input)
+    np_out = np.arctanh(np_input)
     test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
     )
 
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = 1 / (1 + np_input ** 2)
-
+    np_out_grad = 1.0 / (1.0 - np.square(np_input))
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
-
-def _test_arctan(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-
-    of_out = flow.arctan(of_input)
-    np_out = np.arctan(np_input)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / (1 + np_input ** 2)
-
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
-
-def _test_tensor_arctan(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-
-    of_out = of_input.arctan()
-    np_out = np.arctan(np_input)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / (1 + np_input ** 2)
-
-    test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
 
 
@@ -110,21 +66,15 @@ def _test_tensor_arctan(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAtan(flow.unittest.TestCase):
-    def test_atan(test_case):
+class TestAtanh(flow.unittest.TestCase):
+    def test_atanh(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_atan,
-            _test_tensor_atan,
-            _test_arctan,
-            _test_tensor_arctan,
-        ]
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            _test_atanh_impl(test_case, *arg)
+            _test_arctanh_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
     unittest.main()
-
