@@ -13,18 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
@@ -254,6 +242,33 @@ class OFRecordImageDecoder(Module):
     def forward(self, input):
         res = self._op(input)[0]
         return res
+
+
+class TensorBufferToListOfTensors(Module):
+    def __init__(
+        self, out_shapes, out_dtypes, out_num: int = 1, dynamic_out: bool = False
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("tensor_buffer_to_list_of_tensors_v2")
+            .Input("in")
+            .Output("out", out_num)
+            .Attr("out_shapes", out_shapes)
+            .Attr("out_dtypes", out_dtypes)
+            .Attr("dynamic_out", dynamic_out)
+            .Build()
+        )
+
+    def forward(self, input):
+        return self._op(input)
+
+
+@oneflow_export("tensor_buffer_to_list_of_tensors")
+@experimental_api
+def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
+    return TensorBufferToListOfTensors(
+        [list(out_shape) for out_shape in out_shapes], out_dtypes, len(out_shapes)
+    )(tensor)
 
 
 @oneflow_export("nn.image.Resize")

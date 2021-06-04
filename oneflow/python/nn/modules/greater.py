@@ -32,7 +32,9 @@ class Greater(Module):
 
     def forward(self, x, y):
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
         return self._op(x, y)[0]
 
 
@@ -52,14 +54,16 @@ def greater_op(x, y):
 
     .. code-block:: python
         
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input1 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         
-        out = flow.gt(input1, input2).numpy()
-        # out shape (2, 6, 5, 3)
+        >>> out = flow.gt(input1, input2).numpy().shape
+        >>> print(out)
+        (2, 6, 5, 3)
     
     """
     return Greater()(x, y)
@@ -76,3 +80,9 @@ def greater_op_tensor(x, y):
     
     """
     return Greater()(x, y)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

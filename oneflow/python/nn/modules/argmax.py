@@ -29,13 +29,6 @@ class Argmax(Module):
         self._op_softmax_last_dim = (
             flow.builtin_op("argmax").Input("in").Output("out").Build()
         )
-        self._expand_op = (
-            flow.builtin_op("expand_dims")
-            .Input("in")
-            .Output("out")
-            .Attr("axis", -1)
-            .Build()
-        )
         self._flatten = (
             flow.builtin_op("flatten")
             .Input("in")
@@ -66,13 +59,13 @@ class Argmax(Module):
         if axis == num_axes - 1:
             x = self._op_softmax_last_dim(input)[0]
             if self.keepdim == True:
-                x = self._expand_op(x)
+                x = flow.experimental.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
             x = self._transpose_op(input, perm=perm)[0]
             x = self._op_softmax_last_dim(x)[0]
-            x = self._expand_op(x)[0]
+            x = flow.experimental.unsqueeze(x, -1)
             x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
             if self.keepdim == False:
                 x = x.squeeze(dim=[axis])
@@ -97,15 +90,25 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
     .. code-block:: python 
 
-        import oneflow as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([[1, 3, 8, 7, 2],
-                    [1, 9, 4, 3, 2]], dtype=np.float32)
+        >>> x = np.array([[1, 3, 8, 7, 2],
+        ...            [1, 9, 4, 3, 2]], dtype=np.float32)
 
-        out = flow.argmax(flow.Tensor(x))
-
-        # out [2 1]
+        >>> out = flow.argmax(flow.Tensor(x))
+        >>> print(out.numpy())
+        [6]
+        >>> out = flow.argmax(flow.Tensor(x), dim=1)
+        >>> print(out.numpy())
+        [2 1]
 
     """
     return Argmax(dim=dim, keepdim=keepdim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

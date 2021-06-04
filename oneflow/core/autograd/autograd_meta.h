@@ -24,7 +24,6 @@ limitations under the License.
 namespace oneflow {
 
 class Shape;
-class DType;
 
 namespace one {
 
@@ -67,6 +66,10 @@ class AutogradMeta final {
   std::shared_ptr<TensorArg> now_grad_arg_;
 };
 
+inline std::shared_ptr<AutogradMeta> NewAutogradMeta(bool requires_grad, bool is_leaf) {
+  return std::shared_ptr<AutogradMeta>(new AutogradMeta(requires_grad, is_leaf));
+}
+
 class TensorInfo final {
  public:
   TensorInfo() = delete;
@@ -76,7 +79,7 @@ class TensorInfo final {
 
  private:
   std::shared_ptr<const Shape> shape_;
-  std::shared_ptr<const DType> dtype_;
+  DataType dtype_;
   // TODO: Add device info
 };
 

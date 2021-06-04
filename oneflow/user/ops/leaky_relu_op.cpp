@@ -22,9 +22,9 @@ REGISTER_USER_OP("leaky_relu")
     .Output("y")
     .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
       Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      *y_shape = *x_shape;
+      *y_shape = x_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -45,11 +45,11 @@ REGISTER_USER_OP("leaky_relu_grad")
     .Output("dx")
     .Attr<float>("alpha")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *x_shape);
-      *dx_shape = *dy_shape;
+      CHECK(dy_shape == x_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

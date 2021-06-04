@@ -66,6 +66,18 @@ Maybe<void> Device::Init() {
   return std::shared_ptr<const Device>(device);
 }
 
+/*static*/ Maybe<const Device> Device::ThreadLocalGetOrNew(const std::string& type,
+                                                           int64_t device_id) {
+  CHECK_GE_OR_RETURN(device_id, 0);
+  static thread_local HashMap<std::string, std::vector<std::shared_ptr<const Device>>>
+      type2device_id2device;
+  auto* vec = &type2device_id2device[type];
+  if (vec->size() <= device_id) { vec->resize(device_id + 1); }
+  auto* pptr = &vec->at(device_id);
+  if (!*pptr) { *pptr = JUST(New(type, device_id)); }
+  return *pptr;
+}
+
 /*static*/ Maybe<const Device> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessPerNode());
 }
@@ -90,13 +102,20 @@ Maybe<const std::string&> Device::local_call_instruction_name() const {
   return MapAt(type2instr_name, type());
 }
 
-std::string Device::ToString() const {
+std::string Device::ToRepr() const {
   std::stringstream ss;
   ss << "device(type='";
   ss << type_;
   ss << "', index=";
   ss << device_id_;
   ss << ")";
+  return ss.str();
+}
+
+std::string Device::ToString() const {
+  std::stringstream ss;
+  ss << type_;
+  if (type_ != "cpu") { ss << ":" << device_id_; }
   return ss.str();
 }
 
