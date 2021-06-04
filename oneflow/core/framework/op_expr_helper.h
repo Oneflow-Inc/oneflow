@@ -217,6 +217,19 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha, const std::string& name);
 
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha);
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha);
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha, const std::string& name);
+
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha);
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name);
+
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale);
 Maybe<one::UserOpExpr> DropoutGradOp(const float& scale, const std::string& name);
 
@@ -226,6 +239,20 @@ Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
 Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
                                    const std::vector<int64_t>& stop,
                                    const std::vector<int64_t>& step, const std::string& name);
+
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode);
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode,
+                                    const std::string& name);
 
 }  // namespace op_expr_helper
 }  // namespace oneflow
