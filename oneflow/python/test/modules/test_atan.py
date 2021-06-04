@@ -39,7 +39,7 @@ def _test_atan(test_case, shape, device):
     np_out_grad = 1 / (1 + np_input ** 2)
 
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
     )
 
 
@@ -60,7 +60,7 @@ def _test_op_atan(test_case, shape, device):
     np_out_grad = 1 / (1 + np_input ** 2)
 
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
     )
 
 
@@ -81,7 +81,7 @@ def _test_arctan(test_case, shape, device):
     np_out_grad = 1 / (1 + np_input ** 2)
 
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
     )
 
 
@@ -102,7 +102,7 @@ def _test_op_arctan(test_case, shape, device):
     np_out_grad = 1 / (1 + np_input ** 2)
 
     test_case.assertTrue(
-        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
     )
 
 
