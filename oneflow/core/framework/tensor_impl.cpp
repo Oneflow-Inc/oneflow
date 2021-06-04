@@ -62,7 +62,6 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
       tensor_storage_(tensor_storage),
       eager_blob_object_(eager_blob_object) {
   dtype_ = eager_blob_object->blob_desc().data_type();
-  tensor_storage_ = tensor_storage;
 }
 
 void EagerMirroredTensorImpl::Init() {
