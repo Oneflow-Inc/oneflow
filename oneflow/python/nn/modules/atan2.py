@@ -41,7 +41,7 @@ class Atan2(Module):
 @experimental_api
 def atan2_op(input, other):
     r"""Element-wise arctangent of input{i}/other{i}
-    with consideration of the quadrant. Returns a new tensor with the signed 
+    with consideration of the quadrant. Returns a new tensor with the signed
     angles in radians between vector (other{i},input{i}) and vector (1, 0).
 
     The shapes of input and other must be broadcastable.
@@ -57,14 +57,14 @@ def atan2_op(input, other):
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        
+
         >>> x1 = flow.Tensor(np.array([1,2,3]))
         >>> y1 = flow.Tensor(np.array([3,2,1]))
         >>> x2 = flow.Tensor(np.array([1.53123589,0.54242598,0.15117185]))
         >>> y2 = flow.Tensor(np.array([-0.21906378,0.09467151,-0.75562878]))
         >>> x3 = flow.Tensor(np.array([1,0,-1]))
         >>> y3 = flow.Tensor(np.array([0,1,0]))
-        
+
         >>> flow.enable_eager_execution()
         >>> flow.atan2(x1,y1).numpy()
         array([0.32175055, 0.7853982 , 1.2490457 ], dtype=float32)
@@ -92,4 +92,4 @@ def atan2_op_tensor(input, other):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
