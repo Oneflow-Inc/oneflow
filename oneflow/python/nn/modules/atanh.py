@@ -54,6 +54,7 @@ def atanh_op(input):
 
     return Atanh()(input)
 
+
 @register_tensor_op("atanh")
 @experimental_api
 def atanh_op_tensor(x):
@@ -65,6 +66,7 @@ def atanh_op_tensor(x):
 
     return Atanh()(x)
 
+
 @oneflow_export("arctanh")
 @experimental_api
 def arctanh_op(input):
@@ -74,6 +76,7 @@ def arctanh_op(input):
     """
 
     return Atanh()(input)
+
 
 @register_tensor_op("arctanh")
 @experimental_api
@@ -87,6 +90,6 @@ def arctanh_op_tensor(input):
 
 
 if __name__ == "__main__":
-     import doctest
+    import doctest
 
-     doctest.testmod()
+    doctest.testmod()

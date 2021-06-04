@@ -41,6 +41,7 @@ def _test_atanh_impl(test_case, shape, device):
         np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
 
+
 def _test_arctanh_impl(test_case, shape, device):
     np_input = np.random.random(shape)
     of_input = flow.Tensor(
@@ -60,6 +61,7 @@ def _test_arctanh_impl(test_case, shape, device):
         np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
     )
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -67,7 +69,7 @@ def _test_arctanh_impl(test_case, shape, device):
 class TestAtanh(flow.unittest.TestCase):
     def test_atanh(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2,3,4), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_atanh_impl(test_case, *arg)

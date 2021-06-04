@@ -27,6 +27,7 @@ class Tan(Module):
     def forward(self, x):
         return self._op(x)[0]
 
+
 @oneflow_export("tan")
 @experimental_api
 def tan_op(input):
@@ -53,6 +54,7 @@ def tan_op(input):
 
     return Tan()(input)
 
+
 @register_tensor_op("tan")
 @experimental_api
 def tan_op_tensor(input):
@@ -66,6 +68,6 @@ def tan_op_tensor(input):
 
 
 if __name__ == "__main__":
-     import doctest
+    import doctest
 
-     doctest.testmod()
+    doctest.testmod()

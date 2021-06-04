@@ -761,10 +761,8 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_tensor_atanh(test_case):
-        np_input = np.random.random((2,3))
-        of_input = flow.Tensor(
-            np_input, dtype=flow.float32, requires_grad=True
-        )
+        np_input = np.random.random((2, 3))
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
 
         of_out = of_input.atanh()
         np_out = np.arctanh(np_input)
@@ -784,10 +782,8 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_tensor_arctanh(test_case):
-        np_input = np.random.random((2,3))
-        of_input = flow.Tensor(
-            np_input, dtype=flow.float32, requires_grad=True
-        )
+        np_input = np.random.random((2, 3))
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
 
         of_out = of_input.arctanh()
         np_out = np.arctanh(np_input)
@@ -807,10 +803,8 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_tensor_tan(test_case):
-        np_input = np.random.random((2,3))
-        of_input = flow.Tensor(
-            np_input, dtype=flow.float32, requires_grad=True
-        )
+        np_input = np.random.random((2, 3))
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
 
         of_out = of_input.tan()
         np_out = np.tan(np_input)
