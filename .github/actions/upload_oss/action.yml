@@ -15,6 +15,12 @@ runs:
     - run: |
         set -x
         echo "${{ inputs.upload_core }}"
+        if [ "${{ inputs.upload_core }}" == "true" ]; then
+            echo "will upload core files"
+        else
+            echo "will not upload core files"
+            upload_core_arg+="--exclude core*"
+        fi
         exit 1
         if [ -z "$OSS_ACCESS_KEY_ID" ]
         then
