@@ -35,7 +35,7 @@ def _test_broadcast_like(test_case, device):
     )
     of_out = flow.broadcast_like(input, like_tensor, broadcast_axes=(1, 2))
     np_out = np.ones(shape=(3, 3, 3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_broadcast_like_3dim(test_case, device):
@@ -51,7 +51,7 @@ def _test_broadcast_like_3dim(test_case, device):
     )
     of_out = flow.broadcast_like(input, like_tensor, broadcast_axes=(0,))
     np_out = np.ones(shape=(3, 3, 2))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_broadcast_like_4dim(test_case, device):
@@ -67,7 +67,7 @@ def _test_broadcast_like_4dim(test_case, device):
     )
     of_out = flow.broadcast_like(input, like_tensor, broadcast_axes=(0, 3))
     np_out = np.ones(shape=(3, 3, 2, 3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_broadcast_like_backward(test_case, device):
