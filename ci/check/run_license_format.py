@@ -35,29 +35,33 @@ def check_file(path):
     with open(path) as f:
         content = f.read()
         txt = get_txt(path)
+        if content.count("The OneFlow Authors. All rights reserved.") > 1:
+            return ("duplicated", content)
         if content.startswith(txt) or (not content):
-            return (True, content)
+            return ("ok", content)
         else:
-            return (False, content)
+            return ("absent", content)
 
 
 def format_file(path):
     txt = get_txt(path)
     with open(path, "r", encoding="utf-8") as r:
         content = r.read()
-    is_formatted, content = check_file(path)
-    if is_formatted:
+    format_status, content = check_file(path)
+    if format_status == "ok":
         return True
-    else:
+    elif format_status == "absent":
         with open(path, "w") as w:
             new_content = txt + content
             w.write(new_content)
         return False
+    else:
+        raise ValueError(f"license {format_status} {path}")
 
 
 def do_check(x):
-    is_formatted, _ = check_file(x)
-    return (x, is_formatted)
+    format_status, _ = check_file(x)
+    return (x, format_status)
 
 
 def do_format(x):
@@ -91,13 +95,16 @@ if __name__ == "__main__":
     with Pool(10) as p:
         if args.check:
             any_absence = False
-            for (p, is_formatted) in p.map(do_check, files):
-                if is_formatted == False:
-                    print("license absent:", p)
+            for (p, format_status) in p.map(do_check, files):
+                if format_status != "ok":
+                    print(f"license {format_status}:", p)
                     any_absence = True
             if any_absence:
                 exit(1)
         if args.fix:
-            for (p, is_formatted) in p.map(do_format, files):
-                if is_formatted == False:
-                    print("license added:", p)
+            for (p, format_result) in p.map(do_format, files):
+                if format_result == True:
+                    if args.verbose:
+                        print("license already added:", p)
+                else:
+                    print("license just added:", p)
