@@ -44,9 +44,8 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value")
       CHECK_EQ_OR_RETURN(hidden_size % (head_size * 3), 0);
       int64_t num_heads = hidden_size / (head_size * 3);
 
-      *ctx->Shape4ArgNameAndIndex("query_mul_key", 0) =
-          Shape({batch_size, num_heads, seq_len, seq_len});
-      *ctx->Shape4ArgNameAndIndex("value", 0) = Shape({batch_size, num_heads, seq_len, head_size});
+      *ctx->OutputShape("query_mul_key", 0) = Shape({batch_size, num_heads, seq_len, seq_len});
+      *ctx->OutputShape("value", 0) = Shape({batch_size, num_heads, seq_len, head_size});
 
       return Maybe<void>::Ok();
     })
@@ -101,7 +100,7 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value_grad")
       CHECK_EQ_OR_RETURN(qmk_grad_shape.At(2), seq_len);
       CHECK_EQ_OR_RETURN(qmk_grad_shape.At(3), seq_len);
 
-      *ctx->Shape4ArgNameAndIndex("hidden_states_grad", 0) = h_shape;
+      *ctx->OutputShape("hidden_states_grad", 0) = h_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

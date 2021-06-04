@@ -24,7 +24,7 @@ REGISTER_USER_OP("cast_to_tick")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = Shape({1});
       return Maybe<void>::Ok();
     })

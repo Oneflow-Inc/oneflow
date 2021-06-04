@@ -85,7 +85,7 @@ REGISTER_USER_OP("same_padding_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = ctx->InputShape("x_like", 0);
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
       *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x_like", 0);
       return Maybe<void>::Ok();
     })
