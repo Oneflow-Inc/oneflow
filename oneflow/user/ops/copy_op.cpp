@@ -50,7 +50,7 @@ REGISTER_USER_OP("copy")
     .Attr<std::string>("device_type")
     .Attr<int64_t>("device_id")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
