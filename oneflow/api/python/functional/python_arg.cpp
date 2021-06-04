@@ -118,8 +118,7 @@ DataType PythonArg::ObjectAs<DataType>() const {
     auto dtype = detail::cast<std::shared_ptr<cfg::DataType>>(obj);
     return static_cast<DataType>(*dtype);
   } else if (detail::isinstance<DType>(obj)) {
-    auto dtype = detail::cast<std::shared_ptr<DType>>(obj);
-    return dtype->data_type();
+    return detail::cast<DType&>(obj).data_type();
   } else if (detail::isinstance<int32_t>(obj)) {
     return static_cast<DataType>(detail::cast<int32_t>(obj));
   } else if (detail::isinstance<int64_t>(obj)) {
