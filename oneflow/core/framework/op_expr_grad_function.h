@@ -55,7 +55,9 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
     TensorTuple detach_outputs(outputs.size());
-    for (int i = 0; i < outputs.size(); ++i) { detach_outputs.at(i) = outputs.at(i)->detach(); }
+    for (int i = 0; i < outputs.size(); ++i) {
+      detach_outputs.at(i) = JUST(outputs.at(i)->detach());
+    }
     return Capture(state, inputs, detach_outputs, attrs);
   }
 
