@@ -76,7 +76,8 @@ class Tensor {
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
-  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint() const {
+  virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
+      const {
     OF_UNIMPLEMENTED();
   }
 
@@ -243,7 +244,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<const Device> device() const override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint() const override {
+  Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
+      const override {
     return impl_->consumer_parallel_distribution_constraint();
   }
   int64_t ndim() const override;

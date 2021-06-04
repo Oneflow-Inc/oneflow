@@ -236,14 +236,14 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const ParallelDesc*)nullptr;
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const SbpParallel*)nullptr;
+    return *(const cfg::SbpParallel*)nullptr;
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                   int32_t) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                        int32_t) const override {
     UNIMPLEMENTED();
-    return *(const ParallelDistribution*)nullptr;
+    return *(const cfg::ParallelDistribution*)nullptr;
   }
   int64_t parallel_num() const override {
     UNIMPLEMENTED();

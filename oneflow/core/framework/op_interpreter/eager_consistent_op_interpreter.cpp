@@ -33,8 +33,9 @@ namespace one {
 class InputConsistentTensorMeta final {
  public:
   InputConsistentTensorMeta() : tensor_meta_(), consumer_parallel_distribution_constraint_() {}
-  InputConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
-                            Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint)
+  InputConsistentTensorMeta(
+      Symbol<ConsistentTensorMeta> tensor_meta,
+      Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint)
       : tensor_meta_(tensor_meta),
         consumer_parallel_distribution_constraint_(consumer_parallel_distribution_constraint) {}
 
@@ -140,8 +141,7 @@ class OpArgConsistentTensorMeta final {
   OpArgConsistentTensorMeta() : tensor_meta_(), parallel_distribution_() {}
   OpArgConsistentTensorMeta(Symbol<ConsistentTensorMeta> tensor_meta,
                             Symbol<cfg::ParallelDistribution> parallel_distribution)
-      : tensor_meta_(tensor_meta),
-        parallel_distribution_(parallel_distribution) {}
+      : tensor_meta_(tensor_meta), parallel_distribution_(parallel_distribution) {}
 
   OpArgConsistentTensorMeta(const OpArgConsistentTensorMeta&) = default;
   OpArgConsistentTensorMeta(OpArgConsistentTensorMeta&&) = default;
@@ -149,20 +149,16 @@ class OpArgConsistentTensorMeta final {
 
   size_t hash_value() const {
     return std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta())
-           ^ std::hash<Symbol<cfg::ParallelDistribution>>()(
-               parallel_distribution());
+           ^ std::hash<Symbol<cfg::ParallelDistribution>>()(parallel_distribution());
   }
 
   bool operator==(const OpArgConsistentTensorMeta& other) const {
     return this->tensor_meta() == other.tensor_meta()
-           && this->parallel_distribution()
-                  == other.parallel_distribution();
+           && this->parallel_distribution() == other.parallel_distribution();
   }
 
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
-  Symbol<cfg::ParallelDistribution> parallel_distribution() const {
-    return parallel_distribution_;
-  }
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const { return parallel_distribution_; }
   void assign(Symbol<ConsistentTensorMeta> tensor_meta,
               Symbol<cfg::ParallelDistribution> parallel_distribution) {
     tensor_meta_ = tensor_meta;
@@ -176,8 +172,8 @@ class OpArgConsistentTensorMeta final {
 
 class ConsistentTensorMetaInferResult final {
  public:
-  ConsistentTensorMetaInferResult(size_t output_size):
-    output_tensors_(std::make_shared<TensorTuple>(output_size)) {}
+  ConsistentTensorMetaInferResult(size_t output_size)
+      : output_tensors_(std::make_shared<TensorTuple>(output_size)) {}
 
   const std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>>& output_tensor_meta() const {
     return output_tensor_meta_;
@@ -211,19 +207,19 @@ namespace {
 class OpArgMutConsistentTensorMeta final {
  public:
   OpArgMutConsistentTensorMeta()
-    : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType),
-      parallel_distribution_() {}
+      : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType),
+        parallel_distribution_() {}
 
   OpArgMutConsistentTensorMeta(const OpArgMutConsistentTensorMeta&) = default;
   OpArgMutConsistentTensorMeta(OpArgMutConsistentTensorMeta&&) = default;
   ~OpArgMutConsistentTensorMeta() = default;
 
-  TensorMeta* mut_tensor_meta() { return tensor_meta_; }
-  ParallelDistribution* mut_parallel_distribution() { return parallel_distribution_; }
+  TensorMeta* mut_tensor_meta() { return &tensor_meta_; }
+  cfg::ParallelDistribution* mut_parallel_distribution() { return &parallel_distribution_; }
 
  private:
   TensorMeta tensor_meta_;
-  ParallelDistribution parallel_distribution_;
+  cfg::ParallelDistribution parallel_distribution_;
 };
 
 std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>> Infer(
@@ -233,7 +229,7 @@ std::shared_ptr<const std::vector<OpArgConsistentTensorMeta>> Infer(
   return std::shared_ptr<std::vector<OpArgConsistentTensorMeta>>();
 }
 
-}
+}  // namespace
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
