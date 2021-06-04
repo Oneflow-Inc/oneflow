@@ -230,27 +230,12 @@ jobs:
           src_path: ${wheelhouse_dir}
           dst_host: ${{ env.CI_STATIC_HOST }}
           dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
-      - name: Upload bin via SSH
-        if: matrix.test_suite == 'cuda' && env.is_built != '1' && matrix.test_suite != 'mac'
-        uses: ./.github/actions/upload_ssh
-        with:
-          src_path: ${bin_dir}
-          dst_host: ${{ env.CI_STATIC_HOST }}
-          dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
       - name: Upload wheel to cloud, enable by adding label 'upload-wheel'
         if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_oss
         with:
           src_path: ${wheelhouse_dir}
           oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Upload bin to cloud, enable by adding label 'upload-wheel'
-        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'mac'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Remove container
