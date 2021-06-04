@@ -22,6 +22,45 @@ from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
 
 
+def slice(x, begin, size):
+    ndim = len(x.shape)
+    if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
+        raise ValueError(
+            "begin must be a list/tuple with the same length as input tensor's number of dimensions"
+        )
+
+    if not all(isinstance(b, int) or b is None for b in begin):
+        raise ValueError("element of begin must be a int or None")
+
+    if not isinstance(size, (list, tuple)) or len(size) != ndim:
+        raise ValueError(
+            "size must be a list/tuple with the same length as input tensor's number of dimensions."
+        )
+
+    if not all(isinstance(s, int) or s is None for s in size):
+        raise ValueError("element of size must be a int or None")
+
+    slice_tup_list = []
+    for b, s, dim_size in zip(begin, size, x.shape):
+        start, stop, step = (None, None, 1)
+        if b is not None:
+            if b < -dim_size or b >= dim_size:
+                raise ValueError("element of begin is out of range")
+            start = b
+
+        if s is not None:
+            if s == -1:
+                stop = dim_size
+            else:
+                if s <= 0 or s > dim_size:
+                    raise ValueError("element of size is invalid")
+                if b + s < dim_size:
+                    stop = b + s
+
+        slice_tup_list.append((start, stop, step))
+    return flow.experimental.slice(x, slice_tup_list)
+
+
 class ConvUtil(object):
     @classmethod
     def split(cls, x, axis, split_num):
@@ -32,7 +71,7 @@ class ConvUtil(object):
         slice_size[axis] = split_len
         for i in range(split_num):
             slice_begin[axis] = i * split_len
-            result = flow.slice(x, slice_begin, slice_size)
+            result = slice(x, slice_begin, slice_size)
             result_list.append(result)
         return result_list
 
@@ -173,6 +212,7 @@ class Conv2d(Module):
         padding = _pair(padding)
         dilation = _pair(dilation)
         self.groups = groups
+        self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *kernel_size)
         )
@@ -203,6 +243,20 @@ class Conv2d(Module):
             .Output("out")
             .Build()
         )
+        self._cpu_op = (
+            flow.builtin_op("conv2d")
+            .Input("in")
+            .Input("weight")
+            .Attr("filters", out_channels // groups)
+            .Attr("padding_before", padding)
+            .Attr("strides", stride)
+            .Attr("kernel_size", kernel_size)
+            .Attr("dilation_rate", dilation)
+            .Attr("groups", 1)
+            .Attr("data_format", "channels_first")
+            .Output("out")
+            .Build()
+        )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -213,31 +267,19 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device == flow.device("cpu") and self.groups > 1:
+        if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
             filter_out_axis = 0
             in_split_list = ConvUtil.split(
-                inputs, axis=in_channel_axis, split_num=groups
+                x, axis=in_channel_axis, split_num=self.groups
             )
             filter_split_list = ConvUtil.split(
-                filters, axis=filter_out_axis, split_num=groups
+                self.weight, axis=filter_out_axis, split_num=self.groups
             )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(
-                    self._op(
-                        in_split_list[i],
-                        filter_split_list[i],
-                        padding_before,
-                        channel_pos,
-                        kernel_size_list,
-                        strides,
-                        dilations,
-                        groups=1,
-                        name=name + str(i),
-                    )[0]
-                )
-            res = flow.cat(out_list, axis=in_channel_axis)
+                out_list.append(self._cpu_op(in_split_list[i], self.weight[i])[0])
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
 

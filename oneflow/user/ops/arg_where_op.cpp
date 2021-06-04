@@ -20,9 +20,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
+  const Shape& input_shape = ctx->InputShape("input", 0);
   user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-  *output_desc->mut_shape() = Shape({input_shape->elem_cnt(), input_shape->NumAxes()});
+  *output_desc->mut_shape() = Shape({input_shape.elem_cnt(), input_shape.NumAxes()});
   output_desc->set_is_dynamic(true);
   user_op::TensorDesc* output_size_desc = ctx->TensorDesc4ArgNameAndIndex("output_size", 0);
   *output_size_desc->mut_shape() = Shape({1});

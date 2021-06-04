@@ -25,23 +25,23 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Attr<bool>("hash_precomputed")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);
-      const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
-      CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
-      const Shape* size_shape = ctx->Shape4ArgNameAndIndex("size", 0);
-      CHECK_EQ_OR_RETURN(size_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(size_shape->elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& table_shape = ctx->InputShape("table", 0);
+      CHECK_EQ_OR_RETURN(table_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(table_shape.elem_cnt() % 2, 0);
+      const Shape& size_shape = ctx->InputShape("size", 0);
+      CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
-      CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
-      const Shape* size_shape = ctx->Shape4ArgNameAndIndex("size", 0);
-      CHECK_EQ_OR_RETURN(size_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(size_shape->elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& table_shape = ctx->InputShape("table", 0);
+      CHECK_EQ_OR_RETURN(table_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(table_shape.elem_cnt() % 2, 0);
+      const Shape& size_shape = ctx->InputShape("size", 0);
+      CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
+      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
