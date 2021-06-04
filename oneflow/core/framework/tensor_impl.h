@@ -98,7 +98,7 @@ class MirroredTensorImpl : public TensorImpl {
   Maybe<void> set_device(const std::shared_ptr<const Device>& device);
   virtual Maybe<void> set_eager_blob_object(
       std::shared_ptr<vm::EagerBlobObject> eager_blob_object) = 0;
-  virtual Maybe<void> set_tensor_storage(const std::shared_ptr<TensorStorage>& tensor_storage) = 0;
+  virtual Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) = 0;
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const Device>& device,
@@ -206,7 +206,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
       std::shared_ptr<vm::EagerBlobObject> eager_blob_object) override {
     return Error::Unimplemented();
   }
-  Maybe<void> set_tensor_storage(const std::shared_ptr<TensorStorage>& tensor_storage) override {
+  Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
     return Error::Unimplemented();
   }
 
@@ -226,7 +226,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
                           bool is_leaf);
   EagerMirroredTensorImpl(const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
                           const std::shared_ptr<const Device>& device,
-                          const std::shared_ptr<TensorStorage>& tensor_storage, bool requires_grad,
+                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
                           bool is_leaf);
   ~EagerMirroredTensorImpl() override;
 
@@ -243,7 +243,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Setters
   void set_shape(const std::shared_ptr<const Shape>& shape) override { UNIMPLEMENTED(); }
   void set_dtype(DataType dtype) override { UNIMPLEMENTED(); }
-  Maybe<void> set_tensor_storage(const std::shared_ptr<TensorStorage>& tensor_storage) override {
+  Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
     tensor_storage_ = tensor_storage;
     return Maybe<void>::Ok();
   }
