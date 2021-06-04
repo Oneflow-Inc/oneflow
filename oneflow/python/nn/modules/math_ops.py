@@ -867,10 +867,10 @@ class Atan(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-    
+
 @oneflow_export("atan")
 @experimental_api
-def atan_op(tensor): 
+def atan_op(tensor):
     r"""
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
