@@ -83,6 +83,22 @@ class FlattenFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class WhereFunctor {
+ public:
+  WhereFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("where").Input("condition").Input("x").Input("y").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
+                           const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x, y});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ArgWhereFunctor {
  public:
   ArgWhereFunctor() {
@@ -348,10 +364,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");
   m.add_functor<impl::OnesLikeFunctor>("OnesLike");
   m.add_functor<impl::FlattenFunctor>("Flatten");
+  m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
   m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::ExpandFunctor>("Expand");
+  m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
