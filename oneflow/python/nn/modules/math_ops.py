@@ -848,24 +848,28 @@ class Atan(Module):
     
 @oneflow_export("atan")
 @experimental_api
-def atan_op(tensor):
+def atan_op(tensor): 
     r"""
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
     .. math::
         \text{out}_{i} = \tan^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
-
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.atan(input)
-        # [0.4636476  0.5404195  0.61072594]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> output = flow.atan(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [0.4636476  0.5404195  0.61072594]
     """
     return Atan()(tensor)
 
@@ -1213,4 +1217,4 @@ def cosh_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(name="asinh_op")
+    doctest.testmod(name="atan_op")
