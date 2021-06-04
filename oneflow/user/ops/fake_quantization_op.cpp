@@ -43,7 +43,7 @@ REGISTER_USER_OP("fake_quantization")
         CHECK_EQ_OR_RETURN(zero_point_shape.elem_cnt(), in_shape.At(0));
       }
 
-      *ctx->Shape4ArgNameAndIndex("out", 0) = in_shape;
+      *ctx->OutputShape("out", 0) = in_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
