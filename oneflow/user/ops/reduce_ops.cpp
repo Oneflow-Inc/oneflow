@@ -20,11 +20,11 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+  const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
   CHECK_OR_RETURN(!reduce_axes.empty());
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
-  const Shape& reduce_shape = CreateReducedShape(*input_shape, reduce_axes_vec);
+  const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdims = ctx->Attr<bool>("keepdims");
   Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
   if (keepdims) {

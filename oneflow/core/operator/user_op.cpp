@@ -157,6 +157,9 @@ class UserOpInferContext final : public user_op::InferContext {
                    .first->second);
     }
   }
+  const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
