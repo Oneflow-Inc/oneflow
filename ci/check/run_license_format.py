@@ -41,7 +41,7 @@ def check_file(path):
             return ("license_duplicated", content)
         elif content.startswith(txt) or (not content):
             return ("ok", content)
-        else:
+        elif content.startswith(txt) == False:
             return ("license_absent", content)
 
 
