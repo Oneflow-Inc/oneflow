@@ -26,7 +26,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
   const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
+  Shape* output_shape = ctx->OutputShape("output_tensor", 0);
   if (keepdims) {
     *output_shape = reduce_shape;
   } else {

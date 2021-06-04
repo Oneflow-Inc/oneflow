@@ -35,7 +35,7 @@ REGISTER_USER_OP("pad")
       FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
         y_dim_vec[i] = x_shape.At(i) + padding_before[i] + padding_after[i];
       }
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);
+      *ctx->OutputShape("y", 0) = Shape(y_dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -74,7 +74,7 @@ REGISTER_USER_OP("pad_grad")
       FOR_RANGE(int64_t, i, 0, dy_shape.NumAxes()) {
         dx_dim_vec[i] = dy_shape.At(i) - padding_before[i] - padding_after[i];
       }
-      *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);
+      *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
