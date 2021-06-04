@@ -34,8 +34,7 @@ class ScalarPow : public OpExprGradFunction<ScalarPowInterpState> {
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
-    double exponent = 1.0;
-    grad_op_ = JUST(op_expr_helper::ScalarPowGradOp(exponent, GradientOpName(op_name)));
+    grad_op_ = JUST(op_expr_helper::ScalarPowGradOp(/*exponent=*/1.0, GradientOpName(op_name)));
     return Maybe<void>::Ok();
   }
 
