@@ -89,18 +89,24 @@ def matmul_op(a, b):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example:
+    For example: 
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        
-        input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
-        input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
-        of_out = flow.matmul(input1, input2)
-
-        # of_out.shape (2, 5)
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input1 = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> of_out = flow.matmul(input1, input2)
+        >>> print(of_out.shape)
+        flow.Size([2, 5])
 
     """
     return MatMul()(a, b)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()

@@ -335,8 +335,8 @@ Maybe<one::UserOpExpr> BroadcastDivGradOp() {
 Maybe<one::UserOpExpr> BroadcastDivGradOp(const std::string& name) {
   return one::OpBuilder("broadcast_div_grad", name)
       .Input("dz")
-      .Input("y")
       .Input("z")
+      .Input("y")
       .Output("dy")
       .Build();
 }
@@ -603,6 +603,16 @@ Maybe<one::UserOpExpr> SplitLikeOp(const int n, const int64_t axis, const std::s
       .Build();
 }
 
+Maybe<one::UserOpExpr> WhereOp() { return WhereOp(UniqueOpName("where")); }
+Maybe<one::UserOpExpr> WhereOp(const std::string& name) {
+  return one::OpBuilder("where", name)
+      .Input("condition")
+      .Input("x")
+      .Input("y")
+      .Output("out")
+      .Build();
+}
+
 Maybe<one::UserOpExpr> ExpandGradOp(const std::vector<int32_t>& out_shape,
                                     const std::vector<int32_t>& stride) {
   return ExpandGradOp(out_shape, stride, UniqueOpName("expand_grad"));
@@ -648,6 +658,16 @@ Maybe<one::UserOpExpr> BinaryYGradOp(const std::string& binary_op_type, const st
       .Build();
 }
 
+#define MATMUL_SERIES_OPS(op_type_name)       \
+  return one::OpBuilder(op_type_name, name)   \
+      .Input("a")                             \
+      .Input("b")                             \
+      .Output("out")                          \
+      .Attr<bool>("transpose_a", transpose_a) \
+      .Attr<bool>("transpose_b", transpose_b) \
+      .Attr<double>("alpha", alpha)           \
+      .Build();
+
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha) {
   return MatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("matmul"));
@@ -655,12 +675,39 @@ Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b
 
 Maybe<one::UserOpExpr> MatmulOp(const bool& transpose_a, const bool& transpose_b,
                                 const double& alpha, const std::string& name) {
-  return one::OpBuilder("matmul", name)
+  MATMUL_SERIES_OPS("matmul");
+}
+
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha) {
+  return BatchMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("batch_matmul"));
+}
+
+Maybe<one::UserOpExpr> BatchMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                     const double& alpha, const std::string& name) {
+  MATMUL_SERIES_OPS("batch_matmul");
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha) {
+  return BroadcastMatmulOp(transpose_a, transpose_b, alpha, UniqueOpName("broadcast_matmul"));
+}
+
+Maybe<one::UserOpExpr> BroadcastMatmulOp(const bool& transpose_a, const bool& transpose_b,
+                                         const double& alpha, const std::string& name) {
+  MATMUL_SERIES_OPS("broadcast_matmul");
+}
+
+#undef MATMUL_SERIES_OPS
+
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha) {
+  return BroadcastMatmulGradBOp(alpha, UniqueOpName("broadcast_matmul_grad_b"));
+}
+Maybe<one::UserOpExpr> BroadcastMatmulGradBOp(const double& alpha, const std::string& name) {
+  return one::OpBuilder("broadcast_matmul_grad_b", name)
       .Input("a")
       .Input("b")
       .Output("out")
-      .Attr<bool>("transpose_a", transpose_a)
-      .Attr<bool>("transpose_b", transpose_b)
       .Attr<double>("alpha", alpha)
       .Build();
 }
@@ -694,6 +741,40 @@ Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
       .Attr<std::vector<int64_t>>("stop", stop)
       .Attr<std::vector<int64_t>>("step", step)
       .Output("dx")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode) {
+  return PoolNdGradOp(mode, data_format, padding, padding_before, padding_after, pool_size, strides,
+                      ceil_mode, UniqueOpName(mode + "_pool_nd_grad"));
+}
+
+Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
+                                    const std::string& padding,
+                                    const std::vector<int32_t>& padding_before,
+                                    const std::vector<int32_t>& padding_after,
+                                    const std::vector<int32_t>& pool_size,
+                                    const std::vector<int32_t>& strides, const bool& ceil_mode,
+                                    const std::string& name) {
+  int ndims = pool_size.size();
+  std::string op_type_name = mode + "_pool_" + std::to_string(ndims) + "d_grad";
+  return one::OpBuilder(op_type_name, name)
+      .Input("x")
+      .Input("y")
+      .Input("dy")
+      .Output("dx")
+      .Attr<std::string>("data_format", data_format)
+      .Attr<std::string>("padding", padding)
+      .Attr<std::vector<int32_t>>("padding_before", padding_before)
+      .Attr<std::vector<int32_t>>("padding_after", padding_after)
+      .Attr<std::vector<int32_t>>("pool_size", pool_size)
+      .Attr<std::vector<int32_t>>("strides", strides)
+      .Attr<bool>("ceil_mode", ceil_mode)
       .Build();
 }
 
