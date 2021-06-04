@@ -66,6 +66,36 @@ def _test_mul_impl(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-5, 1e-5))
     test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-5, 1e-5))
 
+    x = flow.Tensor(
+        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
+    )
+    y = flow.Tensor(
+        np.random.randn(2, 3, 4), device=flow.device(device), requires_grad=True
+    )
+    of_out = flow.mul(x, y)
+    np_out = np.multiply(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-5, 1e-5))
+
+    x = flow.Tensor(
+        np.random.randn(1, 1), device=flow.device(device), requires_grad=True
+    )
+    y = flow.Tensor(
+        np.random.randn(2, 3, 4, 5), device=flow.device(device), requires_grad=True
+    )
+    of_out = flow.mul(x, y)
+    np_out = np.multiply(x.numpy(), y.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np.sum(y.numpy()), 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
