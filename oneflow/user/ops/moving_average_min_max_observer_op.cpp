@@ -49,8 +49,8 @@ REGISTER_USER_OP("moving_average_min_max_observer")
 
       CHECK_OR_RETURN(current_train_step.NumAxes() == 1 && current_train_step.At(0) == 1);
 
-      *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
-      *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
+      *ctx->OutputShape("scale", 0) = Shape({1});
+      *ctx->OutputShape("zero_point", 0) = Shape({1});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

@@ -23,7 +23,7 @@ REGISTER_USER_OP("ccrelu")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
@@ -43,7 +43,7 @@ REGISTER_USER_OP("ccrelu_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& y_shape = ctx->InputShape("y", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       CHECK(dy_shape == y_shape);
       *dx_shape = y_shape;
       return Maybe<void>::Ok();
@@ -82,7 +82,7 @@ REGISTER_USER_OP("TestReshape")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& conf_shape = ctx->Attr<Shape>("shape");
       CHECK_EQ(in_shape.NumAxes(), conf_shape.NumAxes());
       *out_shape = conf_shape;
@@ -96,7 +96,7 @@ REGISTER_USER_OP("TestReshape")
 REGISTER_USER_OP("TestSource")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = Shape({5});
       return Maybe<void>::Ok();
     })
@@ -115,8 +115,8 @@ REGISTER_USER_OP("TestMultiOutputOrder")
     .Output("out2")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out1_shape = ctx->Shape4ArgNameAndIndex("out1", 0);
-      Shape* out2_shape = ctx->Shape4ArgNameAndIndex("out2", 0);
+      Shape* out1_shape = ctx->OutputShape("out1", 0);
+      Shape* out2_shape = ctx->OutputShape("out2", 0);
       *out1_shape = in_shape;
       *out2_shape = in_shape;
       int32_t last_axis = in_shape.NumAxes() - 1;
@@ -137,13 +137,13 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
     .Output("out")
     .Attr<int64_t>("out_num")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
       *out_shape = Shape({out_num});
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t out_num = ctx->Attr<int64_t>("out_num");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
@@ -173,7 +173,7 @@ REGISTER_USER_OP("TestMultiInput")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x1_shape = ctx->InputShape("x1", 0);
       const Shape& x2_shape = ctx->InputShape("x2", 0);
-      Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+      Shape* y_shape = ctx->OutputShape("y", 0);
       CHECK(x1_shape == x2_shape);
       *y_shape = x1_shape;
       return Maybe<void>::Ok();
@@ -199,8 +199,8 @@ REGISTER_USER_OP("TestMultiInputGrad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x1_shape = ctx->InputShape("x1", 0);
       const Shape& x2_shape = ctx->InputShape("x2", 0);
-      Shape* x1_diff_shape = ctx->Shape4ArgNameAndIndex("x1_diff", 0);
-      Shape* x2_diff_shape = ctx->Shape4ArgNameAndIndex("x2_diff", 0);
+      Shape* x1_diff_shape = ctx->OutputShape("x1_diff", 0);
+      Shape* x2_diff_shape = ctx->OutputShape("x2_diff", 0);
       *x1_diff_shape = x1_shape;
       *x2_diff_shape = x2_shape;
       return Maybe<void>::Ok();
@@ -278,7 +278,7 @@ REGISTER_USER_OP("TestDataTypeAttr")
     .Attr<DataType>("output_type")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
@@ -297,7 +297,7 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
       const auto& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
       const auto& string_list = ctx->Attr<std::vector<std::string>>("string_list");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-        *ctx->Shape4ArgNameAndIndex("out", i) = out_shapes.at(i);
+        *ctx->OutputShape("out", i) = out_shapes.at(i);
       }
       CHECK_GT_OR_RETURN(string_list.size(), 0);
       return Maybe<void>::Ok();
