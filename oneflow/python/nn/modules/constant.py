@@ -144,7 +144,7 @@ def zeros_op(
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor. Can be \
+        size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional) – the desired data type of returned tensor.
         device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
