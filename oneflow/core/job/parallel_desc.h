@@ -55,7 +55,7 @@ class ParallelDesc final {
   // Getters
   const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   DeviceType device_type() const { return device_type_; }
-  std::string device_tag() const { return parallel_conf_.device_tag(); }
+  const std::string& device_tag() const { return parallel_conf_.device_tag(); }
   std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
   machine_id2sorted_dev_phy_ids() const {
     return machine_id2sorted_dev_phy_ids_;
