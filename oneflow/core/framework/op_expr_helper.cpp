@@ -803,5 +803,18 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Build();
 }
 
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis) {
+  return UnsortedSegmentSumLikeOp(axis, UniqueOpName("unsorted_segment_sum_like"));
+}
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name) {
+  return one::OpBuilder("unsorted_segment_sum_like", name)
+      .Input("data")
+      .Input("segment_ids")
+      .Input("like")
+      .Output("out")
+      .Attr<int64_t>("axis", axis)
+      .Build();
+}
+
 }  // namespace op_expr_helper
 }  // namespace oneflow
