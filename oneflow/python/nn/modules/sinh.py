@@ -35,13 +35,13 @@ def sinh_op(x):
 
     .. math::
         \text{out}_{i} = \sinh(\text{input}_{i})
-    
+
     Args:
         input (Tensor): the input tensor.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -80,4 +80,4 @@ def sinh_op_tensor(x):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
