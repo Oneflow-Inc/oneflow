@@ -1,9 +1,20 @@
-add_library(oneflow SHARED example.cpp)
+find_package(JNI)
+
+if (JNI_FOUND)
+    message (STATUS "-- JNI_INCLUDE_DIRS=${JNI_INCLUDE_DIRS}")
+    message (STATUS "-- JNI_LIBRARIES=${JNI_LIBRARIES}")
+else ()
+    message (FATAL_ERROR "JNI is not found on your machine")
+endif()
+
+aux_source_directory(env ENV_SRC)
+aux_source_directory(job_build JOB_BUILD_SRC)
+message (STATUS "-- ENV_SRC=${ENV_SRC}")
+message (STATUS "-- JOB_BUILD_SRC=${JOB_BUILD_SRC}")
+add_library(oneflow SHARED ${ENV_SRC} ${JOB_BUILD_SRC})
 
 target_include_directories(
     oneflow
     PRIVATE
-    ${CMAKE_SOURCE_DIR}
-    /home/percent1/environment/jdk-11/include/
-    /home/percent1/environment/jdk-11/include/linux/
+    ${JNI_INCLUDE_DIRS}
 )
