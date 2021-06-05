@@ -47,7 +47,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->shape();
+  *ctx->OutputShape("prediction_diff", 0) = prediction_desc->shape();
   *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->is_dynamic();
   return Maybe<void>::Ok();
 }

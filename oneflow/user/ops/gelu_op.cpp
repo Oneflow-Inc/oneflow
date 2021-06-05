@@ -22,7 +22,7 @@ REGISTER_USER_OP("gelu")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
@@ -48,7 +48,7 @@ REGISTER_USER_OP("gelu_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& x_shape = ctx->InputShape("x", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       CHECK(dy_shape == x_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();

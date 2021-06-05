@@ -27,7 +27,7 @@ REGISTER_USER_OP("smooth_l1_loss")
       const Shape& label_shape = ctx->InputShape("label", 0);
       CHECK_EQ_OR_RETURN(prediction_shape, label_shape);
       CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
-      *ctx->Shape4ArgNameAndIndex("loss", 0) = prediction_shape;
+      *ctx->OutputShape("loss", 0) = prediction_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -64,7 +64,7 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       CHECK_EQ_OR_RETURN(loss_grad_shape, prediction_shape);
       CHECK_EQ_OR_RETURN(prediction_shape, label_shape);
       CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
-      *ctx->Shape4ArgNameAndIndex("prediction_grad", 0) = loss_grad_shape;
+      *ctx->OutputShape("prediction_grad", 0) = loss_grad_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

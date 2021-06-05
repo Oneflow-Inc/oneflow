@@ -13,31 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-
 import oneflow as flow
-from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Log1p(Module):
-    def __init__(self) -> None:
+class Tan(Module):
+    def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("log1p").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("tan").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
 
-@oneflow_export("log1p")
-@register_tensor_op("log1p")
+@oneflow_export("tan")
 @experimental_api
-def log1p_op(input):
-    r"""Returns a new tensor with the natural logarithm of (1 + input).
+def tan_op(input):
+    r"""Returns  the tan value of the elements of :attr:`input`.
 
     .. math::
-        \text{out}_{i}=\log_e(1+\text{input}_{i})
+        \text{out}_{i} = \tan(\text{input}_{i})
+    Args:
+        input (Tensor): the input tensor.
 
     For example:
 
@@ -46,13 +45,26 @@ def log1p_op(input):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
-        >>> out = flow.log1p(x).numpy()
-        >>> out
-        array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
+        >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.tan(input)
+        >>> print(output.numpy())
+        [-1.  0.  1.]
+    """
+
+    return Tan()(input)
+
+
+@register_tensor_op("tan")
+@experimental_api
+def tan_op_tensor(input):
+    r"""
+    tan() -> Tensor
+    See :func:`oneflow.experimental.tan`
 
     """
-    return Log1p()(input)
+
+    return Tan()(input)
 
 
 if __name__ == "__main__":
