@@ -38,8 +38,8 @@ REGISTER_USER_OP("ctc_loss")
       CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
-      *ctx->Shape4ArgNameAndIndex("loss", 0) = Shape({batch_size});
-      *ctx->Shape4ArgNameAndIndex("alpha", 0) =
+      *ctx->OutputShape("loss", 0) = Shape({batch_size});
+      *ctx->OutputShape("alpha", 0) =
           Shape({batch_size, log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
       return Maybe<void>::Ok();
     })
@@ -83,7 +83,7 @@ REGISTER_USER_OP("ctc_loss_grad")
       CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
       CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
-      *ctx->Shape4ArgNameAndIndex("grad", 0) = log_probs->shape();
+      *ctx->OutputShape("grad", 0) = log_probs->shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
