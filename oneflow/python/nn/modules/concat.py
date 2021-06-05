@@ -61,7 +61,7 @@ def concat_op(inputs, dim=0):
 
     Args:
         inputs: a `list` of `Tensor`
-        dim: a `int`. 
+        dim: a `int`.
 
     Returns:
         A `Tensor`
@@ -90,4 +90,4 @@ def concat_op(inputs, dim=0):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
