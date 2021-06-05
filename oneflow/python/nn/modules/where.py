@@ -106,9 +106,8 @@ def where_op(condition, x, y):
 
     .. note::
 
-    The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
-
-    it will take the `x` element, else it will take the `y` element.
+        The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
+        It will take the `x` element, else it will take the `y` element.
 
     Args:
         condition (IntTensor): When 1 (nonzero), yield x, otherwise yield y

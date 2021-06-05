@@ -47,9 +47,9 @@ def to_op(input, *args, **kwargs):
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
     
     .. note::
-    If the ``input`` Tensor already
-    has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
-    Otherwise, the returned tensor is a copy of ``input`` with the desired.
+        If the ``input`` Tensor already
+        has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
+        Otherwise, the returned tensor is a copy of ``input`` with the desired.
 
     Args:
         input (oneflow.Tensor): An input tensor.

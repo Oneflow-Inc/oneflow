@@ -35,6 +35,7 @@ def atanh_op(input):
 
     .. math::
         \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -50,6 +51,7 @@ def atanh_op(input):
         >>> output = flow.atanh(input)
         >>> print(output.numpy())
         [0.54930615 0.6931472  0.8673005 ]
+
     """
 
     return Atanh()(input)

@@ -99,16 +99,14 @@ class Conv2d(Module):
 
     * :attr:`stride` controls the stride for the cross-correlation, a single
       number or a tuple.
-
     * :attr:`padding` controls the amount of implicit padding on both
       sides for :attr:`padding` number of points for each dimension.
-
     * :attr:`dilation` controls the spacing between the kernel points; also
       known as the à trous algorithm. It is harder to describe, but this `link`_
       has a nice visualization of what :attr:`dilation` does.
-
-    * :attr:`groups` controls the connections between inputs and outputs. :attr:`in_channels` 
-       and :attr:`out_channels` must both be divisible by :attr:`groups`. For example,
+    * :attr:`groups` controls the connections between inputs and outputs.
+      :attr:`in_channels` and :attr:`out_channels` must both be divisible by
+      :attr:`groups`. For example,
 
         * At groups=1, all inputs are convolved to all outputs.
         * At groups=2, the operation becomes equivalent to having two conv
