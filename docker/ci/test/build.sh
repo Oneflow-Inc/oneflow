@@ -4,6 +4,7 @@ test_img_dir="$(realpath "${test_img_dir}")"
 cd $test_img_dir
 
 proxy_args=""
+proxy_args+=" --network=host"
 proxy_args+=" --build-arg HTTP_PROXY=${HTTP_PROXY}"
 proxy_args+=" --build-arg HTTPS_PROXY=${HTTPS_PROXY}"
 proxy_args+=" --build-arg http_proxy=${http_proxy}"
