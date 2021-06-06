@@ -157,5 +157,11 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.clamp
 .. autofunction:: oneflow.experimental.clip
 .. autofunction:: oneflow.experimental.Tensor.clip
+.. autofunction:: oneflow.experimental.atanh
+.. autofunction:: oneflow.experimental.Tensor.atanh
+.. autofunction:: oneflow.experimental.arctanh
+.. autofunction:: oneflow.experimental.Tensor.arctanh
+.. autofunction:: oneflow.experimental.tan
+.. autofunction:: oneflow.experimental.Tensor.tan
 .. autofunction:: oneflow.experimental.log1p
 .. autofunction:: oneflow.experimental.Tensor.log1p

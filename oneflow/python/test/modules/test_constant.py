@@ -23,25 +23,39 @@ from test_util import GenArgList
 
 
 def _test_ones(test_case, device, shape):
-    y = flow.ones(shape)
+    y = flow.ones(shape, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(shape), y.numpy()))
 
-    y2 = flow.ones(10)
+    y2 = flow.ones(10, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(10), y2.numpy()))
 
-    y3 = flow.ones(10, dtype=flow.float64)
+    y3 = flow.ones(10, dtype=flow.float64, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.ones(10, dtype=np.float64), y3.numpy()))
 
 
+def _test_ones_backward(test_case, device, shape):
+    x = flow.ones(shape, device=flow.device(device), requires_grad=True)
+    y = x.sum()
+    y.backward()
+    test_case.assertTrue(np.array_equal(np.ones(shape), x.grad.numpy()))
+
+
 def _test_zeros(test_case, device, shape):
-    y = flow.zeros(shape)
+    y = flow.zeros(shape, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.zeros(shape), y.numpy()))
 
-    y2 = flow.zeros(10)
+    y2 = flow.zeros(10, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.zeros(10), y2.numpy()))
 
-    y3 = flow.zeros(10, dtype=flow.int)
+    y3 = flow.zeros(10, dtype=flow.int, device=flow.device(device))
     test_case.assertTrue(np.array_equal(np.zeros(10, dtype=int), y3.numpy()))
+
+
+def _test_zeros_backward(test_case, device, shape):
+    x = flow.zeros(shape, device=flow.device(device), requires_grad=True)
+    y = x.sum()
+    y.backward()
+    test_case.assertTrue(np.array_equal(np.ones(shape), x.grad.numpy()))
 
 
 def _test_ones_like(test_case, device, shape):
@@ -78,6 +92,8 @@ class TestConstantModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_ones,
             _test_zeros,
+            _test_ones_backward,
+            _test_zeros_backward,
             _test_ones_like,
             _test_zeros_like,
         ]
