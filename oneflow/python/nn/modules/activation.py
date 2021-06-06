@@ -563,19 +563,21 @@ class LogSoftmax(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.LogSoftmax(dim=1)
-        x = flow.Tensor(
-            np.array(
-                [[ 0.4296, -1.1957,  2.5463],
-                [ 1.2552, -1.5747,  0.6923]]
-            )
-        )
-        y = m(x)
-        # [[-2.251349   -3.8766491  -0.13464898]
-        # [-0.48770458 -3.3176045  -1.0506046 ]]
+        >>> m = flow.nn.LogSoftmax(dim=1)
+        >>> x = flow.Tensor(
+        ...    np.array(
+        ...        [[ 0.4296, -1.1957,  2.5463],
+        ...        [ 1.2552, -1.5747,  0.6923]]
+        ...    )
+        ... )
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [[-2.2513487 -3.8766491 -0.1346489]
+         [-0.4877046 -3.3176045 -1.0506046]]
     """
 
     def __init__(
@@ -898,4 +900,4 @@ class LeakyReLU(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
