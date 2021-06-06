@@ -861,11 +861,6 @@ class LeakyReLU(Module):
     r"""Applies the element-wise function:
 
     .. math::
-        \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
-
-    or
-
-    .. math::
         \text{LeakyRELU}(x) = \begin{cases}
             x, & \text{ if } x \geq 0 \\
             \text{negative_slope} \times x, & \text{ otherwise }
