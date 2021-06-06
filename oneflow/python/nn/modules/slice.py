@@ -166,4 +166,4 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
