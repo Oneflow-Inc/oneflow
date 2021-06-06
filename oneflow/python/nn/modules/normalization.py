@@ -196,7 +196,7 @@ class LayerNorm(Module):
             return affined
         else:
             if self.elementwise_affine:
-                flow.F.layer_norm_affile(
+                flow.F.layer_norm_affine(
                     x,
                     self.weight,
                     self.bias,

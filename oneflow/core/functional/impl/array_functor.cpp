@@ -357,6 +357,28 @@ class UpsampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class UnsortedSegmentSumLikeFunctor {
+ public:
+  UnsortedSegmentSumLikeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unsorted_segment_sum_like")
+                         .Input("data")
+                         .Input("segment_ids")
+                         .Input("like")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& segment_ids,
+                           const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -380,6 +402,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::UpsampleFunctor>("Upsample");
+  m.add_functor<impl::UnsortedSegmentSumLikeFunctor>("UnsortedSegmentSumLike");
 };
 
 }  // namespace functional

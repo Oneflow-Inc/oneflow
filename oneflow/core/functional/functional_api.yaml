@@ -316,13 +316,13 @@
 
 - name: "layer_norm_affine"
   signature:
-    "Tensor LayerNormAffine(Tensor x, Tensor beta, Tensor gamma, Int64 begin_norm_axis,
+    "Tensor LayerNormAffine(Tensor x, Tensor beta, Tensor gamma, *, Int64 begin_norm_axis,
                             Int64 begin_params_axis, Double epsilon)"
   bind_python: True
 
 - name: "layer_norm"
   signature:
-    "Tensor LayerNorm(Tensor x, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon)"
+    "Tensor LayerNorm(Tensor x, *, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon)"
   bind_python: True
 
 - name: "avg_pool_2d"
@@ -452,3 +452,8 @@
 - name: "softplus"
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
+
+- name: "unsorted_segment_sum_like"
+  signature:
+    "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
+  bind_python: False
