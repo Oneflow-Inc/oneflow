@@ -115,8 +115,7 @@ class AvgPool2d(Module):
 @experimental_api
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
 
     Applies a 1D max pooling over an input signal composed of several input planes.
 
@@ -172,8 +171,7 @@ class MaxPool1d(Module):
 @experimental_api
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
 
     Applies a 2D max pooling over an input signal composed of several input planes.
 
@@ -302,8 +300,7 @@ class MaxPool2d(Module):
 @experimental_api
 class MaxPool3d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
 
     Applies a 3D max pooling over an input signal composed of several input planes.
 

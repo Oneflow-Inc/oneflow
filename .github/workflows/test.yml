@@ -382,6 +382,12 @@ jobs:
             $extra_docker_args \
             oneflow-test:$USER \
             ${bin_dir}/oneflow_testexe
+      - name: Build documentation
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed)
         if: matrix.test_suite == 'cuda'
         run: |
@@ -482,12 +488,6 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
-      - name: Build documentation
-        if: matrix.test_suite == 'cuda'
-        run: |
-          docker run $extra_docker_args \
-            oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Query system status
         if: ${{ failure() }}
         run: |
