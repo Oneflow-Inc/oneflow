@@ -175,10 +175,16 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
-      base_attrs_(base_attrs) {
-  const auto* registry =
-      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
-  if (registry && registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+      base_attrs_(base_attrs) {}
+
+const user_op::DeviceInferFn& UserOpExpr::device_infer_fn() const {
+  if (!device_infer_fn_) {
+    device_infer_fn_ = std::make_shared<user_op::DeviceInferFn>();
+    const auto* registry =
+        user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
+    if (registry && registry->device_infer_fn) { *device_infer_fn_ = registry->device_infer_fn; }
+  }
+  return *device_infer_fn_;
 }
 
 /* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
@@ -192,9 +198,9 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
 Maybe<const Device> UserOpExpr::InferDevices(
     const AttrMap& attrs, const TensorTuple& input_tensors,
     std::vector<std::shared_ptr<const Device>>* output_devices) const {
-  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
+  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn()));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_devices);
-  return TRY(device_infer_fn_(&device_infer_ctx));
+  return TRY(device_infer_fn()(&device_infer_ctx));
 }
 
 template<>

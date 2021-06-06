@@ -127,7 +127,9 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
-  bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
+  bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn()); }
+  const user_op::DeviceInferFn& device_infer_fn() const;
+
   Maybe<const Device> InferDevices(
       const AttrMap& attrs, const TensorTuple& inputs,
       std::vector<std::shared_ptr<const Device>>* outputs_devices) const;
@@ -137,7 +139,7 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
   AttrMap base_attrs_;
-  user_op::DeviceInferFn device_infer_fn_;
+  mutable std::shared_ptr<user_op::DeviceInferFn> device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
 
