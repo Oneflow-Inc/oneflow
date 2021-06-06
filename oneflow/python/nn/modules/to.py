@@ -63,14 +63,15 @@ def to_op(input, *args, **kwargs):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
-        input = flow.Tensor(arr)
-        output = input.to(dtype=flow.float32)
-        print(np.array_equal(arr.astype(np.float32), output.numpy()))
-        # True
+        >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
+        >>> input = flow.Tensor(arr)
+        >>> output = input.to(dtype=flow.float32)
+        >>> print(np.array_equal(arr.astype(np.float32), output.numpy()))
+        True
 
     """
     copy = kwargs.get("copy", False)
@@ -97,3 +98,8 @@ def to_op(input, *args, **kwargs):
     if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
         return To(copy)(input, device, dtype)
     raise TypeError("to() received an invalid combination of arguments")
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
