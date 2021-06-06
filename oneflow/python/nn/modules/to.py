@@ -99,6 +99,7 @@ def to_op(input, *args, **kwargs):
         return To(copy)(input, device, dtype)
     raise TypeError("to() received an invalid combination of arguments")
 
+
 if __name__ == "__main__":
     import doctest
 
