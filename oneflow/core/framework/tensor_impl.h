@@ -185,6 +185,8 @@ class ConsistentTensorMeta : public TensorMeta {
   Symbol<ParallelDesc> parallel_desc_;
 };
 
+class MirroredTensor;
+
 class ConsistentTensorImpl : public TensorImpl {
  public:
   virtual ~ConsistentTensorImpl() = default;
@@ -199,6 +201,7 @@ class ConsistentTensorImpl : public TensorImpl {
   Symbol<cfg::ParallelDistribution> consumer_parallel_distribution_constraint() const {
     return consumer_parallel_distribution_constraint_;
   }
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
   Symbol<ConsistentTensorMeta> tensor_meta() const { return tensor_meta_; }
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -287,8 +290,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   bool is_lazy() const override { return true; }
 };
 
-class MirroredTensor;
-
 class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EagerConsistentTensorImpl);
@@ -297,9 +298,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   // Getters
   bool is_lazy() const override { return false; }
 
-  const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor() const {
-    return cur_rank_phy_tensor_;
-  }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
 
   static Maybe<EagerConsistentTensorImpl> New(
       const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor,
@@ -308,8 +307,23 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   static Maybe<EagerConsistentTensorImpl> New(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
                                               bool requires_grad, bool is_leaf);
 
+  static Maybe<EagerConsistentTensorImpl> NewWithPhyTensor(
+      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+      const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
+      bool is_leaf);
+
+  static Maybe<EagerConsistentTensorImpl> NewWithoutPhyTensor(
+      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+      const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
+      bool is_leaf);
+
+  typedef Maybe<EagerConsistentTensorImpl> (*NewMethod)(Symbol<ConsistentTensorMeta>,
+                                                        const std::shared_ptr<const Device>&,
+                                                        int64_t, bool, bool);
+
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+                            const std::shared_ptr<AutogradMeta>& autograd_meta,
                             const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor);
 
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor_;

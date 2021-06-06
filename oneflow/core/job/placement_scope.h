@@ -46,7 +46,9 @@ class PlacementScope final {
                                               const OperatorConf& op_conf) const;
 
   Maybe<Symbol<ParallelDesc>> GetParallelDesc(const std::string& device_tag,
-                                              const std::string& user_op_type_name) const;
+                                              const std::string& op_type_name) const;
+
+  Maybe<Symbol<ParallelDesc>> GetParallelDesc(const std::string& op_type_name) const;
 
  private:
   Symbol<ParallelDesc> device_parallel_desc_;

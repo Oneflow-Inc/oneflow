@@ -57,6 +57,9 @@ namespace one {
 
 class FunctionNode;
 
+class ConsistentTensor;
+class MirroredTensor;
+
 class Tensor {
  public:
   virtual ~Tensor() = default;
@@ -74,19 +77,20 @@ class Tensor {
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
 
   // Getters valid only for EagerMirroredTensor
+  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+
+  // Getters/Setters valid only for EagerConsistentTensor
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
       const {
     OF_UNIMPLEMENTED();
   }
-
-  // Setters
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<void> set_consumer_parallel_distribution_constraint(
       Symbol<cfg::ParallelDistribution> val) {
     OF_UNIMPLEMENTED();
   }
-  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -112,9 +116,6 @@ class Tensor {
  protected:
   Tensor() = default;
 };
-
-class ConsistentTensor;
-class MirroredTensor;
 
 template<typename DerivedT>
 class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<DerivedT>> {
@@ -248,6 +249,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
       const override {
     return impl_->consumer_parallel_distribution_constraint();
   }
+  Maybe<MirroredTensor> cur_rank_phy_tensor() const { return impl_->cur_rank_phy_tensor(); }
   int64_t ndim() const override;
   bool is_cuda() const override;
   int64_t dim(int64_t index) const override;

@@ -96,11 +96,10 @@ class ConsistentTensorMetaInferArgs final {
   ~ConsistentTensorMetaInferArgs() = default;
 
   Maybe<void> Init(const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
-                   const AttrMap& attrs, const std::string& current_scope_device_tag) {
+                   const AttrMap& attrs) {
     input_consistent_tensor_metas_.resize(input_tensors.size());
     placement_scope_ = placement_scope;
     attrs_ = attrs;
-    current_scope_device_tag_ = current_scope_device_tag;
     JUST(InitInputConsistentTensorMetas(input_tensors));
     return Maybe<void>::Ok();
   }
@@ -110,7 +109,6 @@ class ConsistentTensorMetaInferArgs final {
   }
   Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
   const AttrMap& attrs() const { return attrs_; }
-  const std::string& current_scope_device_tag() const { return current_scope_device_tag_; }
   size_t hash_value() const {
     size_t hash_value = std::hash<Symbol<PlacementScope>>()(placement_scope_);
     hash_value ^= std::hash<AttrMap>()(attrs_);
@@ -118,14 +116,12 @@ class ConsistentTensorMetaInferArgs final {
     for (const auto& tensor_meta : input_consistent_tensor_metas_) {
       HashCombine(&hash_value, tensor_meta_hash_functor(tensor_meta));
     }
-    hash_value ^= std::hash<std::string>()(current_scope_device_tag_);
     return hash_value;
   }
 
   bool operator==(const ConsistentTensorMetaInferArgs& other) const {
     return this->input_consistent_tensor_metas_ == other.input_consistent_tensor_metas_
-           && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_
-           && this->current_scope_device_tag_ == other.current_scope_device_tag_;
+           && this->placement_scope_ == other.placement_scope_ && this->attrs_ == other.attrs_;
   }
 
   Maybe<void> MakeParallelDistributionConstraints(
@@ -176,14 +172,13 @@ class ConsistentTensorMetaInferArgs final {
       const auto& tensor_meta = JUST(tensor.consistent_tensor_meta());
       const auto& constraints = JUST(tensor.consumer_parallel_distribution_constraint());
       input_consistent_tensor_metas_.at(i).assign(tensor_meta, constraints);
-      return Maybe<void>::Ok();
     }
+    return Maybe<void>::Ok();
   }
 
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;
   Symbol<PlacementScope> placement_scope_;
   AttrMap attrs_;
-  std::string current_scope_device_tag_;
 };
 
 }  // namespace one
@@ -240,9 +235,7 @@ Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> Infer(
   {
     // Get parallel description.
     const auto& placement_scope = infer_args.placement_scope();
-    const auto& dev_tag = infer_args.current_scope_device_tag();
-    const auto& op_type_name = user_op_expr.op_type_name();
-    parallel_desc = JUST(placement_scope->GetParallelDesc(dev_tag, op_type_name));
+    parallel_desc = JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name()));
   }
   std::vector<OpArgMutConsistentTensorMeta> output_mut_metas(user_op_expr.output_size());
   {
@@ -288,12 +281,55 @@ Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> Infer(
   return std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>(output_metas);
 }
 
+Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
+                      TensorTuple* outputs, const AttrMap& attrs) {
+  CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  ConsistentTensorMetaInferArgs infer_args{};
+  const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
+  JUST(infer_args.Init(inputs, placement_scope, attrs));
+  const auto& output_tensor_metas = JUST(Infer(user_op_expr, infer_args));
+  const auto& parallel_desc =
+      JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name())).shared_from_symbol();
+  int64_t parallel_id = -1;
+  const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
+  using TensorImpl = EagerConsistentTensorImpl;
+  TensorImpl::NewMethod New =
+      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
+  for (int i = 0; i < outputs->size(); ++i) {
+    const auto& tensor_impl =
+        JUST(New(output_tensor_metas->at(i), device, parallel_id, false, false));
+    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+  }
+  // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
+  if (!device) { return Maybe<void>::Ok(); }
+  // Run instruction LocalCallOpKernel
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*device));
+  std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    const auto& local_tensor = JUST(inputs.at(i)->cur_rank_phy_tensor());
+    input_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
+  for (int i = 0; i < outputs->size(); ++i) {
+    const auto& local_tensor = JUST(outputs->at(i)->cur_rank_phy_tensor());
+    output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
+  }
+  const auto& instr_type_name = JUST(GetLocalCallInstructionName(parallel_desc->device_tag()));
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+                                      attrs, parallel_desc, instr_type_name);
+  }));
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const UserOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
-  OF_UNIMPLEMENTED();
+  return Interpret(op_expr, inputs, outputs, attrs);
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,

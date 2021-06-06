@@ -93,13 +93,17 @@ Maybe<const std::string&> Device::of_type() const {
   return MapAt(type2device_tag, type());
 }
 
-Maybe<const std::string&> Device::local_call_instruction_name() const {
+Maybe<const std::string&> GetLocalCallInstructionName(const std::string& type) {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
       {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
   };
-  return MapAt(type2instr_name, type());
+  return MapAt(type2instr_name, type);
+}
+
+Maybe<const std::string&> Device::local_call_instruction_name() const {
+  return GetLocalCallInstructionName(type());
 }
 
 std::string Device::ToRepr() const {

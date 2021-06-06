@@ -27,13 +27,17 @@ Maybe<Symbol<ParallelDesc>> PlacementScope::GetParallelDesc(const std::string& d
   }
 }
 
-Maybe<Symbol<ParallelDesc>> PlacementScope::GetParallelDesc(
-    const std::string& device_tag, const std::string& user_op_type_name) const {
-  if (device_tag == "cpu" || IsCpuOnly(user_op_type_name)) {
+Maybe<Symbol<ParallelDesc>> PlacementScope::GetParallelDesc(const std::string& device_tag,
+                                                            const std::string& op_type_name) const {
+  if (device_tag == "cpu" || IsCpuOnly(op_type_name)) {
     return host_parallel_desc_;
   } else {
     return device_parallel_desc_;
   }
+}
+
+Maybe<Symbol<ParallelDesc>> PlacementScope::GetParallelDesc(const std::string& op_type_name) const {
+  return GetParallelDesc(device_parallel_desc_->device_tag(), op_type_name);
 }
 
 }  // namespace oneflow

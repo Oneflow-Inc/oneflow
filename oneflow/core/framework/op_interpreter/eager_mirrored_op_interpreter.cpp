@@ -105,7 +105,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
   }
 
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
