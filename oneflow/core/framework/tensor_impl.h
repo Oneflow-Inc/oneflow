@@ -277,7 +277,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<MirroredTensorImpl> detach() const override {
     std::shared_ptr<EagerMirroredTensorImpl> detached_impl =
         std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
-    detached_impl->set_eager_blob_object(eager_blob_object_);
+    detached_impl->eager_blob_object_ = eager_blob_object_;
     return std::dynamic_pointer_cast<MirroredTensorImpl>(detached_impl);
   }
 
