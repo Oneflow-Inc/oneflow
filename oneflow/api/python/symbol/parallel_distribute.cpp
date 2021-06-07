@@ -48,11 +48,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       m, "ParallelDistributionSymbol")
       .def(py::init([](const std::vector<std::string>& sbp_parallels) {
         cfg::ParallelDistribution parallel_distribution;
-        SbpParallel sbp_parallel;
+        cfg::SbpParallel sbp_parallel;
         for (const std::string& sbp_parallel_str : sbp_parallels) {
           CHECK(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
               << "invalid sbp_parallel: " << sbp_parallel_str;
-          parallel_distribution.mutable_sbp_parallel()->Add()->InitFromProto(sbp_parallel);
+          *(parallel_distribution.mutable_sbp_parallel()->Add()) = sbp_parallel;
         }
         return Symbol<cfg::ParallelDistribution>(parallel_distribution);
       }))

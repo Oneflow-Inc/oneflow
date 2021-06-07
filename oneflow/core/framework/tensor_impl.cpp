@@ -32,31 +32,32 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
-  device_ = device;
-  return Maybe<void>::Ok();
+namespace {
+
+std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
+  const auto& shape = std::make_shared<Shape>();
+  const auto& dtype = DataType::kInvalidDataType;
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
 }
+
+}  // namespace
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl()
+    : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), NewAutogradMeta(false, false)) {}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+    const std::shared_ptr<AutogradMeta>& autograd_meta)
+    : MirroredTensorImpl(tensor_meta, autograd_meta) {}
+
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)) {}
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, const std::shared_ptr<AutogradMeta>& autograd_meta)
-    : MirroredTensorImpl(device, autograd_meta), eager_blob_object_(eager_blob_object) {
-  Init();
-}
-
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
-    : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
-      eager_blob_object_(eager_blob_object) {
-  Init();
-}
-
-void EagerMirroredTensorImpl::Init() {
+void EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
-  dtype_ = eager_blob_object->blob_desc().data_type();
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
@@ -69,6 +70,37 @@ void EagerMirroredTensorImpl::Init() {
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
   return eager_blob_object_->compute_local_dep_object();
+}
+
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
+    const std::shared_ptr<MemoryCase>& mem_case) {
+  const auto& tensor_device = device();
+  CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+  const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+      mem_case, mut_shape, dtype(), std::make_shared<vm::TensorBuffer>(),
+      tensor_device->parallel_desc_ptr());
+  JUST(set_eager_blob_object(eager_blob_object));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObjectAndTensorStorage(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<TensorStorage>& tensor_storage) {
+  CHECK_OR_RETURN(eager_blob_object->tensor_buffer() == tensor_storage->buffer());
+  eager_blob_object_ = eager_blob_object;
+  tensor_storage_ = tensor_storage;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
+    std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
+  eager_blob_object_ = eager_blob_object;
+  CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
+                  == tensor_meta()->shape_ptr().get());
+  CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
+  UpdateTensorStorage();
+  return Maybe<void>::Ok();
 }
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
@@ -90,22 +122,36 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   return eager_blob_object_->blob_desc().shape_ptr();
 }
 
+bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
+  // It's correct to ignore is_dynamic_ field.
+  return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
+         && *this->device() == *other.device();
+}
+
+size_t MirroredTensorMeta::CalcHashValue() const {
+  // It's correct to ignore is_dynamic_ field.
+  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
+         ^ std::hash<Device>()(*device());
+}
+
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
-  return *this->shape() == *other.shape() && this->dtype() == other.dtype()
+  // It's correct to ignore is_dynamic_ field.
+  return *this->shape_ptr() == *other.shape_ptr() && this->dtype() == other.dtype()
          && this->parallel_distribution() == other.parallel_distribution()
          && this->parallel_desc() == other.parallel_desc();
 }
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
-  return std::hash<Shape>()(*shape()) ^ std::hash<DataType>()(dtype())
+  return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
          ^ std::hash<Symbol<cfg::ParallelDistribution>>()(parallel_distribution())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
 EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+    const std::shared_ptr<AutogradMeta>& autograd_meta,
     const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor)
-    : ConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->mut_autograd_meta()),
+    : ConsistentTensorImpl(consistent_tensor_meta, autograd_meta),
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
@@ -126,37 +172,51 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
   const auto& dtype = cur_rank_phy_tensor->dtype();
   Symbol<ConsistentTensorMeta> consistent_tensor_meta(
       ConsistentTensorMeta(shape, dtype, parallel_distribution, parallel_desc));
-  return std::shared_ptr<EagerConsistentTensorImpl>(
-      new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor));
+  return std::shared_ptr<EagerConsistentTensorImpl>(new EagerConsistentTensorImpl(
+      consistent_tensor_meta, cur_rank_phy_tensor->mut_autograd_meta(), cur_rank_phy_tensor));
 }
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta, bool requires_grad, bool is_leaf) {
-  std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
-  {
-    int64_t machine_id = 0;
-    int64_t device_id = 0;
-    GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-    const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
-    int64_t parallel_id = JUST(parallel_desc->ParallelId4MachineDeviceId(machine_id, device_id));
-    const auto& shape = consistent_tensor_meta->shape();
-    const auto& dtype = consistent_tensor_meta->dtype();
-    const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();
-    const auto& cur_rank_phy_shape =
-        JUST(GetPhysicalShape(*shape, *parallel_distribution, *parallel_desc, parallel_id));
-    const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        device->mem_case(), cur_rank_phy_shape, dtype, std::make_shared<vm::TensorBuffer>(),
-        device->parallel_desc_ptr());
-    const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
-    const auto& cur_rank_phy_tensor_impl =
-        std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, autograd_meta);
-    cur_rank_phy_tensor_impl->set_shape(cur_rank_phy_shape);
-    cur_rank_phy_tensor_impl->set_dtype(dtype);
-    cur_rank_phy_tensor.reset(new MirroredTensor(cur_rank_phy_tensor_impl));
-  }
-  return std::shared_ptr<EagerConsistentTensorImpl>(
-      new EagerConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor));
+  const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
+  int64_t parallel_id = -1;
+  const auto& device = JUST(parallel_desc->GetDevice4CurrentProcessCtx(&parallel_id));
+  using TensorImpl = EagerConsistentTensorImpl;
+  TensorImpl::NewMethod NewImpl =
+      (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
+  return NewImpl(consistent_tensor_meta, device, parallel_id, requires_grad, is_leaf);
+}
+
+/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithPhyTensor(
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+    const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
+    bool is_leaf) {
+  const auto& shape = consistent_tensor_meta->shape_ptr();
+  const auto& dtype = consistent_tensor_meta->dtype();
+  const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();
+  const auto& parallel_desc = consistent_tensor_meta->parallel_desc();
+  const auto& cur_rank_phy_shape =
+      JUST(GetPhysicalShape(*shape, *parallel_distribution, *parallel_desc, parallel_id));
+  const auto& cur_rank_phy_tensor_meta =
+      std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
+  const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
+  auto cur_rank_phy_tensor_impl =
+      std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, autograd_meta);
+  JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(device->mem_case()));
+  const auto& cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
+  auto* tensor_impl = new EagerConsistentTensorImpl(
+      consistent_tensor_meta, cur_rank_phy_tensor->mut_autograd_meta(), cur_rank_phy_tensor);
+  return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
+}
+
+/*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithoutPhyTensor(
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta,
+    const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
+    bool is_leaf) {
+  const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
+  auto* tensor_impl = new EagerConsistentTensorImpl(consistent_tensor_meta, autograd_meta,
+                                                    std::shared_ptr<MirroredTensor>());
+  return std::shared_ptr<EagerConsistentTensorImpl>(tensor_impl);
 }
 
 }  // namespace one

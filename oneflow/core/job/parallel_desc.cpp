@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
@@ -145,6 +146,27 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   const auto& device_iter = machine_iter->second.find(device_id);
   CHECK_OR_RETURN(device_iter != machine_iter->second.end());
   return device_iter->second;
+}
+
+Maybe<const Device> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  if (TryGetParallelId(machine_id, device_id, parallel_id)) {
+    return Device::ThreadLocalGetOrNew(device_tag(), device_id);
+  } else {
+    return std::shared_ptr<const Device>();
+  }
+}
+
+bool ParallelDesc::TryGetParallelId(int64_t machine_id, int64_t device_id,
+                                    int64_t* parallel_id) const {
+  const auto& machine_iter = machine_id2device_id2parallel_id_.find(machine_id);
+  if (machine_iter == machine_id2device_id2parallel_id_.end()) { return false; }
+  const auto& device_iter = machine_iter->second.find(device_id);
+  if (device_iter == machine_iter->second.end()) { return false; }
+  *parallel_id = device_iter->second;
+  return true;
 }
 
 Maybe<void> ParallelDesc::GetParallelContext(ParallelContext* parallel_ctx, int64_t machine_id,

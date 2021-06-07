@@ -25,7 +25,7 @@ REGISTER_USER_OP("empty")
     .Attr<Shape>("shape")
     .Attr<std::string>("sbp_parallel", "")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
@@ -36,7 +36,7 @@ REGISTER_USER_OP("empty")
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
@@ -44,7 +44,7 @@ REGISTER_USER_OP("empty")
       }
       if (dim_vec.empty()) { dim_vec.push_back(1); }
 
-      const SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       if (out_sbp_para.has_split_parallel()) {
         const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
         if (parallel_num > 1) {
@@ -73,7 +73,7 @@ REGISTER_USER_OP("empty")
       const std::string& obn = GenRepeatedBn("out", 0);
       const auto& sbp_parallel_str = ctx->Attr<std::string>("sbp_parallel");
       const std::string& ibn = GenRepeatedBn(user_op::kUserSourceOpTickInputArgName, 0);
-      SbpParallel sbp_parallel;
+      cfg::SbpParallel sbp_parallel;
       sbp_parallel.mutable_broadcast_parallel();
       (*bn2sbp)[ibn] = sbp_parallel;
       if (sbp_parallel_str.empty()) {

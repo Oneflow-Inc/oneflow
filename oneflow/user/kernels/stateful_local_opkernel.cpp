@@ -207,13 +207,13 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     UNIMPLEMENTED();
   }
 
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     UNIMPLEMENTED();
   }
 

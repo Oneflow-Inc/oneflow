@@ -44,7 +44,7 @@ def _test_exp_impl(test_case, shape, device):
 class TestExp(flow.unittest.TestCase):
     def test_exp(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_exp_impl(test_case, *arg)

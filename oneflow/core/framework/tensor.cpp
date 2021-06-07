@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 
@@ -28,24 +29,34 @@ Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Sha
                                                  DataType dtype,
                                                  const std::shared_ptr<const Device>& device,
                                                  bool is_lazy, bool requires_grad, bool is_leaf) {
-  std::shared_ptr<MirroredTensorImpl> impl;
+  const auto& tensor_meta =
+      std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
-    impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
+    const auto& impl =
+        std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    return std::make_shared<MirroredTensor>(impl);
   } else {
-    const auto eager_blob_object =
-        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype, *shape, device));
-    impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
-                                                     is_leaf);
+    const auto& impl =
+        std::make_shared<EagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
+    const auto& tensor = std::make_shared<MirroredTensor>(impl);
+    const auto& outputs = std::make_shared<TensorTuple>();
+    outputs->push_back(tensor);
+    JUST(GenerateAllocatedEagerBlobObject(outputs.get()));
+    return tensor;
   }
-  return std::make_shared<MirroredTensor>(impl);
 }
 
-std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeEagerTensor(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf) {
-  std::shared_ptr<MirroredTensorImpl> impl =
-      std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad, is_leaf);
-  return std::make_shared<MirroredTensor>(impl);
+    const std::shared_ptr<const Device>& device,
+    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
+  const auto& blob_desc = eager_blob_object->blob_desc();
+  const auto& tensor_meta =
+      std::make_shared<MirroredTensorMeta>(blob_desc.shape_ptr(), blob_desc.data_type(), device);
+  const auto& autograd_meta = std::make_shared<AutogradMeta>(requires_grad, is_leaf);
+  auto* tensor_impl = new EagerMirroredTensorImpl(tensor_meta, autograd_meta);
+  JUST(tensor_impl->InitEagerBlobObjectAndTensorStorage(eager_blob_object, tensor_storage));
+  return std::make_shared<MirroredTensor>(std::shared_ptr<MirroredTensorImpl>(tensor_impl));
 }
 
 bool MirroredTensor::is_cuda() const { return CHECK_JUST(device())->type() == "cuda"; }
@@ -61,8 +72,12 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
+Maybe<MirroredTensor> MirroredTensor::api_detach() const {
+  const auto& eager_blob_object = JUST(impl_->eager_blob_object());
+  const auto& device = impl_->device();
+  const auto& tensor_storage = JUST(this->tensor_storage());
+  std::shared_ptr<MirroredTensor> t =
+      JUST(MirroredTensor::MakeEagerTensor(eager_blob_object, device, tensor_storage, false, true));
   return t;
 }
 
@@ -97,7 +112,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::detach() const {
+Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }

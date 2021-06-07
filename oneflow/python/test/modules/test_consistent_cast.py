@@ -30,7 +30,7 @@ class TestConsistentCastModule(flow.unittest.TestCase):
         np_out = np.maximum(0, arr)
 
         consisitent_identity = flow.consistent_cast(
-            identity,
+            relu,
             (["S(0)"], ["S(0)"]),
             (
                 [flow.placement("cpu", ["0:0"], None)],
@@ -39,8 +39,8 @@ class TestConsistentCastModule(flow.unittest.TestCase):
         )
         x = flow.Tensor(arr)
         y = consisitent_identity(x)
-        of_out = relu(y)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=1e-05))
+        # of_out = relu(y)
+        test_case.assertTrue(np.allclose(y.numpy(), np_out, rtol=1e-05))
 
 
 if __name__ == "__main__":
