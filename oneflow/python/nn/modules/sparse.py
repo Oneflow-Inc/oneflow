@@ -43,12 +43,13 @@ class Embedding(Module):
 
     .. code-block:: python
         
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
-        m = flow.nn.Embedding(10, 3)
-        y = m(indices)
-
+        >>> indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+        >>> m = flow.nn.Embedding(10, 3)
+        >>> y = m(indices)
 
     """
 
@@ -117,3 +118,9 @@ class Embedding(Module):
     def forward(self, indices):
         res = self._gather_op(self.weight, indices)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
