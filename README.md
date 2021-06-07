@@ -72,10 +72,10 @@
 <details>
 <summary>Build OneFlow</summary>
 
-- #### Option 1: Build with Conda
+- #### Option 1: Build with Conda (recommended)
   Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
 
-- #### Option 2: Build in docker container
+- #### Option 2: Build in docker container (recommended)
   - In the root directory of OneFlow source code, run:
 
     ```
