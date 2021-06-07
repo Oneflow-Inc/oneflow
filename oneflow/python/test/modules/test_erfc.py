@@ -22,7 +22,6 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-
 def _test_erfc_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
@@ -35,7 +34,14 @@ def _test_erfc_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), -(2/np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())), 1e-5, 1e-5))
+    test_case.assertTrue(
+        np.allclose(
+            of_input.grad.numpy(),
+            -(2 / np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())),
+            1e-5,
+            1e-5,
+        )
+    )
 
 
 def _test_tensor_erfc_impl(test_case, shape, device):
@@ -50,7 +56,14 @@ def _test_tensor_erfc_impl(test_case, shape, device):
 
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), -(2/np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())), 1e-5, 1e-5))
+    test_case.assertTrue(
+        np.allclose(
+            of_input.grad.numpy(),
+            -(2 / np.sqrt(np.pi)) * np.exp(-np.square(of_input.numpy())),
+            1e-5,
+            1e-5,
+        )
+    )
 
 
 @unittest.skipIf(
@@ -60,7 +73,7 @@ def _test_tensor_erfc_impl(test_case, shape, device):
 class TestErfcModule(flow.unittest.TestCase):
     def test_erfc(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, ), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_erfc_impl(test_case, *arg)
