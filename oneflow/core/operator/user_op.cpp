@@ -406,7 +406,7 @@ class UserOpInferParallelDistributionFnContext
   }
 
   const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
-      const std::string& arg_name, int32_t index) override {
+      const std::string& arg_name, int32_t index) const override {
     auto hint =
         CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
     return hint->parallel_distribution();
