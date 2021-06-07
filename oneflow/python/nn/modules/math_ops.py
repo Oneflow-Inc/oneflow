@@ -1207,6 +1207,132 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
+class Clamp(Module):
+    def __init__(self, min_value=None, max_value=None) -> None:
+        super().__init__()
+        if min_value is not None:
+            floating_min_value = float(min_value)
+            integral_min_value = int(min_value)
+        if max_value is not None:
+            floating_max_value = float(max_value)
+            integral_max_value = int(max_value)
+
+        if min_value is not None and max_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
+        elif min_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar_min")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Build()
+            )
+        elif max_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar_max")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
+        else:
+            raise ValueError("min_value and max_value cannot be None at the same time")
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("clamp")
+@experimental_api
+def clamp_op(tensor, min=None, max=None):
+    r"""
+    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
+    a resulting tensor:
+
+    .. math::
+        y_i = \begin{cases}
+            \text{min} & \text{if } x_i < \text{min} \\
+            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
+            \text{max} & \text{if } x_i > \text{max}
+        \end{cases}
+
+    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
+    and :attr:`max` must be real numbers, otherwise they should be integers.
+
+    Args:
+        input (Tensor): the input tensor.
+        min (Number): lower-bound of the range to be clamped to. Defaults to None.
+        max (Number): upper-bound of the range to be clamped to. Defaults to None.
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=0.5).numpy()
+        >>> output
+        array([ 0.2,  0.5, -0.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=None, max=0.5).numpy()
+        >>> output
+        array([ 0.2,  0.5, -1.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=None).numpy()
+        >>> output
+        array([ 0.2,  0.6, -0.5, -0.3], dtype=float32)
+
+    """
+    return Clamp(min, max)(tensor)
+
+
+@register_tensor_op("clamp")
+@experimental_api
+def clamp_op_tensor(tensor, min=None, max=None):
+    r"""
+    See :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
+@oneflow_export("clip")
+@experimental_api
+def clip_op(tensor, min=None, max=None):
+    r"""
+    Alias for :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
+@register_tensor_op("clip")
+@experimental_api
+def clip_op_tensor(tensor, min=None, max=None):
+    r"""
+    See :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
