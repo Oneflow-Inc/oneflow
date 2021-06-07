@@ -419,8 +419,11 @@ copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of
 
 add_dependencies(pip_install of_include_copy)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
+option(BUILD_JNI "If build with JNI bindings" OFF)
+
 if (BUILD_JNI)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
+  
   target_link_libraries(oneflow 
     of_ccobj
     of_cfgobj
