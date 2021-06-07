@@ -34,10 +34,10 @@ class Embedding(Module):
         num_embeddings (int): size of the dictionary of embeddings
         embedding_dim (int): the size of each embedding vector
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
-        therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
-        i.e. it remains as a fixed "pad". For a newly constructed Embedding,
-        the embedding vector at :attr:`padding_idx` will default to all zeros,
-        but can be updated to another value to be used as the padding vector.
+                                    therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                    i.e. it remains as a fixed "pad". For a newly constructed Embedding,
+                                    the embedding vector at :attr:`padding_idx` will default to all zeros,
+                                    but can be updated to another value to be used as the padding vector.
     
     For example:
 
