@@ -404,7 +404,7 @@ class Tensor:
         # TODO: support inplace __getitem__
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
+        return res.squeeze()
 
     @_auto_determine
     @register_local_tensor_method()

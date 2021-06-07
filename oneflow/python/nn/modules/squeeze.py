@@ -70,20 +70,20 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         (1, 3)
 
     """
-    squeeze_dim=[]
+    squeeze_dim = []
     if dim is None:
-        for i in input.ndim:
-            if input.size(i)==1:
+        for i in range(input.ndim):
+            if input.size(i) == 1:
                 squeeze_dim.append(i)
-    else: 
+    else:
         if type(dim) == int:
-            if input.size(dim)==1: 
+            if input.size(dim) == 1:
                 squeeze_dim.append(dim)
         else:
             for i in dim:
-                if input.size(i)==1:
+                if input.size(i) == 1:
                     squeeze_dim.append(i)
-    
+
     return Squeeze(dim=squeeze_dim)(input)
 
 
