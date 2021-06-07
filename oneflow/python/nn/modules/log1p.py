@@ -35,7 +35,7 @@ class Log1p(Module):
 @experimental_api
 def log1p_op(input):
     r"""Returns a new tensor with the natural logarithm of (1 + input).
-    
+
     .. math::
         \text{out}_{i}=\log_e(1+\text{input}_{i})
 
@@ -50,7 +50,7 @@ def log1p_op(input):
         >>> out = flow.log1p(x).numpy()
         >>> out
         array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
-        
+
     """
     return Log1p()(input)
 
@@ -58,4 +58,4 @@ def log1p_op(input):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

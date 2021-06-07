@@ -31,9 +31,9 @@ class Identity(Module):
         args: any argument (unused)
         kwargs: any keyword argument (unused)
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import numpy as np
         import oneflow as flow
@@ -59,10 +59,8 @@ class Identity(Module):
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
     Args:
-        
+
         - in_features: size of each input sample
 
         - out_features: size of each output sample
@@ -72,19 +70,19 @@ class Linear(Module):
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
           additional dimensions and :math:`H_{in} = {in\_features}`
-        
+
         - Output: :math:`(N, *, H_{out})` where all but the last dimension
           are the same shape as the input and :math:`H_{out} = {out\_features}`.
 
     Attr:
         - :attr:`weight`: the learnable weights of the module of shape :math:`({out\_features}, {in\_features})`. The values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where :math:`(k = 1 / {in\_features})`
-        
+
         - :attr:`bias`: the learnable bias of the module of shape :math:`({out\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where :math:`(k = 1 / {in\_features})`
 
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -158,4 +156,4 @@ class Linear(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

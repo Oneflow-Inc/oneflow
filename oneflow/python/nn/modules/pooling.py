@@ -115,8 +115,7 @@ class AvgPool2d(Module):
 @experimental_api
 class MaxPool1d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool1d.html#torch.nn.MaxPool1d
 
     Applies a 1D max pooling over an input signal composed of several input planes.
 
@@ -153,30 +152,6 @@ class MaxPool1d(Module):
               L_{out} = \left\lfloor \frac{L_{in} + 2 \times \text{padding} - \text{dilation}
                     \times (\text{kernel_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
 
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow.experimental as flow
-        >>> import numpy as np
-        >>> flow.enable_eager_execution()
-
-        >>> kernel_size, stride, padding = 2, 1, 2
-        >>> m = flow.nn.MaxPool1d(kernel_size, stride, padding)
-        >>> np.random.seed(0)
-        >>> x = flow.Tensor(np.random.rand(1, 1, 5))
-        >>> y = m(x)
-        >>> print(y.numpy())
-        [[[-3.4028235e+38  5.4881352e-01  7.1518934e-01  7.1518934e-01
-            6.0276335e-01  5.4488319e-01  4.2365479e-01 -3.4028235e+38]]]
-
-        >>> kernel_size, stride, padding = 3, 5, 2
-        >>> m = flow.nn.MaxPool1d(kernel_size, stride, padding)
-        >>> x = flow.Tensor(np.random.randn(9, 7, 20))
-        >>> y = m(x)
-        >>> print(y.size())
-        flow.Size([9, 7, 5])
-
     """
 
     def __init__(
@@ -196,8 +171,7 @@ class MaxPool1d(Module):
 @experimental_api
 class MaxPool2d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d.html#torch.nn.MaxPool2d
 
     Applies a 2D max pooling over an input signal composed of several input planes.
 
@@ -326,8 +300,7 @@ class MaxPool2d(Module):
 @experimental_api
 class MaxPool3d(Module):
     r"""The interface is consistent with PyTorch.
-    The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.MaxPool3d.html#torch.nn.MaxPool3d
 
     Applies a 3D max pooling over an input signal composed of several input planes.
 
@@ -466,4 +439,4 @@ class MaxPool3d(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

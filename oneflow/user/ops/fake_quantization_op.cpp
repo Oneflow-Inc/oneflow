@@ -32,18 +32,18 @@ REGISTER_USER_OP("fake_quantization")
     // NOTE(Liang Depeng): "symmetric" or "affine": quantize to signed or unsigned integer
     .Attr<std::string>("quantization_scheme", "symmetric")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      const Shape* scale_shape = ctx->Shape4ArgNameAndIndex("scale", 0);
-      const Shape* zero_point_shape = ctx->Shape4ArgNameAndIndex("zero_point", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      const Shape& scale_shape = ctx->InputShape("scale", 0);
+      const Shape& zero_point_shape = ctx->InputShape("zero_point", 0);
 
       // NOTE(Liang Depeng): scale_shape->elem_cnt() > 1 means per-channel quantization for
       // convolution weights.
-      if (scale_shape->elem_cnt() > 1) {
-        CHECK_EQ_OR_RETURN(scale_shape->elem_cnt(), in_shape->At(0));
-        CHECK_EQ_OR_RETURN(zero_point_shape->elem_cnt(), in_shape->At(0));
+      if (scale_shape.elem_cnt() > 1) {
+        CHECK_EQ_OR_RETURN(scale_shape.elem_cnt(), in_shape.At(0));
+        CHECK_EQ_OR_RETURN(zero_point_shape.elem_cnt(), in_shape.At(0));
       }
 
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *in_shape;
+      *ctx->OutputShape("out", 0) = in_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
