@@ -26,6 +26,7 @@ option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
+option(BUILD_JNI "If build with JNI bindings" OFF)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
 
