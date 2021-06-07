@@ -417,10 +417,27 @@ bool operator==(const OperatorConf& lhs, const OperatorConf& rhs);
 
 Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
                                     const OpNodeSignature& upstream_signature, const Scope& scope);
+
+namespace cfg {
+
+class ParallelDistribution;
+
+}
+
+template<typename ParallelDistributionT>
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
+                              const ParallelDistributionT& parallel_distribution,
+                              const ParallelDesc& parallel_desc, std::size_t parallel_id);
+
 Maybe<Shape> GetPhysicalShape(const Shape& logical_shape,
                               const ParallelDistribution& parallel_distribution,
                               const ParallelDesc& parallel_desc,
                               const ParallelContext& parallel_ctx);
+
+Maybe<Shape> GetLogicalShape(const Shape& physical_shape,
+                             const cfg::ParallelDistribution& parallel_distribution,
+                             const ParallelDesc& parallel_desc);
+
 }  // namespace oneflow
 
 namespace std {

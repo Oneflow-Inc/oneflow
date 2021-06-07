@@ -33,10 +33,10 @@ REGISTER_USER_OP("reshape_like")
     .Input("like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-      CHECK_EQ_OR_RETURN(in_shape->elem_cnt(), like_shape->elem_cnt());
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *like_shape;
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      const Shape& like_shape = ctx->InputShape("like", 0);
+      CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt());
+      *ctx->OutputShape("out", 0) = like_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
