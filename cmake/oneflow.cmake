@@ -420,13 +420,13 @@ copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of
 add_dependencies(pip_install of_include_copy)
 
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
-target_link_libraries(oneflow 
-  of_ccobj
-  of_cfgobj
-  of_protoobj 
-  "${oneflow_exe_third_party_libs}"
-  "${oneflow_third_party_libs}"
-  "${CUDA_CUBLAS_LIBRARIES}"
-  # "${BLAS_LIBRARIES}"
-  # "${CUDNN_LIBRARIES}"
-)
+if (BUILD_JNI)
+  target_link_libraries(oneflow 
+    of_ccobj
+    of_cfgobj
+    of_protoobj 
+    "${oneflow_exe_third_party_libs}"
+    "${oneflow_third_party_libs}"
+    "${CUDA_CUBLAS_LIBRARIES}"
+  )
+endif()
