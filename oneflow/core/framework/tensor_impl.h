@@ -143,7 +143,7 @@ class MirroredTensorImpl : public TensorImpl {
   MirroredTensorMeta* mut_tensor_meta() {
     return const_cast<MirroredTensorMeta*>(tensor_meta_.get());
   }
-  Maybe<std::shared_ptr<const Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
+  std::shared_ptr<const Device>* mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) = 0;
 
   virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }
@@ -262,12 +262,19 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    CHECK_OR_RETURN(eager_blob_object_);
+    return eager_blob_object_;
+  }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override;
-  Maybe<TensorStorage> tensor_storage() const override { return tensor_storage_; }
+  Maybe<TensorStorage> tensor_storage() const override {
+    CHECK_OR_RETURN(eager_blob_object_);
+    return tensor_storage_;
+  }
 
   // Setters
   Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
+    CHECK_OR_RETURN(!tensor_storage_);
     tensor_storage_ = tensor_storage;
     return Maybe<void>::Ok();
   }
@@ -275,14 +282,13 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
 
   Maybe<MirroredTensorImpl> detach() const override {
-    std::shared_ptr<EagerMirroredTensorImpl> detached_impl =
-        std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
+    auto* detached_impl = new EagerMirroredTensorImpl(tensor_meta_, tensor_storage_, false, true);
     detached_impl->eager_blob_object_ = eager_blob_object_;
-    return std::dynamic_pointer_cast<MirroredTensorImpl>(detached_impl);
+    return std::shared_ptr<MirroredTensorImpl>(detached_impl);
   }
 
  private:
-  void UpdateTensorStorage();
+  Maybe<void> UpdateTensorStorage();
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;

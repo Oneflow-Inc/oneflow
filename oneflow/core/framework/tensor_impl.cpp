@@ -62,20 +62,21 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)),
       tensor_storage_(tensor_storage) {}
 
-void EagerMirroredTensorImpl::UpdateTensorStorage() {
-  const auto& eager_blob_object = eager_blob_object_;
-  tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
+Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
+  const auto& blob_object = JUST(eager_blob_object());
+  CHECK_OR_RETURN(!tensor_storage_);
+  tensor_storage_ = std::make_shared<TensorStorage>(blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
-      [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
+      [blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
         PhysicalRun([&](InstructionsBuilder* builder) {
-          builder->ReleaseTensor(eager_blob_object, parallel_desc);
+          builder->ReleaseTensor(blob_object, parallel_desc);
         });
       });
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
-  return eager_blob_object_->compute_local_dep_object();
+  return JUST(eager_blob_object())->compute_local_dep_object();
 }
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
@@ -92,6 +93,7 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
+  CHECK_OR_RETURN(!eager_blob_object_);
   eager_blob_object_ = eager_blob_object;
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
                   == tensor_meta()->shape_ptr().get());
@@ -101,6 +103,7 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
 }
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+  if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
   std::atomic<bool> synced(false);

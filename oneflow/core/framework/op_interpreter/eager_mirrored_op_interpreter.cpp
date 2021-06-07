@@ -81,7 +81,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *JUST(tensor_impl->mut_device()) = default_device;
+      *tensor_impl->mut_device() = default_device;
     }
   } else {
     need_check_mem_case = false;
@@ -135,7 +135,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenerateAllocatedEagerBlobObject(TensorTuple* outputs) {
+Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
   const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
