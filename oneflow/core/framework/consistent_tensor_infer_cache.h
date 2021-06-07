@@ -108,22 +108,18 @@ class ConsistentTensorMetaInferArgs final {
 class OpArgMutConsistentTensorMeta final {
  public:
   OpArgMutConsistentTensorMeta()
-      : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType),
-        parallel_distribution_() {}
+      : tensor_meta_(std::make_shared<Shape>(), DataType::kInvalidDataType) {}
 
   OpArgMutConsistentTensorMeta(const OpArgMutConsistentTensorMeta&) = default;
   OpArgMutConsistentTensorMeta(OpArgMutConsistentTensorMeta&&) = default;
   ~OpArgMutConsistentTensorMeta() = default;
 
   const TensorMeta& tensor_meta() const { return tensor_meta_; }
-  const cfg::ParallelDistribution& parallel_distribution() const { return parallel_distribution_; }
 
   TensorMeta* mut_tensor_meta() { return &tensor_meta_; }
-  cfg::ParallelDistribution* mut_parallel_distribution() { return &parallel_distribution_; }
 
  private:
   TensorMeta tensor_meta_;
-  cfg::ParallelDistribution parallel_distribution_;
 };
 
 }  // namespace one
