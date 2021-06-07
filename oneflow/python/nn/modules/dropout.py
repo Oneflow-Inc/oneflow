@@ -50,8 +50,8 @@ class Dropout(_DropoutNd):
 
     This has proven to be an effective technique for regularization and
     preventing the co-adaptation of neurons as described in the paper
-    `Improving neural networks by preventing co-adaptation of feature
-    detectors`_ .
+    "Improving neural networks by preventing co-adaptation of feature
+    detectors".
 
     Furthermore, the outputs are scaled by a factor of :math:`\frac{1}{1-p}` during
     training. This means that during evaluation the module simply computes an
@@ -65,9 +65,9 @@ class Dropout(_DropoutNd):
         - Input: :math:`(*)`. Input can be of any shape
         - Output: :math:`(*)`. Output is of the same shape as input
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -127,4 +127,4 @@ class Dropout(_DropoutNd):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

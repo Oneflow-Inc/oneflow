@@ -13,30 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import register_tensor_op
 
 
-class Acosh(Module):
+class Atanh(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("acosh").Input("x").Output("y").Build()
+        self._op = flow.builtin_op("atanh").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
 
 
-@oneflow_export("acosh")
+@oneflow_export("atanh")
 @experimental_api
-def acosh_op(x):
-    r"""Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
+def atanh_op(input):
+    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
     .. math::
-
-        \text{out}_{i} = \cosh^{-1}(\text{input}_{i})
+        \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
 
     Args:
         input (Tensor): the input tensor.
@@ -48,58 +46,49 @@ def acosh_op(x):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        >>> out1 = flow.acosh(x1)
-        >>> out1.numpy() #doctest: +ELLIPSIS
-        array([1.3169... , 1.7627..., 2.0634... ], dtype=float32)
-        >>> x2 = flow.Tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
-        >>> out2 = flow.acosh(x2)
-        >>> out2.numpy() #doctest: +ELLIPSIS
-        array([0.9624..., 1.6094..., 1.9826...], dtype=float32)
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.atanh(input)
+        >>> print(output.numpy())
+        [0.54930615 0.6931472  0.8673005 ]
 
     """
 
-    return Acosh()(x)
+    return Atanh()(input)
 
 
-@register_tensor_op("acosh")
+@register_tensor_op("atanh")
 @experimental_api
-def acosh_op_tensor(x):
+def atanh_op_tensor(x):
+    r"""
+    atanh() -> Tensor
+    See :func:`oneflow.experimental.atanh`
+
+    """
+
+    return Atanh()(x)
+
+
+@oneflow_export("arctanh")
+@experimental_api
+def arctanh_op(input):
     r"""
 
-    acosh() -> Tensor
-
-    See :func:`oneflow.experimental.acosh`
-
+    Alias for :func:`oneflow.experimental.atanh`
     """
 
-    return Acosh()(x)
+    return Atanh()(input)
 
 
-@oneflow_export("arccosh")
+@register_tensor_op("arctanh")
 @experimental_api
-def arccosh_op(x):
+def arctanh_op_tensor(input):
     r"""
 
-    See :func:`oneflow.experimental.acosh`
-
+    Alias for :func:`oneflow.experimental.atanh`
     """
 
-    return Acosh()(x)
-
-
-@register_tensor_op("arccosh")
-@experimental_api
-def arccosh_op_tensor(x):
-    r"""
-
-    arccosh() -> Tensor
-
-    See :func:`oneflow.experimental.acosh`
-
-    """
-
-    return Acosh()(x)
+    return Atanh()(input)
 
 
 if __name__ == "__main__":

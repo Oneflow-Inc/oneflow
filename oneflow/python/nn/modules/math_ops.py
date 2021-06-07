@@ -56,7 +56,7 @@ class Sum(Module):
 @experimental_api
 def _sum(input, dim=None, keepdims=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
-    
+
     For example:
 
     .. code-block:: python
@@ -139,12 +139,12 @@ class BroadcastMul(Module):
 @experimental_api
 def _mul(x, y):
     r"""Computes the multiplication of x by y for each element, scalar and broadcast promotation are supported.
-    
+
     The formula is:
 
     .. math::
         out = x \times y
-    
+
     For example:
 
     .. code-block:: python
@@ -290,8 +290,8 @@ class Variance(Module):
 def variance_op(input, dim=None, keepdim=False):
     r"""Returns the variance of each row of the `input` tensor in the given dimension `dim`.
 
-    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` 
-    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output 
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim`
+    where it is of size 1. Otherwise, dim is squeezed (see `flow.squeeze()`), resulting in the output
     tensor having 1 (or `len(dim)`) fewer dimension(s).
 
     Args:
@@ -381,7 +381,7 @@ def _sub(x, y):
 
     .. math::
         out = x - y
-    
+
     For example:
 
     .. code-block:: python
@@ -456,11 +456,11 @@ def _div(x, y):
 
     .. math::
         out = \frac{X}{Y}
-    
+
     Args:
         x (Union[int, float, flow.Tensor]): X.
         y (Union[int, float, flow.Tensor]): Y.
-    
+
     For example:
 
     .. code-block:: python
@@ -578,6 +578,7 @@ def _add(x, y):
 
     .. math::
         out = x + y
+
     For example:
 
     .. code-block:: python
@@ -635,8 +636,10 @@ def asin_op(input):
 
     .. math::
         \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
@@ -675,7 +678,7 @@ def asin_op_tensor(input):
 @experimental_api
 def arcsin_op(input):
     r"""
-  
+
     Alias for :func:`oneflow.experimental.asin`
     """
     return Asin()(input)
@@ -708,15 +711,17 @@ def asinh_op(input):
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-        >>> flow.enable_eager_execution() 
+        >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
         >>> print(output.shape)
@@ -740,7 +745,7 @@ def asinh_op(input):
 @experimental_api
 def arcsinh_op(input):
     r"""
-  
+
     Alias for :func:`oneflow.experimental.asinh`
     """
     return Asinh()(input)
@@ -817,7 +822,7 @@ def sin_op_tensor(tensor):
     sin() -> Tensor
 
     See :func:`oneflow.experimental.sin`
-    
+
     """
 
     return Sin()(tensor)
@@ -838,9 +843,10 @@ class Cos(Module):
 def cos_op(tensor):
     r"""
     Returns a new tensor with the cosine  of the elements of :attr:`input`.
-    
+
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -854,7 +860,7 @@ def cos_op(tensor):
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.cos(input)
         # [0.13944048 0.29570782 0.6553126  0.5573547 ]
-        
+
     """
     return Cos()(tensor)
 
@@ -943,12 +949,13 @@ class Log(Module):
 def log_op(tensor):
     r"""
     Returns a new tensor with the natural logarithm of the elements of :attr:`input`.
-    
+
     .. math::
         y_{i} = \log_{e} (x_{i})
+
     Args:
         input (Tensor): the input tensor.
-    
+
     For example:
 
     .. code-block:: python
@@ -959,7 +966,7 @@ def log_op(tensor):
         input = flow.Tensor(arr, dtype=flow.float32)
         output = flow.log(input)
         # equal to np.log(input)
-        
+
     """
     return Log()(tensor)
 
@@ -1133,8 +1140,8 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     dimension :attr:`dim`. If :attr:`dim` is a list of dimensions,
     reduce over all of them.
 
-    If keepdim is True, the output tensor is of the same size as input except in 
-    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed, 
+    If keepdim is True, the output tensor is of the same size as input except in
+    the dimension(s) dim where it is of size 1. Otherwise, dim is squeezed,
     resulting in the output tensor having 1 (or len(dim)) fewer dimension(s).
 
     If :attr:`unbiased` is ``False``, then the standard-deviation will be calculated
@@ -1184,18 +1191,18 @@ class Pow(Module):
 def pow_op(tensor, exponent):
     r"""Takes the power of each element in input with exponent and returns a tensor with the result.
     exponent can be either a single float number or a single int number.
-    
+
     For example:
 
     .. code-block:: python
 
         import oneflow.experimental as flow
         import numpy as np
-        
+
         x = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]))
         out = flow.pow(x, 2).numpy()
         print(out) # [1, 4, 9, 16, 25, 36]
-        
+
     """
     return Pow()(tensor, exponent)
 
@@ -1218,6 +1225,7 @@ def cosh_op(tensor):
 
     .. math::
         \text{out}_{i} = \cosh(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -1240,3 +1248,4 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod("atan_op")
+

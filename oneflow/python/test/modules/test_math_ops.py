@@ -391,7 +391,7 @@ class TestPow(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_pow,
-            # _test_pow_backward TODO:(zhaoluyang) >> rewrite scalar_pow op backward
+            _test_pow_backward,
         ]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
