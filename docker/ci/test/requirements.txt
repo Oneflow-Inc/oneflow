@@ -1,8 +1,9 @@
+Sphinx==2.2.0
+recommonmark==0.6.0
+sphinx_rtd_theme==0.5.0
+# dependencies above must be identical to docs/requirements.txt
 pycocotools
 opencv-python==4.2.0.34
-sphinx
-recommonmark
 scipy
 pillow
-sphinx_rtd_theme
 tensorflow-addons==0.9.1
