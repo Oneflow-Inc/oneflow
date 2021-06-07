@@ -132,7 +132,7 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
 
 }  // namespace
 
-/*static*/ Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> ConsistentTensorInferCache::Infer(
+/*static*/ Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::Infer(
     const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args) {
   Symbol<ParallelDesc> parallel_desc;
   {
@@ -171,7 +171,14 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
     JUST(op->InferParallelDistributionSignatureIf(parallel_distribution_constraints, *parallel_desc,
                                                   ParallelDistributionInferHint4Ibn));
   }
-  auto* output_metas = new std::vector<Symbol<ConsistentTensorMeta>>(user_op_expr.output_size());
+  auto* result =
+      new ConsistentTensorInferResult(user_op_expr.input_size(), user_op_expr.output_size());
+  auto* input_pd = result->mut_input_parallel_distributions();
+  for (int32_t i = 0; i < user_op_expr.input_size(); ++i) {
+    const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
+    input_pd->at(i) = SymbolOf(*JUST(op->ParallelDistribution4BnInOp(ibn)));
+  }
+  auto* output_metas = result->mut_output_tensor_metas();
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
@@ -181,10 +188,10 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
     ConsistentTensorMeta tensor_meta(shape, data_type, parallel_distribution, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
-  return std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>(output_metas);
+  return std::shared_ptr<const ConsistentTensorInferResult>(result);
 }
 
-Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> ConsistentTensorInferCache::GetOrInfer(
+Maybe<const ConsistentTensorInferResult> ConsistentTensorInferCache::GetOrInfer(
     const ConsistentTensorMetaInferArgs& infer_args) {
   auto iter = cache_.find(infer_args);
   if (iter == cache_.end()) {

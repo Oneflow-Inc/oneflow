@@ -150,22 +150,47 @@ struct hash<oneflow::one::ConsistentTensorMetaInferArgs> final {
 namespace oneflow {
 namespace one {
 
+class ConsistentTensorInferResult final {
+ public:
+  ConsistentTensorInferResult(size_t input_size, size_t output_size)
+      : input_parallel_distributions_(input_size), output_tensor_metas_(output_size) {}
+  ConsistentTensorInferResult(const ConsistentTensorInferResult&) = delete;
+  ConsistentTensorInferResult(ConsistentTensorInferResult&&) = delete;
+  ~ConsistentTensorInferResult() = default;
+
+  const std::vector<Symbol<cfg::ParallelDistribution>>& input_parallel_distributions() const {
+    return input_parallel_distributions_;
+  }
+  const std::vector<Symbol<ConsistentTensorMeta>>& output_tensor_metas() const {
+    return output_tensor_metas_;
+  }
+
+  std::vector<Symbol<cfg::ParallelDistribution>>* mut_input_parallel_distributions() {
+    return &input_parallel_distributions_;
+  }
+  std::vector<Symbol<ConsistentTensorMeta>>* mut_output_tensor_metas() {
+    return &output_tensor_metas_;
+  }
+
+ private:
+  std::vector<Symbol<cfg::ParallelDistribution>> input_parallel_distributions_;
+  std::vector<Symbol<ConsistentTensorMeta>> output_tensor_metas_;
+};
+
 class ConsistentTensorInferCache final {
  public:
   ConsistentTensorInferCache(const std::shared_ptr<const UserOpExpr>& user_op_expr)
       : user_op_expr_(user_op_expr) {}
 
-  Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> GetOrInfer(
+  Maybe<const ConsistentTensorInferResult> GetOrInfer(
       const ConsistentTensorMetaInferArgs& infer_args);
 
-  static Maybe<const std::vector<Symbol<ConsistentTensorMeta>>> Infer(
+  static Maybe<const ConsistentTensorInferResult> Infer(
       const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args);
 
  private:
   std::weak_ptr<const UserOpExpr> user_op_expr_;
-  HashMap<ConsistentTensorMetaInferArgs,
-          std::shared_ptr<const std::vector<Symbol<ConsistentTensorMeta>>>>
-      cache_;
+  HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;
 };
 
 }  // namespace one

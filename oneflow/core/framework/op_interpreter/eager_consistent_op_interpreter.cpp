@@ -38,8 +38,9 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   ConsistentTensorMetaInferArgs infer_args{};
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
   JUST(infer_args.Init(inputs, placement_scope, attrs));
-  const auto& output_tensor_metas =
+  const auto& resualt =
       JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(infer_args));
+  const auto& output_tensor_metas = resualt->output_tensor_metas();
   const auto& parallel_desc =
       JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name())).shared_from_symbol();
   int64_t parallel_id = -1;
@@ -49,7 +50,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
       (device ? &TensorImpl::NewWithPhyTensor : &TensorImpl::NewWithoutPhyTensor);
   for (int i = 0; i < outputs->size(); ++i) {
     const auto& tensor_impl =
-        JUST(New(output_tensor_metas->at(i), device, parallel_id, false, false));
+        JUST(New(output_tensor_metas.at(i), device, parallel_id, false, false));
     outputs->at(i).reset(new ConsistentTensor(tensor_impl));
   }
   // Do nothing if the `parallel_desc` doesn't cover current ProcessCtx.
