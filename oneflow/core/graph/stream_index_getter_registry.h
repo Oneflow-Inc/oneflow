@@ -55,6 +55,6 @@ class StreamIndexGetterRegistry final {
   }
 };
 
-}  // namespace oneflow
+};  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_STREAM_INDEX_GETTER_REGISTRY_H_

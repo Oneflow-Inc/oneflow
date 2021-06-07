@@ -22,7 +22,7 @@ REGISTER_USER_OP("ones_like")
     .Output("out")
     .SetOutputBufferNum(1)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

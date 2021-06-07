@@ -25,7 +25,7 @@ REGISTER_USER_OP("constant")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
