@@ -33,7 +33,7 @@ class Acosh(Module):
 @experimental_api
 def acosh_op(x):
     r"""Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
-    
+
     .. math::
 
         \text{out}_{i} = \cosh^{-1}(\text{input}_{i})
@@ -70,7 +70,7 @@ def acosh_op_tensor(x):
     acosh() -> Tensor
 
     See :func:`oneflow.experimental.acosh`
-    
+
     """
 
     return Acosh()(x)
@@ -82,7 +82,7 @@ def arccosh_op(x):
     r"""
 
     See :func:`oneflow.experimental.acosh`
-    
+
     """
 
     return Acosh()(x)
@@ -96,7 +96,7 @@ def arccosh_op_tensor(x):
     arccosh() -> Tensor
 
     See :func:`oneflow.experimental.acosh`
-    
+
     """
 
     return Acosh()(x)
@@ -105,4 +105,4 @@ def arccosh_op_tensor(x):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

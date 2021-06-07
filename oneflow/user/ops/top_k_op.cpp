@@ -24,7 +24,7 @@ REGISTER_USER_OP("top_k")
     .Attr<bool>("sorted")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       *out_shape = in_shape;
       out_shape->Set(
           in_shape.NumAxes() - 1,

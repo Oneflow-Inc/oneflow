@@ -23,7 +23,7 @@ REGISTER_USER_OP("generate_random_batch_permutation_indices")
     .Output("y")
     .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
+      *ctx->OutputShape("y", 0) = Shape({ctx->InputShape("x", 0).At(0)});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
