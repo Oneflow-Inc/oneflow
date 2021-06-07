@@ -176,7 +176,7 @@ class TensorScalarDiv : public OpExprGradFunction<TensorScalarInterpState> {
 
  private:
   std::shared_ptr<OpExpr> tensor_scalar_div_op_;
-  std::shared_ptr<OpExpr> broadcast_div_op_;
+  std::shared_ptr<OpExpr> broadcast_div_grad_op_;
 };
 
 Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
@@ -184,7 +184,8 @@ Maybe<void> TensorScalarDiv::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   const std::string& op_name = fw_op_expr->op_name();
   tensor_scalar_div_op_ = JUST(op_expr_helper::ScalarDivByTensorOp(GradientOpName(op_name + "_x")));
-  broadcast_div_op_ = JUST(op_expr_helper::BroadcastDivOp(GradientOpName(op_name + "_scalar")));
+  broadcast_div_grad_op_ =
+      JUST(op_expr_helper::BroadcastDivGradOp(GradientOpName(op_name + "_scalar")));
   return Maybe<void>::Ok();
 }
 
@@ -211,7 +212,7 @@ Maybe<void> TensorScalarDiv::Apply(const TensorScalarInterpState* ctx, const Ten
     const auto& scalar = ctx->SavedTensors().at(0);
     const auto& y = ctx->SavedTensors().at(1);
     in_grads->at(1) =
-        JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_div_op_, {out_grads.at(0), y, scalar}));
+        JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_div_grad_op_, {out_grads.at(0), y, scalar}));
   }
   return Maybe<void>::Ok();
 }

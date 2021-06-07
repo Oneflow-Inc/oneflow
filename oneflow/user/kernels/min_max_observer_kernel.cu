@@ -238,8 +238,8 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         size_t tmp_buffer_size = 1;                                                    \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
-          const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
-          tmp_buffer_size = in_shape->At(0);                                           \
+          const Shape& in_shape = ctx->InputShape("in", 0);                            \
+          tmp_buffer_size = in_shape.At(0);                                            \
         }                                                                              \
         return 2 * tmp_buffer_size * sizeof(dtype);                                    \
       })

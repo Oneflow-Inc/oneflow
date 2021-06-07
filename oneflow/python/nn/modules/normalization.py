@@ -28,79 +28,83 @@ _shape_t = Union[int, Tuple[int], flow._oneflow_internal.Size]
 class LayerNorm(Module):
     r"""Applies Layer Normalization over a mini-batch of inputs as described in
     the paper `Layer Normalization <https://arxiv.org/abs/1607.06450>`__
-    
+
     .. math::
         y = \frac{x - \mathrm{E}[x]}{ \sqrt{\mathrm{Var}[x] + \epsilon}} * \gamma + \beta
-    
+
     The mean and standard-deviation are calculated separately over the last
     certain number dimensions which have to be of the shape specified by
     :attr:`normalized_shape`.
     :math:`\gamma` and :math:`\beta` are learnable affine transform parameters of
     :attr:`normalized_shape` if :attr:`elementwise_affine` is ``True``.
     The standard-deviation is calculated via the biased estimator.
-    
+
     .. note::
         Unlike Batch Normalization and Instance Normalization, which applies
         scalar scale and bias for each entire channel/plane with the
         :attr:`affine` option, Layer Normalization applies per-element scale and
         bias with :attr:`elementwise_affine`.
+
     This layer uses statistics computed from input data in both training and
     evaluation modes.
-    
+
     Args:
         normalized_shape (int or list or oneflow.Size): input shape from an expected input of size
 
             .. math::
-                [* \times \text{normalized_shape}[0] \times \text{normalized_shape}[1] \times \ldots \times \text{normalized_shape}[-1]] 
-            
+                [* \times \text{normalized_shape}[0] \times \text{normalized_shape}[1] \times \ldots \times \text{normalized_shape}[-1]]
+
             If a single integer is used, it is treated as a singleton list, and this module will
-            
+
             normalize over the last dimension which is expected to be of that specific size.
-        
+
         eps: a value added to the denominator for numerical stability. Default: 1e-5
         elementwise_affine: a boolean value that when set to ``True``, this module
             has learnable per-element affine parameters initialized to ones (for weights)
             and zeros (for biases). Default: ``True``.
+
     Shape:
         - Input: :math:`(N, *)`
         - Output: :math:`(N, *)` (same shape as input)
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
 
-        import numpy as np
-        import oneflow as flow
+    .. code-block:: python
 
-        input_arr = np.array(
-            [
-                [
-                    [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
-                    [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
-                ],
-                [
-                    [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
-                    [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
-                ],
-            ],
-            dtype=np.float32,
-        )
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(input_arr)
-        m = flow.nn.LayerNorm(2)
-        y = m(x)
+        >>> input_arr = np.array(
+        ...     [
+        ...         [
+        ...             [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
+        ...             [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
+        ...         ],
+        ...         [
+        ...             [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
+        ...             [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
+        ...         ],
+        ...     ],
+        ...     dtype=np.float32,
+        ... )
 
-        # [[[[ 0.99997395 -0.99997395]
-        # [-0.999947    0.999947  ]]
-
-        # [[-0.99995947  0.9999595 ]
-        # [ 0.99998796 -0.99998796]]]
-
-        # [[[-0.9998348   0.99983454]
-        # [ 0.9999913  -0.9999913 ]]
-
-        # [[ 0.99997866 -0.99997854]
-        # [ 0.9999645  -0.9999645 ]]]]
+        >>> x = flow.Tensor(input_arr)
+        >>> m = flow.nn.LayerNorm(2)
+        >>> y = m(x).numpy()
+        >>> y
+        array([[[[ 0.99997395, -0.99997395],
+                 [-0.999947  ,  0.999947  ]],
+        <BLANKLINE>
+                [[-0.9999596 ,  0.9999594 ],
+                 [ 0.999988  , -0.999988  ]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[-0.9998343 ,  0.9998341 ],
+                 [ 0.9999914 , -0.9999914 ]],
+        <BLANKLINE>
+                [[ 0.99997866, -0.99997866],
+                 [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
 
     """
     __constants__ = ["normalized_shape", "eps", "elementwise_affine"]
@@ -242,3 +246,9 @@ class LayerNorm(Module):
             "{normalized_shape}, eps={eps}, "
             "elementwise_affine={elementwise_affine}".format(**self.__dict__)
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
