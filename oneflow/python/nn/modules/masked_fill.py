@@ -34,7 +34,7 @@ class MaskedFill(Module):
 
     def forward(self, input, mask):
         in_shape = tuple(input.shape)
-        value_like_x = flow.Tensor(*in_shape)
+        value_like_x = flow.Tensor(*in_shape, device=input.device)
         value_like_x.fill_(self.value)
         return self._where_op(mask, value_like_x, input)[0]
 
@@ -86,4 +86,4 @@ def masked_fill_op(tensor, mask, value):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
