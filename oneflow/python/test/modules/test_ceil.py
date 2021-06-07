@@ -22,23 +22,14 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_ceil_forward(test_case, device, shape):
+def _test_ceil_impl(test_case, device, shape):
     x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-
     of_out = flow.ceil(x)
     np_out = np.ceil(x.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
-
-
-
-def _test_ceil_backward(test_case, device, shape):
-    x = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-
-    of_out = flow.ceil(x).sum()
+    of_out = of_out.sum()
     of_out.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
-
 
 
 
@@ -50,8 +41,7 @@ class TestCeilModule(flow.unittest.TestCase):
     def test_ceil(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_ceil_forward,
-            _test_ceil_backward
+            _test_ceil_impl
         ]
 
         arg_dict["device"] = ["cpu", "cuda"]
