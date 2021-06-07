@@ -11,30 +11,30 @@ OneFlow API Reference
     :maxdepth: 1
     :caption: OneFlow Python API
 
-    advanced
-    config
-    data
-    deprecated
-    distribute
+    oneflow
     env
-    experimental
-    image
-    layers
+    config
+    optimizer
     losses
     math
     nn
-    oneflow
-    onnx
-    optim
-    optimizer
-    random
-    regularizers
-    scope
-    sysconfig
-    system
-    tensorrt
-    train
+    layers
+    data
+    distribute
+    advanced 
     typing
+    tensorrt 
+    deprecated  
+    experimental 
+    scope 
+    sysconfig 
+    onnx   
+    random 
+    system 
+    regularizers  
+    image
+    train
+    optim
 
 
 Indices and tables
