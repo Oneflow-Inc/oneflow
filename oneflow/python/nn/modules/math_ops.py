@@ -1309,4 +1309,4 @@ def erfc_op_tensor(input):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(name='erf_op')
+    doctest.testmod(raise_on_error=True)
