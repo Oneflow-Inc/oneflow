@@ -49,6 +49,12 @@ def _test_slice_special_case(test_case, device):
     np_out = np_arr[0, :]
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
+    np_arr = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :, :]
+    np_out = np_arr[0, :, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
     np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
     of_out = x[0, :, :, :]

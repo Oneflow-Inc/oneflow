@@ -402,9 +402,13 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        squeeze_dims = []
+        for idx, val in enumerate(key):
+            if isinstance(val, int):
+                squeeze_dims.append(idx)
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res.squeeze()
+        return res.squeeze(dim=squeeze_dims)
 
     @_auto_determine
     @register_local_tensor_method()
