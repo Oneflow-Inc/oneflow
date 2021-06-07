@@ -50,18 +50,18 @@ def floor_op(x):
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  1.5, 0,  0.8]), dtype=flow.float32)
         >>> output = flow.floor(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([4])
-        >>> print(output.numpy())
-        [-1.  1.  0.  0.]
+        >>> output.numpy()
+        array([-1.,  1.,  0.,  0.], dtype=float32)
         
         >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, 2.5]]), dtype=flow.float32)
         >>> output1 = input1.floor()
-        >>> print(output1.shape)
+        >>> output1.shape
         flow.Size([2, 2])
-        >>> print(output1.numpy())
-        [[ 0.  1.]
-         [-1.  2.]]
+        >>> output1.numpy()
+        array([[ 0.,  1.],
+               [-1.,  2.]], dtype=float32)
      """
 
     return Floor()(x)
@@ -78,4 +78,4 @@ def floor_op_tensor(input):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(name="floor_op")
+    doctest.testmod(raise_on_error=True)
