@@ -50,8 +50,8 @@ class Dropout(_DropoutNd):
 
     This has proven to be an effective technique for regularization and
     preventing the co-adaptation of neurons as described in the paper
-    `Improving neural networks by preventing co-adaptation of feature
-    detectors`_ .
+    "Improving neural networks by preventing co-adaptation of feature
+    detectors".
 
     Furthermore, the outputs are scaled by a factor of :math:`\frac{1}{1-p}` during
     training. This means that during evaluation the module simply computes an
@@ -82,11 +82,11 @@ class Dropout(_DropoutNd):
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = m(x)
-
-        # tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
-        # [ 0.4299,  0.3626, -0.4892,  0.4141],
-        # [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
+        >>> y = m(x).numpy()
+        >>> print(y)
+        [[-0.7797  0.2264  0.2458  0.4163]
+         [ 0.4299  0.3626 -0.4892  0.4141]
+         [-1.4115  1.2183 -0.5503  0.652 ]]
 
 
     """

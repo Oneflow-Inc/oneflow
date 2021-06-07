@@ -260,5 +260,8 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
                                     const std::vector<int32_t>& strides, const bool& ceil_mode,
                                     const std::string& name);
 
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);
+
 }  // namespace op_expr_helper
 }  // namespace oneflow

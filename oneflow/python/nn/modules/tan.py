@@ -35,6 +35,7 @@ def tan_op(input):
 
     .. math::
         \text{out}_{i} = \tan(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -50,6 +51,7 @@ def tan_op(input):
         >>> output = flow.tan(input)
         >>> print(output.numpy())
         [-1.  0.  1.]
+
     """
 
     return Tan()(input)

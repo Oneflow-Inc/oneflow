@@ -578,6 +578,7 @@ def _add(x, y):
 
     .. math::
         out = x + y
+
     For example:
 
     .. code-block:: python
@@ -635,8 +636,10 @@ def asin_op(input):
 
     .. math::
         \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
@@ -708,8 +711,10 @@ def asinh_op(input):
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
@@ -841,6 +846,7 @@ def cos_op(tensor):
 
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -877,6 +883,7 @@ def log_op(tensor):
 
     .. math::
         y_{i} = \log_{e} (x_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -1149,6 +1156,7 @@ def cosh_op(tensor):
 
     .. math::
         \text{out}_{i} = \cosh(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
