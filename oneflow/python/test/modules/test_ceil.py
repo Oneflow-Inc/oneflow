@@ -30,10 +30,6 @@ def _test_ceil_forward(test_case, device, shape):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
-    x = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-    of_out = x.ceil()
-    np_out = np.ceil(x.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_ceil_backward(test_case, device, shape):
@@ -43,10 +39,6 @@ def _test_ceil_backward(test_case, device, shape):
     of_out.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
 
-    x = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-    of_out = x.ceil().sum()
-    of_out.backward()
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros(shape), 1e-4, 1e-4))
 
 
 

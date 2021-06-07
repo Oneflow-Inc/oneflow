@@ -841,5 +841,30 @@ class TestTensor(flow.unittest.TestCase):
         )
 
 
+    
+    def test_tensor_ceil(test_case):
+        x = flow.Tensor(np.random.randn(2,3), requires_grad=True)
+        of_out = x.ceil()
+        np_out = np.ceil(x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2,3)), 1e-4, 1e-4))
+
+
+        
+    def test_tensor_expm1(test_case):
+        x = flow.Tensor(np.random.randn(2,3), requires_grad=True)
+        of_out = x.expm1()
+        np_out = np.expm1(x.numpy())
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
+
+
 if __name__ == "__main__":
     unittest.main()
