@@ -1373,4 +1373,4 @@ def cosh_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod("atan_op")
+    doctest.testmod(raise_on_error=True)
