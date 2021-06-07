@@ -74,10 +74,9 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionConstraints(
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   auto* map = parallel_distribution_signature->mutable_bn_in_op2parallel_distribution();
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
-    const auto x = input_consistent_tensor_metas_.at(i).consumer_parallel_distribution_constraint();
-    CHECK(x);
-    (*map)[input_arg_tuple.indexed_bns().at(i)] =
-        *input_consistent_tensor_metas_.at(i).consumer_parallel_distribution_constraint();
+    const auto& constaint =
+        input_consistent_tensor_metas_.at(i).consumer_parallel_distribution_constraint();
+    if (constaint) { (*map)[input_arg_tuple.indexed_bns().at(i)] = *constaint; }
   }
   return Maybe<void>::Ok();
 }
