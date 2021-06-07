@@ -26,14 +26,18 @@ def _test_acos_forward(test_case, device):
     input = flow.Tensor(np.random.randn(2, 6, 5, 3), device=flow.device(device))
     of_out = flow.acos(input)
     np_out = np.arccos(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
 
 
 def _test_acos_tensor_function_forward(test_case, device):
     input = flow.Tensor(np.random.randn(8, 11, 9, 7), device=flow.device(device))
     of_out = input.acos()
     np_out = np.arccos(input.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+    )
 
 
 def _test_acos_backward(test_case, device):
@@ -42,8 +46,10 @@ def _test_acos_backward(test_case, device):
     )
     of_out = flow.acos(input).sum()
     of_out.backward()
-    np_grad = -1.0 / np.sqrt( 1 - np.square(input.numpy()))
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True))
+    np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 def _test_acos_tensor_function_backward(test_case, device):
@@ -53,7 +59,9 @@ def _test_acos_tensor_function_backward(test_case, device):
     of_out = input.acos().sum()
     of_out.backward()
     np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 @unittest.skipIf(
@@ -76,4 +84,3 @@ class TestAcos(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
