@@ -27,6 +27,13 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
+namespace detail {
+
+template<typename T>
+using remove_cv_t = typename std::remove_const<typename std::remove_reference<T>::type>::type;
+
+}  // namespace detail
+
 struct FunctionBody {
   virtual operator void*() = 0;
 };
@@ -42,13 +49,15 @@ class FunctionBodyImpl<R(Args...)> : public FunctionBody {
                std::is_same<typename function_traits<Func>::func_type, R(Args...)>::value,
                int>::type = 0>
   FunctionBodyImpl(const Func& func) {
-    func_ = [func](Args... args) { return func(std::forward<Args>(args)...); };
+    func_ = [func](const detail::remove_cv_t<Args>&... args) {
+      return func(std::forward<const detail::remove_cv_t<Args>&>(args)...);
+    };
   }
 
   operator void*() override { return &func_; }
 
  private:
-  std::function<R(Args...)> func_;
+  std::function<R(const detail::remove_cv_t<Args>&...)> func_;
 };
 
 class Functor {
@@ -57,13 +66,13 @@ class Functor {
       : signatrue_(signatrue), body_(body) {}
 
   template<typename R, typename... Args>
-  R call(Args... args) const {
+  R call(const detail::remove_cv_t<Args>&... args) const {
     if (!detail::CheckSignature<R(Args...)>(signatrue_).Ok()) {
       LOG(FATAL) << "The function was called with wrong arguments.";
     }
-    using FuncType = std::function<R(Args...)>;
+    using FuncType = std::function<R(const detail::remove_cv_t<Args>&...)>;
     auto* func = reinterpret_cast<FuncType*>(body_->operator void*());
-    return (*func)(std::forward<Args>(args)...);
+    return (*func)(std::forward<const detail::remove_cv_t<Args>&>(args)...);
   }
 
  private:
