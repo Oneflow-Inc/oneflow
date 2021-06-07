@@ -65,23 +65,26 @@ def _np_constant_pad2d_grad(src, dest, padding):
 
 def _test_ConstantPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape).astype( np.float32)
-    x = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
     if isinstance(padding, int):
         np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
+        boundry = [padding, padding, padding, padding]
+
     elif isinstance(padding, (tuple, int)) and len(padding) == 4:
         np_boundary = ((0, 0), (0, 0), (padding[2], padding[3]), (padding[0], padding[1]))
+        boundry = [padding[0], padding[1], padding[2], padding[3]]
     else:
         raise ValueError("padding must be in or list or tuple!") 
     
-    layer = flow.nn.ConstantPad2d(x, padding = padding, value=value)
-    of_out = layer(x)
-    np_out = np.pad(x, np_boundary, mode='constant', constant_values=value)
+    layer = flow.nn.ConstantPad2d(padding = padding, value=value)
+    of_out = layer(of_input)
+    np_out = np.pad(np_input, np_boundary, mode='constant', constant_values=value)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = _np_constant_pad2d_grad(np_out, np_input, boundary)
-
+    np_out_grad = _np_constant_pad2d_grad(np_out, np_input, boundry)
+    print('1', of_out.grad)
     test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
 
 @unittest.skipIf(

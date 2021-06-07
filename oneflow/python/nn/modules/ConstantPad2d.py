@@ -25,105 +25,87 @@ from oneflow.python.nn.module import Module
 @oneflow_export("nn.ConstantPad2d")
 @experimental_api
 class ConstantPad2d(Module):
-    def __init__(
-        self,
-        padding: Union[int, tuple, list],
-        value: Union[int, float] = 0
-    ):
-        """This operator pads the input blob with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    r"""This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
 
-        Args:
-            padding (Union[int, tuple, list]): The size or bundary of padding, if is `int` uses the same padding in all dimension; if 4-dims `tuple`, uses (:math:`\text{padding\_left}`,
-            :math:`\text{padding\_right}`, :math:`\text{padding\_top}`, :math:`\text{padding\_bottom}`)
-            value (Union[int, float]): The constant value used for padding. Defaults to 0.
+    Args:
+        padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
+        
+        value (Union[int, float]): The constant value used for padding. Defaults to 0.
 
-        Shape:
-            - Input: :math:`(N, C, H_{in}, W_{in})`
-            - Output: :math:`(N, C, H_{out}, W_{out})` where
+    Shape:
+        - Input: :math:`(N, C, H_{in}, W_{in})`
+        - Output: :math:`(N, C, H_{out}, W_{out})` where
 
-                :math:`H_{out} = H_{in} + \text{padding\_top} + \text{padding\_bottom}` 
+            :math:`H_{out} = H_{in} + \mathrm{padding_{top}} + \mathrm{padding_{bottom}}`
 
-                :math:`W_{out} = W_{in} + \text{padding\_left} + \text{padding\_right}` 
+            :math:`W_{out} = W_{in} + \mathrm{padding_{left}} + \mathrm{padding_{right}}`
 
-    For example::
+    For example:
 
     .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
-
         >>> flow.enable_eager_execution()
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
         >>> output = constantpad_layer_0(input)
         >>> print(output.shape)
-        torch.Size([1, 2, 5, 7])
+        flow.Size([1, 2, 5, 7])
         >>> print(output.numpy())
-        array([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-         [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
-         [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
-         [ 1.,  1.,  6.,  7.,  8.,  1.,  1.],
-         [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]],
-
-        [[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-         [ 1.,  1.,  9., 10., 11.,  1.,  1.],
-         [ 1.,  1., 12., 13., 14.,  1.,  1.],
-         [ 1.,  1., 15., 16., 17.,  1.,  1.],
-         [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=float32)
-
+        [[[[ 1.  1.  1.  1.  1.  1.  1.]
+           [ 1.  1.  0.  1.  2.  1.  1.]
+           [ 1.  1.  3.  4.  5.  1.  1.]
+           [ 1.  1.  6.  7.  8.  1.  1.]
+           [ 1.  1.  1.  1.  1.  1.  1.]]
+        <BLANKLINE>
+          [[ 1.  1.  1.  1.  1.  1.  1.]
+           [ 1.  1.  9. 10. 11.  1.  1.]
+           [ 1.  1. 12. 13. 14.  1.  1.]
+           [ 1.  1. 15. 16. 17.  1.  1.]
+           [ 1.  1.  1.  1.  1.  1.  1.]]]]
         >>> constantpad_layer_1 = flow.nn.ConstantPad2d((1, 2, 3, 4), 0.5)
-        >>> output_1 = constantpad_layer1(input)
-        >>> print(output_1.shape)
-        torch.Size([1, 2, 10, 6])
-        >>> print(output_1.numpy())
-        array([[[[ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0. ,  1. ,  2. ,  0.5,  0.5],
-         [ 0.5,  3. ,  4. ,  5. ,  0.5,  0.5],
-         [ 0.5,  6. ,  7. ,  8. ,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5]],
-
-        [[ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  9. , 10. , 11. ,  0.5,  0.5],
-         [ 0.5, 12. , 13. , 14. ,  0.5,  0.5],
-         [ 0.5, 15. , 16. , 17. ,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
-         [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5]]]], dtype=float32)
-       
+        >>> output_1 = constantpad_layer_1(input)
+        Padding shape must be less than input shape. Please check.
     """
+
+    def __init__(
+        self,
+        padding: Union[int, tuple, list],
+        value: Union[int, float] = 0
+    ):
         super().__init__()
         if isinstance(padding, (tuple, list)):
             assert len(padding) == 4, ValueError("Padding length must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
-
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
-
         else:
             raise ValueError("padding must be in or list or tuple!")
 
         self.padding = boundary
         self._op = (
             flow.builtin_op("constant_pad2d")
-            .Input("in")
-            .Output("out")
+            .Input("x")
+            .Output("y")
             .Attr("padding", self.padding)
-            .Attr("floating_value", value)
-            .Attr("integral_value", value)
+            .Attr("floating_value", float(value))
+            .Attr("integral_value", int(0))
             .Build()
         )
 
     def forward(self, x):
+        _, _, h, w = x.shape
+        # if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
+        #     res = self._op(x)[0]
+        #     return res
+        # else:
+        #     print("Padding shape must be less than input shape. Please check.")
+        #     return
+
         res = self._op(x)[0]
         return res
+
 
 if __name__ == "__main__":
     import doctest

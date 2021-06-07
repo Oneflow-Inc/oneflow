@@ -42,6 +42,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
 .. autofunction:: oneflow.experimental.nn.LayerNorm
+.. autofunction:: oneflow.experimental.nn.ConstantPad2d
 .. autofunction:: oneflow.experimental.cast
 .. autofunction:: oneflow.experimental.Tensor.cast
 .. autofunction:: oneflow.experimental.cat
