@@ -70,9 +70,12 @@
 </details>
 
 <details>
-<summary>Build and Install OneFlow</summary>
+<summary>Build OneFlow</summary>
 
-- #### Option 1: Build in docker container (recommended)
+- #### Option 1: Build with Conda
+  Please refer to [this repo](https://github.com/Oneflow-Inc/conda-env)
+
+- #### Option 2: Build in docker container
   - In the root directory of OneFlow source code, run:
 
     ```
@@ -95,7 +98,7 @@
 
   - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
-- #### Option 2: Build on bare metal
+- #### Option 3: Build on bare metal
   - Install dependencies. For instance, on Ubuntu 20.04, run:
     ```
     sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
@@ -108,7 +111,20 @@
     cd build
     cmake ..
     make -j$(nproc)
-    make pip_install
+    ```
+
+  - Add oneflow to your PYTHONPATH
+
+    ```
+    source build/source.sh
+    ```
+
+    Please note that this change is not permanent
+
+  - Simple validation
+
+    ```
+    python3 -m oneflow --doctor
     ```
 
   - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
