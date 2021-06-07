@@ -128,6 +128,14 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.atanh
+.. autofunction:: oneflow.experimental.Tensor.atanh
+.. autofunction:: oneflow.experimental.arctanh
+.. autofunction:: oneflow.experimental.Tensor.arctanh
+.. autofunction:: oneflow.experimental.tan
+.. autofunction:: oneflow.experimental.Tensor.tan
+.. autofunction:: oneflow.experimental.log1p
+.. autofunction:: oneflow.experimental.Tensor.log1p
 .. autofunction:: oneflow.experimental.ceil
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
