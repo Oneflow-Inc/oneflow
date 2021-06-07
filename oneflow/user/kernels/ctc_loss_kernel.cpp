@@ -120,20 +120,20 @@ class CtcLossGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                           \
-  REGISTER_USER_KERNEL("ctc_loss_grad")                                                       \
-      .SetCreateFn<                                                                           \
-          CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>()  \
-      .SetIsMatchedHob(                                                                       \
-          (user_op::HobDeviceTag() == device)                                                 \
-          & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))                \
-          & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))       \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
-        const Shape* log_probs_shape = ctx->Shape4ArgNameAndIndex("log_probs", 0);            \
-        const Shape* targets_shape = ctx->Shape4ArgNameAndIndex("targets", 0);                \
-        int64_t elem_cnt =                                                                    \
-            log_probs_shape->At(1) * log_probs_shape->At(0) * (2 * targets_shape->At(1) + 1); \
-        return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                    \
+#define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                          \
+  REGISTER_USER_KERNEL("ctc_loss_grad")                                                      \
+      .SetCreateFn<                                                                          \
+          CtcLossGradKernel<device, OF_PP_PAIR_FIRST(dtype), OF_PP_PAIR_FIRST(idx_dtype)>>() \
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceTag() == device)                                                \
+          & (user_op::HobDataType("log_probs", 0) == OF_PP_PAIR_SECOND(dtype))               \
+          & (user_op::HobDataType("input_lengths", 0) == OF_PP_PAIR_SECOND(idx_dtype)))      \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                    \
+        const Shape& log_probs_shape = ctx->InputShape("log_probs", 0);                      \
+        const Shape& targets_shape = ctx->InputShape("targets", 0);                          \
+        int64_t elem_cnt =                                                                   \
+            log_probs_shape.At(1) * log_probs_shape.At(0) * (2 * targets_shape.At(1) + 1);   \
+        return elem_cnt * sizeof(OF_PP_PAIR_FIRST(dtype));                                   \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CTC_LOSS_BACKWARD_KERNEL, DEVICE_TYPE_SEQ,
