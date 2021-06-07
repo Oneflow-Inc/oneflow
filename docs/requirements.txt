@@ -1,5 +1,5 @@
-Sphinx==2.2.0
+sphinx==3.5.4
 recommonmark==0.6.0
-sphinx_rtd_theme==0.5.0
+furo==2021.4.11b34
 --find-links https://staging.oneflow.info/branch/master/cu102
 oneflow
