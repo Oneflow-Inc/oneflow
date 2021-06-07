@@ -281,11 +281,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue("requires_grad=" in requires_grad_input_str)
 
     @unittest.skipIf(
-        # TODO(Liang Depeng): enable this test after tensor support indexing
-        # not flow.unittest.env.eager_execution_enabled(),
-        # "numpy doesn't work in lazy mode",
-        True,
-        "skip for now",
+        not flow.unittest.env.eager_execution_enabled(), "skip for now",
     )
     def test_indexing(test_case):
         class SliceExtracter:
