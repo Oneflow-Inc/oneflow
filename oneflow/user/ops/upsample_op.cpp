@@ -57,16 +57,16 @@ REGISTER_USER_OP("upsample_grad")
     .Attr<std::string>("data_format")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
-      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape->NumAxes() != 4) {
+      if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
         LOG(FATAL) << "upsample_nearest only supports NCHW";
       }
-      *dx_shape = Shape({dy_shape->At(0), dy_shape->At(1),
-                         static_cast<int32_t>(dy_shape->At(2) / height_scale),
-                         static_cast<int32_t>(dy_shape->At(3) / width_scale)});
+      *dx_shape = Shape({dy_shape.At(0), dy_shape.At(1),
+                         static_cast<int32_t>(dy_shape.At(2) / height_scale),
+                         static_cast<int32_t>(dy_shape.At(3) / width_scale)});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

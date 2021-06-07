@@ -462,7 +462,7 @@ class Hardsigmoid(Module):
         >>> out = hardsigmoid(input).numpy()
         >>> print(out)
         [0.41666666 0.5        0.5833333 ]
-    
+
 
     """
 
@@ -759,7 +759,7 @@ class Hardswish(Module):
         >>> out = hardswish(input).numpy()
         >>> print(out)
         [-0.20833333  0.          0.29166666]
-    
+
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
     """
@@ -812,7 +812,7 @@ class Hardtanh(Module):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
-        
+
         >>> m = flow.nn.Hardtanh()
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
@@ -859,11 +859,6 @@ class Hardtanh(Module):
 @experimental_api
 class LeakyReLU(Module):
     r"""Applies the element-wise function:
-
-    .. math::
-        \text{LeakyReLU}(x) = \max(0, x) + \text{negative_slope} * \min(0, x)
-
-    or
 
     .. math::
         \text{LeakyRELU}(x) = \begin{cases}
@@ -914,4 +909,4 @@ class LeakyReLU(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
