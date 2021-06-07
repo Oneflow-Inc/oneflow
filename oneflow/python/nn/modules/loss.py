@@ -296,6 +296,92 @@ class NLLLoss(Module):
             return res.mean()
 
 
+@oneflow_export("nn.MarginRankingLoss")
+@experimental_api
+class MarginRankingLoss(Module):
+    r"""Creates a criterion that measures the loss given
+    inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
+    and a label 1D mini-batch tensor :math:`y` (containing 1 or -1).
+
+    If :math:`y = 1` then it assumed the first input should be ranked higher
+    (have a larger value) than the second input, and vice-versa for :math:`y = -1`.
+
+    The loss function for each sample in the mini-batch is:
+
+    .. math::
+        \text{loss}(x, y) = \max(0, -y * (x1 - x2) + \text{margin})
+
+    Args:
+        margin (float, optional): Has a default value of :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
+    Shape:
+        - Input: :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - Target: :math:`(N)`
+        - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N)`.
+
+    For example:
+
+    .. code-block:: python 
+        
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import numpy as np
+
+        >>> input = flow.Tensor(
+        ... [[-0.1664078, -1.7256707, -0.14690138],
+        ... [-0.21474946, 0.53737473, 0.99684894],
+        ... [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
+        >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
+        >>> m = flow.nn.NLLLoss(reduction="none")
+        >>> out = m(input, target).numpy()
+        >>> print(out)
+        [ 0.1664078  -0.53737473 -0.7645404 ]
+
+        >>> m = flow.nn.NLLLoss(reduction="sum")
+        >>> out = m(input, target).numpy()
+        >>> print(out)
+        [-1.1355073]
+        
+        >>> m = flow.nn.NLLLoss(reduction="mean")
+        >>> out = m(input, target).numpy()
+        >>> print(out)
+        [-0.37850246]
+
+
+
+
+    """
+    def __init__(self, margin=0.0,  reduction: str = "mean") -> None:
+        super().__init__()
+        self.margin = margin
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+
+
+    def forward(self, input1, input2, target):
+        res = flow.experimental.clip(
+                flow.experimental.add(self.margin, flow.experimental.multiply(target, flow.experimental.multiply(-1, flow.experimental.subtract(input1, input2)))),
+                min_value=0)
+
+        if self.reduction == "none":
+            return res
+        elif self.reduction == "sum":
+            return res.sum()
+        else:
+            return res.mean()
+
 if __name__ == "__main__":
     import doctest
 

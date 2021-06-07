@@ -1131,6 +1131,86 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
+class Addmm(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._matmul_op = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        ) 
+
+        
+    def forward(self, x, mat1, mat2, alpha=1, beta=1):
+        if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
+            raise ValueError("input matrixes shape can not be greater than 2")
+        else:
+            return _mul(x, beta) + _mul(self._matmul_op(mat1,mat2)[0], alpha)
+
+
+@oneflow_export("addmm")
+@register_tensor_op("addmm")
+def addmm_op(input, mat1, mat2, alpha=1, beta=1):
+    r"""addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
+
+    Performs a matrix multiplication of the matrices :attr:`mat1` and :attr:`mat2`.
+    The matrix :attr:`input` is added to the final result.
+
+    If :attr:`mat1` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, then :attr:`input` must be
+    :ref:`broadcastable <broadcasting-semantics>` with a :math:`(n \times p)` tensor
+    and :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    :attr:`alpha` and :attr:`beta` are scaling factors on matrix-vector product between
+    :attr:`mat1` and :attr:`mat2` and the added matrix :attr:`input` respectively.
+
+    .. math::
+        \text{out} = \beta\ \text{input} + \alpha\ (\text{mat1}_i \mathbin{@} \text{mat2}_i)
+
+    For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
+    :attr:`alpha` must be real numbers, otherwise they should be integers.
+
+    Args:
+        beta (Number, optional): multiplier for :attr:`input` (:math:`\beta`)
+        input (Tensor): matrix to be added
+        alpha (Number, optional): multiplier for :math:`mat1 @ mat2` (:math:`\alpha`)
+        mat1 (Tensor): the first matrix to be multiplied
+        mat2 (Tensor): the second matrix to be multiplied
+        out (Tensor, optional): the output tensor.
+
+    Example::
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.tensor(np.array([[1,2,4],[5,11,9.1]]))
+        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
+        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
+        >>> output = flow.addmm(input, mat1, mat2)
+        >>> output.numpy()
+        array([[100.68,  33.83, 126.87],
+               [110.01,  43.48, 133.61]])
+        >>> output.shape
+        flow.Size([2, 3])
+
+        >>> input2 = flow.tensor(np.array([1.7]))
+        >>> mat1 = flow.tensor(np.array([[1,2],[5,9.1],[7.7,1.4]]))
+        >>> mat2 = flow.tensor(np.array([[1,2,3.7],[5,9.1,6.8]]))
+        >>> output2 = flow.addmm(input2, mat1, mat2, alpha=1, beta=2)
+        >>> output2.numpy()
+        array([[14.4 , 23.6 , 20.7 ],
+               [53.9 , 96.21, 83.78],
+               [18.1 , 31.54, 41.41]])
+        >>> output2.shape
+        flow.Size([3, 3])
+    """
+    return Addmm()(input, mat1, mat2, alpha, beta)
+
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1170,4 +1250,4 @@ def cosh_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(name="addmm")
