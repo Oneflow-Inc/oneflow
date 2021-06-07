@@ -73,12 +73,12 @@ struct SwitchUtil {
 size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   const std::string& device_tag = ctx->device_tag();
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input", 0);
+  const Shape& input_shape = ctx->InputShape("input", 0);
   DataType input_dtype = *ctx->Dtype4ArgNameAndIndex("input", 0);
   DataType output_dtype = *ctx->Dtype4ArgNameAndIndex("output", 0);
   return SwitchUtil::SwitchGetWorkspaceBytesSize(
-      SwitchCase(device_type, input_dtype, output_dtype, input_shape->NumAxes()),
-      input_shape->elem_cnt());
+      SwitchCase(device_type, input_dtype, output_dtype, input_shape.NumAxes()),
+      input_shape.elem_cnt());
 }
 
 }  // namespace
