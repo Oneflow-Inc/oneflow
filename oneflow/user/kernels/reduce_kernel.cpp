@@ -51,8 +51,8 @@ class ReduceKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
                        & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                    \
-        return in_shape.elem_cnt() * sizeof(dtype);                                              \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
+        return in_shape.elem_cnt() * sizeof(dtype);                                               \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \

@@ -162,12 +162,12 @@ class GpuPReluKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                             \
-        const Shape& in_shape = ctx->InputShape("x", 0);                   \
-        const Shape& alpha_shape = ctx->InputShape("alpha", 0);            \
+        const Shape& in_shape = ctx->InputShape("x", 0);                              \
+        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                       \
         const int64_t tmp_buffer_size =                                               \
-            IsAlphaShapeContiguous(alpha_shape, in_shape)                           \
+            IsAlphaShapeContiguous(alpha_shape, in_shape)                             \
                 ? 0                                                                   \
-                : GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));           \
+                : GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));            \
         return tmp_buffer_size;                                                       \
       });
 
@@ -229,12 +229,12 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
                        & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const Shape& in_shape = ctx->InputShape("x", 0);                    \
-        const Shape& alpha_shape = ctx->InputShape("alpha", 0);             \
+        const Shape& in_shape = ctx->InputShape("x", 0);                               \
+        const Shape& alpha_shape = ctx->InputShape("alpha", 0);                        \
         const int64_t tmp_buffer_size =                                                \
-            IsAlphaShapeContiguous(alpha_shape, in_shape)                            \
-                ? 2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype))         \
-                : 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));        \
+            IsAlphaShapeContiguous(alpha_shape, in_shape)                              \
+                ? 2 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype))          \
+                : 3 * GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(dtype));         \
         return tmp_buffer_size;                                                        \
       });
 

@@ -199,8 +199,8 @@ class ReduceGlobalStageKernel final : public OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
                        & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInferTmpSizeFn([](InferContext* ctx) {                                                 \
-        const Shape& in_shape = ctx->InputShape("in", 0);                             \
-        return in_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));                      \
+        const Shape& in_shape = ctx->InputShape("in", 0);                                        \
+        return in_shape.elem_cnt() * sizeof(OF_PP_PAIR_FIRST(dtype_pair));                       \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_REDUCE_GLOBAL_STAGE_KERNEL, ("reduce_max_global_stage"),
