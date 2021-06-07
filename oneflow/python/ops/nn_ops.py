@@ -3917,6 +3917,7 @@ def bce_with_logits_loss(
 
 
 @oneflow_export("nn.MSELoss")
+@stable_api
 def mse_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
