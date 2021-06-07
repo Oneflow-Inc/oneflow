@@ -50,8 +50,8 @@ class Dropout(_DropoutNd):
 
     This has proven to be an effective technique for regularization and
     preventing the co-adaptation of neurons as described in the paper
-    `Improving neural networks by preventing co-adaptation of feature
-    detectors`_ .
+    "Improving neural networks by preventing co-adaptation of feature
+    detectors".
 
     Furthermore, the outputs are scaled by a factor of :math:`\frac{1}{1-p}` during
     training. This means that during evaluation the module simply computes an

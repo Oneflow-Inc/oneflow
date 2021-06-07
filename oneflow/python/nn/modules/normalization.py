@@ -44,6 +44,7 @@ class LayerNorm(Module):
         scalar scale and bias for each entire channel/plane with the
         :attr:`affine` option, Layer Normalization applies per-element scale and
         bias with :attr:`elementwise_affine`.
+
     This layer uses statistics computed from input data in both training and
     evaluation modes.
 
@@ -61,6 +62,7 @@ class LayerNorm(Module):
         elementwise_affine: a boolean value that when set to ``True``, this module
             has learnable per-element affine parameters initialized to ones (for weights)
             and zeros (for biases). Default: ``True``.
+
     Shape:
         - Input: :math:`(N, *)`
         - Output: :math:`(N, *)` (same shape as input)

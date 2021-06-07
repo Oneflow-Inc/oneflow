@@ -59,8 +59,6 @@ class Identity(Module):
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
     Args:
 
         - in_features: size of each input sample
