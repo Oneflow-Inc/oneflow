@@ -177,11 +177,15 @@ class Conv2d(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
 
-        m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
-        input = flow.randn(20, 16, 50, 100)
-        output = m(input)
+        >>> arr = np.random.randn(20, 16, 50, 100)
+        >>> input = flow.Tensor(arr)
+        >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
+        >>> output = m(input)
 
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
@@ -284,3 +288,9 @@ class Conv2d(Module):
         if self._bias_add_op is not None:
             res = self._bias_add_op(res, self.bias)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
