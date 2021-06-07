@@ -22,7 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_expm1_forward(test_case, shape, device):
+def _test_expm1_forward(test_case, device, shape):
     x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
 
     of_out = flow.expm1(x)
@@ -36,16 +36,16 @@ def _test_expm1_forward(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
-def _test_expm1_backward(test_case, shape, device):
+def _test_expm1_backward(test_case, device, shape):
     x = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
 
-    of_out = flow.expm1(x)
+    of_out = flow.expm1(x).sum()
     of_out.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
 
 
     x = flow.Tensor(np.random.randn(*shape), requires_grad=True, device=flow.device(device))
-    of_out = x.expm1()
+    of_out = x.expm1().sum()
     of_out.backward()
     test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
 
@@ -55,20 +55,19 @@ def _test_expm1_backward(test_case, shape, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAddModule(flow.unittest.TestCase):
-    def test_expm1(test_case):
-        arg_dict_forward = OrderedDict()
-        arg_dict_forward["shape"] = [(2, ), (2, 3), (2, 4, 5, 6)]
-        arg_dict_forward["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict_forward):
-            _test_expm1_forward(test_case, *arg)
+class TestExpm1Module(flow.unittest.TestCase):
+    def test_ceil(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_expm1_forward,
+            _test_expm1_backward
+        ]
 
-        arg_dict_backward = OrderedDict()
-        arg_dict_backward["shape"] = [(1,)]
-        arg_dict_backward["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict_backward):
-            _test_expm1_backward(test_case, *arg)
-        
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(1,), (2, 3), (2, 3, 4), (2, 3, 4, 5)]
+
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 
