@@ -803,7 +803,6 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-
     def test_tensor_arctanh(test_case):
         np_input = np.random.random((2, 3))
         of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
@@ -889,6 +888,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
         )
-        
+
+
 if __name__ == "__main__":
     unittest.main()
