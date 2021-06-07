@@ -119,7 +119,7 @@
     source build/source.sh
     ```
 
-    Please note that this change is not permanent
+    Please note that this change is not permanent.
 
   - Simple validation
 
