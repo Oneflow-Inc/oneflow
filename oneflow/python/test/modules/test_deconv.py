@@ -24,13 +24,17 @@ from test_util import GenArgList
 
 
 def _test_deconv_normal(test_case, device):
-    np_arr = np.random.randn(1, 1, 2, 2)
+    np_arr = np.array([[[[0.2735021114349365, -1.3842310905456543], [1.058540940284729, -0.03388553857803345]]]])
     input = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
-    m = nn.ConvTranspose2d(1, 2, 3, stride=2)
+    weight = np.array([[[[0.06456436216831207, -0.10852358490228653, -0.21638715267181396], [-0.2279110550880432, 0.1476770043373108, 0.19457484781742096], [0.05026858672499657, 0.10818571597337723, 0.02056501805782318]], [[0.205095112323761, 0.1488947868347168, -0.2344113141298294], [0.1684819906949997, -0.21986986696720123, 0.1082606166601181], [-0.1528974026441574, 0.17120417952537537, 0.01954500749707222]]]])
+    m = nn.ConvTranspose2d(1, 2, 3, stride=1)
+    m.weight = flow.nn.Parameter(flow.Tensor(weight))
     m = m.to(device)
     output = m(input)
-    print(input.numpy())
-    print(m.weight.numpy())
+
+    print(input.numpy().tolist())
+    print(m.weight.numpy().tolist())
+    print(output.numpy().tolist())
 
 
 @unittest.skipIf(

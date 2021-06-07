@@ -161,7 +161,7 @@ class ConvTranspose2d(Module):
         self.bias = None
         self._bias_add_op = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels // groups))
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
                 .Input("a")
@@ -182,6 +182,7 @@ class ConvTranspose2d(Module):
             .Attr("strides", stride)
             .Attr("dilation_rate", dilation)
             .Attr("output_padding", output_padding)
+            .Attr("groups", groups)
             .Output("out")
             .Build()
         )
@@ -195,10 +196,7 @@ class ConvTranspose2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        print(x.shape)
-        print(self.weight.shape)
         res = self._op(x, self.weight)[0]
-        print('debug here')
         if self._bias_add_op is not None:
             res = self._bias_add_op(res, self.bias)[0]
         return res
