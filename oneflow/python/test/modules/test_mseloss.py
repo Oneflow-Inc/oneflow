@@ -22,7 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def np_mseloss(np_input, np_target):
+def _np_mseloss(np_input, np_target):
     np_mse = np.square(np_target - np_input)
     np_mse_mean = np.mean(np_mse)
     np_mse_sum = np.sum(np_mse)
@@ -34,17 +34,76 @@ def np_mseloss(np_input, np_target):
     }
 
 
-def _test_mseloss(test_case, device, reduction):
-    x = np.random.randn(2, 3)
-    y = np.random.randn(2, 3)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+def _np_mseloss_grad(np_input, np_target):
+    elem_cnt = np_input.size
+    np_mse_grad_sum = -2 * (np_target - np_input)
+    np_mse_grad_mean = np_mse_grad_sum / elem_cnt
+
+    return {
+        "none": np_mse_grad_sum,
+        "mean": np_mse_grad_mean,
+        "sum": np_mse_grad_sum,
+    }
+
+
+def _test_mseloss_backward(test_case, device, reduction):
+    x = np.random.randn(3, 5)
+    y = np.random.randn(3, 5)
+    input = flow.Tensor(
+        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
     target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
 
     loss = flow.nn.MSELoss(reduction=reduction)
     loss = loss.to(device)
     of_out = loss(input, target)
-    np_out = np_mseloss(x, y)[reduction]
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    np_out = _np_mseloss(x, y)[reduction]
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = _np_mseloss_grad(x, y)[reduction]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_mseloss_high_dim_input_backward(test_case, device, reduction):
+    x = np.random.randn(3, 2, 4, 16, 5)
+    y = np.random.randn(3, 2, 4, 16, 5)
+    input = flow.Tensor(
+        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+
+    loss = flow.nn.MSELoss(reduction=reduction)
+    loss = loss.to(device)
+    of_out = loss(input, target)
+    np_out = _np_mseloss(x, y)[reduction]
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = _np_mseloss_grad(x, y)[reduction]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_mseloss_one_elem_input_backward(test_case, device, reduction):
+    x = np.array([0]).astype(np.float)
+    y = np.array([-1]).astype(np.float)
+    input = flow.Tensor(
+        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+
+    loss = flow.nn.MSELoss(reduction=reduction)
+    loss = loss.to(device)
+    of_out = loss(input, target)
+    np_out = _np_mseloss(x, y)[reduction]
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = _np_mseloss_grad(x, y)[reduction]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -55,10 +114,12 @@ class TestMSELossModule(flow.unittest.TestCase):
     def test_mseloss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_mseloss,
+            _test_mseloss_backward,
+            _test_mseloss_high_dim_input_backward,
+            _test_mseloss_one_elem_input_backward,
         ]
-        arg_dict["device"] = ["cpu"]
-        arg_dict["reduction"] = ["none"]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["reduction"] = ["none", "mean", "sum"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

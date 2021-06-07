@@ -360,6 +360,27 @@ class MSELoss(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
+        >>> input = flow.Tensor(
+        ... [[-0.02557137, 0.03101675, 1.37493674],
+        ... [0.25599439, -1.08372561, -0.21006816]], dtype=flow.float32)
+        >>> #1111
+        >>> target = flow.Tensor(
+        ... [[-1.53105064, -0.68137555, 0.5931354],
+        ... [-0.49158347, 0.93673637, 0.1324141]], dtype=flow.float32)
+        >>> m = flow.nn.MSELoss(reduction="none")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [[2.266468   0.50750285 0.61121327]
+         [0.55887264 4.082267   0.1172941 ]]
+        >>> m = flow.nn.MSELoss(reduction="mean")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [1.3572696]
+        >>> m = flow.nn.MSELoss(reduction="sum")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [8.143618]
+
     """
 
     def __init__(self, reduction: str = "mean", size_average=True, reduce=True) -> None:
