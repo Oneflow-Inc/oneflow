@@ -46,9 +46,9 @@ def softplus_op(x):
 
         threshold:values above this revert to a linear function.Default:20
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -72,4 +72,4 @@ def softplus_op(x):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

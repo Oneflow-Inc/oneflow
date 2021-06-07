@@ -70,6 +70,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.eq
 .. autofunction:: oneflow.experimental.exp
 .. autofunction:: oneflow.experimental.Tensor.exp
+.. autofunction:: oneflow.experimental.round
+.. autofunction:: oneflow.experimental.Tensor.round
 .. autofunction:: oneflow.experimental.expand
 .. autofunction:: oneflow.experimental.Tensor.expand
 .. autofunction:: oneflow.experimental.nn.Flatten
@@ -83,6 +85,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
+.. autofunction:: oneflow.experimental.nn.MarginRankingLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.sum
@@ -126,7 +129,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.negative
 .. autofunction:: oneflow.experimental.nn.LayerNorm
 .. autofunction:: oneflow.experimental.nn.AvgPool2d
+.. autofunction:: oneflow.experimental.nn.MaxPool1d
 .. autofunction:: oneflow.experimental.nn.MaxPool2d
+.. autofunction:: oneflow.experimental.nn.MaxPool3d
 .. autofunction:: oneflow.experimental.repeat
 .. autofunction:: oneflow.experimental.Tensor.repeat
 .. autofunction:: oneflow.experimental.reshape
@@ -151,5 +156,15 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
 .. autofunction:: oneflow.experimental.addmm
 .. autofunction:: oneflow.experimental.Tensor.addmm
+.. autofunction:: oneflow.experimental.clamp
+.. autofunction:: oneflow.experimental.Tensor.clamp
+.. autofunction:: oneflow.experimental.clip
+.. autofunction:: oneflow.experimental.Tensor.clip
+.. autofunction:: oneflow.experimental.atanh
+.. autofunction:: oneflow.experimental.Tensor.atanh
+.. autofunction:: oneflow.experimental.arctanh
+.. autofunction:: oneflow.experimental.Tensor.arctanh
+.. autofunction:: oneflow.experimental.tan
+.. autofunction:: oneflow.experimental.Tensor.tan
 .. autofunction:: oneflow.experimental.log1p
 .. autofunction:: oneflow.experimental.Tensor.log1p

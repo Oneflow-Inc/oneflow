@@ -23,7 +23,7 @@ REGISTER_USER_OP("broadcast_div_grad")
     .Input("dz")
     .Output("dy")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("dy", 0) = *ctx->Shape4ArgNameAndIndex("y", 0);
+      *ctx->OutputShape("dy", 0) = ctx->InputShape("y", 0);
       *ctx->IsDynamic4ArgNameAndIndex("dy", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })

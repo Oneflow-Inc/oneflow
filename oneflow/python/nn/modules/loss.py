@@ -26,7 +26,7 @@ class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
-    
+
     The `input` is expected to contain raw, unnormalized scores for each class.
 
     `input` has to be a Tensor of size either :math:`(minibatch, C)` or
@@ -34,7 +34,7 @@ class CrossEntropyLoss(Module):
     with :math:`K \geq 1` for the `K`-dimensional case (described later).
 
     This criterion expects a class index in the range :math:`[0, C-1]` as the
-    `target` for each value of a 1D tensor of size `minibatch`; 
+    `target` for each value of a 1D tensor of size `minibatch`;
 
     The loss can be described as:
 
@@ -78,7 +78,7 @@ class CrossEntropyLoss(Module):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> print(out_mean.numpy())
         [0.75896907]
-        
+
 
     """
 
@@ -162,7 +162,7 @@ class NLLLoss(Module):
     layer.
 
     The `target` that this loss expects should be a class index in the range :math:`[0, C-1]`
-    where `C = number of classes`; 
+    where `C = number of classes`;
 
     The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
 
@@ -196,11 +196,11 @@ class NLLLoss(Module):
             and :attr:`reduce` are in the process of being deprecated, and in
             the meantime, specifying either of those two args will override
             :attr:`reduction`. Default: ``'mean'``
-    
+
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
@@ -219,12 +219,12 @@ class NLLLoss(Module):
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-1.1355073]
-        
+
         >>> m = flow.nn.NLLLoss(reduction="mean")
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-0.37850246]
-    
+
     """
 
     def __init__(
@@ -333,27 +333,25 @@ class MarginRankingLoss(Module):
         >>> flow.enable_eager_execution()
         >>> import numpy as np
 
-        >>> input = flow.Tensor(
-        ... [[-0.1664078, -1.7256707, -0.14690138],
-        ... [-0.21474946, 0.53737473, 0.99684894],
-        ... [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
-        >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
-        >>> m = flow.nn.NLLLoss(reduction="none")
-        >>> out = m(input, target).numpy()
+        >>> input1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
+        >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
+        >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
+        >>> out = m(input1, input2, target).numpy()
         >>> print(out)
-        [ 0.1664078  -0.53737473 -0.7645404 ]
+        [[2. 1. 0.]
+         [3. 0. 5.]
+         [0. 0. 0.]]
 
-        >>> m = flow.nn.NLLLoss(reduction="sum")
-        >>> out = m(input, target).numpy()
+        >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
+        >>> out = m(input1, input2, target).numpy()
         >>> print(out)
-        [-1.1355073]
+        [8.2]
         
-        >>> m = flow.nn.NLLLoss(reduction="mean")
-        >>> out = m(input, target).numpy()
+        >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
+        >>> out = m(input1, input2, target).numpy()
         >>> print(out)
-        [-0.37850246]
-
-
+        [8.333333]
 
 
     """
@@ -372,8 +370,8 @@ class MarginRankingLoss(Module):
 
     def forward(self, input1, input2, target):
         res = flow.experimental.clip(
-                flow.experimental.add(self.margin, flow.experimental.multiply(target, flow.experimental.multiply(-1, flow.experimental.subtract(input1, input2)))),
-                min_value=0)
+                flow.experimental.add(self.margin, flow.experimental.mul(target, flow.experimental.mul(-1, flow.experimental.sub(input1, input2)))),
+                min=0.)
 
         if self.reduction == "none":
             return res
@@ -385,4 +383,4 @@ class MarginRankingLoss(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
