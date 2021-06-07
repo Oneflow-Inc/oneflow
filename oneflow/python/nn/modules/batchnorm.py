@@ -17,6 +17,8 @@ import oneflow as flow
 
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.parameter import Parameter
+from oneflow.python.framework.tensor import Tensor
 import oneflow._oneflow_internal as oneflow_api
 
 
@@ -38,17 +40,17 @@ class _NormBase(Module):
         self.affine = affine
         self.track_running_stats = track_running_stats
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_features))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_features))
+            self.weight = Parameter(Tensor(num_features))
+            self.bias = Parameter(Tensor(num_features))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
             self.register_buffer(
-                "running_mean", flow.Tensor(num_features),
+                "running_mean", Tensor(num_features),
             )
             self.register_buffer(
-                "running_var", flow.Tensor(num_features),
+                "running_var", Tensor(num_features),
             )
         else:
             self.register_parameter("running_mean", None)

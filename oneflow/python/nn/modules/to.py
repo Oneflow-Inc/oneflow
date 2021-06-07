@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Union
@@ -78,7 +79,7 @@ def to_op(input, *args, **kwargs):
     device = kwargs.get("device", None)
     dtype = kwargs.get("dtype", None)
     if len(args) > 0:
-        if isinstance(args[0], flow.Tensor):
+        if isinstance(args[0], Tensor):
             if len(args) == 2:
                 copy = args[1]
             return To(copy)(input, args[0].device, args[0].dtype)

@@ -17,6 +17,7 @@ import oneflow as flow
 from oneflow.python.nn import init
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 from typing import Tuple, Union
 
@@ -127,8 +128,8 @@ class LayerNorm(Module):
         self.epsilon = eps
         self.elementwise_affine = elementwise_affine
         if self.elementwise_affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
-            self.bias = flow.nn.Parameter(flow.Tensor(*self.normalized_shape))
+            self.weight = Parameter(Tensor(*self.normalized_shape))
+            self.bias = Parameter(Tensor(*self.normalized_shape))
         else:
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)

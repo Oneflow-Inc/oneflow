@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
+from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
@@ -86,14 +87,14 @@ class Embedding(Module):
         assert sparse is False, "Not support sparse=True yet!"
 
         if _weight is None:
-            self.weight = flow.nn.Parameter(Tensor(num_embeddings, embedding_dim))
+            self.weight = Parameter(Tensor(num_embeddings, embedding_dim))
             self.reset_parameters()
         else:
             assert list(_weight.shape) == [
                 num_embeddings,
                 embedding_dim,
             ], "Shape of weight does not match num_embeddings and embedding_dim"
-            self.weight = flow.nn.Parameter(_weight)
+            self.weight = Parameter(_weight)
 
         self.sparse = sparse
         self._gather_op = (

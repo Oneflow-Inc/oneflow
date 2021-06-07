@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
@@ -27,7 +28,7 @@ class Eq(Module):
         )
 
     def forward(self, input, other):
-        if isinstance(other, flow.Tensor):
+        if isinstance(other, Tensor):
             for i in range(len(input.size())):
                 assert (
                     input.shape[i] >= other.shape[i]

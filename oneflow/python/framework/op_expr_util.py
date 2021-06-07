@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 import oneflow._oneflow_internal
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.framework.attr_util import convert_to_user_attr_value
 
 
@@ -22,7 +23,7 @@ def user_op_expr_call(self, *args, **kwargs):
     args = list(args)
     for i in range(len(args)):
         arg = args[i]
-        if isinstance(arg, flow.experimental.Tensor):
+        if isinstance(arg, Tensor):
             if not arg.is_determined:
                 arg.determine()
             args[i] = arg._local_or_consistent_tensor

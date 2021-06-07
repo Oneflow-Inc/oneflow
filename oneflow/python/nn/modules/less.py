@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.nn.module import Module
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
@@ -28,7 +29,7 @@ class Less(Module):
 
     def forward(self, x, y):
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor(
+            y = Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
         return self._op(x, y)[0]

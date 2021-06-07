@@ -17,6 +17,8 @@ import math
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.parameter import Parameter
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.modules.utils import _pair
 from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
@@ -215,13 +217,13 @@ class Conv2d(Module):
         dilation = _pair(dilation)
         self.groups = groups
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *kernel_size)
+        self.weight = Parameter(
+            Tensor(out_channels, in_channels // groups, *kernel_size)
         )
         self.bias = None
         self._bias_add_op = None
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self.bias = Parameter(Tensor(out_channels))
             self._bias_add_op = (
                 flow.builtin_op("bias_add")
                 .Input("a")

@@ -15,8 +15,9 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
-from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.parameter import Parameter
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.init import _calculate_fan_in_and_fan_out
 from typing import Optional, List, Tuple
 import math
@@ -101,11 +102,11 @@ class Linear(Module):
         super().__init__()
 
         self.use_bias = bias
-        self.weight = flow.nn.Parameter(flow.Tensor(out_features, in_features))
+        self.weight = Parameter(Tensor(out_features, in_features))
         self.bias = None
 
         if bias:
-            self.bias = flow.nn.Parameter(flow.Tensor(out_features))
+            self.bias = Parameter(Tensor(out_features))
 
         self._matmul_op = (
             flow.builtin_op("matmul")

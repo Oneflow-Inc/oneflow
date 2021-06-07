@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
+from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.module import Module
 
@@ -70,7 +71,7 @@ class PReLU(Module):
     def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
         super().__init__()
         self.num_parameters = num_parameters
-        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
+        self.weight = Parameter(Tensor(num_parameters, 1, 1).fill_(init))
         self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
 
     def forward(self, x):
