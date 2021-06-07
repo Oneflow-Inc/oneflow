@@ -245,7 +245,7 @@ class Tensor:
     @_auto_determine
     def data(self):
         if self._local_or_consistent_tensor is not None:
-            return flow.Tensor(self._local_or_consistent_tensor.data)
+            return flow.experimental.Tensor(self._local_or_consistent_tensor.data)
         else:
             return None
 
@@ -253,7 +253,7 @@ class Tensor:
     def grad(self):
         if self._local_or_consistent_tensor is not None:
             if self._local_or_consistent_tensor.grad is not None:
-                return flow.Tensor(self._local_or_consistent_tensor.grad)
+                return flow.experimental.Tensor(self._local_or_consistent_tensor.grad)
         else:
             return None
 
@@ -303,7 +303,7 @@ class Tensor:
     @_auto_determine
     def detach(self):
         if self._local_or_consistent_tensor is not None:
-            return flow.Tensor(self._local_or_consistent_tensor.detach())
+            return flow.experimental.Tensor(self._local_or_consistent_tensor.detach())
         else:
             return None
 
@@ -414,7 +414,7 @@ class Tensor:
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
-            value = flow.Tensor(*shape)
+            value = flow.experimental.Tensor(*shape)
             value.fill_(scalar)
 
         flow.experimental.tmp.logical_slice_assign(
@@ -809,7 +809,7 @@ def _input_args_is_consistent_or_local(*args):
 
 
 def _input_args_is_tensor(*args):
-    return len(args) == 1 and isinstance(args[0], flow.Tensor)
+    return len(args) == 1 and isinstance(args[0], flow.experimental.Tensor)
 
 
 def _input_args_is_data(*args):

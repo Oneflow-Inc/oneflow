@@ -22,7 +22,7 @@ def user_op_expr_call(self, *args, **kwargs):
     args = list(args)
     for i in range(len(args)):
         arg = args[i]
-        if isinstance(arg, flow.Tensor):
+        if isinstance(arg, flow.experimental.Tensor):
             if not arg.is_determined:
                 arg.determine()
             args[i] = arg._local_or_consistent_tensor
