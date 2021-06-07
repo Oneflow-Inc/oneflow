@@ -200,8 +200,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
-  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
-    return mut_eager_mirrored_tensor_impl();
+  Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
+    return impl_->mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
