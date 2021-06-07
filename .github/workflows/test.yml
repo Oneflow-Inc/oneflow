@@ -38,6 +38,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Check license
         id: license_check
         run: |
@@ -97,7 +98,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/github-workflow-schedule@286010392b8658836e374657a39d87654512926d
+      - uses: Oneflow-Inc/github-workflow-schedule@0e42bf5171f37d1b91825b9b6f6040e3372ae049
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
@@ -244,14 +245,6 @@ jobs:
           oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-      - name: Upload bin to cloud, enable by adding label 'upload-wheel'
-        if: contains(github.event.pull_request.labels.*.name, 'upload-wheel') && matrix.test_suite != 'mac'
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/bin
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Remove container
         if: always() && matrix.test_suite != 'mac'
         run: |
@@ -389,6 +382,12 @@ jobs:
             $extra_docker_args \
             oneflow-test:$USER \
             ${bin_dir}/oneflow_testexe
+      - name: Build documentation
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed)
         if: matrix.test_suite == 'cuda'
         run: |
@@ -403,12 +402,20 @@ jobs:
           oss_dst_path: oss://oneflow-log/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{github.run_id}}/distributed-tmp
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
         if: always() && matrix.test_suite == 'cuda'
         run: |
           docker run \
             $extra_docker_args \
             oneflow-test:$USER bash ci/test/print_stack_from_core.sh python3 distributed-tmp
+      - name: Doctest
+        if: matrix.test_suite == 'cuda'
+        run: |
+          docker run \
+            $extra_docker_args \
+            oneflow-test:$USER \
+            bash -c "bash ci/test/try_install.sh && bash ci/test/doctest.sh"
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
@@ -481,12 +488,11 @@ jobs:
           docker run $extra_docker_args \
             oneflow-test:$USER \
             bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
-      - name: Build documentation
-        if: matrix.test_suite == 'cuda'
+      - name: Query system status
+        if: ${{ failure() }}
         run: |
-          docker run $extra_docker_args \
-            oneflow-test:$USER \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
+          nvidia-smi
+          docker ps
       - name: Remove container
         if: always()
         run: |

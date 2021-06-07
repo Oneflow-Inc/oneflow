@@ -14,9 +14,25 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
+from test_util import GenArgList
+
+
+def _test_eq(test_case, shape, device):
+    arr1 = np.random.randn(*shape)
+    arr2 = np.random.randn(*shape)
+    input = flow.Tensor(arr1, dtype=flow.float32, device=flow.device(device))
+    other = flow.Tensor(arr2, dtype=flow.float32, device=flow.device(device))
+
+    of_out = flow.eq(input, other)
+    of_out2 = flow.equal(input, other)
+    np_out = np.equal(arr1, arr2)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+    test_case.assertTrue(np.array_equal(of_out2.numpy(), np_out))
 
 
 @unittest.skipIf(
@@ -25,26 +41,11 @@ import oneflow.experimental as flow
 )
 class TestEq(flow.unittest.TestCase):
     def test_eq(test_case):
-        arr1 = np.array([2, 3, 4, 5,])
-        arr2 = np.array([2, 3, 4, 1])
-        input = flow.Tensor(arr1, dtype=flow.float32)
-        other = flow.Tensor(arr2, dtype=flow.float32)
-
-        of_out = flow.eq(input, other)
-        of_out2 = flow.equal(input, other)
-        np_out = np.equal(arr1, arr2)
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
-        test_case.assertTrue(np.array_equal(of_out2.numpy(), np_out))
-
-    def test_eq_tensor_function(test_case):
-        arr1 = np.random.randint(1, 10, size=(2, 3, 4, 5))
-        arr2 = np.random.randint(1, 10, size=(2, 3, 4, 5))
-        input = flow.Tensor(arr1, dtype=flow.float32)
-        other = flow.Tensor(arr2, dtype=flow.float32)
-
-        of_out = input.eq(other)
-        np_out = np.equal(arr1, arr2)
-        test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eq(test_case, *arg)
 
 
 if __name__ == "__main__":

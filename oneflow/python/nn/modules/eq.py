@@ -57,21 +57,29 @@ def eq_op(input, other):
         other (oneflow.Tensor): the tensor to compare
 
     Returns:
-        
+
         - A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
 
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
-        other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
+        >>> input = flow.Tensor(np.array([2, 3, 4, 5]), dtype=flow.float32)
+        >>> other = flow.Tensor(np.array([2, 3, 4, 1]), dtype=flow.float32)
 
-        y = flow.eq(input, other)
-        # [1 1 1 0]
+        >>> y = flow.eq(input, other)
+        >>> y
+        tensor([1, 1, 1, 0], dtype=oneflow.int8)
 
     """
     return Eq()(input, other)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
