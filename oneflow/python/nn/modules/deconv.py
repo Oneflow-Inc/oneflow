@@ -25,51 +25,13 @@ from oneflow.python.nn import init
 @oneflow_export("nn.ConvTranspose2d")
 @experimental_api
 class ConvTranspose2d(Module):
-    r"""docs from https://pytorch.org/docs/stable/_modules/torch/nn/modules/conv.html#ConvTranspose2d
+    r"""
     
     Applies a 2D transposed convolution operator over an input image composed of several input planes.
 
     This module can be seen as the gradient of Conv2d with respect to its input.
     It is also known as a fractionally-strided convolution or
     a deconvolution (although it is not an actual deconvolution operation).
-
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
-    * :attr:`stride` controls the stride for the cross-correlation.
-
-    * :attr:`padding` controls the amount of implicit zero padding on both
-      sides for ``dilation * (kernel_size - 1) - padding`` number of points. See note
-      below for details.
-
-    * :attr:`output_padding` controls the additional size added to one side
-      of the output shape. See note below for details.
-
-    * :attr:`dilation` controls the spacing between the kernel points; also known as the à trous algorithm.
-      It is harder to describe, but this `link`_ has a nice visualization of what :attr:`dilation` does.
-
-    {groups_note}
-
-    The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`output_padding`
-    can either be:
-
-        - a single ``int`` -- in which case the same value is used for the height and width dimensions
-        - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
-          and the second `int` for the width dimension
-
-    Note:
-        The :attr:`padding` argument effectively adds ``dilation * (kernel_size - 1) - padding``
-        amount of zero padding to both sizes of the input. This is set so that
-        when a :class:`~torch.nn.Conv2d` and a :class:`~torch.nn.ConvTranspose2d`
-        are initialized with same parameters, they are inverses of each other in
-        regard to the input and output shapes. However, when ``stride > 1``,
-        :class:`~torch.nn.Conv2d` maps multiple input shapes to the same output
-        shape. :attr:`output_padding` is provided to resolve this ambiguity by
-        effectively increasing the calculated output shape on one side. Note
-        that :attr:`output_padding` is only used to find output shape, but does
-        not actually add zero-padding to output.
-
-    Note:
-        {cudnn_reproducibility_note}
 
     Args:
         in_channels (int): Number of channels in the input image
@@ -89,42 +51,41 @@ class ConvTranspose2d(Module):
         - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
 
         .. math::
-              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0]
-                        \times (\text{kernel\_size}[0] - 1) + \text{output\_padding}[0] + 1
+              H_{out} = (H_{in} - 1) \times \text{stride}[0] - 2 \times \text{padding}[0] + \text{dilation}[0] 
+
+                        \times (\text{kernel_size}[0] - 1) + \text{output_padding}[0] + 1
         .. math::
               W_{out} = (W_{in} - 1) \times \text{stride}[1] - 2 \times \text{padding}[1] + \text{dilation}[1]
-                        \times (\text{kernel\_size}[1] - 1) + \text{output\_padding}[1] + 1
+              
+                        \times (\text{kernel_size}[1] - 1) + \text{output_padding}[1] + 1
 
     Attributes:
         weight (Tensor): the learnable weights of the module of shape
-                         :math:`(\text{in\_channels}, \frac{\text{out\_channels}}{\text{groups}},`
-                         :math:`\text{kernel\_size[0]}, \text{kernel\_size[1]})`.
+                         :math:`(\text{in_channels}, \frac{\text{out_channels}}{\text{groups}},`
+                         :math:`\text{kernel_size[0]}, \text{kernel_size[1]})`.
                          The values of these weights are sampled from
                          :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                         :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel\_size}[i]}`
+                         :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
         bias (Tensor):   the learnable bias of the module of shape (out_channels)
                          If :attr:`bias` is ``True``, then the values of these weights are
                          sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
-                         :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel\_size}[i]}`
+                         :math:`k = \frac{groups}{C_\text{out} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
 
     Examples::
 
-        >>> # With square kernels and equal stride
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding
         >>> m = nn.ConvTranspose2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2))
-        >>> input = torch.randn(20, 16, 50, 100)
+        >>> m = m.to("cuda")
+        >>> input = flow.Tensor(np.random.randn(20, 16, 50, 100), device=flow.device("cuda"))
         >>> output = m(input)
-        >>> # exact output size can be also specified as an argument
-        >>> input = torch.randn(1, 16, 12, 12)
-        >>> downsample = nn.Conv2d(16, 16, 3, stride=2, padding=1)
-        >>> upsample = nn.ConvTranspose2d(16, 16, 3, stride=2, padding=1)
-        >>> h = downsample(input)
-        >>> h.size()
-        torch.Size([1, 16, 6, 6])
-        >>> output = upsample(h, output_size=input.size())
         >>> output.size()
-        torch.Size([1, 16, 12, 12])
+        flow.Size([20, 33, 93, 100])
 
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
@@ -149,6 +110,7 @@ class ConvTranspose2d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        assert groups == 1, f"not support group convtranspose2d now!"
         kernel_size = _pair(kernel_size)
         stride = _pair(stride)
         padding = _pair(padding)
@@ -205,4 +167,4 @@ class ConvTranspose2d(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
