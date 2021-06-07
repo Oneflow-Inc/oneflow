@@ -142,7 +142,7 @@ class ConvTranspose2d(Module):
         padding: _size_2_t = 0,
         output_padding: _size_2_t = 0,
         groups: int = 1,
-        bias: bool = True,
+        bias: bool = False,
         dilation: int = 1,
         padding_mode: str = "zeros",
     ) -> None:

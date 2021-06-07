@@ -62,9 +62,9 @@ Maybe<void> DeConvolutionNd::Init(const OpExpr& op) {
   int32_t ndims = kernel_size_->size();
   CHECK_EQ_OR_RETURN(ndims, strides_->size());
   CHECK_EQ_OR_RETURN(ndims, dilation_rate_->size());
-  int32_t filters = JUST(op_trait_->GetAttr<int32_t>("filters"));
+  // int32_t filters = JUST(op_trait_->GetAttr<int32_t>("filters"));
   activation_grad_op_ =
-      JUST(op_expr_helper::ConvNdOp(filters, *kernel_size_, *strides_, *padding_before_,
+      JUST(op_expr_helper::ConvNdOp(/*filters=1*/ 1, *kernel_size_, *strides_, *padding_before_,
                                     *dilation_rate_, /*groups=*/1, *data_format_));
   weight_grad_op_ = JUST(op_expr_helper::ConvNdFilterGradOp(
       *kernel_size_, *strides_, *padding_before_, *dilation_rate_, /*groups=*/1, *data_format_));
@@ -89,8 +89,11 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdInterpState* ctx,
   in_grads->resize(2);
   if (ctx->activation_requires_grad) {
     const auto& weight = ctx->SavedTensors().at(0);
-    in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*activation_grad_op_,
-                                                          {out_grads.at(0), weight}, /*attrs=*/{}));
+    MutableAttrMap attrs;
+    const int32_t filters = weight->shape()->At(0);
+    JUST(attrs.SetAttr<int32_t>("filters", filters));
+    in_grads->at(0) = JUST(
+        OpInterpUtil::Dispatch<Tensor>(*activation_grad_op_, {out_grads.at(0), weight}, attrs));
   }
   if (ctx->weight_requires_grad) {
     int idx = ctx->activation_requires_grad;
