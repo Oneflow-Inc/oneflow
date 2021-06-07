@@ -14,11 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import Tensor
 
 
 @oneflow_export("nn.Parameter")
+@experimental_api
 class Parameter(Tensor):
     def __init__(self, data, requires_grad=True):
         # TODO: uncomment this line when autograd is ready

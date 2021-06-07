@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow._oneflow_internal
 import numpy as np
@@ -96,6 +96,7 @@ def _init_eager_local_tensor_by_initializer_conf(
 
 
 @oneflow_export("tensor")
+@experimental_api
 def construct_tensor(
     data,
     dtype=None,
@@ -131,6 +132,7 @@ def construct_tensor(
 
 
 @oneflow_export("Tensor")
+@experimental_api
 class Tensor:
     def __init__(
         self,

@@ -22,7 +22,7 @@ import itertools
 import numpy as np
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
@@ -47,6 +47,7 @@ T = TypeVar("T", bound="Module")
 
 
 @oneflow_export("nn.Module")
+@experimental_api
 class Module(object):
     def __init__(self):
         self.training = True
