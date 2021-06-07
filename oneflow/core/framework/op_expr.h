@@ -115,6 +115,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 };
 
 class StatefulLocalOpKernel;
+class ConsistentTensorInferCache;
 
 class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
  public:
@@ -137,16 +138,21 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                    TensorTuple* outputs) const;
 
+  ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
+    return consistent_tensor_infer_cache_.get();
+  }
+
  private:
   UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
-  Maybe<void> Init();
+  Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
   user_op::TensorDescInferFn shape_infer_fn_;
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
+  std::shared_ptr<ConsistentTensorInferCache> consistent_tensor_infer_cache_;
 };
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;

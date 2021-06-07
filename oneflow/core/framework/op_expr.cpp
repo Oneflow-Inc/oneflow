@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
@@ -303,7 +304,7 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
       base_attrs_(base_attrs) {}
 
-Maybe<void> UserOpExpr::Init() {
+Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
@@ -312,6 +313,7 @@ Maybe<void> UserOpExpr::Init() {
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
   if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
 
@@ -321,7 +323,7 @@ Maybe<void> UserOpExpr::Init() {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   std::shared_ptr<UserOpExpr> op_expr(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
-  JUST(op_expr->Init());
+  JUST(op_expr->Init(op_expr));
   return op_expr;
 }
 
