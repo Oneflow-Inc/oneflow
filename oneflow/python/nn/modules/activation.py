@@ -198,15 +198,16 @@ def tanh_op(x):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([-1, 0, 1]).astype(np.float32)
-        input = flow.Tensor(x)
-        tanh = flow.nn.Tanh()
-        out = tanh(input).numpy()
-
-        # out [-0.7615942  0.         0.7615942]
+        >>> x = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> tanh = flow.nn.Tanh()
+        >>> out = tanh(input).numpy()
+        >>> print(out)
+        [-0.7615942  0.         0.7615942]
 
     """
     return Tanh()(x)
@@ -364,22 +365,15 @@ class Sigmoid(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
-        m = flow.nn.Sigmoid() # or y = flow.sigmoid(x)
-        y = m(x)
-        # [[0.69366997, 0.60735673, 0.52585548],
-        # [0.23947647, 0.33676055, 0.56800622]]
-
+        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> m = flow.nn.Sigmoid()
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [0.69367   0.6073567 0.5258555]
     """
 
     def __init__(self):
@@ -408,20 +402,14 @@ def sigmoid_op(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(
-            np.array(
-                [
-                    [0.81733328, 0.43621480, 0.10351428],
-                    [-1.15555191, -0.67776406, 0.27372134],
-                ]
-            )
-        )
-        y = x.sigmoid()
-        # [[0.69366997, 0.60735673, 0.52585548],
-        # [0.23947647, 0.33676055, 0.56800622]]
+        >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
+        >>> out = flow.sigmoid(x).numpy()
+        >>> print(out)
+        [0.69367   0.6073567 0.5258555]
 
     """
     return Sigmoid()(x)
@@ -534,25 +522,21 @@ def softmax_op(tensor, dim=None):
 
     .. code-block:: python
 
-        import oneflow as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.Softmax(dim = 2)
-        x = flow.Tensor(
-            np.array(
-                [[[[-0.46716809,  0.40112534,  0.61984003],
-                [-1.31244969, -0.42528763,  1.47953856]]],
-
-                [[[ 1.02978742, -0.49383053,  1.88214159],
-                [ 1.35351622, -1.46251285, -1.40751374]]]]
-            )
-        )
-        y = m(x)
-        # [[[[0.6995764  0.6955959  0.29740235]
-        # [0.3004236  0.30440408 0.7025977 ]]]
-
-        # [[[0.4197673  0.7248568  0.96407217]
-        # [0.58023274 0.27514324 0.03592779]]]]
+        >>> m = flow.nn.Softmax(dim = 2)
+        >>> x = flow.Tensor(
+        ...    np.array(
+        ...        [[[-0.46716809,  0.40112534,  0.61984003],
+        ...        [-1.31244969, -0.42528763,  1.47953856]]]
+        ...    )
+        ... )
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [[[0.15752424 0.3753552  0.46712062]
+          [0.05065432 0.12300029 0.8263454 ]]]
     """
     return Softmax(dim)(tensor)
 
@@ -579,19 +563,21 @@ class LogSoftmax(Module):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        m = flow.nn.LogSoftmax(dim=1)
-        x = flow.Tensor(
-            np.array(
-                [[ 0.4296, -1.1957,  2.5463],
-                [ 1.2552, -1.5747,  0.6923]]
-            )
-        )
-        y = m(x)
-        # [[-2.251349   -3.8766491  -0.13464898]
-        # [-0.48770458 -3.3176045  -1.0506046 ]]
+        >>> m = flow.nn.LogSoftmax(dim=1)
+        >>> x = flow.Tensor(
+        ...    np.array(
+        ...        [[ 0.4296, -1.1957,  2.5463],
+        ...        [ 1.2552, -1.5747,  0.6923]]
+        ...    )
+        ... )
+        >>> out = m(x).numpy()
+        >>> print(out)
+        [[-2.2513487 -3.8766491 -0.1346489]
+         [-0.4877046 -3.3176045 -1.0506046]]
     """
 
     def __init__(
