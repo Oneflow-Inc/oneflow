@@ -130,7 +130,7 @@ class FileBackendVariableBlob:
 
 
 ValueContainer = Union[
-    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"
+    EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "oneflow.experimental.Tensor"
 ]
 
 
@@ -216,7 +216,7 @@ def _ReadSlice(
     Return a generator which iterates over the input blob or array and yields
     (start_nd_idx, stop_nd_idx, slice_np_array)
     """
-    if isinstance(container, oneflow.Tensor):
+    if isinstance(container, oneflow.experimental.Tensor):
 
         def ReadFromTensor(tensor, start_nd_idx, stop_nd_idx):
             start_nd_idx = list(map(int, start_nd_idx))
@@ -470,7 +470,9 @@ def _LogicalSliceAssign(
 
 
 def FeedValueToVariable(
-    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, "oneflow.Tensor"],
+    var_blob: Union[
+        oneflow._oneflow_internal.EagerConsistentBlob, "oneflow.experimental.Tensor"
+    ],
     value: ValueContainer,
     scope_symbol_id: Optional[int],
 ) -> None:
@@ -478,7 +480,13 @@ def FeedValueToVariable(
     Feed the value of `value` to the variable `var_blob`
     """
     assert isinstance(
-        value, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
+        value,
+        (
+            EagerBlobTrait,
+            FileBackendVariableBlob,
+            np.ndarray,
+            oneflow.experimental.Tensor,
+        ),
     ), "Unknown value type: {}".format(type(value).__name__)
 
     if isinstance(value, FileBackendVariableBlob):
@@ -495,7 +503,7 @@ def FeedValueToVariable(
         var_blob.dtype, value_flow_dtype
     )
 
-    if isinstance(var_blob, oneflow.Tensor):
+    if isinstance(var_blob, oneflow.experimental.Tensor):
         raise ValueError("Tensor object arguments are not supported")
     else:
         assert isinstance(var_blob, EagerBlobTrait)
@@ -547,7 +555,13 @@ def _ForEachSlice(
     yield start_nd_idx, stop_nd_idx and f(slice)
     """
     assert isinstance(
-        container, (EagerBlobTrait, FileBackendVariableBlob, np.ndarray, oneflow.Tensor)
+        container,
+        (
+            EagerBlobTrait,
+            FileBackendVariableBlob,
+            np.ndarray,
+            oneflow.experimental.Tensor,
+        ),
     ), "Unknown type: {}".format(type(container).__name__)
     assert container.shape is not None
     # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
@@ -589,7 +603,7 @@ def generate_values_by_initializer(initializer, shape, dtype):
 
 
 def init_by_initializer_conf(
-    var_blob: Union[EagerBlobTrait, "oneflow.Tensor"],
+    var_blob: Union[EagerBlobTrait, "oneflow.experimental.Tensor"],
     initializer_conf: initializer_conf_util.InitializerConf,
     sync_between_multi_machine: bool,
     scope_symbol_id: Optional[int],
@@ -606,7 +620,7 @@ def init_by_initializer_conf(
         shape = np.array(stop_nd_idx) - np.array(start_nd_idx)
         vals = generate_values_by_initializer(initializer, shape, var_blob.dtype)
 
-        if isinstance(var_blob, oneflow.Tensor):
+        if isinstance(var_blob, oneflow.experimental.Tensor):
             raise ValueError("Tensor object arguments are not supported")
         else:
             assert isinstance(var_blob, EagerBlobTrait)
