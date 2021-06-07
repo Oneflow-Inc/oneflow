@@ -26,28 +26,6 @@ limitations under the License.
 
 namespace oneflow {
 
-class Blob;
-
-namespace cfg {
-
-class LogicalBlobId;
-class ParallelConf;
-
-}  // namespace cfg
-
-class Tensor {
- public:
-  virtual ~Tensor() = default;
-
-  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const = 0;
-  virtual std::string logical_blob_name() const = 0;
-  virtual std::string op_name() const = 0;
-  virtual std::string blob_name() const = 0;
-  virtual std::shared_ptr<Shape> shape() const = 0;
-  virtual DataType dtype() const = 0;
-  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
-};
-
 namespace cfg {
 class ParallelDistribution;
 }
@@ -80,6 +58,7 @@ class Tensor {
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_parallel_distribution_constraint()
@@ -99,7 +78,7 @@ class Tensor {
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const = 0;
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
-  virtual std::shared_ptr<Tensor> detach() const = 0;
+  virtual Maybe<Tensor> detach() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -144,12 +123,13 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
 
+  Maybe<Tensor> detach() const override {
+    return std::static_pointer_cast<Tensor>(JUST(api_detach()));
+  }
+
   // Operators for tensor
   // used by pybind11 only
-  Maybe<DerivedT> api_detach() const {
-    const std::shared_ptr<Tensor>& tensor = detach();
-    return cast_for_api(tensor);
-  }
+  virtual Maybe<DerivedT> api_detach() const = 0;
 
  protected:
   TensorIf() = default;
@@ -196,6 +176,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<VmLocalDepObject> compute_local_dep_object() const override {
     return impl_->compute_local_dep_object();
   }
+  Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const override { return impl_->acc_grad(); }
@@ -213,7 +194,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
   // Operators for tensor
-  std::shared_ptr<Tensor> detach() const override;
+  Maybe<MirroredTensor> api_detach() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
@@ -223,6 +204,11 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return mut_eager_mirrored_tensor_impl();
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
+
+  static Maybe<MirroredTensor> MakeEagerTensor(
+      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+      const std::shared_ptr<const Device>& device,
+      const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
 
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
@@ -288,7 +274,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
   // Operators for tensor
-  std::shared_ptr<Tensor> detach() const override;
+  virtual Maybe<ConsistentTensor> api_detach() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype,
@@ -309,44 +295,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 };
 
 }  // namespace one
-
-namespace user_op {
-
-class Tensor {
- public:
-  ~Tensor() = default;
-
-  virtual const ShapeView& shape() const = 0;
-  virtual MutShapeView* mut_shape() = 0;
-  virtual DataType data_type() const = 0;
-  virtual const MemoryCase& mem_case() const = 0;
-  virtual const void* raw_dptr() const = 0;
-  virtual void* mut_raw_dptr() = 0;
-
-  template<typename T = void>
-  const T* dptr() const {
-    CheckDataType<T>();
-    return reinterpret_cast<const T*>(raw_dptr());
-  }
-
-  template<typename T = void>
-  T* mut_dptr() {
-    CheckDataType<T>();
-    return reinterpret_cast<T*>(mut_raw_dptr());
-  }
-
- protected:
-  template<typename T>
-  void CheckDataType() const {
-    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && data_type() != DataType::kChar && data_type() != GetDataType<T>::value))
-        << "tensor data_type mismatched. value: " << DataType_Name(data_type())
-        << ", template T:" << DataType_Name(GetDataType<T>::value);
-  }
-};
-
-}  // namespace user_op
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_H_

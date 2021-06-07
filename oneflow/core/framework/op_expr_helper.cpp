@@ -168,6 +168,31 @@ Maybe<one::UserOpExpr> ReduceSumLikeOp(const std::vector<int32_t>& axis, const s
       .Build();
 }
 
+Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent) {
+  return ScalarPowOp(exponent, UniqueOpName("scalar_pow"));
+}
+
+Maybe<one::UserOpExpr> ScalarPowOp(const double& exponent, const std::string& name) {
+  return one::OpBuilder("scalar_pow", name)
+      .Input("in")
+      .Attr<double>("exponent", exponent)
+      .Output("out")
+      .Build();
+}
+
+Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent) {
+  return ScalarPowGradOp(exponent, UniqueOpName("scalar_pow_grad"));
+}
+
+Maybe<one::UserOpExpr> ScalarPowGradOp(const double& exponent, const std::string& name) {
+  return one::OpBuilder("scalar_pow_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Attr<double>("exponent", exponent)
+      .Output("dx")
+      .Build();
+}
+
 template<>
 Maybe<one::UserOpExpr> ScalarMulOp(const float& scalar, const std::string& name) {
   return one::OpBuilder("scalar_mul", name)
@@ -775,6 +800,19 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Attr<std::vector<int32_t>>("pool_size", pool_size)
       .Attr<std::vector<int32_t>>("strides", strides)
       .Attr<bool>("ceil_mode", ceil_mode)
+      .Build();
+}
+
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis) {
+  return UnsortedSegmentSumLikeOp(axis, UniqueOpName("unsorted_segment_sum_like"));
+}
+Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name) {
+  return one::OpBuilder("unsorted_segment_sum_like", name)
+      .Input("data")
+      .Input("segment_ids")
+      .Input("like")
+      .Output("out")
+      .Attr<int64_t>("axis", axis)
       .Build();
 }
 

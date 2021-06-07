@@ -61,6 +61,7 @@ class TensorImpl {
   // Getters valid only for EagerMirroredTensorImpl
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
+  virtual Maybe<TensorStorage> tensor_storage() const { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   const std::shared_ptr<Tensor>& acc_grad() const { return autograd_meta_->acc_grad(); }
@@ -188,11 +189,15 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override;
+  Maybe<TensorStorage> tensor_storage() const override { return tensor_storage_; }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
 
   Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
+  Maybe<void> InitEagerBlobObjectAndTensorStorage(
+      const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+      const std::shared_ptr<TensorStorage>& tensor_storage);
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { return this; }
 
  private:

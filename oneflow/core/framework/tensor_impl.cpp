@@ -84,6 +84,15 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObjectAndTensorStorage(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<TensorStorage>& tensor_storage) {
+  CHECK_OR_RETURN(eager_blob_object->tensor_buffer() == tensor_storage->buffer());
+  eager_blob_object_ = eager_blob_object;
+  tensor_storage_ = tensor_storage;
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;

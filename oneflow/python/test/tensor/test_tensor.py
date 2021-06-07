@@ -661,12 +661,33 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(
             np.random.randn(*shape), dtype=flow.float32, requires_grad=True,
         )
-        test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy()))
+        test_case.assertTrue(np.allclose(x.detach().numpy(), x.numpy(), 1e-4, 1e-4))
+        test_case.assertEqual(x.detach().requires_grad, False)
+        y = x * 2
+        z = y.detach()
+        test_case.assertEqual(z.is_leaf, True)
+        test_case.assertEqual(z.grad_fn, None)
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_clamp_(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = input.clamp(0.1, 0.5)
+        np_out = np.clip(input.numpy(), 0.1, 0.5)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_clip_(test_case):
+        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        of_out = input.clip(0.1, 0.5)
+        np_out = np.clip(input.numpy(), 0.1, 0.5)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
     def _test_cast_tensor_function(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.randn(*shape).astype(np.float32)
@@ -755,6 +776,69 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.pow(2.1)
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_atanh(test_case):
+        np_input = np.random.random((2, 3)) - 0.5
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+
+        of_out = of_input.atanh()
+        np_out = np.arctanh(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1.0 / (1.0 - np.square(np_input))
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_arctanh(test_case):
+        np_input = np.random.random((2, 3))
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+
+        of_out = of_input.arctanh()
+        np_out = np.arctanh(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1.0 / (1.0 - np.square(np_input))
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_tan(test_case):
+        np_input = np.random.random((2, 3)) - 0.5
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+
+        of_out = of_input.tan()
+        np_out = np.tan(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1 + np.square(np_out)
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+        )
 
 
 if __name__ == "__main__":
