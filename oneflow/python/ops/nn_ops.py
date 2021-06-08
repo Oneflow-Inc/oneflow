@@ -3562,6 +3562,7 @@ def relu6(
 
 
 @oneflow_export("nn.L1Loss")
+@stable_api
 def l1_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
