@@ -244,7 +244,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
-  DataType* OutputDType(const std::string& arg_name, int32_t index) const override {
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
     return const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
