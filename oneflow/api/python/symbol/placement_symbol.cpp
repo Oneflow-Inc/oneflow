@@ -91,27 +91,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("Containing", &ParallelDesc::Bigger)
       .def(py::self == py::self)
       .def(py::hash(py::self));
-
-  py::class_<Symbol<ParallelDesc>, std::shared_ptr<Symbol<ParallelDesc>>>(m, "ParallelDescSymbol")
-      .def(py::init([](const std::shared_ptr<ParallelDesc>& parallel_desc) {
-        return Symbol<ParallelDesc>(*parallel_desc);
-      }))
-      .def_property_readonly(
-          "symbol_id", [](const Symbol<ParallelDesc>& x) { return x->symbol_id().GetOrThrow(); })
-      .def_property_readonly("parallel_conf",
-                             [](const Symbol<ParallelDesc>& x) { return x->cfg_parallel_conf(); })
-      .def_property_readonly("parallel_num",
-                             [](const Symbol<ParallelDesc>& x) { return x->parallel_num(); })
-      .def_property_readonly("device_tag",
-                             [](const Symbol<ParallelDesc>& x) { return x->device_tag(); })
-      .def_property_readonly("machine_id2device_id_list",
-                             [](const Symbol<ParallelDesc>& x) {
-                               return PlacementSymbolExportUtil::MachineId2DeviceIdList(*x);
-                             })
-      .def_property_readonly("hierarchy",
-                             [](const Symbol<ParallelDesc>& x) { return x->hierarchy(); })
-      .def(py::self == py::self)
-      .def("__hash__", &Symbol<ParallelDesc>::hash_value);
 }
 
 }  // namespace oneflow

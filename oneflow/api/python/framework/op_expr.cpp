@@ -95,6 +95,8 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class
       .def_property_readonly("op_type_name",
                              [](const one::UserOpExpr& op) { return op.proto().op_type_name(); })
+      // register __deepcopy__  and __copy__ to support copy.copy() and copy.deepcopy() in python
+      // side
       .def("__copy__", [](const one::UserOpExpr& self) { return one::UserOpExpr(self); })
       .def("__deepcopy__",
            [](const one::UserOpExpr& self, py::dict) { return one::UserOpExpr(self); });

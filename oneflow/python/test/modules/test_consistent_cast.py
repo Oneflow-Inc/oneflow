@@ -18,6 +18,18 @@ import numpy as np
 import oneflow.experimental as flow
 
 
+class Identity(flow.nn.Module):
+    r"""Do nothing
+    return input
+    """
+
+    def __init__(self, inplace: bool = False):
+        super().__init__()
+
+    def forward(self, x):
+        return x
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -25,7 +37,7 @@ import oneflow.experimental as flow
 class TestConsistentCastModule(flow.unittest.TestCase):
     def test_consistent_cast(test_case):
         relu = flow.nn.ReLU()
-        identity = flow.nn.Identity()
+        identity = Identity()
         arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
