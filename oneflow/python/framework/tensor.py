@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from numpy.lib.arraysetops import isin
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util

@@ -42,7 +42,7 @@ def _test_slice_4_dim(test_case, device):
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
 
-def _test_slice_special_case(test_case, device):
+def _test_slice_special_cases(test_case, device):
     np_arr = np.random.randn(2, 3, 4).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
     of_out = x[0, 1:2]
@@ -91,7 +91,7 @@ class TestSlice(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_slice,
             _test_slice_4_dim,
-            _test_slice_special_case,
+            _test_slice_special_cases,
             _test_slice_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
