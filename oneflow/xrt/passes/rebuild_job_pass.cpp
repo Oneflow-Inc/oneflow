@@ -404,7 +404,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     auto* sbp_signatures = launch_conf->mutable_sbp_signatures();
     for (const auto& node_conf : launch_conf->function().node()) {
       const std::string& node_name = node_conf.name();
-      (*sbp_signatures)[node_name] = builder_->SbpSignature4OpName(node_name);
+      builder_->SbpSignature4OpName(node_name).ToProto(&(*sbp_signatures)[node_name]);
     }
   }
 }
