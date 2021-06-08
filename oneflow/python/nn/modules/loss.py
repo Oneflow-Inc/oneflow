@@ -304,33 +304,24 @@ class MSELoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
-
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
-
     The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
-
     .. math::
         \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
         l_n = \left( x_n - y_n \right)^2,
-
     where :math:`N` is the batch size. If :attr:`reduction` is not ``'none'``
     (default ``'mean'``), then:
-
     .. math::
         \ell(x, y) =
         \begin{cases}
             \operatorname{mean}(L), &  \text{if reduction} = \text{`mean';}\\
             \operatorname{sum}(L),  &  \text{if reduction} = \text{`sum'.}
         \end{cases}
-
     :math:`x` and :math:`y` are tensors of arbitrary shapes with a total
     of :math:`n` elements each.
-
     The mean operation still operates over all the elements, and divides by :math:`n`.
-
     The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
-
     Args:
         size_average (bool, optional): Deprecated (see :attr:`reduction`). By default,
             the losses are averaged over each loss element in the batch. Note that for
@@ -347,20 +338,15 @@ class MSELoss(Module):
             elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
             and :attr:`reduce` are in the process of being deprecated, and in the meantime,
             specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
-
     Shape:
         - Input: :math:`(N, *)` where :math:`*` means, any number of additional
           dimensions
         - Target: :math:`(N, *)`, same shape as the input
-
     For example:
-
     .. code-block:: python
-
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-
         >>> input = flow.Tensor(
         ... [[-0.02557137, 0.03101675, 1.37493674],
         ... [0.25599439, -1.08372561, -0.21006816]], dtype=flow.float32)
@@ -380,7 +366,6 @@ class MSELoss(Module):
         >>> out = m(input, target)
         >>> print(out.numpy())
         [8.143618]
-
     """
 
     def __init__(
@@ -413,6 +398,97 @@ class MSELoss(Module):
         else:
             # Do no reduction
             return mean_squared_difference
+
+
+@oneflow_export("nn.MarginRankingLoss")
+@experimental_api
+class MarginRankingLoss(Module):
+    r"""Creates a criterion that measures the loss given
+    inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
+    and a label 1D mini-batch tensor :math:`y` (containing 1 or -1).
+
+    If :math:`y = 1` then it assumed the first input should be ranked higher
+    (have a larger value) than the second input, and vice-versa for :math:`y = -1`.
+
+    The loss function for each sample in the mini-batch is:
+
+    .. math::
+        \text{loss}(x1, x2, y) = \max(0, -y * (x1 - x2) + \text{margin})
+
+    Args:
+        margin (float, optional): Has a default value of :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+
+    Shape:
+        - `x1` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - `x2` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - Target: :math:`(N)`
+        - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N)`.
+
+    For example:
+
+    .. code-block:: python 
+        
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import numpy as np
+
+        >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
+        >>> x2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
+        >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
+        >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([[2., 1., 0.],
+                [3., 0., 5.],
+                [0., 0., 0.]], dtype=oneflow.float32)
+
+        >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.2], dtype=oneflow.float32)
+        
+        >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.3333], dtype=oneflow.float32)
+
+
+    """
+
+    def __init__(self, margin=0.0, reduction: str = "mean") -> None:
+        super().__init__()
+        self.margin = margin
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+
+    def forward(self, input1, input2, target):
+        res = flow.experimental.clip(
+            flow.experimental.add(
+                self.margin,
+                flow.experimental.mul(
+                    target,
+                    flow.experimental.mul(-1, flow.experimental.sub(input1, input2)),
+                ),
+            ),
+            min=0.0,
+        )
+
+        if self.reduction == "none":
+            return res
+        elif self.reduction == "sum":
+            return res.sum()
+        else:
+            return res.mean()
 
 
 if __name__ == "__main__":

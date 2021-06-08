@@ -4032,6 +4032,7 @@ def mse_loss(
 
 
 @oneflow_export("nn.MarginRankingLoss")
+@stable_api
 def margin_ranking_loss(
     input1: oneflow._oneflow_internal.BlobDesc,
     input2: oneflow._oneflow_internal.BlobDesc,
