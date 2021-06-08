@@ -656,6 +656,54 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def _test_tensor_atan(test_case, shape, device):
+        np_input = np.random.randn(*shape)
+        of_input = flow.Tensor(
+            np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+        )
+
+        of_out = of_input.atan()
+        np_out = np.arctan(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1 / (1 + np_input ** 2)
+
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def _test_tensor_arctan(test_case, shape, device):
+        np_input = np.random.randn(*shape)
+        of_input = flow.Tensor(
+            np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+        )
+
+        of_out = of_input.arctan()
+        np_out = np.arctan(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1 / (1 + np_input ** 2)
+
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(
@@ -805,6 +853,7 @@ class TestTensor(flow.unittest.TestCase):
 
         of_out = of_out.sum()
         of_out.backward()
+
         np_out_grad = 1.0 / (1.0 - np.square(np_input))
         test_case.assertTrue(
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
