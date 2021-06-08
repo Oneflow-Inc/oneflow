@@ -47,7 +47,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
     const auto& input_device = JUST(inputs.at(i)->device());
-    if (i > 0) { CHECK_OR_RETURN(*default_device == *input_device); }
+    if (i > 0) {
+      CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
+    }
     input_eager_blob_objects->at(i) = JUST(inputs.at(i)->eager_blob_object());
   }
   std::shared_ptr<const Device> op_device;
@@ -91,11 +93,11 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
   }
 
-  kernel->ResetDynamicOpAttrs(attrs);
+  kernel->composed_attrs_for_main_thread()->ResetPrior(attrs);
   JUST(kernel->InferDataType(input_eager_blob_objects, output_eager_blob_objects,
-                             kernel->op_infer_ctx_for_thread_b()));
+                             kernel->op_infer_ctx_for_main_thread()));
   JUST(kernel->InferTensorDesc(input_eager_blob_objects, output_eager_blob_objects,
-                               kernel->op_infer_ctx_for_thread_b()));
+                               kernel->op_infer_ctx_for_main_thread()));
 
   const auto& instr_type_name = JUST(op_device->local_call_instruction_name());
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -103,10 +105,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       for (const auto& input_tensor : inputs) {
         const auto& tensor = std::dynamic_pointer_cast<one::MirroredTensor>(input_tensor);
         CHECK_OR_RETURN(static_cast<bool>(tensor));
-        // Instruction `AccessBlobByCallback` records event which can be used to synchronize cuda
-        // stream.
-        JUST(builder->AccessBlobByCallback(
-            tensor, [](uint64_t) {}, "mut"));
+        // Instruction `SoftSyncStream` records event which can be used to synchronize cuda
+        // stream
+        JUST(builder->SoftSyncStream(JUST(tensor->compute_local_dep_object()), "mut",
+                                     JUST(tensor->device())->parallel_desc_ptr()));
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,

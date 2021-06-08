@@ -78,6 +78,10 @@
 - Failed to compile because C++ 17 is enabled
     - In some cases, environment variable `CXXFLAGS` is not empty and contains `--std c++17`.
     - Check if it is empty by running `echo $CXXFLAGS` and clear it with `unset CXXFLAGS`.
+    - If you are using conda, to make the changes on environment variables permanent, you can run:
+        ```bash
+        conda env config vars set CXXFLAGS="-fPIC"
+        ```
 
 - cmake outputs error `No CMAKE_ASM_NASM_COMPILER could be found.`
     - Install `nasm`. For instance, run `sudo yum install nasm` if you are on centos.

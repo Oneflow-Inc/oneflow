@@ -23,13 +23,7 @@ namespace {
 
 }  // namespace
 
-GrpcCtrlClient::~GrpcCtrlClient() {
-  {
-    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-    need_heartbeat_thread_stop_ = true;
-  }
-  heartbeat_thread_.join();
-}
+GrpcCtrlClient::~GrpcCtrlClient() { StopHeartbeat(); }
 
 GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
   rpc_client_.ReserveStubsOfSize(process_ctx.ctrl_addr_size());
@@ -117,5 +111,15 @@ int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
 }
 
 void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
+
+void GrpcCtrlClient::StopHeartbeat() {
+  bool already_stopped = false;
+  {
+    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
+    already_stopped = need_heartbeat_thread_stop_;
+    need_heartbeat_thread_stop_ = true;
+  }
+  if (!already_stopped) { heartbeat_thread_.join(); }
+}
 
 }  // namespace oneflow

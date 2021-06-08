@@ -26,6 +26,8 @@ namespace oneflow {
 namespace one {
 
 struct NormalizationGradInterpState : public OpExprInterpState {
+  int32_t axis;
+  float epsilon;
   bool is_training;
 };
 
@@ -42,16 +44,15 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     CHECK_NOTNULL_OR_RETURN(fw_op_expr);
     const std::string& op_name = fw_op_expr->op_name();
     op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-    const float epsilon = JUST(op_trait_->GetAttr<float>("epsilon"));
-    axis_ = JUST(op_trait_->GetAttr<int32_t>("axis"));
     // v1 = variance + eps
-    add_eps_op_ = JUST(op_expr_helper::ScalarAddOp(epsilon, GradientOpName(op_name + "_add_eps")));
+    add_eps_op_ =
+        JUST(op_expr_helper::ScalarAddOp(/*epsilon=*/0, GradientOpName(op_name + "_add_eps")));
     // v2 = rsqrt(v1)
     rsqrt_op_ = JUST(op_expr_helper::RsqrtOp(GradientOpName(op_name + "_rsqrt")));
 
     // Normalization grad.
     normalization_grad_op_ = JUST(op_expr_helper::NormalizationGradOp(
-        axis_, epsilon, GradientOpName(op_name + "_norm_grad")));
+        /*axis=*/-1, /*epsilon=*/0, GradientOpName(op_name + "_norm_grad")));
 
     reshape_gamma_op_ =
         JUST(op_expr_helper::ReshapeOp(Shape{-1}, GradientOpName(op_name + "_reshape_gamma")));
@@ -68,6 +69,8 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
 
   Maybe<void> Capture(NormalizationGradInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->axis = JUST(op_trait_->GetAttr<int32_t>("axis", attrs));
+    ctx->epsilon = JUST(op_trait_->GetAttr<float>("epsilon", attrs));
     ctx->is_training = JUST(op_trait_->GetAttr<bool>("training", attrs));
     ctx->SaveTensorForBackward(inputs.at(0));  // x
     ctx->SaveTensorForBackward(inputs.at(3));  // gamma
@@ -94,12 +97,19 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
     } else {
       const auto& moving_mean = ctx->SavedTensors().at(2);      // moving_mean
       const auto& moving_variance = ctx->SavedTensors().at(3);  // moving_variance
-      const auto& add_eps = JUST(OpInterpUtil::Dispatch<Tensor>(*add_eps_op_, {moving_variance}));
+      MutableAttrMap epsilon_attr;
+      JUST(epsilon_attr.SetAttr<float>("epsilon", ctx->epsilon));
+      const auto& add_eps =
+          JUST(OpInterpUtil::Dispatch<Tensor>(*add_eps_op_, {moving_variance}, epsilon_attr));
       mean = moving_mean;
       inv_variance = JUST(OpInterpUtil::Dispatch<Tensor>(*rsqrt_op_, {add_eps}));
     }
+
+    MutableAttrMap norm_grad_attr;
+    JUST(norm_grad_attr.SetAttr<int32_t>("axis", ctx->axis));
+    JUST(norm_grad_attr.SetAttr<float>("epsilon", ctx->epsilon));
     const auto& results = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *normalization_grad_op_, {x, y_grad, gamma, mean, inv_variance}));
+        *normalization_grad_op_, {x, y_grad, gamma, mean, inv_variance}, norm_grad_attr));
     CHECK_EQ_OR_RETURN(results->size(), 3);
     // The normalization op has 5 inputs which are x, moving_mean, moving_variance, gamma and beta.
     in_grads->resize(5);
@@ -112,10 +122,10 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
 
     DimVector dim_vec;
     for (int i = 0; i < x->shape()->NumAxes(); ++i) {
-      if (i != axis_) {
+      if (i != ctx->axis) {
         dim_vec.push_back(1);
       } else {
-        dim_vec.push_back(x->shape()->At(axis_));
+        dim_vec.push_back(x->shape()->At(ctx->axis));
       }
     }
     MutableAttrMap shape_attr;
@@ -126,7 +136,7 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
         JUST(OpInterpUtil::Dispatch<Tensor>(*reshape_variance_op_, {inv_variance}, shape_attr));
 
     std::shared_ptr<Tensor> y_grad_fp32 = y_grad;
-    bool is_fp16 = y_grad->dtype()->data_type() == DataType::kFloat16;
+    bool is_fp16 = y_grad->dtype() == DataType::kFloat16;
     if (is_fp16) { y_grad_fp32 = JUST(OpInterpUtil::Dispatch<Tensor>(*h2f_cast_op_, {y_grad})); }
     const auto& dy_mul_gamma =
         JUST(OpInterpUtil::Dispatch<Tensor>(*broadcast_mul_op_, {reshaped_gamma, y_grad_fp32}));
@@ -142,7 +152,6 @@ class NormalizationGrad : public OpExprGradFunction<NormalizationGradInterpState
 
  private:
   std::shared_ptr<user_op::UserOpConfTrait> op_trait_;
-  int32_t axis_;
   std::shared_ptr<OpExpr> add_eps_op_;
   std::shared_ptr<OpExpr> rsqrt_op_;
   std::shared_ptr<OpExpr> normalization_grad_op_;

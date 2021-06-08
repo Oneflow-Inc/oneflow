@@ -31,9 +31,9 @@ class Identity(Module):
         args: any argument (unused)
         kwargs: any keyword argument (unused)
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import numpy as np
         import oneflow as flow
@@ -59,10 +59,8 @@ class Identity(Module):
 class Linear(Module):
     """Applies a linear transformation to the incoming data: :math:`y = xA^T + b`
 
-    This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
-
     Args:
-        
+
         - in_features: size of each input sample
 
         - out_features: size of each output sample
@@ -72,40 +70,30 @@ class Linear(Module):
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
           additional dimensions and :math:`H_{in} = {in\_features}`
-        
+
         - Output: :math:`(N, *, H_{out})` where all but the last dimension
           are the same shape as the input and :math:`H_{out} = {out\_features}`.
 
     Attr:
         - :attr:`weight`: the learnable weights of the module of shape :math:`({out\_features}, {in\_features})`. The values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})`, where :math:`(k = 1 / {in\_features})`
-        
+
         - :attr:`bias`: the learnable bias of the module of shape :math:`({out\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where :math:`(k = 1 / {in\_features})`
 
-    
-    For example: 
 
-    .. code-block:: python 
+    For example:
 
-        import numpy as np
-        import oneflow as flow
+    .. code-block:: python
 
-        linear = flow.nn.Linear(3, 8, False)
-        input_arr = np.array(
-            [
-                [-0.94630778, -0.83378579, -0.87060891],
-                [2.0289922, -0.28708987, -2.18369248],
-                [0.35217619, -0.67095644, -1.58943879],
-                [0.08086036, -1.81075924, 1.20752494],
-                [0.8901075, -0.49976737, -1.07153746],
-                [-0.44872912, -1.07275683, 0.06256855],
-                [-0.22556897, 0.74798368, 0.90416439],
-                [0.48339456, -2.32742195, -0.59321527],
-            ]
-        )
-        x = flow.Tensor(input_arr)
-        out = linear(x)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        # out.shape (8, 8)
+
+        >>> m = flow.nn.Linear(20, 30, False)
+        >>> input = flow.Tensor(np.random.randn(128, 20))
+        >>> output = m(input)
+        >>> print(output.size())
+        flow.Size([128, 30])
 
     """
 
@@ -163,3 +151,9 @@ class Linear(Module):
             res += self.bias
 
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

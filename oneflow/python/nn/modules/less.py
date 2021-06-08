@@ -27,8 +27,14 @@ class Less(Module):
         )
 
     def forward(self, x, y):
+        if x.dtype != flow.float32:
+            x = flow.experimental.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
-            y = flow.Tensor([float(y)], dtype=flow.float32)
+            y = flow.Tensor(
+                [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
+            )
+        if y.dtype != flow.float32:
+            y = flow.experimental.cast(y, flow.float32)
         return self._op(x, y)[0]
 
 
@@ -49,15 +55,22 @@ def less_op(x, y):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        
-        input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
-        
-        out = flow.gt(input1, input2).numpy
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        # out [0 0 1]
+        >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+
+        >>> out = flow.lt(input1, input2).numpy()
+        >>> print(out)
+        [0 0 1]
 
     """
     return Less()(x, y)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
