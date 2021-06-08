@@ -75,12 +75,12 @@ class Upsample(Module):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-        >>> output = m(input).numpy()
+        >>> output = m(input)
         >>> output
-        [[[[1. 1. 2. 2.]
-           [1. 1. 2. 2.]
-           [3. 3. 4. 4.]
-           [3. 3. 4. 4.]]]]
+        tensor([[[[1., 1., 2., 2.],
+                  [1., 1., 2., 2.],
+                  [3., 3., 4., 4.],
+                  [3., 3., 4., 4.]]]], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -196,12 +196,12 @@ class UpsamplingNearest2d(Upsample):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
-        >>> output = m(input).numpy()
+        >>> output = m(input)
         >>> output
-        [[[[1. 1. 2. 2.]
-           [1. 1. 2. 2.]
-           [3. 3. 4. 4.]
-           [3. 3. 4. 4.]]]]
+        tensor([[[[1., 1., 2., 2.],
+                  [1., 1., 2., 2.],
+                  [3., 3., 4., 4.],
+                  [3., 3., 4., 4.]]]], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -254,12 +254,13 @@ class UpsamplingBilinear2d(Upsample):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
-        >>> output = m(input).numpy()
+        >>> output = m(input)
         >>> output
-        [[[[1.        1.3333334 1.6666667 2.       ]
-           [1.6666667 2.        2.3333335 2.6666667]
-           [2.3333335 2.6666667 3.        3.3333335]
-           [3.        3.3333333 3.6666667 4.       ]]]]
+        tensor([[[[1.    , 1.3333, 1.6667, 2.    ],
+                  [1.6667, 2.    , 2.3333, 2.6667],
+                  [2.3333, 2.6667, 3.    , 3.3333],
+                  [3.    , 3.3333, 3.6667, 4.    ]]]], device='cuda:0',
+               dtype=oneflow.float32)
 
     """
 

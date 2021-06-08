@@ -51,9 +51,9 @@ def negative_op(x):
         >>> input = flow.Tensor(
         ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
         ... )
-        >>> out = flow.negative(input).numpy()
+        >>> out = flow.negative(input)
         >>> out
-        [-1.   1.  -2.3]
+        tensor([-1. ,  1. , -2.3], dtype=oneflow.float32)
 
     """
     return Negative()(x)

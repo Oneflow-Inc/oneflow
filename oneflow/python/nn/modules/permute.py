@@ -63,9 +63,9 @@ def permute_op(tensor, *dims):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> out = input.permute(1, 0, 2, 3).numpy().shape
+        >>> out = input.permute(1, 0, 2, 3).shape
         >>> out
-        (6, 2, 5, 3)
+        flow.Size([6, 2, 5, 3])
 
     """
     return Permute(dims)(tensor)

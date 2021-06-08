@@ -61,9 +61,9 @@ class PReLU(Module):
 
         >>> m = flow.nn.PReLU()
         >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
-        >>> m(input).numpy()
-        [[[[ 1.  -0.5]
-           [ 3.   4. ]]]]
+        >>> m(input)
+        tensor([[[[ 1. , -0.5],
+                  [ 3. ,  4. ]]]], dtype=oneflow.float32, grad_fn=<prelu_backward>)
 
     """
 

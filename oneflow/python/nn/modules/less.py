@@ -58,9 +58,9 @@ def less_op(x, y):
         >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
 
-        >>> out = flow.lt(input1, input2).numpy()
+        >>> out = flow.lt(input1, input2)
         >>> out
-        [0 0 1]
+        tensor([0, 0, 1], dtype=oneflow.int8)
 
     """
     return Less()(x, y)

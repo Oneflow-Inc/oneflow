@@ -84,9 +84,9 @@ def reshape_op(x, shape: Sequence[int] = None):
         ... ).astype(np.float32)
         >>> input = flow.Tensor(x)
 
-        >>> y = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
+        >>> y = flow.reshape(input, shape=[2, 2, 2, -1]).shape
         >>> y
-        (2, 2, 2, 2)
+        flow.Size([2, 2, 2, 2])
 
     """
     return Reshape(shape=shape)(x)

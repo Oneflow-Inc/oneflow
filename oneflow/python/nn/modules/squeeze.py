@@ -62,9 +62,9 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        >>> out = flow.squeeze(input, dim=[1, 2]).numpy().shape
+        >>> out = flow.squeeze(input, dim=[1, 2]).shape
         >>> out
-        (1, 3)
+        flow.Size([1, 3])
 
     """
     if type(dim) == int:
