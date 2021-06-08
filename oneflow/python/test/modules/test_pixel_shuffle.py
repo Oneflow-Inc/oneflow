@@ -22,6 +22,10 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
+def _np_pixel_shuffle(input, factor):
+    return _np_pixel_shuffle_v2(input, factor, factor)
+
+
 def _np_pixel_shuffle_v2(input, h_factor, w_factor):
     _batch, _channel, _height, _width = input.shape
     assert (
@@ -36,6 +40,10 @@ def _np_pixel_shuffle_v2(input, h_factor, w_factor):
     return out
 
 
+def _np_pixel_shuffle_grad(input, factor):
+    return _np_pixel_shuffle_v2_grad(input, factor, factor)
+
+
 def _np_pixel_shuffle_v2_grad(input, h_factor, w_factor):
     _batch, _new_channel, _height_mul_factor, _width_mul_factor = input.shape
     _channel = _new_channel * (h_factor * w_factor)
@@ -44,6 +52,47 @@ def _np_pixel_shuffle_v2_grad(input, h_factor, w_factor):
 
     out = np.ones(shape=(_batch, _channel, _height, _width))
     return out
+
+
+def _test_pixel_shuffle_impl(test_case, device, shape, upscale_factor):
+    x = np.random.randn(*shape)
+    input = flow.Tensor(
+        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
+
+    m = flow.nn.PixelShuffle(upscale_factor)
+    m = m.to(device)
+    of_out = m(input)
+    np_out = _np_pixel_shuffle(x, upscale_factor)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = _np_pixel_shuffle_grad(np_out, upscale_factor)
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestPixelShuffleModule(flow.unittest.TestCase):
+    def test_pixel_shuffle(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_pixel_shuffle_impl,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+
+        arg_dict["shape"] = [(2, 144, 5, 5), (11, 144, 1, 1)]
+        arg_dict["upscale_factor"] = [2, 3, 4]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+        arg_dict["shape"] = [(8, 25, 18, 18), (1, 25, 2, 2)]
+        arg_dict["upscale_factor"] = [5]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

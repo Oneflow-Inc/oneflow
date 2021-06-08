@@ -60,6 +60,18 @@ class PixelShuffle(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
+        >>> m = flow.nn.PixelShuffle(upscale_factor=2)
+        >>> x = flow.Tensor(np.random.randn(3, 4, 5, 5))
+        >>> y = m(x)
+        >>> print(y.size())
+        flow.Size([3, 1, 10, 10])
+
+        >>> m = flow.nn.PixelShuffle(upscale_factor=3)
+        >>> x = flow.Tensor(np.random.randn(1, 18, 2, 2))
+        >>> y = m(x)
+        >>> print(y.size())
+        flow.Size([1, 2, 6, 6])
+
     .. _Real-Time Single Image and Video Super-Resolution Using an Efficient Sub-Pixel Convolutional Neural Network:
         https://arxiv.org/abs/1609.05158
     """
@@ -128,3 +140,9 @@ class PixelShufflev2(Module):
         )
 
         return out
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
