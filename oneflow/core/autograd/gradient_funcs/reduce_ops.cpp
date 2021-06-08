@@ -132,15 +132,6 @@ Maybe<void> ReduceMaxOrMinOp::Apply(const ReduceMaxOrMinOpInterpState* ctx,
   const auto& bcast_eq =
       JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_equal_op_, {input, bcast_like}));
   const auto& cast_like = JUST(OpInterpUtil::Dispatch<Tensor>(*cast_like_op_, {bcast_eq, input}));
-
-  // MutableAttrMap reduce_sum_attrs;
-  // JUST(reduce_sum_attrs.SetAttr<std::vector<int32_t>>("axis", ctx->axis));
-  // JUST(reduce_sum_attrs.SetAttr<bool>("keepdims", ctx->keepdims));
-  // const auto& reduce_sum =
-  //     JUST(OpInterpUtil::Dispatch<Tensor>(*reduce_sum_op_, {cast_like}, reduce_sum_attrs));
-  // const auto& broadcast_div =
-  //     JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_div_op_, {dy, reduce_sum}));
-  // LOG(INFO) << broadcast_div->shape()->DebugStr() << ", " << input->shape()->DebugStr();
   const auto& bcast_like_div =
       JUST(OpInterpUtil::Dispatch<Tensor>(*bcast_like_op_, {dy, input}, bcast_attrs));
 
