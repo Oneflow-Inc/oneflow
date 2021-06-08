@@ -56,7 +56,7 @@ def exp_op(x):
 
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = x.exp().numpy()
-        >>> print(y)
+        >>> y
         [ 2.7182817  7.389056  20.085537 ]
 
     """

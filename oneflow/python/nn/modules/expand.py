@@ -96,7 +96,7 @@ def expand_op(x, *sizes):
         >>> input = flow.Tensor(x)
 
         >>> out = input.expand(1, 3, 2, 2)
-        >>> print(out.shape)
+        >>> out.shape
         flow.Size([1, 3, 2, 2])
 
     """

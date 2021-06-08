@@ -112,7 +112,7 @@ class ReLU6(Module):
         >>> relu6 = flow.nn.ReLU6()
 
         >>> out = relu6(input).numpy()
-        >>> print(out)
+        >>> out
         [0.  0.  0.5]
 
     """
@@ -162,7 +162,7 @@ class Tanh(Module):
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
         >>> out = tanh(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.7615942  0.         0.7615942]
 
     """
@@ -206,7 +206,7 @@ def tanh_op(x):
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
         >>> out = tanh(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.7615942  0.         0.7615942]
 
     """
@@ -248,7 +248,7 @@ class ELU(Module):
         >>> elu = flow.nn.ELU()
 
         >>> out = elu(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.39346933  0.          0.5       ]
 
     """
@@ -297,7 +297,7 @@ class GELU(Module):
         >>> gelu = flow.nn.GELU()
 
         >>> out = gelu(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.15426877  0.          0.34573123]
 
     """
@@ -341,7 +341,7 @@ def gelu_op(x):
         >>> gelu = flow.nn.GELU()
 
         >>> out = gelu(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.15426877  0.          0.34573123]
 
     """
@@ -372,7 +372,7 @@ class Sigmoid(Module):
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> m = flow.nn.Sigmoid()
         >>> out = m(x).numpy()
-        >>> print(out)
+        >>> out
         [0.69367   0.6073567 0.5258555]
     """
 
@@ -408,7 +408,7 @@ def sigmoid_op(x):
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> out = flow.sigmoid(x).numpy()
-        >>> print(out)
+        >>> out
         [0.69367   0.6073567 0.5258555]
 
     """
@@ -448,7 +448,7 @@ class Hardsigmoid(Module):
         >>> hardsigmoid = flow.nn.Hardsigmoid()
 
         >>> out = hardsigmoid(input).numpy()
-        >>> print(out)
+        >>> out
         [0.41666666 0.5        0.5833333 ]
 
 
@@ -534,7 +534,7 @@ def softmax_op(tensor, dim=None):
         ...    )
         ... )
         >>> out = m(x).numpy()
-        >>> print(out)
+        >>> out
         [[[0.15752424 0.3753552  0.46712062]
           [0.05065432 0.12300029 0.8263454 ]]]
     """
@@ -575,7 +575,7 @@ class LogSoftmax(Module):
         ...    )
         ... )
         >>> out = m(x).numpy()
-        >>> print(out)
+        >>> out
         [[-2.2513487 -3.8766491 -0.1346489]
          [-0.4877046 -3.3176045 -1.0506046]]
     """
@@ -642,7 +642,7 @@ class LogSigmoid(Module):
         >>> logsigmoid = flow.nn.LogSigmoid()
 
         >>> out = logsigmoid(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.974077   -0.6931472  -0.47407696]
 
     """
@@ -692,7 +692,7 @@ class Softplus(Module):
         >>> softplus = flow.nn.Softplus()
 
         >>> out = softplus(input).numpy()
-        >>> print(out)
+        >>> out
         [0.474077  0.6931472 0.974077 ]
     """
 
@@ -743,7 +743,7 @@ class Hardswish(Module):
         >>> hardswish = flow.nn.Hardswish()
 
         >>> out = hardswish(input).numpy()
-        >>> print(out)
+        >>> out
         [-0.20833333  0.          0.29166666]
 
     .. _`Searching for MobileNetV3`:
@@ -803,7 +803,7 @@ class Hardtanh(Module):
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
         >>> out = m(x).numpy()
-        >>> print(out)
+        >>> out
         [0.2 0.3 1.  1. ]
 
     """
@@ -873,7 +873,7 @@ class LeakyReLU(Module):
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
         >>> out = m(x).numpy()
-        >>> print(out)
+        >>> out
         [0.2 0.3 3.  4. ]
     """
 

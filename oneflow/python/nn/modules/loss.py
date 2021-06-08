@@ -70,13 +70,13 @@ class CrossEntropyLoss(Module):
         ...        [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
-        >>> print(out.numpy())
+        >>> out.numpy()
         [0.80199665 1.1166505  0.35826024]
         >>> out_sum = flow.nn.CrossEntropyLoss(reduction="sum")(input, target)
-        >>> print(out_sum.numpy())
+        >>> out_sum.numpy()
         [2.2769072]
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
-        >>> print(out_mean.numpy())
+        >>> out_mean.numpy()
         [0.75896907]
 
 
@@ -212,17 +212,17 @@ class NLLLoss(Module):
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> m = flow.nn.NLLLoss(reduction="none")
         >>> out = m(input, target).numpy()
-        >>> print(out)
+        >>> out
         [ 0.1664078  -0.53737473 -0.7645404 ]
 
         >>> m = flow.nn.NLLLoss(reduction="sum")
         >>> out = m(input, target).numpy()
-        >>> print(out)
+        >>> out
         [-1.1355073]
 
         >>> m = flow.nn.NLLLoss(reduction="mean")
         >>> out = m(input, target).numpy()
-        >>> print(out)
+        >>> out
         [-0.37850246]
 
     """

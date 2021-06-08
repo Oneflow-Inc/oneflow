@@ -76,7 +76,7 @@ class Upsample(Module):
         >>> input = input.to("cuda")
         >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
         >>> output = m(input).numpy()
-        >>> print(output)
+        >>> output
         [[[[1. 1. 2. 2.]
            [1. 1. 2. 2.]
            [3. 3. 4. 4.]
@@ -197,7 +197,7 @@ class UpsamplingNearest2d(Upsample):
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
         >>> output = m(input).numpy()
-        >>> print(output)
+        >>> output
         [[[[1. 1. 2. 2.]
            [1. 1. 2. 2.]
            [3. 3. 4. 4.]
@@ -255,7 +255,7 @@ class UpsamplingBilinear2d(Upsample):
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
         >>> output = m(input).numpy()
-        >>> print(output)
+        >>> output
         [[[[1.        1.3333334 1.6666667 2.       ]
            [1.6666667 2.        2.3333335 2.6666667]
            [2.3333335 2.6666667 3.        3.3333335]

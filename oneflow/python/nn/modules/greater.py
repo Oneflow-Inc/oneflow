@@ -62,7 +62,7 @@ def greater_op(x, y):
         >>> input2 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         >>> out = flow.gt(input1, input2).numpy().shape
-        >>> print(out)
+        >>> out
         (2, 6, 5, 3)
 
     """

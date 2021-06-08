@@ -649,15 +649,15 @@ def asin_op(input):
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([4])
-        >>> print(output.numpy())
+        >>> output.numpy()
         [-0.5235988  0.9272952  1.5707964 -0.9272952]
         >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
-        >>> print(output1.shape)
+        >>> output1.shape
         flow.Size([2, 2])
-        >>> print(output1.numpy())
+        >>> output1.numpy()
         [[ 0.9272952   1.5707964 ]
          [-0.64350116 -1.5707964 ]]
     """
@@ -724,16 +724,16 @@ def asinh_op(input):
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([3])
-        >>> print(output.numpy())
+        >>> output.numpy()
         [1.4436355 1.8184465 2.0947125]
 
         >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
-        >>> print(output1.shape)
+        >>> output1.shape
         flow.Size([2, 3])
-        >>> print(output1.numpy())
+        >>> output1.numpy()
         [[-0.8813736   0.         -0.39003533]
          [ 2.3124382   2.6441207   0.7326682 ]]
 

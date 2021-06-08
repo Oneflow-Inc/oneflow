@@ -49,7 +49,7 @@ def tan_op(input):
         >>> np_arr = np.array([-1/4*np.pi, 0, 1/4*np.pi]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.tan(input)
-        >>> print(output.numpy())
+        >>> output.numpy()
         [-1.  0.  1.]
 
     """

@@ -91,7 +91,7 @@ def transpose_op(tensor, dim0, dim1):
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         >>> out = flow.transpose(input, 0, 1).numpy().shape
-        >>> print(out)
+        >>> out
         (6, 2, 5, 3)
 
     """

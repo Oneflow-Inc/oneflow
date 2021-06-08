@@ -79,7 +79,7 @@ def concat_op(inputs, dim=0):
         >>> input3 = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
 
         >>> out = flow.cat([input1, input2, input3], dim=1)
-        >>> print(out.shape)
+        >>> out.shape
         flow.Size([2, 18, 5, 3])
 
     """

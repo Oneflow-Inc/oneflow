@@ -92,7 +92,7 @@ class Linear(Module):
         >>> m = flow.nn.Linear(20, 30, False)
         >>> input = flow.Tensor(np.random.randn(128, 20))
         >>> output = m(input)
-        >>> print(output.size())
+        >>> output.size()
         flow.Size([128, 30])
 
     """

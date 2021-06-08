@@ -88,7 +88,7 @@ def repeat_op(x, sizes):
 
         >>> input = flow.Tensor(x)
         >>> out = input.repeat(sizes=(1, 1, 2, 2)).numpy()
-        >>> print(out.shape)
+        >>> out.shape
         (1, 3, 2, 4)
     """
     return Repeat(sizes=sizes)(x)

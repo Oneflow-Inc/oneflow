@@ -70,7 +70,7 @@ def to_op(input, *args, **kwargs):
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         >>> input = flow.Tensor(arr)
         >>> output = input.to(dtype=flow.float32)
-        >>> print(np.array_equal(arr.astype(np.float32), output.numpy()))
+        >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
 
     """

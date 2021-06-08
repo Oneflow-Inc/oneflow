@@ -66,7 +66,7 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
         
         >>> input = flow.Tensor(x)
         >>> output = flow.argwhere(input)
-        >>> print(output.numpy())
+        >>> output.numpy()
         [[0 1]
          [1 0]
          [1 2]

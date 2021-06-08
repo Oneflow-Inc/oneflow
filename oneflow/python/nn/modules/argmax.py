@@ -98,10 +98,10 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
         ...            [1, 9, 4, 3, 2]], dtype=np.float32)
 
         >>> out = flow.argmax(flow.Tensor(x))
-        >>> print(out.numpy())
+        >>> out.numpy()
         [6]
         >>> out = flow.argmax(flow.Tensor(x), dim=1)
-        >>> print(out.numpy())
+        >>> out.numpy()
         [2 1]
 
     """

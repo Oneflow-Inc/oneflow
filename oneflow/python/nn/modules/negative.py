@@ -52,7 +52,7 @@ def negative_op(x):
         ...    np.array([1.0, -1.0, 2.3]).astype(np.float32), dtype=flow.float32
         ... )
         >>> out = flow.negative(input).numpy()
-        >>> print(out)
+        >>> out
         [-1.   1.  -2.3]
 
     """
