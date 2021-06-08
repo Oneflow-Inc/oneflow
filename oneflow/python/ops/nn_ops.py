@@ -383,15 +383,15 @@ def conv2d(
         filters (oneflow._oneflow_internal.BlobDesc): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_height, filter_width] for NCHW, or [out_channels, filter_height, filter_width, in_channels//groups] for NHWC`
         strides (Union[int, IntPair]): An int or list of `ints` that has length `2`. The stride of the sliding window for each dimension of `input`.
         padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
-        data_format (str, optional): `"NHWC" or "NCHW"`. Defaults to `"NCHW"`.
+        data_format (str, optional): `"NHWC"` or `"NCHW"`. Defaults to `"NCHW"`.
         dilations (Optional[Union[int, IntPair]], optional): An int or list of `ints` that has length `2`. The dilation factor for each dimension of `input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
         name (Optional[str], optional): This operator's name. Defaults to None.
 
     Raises:
         ValueError: strides must be an int or a list.
-        ValueError: padding must be "SAME" or `"SAME_LOWER" or "SAME_UPPER" or "VALID" or Tuple[IntPair, IntPair, IntPair, IntPair].
-        ValueError: data_format must be "NHWC" or "NCHW".
+        ValueError: padding must be `"SAME"` or `"SAME_LOWER" or `"SAME_UPPER"` or `"VALID"` or Tuple[IntPair, IntPair, IntPair, IntPair].
+        ValueError: data_format must be `"NHWC"` or `"NCHW"`.
         ValueError: dilations must be an int or a list.
         ValueError: invalid data_format.
         ValueError: data_format NHWC not support groups > 1
@@ -598,7 +598,7 @@ def conv3d(
         input (oneflow._oneflow_internal.BlobDesc):  A 5D input `Blob`. [batch_num, channel, depth, height, width]
         filters (oneflow._oneflow_internal.BlobDesc): A `Blob` with the same type as `input` and has the shape `[out_channels, in_channels//groups, filter_depth, filter_height, filter_width] for NCDHW, or [out_channels, filter_depth, filter_height, filter_width, in_channels//groups] for NDHWC`
         strides (Union[int, Sequence[int]]): An `int` or `list of ints` that has length `3`. The stride of the sliding window for each dimension of `input`.
-        padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID" or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
+        padding (Union[str, Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]]): padding: `string` `"SAME"` or `"SAME_LOWER"` or `"SAME_UPPER"` or `"VALID"` or Tuple[IntPair, IntPair, IntPair, IntPair, IntPair]` indicating the type of padding algorithm to use, or a list indicating the explicit paddings at the start and end of each dimension.
         data_format (str, optional): `"NDHWC" or "NCDHW"`. Defaults to `"NCDHW"`.
         dilations (Optional[Union[int, Sequence[int]]], optional): An int or list of `ints` that has length `3`. The dilation factor for each dimension of `input`. Defaults to None.
         groups (int, optional): int value greater than 0. Defaults to 1.
@@ -3470,7 +3470,6 @@ def hardtanh(
         import oneflow.typing as tp
         import numpy as np
 
-
         @flow.global_function()
         def hardtanh_job(x: tp.Numpy.Placeholder(shape=(2, 3)))->tp.Numpy:
             return flow.nn.hardtanh(x, min_val=-1.25, max_val=1.2)
@@ -3482,11 +3481,13 @@ def hardtanh(
 
         # output [[-1.25 -1.1   0.6 ]
         #         [ 1.2   1.2   1.2 ]]
+
     Args:
         x (oneflow._oneflow_internal.BlobDesc): The input Tensor.
         min_val (float, optional): The minimum value of the linear region range. Defaults to -1.
         max_val (float, optional): The maximum value of the linear region range. Defaults to 1.
         name (Optional[str], optional): The name for the operation. Defaults to None.
+
     Returns:
         oneflow._oneflow_internal.BlobDesc: The activated tensor.
     """
