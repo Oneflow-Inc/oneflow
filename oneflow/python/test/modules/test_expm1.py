@@ -22,8 +22,12 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 flow.enable_eager_execution()
+
+
 def _test_expm1_impl(test_case, device, shape):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device),requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
 
     of_out = flow.expm1(x)
     np_out = np.expm1(x.numpy())

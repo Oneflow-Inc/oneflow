@@ -23,7 +23,9 @@ from test_util import GenArgList
 
 
 def _test_ceil_impl(test_case, device, shape):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device),requires_grad=True)
+    x = flow.Tensor(
+        np.random.randn(*shape), device=flow.device(device), requires_grad=True
+    )
     of_out = flow.ceil(x)
     np_out = np.ceil(x.numpy())
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
