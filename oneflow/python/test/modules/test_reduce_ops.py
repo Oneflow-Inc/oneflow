@@ -22,61 +22,6 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_sum(test_case, device, shape, dim, keepdims):
-    input_arr = np.random.randn(*shape)
-    np_out = np.sum(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
-        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.sum(x, dim, keepdims)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = np.ones_like(input_arr)
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
-    )
-
-
-def _test_sum_tensor_function(test_case, device, shape, dim, keepdims):
-    input_arr = np.random.randn(*shape)
-    np_out = np.sum(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.Tensor(
-        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = x.sum(dim, keepdims)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = np.ones_like(input_arr)
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
-    )
-
-
-@unittest.skipIf(
-    not flow.unittest.env.eager_execution_enabled(),
-    ".numpy() doesn't work in lazy mode",
-)
-class TestSumModule(flow.unittest.TestCase):
-    def test_sum(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_sum, _test_sum_tensor_function]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
-        arg_dict["dim"] = [None, 0, -1]
-        arg_dict["keepdims"] = [False, True]
-        for arg in GenArgList(arg_dict):
-            pass
-            # arg[0](test_case, *arg[1:])
-
-
 def _test_min(test_case, device, shape, dim, keepdims):
     input_arr = np.random.randn(*shape)
     np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
@@ -84,9 +29,7 @@ def _test_min(test_case, device, shape, dim, keepdims):
         input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     of_out = flow.min(x, dim, keepdims)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
@@ -98,9 +41,29 @@ def _test_min(test_case, device, shape, dim, keepdims):
     else:
         arg_min = np.expand_dims(np.argmin(input_arr, axis=dim), axis=dim)
         np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
-    test_case.assertTrue(
-        np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+
+
+def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
+    input_arr = np.random.randn(*shape)
+    np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
+    of_out = x.min(dim, keepdims)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+
+    np_out_grad = np.zeros_like(input_arr)
+    if dim == None:
+        arg_min = np.argmin(input_arr)
+        np.put(np_out_grad, arg_min, 1)
+    else:
+        arg_min = np.expand_dims(np.argmin(input_arr, axis=dim), axis=dim)
+        np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -108,9 +71,75 @@ def _test_min(test_case, device, shape, dim, keepdims):
     ".numpy() doesn't work in lazy mode",
 )
 class TestMinModule(flow.unittest.TestCase):
-    def test_min(test_case):
-        _test_min(test_case, "cpu", (2, 3), -1, True)
-        _test_min(test_case, "cpu", (2, 3, 4, 5), 2, True)
+    def test_max(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_min, _test_min_tensor_function]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
+        arg_dict["dim"] = [None, 0, -1]
+        arg_dict["keepdims"] = [False, True]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
+def _test_max(test_case, device, shape, dim, keepdims):
+    input_arr = np.random.randn(*shape)
+    np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_out = flow.max(x, dim, keepdims)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+
+    np_out_grad = np.zeros_like(input_arr)
+    if dim == None:
+        arg_max = np.argmax(input_arr)
+        np.put(np_out_grad, arg_max, 1)
+    else:
+        arg_max = np.expand_dims(np.argmax(input_arr, axis=dim), axis=dim)
+        np.put_along_axis(np_out_grad, arg_max, 1, axis=dim)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+
+
+def _test_max_tensor_function(test_case, device, shape, dim, keepdims):
+    input_arr = np.random.randn(*shape)
+    np_out = np.amax(input_arr, axis=dim, keepdims=keepdims)
+    x = flow.Tensor(
+        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_out = x.max(dim, keepdims)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out = of_out.sum()
+    of_out.backward()
+
+    np_out_grad = np.zeros_like(input_arr)
+    if dim == None:
+        arg_max = np.argmax(input_arr)
+        np.put(np_out_grad, arg_max, 1)
+    else:
+        arg_max = np.expand_dims(np.argmax(input_arr, axis=dim), axis=dim)
+        np.put_along_axis(np_out_grad, arg_max, 1, axis=dim)
+    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestMaxModule(flow.unittest.TestCase):
+    def test_max(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_max, _test_max_tensor_function]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
+        arg_dict["dim"] = [None, 0, -1]
+        arg_dict["keepdims"] = [False, True]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
