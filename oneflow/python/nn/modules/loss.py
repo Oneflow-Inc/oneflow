@@ -16,6 +16,7 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.math_ops import Subtract, Square, Sum, Mean
@@ -302,7 +303,7 @@ class NLLLoss(Module):
 class MSELoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
-        https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
+    https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
 
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
@@ -382,18 +383,20 @@ class MSELoss(Module):
 
     """
 
-    def __init__(self, reduction: str = "mean", size_average=True, reduce=True) -> None:
+    def __init__(
+        self, reduction: str = "mean", size_average: bool = True, reduce: bool = True
+    ) -> None:
         super().__init__()
-        if size_average is not None and not size_average:
+        if size_average is False:
             raise ValueError("Argument size_average is not supported yet")
-        if reduce is not None and not reduce:
+        if reduce is False:
             raise ValueError("Argument reduce is not supported yet")
         assert reduction in [
             "sum",
             "none",
             "mean",
             None,
-        ], "reduction parameter only support 'sum'/'mean'/'none'/None for now!"
+        ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
 
         self.reduction = reduction
         self.square_op = Square()
@@ -401,7 +404,7 @@ class MSELoss(Module):
         self.sum_op = Sum()
         self.mean_op = Mean()
 
-    def forward(self, input, target):
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
         mean_squared_difference = self.square_op(self.subtract_op(input, target))
         if self.reduction == "mean":
             return self.mean_op(mean_squared_difference)
