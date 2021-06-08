@@ -25,7 +25,7 @@ REGISTER_USER_OP("scalar_mul")
     .Attr<int64_t>("int_operand")
     .Attr<double>("float_operand")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })

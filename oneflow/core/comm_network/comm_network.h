@@ -82,16 +82,16 @@ class CommNetIf : public CommNet {
   virtual ~CommNetIf() {}
 
   void* RegisterMemory(void* ptr, size_t byte_size) override {
-    MemDescType* mem_desc = NewMemDesc(ptr, byte_size);
     std::unique_lock<std::mutex> lck(mem_descs_mtx_);
+    MemDescType* mem_desc = NewMemDesc(ptr, byte_size);
     CHECK(mem_descs_.insert(mem_desc).second);
     return mem_desc;
   }
 
   void UnRegisterMemory(void* token) override {
+    std::unique_lock<std::mutex> lck(mem_descs_mtx_);
     MemDescType* mem_desc = static_cast<MemDescType*>(token);
     delete mem_desc;
-    std::unique_lock<std::mutex> lck(mem_descs_mtx_);
     CHECK_EQ(mem_descs_.erase(mem_desc), 1);
   }
 

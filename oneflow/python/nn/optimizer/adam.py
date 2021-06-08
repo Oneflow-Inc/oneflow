@@ -113,7 +113,6 @@ class Adam(Optimizer):
             flow.builtin_op("adam_update")
             .Input("model")
             .Input("model_diff")
-            .Input("learning_rate")
             .Input("m")
             .Input("v")
             .Attr("l1", 0.0)
@@ -135,20 +134,20 @@ class Adam(Optimizer):
 
             for param_group in self._param_groups:
                 kwargs = {
+                    "learning_rate_val": param_group.options["lr"],
                     "scale": param_group.options["scale"],
                     "l2": param_group.options["weight_decay"],
                     "beta1": param_group.options["betas"][0],
                     "beta2": param_group.options["betas"][1],
                     "epsilon": param_group.options["eps"],
                 }
-                lr_tensor = flow.Tensor([param_group.options["lr"]])
                 for param in param_group.parameters:
-                    m_tensor = self._state[param]["exp_avg"]
-                    v_tensor = self._state[param]["exp_avg_sq"]
                     if param.grad is None:
                         continue
+                    m_tensor = self._state[param]["exp_avg"]
+                    v_tensor = self._state[param]["exp_avg_sq"]
                     self._op(
-                        param, param.grad, lr_tensor, m_tensor, v_tensor, **kwargs,
+                        param, param.grad, m_tensor, v_tensor, **kwargs,
                     )
 
             self._state["step"] = self._state["step"] + 1

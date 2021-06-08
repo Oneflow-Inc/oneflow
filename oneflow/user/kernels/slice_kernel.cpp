@@ -267,8 +267,12 @@ DEFINE_STATIC_SWITCH_FUNC(void, WriteSlice, MAKE_WRITE_SLICE_SWITCH_ENTRY,
 
 std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitContext* ctx,
                                                          const std::string& large_tensor_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) {
+    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
+    return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
+  }
   const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
-  if (in_sbp.has_split_parallel() && ctx->parallel_ctx().parallel_num() > 1) {
+  if (in_sbp.has_split_parallel()) {
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
     const auto split_axis = in_sbp.split_parallel().axis();
@@ -277,8 +281,7 @@ std::shared_ptr<user_op::OpKernelState> CreateSliceState(user_op::KernelInitCont
     BalancedSplitter bs(split_dim_size, ctx->parallel_ctx().parallel_num());
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(
         split_axis, bs.At(parallel_id).begin(), bs.At(parallel_id).end(), split_dim_size);
-  } else if (in_sbp.has_broadcast_parallel() || ctx->parallel_ctx().parallel_num() == 1) {
-    // split_axis == SPLIT_AXIS_FOR_BROADCAST means the sbp attribute is broadcast instead of split
+  } else if (in_sbp.has_broadcast_parallel()) {
     return std::make_shared<OpKernelStateWrapper<SliceContext>>(SPLIT_AXIS_FOR_BROADCAST, 0, 0, 0);
   } else {
     // TODO(jianhao): support partialsum
@@ -338,8 +341,10 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
-    if (ctx->parallel_ctx().parallel_num() > 1) { CHECK(value_sbp.has_broadcast_parallel()); }
+    if (ctx->parallel_ctx().parallel_num() > 1) {
+      const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
+      CHECK(value_sbp.has_broadcast_parallel());
+    }
     return CreateSliceState(ctx, "ref");
   }
 

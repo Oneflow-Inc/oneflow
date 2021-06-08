@@ -40,8 +40,8 @@ class Copy : public OpExprGradFunction<CopyOpExprInterpState> {
 
   Maybe<void> Capture(CopyOpExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    ctx->device_type = inputs.at(0)->device()->type();
-    ctx->device_id = inputs.at(0)->device()->device_id();
+    ctx->device_type = JUST(inputs.at(0)->device())->type();
+    ctx->device_id = JUST(inputs.at(0)->device())->device_id();
     return Maybe<void>::Ok();
   }
 

@@ -21,7 +21,7 @@ import operator
 import oneflow as flow
 import oneflow._oneflow_internal
 import oneflow.python.framework.id_util as id_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 from typing import Optional, Sequence, List
 
 
@@ -169,6 +169,7 @@ def gen_tensor_buffer(
         BlobDesc: The result Blob.
 
     For example:
+
     .. code-block:: python
 
         import oneflow as flow
@@ -181,6 +182,7 @@ def gen_tensor_buffer(
                 return y
 
         # y_0.shape (2, 1), y_1.shape (1. 2)
+
     """
     return (
         flow.user_op_builder(
@@ -200,6 +202,7 @@ def gen_tensor_buffer(
 
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
+@stable_api
 def tensor_buffer_to_list_of_tensors(
     x: oneflow._oneflow_internal.BlobDesc,
     out_shape: Sequence[int],
@@ -221,8 +224,11 @@ def tensor_buffer_to_list_of_tensors(
         List[BlobDesc]: result blobs
 
     For example:
+
     .. code-block:: python
+
         # the same with `gen_tensor_buffer` op
+
     """
     return (
         flow.user_op_builder(
