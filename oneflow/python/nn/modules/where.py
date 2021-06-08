@@ -101,14 +101,13 @@ class Where(Module):
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
-    
+
     it will take the `x` element, else it will take the `y` element
 
     .. note::
 
-    The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
-
-    it will take the `x` element, else it will take the `y` element.
+        The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
+        It will take the `x` element, else it will take the `y` element.
 
     Args:
         condition (IntTensor): When 1 (nonzero), yield x, otherwise yield y
@@ -118,24 +117,32 @@ def where_op(condition, x, y):
                             where :attr:`condition` is False
     Returns:
         Tensor: A tensor of shape equal to the broadcasted shape of :attr:`condition`, :attr:`x`, :attr:`y`
-    
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(
-            np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
-            dtype=flow.float32,
-        )
-        y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
-        condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
-        of_out = condition.where(x, y)
-        # of_out
-        # [[1.     0.3139]
-        # [0.3898 1.    ]
-        # [0.0478 1.    ]]
-    
+        >>> x = flow.Tensor(
+        ...    np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]),
+        ...    dtype=flow.float32,
+        ... )
+        >>> y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
+        >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
+        >>> out = condition.where(x, y).numpy()
+        >>> print(out)
+        [[1.     0.3139]
+         [0.3898 1.    ]
+         [0.0478 1.    ]]
+
     """
     return Where()(condition, x, y)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

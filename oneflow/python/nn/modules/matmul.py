@@ -89,7 +89,7 @@ def matmul_op(a, b):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -101,6 +101,7 @@ def matmul_op(a, b):
         >>> of_out = flow.matmul(input1, input2)
         >>> print(of_out.shape)
         flow.Size([2, 5])
+
     """
     return MatMul()(a, b)
 
@@ -108,4 +109,4 @@ def matmul_op(a, b):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

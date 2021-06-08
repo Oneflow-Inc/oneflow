@@ -34,9 +34,9 @@ class Exp(Module):
 def exp_op(x):
     """This operator computes the exponential of Tensor.
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         out = e^x
 
@@ -46,17 +46,24 @@ def exp_op(x):
     Returns:
         oneflow.Tensor: The result Tensor
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        import numpy as np
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        y = x.exp().numpy()
-
-        # y [ 2.7182817  7.389056  20.085537 ]
+        >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
+        >>> y = x.exp().numpy()
+        >>> print(y)
+        [ 2.7182817  7.389056  20.085537 ]
 
     """
     return Exp()(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
