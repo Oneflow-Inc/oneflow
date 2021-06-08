@@ -61,10 +61,14 @@ def _sum(input, dim=None, keepdims=False):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        of_out = flow.sum(input, dim=(2,1))
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
+        >>> input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        >>> of_out = flow.sum(input, dim=(2, 1))
+        >>> of_out.shape
+        flow.Size([4])
     """
 
     return Sum(dim, keepdims)(input)
@@ -149,25 +153,30 @@ def _mul(x, y):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
         # element-wise multiply
-        x = flow.Tensor(np.random.randn(2,3))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.mul(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(2,3))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # scalar mutiply
-        x = 5
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.mul(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = 5
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # broadcast mutiply
-        x = flow.Tensor(np.random.randn(1,1))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.mul(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(1,1))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.mul(x,y).numpy()
+        >>> out.shape 
+        (2, 3)
 
     """
 
@@ -241,22 +250,24 @@ def _mean(input_tensor, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input)
-        # out: [3.5]
-        print(out.numpy())
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> out = flow.mean(input)
+        >>> out.numpy()
+        array([3.5], dtype=float32)
 
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=0)
-        # out: [2.5 3.5 4.5]
-        print(out.numpy())
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> out = flow.mean(input, dim=0)
+        >>> out.numpy()
+        array([2.5, 3.5, 4.5], dtype=float32)
 
-        input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        out = flow.mean(input, axis=1)
-        # out: [ 2. 5.]
-        print(out.numpy())
+        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        >>> out = flow.mean(input, dim=1)
+        >>> out.numpy()
+        array([2., 5.], dtype=float32)
 
     """
 
@@ -306,13 +317,13 @@ def variance_op(input, dim=None, keepdim=False):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        np_arr = np.random.randn(2,3,4,5)
-        input = flow.Tensor(np_arr)
-        output = flow.var(input, 1, True)
-        # equal to np.var(input_arr, 1, keepdim=True)
+        >>> np_arr = np.random.randn(2,3,4,5)
+        >>> input = flow.Tensor(np_arr)
+        >>> output = flow.var(input, 1, True)
 
     """
     return Variance(dim, keepdim)(input)
@@ -386,25 +397,30 @@ def _sub(x, y):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
         # element-wise subtract
-        x = flow.Tensor(np.random.randn(2,3))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.sub(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(2,3))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # scalar subtract
-        x = 5
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.sub(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = 5
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # broadcast subtract
-        x = flow.Tensor(np.random.randn(1,1))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.sub(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(1,1))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.sub(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
     """
 
@@ -465,25 +481,30 @@ def _div(x, y):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
         # element-wise divide
-        x = flow.Tensor(np.random.randn(2,3))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.div(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(2,3))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # scalar divide
-        x = 5
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.div(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = 5
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(x,y).numpy()
+        >>> out.shape
+        (2, 3)
 
         # broadcast divide
-        x = flow.Tensor(np.random.randn(1,1))
-        y = flow.Tensor(np.random.randn(2,3))
-        out = flow.div(x,y).numpy()
-        print(out.shape) # (2,3)
+        >>> x = flow.Tensor(np.random.randn(1,1))
+        >>> y = flow.Tensor(np.random.randn(2,3))
+        >>> out = flow.div(x,y).numpy()
+        >>> out.shape 
+        (2, 3)
 
     """
 
@@ -523,12 +544,15 @@ def _reciprocal(x):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
-        out = flow.reciprocal()(x)
-        # out [[1.         0.5        0.33333334]
-               [0.25       0.2        0.16666667]]
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
+        >>> x = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6]]))
+        >>> out = flow.reciprocal(x)
+        >>> out.numpy()
+        array([[1.        , 0.5       , 0.33333334],
+               [0.25      , 0.2       , 0.16666667]], dtype=float32)
     """
 
     return Reciprocal()(x)
@@ -1304,4 +1328,4 @@ def cosh_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
