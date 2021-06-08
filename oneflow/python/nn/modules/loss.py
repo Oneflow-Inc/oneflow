@@ -296,6 +296,97 @@ class NLLLoss(Module):
             return res.mean()
 
 
+@oneflow_export("nn.MarginRankingLoss")
+@experimental_api
+class MarginRankingLoss(Module):
+    r"""Creates a criterion that measures the loss given
+    inputs :math:`x1`, :math:`x2`, two 1D mini-batch `Tensors`,
+    and a label 1D mini-batch tensor :math:`y` (containing 1 or -1).
+
+    If :math:`y = 1` then it assumed the first input should be ranked higher
+    (have a larger value) than the second input, and vice-versa for :math:`y = -1`.
+
+    The loss function for each sample in the mini-batch is:
+
+    .. math::
+        \text{loss}(x1, x2, y) = \max(0, -y * (x1 - x2) + \text{margin})
+
+    Args:
+        margin (float, optional): Has a default value of :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
+
+    Shape:
+        - `x1` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - `x2` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - Target: :math:`(N)`
+        - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N)`.
+
+    For example:
+
+    .. code-block:: python 
+        
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import numpy as np
+
+        >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
+        >>> x2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
+        >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
+        >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([[2., 1., 0.],
+                [3., 0., 5.],
+                [0., 0., 0.]], dtype=oneflow.float32)
+
+        >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.2], dtype=oneflow.float32)
+        
+        >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.3333], dtype=oneflow.float32)
+
+
+    """
+
+    def __init__(self, margin=0.0, reduction: str = "mean") -> None:
+        super().__init__()
+        self.margin = margin
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+
+    def forward(self, input1, input2, target):
+        res = flow.experimental.clip(
+            flow.experimental.add(
+                self.margin,
+                flow.experimental.mul(
+                    target,
+                    flow.experimental.mul(-1, flow.experimental.sub(input1, input2)),
+                ),
+            ),
+            min=0.0,
+        )
+
+        if self.reduction == "none":
+            return res
+        elif self.reduction == "sum":
+            return res.sum()
+        else:
+            return res.mean()
+
+
 if __name__ == "__main__":
     import doctest
 
