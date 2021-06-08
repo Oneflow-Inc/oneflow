@@ -34,9 +34,6 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
   if (!acc_tensor_) {
     acc_tensor_ = partial_tensor;
   } else {
-    LOG(ERROR) << int64_t(
-        JUST(JUST(partial_tensor->cur_rank_phy_tensor())->eager_blob_object()).get());
-    LOG(ERROR) << int64_t(partial_tensor.get());
     acc_tensor_ = JUST(OpInterpUtil::Dispatch<Tensor>(*add2_op_, {partial_tensor, acc_tensor_}));
   }
   return Maybe<void>::Ok();

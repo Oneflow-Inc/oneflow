@@ -159,7 +159,6 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
     if (!func_node) { continue; }
-    LOG(ERROR) << func_node->GetOpTypeName();
     // CHECK_NOTNULL_OR_RETURN(func_node);
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->AccGrad4LeafTensor(create_graph));

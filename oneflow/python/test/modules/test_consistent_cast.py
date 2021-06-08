@@ -25,11 +25,11 @@ import oneflow.experimental as flow
 class TestConsistentCastModule(flow.unittest.TestCase):
     def test_consistent_cast(test_case):
         relu = flow.nn.ReLU()
-        arr = np.random.randn(3, 4)
+        arr = np.random.randn(8, 16, 12, 5)
         np_out = np.maximum(0, arr)
 
         relu_mask = arr > 0
-        out_diff = np.random.randn(3, 4)
+        out_diff = np.random.randn(8, 16, 12, 5)
         in_diff = out_diff * relu_mask
 
         consisitent_relu = flow.consistent_cast(
@@ -40,16 +40,13 @@ class TestConsistentCastModule(flow.unittest.TestCase):
                 [flow.placement("cpu", ["0:0"], None)],
             ),
         )
-        # consisitent_relu = relu
 
         x = flow.Tensor(arr, requires_grad=True)
         y = consisitent_relu(x)
         y_diff = flow.Tensor(out_diff)
         y.backward(y_diff)
-        x_grad = x.grad.numpy()
-        print(x_grad)
         test_case.assertTrue(np.allclose(y.numpy(), np_out, rtol=1e-05))
-        test_case.assertTrue(np.allclose(x_grad, in_diff, rtol=1e-05))
+        test_case.assertTrue(np.allclose(x.grad.numpy(), in_diff, rtol=1e-05))
 
 
 if __name__ == "__main__":

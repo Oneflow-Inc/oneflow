@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_expr_helper.h"
-#include "oneflow/core/framework/session_util.h"
 
 namespace oneflow {
 namespace one {
@@ -43,10 +42,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentOpExprInterpSta
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& session = JUST(GetDefaultSession());
-    // session->PushMirroredStrategyEnabled(false);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
-    session->PopMirroredStrategyEnabled();
     return Maybe<void>::Ok();
   }
 
@@ -75,11 +71,7 @@ class CastFromConsistent : public OpExprGradFunction<CastConsistentOpExprInterpS
 
   Maybe<void> Apply(const CastConsistentOpExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& session = JUST(GetDefaultSession());
-    LOG(ERROR) << "cast_from_consistent backward";
-    session->PushMirroredStrategyEnabled(false);
     in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0)}));
-    // session->PopMirroredStrategyEnabled();
     return Maybe<void>::Ok();
   }
 

@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/session_util.h"
 
 namespace oneflow {
 namespace one {
@@ -148,6 +149,7 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
+  bool is_mirrored_strategy_enabled = true;
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
         std::any_of(inputs.begin(), inputs.end(),
@@ -159,6 +161,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
   }
+  {
+    const auto& session = JUST(GetDefaultSession());
+    is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
+                                   || JUST(session->IsMirroredStrategyEnabled());
+  }
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     JUST(grad_closure->Capture(inputs, *outputs, attrs));
@@ -167,8 +174,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
+              const auto& session = JUST(GetDefaultSession());
+              session->PushMirroredStrategyEnabled(is_mirrored_strategy_enabled);
               autograd::AutoGradMode mode(create_graph);
               JUST(grad_closure->Apply(out_grads, in_grads));
+              session->PopMirroredStrategyEnabled();
               return Maybe<void>::Ok();
             });
     GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
