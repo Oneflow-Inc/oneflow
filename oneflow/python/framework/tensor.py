@@ -627,6 +627,10 @@ class Tensor:
         internal_tensor.zeros_()
 
     @_auto_determine
+    def register_hook(self, hook):
+        self._local_or_consistent_tensor.register_hook(hook)
+
+    @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
         internal_tensor = self._local_or_consistent_tensor
         if internal_tensor.is_lazy:

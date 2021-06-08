@@ -18,6 +18,7 @@ limitations under the License.
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_META_H_
 
 #include <memory>
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
 
@@ -29,6 +30,7 @@ namespace one {
 
 class Tensor;
 class TensorArg;
+class MirroredTensor;
 
 class AutogradMeta final {
  public:
@@ -45,6 +47,9 @@ class AutogradMeta final {
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
+  using Hook =
+      std::function<std::shared_ptr<MirroredTensor>(std::shared_ptr<const MirroredTensor>)>;
+  const std::vector<Hook>& hooks() const { return hooks_; }
 
   // Setters
   void set_acc_grad(const std::shared_ptr<Tensor>& grad) { acc_grad_ = grad; }
@@ -52,6 +57,7 @@ class AutogradMeta final {
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
+  void add_hook(const Hook& hook) { hooks_.push_back(hook); }
 
  private:
   bool is_leaf_;
@@ -64,6 +70,7 @@ class AutogradMeta final {
 
   std::shared_ptr<Tensor> acc_grad_;
   std::shared_ptr<TensorArg> now_grad_arg_;
+  std::vector<Hook> hooks_;
 };
 
 inline std::shared_ptr<AutogradMeta> NewAutogradMeta(bool requires_grad, bool is_leaf) {

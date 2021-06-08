@@ -14,8 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
+
+Maybe<const Device> DeviceInferFn(user_op::DeviceInferContext* ctx) {
+  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
+      ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+  return Device::New("cuda_d2d");
+}
 
 REGISTER_USER_OP("eager_nccl_all_reduce")
     .Input("in")
@@ -25,6 +32,7 @@ REGISTER_USER_OP("eager_nccl_all_reduce")
       *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
+    .SetDeviceInferFn(DeviceInferFn)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))

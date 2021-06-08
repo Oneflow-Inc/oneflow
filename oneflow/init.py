@@ -72,6 +72,7 @@ del env_util
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(get_rank, sync):
     def SyncOnMaster():
+        return
         if get_rank() == 0:
             sync()
 

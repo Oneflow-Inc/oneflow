@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -38,8 +39,14 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_dat
 
 Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
+  if (!JUST(autograd_meta->now_grad_arg()->GetAccTensor())) { return Maybe<void>::Ok(); }
+  for (const auto& hook : autograd_meta->hooks()) {
+    const auto& now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
+    const auto& local_now_grad = std::dynamic_pointer_cast<MirroredTensor>(now_grad);
+    auto new_grad = hook(local_now_grad);
+    if (new_grad) { autograd_meta->now_grad_arg()->SetAccTensor(new_grad); }
+  }
   const auto& now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
-  if (!now_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
     TensorTuple input = {autograd_meta->acc_grad(), now_grad};
     TensorTuple output(1);
@@ -128,14 +135,14 @@ Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
       JUST(input_meta_datas_.at(i)->now_grad_arg()->PushPartialTensor(input_grads.at(i)));
     }
   }
-  for (int i = 0; i < input_meta_datas_.size(); ++i) {
-    if (input_grads.at(i)) {
-      auto op = JUST(op_expr_helper::EagerNcclAllReduceOp(2));
-      auto grad_arg = input_meta_datas_.at(i)->now_grad_arg();
-      auto input_grad = JUST(grad_arg->GetAccTensor());
-      grad_arg->SetAccTensor(JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input_grad})));
-    }
-  }
+  // for (int i = 0; i < input_meta_datas_.size(); ++i) {
+  //   if (input_grads.at(i)) {
+  //     auto op = JUST(op_expr_helper::EagerNcclAllReduceOp(2));
+  //     auto grad_arg = input_meta_datas_.at(i)->now_grad_arg();
+  //     auto input_grad = JUST(grad_arg->GetAccTensor());
+  //     grad_arg->SetAccTensor(JUST(OpInterpUtil::Dispatch<Tensor>(*op, {input_grad})));
+  //   }
+  // }
   return true;
 }
 

@@ -45,6 +45,19 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
 
+class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
+ public:
+  AsyncCudaLocalCallOpKernelInstructionType() = default;
+  ~AsyncCudaLocalCallOpKernelInstructionType() override = default;
+
+  using stream_type = vm::AsyncCudaStreamType;
+
+ private:
+  const char* device_tag() const override { return stream_type().device_tag(); }
+};
+COMMAND(vm::RegisterInstructionType<AsyncCudaLocalCallOpKernelInstructionType>(
+    "async.gpu.LocalCallOpKernel"));
+
 class CudaH2DLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:
   CudaH2DLocalCallOpKernelInstructionType() = default;

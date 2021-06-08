@@ -88,7 +88,8 @@ const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {
 
 Maybe<const std::string&> Device::of_type() const {
   static const HashMap<std::string, std::string> type2device_tag{
-      {"cpu", "cpu"}, {"cuda", "gpu"}, {"gpu", "gpu"}, {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"},
+      {"cpu", "cpu"},      {"cuda", "gpu"},     {"gpu", "gpu"},
+      {"cuda_h2d", "gpu"}, {"cuda_d2h", "gpu"}, {"cuda_d2d", "gpu"},
   };
   return MapAt(type2device_tag, type());
 }
@@ -97,7 +98,7 @@ Maybe<const std::string&> Device::local_call_instruction_name() const {
   static const HashMap<std::string, std::string> type2instr_name{
       {"cpu", "cpu.LocalCallOpKernel"},           {"cuda", "gpu.LocalCallOpKernel"},
       {"gpu", "gpu.LocalCallOpKernel"},           {"cuda_h2d", "cuda_h2d.LocalCallOpKernel"},
-      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"},
+      {"cuda_d2h", "cuda_d2h.LocalCallOpKernel"}, {"cuda_d2d", "async.gpu.LocalCallOpKernel"},
   };
   return MapAt(type2instr_name, type());
 }

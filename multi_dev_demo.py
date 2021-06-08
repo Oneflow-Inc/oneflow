@@ -64,13 +64,29 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError()
 
+    def allreduce(grad):
+        print(f"original grad: {grad}")
+        op = (
+            flow.builtin_op("eager_nccl_all_reduce")
+            .Input("in")
+            .Output("out")
+            .Attr("parallel_conf", 'device_tag: "gpu", device_name: "0:0-1"')
+            .Build()
+        )
+        return op(grad)[0]
+
     flow.enable_eager_execution(True)
     x = flow.Tensor([2, 3], requires_grad=True, device="cuda:{}".format(rank))
+    x.register_hook(allreduce)
     print("rank:", rank)
     if rank == 0:
-        y = x * 3
-    else:
+        y0 = x * 5
+        y1 = x * 2
+        y = y0 + y1
+    elif rank == 1:
         y = x * 4
+    else:
+        raise ValueError()
     print(y.numpy())
     loss = y.sum()
     loss.backward()
