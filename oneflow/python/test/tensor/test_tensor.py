@@ -608,7 +608,7 @@ class TestTensor(flow.unittest.TestCase):
          not flow.unittest.env.eager_execution_enabled(),
          "numpy doesn't work in lazy mode",
      )
-     def test_floor(test_case):
+    def test_floor(test_case):
          input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
          of_out = input.floor()
          np_out = np.floor(input.numpy())
