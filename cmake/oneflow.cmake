@@ -232,7 +232,7 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user)
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user) # will set ONEFLOW_USER_LIBS
 
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 add_dependencies(of_ccobj prepare_oneflow_third_party)
