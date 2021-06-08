@@ -61,8 +61,7 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->Dtype4ArgNameAndIndex(output_arg.first, output_arg.second) =
-        first_tensor_desc->data_type();
+    *ctx->OutputDType(output_arg.first, output_arg.second) = first_tensor_desc->data_type();
   }
   return Maybe<void>::Ok();
 }
