@@ -354,7 +354,8 @@ class MarginRankingLoss(Module):
 
 
     """
-    def __init__(self, margin=0.0,  reduction: str = "mean") -> None:
+
+    def __init__(self, margin=0.0, reduction: str = "mean") -> None:
         super().__init__()
         self.margin = margin
         assert reduction in [
@@ -366,11 +367,17 @@ class MarginRankingLoss(Module):
 
         self.reduction = reduction
 
-
     def forward(self, input1, input2, target):
         res = flow.experimental.clip(
-                flow.experimental.add(self.margin, flow.experimental.mul(target, flow.experimental.mul(-1, flow.experimental.sub(input1, input2)))),
-                min=0.)
+            flow.experimental.add(
+                self.margin,
+                flow.experimental.mul(
+                    target,
+                    flow.experimental.mul(-1, flow.experimental.sub(input1, input2)),
+                ),
+            ),
+            min=0.0,
+        )
 
         if self.reduction == "none":
             return res
@@ -378,6 +385,7 @@ class MarginRankingLoss(Module):
             return res.sum()
         else:
             return res.mean()
+
 
 if __name__ == "__main__":
     import doctest

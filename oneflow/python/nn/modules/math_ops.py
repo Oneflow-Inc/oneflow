@@ -1221,14 +1221,13 @@ class Addmm(Module):
             .Attr("transpose_b", False)
             .Attr("alpha", 1.0)
             .Build()
-        ) 
+        )
 
-        
     def forward(self, x, mat1, mat2, alpha=1, beta=1):
         if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
             raise ValueError("input matrixes shape can not be greater than 2")
         else:
-            return _mul(x, beta) + _mul(self._matmul_op(mat1,mat2)[0], alpha)
+            return _mul(x, beta) + _mul(self._matmul_op(mat1, mat2)[0], alpha)
 
 
 @oneflow_export("addmm")
