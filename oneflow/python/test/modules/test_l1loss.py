@@ -22,7 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def l1_loss_1d(input, target, reduction="none"):
+def l1_loss(input, target, reduction="none"):
     assert len(input.shape) == target.shape
     assert (
         input.shape == target.shape), "The Input shape must be the same as Target shape"
@@ -36,7 +36,7 @@ def l1_loss_1d(input, target, reduction="none"):
     else:
         return np_l1
 
-def _test_l1loss(test_case, device):
+def _test_l1loss_2d(test_case, device):
     x = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
     y = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
@@ -44,11 +44,11 @@ def _test_l1loss(test_case, device):
     l1_loss = flow.nn.L1Loss(reduction="none")
     l1_loss = l1_loss.to(device)
     of_out = l1_loss(input, target)
-    np_out = l1_loss_1d(input.numpy(), target.numpy(), reduction="none")
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="none")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
-def _test_l1loss_mean(test_case, device):
+def _test_l1loss_mean_2d(test_case, device):
     x = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
     y = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
@@ -56,10 +56,10 @@ def _test_l1loss_mean(test_case, device):
     l1_loss = flow.nn.L1Loss(reduction="mean")
     l1_loss = l1_loss.to(device)
     of_out = l1_loss(input, target)
-    np_out = l1_loss_1d(input.numpy(), target.numpy(), reduction="mean")
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="mean")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
-def _test_l1loss_sum(test_case, device):
+def _test_l1loss_sum_2d(test_case, device):
     x = np.array([[1, 1, 1], [2, 2, 2], [7, 7, 7]]).astype(np.float32)
     y = np.array([[4, 4, 4], [4, 4, 4], [4, 4, 4]]).astype(np.float32)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
@@ -67,7 +67,41 @@ def _test_l1loss_sum(test_case, device):
     l1_loss = flow.nn.L1Loss(reduction="sum")
     l1_loss = l1_loss.to(device)
     of_out = l1_loss(input, target)
-    np_out = l1_loss_1d(input.numpy(), target.numpy(), reduction="sum")
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="sum")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+def _test_l1loss_3d(test_case, device):
+    x = np.array([[[1, 1, 1], [2, 2, 2], [7, 7, 7]], [[1, 1, 1], [2, 2, 2], [7, 7, 7]]]).astype(np.float32)
+    y = np.array([[[4, 4, 4], [4, 4, 4], [4, 4, 4]], [[4, 4, 4], [4, 4, 4], [4, 4, 4]]]).astype(np.float32)
+    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    l1_loss = flow.nn.L1Loss(reduction="none")
+    l1_loss = l1_loss.to(device)
+    of_out = l1_loss(input, target)
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="none")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+
+def _test_l1loss_mean_3d(test_case, device):
+    x = np.array([[[1, 1, 1], [2, 2, 2], [7, 7, 7]], [[1, 1, 1], [2, 2, 2], [7, 7, 7]]]).astype(np.float32)
+    y = np.array([[[4, 4, 4], [4, 4, 4], [4, 4, 4]], [[4, 4, 4], [4, 4, 4], [4, 4, 4]]]).astype(np.float32)
+    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    l1_loss = flow.nn.L1Loss(reduction="mean")
+    l1_loss = l1_loss.to(device)
+    of_out = l1_loss(input, target)
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="mean")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+def _test_l1loss_sum_3d(test_case, device):
+    x = np.array([[[1, 1, 1], [2, 2, 2], [7, 7, 7]], [[1, 1, 1], [2, 2, 2], [7, 7, 7]]]).astype(np.float32)
+    y = np.array([[[4, 4, 4], [4, 4, 4], [4, 4, 4]], [[4, 4, 4], [4, 4, 4], [4, 4, 4]]]).astype(np.float32)
+    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    l1_loss = flow.nn.L1Loss(reduction="sum")
+    l1_loss = l1_loss.to(device)
+    of_out = l1_loss(input, target)
+    np_out = l1_loss(input.numpy(), target.numpy(), reduction="sum")
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -79,9 +113,12 @@ class TestL1LossModule(flow.unittest.TestCase):
     def test_nllloss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_l1loss,
-            _test_l1loss_mean,
-            _test_l1loss_sum
+            _test_l1loss_2d,
+            _test_l1loss_mean_2d,
+            _test_l1loss_sum_2d,
+            _test_l1loss_3d,
+            _test_l1loss_mean_3d,
+            _test_l1loss_sum_3d
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
@@ -90,4 +127,4 @@ class TestL1LossModule(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
+

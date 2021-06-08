@@ -97,27 +97,28 @@ class L1Loss(Module):
             None,
         ], "only 'sum', 'mean' and 'none' supported by now"
 
-        self.reduction = reduction  
-        self.abs_op = Abs()
-        self.sub_op = Subtract()
-        self.mean_op = Mean()
-        self.sum_op = Sum()      
+        self.reduction = reduction
+        self.abs = Abs()
+        self.sub = Subtract()
+        self.mean = Mean()
+        self.sum = Sum()
+              
 
     def forward(self, input, target):
-        assert len(input.shape) == len(target.shape)
         assert (
             input.shape == target.shape), "The Input shape must be the same as Target shape"
 
-        l1_value = self.abs_op(self.sub_op(target, input))
+        l1_value =  self.abs(self.sub(target, input))
         if self.reduction == "mean":
-            return self.mean_op(l1_value)
+            return self.mean(l1_value)
         elif self.reduction == "sum":
-            return self.sum_op(l1_value)
+            return self.sum(l1_value)
         else:
             return l1_value
 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
+
     
