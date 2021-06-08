@@ -1372,6 +1372,145 @@ def cosh_op(tensor):
     return Cosh()(tensor)
 
 
+
+class Erf(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erf_op(input)[0]
+
+
+@oneflow_export("erf")
+@register_tensor_op("erf")
+@experimental_api
+def erf_op(input):
+    r"""Computes the error function of each element. The error function is defined as follows:
+
+    .. math::
+            \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor   
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> out.shape
+        flow.Size([3])
+        >>> out.numpy()
+        array([ 0.       , -0.8427008,  1.       ], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> out.shape
+        flow.Size([2, 3])
+        >>> out.numpy()
+        array([[ 0.        , -0.8427008 ,  1.        ],
+               [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erf()
+        >>> out.shape
+        flow.Size([3, 3])
+        >>> out.numpy()
+        array([[ 0.        , -0.8427008 ,  1.        ],
+               [ 1.        ,  1.        ,  0.74210095],
+               [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
+               
+    """
+    return Erf()(input)
+
+
+@register_tensor_op("erf")
+@experimental_api
+def erf_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erf`
+    """
+    return Erf()(input)
+
+
+class Erfc(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erfc_op(input)[0]
+
+
+@oneflow_export("erfc")
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op(input):
+    r"""Computes the complementary error function of each element of input. The complementary error 
+    function is defined as follows:
+
+    .. math::
+            \operatorname{erfc}(x)=1-\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> out.shape
+        flow.Size([3])
+        >>> out.numpy()
+        array([1.0000000e+00, 1.8427007e+00, 2.8025969e-45], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> out.shape
+        flow.Size([2, 3])
+        >>> out.numpy()
+        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
+               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01]], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erfc()
+        >>> out.shape
+        flow.Size([3, 3])
+        >>> out.numpy()
+        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
+               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
+               [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
+        
+    """
+    return Erfc()(input)
+
+
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erfc`
+    """
+    return Erfc()(input)
+
 class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1529,6 +1668,7 @@ def expm1_op_tensor(x):
     """
 
     return Expm1()(x)
+
 
 
 if __name__ == "__main__":
