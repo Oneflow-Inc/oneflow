@@ -378,6 +378,8 @@ if (BUILD_CUDA)
         oneflow_softmax_cuda_kernel
         kernels/softmax_kernel.cu
     )
+    target_link_libraries(oneflow_user_cuda_kernel ${CUDA_LIBRARIES})
+    target_link_libraries(oneflow_softmax_cuda_kernel ${CUDA_LIBRARIES})
     list(APPEND ONEFLOW_USER_LIBS oneflow_user_cuda_kernel)
     list(APPEND ONEFLOW_USER_LIBS oneflow_softmax_cuda_kernel)
 endif()
