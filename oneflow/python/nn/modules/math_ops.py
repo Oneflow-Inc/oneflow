@@ -889,6 +889,7 @@ def atan_op(tensor):
     For example:
 
     .. code-block:: python
+    
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -898,6 +899,7 @@ def atan_op(tensor):
         flow.Size([3])
         >>> print(output.numpy())
         [0.4636476  0.5404195  0.61072594]
+        
     """
     return Atan()(tensor)
 
