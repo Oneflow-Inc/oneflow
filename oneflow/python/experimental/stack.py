@@ -1,25 +1,9 @@
-"""
-Copyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
 import oneflow as flow
 from typing import List, Tuple
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
-
 
 class Stack(Module):
     def __init__(self, dim: int = 0) -> None:
@@ -39,13 +23,12 @@ class Stack(Module):
         for i in range(input_list_length):
             current_shape = inputs[i].shape
             assert (
-                input_shape == current_shape
+                    input_shape == current_shape
             ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
                 current_shape
             )
             inputs[i] = flow.experimental.unsqueeze(inputs[i], dim=self.dim)
         return flow.experimental.cat(inputs, dim=self.dim)
-
 
 @oneflow_export("stack")
 @register_tensor_op("stack")
@@ -54,7 +37,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
     A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1)`
-    can be used. Negative :attr:`dim` will correspond to :meth:`unsqueeze`
+    can be used. Negative :attr:`dim` will correspond to :meth:`stack`
     applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
     Args:
         inputs (List[Tensor]): the list of input tensors. Each tensor should have the same shape.
