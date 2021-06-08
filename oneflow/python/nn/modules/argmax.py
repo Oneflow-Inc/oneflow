@@ -88,7 +88,7 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 
     For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -111,4 +111,4 @@ def argmax_op(input, dim: int = None, keepdim: bool = False):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

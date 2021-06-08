@@ -22,52 +22,37 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_asinh(test_case, shape, device):
-    np_input = np.random.randn(*shape)
+def _test_tan_impl(test_case, shape, device):
+    np_input = np.random.random(shape) - 0.5
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
 
-    of_out = flow.asinh(of_input)
-    np_out = np.arcsinh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
-
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
-
-
-def _test_arcsinh(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    of_out = flow.tan(of_input)
+    np_out = np.tan(np_input)
+    test_case.assertTrue(
+        np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4, equal_nan=True)
     )
 
-    of_out = flow.arcsinh(of_input)
-    np_out = np.arcsinh(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-
     of_out = of_out.sum()
     of_out.backward()
-    np_out_grad = 1 / np.sqrt(1 + np_input ** 2)
-
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4))
+    np_out_grad = 1 + np.square(np_out)
+    test_case.assertTrue(
+        np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
+    )
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAsinh(flow.unittest.TestCase):
-    def test_asinh(test_case):
+class TestTan(flow.unittest.TestCase):
+    def test_tan(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2,), (2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            _test_asinh(test_case, *arg)
-            _test_arcsinh(test_case, *arg)
+            _test_tan_impl(test_case, *arg)
 
 
 if __name__ == "__main__":
