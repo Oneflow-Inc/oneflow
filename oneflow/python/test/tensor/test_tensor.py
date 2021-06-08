@@ -450,7 +450,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_asin(test_case):
-        input = flow.Tensor(2 * np.random.random((4, 5, 6)) - 1, dtype=flow.float32)
+        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
         of_out = input.asin()
         np_out = np.arcsin(input.numpy())
         test_case.assertTrue(
@@ -462,7 +462,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_arcsin(test_case):
-        input = flow.Tensor(2 * np.random.random((4, 5, 6)) - 1, dtype=flow.float32)
+        input = flow.Tensor(np.random.random((4, 5, 6)) - 0.5, dtype=flow.float32)
         of_out = input.arcsin()
         np_out = np.arcsin(input.numpy())
         test_case.assertTrue(
@@ -656,6 +656,54 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def _test_tensor_atan(test_case, shape, device):
+        np_input = np.random.randn(*shape)
+        of_input = flow.Tensor(
+            np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+        )
+
+        of_out = of_input.atan()
+        np_out = np.arctan(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1 / (1 + np_input ** 2)
+
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def _test_tensor_arctan(test_case, shape, device):
+        np_input = np.random.randn(*shape)
+        of_input = flow.Tensor(
+            np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+        )
+
+        of_out = of_input.arctan()
+        np_out = np.arctan(np_input)
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+        of_out = of_out.sum()
+        of_out.backward()
+        np_out_grad = 1 / (1 + np_input ** 2)
+
+        test_case.assertTrue(
+            np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_detach(test_case):
         shape = (2, 3, 4, 5)
         x = flow.Tensor(
@@ -793,6 +841,7 @@ class TestTensor(flow.unittest.TestCase):
 
         of_out = of_out.sum()
         of_out.backward()
+
         np_out_grad = 1.0 / (1.0 - np.square(np_input))
         test_case.assertTrue(
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
@@ -840,26 +889,21 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
-
-    
     def test_tensor_ceil(test_case):
-        x = flow.Tensor(np.random.randn(2,3), requires_grad=True)
+        x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.ceil()
         np_out = np.ceil(x.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
         of_out = of_out.sum()
         of_out.backward()
-        test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2,3)), 1e-4, 1e-4))
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2, 3)), 1e-4, 1e-4))
 
-
-        
     def test_tensor_expm1(test_case):
-        x = flow.Tensor(np.random.randn(2,3), requires_grad=True)
+        x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.expm1()
         np_out = np.expm1(x.numpy())
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-
 
         of_out = of_out.sum()
         of_out.backward()

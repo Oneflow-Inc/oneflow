@@ -72,7 +72,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.exp
 .. autofunction:: oneflow.experimental.round
 .. autofunction:: oneflow.experimental.Tensor.round
-.. autofunction:: oneflow.experimental.expand
 .. autofunction:: oneflow.experimental.Tensor.expand
 .. autofunction:: oneflow.experimental.nn.Flatten
 .. autofunction:: oneflow.experimental.flatten
@@ -107,6 +106,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.sign
 .. autofunction:: oneflow.experimental.sin
 .. autofunction:: oneflow.experimental.Tensor.sin
+.. autofunction:: oneflow.experimental.atan
+.. autofunction:: oneflow.experimental.Tensor.atan
+.. autofunction:: oneflow.experimental.arctan
+.. autofunction:: oneflow.experimental.Tensor.arctan
 .. autofunction:: oneflow.experimental.cos
 .. autofunction:: oneflow.experimental.Tensor.cos
 .. autofunction:: oneflow.experimental.log
@@ -126,7 +129,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.negative
 .. autofunction:: oneflow.experimental.neg
 .. autofunction:: oneflow.experimental.Tensor.negative
-.. autofunction:: oneflow.experimental.nn.LayerNorm
 .. autofunction:: oneflow.experimental.nn.AvgPool2d
 .. autofunction:: oneflow.experimental.nn.MaxPool1d
 .. autofunction:: oneflow.experimental.nn.MaxPool2d

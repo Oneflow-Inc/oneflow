@@ -865,6 +865,77 @@ def cos_op(tensor):
     return Cos()(tensor)
 
 
+class Atan(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("atan").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("atan")
+@experimental_api
+def atan_op(tensor):
+    r"""
+    Returns a new tensor with the arctangent of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \tan^{-1}(\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> output = flow.atan(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [0.4636476  0.5404195  0.61072594]
+        
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("atan")
+@experimental_api
+def atan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@oneflow_export("arctan")
+@experimental_api
+def arctan_op(tensor):
+    r"""
+    Alias for :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("arctan")
+@experimental_api
+def arctan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.arctan`
+    
+    """
+    return Atan()(tensor)
+
+
 class Log(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1301,7 +1372,6 @@ def cosh_op(tensor):
     return Cosh()(tensor)
 
 
-
 class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1309,6 +1379,7 @@ class Ceil(Module):
 
     def forward(self, x):
         return self._op(x)[0]
+
 
 @oneflow_export("ceil")
 @experimental_api
@@ -1381,9 +1452,6 @@ def ceil_op_tensor(x):
     return Ceil()(x)
 
 
-
-
-
 class Expm1(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1453,7 +1521,6 @@ def expm1_op(x):
     return Expm1()(x)
 
 
-
 @register_tensor_op("expm1")
 @experimental_api
 def expm1_op_tensor(x):
@@ -1464,10 +1531,7 @@ def expm1_op_tensor(x):
     return Expm1()(x)
 
 
-
-
-
-
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)
