@@ -51,7 +51,6 @@ class L1Loss(Module):
         input (oneflow.experimental.Tensor): The input Tensor.
         target (oneflow.experimental.Tensor): The target Tensor.
         reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
-        name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
         oneflow.experimental.Tensor: The result Tensor.
