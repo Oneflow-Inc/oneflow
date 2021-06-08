@@ -106,6 +106,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.sign
 .. autofunction:: oneflow.experimental.sin
 .. autofunction:: oneflow.experimental.Tensor.sin
+.. autofunction:: oneflow.experimental.atan
+.. autofunction:: oneflow.experimental.Tensor.atan
+.. autofunction:: oneflow.experimental.arctan
+.. autofunction:: oneflow.experimental.Tensor.arctan
 .. autofunction:: oneflow.experimental.cos
 .. autofunction:: oneflow.experimental.Tensor.cos
 .. autofunction:: oneflow.experimental.log
