@@ -63,7 +63,7 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferSliceOpDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -104,7 +104,7 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferSliceGradDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
   return Maybe<void>::Ok();
 }
 
@@ -302,7 +302,7 @@ Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferLogicalSliceDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
