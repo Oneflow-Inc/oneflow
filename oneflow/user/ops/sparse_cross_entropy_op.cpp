@@ -67,7 +67,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
   CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->data_type();
+  *ctx->OutputDType("prediction_diff", 0) = prediction_desc->data_type();
   return Maybe<void>::Ok();
 }
 
