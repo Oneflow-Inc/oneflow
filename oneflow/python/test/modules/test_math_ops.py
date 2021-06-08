@@ -400,7 +400,7 @@ class TestPow(flow.unittest.TestCase):
 
 
 def _test_asin(test_case, shape, device):
-    np_input = 2 * np.random.random(shape) - 1
+    np_input = np.random.random(shape) - 0.5
 
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
@@ -418,7 +418,7 @@ def _test_asin(test_case, shape, device):
 
 
 def _test_arcsin(test_case, shape, device):
-    np_input = 2 * np.random.random(shape) - 1
+    np_input = np.random.random(shape) - 0.5
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
