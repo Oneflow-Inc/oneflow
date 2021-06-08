@@ -42,8 +42,7 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   auto now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
   if (!now_grad) { return Maybe<void>::Ok(); }
   for (const auto& hook : autograd_meta->hooks()) {
-    const auto& local_now_grad = std::dynamic_pointer_cast<MirroredTensor>(now_grad);
-    auto new_grad = hook(local_now_grad);
+    auto new_grad = hook(now_grad);
     if (new_grad) { now_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
