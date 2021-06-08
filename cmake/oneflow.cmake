@@ -258,6 +258,13 @@ if (BUILD_SHARED_LIBS)
   set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 endif()
 
+target_link_libraries(oneflow_softmax_cuda_kernel of_ccobj)
+target_link_libraries(oneflow_user_op_kernel of_ccobj)
+if (BUILD_CUDA)
+  target_link_libraries(oneflow_user_cuda_kernel of_ccobj)
+  target_link_libraries(oneflow_user_op_kernel oneflow_user_cuda_kernel)
+endif()
+
 # py ext lib
 add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})

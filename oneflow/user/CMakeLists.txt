@@ -1,4 +1,10 @@
 add_library(
+    oneflow_user_op_kernel_util
+
+    kernels/slice_util.cpp
+)
+
+add_library(
     oneflow_user_op_kernel
 
     data/coco_data_reader.cpp
@@ -118,7 +124,6 @@ add_library(
     kernels/sigmoid_cross_entropy_kernel.cpp
     kernels/sigmoid_kernel.cpp
     kernels/slice_kernel.cpp
-    kernels/slice_util.cpp
     kernels/smooth_l1_loss_kernel.cpp
     kernels/softmax_cross_entropy_kernel.cpp
     kernels/softmax_kernel.cpp
@@ -290,6 +295,11 @@ add_library(
     utils/pool_util.cpp
 )
 
+target_link_libraries(
+    oneflow_user_op_kernel
+    oneflow_user_op_kernel_util
+)
+
 add_library(
     oneflow_random_crop_generator
 
@@ -394,7 +404,7 @@ if (BUILD_CUDA)
         oneflow_softmax_cuda_kernel
         kernels/softmax_kernel.cu
     )
-    target_link_libraries(oneflow_user_cuda_kernel ${CUDA_LIBRARIES})
+    target_link_libraries(oneflow_user_cuda_kernel ${CUDA_LIBRARIES} oneflow_user_op_kernel_util)
     target_link_libraries(oneflow_softmax_cuda_kernel ${CUDA_LIBRARIES})
     list(APPEND ONEFLOW_USER_LIBS oneflow_user_cuda_kernel)
     list(APPEND ONEFLOW_USER_LIBS oneflow_softmax_cuda_kernel)
