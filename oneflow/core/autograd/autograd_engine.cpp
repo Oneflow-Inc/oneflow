@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
@@ -38,8 +39,14 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_dat
 
 Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
+  if (!JUST(autograd_meta->now_grad_arg()->GetAccTensor())) { return Maybe<void>::Ok(); }
+  for (const auto& hook : autograd_meta->hooks()) {
+    const auto& now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
+    const auto& local_now_grad = std::dynamic_pointer_cast<MirroredTensor>(now_grad);
+    auto new_grad = hook(local_now_grad);
+    if (new_grad) { autograd_meta->now_grad_arg()->SetAccTensor(new_grad); }
+  }
   const auto& now_grad = JUST(autograd_meta->now_grad_arg()->GetAccTensor());
-  if (!now_grad) { return Maybe<void>::Ok(); }
   if (autograd_meta->acc_grad()) {
     TensorTuple input = {autograd_meta->acc_grad(), now_grad};
     TensorTuple output(1);

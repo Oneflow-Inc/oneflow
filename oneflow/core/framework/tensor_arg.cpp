@@ -44,5 +44,10 @@ Maybe<Tensor> TensorArg::GetAccTensor() {
   return acc_tensor_;
 }
 
+Maybe<void> TensorArg::SetAccTensor(const std::shared_ptr<Tensor>& acc_tensor) {
+  acc_tensor_ = acc_tensor;
+  return Maybe<void>::Ok();
+}
+
 }  // namespace one
 }  // namespace oneflow
