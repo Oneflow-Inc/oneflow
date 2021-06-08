@@ -96,12 +96,12 @@ class ConstantPad2d(Module):
 
     def forward(self, x):
         _, _, h, w = x.shape
-        # if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
-        #     res = self._op(x)[0]
-        #     return res
-        # else:
-        #     print("Padding shape must be less than input shape. Please check.")
-        #     return
+        if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
+            res = self._op(x)[0]
+            return res
+        else:
+            print("Padding shape must be less than input shape. Please check.")
+            return
 
         res = self._op(x)[0]
         return res
