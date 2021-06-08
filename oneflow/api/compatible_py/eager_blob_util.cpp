@@ -17,7 +17,7 @@ limitations under the License.
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/eager_blob_util.h"
+#include "oneflow/core/framework/compatible_py/eager_blob_util.h"
 
 namespace py = pybind11;
 

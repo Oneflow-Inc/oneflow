@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/framework/compatible_py/py_distribute.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/operator/operator.h"

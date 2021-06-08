@@ -21,8 +21,8 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/framework/py_blob_desc.h"
-#include "oneflow/core/framework/blob_register.h"
+#include "oneflow/core/framework/compatible_py/py_blob_desc.h"
+#include "oneflow/core/framework/compatible_py/blob_register.h"
 
 namespace oneflow {
 

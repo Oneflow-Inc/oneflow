@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OBJECT_STORAGE_H_
 
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/compatible_py/object.h"
 
 namespace oneflow {
 

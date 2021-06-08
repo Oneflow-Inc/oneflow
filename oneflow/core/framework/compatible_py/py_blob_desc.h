@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
-#include "oneflow/core/framework/py_distribute.h"
+#include "oneflow/core/framework/compatible_py/py_distribute.h"
 
 namespace oneflow {
 

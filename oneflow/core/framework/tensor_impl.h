@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/placement.cfg.h"
-#include "oneflow/core/framework/object.h"
+#include "oneflow/core/framework/compatible_py/object.h"
 #include "oneflow/core/framework/tensor_storage.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/common/symbol.h"
@@ -31,7 +31,6 @@ class MemoryCase;
 class VmLocalDepObject;
 
 namespace cfg {
-
 class ParallelDistribution;
 }
 

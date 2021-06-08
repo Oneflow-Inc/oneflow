@@ -45,6 +45,7 @@ endforeach()
 
 file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*" "${PROJECT_SOURCE_DIR}/oneflow/python/*.*"
  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/python/*.*"
+ "${PROJECT_SOURCE_DIR}/oneflow/api/compatible_py/*.*"
  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if (WITH_XLA OR WITH_TENSORRT)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
@@ -126,6 +127,16 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/python/.*\\.h$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/compatible_py/.*\\.cpp$")
+    list(APPEND of_pybind_obj_cc ${oneflow_single_file})
+    set(group_this ON)
+  endif()
+
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/api/compatible_py/.*\\.h$")
     list(APPEND of_pybind_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()

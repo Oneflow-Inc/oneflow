@@ -51,6 +51,7 @@ class Tensor {
 namespace cfg {
 class ParallelDistribution;
 }
+
 class Device;
 
 namespace one {
