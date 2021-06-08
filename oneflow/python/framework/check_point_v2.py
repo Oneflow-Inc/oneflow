@@ -130,7 +130,7 @@ class FileBackendVariableBlob:
         ).reshape(self.shape)
 
 
-ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray, "Tensor"]
+ValueContainer = Union[EagerBlobTrait, FileBackendVariableBlob, np.ndarray, Tensor]
 
 
 def _ElemCnt(shape):
@@ -469,7 +469,7 @@ def _LogicalSliceAssign(
 
 
 def FeedValueToVariable(
-    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, "Tensor"],
+    var_blob: Union[oneflow._oneflow_internal.EagerConsistentBlob, Tensor],
     value: ValueContainer,
     scope_symbol_id: Optional[int],
 ) -> None:
@@ -588,7 +588,7 @@ def generate_values_by_initializer(initializer, shape, dtype):
 
 
 def init_by_initializer_conf(
-    var_blob: Union[EagerBlobTrait, "Tensor"],
+    var_blob: Union[EagerBlobTrait, Tensor],
     initializer_conf: initializer_conf_util.InitializerConf,
     sync_between_multi_machine: bool,
     scope_symbol_id: Optional[int],
