@@ -24,7 +24,7 @@ REGISTER_USER_OP("expand")
     .Attr<std::vector<int32_t>>("out_shape")
     .Attr<std::vector<int32_t>>("stride")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
       DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
       *out_shape = Shape(dim_vec);
@@ -48,7 +48,7 @@ REGISTER_USER_OP("expand_grad")
     .Attr<std::vector<int32_t>>("out_shape")
     .Attr<std::vector<int32_t>>("stride")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const auto& out_shape_attr = ctx->Attr<std::vector<int32_t>>("out_shape");
       DimVector dim_vec(out_shape_attr.begin(), out_shape_attr.end());
       *out_shape = Shape(dim_vec);

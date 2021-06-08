@@ -68,13 +68,13 @@ def repeat_op(x, sizes):
     """This operator repeat the input tensor to a larger size along the specified dimensions.
 
     Args:
-        x (oneflow.Tensor): The input Tensor. 
+        x (oneflow.Tensor): The input Tensor.
         size (Sequence[int]): The number of times to repeat this tensor along each dimension
 
     Returns:
-        oneflow.Tensor: The result Tensor. 
+        oneflow.Tensor: The result Tensor.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -97,4 +97,4 @@ def repeat_op(x, sizes):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

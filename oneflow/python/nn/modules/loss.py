@@ -296,6 +296,158 @@ class NLLLoss(Module):
             return res.mean()
 
 
+@oneflow_export("nn.BCEWithLogitsLoss")
+@experimental_api
+class BCEWithLogitsLoss(Module):
+
+    r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
+    we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
+
+    The equation is:
+
+    if reduction = "none":
+
+    .. math::
+
+        out = -weight*[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    if reduction = "mean":
+
+    .. math::
+
+        out = -\frac{weight}{n}\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    if reduction = "sum":
+
+    .. math::
+
+        out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    Args:
+        input (oneflow._oneflow_internal.BlobDesc): The input Tensor.
+        target (oneflow._oneflow_internal.BlobDesc): The target Tensor.
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Defaults to None.
+        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
+        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Returns:
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import oneflow.typing as tp
+        >>> import numpy as np
+
+        >>> np_input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2]], dtype=flow.float32)
+
+        >>> np_target = flow.Tensor([[0, 1, 0], [1, 0, 1]],dtype=flow.float32)
+
+        >>> np_weight = flow.Tensor([[2, 2, 2], [2, 2, 2]],dtype=flow.float32)
+
+        >>> np_pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
+
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="mean")
+        >>> out = m(np_input, np_target ).numpy()
+        >>> print(out)
+        [2.4314096]
+
+    """
+
+    def __init__(
+        self,
+        weight=None,
+        pos_weight=None,
+        reduction: Optional[str] = "mean",
+    ) -> None:
+        super().__init__()
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.weight = weight
+        self.pos_weight = pos_weight
+        self.reduction = reduction
+        # self._op = (
+        #     flow.builtin_op("bce_with_logits_loss")
+        #     .Input("prediction")
+        #     .Input("label")
+        #     .Attr("weight", weight)
+        #     .Attr("pos_weight", pos_weight)
+        #     .Attr("reduction", reduction)
+        #     .Output("out")
+        #     .Build()
+        # )
+
+    def forward(self, input, target):
+        assert len(input.shape) <= 4
+        # assert len(target.shape) == len(input.shape) - 1
+        input_shape_len = len(input.shape)
+
+        if input_shape_len == 3:
+            b, c, h = input.shape[0], input.shape[1], input.shape[2]
+            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = input.reshape(shape=[-1, input.shape[2]])
+            target = target.flatten()
+        elif input_shape_len == 4:
+            b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
+            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
+            input = input.reshape(shape=[-1, input.shape[3]])
+            target = target.flatten()
+        elif input_shape_len >= 5:
+            raise NotImplemented
+
+        _neg_input = flow.experimental.negative(input)
+        _max_val = flow.experimental.clip(_neg_input,3)
+        _neg_max_val = flow.experimental.negative(_max_val)
+
+        if self.pos_weight:
+            assert self.pos_weight.shape[0] == input.shape[-1], (
+                "The length of `pos_weight` must be equal to the number of classes. "
+                "Found the length of pos_weight {} vs classes {}".format(
+                    self.pos_weight.shape[0], input.shape[-1]
+                )
+            )
+            _log_weight = ((self.pos_weight - 1) * target) + 1
+            _loss = (1 - target) * input + _log_weight * (
+                    flow.experimental.log1p(
+                        flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
+                    )
+                    + _max_val
+            )
+        else:
+            _loss = (1 - target) * input + _max_val
+            _loss += flow.experimental.log1p(
+                flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
+            )
+
+        if self.weight is not None:
+            assert (
+                    self.weight.shape == input.shape
+            ), "The weight shape must be the same as Input shape"
+            _weighted_loss = self.weight * _loss
+        else:
+            _weighted_loss = _loss
+
+        # out = self._op(input, target, self.weight, self.pos_weight, self.reduction)
+        # return out
+
+        if self.reduction == "mean":
+            return flow.experimental.mean(_weighted_loss)
+        elif self.reduction == "sum":
+            return flow.experimental.sum(_weighted_loss)
+        else:
+        # Do no reduction
+            return _weighted_loss
+
+
 if __name__ == "__main__":
     import doctest
 
