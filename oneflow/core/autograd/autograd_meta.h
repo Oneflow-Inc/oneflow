@@ -47,8 +47,7 @@ class AutogradMeta final {
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
-  using Hook =
-      std::function<std::shared_ptr<MirroredTensor>(const std::shared_ptr<const MirroredTensor>&)>;
+  using Hook = std::function<std::shared_ptr<Tensor>(const std::shared_ptr<const Tensor>&)>;
   const std::vector<Hook>& hooks() const { return hooks_; }
 
   // Setters

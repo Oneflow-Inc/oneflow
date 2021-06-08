@@ -214,7 +214,7 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
            &ApiGetCopyMirroredTensorFromNumpyFuncName);
   api->def("zeros_", &ApiEagerMirroredTensorZeros);
   api->def("_register_hook",
-           [](const std::shared_ptr<MirroredTensor>& self, AutogradMeta::Hook hook) -> void {
+           [](const std::shared_ptr<MirroredTensor>& self, const AutogradMeta::Hook& hook) -> void {
              self->mut_autograd_meta()->add_hook(hook);
            });
 }
