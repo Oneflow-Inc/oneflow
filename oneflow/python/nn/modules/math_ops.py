@@ -1240,7 +1240,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
 
     If :attr:`mat1` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
     :math:`(m \times p)` tensor, then :attr:`input` must be
-    :ref:`broadcastable <broadcasting-semantics>` with a :math:`(n \times p)` tensor
+    broadcastable with a :math:`(n \times p)` tensor
     and :attr:`out` will be a :math:`(n \times p)` tensor.
 
     :attr:`alpha` and :attr:`beta` are scaling factors on matrix-vector product between
