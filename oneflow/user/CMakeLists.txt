@@ -417,6 +417,7 @@ if (BUILD_SHARED_LIBS)
   get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
   target_link_libraries(oneflow_user_op_kernel of_protoobj of_cfgobj "${GLOG_STATIC_LIBRARIES}")
   set_target_properties(oneflow_user_op_kernel PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
+  target_link_libraries(oneflow_user_op_kernel oneflow_user_cuda_kernel)
 endif()
 
 foreach(X IN
