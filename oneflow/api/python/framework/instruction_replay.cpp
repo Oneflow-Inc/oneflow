@@ -22,7 +22,7 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("experimental", m) {
+ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("start_recording_instruction", &StartRecordingInstruction);
   m.def("end_and_clear_recording_instruction", &EndAndClearRecordingInstruction);
   m.def("replay_instruction", &ReplayInstruction);

@@ -21,14 +21,14 @@ from oneflow.python.oneflow_export import oneflow_export
 
 @oneflow_export("start_recording_instruction")
 def start_recording_instruction():
-    oneflow._oneflow_internal.experimental.start_recording_instruction()
+    oneflow._oneflow_internal.start_recording_instruction()
 
 
 @oneflow_export("end_and_clear_recording_instruction")
 def end_and_clear_recording_instruction():
-    oneflow._oneflow_internal.experimental.end_and_clear_recording_instruction()
+    oneflow._oneflow_internal.end_and_clear_recording_instruction()
 
 
 @oneflow_export("replay_instruction")
 def replay_instruction():
-    oneflow._oneflow_internal.experimental.replay_instruction()
+    oneflow._oneflow_internal.replay_instruction()
