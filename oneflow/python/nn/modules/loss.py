@@ -309,19 +309,18 @@ class MarginRankingLoss(Module):
     The loss function for each sample in the mini-batch is:
 
     .. math::
-        \text{loss}(x, y) = \max(0, -y * (x1 - x2) + \text{margin})
+        \text{loss}(x1, x2, y) = \max(0, -y * (x1 - x2) + \text{margin})
 
     Args:
         margin (float, optional): Has a default value of :math:`0`.
         reduction (string, optional): Specifies the reduction to apply to the output:
             ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
             ``'mean'``: the sum of the output will be divided by the number of
-            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
-            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
-            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+            elements in the output, ``'sum'``: the output will be summed. Default: ``'mean'``
 
     Shape:
-        - Input: :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - `x1` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
+        - `x2` : :math:`(N, D)` where `N` is the batch size and `D` is the size of a sample.
         - Target: :math:`(N)`
         - Output: scalar. If :attr:`reduction` is ``'none'``, then :math:`(N)`.
 
@@ -333,25 +332,25 @@ class MarginRankingLoss(Module):
         >>> flow.enable_eager_execution()
         >>> import numpy as np
 
-        >>> input1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
+        >>> x1 = flow.Tensor(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]), dtype=flow.float32)
+        >>> x2 = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2], [2, 2, 2]]), dtype=flow.float32)
         >>> target = flow.Tensor(np.array([[1, -1, 1],[-1, 1, -1], [1, 1, 1]]), dtype=flow.float32)
         >>> m = flow.nn.MarginRankingLoss(margin =1.0, reduction="none")
-        >>> out = m(input1, input2, target).numpy()
-        >>> print(out)
-        [[2. 1. 0.]
-         [3. 0. 5.]
-         [0. 0. 0.]]
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([[2., 1., 0.],
+                [3., 0., 5.],
+                [0., 0., 0.]], dtype=oneflow.float32)
 
         >>> m = flow.nn.MarginRankingLoss(margin = 0.3, reduction="sum")
-        >>> out = m(input1, input2, target).numpy()
-        >>> print(out)
-        [8.2]
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.2], dtype=oneflow.float32)
         
         >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
-        >>> out = m(input1, input2, target).numpy()
-        >>> print(out)
-        [8.333333]
+        >>> out = m(x1, x2, target)
+        >>> out
+        tensor([8.3333], dtype=oneflow.float32)
 
 
     """

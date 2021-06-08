@@ -1161,6 +1161,7 @@ class Addmm(Module):
 
 
 @oneflow_export("addmm")
+@experimental_api
 def addmm_op(input, mat1, mat2, alpha=1, beta=1):
     r"""addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
 
@@ -1198,9 +1199,9 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
         >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
         >>> output = flow.addmm(input, mat1, mat2)
-        >>> output.numpy()
-        array([[100.68,  33.83, 126.87],
-               [110.01,  43.48, 133.61]])
+        >>> output
+        tensor([[100.68,  33.83, 126.87],
+                [110.01,  43.48, 133.61]], dtype=oneflow.float64)
         >>> output.shape
         flow.Size([2, 3])
 
@@ -1208,10 +1209,10 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> mat1 = flow.tensor(np.array([[1,2],[5,9.1],[7.7,1.4]]))
         >>> mat2 = flow.tensor(np.array([[1,2,3.7],[5,9.1,6.8]]))
         >>> output2 = flow.addmm(input2, mat1, mat2, alpha=1, beta=2)
-        >>> output2.numpy()
-        array([[14.4 , 23.6 , 20.7 ],
-               [53.9 , 96.21, 83.78],
-               [18.1 , 31.54, 41.41]])
+        >>> output2
+        tensor([[14.4 , 23.6 , 20.7 ],
+                [53.9 , 96.21, 83.78],
+                [18.1 , 31.54, 41.41]], dtype=oneflow.float64)
         >>> output2.shape
         flow.Size([3, 3])
     """
