@@ -404,13 +404,10 @@ class Tensor:
         # TODO: support inplace __getitem__
         assert isinstance(key, int) or isinstance(key, tuple), "Unsupported key type!"
 
-        squeeze_dims = []
         if isinstance(key, tuple):
-            for idx, val in enumerate(key):
-                if isinstance(val, int):
-                    squeeze_dims.append(idx)
+            squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
         else:
-            squeeze_dims.append(key)
+            squeeze_dims = [key]
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         return res.squeeze(dim=squeeze_dims)
