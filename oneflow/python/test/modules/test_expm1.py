@@ -21,9 +21,9 @@ import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
 
-
+flow.enable_eager_execution()
 def _test_expm1_impl(test_case, device, shape):
-    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
+    x = flow.Tensor(np.random.randn(*shape), device=flow.device(device),requires_grad=True)
 
     of_out = flow.expm1(x)
     np_out = np.expm1(x.numpy())
@@ -44,7 +44,7 @@ def _test_expm1_impl(test_case, device, shape):
     ".numpy() doesn't work in lazy mode",
 )
 class TestExpm1Module(flow.unittest.TestCase):
-    def test_ceil(test_case):
+    def test_expm1(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_expm1_impl
