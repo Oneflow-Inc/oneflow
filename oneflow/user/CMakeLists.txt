@@ -287,6 +287,9 @@ add_library(
     ops/where_op.cpp
     ops/zero_like_op.cpp
 
+    image/image_util.cpp
+    image/random_crop_generator.cpp
+
     summary/events_writer.cpp
     summary/event_writer_helper.cpp
     summary/histogram.cpp
