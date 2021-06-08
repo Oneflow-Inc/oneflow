@@ -1,5 +1,20 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -21,15 +36,15 @@ from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
 
 
-
 class Floor(Module):
-    def __init__(self) -> None: 
+    def __init__(self) -> None:
         super().__init__()
         self._op = flow.builtin_op("floor").Input("x").Output("y").Build()
 
     def forward(self, x):
         return self._op(x)[0]
-    
+
+
 @oneflow_export("floor")
 @experimental_api
 def floor_op(x):
@@ -66,6 +81,7 @@ def floor_op(x):
 
     return Floor()(x)
 
+
 @register_tensor_op("floor")
 @experimental_api
 def floor_op_tensor(input):
@@ -73,7 +89,7 @@ def floor_op_tensor(input):
     See :func:`oneflow.experimental.floor`
     """
     return Floor()(input)
-    
+
 
 if __name__ == "__main__":
     import doctest
