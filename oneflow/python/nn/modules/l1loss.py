@@ -81,11 +81,8 @@ class L1Loss(Module):
         tensor([24.], dtype=oneflow.float32)
         
     """
-    def __init__(
-        self,
-        reduction: str = "mean", 
-        reduce=True
-    ) -> None:
+
+    def __init__(self, reduction: str = "mean", reduce=True) -> None:
         super().__init__()
         if reduce is not None and not reduce:
             raise ValueError("Argument reduce is not supported yet")
@@ -101,19 +98,20 @@ class L1Loss(Module):
         self.sub = Subtract()
         self.mean = Mean()
         self.sum = Sum()
-              
 
     def forward(self, input, target):
         assert (
-            input.shape == target.shape), "The Input shape must be the same as Target shape"
+            input.shape == target.shape
+        ), "The Input shape must be the same as Target shape"
 
-        l1_value =  self.abs(self.sub(target, input))
+        l1_value = self.abs(self.sub(target, input))
         if self.reduction == "mean":
             return self.mean(l1_value)
         elif self.reduction == "sum":
             return self.sum(l1_value)
         else:
             return l1_value
+
 
 if __name__ == "__main__":
     import doctest
