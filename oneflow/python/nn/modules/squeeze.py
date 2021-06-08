@@ -72,15 +72,11 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
     """
     if isinstance(dim, int):
         dim = [dim]
-
-    squeeze_dim = []
-    if dim is None:
+    elif dim is None:
         dim = range(input.ndim)
 
-    for i in dim:
-        if input.size(i) == 1:
-            squeeze_dim.append(i)
-    return Squeeze(dim=squeeze_dim)(input)
+    dim = list(filter(lambda i: input.size(i) == 1, dim))
+    return Squeeze(dim=dim)(input)
 
 
 if __name__ == "__main__":

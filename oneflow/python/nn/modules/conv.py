@@ -210,6 +210,7 @@ class Conv2d(Module):
 
         assert padding_mode == "zeros"
         kernel_size = _pair(kernel_size)
+        self.kernel_size = kernel_size
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)

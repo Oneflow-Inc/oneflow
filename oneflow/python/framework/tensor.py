@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from numpy.lib.arraysetops import isin
 import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.remote_blob as remote_blob_util
@@ -402,10 +403,15 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        assert isinstance(key, int) or isinstance(key, tuple), "Unsupported key type!"
+
         squeeze_dims = []
-        for idx, val in enumerate(key):
-            if isinstance(val, int):
-                squeeze_dims.append(idx)
+        if isinstance(key, tuple):
+            for idx, val in enumerate(key):
+                if isinstance(val, int):
+                    squeeze_dims.append(idx)
+        else:
+            squeeze_dims.append(key)
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         return res.squeeze(dim=squeeze_dims)
