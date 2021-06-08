@@ -1173,19 +1173,22 @@ test_conv2d_dilation_output = np.array(
 
 
 def _test_conv2d(
-    test_case,
-    conv,
-    data,
-    output,
-    weight,
-    data_grad=None,
-    weight_grad=None,
-    bias=None,
-    device="cuda",
+    test_case, conv, data, weight, output, bias=None, device="cuda",
 ):
     to_device = flow.device(device)
-    # if device == 'cpu':
-    #     return
+    x = flow.Tensor(data, device=to_device)
+    conv.weight = flow.nn.Parameter(flow.Tensor(weight))
+    if bias is not None:
+        conv.bias = flow.nn.Parameter(flow.Tensor(bias))
+    conv.to(to_device)
+    of_out = conv(x)
+    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-4, atol=1e-8))
+
+
+def _test_conv2d_backward(
+    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
+):
+    to_device = flow.device(device)
     x = flow.Tensor(data, device=to_device, requires_grad=True)
     conv.weight = flow.nn.Parameter(flow.Tensor(weight), requires_grad=True)
     if bias is not None:
@@ -1193,7 +1196,6 @@ def _test_conv2d(
     conv.to(to_device)
     of_out = conv(x)
     of_out.sum().backward()
-    test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-4, atol=1e-8))
     if data_grad is not None:
         test_case.assertTrue(
             np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8)
@@ -1204,8 +1206,6 @@ def _test_conv2d(
         )
 
 
-# TODO: skip this test, for layernorm doesn't have cpu implementation
-# @unittest.skipIf(True, "CPU conv is not supported")
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -1232,14 +1232,25 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_data,
+                test_conv2d_weight,
                 test_conv2d_output,
+                device=device,
+            )
+
+    def test_conv2d_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_data,
                 test_conv2d_weight,
                 test_conv2d_data_grad,
                 test_conv2d_weight_grad,
                 device=device,
             )
 
-    # FIXME: bias grad not yet supported
+    # bias grad not yet supported
     def test_conv2d_with_bias(test_case):
         for device in ["cuda", "cpu"]:
             conv = flow.nn.Conv2d(1, 3, (3, 3), bias=True).to(flow.device(device))
@@ -1247,14 +1258,14 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_with_bias_data,
-                test_conv2d_with_bias_output,
                 test_conv2d_with_bias_weight,
+                test_conv2d_with_bias_output,
                 bias=test_conv2d_with_bias_bias,
                 device=device,
             )
 
     def test_conv2d_group(test_case):
-        for device in ["cpu", "cuda"]:
+        for device in ["cuda", "cpu"]:
             conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
                 flow.device(device)
             )
@@ -1262,7 +1273,20 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_group_data,
+                test_conv2d_group_weight,
                 test_conv2d_group_output,
+                device=device,
+            )
+
+    def test_conv2d_group_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_group_data,
                 test_conv2d_group_weight,
                 test_conv2d_group_data_grad,
                 test_conv2d_group_weight_grad,
@@ -1278,7 +1302,20 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_padding_data,
+                test_conv2d_padding_weight,
                 test_conv2d_padding_output,
+                device=device,
+            )
+
+    def test_conv2d_padding_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_padding_data,
                 test_conv2d_padding_weight,
                 test_conv2d_padding_data_grad,
                 test_conv2d_padding_weight_grad,
@@ -1294,7 +1331,20 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_stride_data,
+                test_conv2d_stride_weight,
                 test_conv2d_stride_output,
+                device=device,
+            )
+
+    def test_conv2d_stride_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False
+            ).to(flow.device(device))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_stride_data,
                 test_conv2d_stride_weight,
                 test_conv2d_stride_data_grad,
                 test_conv2d_stride_weight_grad,
@@ -1309,7 +1359,18 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_kernel_data,
+                test_conv2d_kernel_weight,
                 test_conv2d_kernel_output,
+            )
+
+    def test_conv2d_kernel_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False).to(flow.device(device))
+            conv.to(flow.device("cuda"))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_kernel_data,
                 test_conv2d_kernel_weight,
                 test_conv2d_kernel_data_grad,
                 test_conv2d_kernel_weight_grad,
@@ -1324,7 +1385,20 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 conv,
                 test_conv2d_dilation_data,
+                test_conv2d_dilation_weight,
                 test_conv2d_dilation_output,
+                device=device,
+            )
+
+    def test_conv2d_dilation_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_dilation_data,
                 test_conv2d_dilation_weight,
                 test_conv2d_dilation_data_grad,
                 test_conv2d_dilation_weight_grad,
@@ -1333,5 +1407,4 @@ class TestConv2d(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    flow.enable_eager_execution()
     unittest.main()

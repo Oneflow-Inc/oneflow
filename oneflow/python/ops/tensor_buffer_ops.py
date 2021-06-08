@@ -169,6 +169,7 @@ def gen_tensor_buffer(
         BlobDesc: The result Blob.
 
     For example:
+
     .. code-block:: python
 
         import oneflow as flow
@@ -181,6 +182,7 @@ def gen_tensor_buffer(
                 return y
 
         # y_0.shape (2, 1), y_1.shape (1. 2)
+
     """
     return (
         flow.user_op_builder(
@@ -222,8 +224,11 @@ def tensor_buffer_to_list_of_tensors(
         List[BlobDesc]: result blobs
 
     For example:
+
     .. code-block:: python
+
         # the same with `gen_tensor_buffer` op
+
     """
     return (
         flow.user_op_builder(

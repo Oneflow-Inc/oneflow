@@ -101,14 +101,13 @@ class Where(Module):
 def where_op(condition, x, y):
     """Return a tensor of elements selected from either :attr:`x` or :attr:`y`, depending on :attr:`condition`.
     If the element in condition is larger than 0,
-    
+
     it will take the `x` element, else it will take the `y` element
 
     .. note::
 
-    The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
-
-    it will take the `x` element, else it will take the `y` element.
+        The tensors :attr:`condition`, :attr:`x`, :attr:`y` must be broadcastable.
+        It will take the `x` element, else it will take the `y` element.
 
     Args:
         condition (IntTensor): When 1 (nonzero), yield x, otherwise yield y
@@ -118,7 +117,7 @@ def where_op(condition, x, y):
                             where :attr:`condition` is False
     Returns:
         Tensor: A tensor of shape equal to the broadcasted shape of :attr:`condition`, :attr:`x`, :attr:`y`
-    
+
     For example:
 
     .. code-block:: python
@@ -138,7 +137,7 @@ def where_op(condition, x, y):
         [[1.     0.3139]
          [0.3898 1.    ]
          [0.0478 1.    ]]
-    
+
     """
     return Where()(condition, x, y)
 
@@ -146,4 +145,4 @@ def where_op(condition, x, y):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
