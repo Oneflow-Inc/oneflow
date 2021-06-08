@@ -62,25 +62,26 @@ class Expand(Module):
         )[0]
 
 
+@oneflow_export("expand")
 @register_tensor_op("expand")
 @experimental_api
 def expand_op(x, *sizes):
     """This operator expand the input tensor to a larger size.
-    
+
     Passing -1 as the size for a dimension means not changing the size of that dimension.
 
-    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front. 
-    
-    For the new dimensions, the size cannot be set to -1. 
+    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front.
+
+    For the new dimensions, the size cannot be set to -1.
 
     Args:
-        x (oneflow.Tensor): The input Tensor. 
+        x (oneflow.Tensor): The input Tensor.
         *sizes  (flow.Size or int): The desired expanded size.
 
     Returns:
-        oneflow.Tensor: The result Tensor. 
+        oneflow.Tensor: The result Tensor.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -97,6 +98,7 @@ def expand_op(x, *sizes):
         >>> out = input.expand(1, 3, 2, 2)
         >>> print(out.shape)
         flow.Size([1, 3, 2, 2])
+
     """
     return Expand(sizes)(x)
 
@@ -104,4 +106,4 @@ def expand_op(x, *sizes):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

@@ -32,15 +32,15 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
 
   size_t output_num_axes = std::max(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes());
   if (IsScalarTensor(tensor_x)) {
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("y", 0);
+    *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
   } else if (IsScalarTensor(tensor_y)) {
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
   } else {
     const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x->shape()), output_num_axes);
     const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y->shape()), output_num_axes);
-    *ctx->Shape4ArgNameAndIndex("z", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+    *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {

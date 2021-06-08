@@ -26,7 +26,7 @@ class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
-    
+
     The `input` is expected to contain raw, unnormalized scores for each class.
 
     `input` has to be a Tensor of size either :math:`(minibatch, C)` or
@@ -34,7 +34,7 @@ class CrossEntropyLoss(Module):
     with :math:`K \geq 1` for the `K`-dimensional case (described later).
 
     This criterion expects a class index in the range :math:`[0, C-1]` as the
-    `target` for each value of a 1D tensor of size `minibatch`; 
+    `target` for each value of a 1D tensor of size `minibatch`;
 
     The loss can be described as:
 
@@ -78,7 +78,7 @@ class CrossEntropyLoss(Module):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> print(out_mean.numpy())
         [0.75896907]
-        
+
 
     """
 
@@ -162,7 +162,7 @@ class NLLLoss(Module):
     layer.
 
     The `target` that this loss expects should be a class index in the range :math:`[0, C-1]`
-    where `C = number of classes`; 
+    where `C = number of classes`;
 
     The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
 
@@ -196,11 +196,11 @@ class NLLLoss(Module):
             and :attr:`reduce` are in the process of being deprecated, and in
             the meantime, specifying either of those two args will override
             :attr:`reduction`. Default: ``'mean'``
-    
+
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
@@ -219,16 +219,16 @@ class NLLLoss(Module):
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-1.1355073]
-        
+
         >>> m = flow.nn.NLLLoss(reduction="mean")
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-0.37850246]
-    
+
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "none",
+        self, weight=None, ignore_index: int = None, reduction: str = "mean",
     ) -> None:
         super().__init__()
         if weight != None:
@@ -299,4 +299,4 @@ class NLLLoss(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
