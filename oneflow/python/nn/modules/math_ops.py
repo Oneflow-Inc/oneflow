@@ -28,6 +28,48 @@ def _build_math_binary_elementwise_op(math_op):
     return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
 
 
+class Sum(Module):
+    def __init__(
+        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
+    ) -> None:
+        super().__init__()
+
+        self.axis = axis
+        self.keepdims = keepdims
+        self._op = (
+            flow.builtin_op("reduce_sum")
+            .Input("input_tensor")
+            .Output("output_tensor")
+            .Attr("keepdims", keepdims)
+            .Build()
+        )
+
+    def forward(self, input):
+        axis_checked = _check_axis(self.axis, input.shape)
+        if len(axis_checked) == 0:
+            return input
+        return self._op(input, axis=axis_checked)[0]
+
+
+@oneflow_export("sum")
+@register_tensor_op("sum")
+@experimental_api
+def _sum(input, dim=None, keepdims=False):
+    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow.experimental as flow
+        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        of_out = flow.sum(input, dim=(2,1))
+
+    """
+
+    return Sum(dim, keepdims)(input)
+
+
 class ScalarMul(Module):
     def __init__(self, operand) -> None:
         super().__init__()
