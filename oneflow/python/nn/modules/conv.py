@@ -27,12 +27,11 @@ class ConvUtil(object):
     def split(cls, x, axis, split_num):
         split_len = x.shape[axis] // split_num
         result_list = []
-        slice_begin = [0] * len(x.shape)
-        slice_size = [-1] * len(x.shape)
-        slice_size[axis] = split_len
+        tup_list = [[None, None, None] for _ in range(len(x.shape))]
         for i in range(split_num):
-            slice_begin[axis] = i * split_len
-            result = flow.slice(x, slice_begin, slice_size)
+            tup_list[axis][0] = i * split_len  # start
+            tup_list[axis][1] = (i + 1) * split_len  # end
+            result = flow.experimental.slice(x, slice_tup_list=tup_list)
             result_list.append(result)
         return result_list
 
@@ -68,7 +67,7 @@ class Conv2d(Module):
       known as the à trous algorithm. It is harder to describe, but this `link`_
       has a nice visualization of what :attr:`dilation` does.
 
-    * :attr:`groups` controls the connections between inputs and outputs. :attr:`in_channels` 
+    * :attr:`groups` controls the connections between inputs and outputs. :attr:`in_channels`
        and :attr:`out_channels` must both be divisible by :attr:`groups`. For example,
 
         * At groups=1, all inputs are convolved to all outputs.
@@ -93,7 +92,7 @@ class Conv2d(Module):
         In other words, for an input of size :math:`(N, C_{in}, L_{in})`,
         a depthwise convolution with a depthwise multiplier `K` can be performed with the arguments
         :math:`(C_\text{in}=C_\text{in}, C_\text{out}=C_\text{in} \times \text{K}, ..., \text{groups}=C_\text{in})`.
-    
+
 
     Args:
         in_channels (int): Number of channels in the input image
@@ -138,12 +137,13 @@ class Conv2d(Module):
 
     For example: 
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        import oneflow.experimental as flow
+        import oneflow.experimental.nn as nn
+        import numpy as np
 
         m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
-        input = flow.randn(20, 16, 50, 100)
+        input = flow.Tensor(np.random.randn(20, 16, 50, 100))
         output = m(input)
 
     .. _cross-correlation:
@@ -173,6 +173,8 @@ class Conv2d(Module):
         padding = _pair(padding)
         dilation = _pair(dilation)
         self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *kernel_size)
         )
@@ -193,7 +195,7 @@ class Conv2d(Module):
             flow.builtin_op("conv2d")
             .Input("in")
             .Input("weight")
-            .Attr("filters", out_channels)
+            .Attr("filters", out_channels // groups)
             .Attr("padding_before", padding)
             .Attr("strides", stride)
             .Attr("kernel_size", kernel_size)
@@ -213,31 +215,21 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device == flow.device("cpu") and self.groups > 1:
+        if self.groups > 1:
             in_channel_axis = 1
             filter_out_axis = 0
             in_split_list = ConvUtil.split(
-                inputs, axis=in_channel_axis, split_num=groups
+                x, axis=in_channel_axis, split_num=self.groups
             )
             filter_split_list = ConvUtil.split(
-                filters, axis=filter_out_axis, split_num=groups
+                self.weight, axis=filter_out_axis, split_num=self.groups
             )
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    self._op(
-                        in_split_list[i],
-                        filter_split_list[i],
-                        padding_before,
-                        channel_pos,
-                        kernel_size_list,
-                        strides,
-                        dilations,
-                        groups=1,
-                        name=name + str(i),
-                    )[0]
+                    self._op(in_split_list[i], filter_split_list[i], groups=1,)[0]
                 )
-            res = flow.cat(out_list, axis=in_channel_axis)
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
 
