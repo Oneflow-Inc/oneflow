@@ -631,8 +631,8 @@ class Tensor:
     def register_hook(self, hook):
         assert self.is_leaf, "register_hook only supports leaf tensor for now"
         assert (
-            not self.is_consistent
-        ), "register_hook only supports local tensor for now"
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
 
         def hook_returning_determined_tensor(grad):
             new_grad = hook(grad)
