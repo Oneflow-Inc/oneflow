@@ -132,7 +132,6 @@ add_library(
     kernels/squeeze_kernel.cpp
     kernels/ssp_variable_proxy_kernel.cpp
     kernels/stateful_local_opkernel.cpp
-    kernels/summary_kernels.cpp
     kernels/tensor_buffer_kernels.cpp
     kernels/test_kernels.cpp
     kernels/top_k_kernel.cpp
@@ -290,13 +289,19 @@ add_library(
     image/image_util.cpp
     image/random_crop_generator.cpp
 
+    utils/pool_util.cpp
+)
+
+add_library(
+    oneflow_user_summary
+
+    kernels/summary_kernels.cpp
     summary/events_writer.cpp
     summary/event_writer_helper.cpp
     summary/histogram.cpp
     summary/plan_to_physical_graph.cpp
-
-    utils/pool_util.cpp
 )
+target_link_libraries(oneflow_user_summary ${OPENCV_STATIC_LIBRARIES})
 
 set(ONEFLOW_USER_LIBS oneflow_user_op_kernel)
 

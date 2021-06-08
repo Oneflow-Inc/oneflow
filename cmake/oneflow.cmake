@@ -231,9 +231,12 @@ endif()
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user)
+
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 add_dependencies(of_ccobj prepare_oneflow_third_party)
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
+target_link_libraries(of_ccobj oneflow_user_summary ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
@@ -255,8 +258,6 @@ add_library(of_pyext_obj ${of_pyext_obj_cc})
 target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(of_pyext_obj of_ccobj)
 add_dependencies(of_pyext_obj of_ccobj)
-
-add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user)
 
 if(APPLE)
   set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj ${ONEFLOW_USER_LIBS})
