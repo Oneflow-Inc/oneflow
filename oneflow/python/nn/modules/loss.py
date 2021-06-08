@@ -393,7 +393,7 @@ class MSELoss(Module):
             "none",
             "mean",
             None,
-        ], "only 'sum', 'mean' and None supported by now"
+        ], "reduction parameter only support 'sum'/'mean'/'none'/None for now!"
 
         self.reduction = reduction
         self.square_op = Square()
