@@ -131,7 +131,6 @@ add_library(
     kernels/square_sum_kernel.cpp
     kernels/squeeze_kernel.cpp
     kernels/ssp_variable_proxy_kernel.cpp
-    kernels/stateful_local_opkernel.cpp
     kernels/tensor_buffer_kernels.cpp
     kernels/test_kernels.cpp
     kernels/top_k_kernel.cpp
@@ -287,10 +286,22 @@ add_library(
     ops/zero_like_op.cpp
 
     image/image_util.cpp
-    image/random_crop_generator.cpp
 
     utils/pool_util.cpp
 )
+
+add_library(
+    oneflow_random_crop_generator
+
+    image/random_crop_generator.cpp
+)
+
+add_library(
+    stateful_local_opkernel
+
+    kernels/stateful_local_opkernel.cpp
+)
+
 
 add_library(
     oneflow_user_summary

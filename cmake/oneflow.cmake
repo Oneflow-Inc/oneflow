@@ -236,7 +236,12 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user)
 
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 add_dependencies(of_ccobj prepare_oneflow_third_party)
-target_link_libraries(of_ccobj oneflow_user_summary ${oneflow_third_party_libs})
+target_link_libraries(of_ccobj
+  oneflow_user_summary
+  oneflow_random_crop_generator
+  stateful_local_opkernel
+  ${oneflow_third_party_libs}
+)
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
