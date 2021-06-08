@@ -180,7 +180,7 @@ class UserOpExprInferContext : public user_op::InferContext {
     CHECK_GE(tuple_index, 0);
     return tensor_meta4input_index_(tuple_index)->shape();
   }
-  Shape* OutputShape(const std::string& name, int32_t index) const override {
+  Shape* OutputShape(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);

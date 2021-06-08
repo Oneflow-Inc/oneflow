@@ -35,6 +35,9 @@ namespace one {
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
+  LOG(ERROR) << user_op_expr.op_type_name();
+  LOG(ERROR) << int64_t(JUST(JUST(inputs.at(0)->cur_rank_phy_tensor())->eager_blob_object()).get());
+  LOG(ERROR) << int64_t(inputs.at(0).get());
   ConsistentTensorMetaInferArgs infer_args{};
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
   JUST(infer_args.Init(inputs, placement_scope, attrs));
@@ -108,14 +111,16 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& 
   CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
   const auto& input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(inputs.at(0));
   CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
-  auto parallel_distribution = op_expr.parallel_distribution();
-  auto parallel_desc = op_expr.parallel_desc();
+  const auto& parallel_distribution = op_expr.parallel_distribution();
+  const auto& parallel_desc = op_expr.parallel_desc();
   std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl = JUST(
       EagerConsistentTensorImpl::New(input_mirrored_tensor, parallel_distribution, parallel_desc));
   std::shared_ptr<ConsistentTensor> consistent_tensor =
       std::make_shared<ConsistentTensor>(eager_consistent_tensor_impl);
   const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(consistent_tensor);
   CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
+  LOG(ERROR) << int64_t(JUST(JUST(out_tensor->cur_rank_phy_tensor())->eager_blob_object()).get());
+  LOG(ERROR) << int64_t(out_tensor.get());
   outputs->at(0) = out_tensor;
   return Maybe<void>::Ok();
 }
