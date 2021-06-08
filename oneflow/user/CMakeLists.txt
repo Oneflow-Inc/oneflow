@@ -302,7 +302,6 @@ add_library(
     kernels/stateful_local_opkernel.cpp
 )
 
-
 add_library(
     oneflow_user_summary
 
@@ -409,3 +408,15 @@ if (BUILD_SHARED_LIBS)
   target_link_libraries(oneflow_user_op_kernel of_protoobj of_cfgobj "${GLOG_STATIC_LIBRARIES}")
   set_target_properties(oneflow_user_op_kernel PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 endif()
+
+foreach(X IN
+    ITEMS
+    oneflow_softmax_cuda_kernel
+    stateful_local_opkernel
+    oneflow_user_summary
+    oneflow_random_crop_generator
+    oneflow_user_cuda_kernel
+    oneflow_user_op_kernel
+)
+    add_dependencies(${X} of_protoobj of_cfgobj)
+endforeach()
