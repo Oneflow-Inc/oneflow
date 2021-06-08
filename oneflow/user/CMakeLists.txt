@@ -421,6 +421,7 @@ endif()
 
 foreach(X IN
     ITEMS
+    oneflow_user_op_kernel_util
     oneflow_softmax_cuda_kernel
     stateful_local_opkernel
     oneflow_user_summary
