@@ -304,24 +304,33 @@ class MSELoss(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
+
     Creates a criterion that measures the mean squared error (squared L2 norm) between
     each element in the input :math:`x` and target :math:`y`.
+
     The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
+
     .. math::
         \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
         l_n = \left( x_n - y_n \right)^2,
+
     where :math:`N` is the batch size. If :attr:`reduction` is not ``'none'``
     (default ``'mean'``), then:
+
     .. math::
         \ell(x, y) =
         \begin{cases}
             \operatorname{mean}(L), &  \text{if reduction} = \text{`mean';}\\
             \operatorname{sum}(L),  &  \text{if reduction} = \text{`sum'.}
         \end{cases}
+
     :math:`x` and :math:`y` are tensors of arbitrary shapes with a total
     of :math:`n` elements each.
+
     The mean operation still operates over all the elements, and divides by :math:`n`.
+
     The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
+
     Args:
         size_average (bool, optional): Deprecated (see :attr:`reduction`). By default,
             the losses are averaged over each loss element in the batch. Note that for
@@ -338,15 +347,20 @@ class MSELoss(Module):
             elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
             and :attr:`reduce` are in the process of being deprecated, and in the meantime,
             specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
     Shape:
         - Input: :math:`(N, *)` where :math:`*` means, any number of additional
           dimensions
         - Target: :math:`(N, *)`, same shape as the input
+
     For example:
+
     .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
+
         >>> input = flow.Tensor(
         ... [[-0.02557137, 0.03101675, 1.37493674],
         ... [0.25599439, -1.08372561, -0.21006816]], dtype=flow.float32)
@@ -366,6 +380,7 @@ class MSELoss(Module):
         >>> out = m(input, target)
         >>> print(out.numpy())
         [8.143618]
+
     """
 
     def __init__(
