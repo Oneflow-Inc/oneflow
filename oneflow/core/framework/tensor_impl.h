@@ -30,7 +30,6 @@ namespace oneflow {
 class MemoryCase;
 class VmLocalDepObject;
 
-
 namespace cfg {
 class ParallelDistribution;
 }

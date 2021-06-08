@@ -48,7 +48,6 @@ class Tensor {
   virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
 };
 
-
 namespace cfg {
 class ParallelDistribution;
 }
