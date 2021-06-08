@@ -46,7 +46,7 @@ def _np_mseloss_grad(np_input, np_target):
     }
 
 
-def _test_mseloss_backward(test_case, device, shape, reduction):
+def _test_mseloss_impl(test_case, device, shape, reduction):
     x = np.random.randn(*shape)
     y = np.random.randn(*shape)
     input = flow.Tensor(
@@ -74,7 +74,7 @@ class TestMSELossModule(flow.unittest.TestCase):
     def test_mseloss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_mseloss_backward,
+            _test_mseloss_impl,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [
