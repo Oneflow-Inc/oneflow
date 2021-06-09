@@ -46,24 +46,35 @@ class ReplicationPad2d(Module):
         >>> flow.enable_eager_execution()
         >>> replicationpad_layer_0 = flow.nn.ReplicationPad2d((2, 2, 1, 1))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = replicationpad_layer_0(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([1, 2, 5, 7])
-        >>> print(output.numpy())
-        [[[[ 0.  0.  0.  1.  2.  2.  2.]
-           [ 0.  0.  0.  1.  2.  2.  2.]
-           [ 3.  3.  3.  4.  5.  5.  5.]
-           [ 6.  6.  6.  7.  8.  8.  8.]
-           [ 6.  6.  6.  7.  8.  8.  8.]]
+        >>> output
+        tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
+                  [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
+                  [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
+                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.],
+                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.]],
         <BLANKLINE>
-          [[ 9.  9.  9. 10. 11. 11. 11.]
-           [ 9.  9.  9. 10. 11. 11. 11.]
-           [12. 12. 12. 13. 14. 14. 14.]
-           [15. 15. 15. 16. 17. 17. 17.]
-           [15. 15. 15. 16. 17. 17. 17.]]]]
-        >>> replicationpad_layer_1 = flow.nn.ReplicationPad2d((1, 2, 3, 4))
-        >>> output_1 = replicationpad_layer_1(input)
-        Padding size should be less than the corresponding input dimension. Please check.
+                 [[ 9.,  9.,  9., 10., 11., 11., 11.],
+                  [ 9.,  9.,  9., 10., 11., 11., 11.],
+                  [12., 12., 12., 13., 14., 14., 14.],
+                  [15., 15., 15., 16., 17., 17., 17.],
+                  [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
+        >>> output_int = replicationpad_layer_0(input_int)
+        >>> output_int
+        tensor([[[[ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
+                  [ 0.,  0.,  0.,  1.,  2.,  2.,  2.],
+                  [ 3.,  3.,  3.,  4.,  5.,  5.,  5.],
+                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.],
+                  [ 6.,  6.,  6.,  7.,  8.,  8.,  8.]],
+        <BLANKLINE>
+                 [[ 9.,  9.,  9., 10., 11., 11., 11.],
+                  [ 9.,  9.,  9., 10., 11., 11., 11.],
+                  [12., 12., 12., 13., 14., 14., 14.],
+                  [15., 15., 15., 16., 17., 17., 17.],
+                  [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
 
     """
     def __init__(
@@ -100,4 +111,4 @@ class ReplicationPad2d(Module):
 
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
