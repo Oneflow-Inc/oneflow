@@ -59,8 +59,6 @@ def _make_op_function(
     func_config.default_logical_view(flow.scope.consistent_view())
 
     def _compare_diff(blob: tp.Numpy):
-        print('np', grad)
-        print('of', blob)
         test_case.assertTrue(np.allclose(grad, blob, 1e-3, 1e-3))
 
     if value_type == flow.float32 or value_type == flow.float64:
