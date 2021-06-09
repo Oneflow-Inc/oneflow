@@ -70,7 +70,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx) {
   if (ctx->has_input("_add_to_output", 0)) {
     CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("_add_to_output", 0), dtype);
   }
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
+  *ctx->OutputDType("out", 0) = dtype;
   return Maybe<void>::Ok();
 }
 

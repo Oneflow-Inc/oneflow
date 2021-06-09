@@ -75,7 +75,7 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
   DeviceType device_type = CHECK_JUST(DeviceType4DeviceTag(device_tag));
   const Shape& input_shape = ctx->InputShape("input", 0);
   DataType input_dtype = *ctx->Dtype4ArgNameAndIndex("input", 0);
-  DataType output_dtype = *ctx->Dtype4ArgNameAndIndex("output", 0);
+  DataType output_dtype = *ctx->OutputDType("output", 0);
   return SwitchUtil::SwitchGetWorkspaceBytesSize(
       SwitchCase(device_type, input_dtype, output_dtype, input_shape.NumAxes()),
       input_shape.elem_cnt());
