@@ -238,7 +238,7 @@ oneflow_add_library(of_ccobj ${of_all_obj_cc})
 add_dependencies(of_ccobj prepare_oneflow_third_party)
 target_link_libraries(of_ccobj
   oneflow_user_summary
-  oneflow_random_crop_generator
+  oneflow_user_image
   stateful_local_opkernel
   ${oneflow_third_party_libs}
 )
@@ -263,10 +263,11 @@ if (BUILD_SHARED_LIBS)
   target_link_libraries(of_ccobj of_protoobj of_cfgobj "${GLOG_STATIC_LIBRARIES}")
   set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 
-  target_link_libraries(oneflow_user_op_kernel of_ccobj)
+  target_link_libraries(oneflow_user_kernels of_ccobj)
+  target_link_libraries(oneflow_user_ops of_ccobj)
   if (BUILD_CUDA)
     target_link_libraries(oneflow_softmax_cuda_kernel of_ccobj)
-    target_link_libraries(oneflow_user_cuda_kernel of_ccobj)
+    target_link_libraries(oneflow_user_cuda_kernels of_ccobj)
   endif()
   target_link_libraries(of_pyext_obj of_ccobj)
 endif()
