@@ -69,7 +69,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       CHECK_OR_RETURN(IsIndexDataType(data_type));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
+      *ctx->OutputDType("out", 0) = data_type;
       return Maybe<void>::Ok();
     });
 

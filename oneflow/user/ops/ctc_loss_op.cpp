@@ -55,8 +55,8 @@ REGISTER_USER_OP("ctc_loss")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
-      *ctx->Dtype4ArgNameAndIndex("alpha", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
+      *ctx->OutputDType("loss", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
+      *ctx->OutputDType("alpha", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       return Maybe<void>::Ok();
     });
 
@@ -100,7 +100,7 @@ REGISTER_USER_OP("ctc_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("grad", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
+      *ctx->OutputDType("grad", 0) = *ctx->Dtype4ArgNameAndIndex("log_probs", 0);
       return Maybe<void>::Ok();
     });
 
