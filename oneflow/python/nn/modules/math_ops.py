@@ -22,6 +22,10 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
+from oneflow.python.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
 
 
 def _build_math_binary_elementwise_op(math_op):
@@ -1598,6 +1602,107 @@ def erfc_op_tensor(input):
     See :func:`oneflow.experimental.erfc`
     """
     return Erfc()(input)
+
+
+class Topk(Module):
+    def __init__(
+        self, k, dim: int = None, largest: bool = True, sorted: bool = True
+    ) -> None:
+        super().__init__()
+        self._op_topk_last_dim = (
+            flow.builtin_op("top_k")
+            .Input("in")
+            .Output("out")
+            .Attr("k", k)
+            .Attr("sorted", sorted)
+            .Build()
+        )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
+
+        self.dim = dim
+        self.largest = largest
+
+    def forward(self, input):
+        if self.dim == None:
+            self.dim = -1
+
+        num_axes = len(input.shape)
+        axis = self.dim if self.dim >= 0 else self.dim + num_axes
+        assert 0 <= axis < num_axes, "axis out of range"
+        if axis == num_axes - 1:
+            if self.largest:
+                indices = self._op_topk_last_dim(input)[0]
+            else:
+                neg_input = flow.experimental.mul(input, -1)
+                indices = self._op_topk_last_dim(neg_input)[0]
+            return (flow.experimental.gather(input, indices, dim=axis), indices)
+        else:
+            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+            x = self._transpose_op(input, perm=perm)[0]
+            if self.largest:
+                indices = self._op_topk_last_dim(x)[0]
+            else:
+                neg_input = flow.experimental.mul(x, -1)
+                indices = self._op_topk_last_dim(neg_input)[0]
+            indices = self._transpose_op(indices, perm=get_inversed_perm(perm))[0]
+            return (flow.experimental.gather(input, indices, dim=axis), indices)
+
+
+@oneflow_export("topk")
+@register_tensor_op("topk")
+@experimental_api
+def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
+    r"""Finds the values and indices of the k largest entries at specified axis.
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
+        largest (bool, optional): controls whether to return largest or smallest elements
+        sorted (bool, optional): controls whether to return the elements in sorted order
+
+    Returns:
+        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
+        the indices are the indices of the elements in the original input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
+        >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
+        >>> values
+        tensor([[8., 7., 3.],
+                [9., 4., 3.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[2, 3, 1],
+                [1, 2, 3]], dtype=oneflow.int32)
+        >>> values.shape
+        flow.Size([2, 3])
+        >>> indices.shape
+        flow.Size([2, 3])
+        >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
+        >>> values
+        tensor([[1., 2.],
+                [1., 2.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[0, 4],
+                [0, 4]], dtype=oneflow.int32)
+        >>> values.shape
+        flow.Size([2, 2])
+        >>> indices.shape
+        flow.Size([2, 2])
+
+    """
+    return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
 if __name__ == "__main__":

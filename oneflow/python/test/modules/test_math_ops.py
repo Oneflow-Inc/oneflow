@@ -613,7 +613,7 @@ class TestTopk(flow.unittest.TestCase):
             _test_topk_dim_negative,
             _test_tensor_topk,
             _test_topk_dim_positive,
-            _test_topk_largest
+            _test_topk_largest,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
