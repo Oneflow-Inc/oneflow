@@ -120,6 +120,7 @@ def _test_expand_same_int(test_case, device):
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 
+
 def _test_expand_same_int8(test_case, device):
     input_shape = (2, 4, 1, 32)
     expand_dim = [2, 4, 2, 32]

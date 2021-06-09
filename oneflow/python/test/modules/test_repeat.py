@@ -67,6 +67,7 @@ def _test_repeat_same_dim_int8(test_case, device):
     np_out = np_repeat(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
+
 def _test_repeat_new_dim_backward(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 4, 1, 3),
