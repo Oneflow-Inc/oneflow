@@ -48,6 +48,8 @@ class OpExprInterpreter {
 
   virtual Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs,
                             const AttrMap& attrs) const = 0;
+  virtual bool is_lazy() const = 0;
+  virtual bool is_mirrored() const = 0;
 
   Maybe<void> Apply(const OpExpr& op, const TensorTuple& inputs, TensorTuple* outputs) const {
     return Apply(op, inputs, outputs, AttrMap{});
@@ -84,6 +86,9 @@ class LazyInterpreter : public OpExprInterpreter {
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const override;
 
+  bool is_lazy() const override { return true; }
+  bool is_mirrored() const override { UNIMPLEMENTED(); }
+
  private:
   DECLARE_NORMAL_APPLY_FUNC(BuiltinOp);
   DECLARE_NORMAL_APPLY_FUNC(FunctionOp);
@@ -96,6 +101,7 @@ class EagerInterpreter : public OpExprInterpreter {
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,
                     const AttrMap& attrs) const override;
+  bool is_lazy() const override { return false; }
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_PURE_VIRTUAL_APPLY_FUNC);
@@ -107,6 +113,8 @@ class EagerConsistentInterpreter : public EagerInterpreter {
   EagerConsistentInterpreter() : EagerInterpreter() {}
   virtual ~EagerConsistentInterpreter() = default;
 
+  bool is_mirrored() const override { return false; }
+
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);
 };
@@ -115,6 +123,8 @@ class EagerMirroredInterpreter : public EagerInterpreter {
  public:
   EagerMirroredInterpreter() : EagerInterpreter() {}
   virtual ~EagerMirroredInterpreter() = default;
+
+  bool is_mirrored() const override { return true; }
 
  private:
   FOR_EACH_BUILTIN_OPS(DECLARE_OVERRIDE_APPLY_FUNC);

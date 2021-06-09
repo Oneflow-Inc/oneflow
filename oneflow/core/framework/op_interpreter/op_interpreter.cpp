@@ -149,7 +149,7 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
-  bool is_mirrored_strategy_enabled = true;
+  bool is_mirrored_strategy_enabled = internal_->is_mirrored();
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
         std::any_of(inputs.begin(), inputs.end(),
@@ -160,11 +160,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(internal_->Apply(op_expr, inputs, outputs, attrs));
     JUST(DetermineIsLeaf(outputs, inputs.size() == 0, requires_grad));
     JUST(DetermineRequiresGrad(outputs, requires_grad));
-  }
-  {
-    const auto& session = JUST(GetDefaultSession());
-    is_mirrored_strategy_enabled = session->is_mirrored_strategy_enabled_stack()->empty()
-                                   || JUST(session->IsMirroredStrategyEnabled());
   }
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
