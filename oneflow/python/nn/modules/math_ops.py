@@ -1195,6 +1195,7 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
     For example:
 
     .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -1301,7 +1302,7 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         mat2 (Tensor): the second matrix to be multiplied
         out (Tensor, optional): the output tensor.
 
-    Example::
+    For example:
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
