@@ -38,15 +38,17 @@ class Floor(Module):
 def floor_op(x):
 
     r"""
-     Returns a new tensor with the arcsine of the elements of :attr:`input`.
+    Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
-     .. math::
-         \text{out}_{i} = \lfloor \text{input}_{i} \rfloor
-     Args:
-         input (Tensor): the input tensor.
-     For example:
+    .. math::
+        \text{out}_{i} = \lfloor \text{input}_{i} \rfloor
 
-     .. code-block:: python
+    Args:
+        input (Tensor): the input tensor.
+        
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
@@ -64,8 +66,9 @@ def floor_op(x):
         flow.Size([2, 2])
         >>> output1.numpy()
         array([[ 0.,  1.],
-               [-1.,  2.]], dtype=float32)
-     """
+            [-1.,  2.]], dtype=float32)
+
+    """
 
     return Floor()(x)
 
