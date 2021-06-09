@@ -39,7 +39,7 @@ class Stack(Module):
         for i in range(input_list_length):
             current_shape = inputs[i].shape
             assert (
-                    input_shape == current_shape
+                input_shape == current_shape
             ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
                 current_shape
             )
@@ -87,7 +87,7 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
     return Stack(dim)(inputs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
