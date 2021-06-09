@@ -351,10 +351,21 @@ class BCEWithLogitsLoss(Module):
 
         >>> np_pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
+        # >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="none")
+        # >>> out = m(np_input, np_target).numpy()
+        # >>> print(out)
+        # [[2.926565, 1.5551611, 1.1087105],
+        #  [0.96764666, 2.074976, 5.9553986]]
+
         >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="mean")
-        >>> out = m(np_input, np_target ).numpy()
+        >>> out = m(np_input, np_target).numpy()
         >>> print(out)
-        [2.4314096]
+        [2.4314098]
+
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="sum")
+        >>> out = m(np_input, np_target).numpy()
+        >>> print(out)
+        [14.588458]
 
     """
 
@@ -405,7 +416,7 @@ class BCEWithLogitsLoss(Module):
             raise NotImplemented
 
         _neg_input = flow.experimental.negative(input)
-        _max_val = flow.experimental.clip(_neg_input,3)
+        _max_val = flow.experimental.clip(_neg_input,0)
         _neg_max_val = flow.experimental.negative(_max_val)
 
         if self.pos_weight:
@@ -417,14 +428,14 @@ class BCEWithLogitsLoss(Module):
             )
             _log_weight = ((self.pos_weight - 1) * target) + 1
             _loss = (1 - target) * input + _log_weight * (
-                    flow.experimental.log1p(
+                    flow.experimental.log(
                         flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
                     )
                     + _max_val
             )
         else:
             _loss = (1 - target) * input + _max_val
-            _loss += flow.experimental.log1p(
+            _loss += flow.experimental.log(
                 flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
             )
 
