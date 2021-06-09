@@ -402,7 +402,9 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
-        assert isinstance(key, int) or isinstance(key, tuple), "Unsupported key type!"
+        assert (
+            isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
+        ), "Unsupported key type!"
 
         if isinstance(key, tuple):
             squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
