@@ -1,24 +1,25 @@
+DEFINE_PROPERTY(GLOBAL PROPERTY ONEFLOW_USER_LIBS
+    BRIEF_DOCS "oneflow user libs"
+    FULL_DOCS "user libs including ops and kernels")
+
 function(setup_user_library)
   add_dependencies(${ARGV0} of_protoobj of_cfgobj)
-  list(APPEND ONEFLOW_USER_LIBS ${ARGV0})
-  set(ONEFLOW_USER_LIBS ${ONEFLOW_USER_LIBS} PARENT_SCOPE)
+  GET_PROPERTY(user_libs GLOBAL PROPERTY ONEFLOW_USER_LIBS)
+  list(APPEND user_libs ${ARGV0})
+  SET_PROPERTY(GLOBAL PROPERTY ONEFLOW_USER_LIBS ${user_libs})
 endfunction()
 
 function(oneflow_add_user_library)
   add_library(${ARGV})
   setup_user_library(${ARGV})
-  set(ONEFLOW_USER_LIBS ${ONEFLOW_USER_LIBS} PARENT_SCOPE)
 endfunction()
 
 function(oneflow_add_user_cuda_library)
   if (BUILD_CUDA)
     cuda_add_library(${ARGV})
     setup_user_library(${ARGV})
-    set(ONEFLOW_USER_LIBS ${ONEFLOW_USER_LIBS} PARENT_SCOPE)
   endif()
 endfunction()
-
-set(ONEFLOW_USER_LIBS ${ONEFLOW_USER_LIBS} PARENT_SCOPE)
 
 add_subdirectory(utils)
 add_subdirectory(ops)
