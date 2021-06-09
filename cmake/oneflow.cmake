@@ -84,7 +84,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.h$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.h$")
     if((NOT RPC_BACKEND MATCHES "GRPC") AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/control/.*")
       # skip if GRPC not enabled
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/(epoll|ibverbs)/.*")
@@ -95,26 +95,26 @@ foreach(oneflow_single_file ${oneflow_all_src})
     endif()
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.hpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.hpp$")
     list(APPEND of_all_obj_cc ${oneflow_single_file})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cuh$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.cuh$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cu$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.cu$")
     if(BUILD_CUDA)
       list(APPEND of_all_obj_cc ${oneflow_single_file})
     endif()
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.proto$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.proto$")
     list(APPEND of_all_proto ${oneflow_single_file})
     #list(APPEND of_all_obj_cc ${oneflow_single_file})   # include the proto file in the project
     set(group_this ON)
@@ -140,12 +140,12 @@ foreach(oneflow_single_file ${oneflow_all_src})
     set(group_this ON)
   endif()
 
-  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
+  if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*\\.cpp$")
     if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
       if(RPC_BACKEND MATCHES "GRPC")
         list(APPEND of_transport_test_cc ${oneflow_single_file})
       endif()
-    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
+    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/(epoll|ibverbs)/.*")
@@ -231,9 +231,17 @@ endif()
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/user) # will set ONEFLOW_USER_LIBS
+
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
 add_dependencies(of_ccobj prepare_oneflow_third_party)
-target_link_libraries(of_ccobj ${oneflow_third_party_libs})
+target_link_libraries(of_ccobj
+  oneflow_user_summary
+  oneflow_user_image
+  stateful_local_opkernel
+  ${oneflow_third_party_libs}
+)
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
 if (BUILD_GIT_VERSION)
@@ -243,23 +251,33 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
+# py ext lib
+add_library(of_pyext_obj ${of_pyext_obj_cc})
+target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(of_pyext_obj of_ccobj)
+add_dependencies(of_pyext_obj of_protoobj generate_py_cfg)
+
 if (BUILD_SHARED_LIBS)
   get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
   get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
   target_link_libraries(of_ccobj of_protoobj of_cfgobj "${GLOG_STATIC_LIBRARIES}")
   set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
+
+  target_link_libraries(oneflow_user_kernels of_ccobj)
+  target_link_libraries(oneflow_user_ops of_ccobj)
+  if (BUILD_CUDA)
+    target_link_libraries(oneflow_softmax_cuda_kernel of_ccobj)
+    target_link_libraries(oneflow_user_cuda_kernels of_ccobj)
+  endif()
+  target_link_libraries(of_pyext_obj of_ccobj)
 endif()
 
-# py ext lib
-add_library(of_pyext_obj ${of_pyext_obj_cc})
-target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-target_link_libraries(of_pyext_obj of_ccobj)
-add_dependencies(of_pyext_obj of_ccobj)
-
+GET_PROPERTY(user_libs GLOBAL PROPERTY ONEFLOW_USER_LIBS)
+set(user_libs -Wl,--no-as-needed ${user_libs} -Wl,--as-needed)
 if(APPLE)
-  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj)
+  set(of_libs -Wl,-force_load of_ccobj of_protoobj of_cfgobj ${user_libs})
 elseif(UNIX)
-  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj -Wl,--no-whole-archive -ldl -lrt)
+  set(of_libs -Wl,--whole-archive of_ccobj of_protoobj of_cfgobj ${user_libs} -Wl,--no-whole-archive -ldl -lrt)
 elseif(WIN32)
   set(of_libs of_ccobj of_protoobj of_cfgobj)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /WHOLEARCHIVE:of_ccobj")
@@ -267,7 +285,7 @@ endif()
 
 pybind11_add_module(oneflow_internal ${PYBIND11_SRCS} ${of_pybind_obj_cc} ${PYBIND_REGISTRY_CC})
 set_property(TARGET oneflow_internal PROPERTY CXX_VISIBILITY_PRESET "default")
-add_dependencies(oneflow_internal of_cfgobj generate_py_cfg)
+add_dependencies(oneflow_internal of_cfgobj)
 set_target_properties(oneflow_internal PROPERTIES PREFIX "_")
 set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/python_scripts/oneflow")
 target_link_libraries(oneflow_internal PRIVATE ${of_libs} ${oneflow_third_party_libs} of_pyext_obj ${oneflow_exe_third_party_libs})
