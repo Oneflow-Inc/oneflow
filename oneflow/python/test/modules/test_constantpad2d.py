@@ -66,8 +66,7 @@ def _np_constant_pad2d_grad(src, dest, padding):
 def _test_ConstantPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape)
     of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
-    of_input_0 = flow.nn.Parameter(flow.Tensor(np.zeros(shape), device=flow.device(device)), requires_grad=True)
-    of_input += of_input_0
+
     if isinstance(padding, int):
         np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
 
@@ -82,10 +81,12 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
+    # of_out is a non-leaf tensor, in order to get grad using retain_grad()
+    of_out.retain_grad()
     of_out.backward()
+    
     np_out_grad = _np_constant_pad2d_grad(np_out, np_input, layer.padding)
-    print('grad', of_out.grad)
-    test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
+    test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-5, 1e-5))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

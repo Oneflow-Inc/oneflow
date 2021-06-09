@@ -133,7 +133,3 @@ class ConstantPad2d(Module):
         else:
             print("Padding size should be less than the corresponding input dimension. Please check.")
             return
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
