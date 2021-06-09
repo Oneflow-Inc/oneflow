@@ -23,6 +23,48 @@ import numpy as np
     ".numpy() doesn't work in lazy mode",
 )
 class TestBCEWithLogitsLossModule(flow.unittest.TestCase):
+    def np_bcewithlogitsloss(output, target, weight=None, pos_weight=None, reduction='none'):
+        _neg_input = np.negative(output)
+        _max_val = np.clip(_neg_input, 0, None)
+        _neg_max_val = np.negative(_max_val)
+
+        if pos_weight is not None:
+            assert pos_weight.shape[0] == output.shape[-1], (
+                "The length of `pos_weight` must be equal to the number of classes. "
+                "Found the length of pos_weight {} vs classes {}".format(
+                    pos_weight.shape[0], output.shape[-1]
+                )
+            )
+            _log_weight = ((pos_weight - 1) * target) + 1
+            _loss = (1 - target) * output + _log_weight * (
+                    np.log(
+                        np.exp(_neg_max_val) + np.exp(_neg_input - _max_val)
+                    )
+                    + _max_val
+            )
+        else:
+            _loss = (1 - target) * output + _max_val
+            _loss += np.log(
+                np.exp(_neg_max_val) + np.exp(_neg_input - _max_val)
+            )
+
+        if weight is not None:
+            assert (
+                    weight.shape == output.shape
+            ), "The weight shape must be the same as Input shape"
+            _weighted_loss = weight * _loss
+        else:
+            _weighted_loss = _loss
+
+        if reduction == "mean":
+            return _weighted_loss.mean()
+        elif reduction == "sum":
+            return _weighted_loss.sum()
+        else:
+            # Do no reduction
+            return _weighted_loss
+            #     return _weighted_loss
+
     def test_BCEWithLogitsLoss_none(test_case):
         x = np.array(
             [[1.2, 0.2, -0.3],
