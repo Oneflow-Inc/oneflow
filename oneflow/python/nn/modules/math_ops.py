@@ -889,9 +889,6 @@ def cos_op(tensor):
         >>> arr = np.array([1.4309,  1.2706, -0.8562,  0.9796])
         >>> input = flow.Tensor(arr, dtype=flow.float32)
         >>> output = flow.cos(input).numpy()
-        >>> output
-        array([0.13944048, 0.2957078 , 0.6553126 , 0.5573547 ], dtype=float32)
-
 
     """
     return Cos()(tensor)
@@ -927,10 +924,8 @@ def atan_op(tensor):
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([3])
-        >>> print(output.numpy())
-        [0.4636476  0.5404195  0.61072594]
         
     """
     return Atan()(tensor)
