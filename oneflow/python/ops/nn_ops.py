@@ -3918,6 +3918,7 @@ def bce_with_logits_loss(
 
 
 @oneflow_export("nn.MSELoss")
+@stable_api
 def mse_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4032,6 +4033,7 @@ def mse_loss(
 
 
 @oneflow_export("nn.MarginRankingLoss")
+@stable_api
 def margin_ranking_loss(
     input1: oneflow._oneflow_internal.BlobDesc,
     input2: oneflow._oneflow_internal.BlobDesc,

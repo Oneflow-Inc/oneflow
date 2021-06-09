@@ -46,7 +46,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -73,7 +73,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
