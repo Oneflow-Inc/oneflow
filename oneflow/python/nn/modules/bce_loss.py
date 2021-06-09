@@ -101,7 +101,6 @@ class BCELoss(Module):
         self.sum = Sum()
         self.cross_entropy = CrossEntropyLoss(reduction=None)
 
-
     def forward(self, input, target, weight):
         assert (
             input.shape == target.shape
