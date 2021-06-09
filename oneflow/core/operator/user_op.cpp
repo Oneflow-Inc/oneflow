@@ -168,6 +168,9 @@ class UserOpInferContext final : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
     return const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }

@@ -44,6 +44,7 @@ class InferContext {
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
   virtual Shape* OutputShape(const std::string&, int32_t) = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
   virtual DataType* OutputDType(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;

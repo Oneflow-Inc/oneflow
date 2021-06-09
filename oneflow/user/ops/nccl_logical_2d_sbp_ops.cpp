@@ -27,7 +27,7 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_reduce")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -63,7 +63,7 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim1_all_reduce")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -99,7 +99,7 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -138,7 +138,7 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all_gather_noncontinuous")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)
@@ -180,7 +180,7 @@ REGISTER_USER_OP("_nccl_logical_2D_same_dim0_all2all")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn([](user_op::InferParallelDistributionFnContext* ctx)

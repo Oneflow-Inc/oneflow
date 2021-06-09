@@ -37,7 +37,7 @@ REGISTER_USER_OP("gelu")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -70,8 +70,8 @@ REGISTER_USER_OP("gelu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("x", 0), *ctx->Dtype4ArgNameAndIndex("dy", 0));
-      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
