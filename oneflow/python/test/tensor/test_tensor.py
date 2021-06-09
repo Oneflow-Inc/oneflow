@@ -819,6 +819,18 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_addmm_(test_case):
+        input = flow.Tensor(np.random.randn(2, 6), dtype=flow.float32)
+        mat1 = flow.Tensor(np.random.randn(2, 3), dtype=flow.float32)
+        mat2 = flow.Tensor(np.random.randn(3, 6), dtype=flow.float32)
+        of_out = input.addmm(mat1, mat2, alpha=1, beta=2)
+        np_out = np.add(2 * input.numpy(), 1 * np.matmul(mat1.numpy(), mat2.numpy()))
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_pow_tensor_function(test_case):
         input = flow.Tensor(np.array([1, 2, 3, 4, 5, 6]), dtype=flow.float32)
         of_out = input.pow(2.1)
