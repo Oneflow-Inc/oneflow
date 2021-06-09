@@ -199,9 +199,9 @@ if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
-  list(APPEND oneflow_third_party_cuda_libs ${CUDA_LIBRARIES})
-  list(APPEND oneflow_third_party_cuda_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_cuda_libs ${NCCL_STATIC_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
   list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
@@ -242,6 +242,5 @@ if(WITH_TENSORRT)
 endif()
 
 message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
-message(STATUS "oneflow_third_party_cuda_libs: ${oneflow_third_party_cuda_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)
