@@ -21,43 +21,40 @@ from collections import OrderedDict
 import random
 
 
-def _test_stack(test_case, device, shapes):
-    for s in shapes:
-        x = np.random.rand(s)
-        y = np.random.rand(s)
-        x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
-        y_tensor = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
-        out_np = np.stack([x, y], axis=1)
-        out_of = flow.experimental.stack([x_tensor, y_tensor], dim=1).numpy()
-        test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
+def _test_stack(test_case, device, shape):
+    x = np.random.rand(*shape)
+    y = np.random.rand(*shape)
+    x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    y_tensor = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    out_np = np.stack([x, y], axis=1)
+    out_of = flow.experimental.stack([x_tensor, y_tensor], dim=1).numpy()
+    test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
 
-def _test_stack_backward(test_case, device, shapes):
-    for s in shapes:
-        x = np.random.rand(s)
-        y = np.random.rand(s)
-        x_tensor = flow.Tensor(x, device=flow.device(device), requires_grad=True)
-        y_tensor = flow.Tensor(y, device=flow.device(device), requires_grad=True)
-        out_of = flow.experimental.stack([x_tensor, y_tensor]).sum()
-        out_of.backward()
-        test_case.assertTrue(
-            np.allclose(x_tensor.grad.numpy(), np.ones(x_tensor.shape), 1e-5, 1e-5)
-        )
-        test_case.assertTrue(
-            np.allclose(y_tensor.grad.numpy(), np.ones(y_tensor.shape), 1e-5, 1e-5)
-        )
+def _test_stack_backward(test_case, device, shape):
+    x = np.random.rand(*shape)
+    y = np.random.rand(*shape)
+    x_tensor = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    y_tensor = flow.Tensor(y, device=flow.device(device), requires_grad=True)
+    out_of = flow.experimental.stack([x_tensor, y_tensor]).sum()
+    out_of.backward()
+    test_case.assertTrue(
+        np.allclose(x_tensor.grad.numpy(), np.ones(x_tensor.shape), 1e-5, 1e-5)
+    )
+    test_case.assertTrue(
+        np.allclose(y_tensor.grad.numpy(), np.ones(y_tensor.shape), 1e-5, 1e-5)
+    )
 
 
-def _test_stack_different_dim(test_case, device, shapes):
-    for s in shapes:
-        x = np.random.rand(s)
-        y = np.random.rand(s)
-        x_tensor = flow.Tensor(x, device=flow.device(device))
-        y_tensor = flow.Tensor(y, device=flow.device(device))
-        for axis in range(-len(x.shape) - 1, len(x.shape) + 1):
-            out_of = flow.experimental.stack([x_tensor, y_tensor], dim=axis)
-            out_np = np.stack([x, y], axis=axis)
-            test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
+def _test_stack_different_dim(test_case, device, shape):
+    x = np.random.rand(*shape)
+    y = np.random.rand(*shape)
+    x_tensor = flow.Tensor(x, device=flow.device(device))
+    y_tensor = flow.Tensor(y, device=flow.device(device))
+    for axis in range(-len(x.shape) - 1, len(x.shape) + 1):
+        out_of = flow.experimental.stack([x_tensor, y_tensor], dim=axis)
+        out_np = np.stack([x, y], axis=axis)
+        test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 
 
 @unittest.skipIf(
@@ -73,9 +70,9 @@ class TestStack(flow.unittest.TestCase):
             _test_stack_different_dim,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        # Generate random tuple from 3D to 10D with values ranging from 1 to 10
+        # Generate random tuple from 3D to 5D with values ranging from 1 to 9
         arg_dict["shape"] = [
-            tuple(random.randrange(1, 10) for _ in range(i)) for i in range(3, 10)
+            tuple(random.randrange(1, 10) for _ in range(i)) for i in range(3, 6)
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

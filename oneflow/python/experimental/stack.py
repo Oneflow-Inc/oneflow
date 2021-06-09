@@ -1,9 +1,25 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 import oneflow as flow
 from typing import List, Tuple
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
+
 
 class Stack(Module):
     def __init__(self, dim: int = 0) -> None:
@@ -23,12 +39,13 @@ class Stack(Module):
         for i in range(input_list_length):
             current_shape = inputs[i].shape
             assert (
-                    input_shape == current_shape
+                input_shape == current_shape
             ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
                 current_shape
             )
             inputs[i] = flow.experimental.unsqueeze(inputs[i], dim=self.dim)
         return flow.experimental.cat(inputs, dim=self.dim)
+
 
 @oneflow_export("stack")
 @register_tensor_op("stack")
@@ -41,16 +58,16 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
     applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
     Args:
         inputs (List[Tensor]): the list of input tensors. Each tensor should have the same shape.
-        dim (int): the index at which to insert the singleton dimension
+        dim (int): the index at which to insert the singleton dimension.
     For example:
     .. code-block:: python
-        >>> import numpy as np
         >>> import oneflow.experimental as flow
+        >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> x = flow.Tensor(np.random.rand(2, 4, 6))
-        >>> y = flow.Tensor(np.random.rand(2, 4, 6))
-        >>> out = flow.experimental.stack([x, y])
-        >>> out.shape
-        flow.Size([4, 4, 6])
+        >>> x = flow.Tensor(np.random.rand(1, 3, 5))
+        >>> y = flow.Tensor(np.random.rand(1, 3, 5))
+        >>> out = flow.stack([x, y], dim = -1)
+        >>> print(out.shape)
+        flow.Size([1, 3, 5, 2])
     """
     return Stack(dim)(inputs)
