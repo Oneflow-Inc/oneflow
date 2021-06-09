@@ -101,7 +101,7 @@ REGISTER_USER_OP("empty")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const DataType dtype = ctx->Attr<DataType>("dtype");
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
+      *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     });
 
