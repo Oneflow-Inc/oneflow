@@ -15,10 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-<<<<<<< HEAD
-=======
 #include <pybind11/functional.h>
->>>>>>> 267027154b858d42fab1beffb5e187abbed0b8fd
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
