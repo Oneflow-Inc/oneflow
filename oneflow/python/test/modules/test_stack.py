@@ -57,6 +57,21 @@ def _test_stack_different_dim(test_case, device, shape):
         test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
 
 
+def _test_stack_multi_input(test_case, device, shape):
+    # Test 2 to 9 inputs
+    max_input_num = 10
+    for i in range(2, max_input_num):
+        x = []
+        x_tensor = []
+        for _ in range(0, i):
+            tmp = np.random.rand(*shape)
+            x.append(tmp)
+            x_tensor.append(flow.Tensor(tmp, device=flow.device(device)))
+        out_of = flow.experimental.stack(x_tensor, dim=-1)
+        out_np = np.stack(x, axis=-1)
+        test_case.assertTrue(np.allclose(out_np, out_of.numpy(), 1e-05, 1e-05))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -68,6 +83,7 @@ class TestStack(flow.unittest.TestCase):
             _test_stack,
             _test_stack_backward,
             _test_stack_different_dim,
+            _test_stack_multi_input,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         # Generate random tuple from 3D to 5D with values ranging from 1 to 9

@@ -81,7 +81,6 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
         >>> out = flow.stack([x, y], dim = -1)
-        >>> print(out.shape)
         flow.Size([1, 3, 5, 2])
     """
     return Stack(dim)(inputs)
