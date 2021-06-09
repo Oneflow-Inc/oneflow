@@ -16,8 +16,10 @@ limitations under the License.
 from typing import Optional
 
 import oneflow as flow
+from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
+from oneflow.python.nn.modules.math_ops import Subtract, Square, Sum, Mean
 
 
 @oneflow_export("nn.CrossEntropyLoss")
@@ -294,6 +296,123 @@ class NLLLoss(Module):
             return res.sum()
         else:
             return res.mean()
+
+
+@oneflow_export("nn.MSELoss")
+@experimental_api
+class MSELoss(Module):
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.MSELoss.html?highlight=mseloss#torch.nn.MSELoss
+
+    Creates a criterion that measures the mean squared error (squared L2 norm) between
+    each element in the input :math:`x` and target :math:`y`.
+
+    The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
+
+    .. math::
+        \ell(x, y) = L = \{l_1,\dots,l_N\}^\top, \quad
+        l_n = \left( x_n - y_n \right)^2,
+
+    where :math:`N` is the batch size. If :attr:`reduction` is not ``'none'``
+    (default ``'mean'``), then:
+
+    .. math::
+        \ell(x, y) =
+        \begin{cases}
+            \operatorname{mean}(L), &  \text{if reduction} = \text{`mean';}\\
+            \operatorname{sum}(L),  &  \text{if reduction} = \text{`sum'.}
+        \end{cases}
+
+    :math:`x` and :math:`y` are tensors of arbitrary shapes with a total
+    of :math:`n` elements each.
+
+    The mean operation still operates over all the elements, and divides by :math:`n`.
+
+    The division by :math:`n` can be avoided if one sets ``reduction = 'sum'``.
+
+    Args:
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). By default,
+            the losses are averaged over each loss element in the batch. Note that for
+            some losses, there are multiple elements per sample. If the field :attr:`size_average`
+            is set to ``False``, the losses are instead summed for each minibatch. Ignored
+            when :attr:`reduce` is ``False``. Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). By default, the
+            losses are averaged or summed over observations for each minibatch depending
+            on :attr:`size_average`. When :attr:`reduce` is ``False``, returns a loss per
+            batch element instead and ignores :attr:`size_average`. Default: ``True``
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the sum of the output will be divided by the number of
+            elements in the output, ``'sum'``: the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`. Default: ``'mean'``
+
+    Shape:
+        - Input: :math:`(N, *)` where :math:`*` means, any number of additional
+          dimensions
+        - Target: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(
+        ... [[-0.02557137, 0.03101675, 1.37493674],
+        ... [0.25599439, -1.08372561, -0.21006816]], dtype=flow.float32)
+        >>> target = flow.Tensor(
+        ... [[-1.53105064, -0.68137555, 0.5931354],
+        ... [-0.49158347, 0.93673637, 0.1324141]], dtype=flow.float32)
+        >>> m = flow.nn.MSELoss(reduction="none")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [[2.266468   0.50750285 0.61121327]
+         [0.55887264 4.082267   0.1172941 ]]
+        >>> m = flow.nn.MSELoss(reduction="mean")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [1.3572696]
+        >>> m = flow.nn.MSELoss(reduction="sum")
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [8.143618]
+
+    """
+
+    def __init__(
+        self, reduction: str = "mean", size_average: bool = True, reduce: bool = True
+    ) -> None:
+        super().__init__()
+        if size_average is False:
+            raise ValueError("Argument size_average is not supported yet")
+        if reduce is False:
+            raise ValueError("Argument reduce is not supported yet")
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
+
+        self.reduction = reduction
+        self.square_op = Square()
+        self.subtract_op = Subtract()
+        self.sum_op = Sum()
+        self.mean_op = Mean()
+
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        mean_squared_difference = self.square_op(self.subtract_op(input, target))
+        if self.reduction == "mean":
+            return self.mean_op(mean_squared_difference)
+        elif self.reduction == "sum":
+            return self.sum_op(mean_squared_difference)
+        else:
+            # Do no reduction
+            return mean_squared_difference
 
 
 @oneflow_export("nn.MarginRankingLoss")

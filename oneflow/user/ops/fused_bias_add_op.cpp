@@ -36,7 +36,7 @@ REGISTER_USER_OP("fused_bias_add_gelu")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = a_tensor_desc->data_type();
+      *ctx->OutputDType("out", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -78,7 +78,7 @@ REGISTER_USER_OP("fused_bias_add_gelu_grad")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = a_tensor_desc->data_type();
+      *ctx->OutputDType("dx", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -163,7 +163,7 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto* a_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("a", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = a_tensor_desc->data_type();
+      *ctx->OutputDType("out", 0) = a_tensor_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
