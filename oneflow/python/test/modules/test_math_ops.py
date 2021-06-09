@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
-from test_util import GenArgList
+from test_util import GenArgList, type_name_to_flow_type
 
 
 def _test_variance_keepdim(test_case, shape, device):
@@ -499,20 +499,23 @@ class TestAsinh(flow.unittest.TestCase):
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
     in_dims = input.shape
     out_dims = list(in_dims)
+    num_axes = len(input.shape)
+    if dim < 0:
+        dim = dim + num_axes
+    n = in_dims[dim]
+    if k > n:
+        k = n
     out_dims[dim] = k
     out_dims = tuple(out_dims)
-    if dim == -1:
-        dim = len(in_dims) - 1
     prev_dims = 1
     next_dims = 1
     for i in range(dim):
         prev_dims *= in_dims[i]
     for i in range(dim + 1, len(in_dims)):
         next_dims *= in_dims[i]
-    n = in_dims[dim]
     input_flat = input.reshape((prev_dims, n, next_dims))
 
-    values_ref = np.ndarray(shape=(prev_dims, k, next_dims), dtype=np.float32)
+    values_ref = np.ndarray(shape=(prev_dims, k, next_dims), dtype=input.dtype)
     values_ref.fill(0)
     indices_ref = np.ndarray(shape=(prev_dims, k, next_dims), dtype=np.int64)
     indices_ref.fill(-1)
@@ -602,6 +605,31 @@ def _test_topk_largest(test_case, device):
     )
 
 
+def _test_topk_original(test_case, device):
+    arg_dict = OrderedDict()
+    arg_dict["shape"] = [(10, 10, 500)]
+    arg_dict["axis"] = [-2, 0, 2]
+    arg_dict["k"] = [1, 50, 200]
+    arg_dict["largest"] = [True, False]
+    arg_dict["data_type"] = ["float32", "double"]
+    for (shape, axis, k, largest, data_type) in GenArgList(arg_dict):
+        input = flow.Tensor(
+            np.random.randn(*shape),
+            dtype=type_name_to_flow_type[data_type],
+            device=flow.device(device),
+        )
+        (of_values, of_indices) = flow.topk(input, k=k, dim=axis, largest=largest)
+        (np_values, np_indices) = _topk_np(
+            input.numpy(), k=k, dim=axis, largest=largest
+        )
+        test_case.assertTrue(
+            np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+        )
+        test_case.assertTrue(
+            np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
+        )
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -614,6 +642,7 @@ class TestTopk(flow.unittest.TestCase):
             _test_tensor_topk,
             _test_topk_dim_positive,
             _test_topk_largest,
+            _test_topk_original,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
