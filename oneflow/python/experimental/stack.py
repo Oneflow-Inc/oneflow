@@ -53,14 +53,28 @@ class Stack(Module):
 def stack(inputs: Tensor, dim: int = 0) -> None:
     r"""Concatenates a sequence of tensors along a new dimension.
     The returned tensor shares the same underlying data with input tensors.
-    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1)`
+
+
+    A :attr:`dim` value within the range `[-input.ndimension() - 1, input.ndimension() + 1]`
     can be used. Negative :attr:`dim` will correspond to :meth:`stack`
     applied at :attr:`dim` = ``dim + input.ndimension() + 1``.
+
+
     Args:
-        inputs (List[Tensor]): the list of input tensors. Each tensor should have the same shape.
-        dim (int): the index at which to insert the singleton dimension.
+        inputs (List[oneflow.Tensor]): the list of input tensors. Each tensor should have the same shape.
+        dim (int): the index at which to insert the concatenated dimension.
+
+
+    Returns:
+        A `Tensor`
+
+
     For example:
+
+
     .. code-block:: python
+
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
