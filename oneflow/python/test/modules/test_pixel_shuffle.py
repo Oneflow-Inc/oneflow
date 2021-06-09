@@ -23,32 +23,24 @@ from test_util import GenArgList
 
 
 def _np_pixel_shuffle(input, factor):
-    return _np_pixel_shuffle_v2(input, factor, factor)
-
-
-def _np_pixel_shuffle_v2(input, h_factor, w_factor):
     _batch, _channel, _height, _width = input.shape
     assert (
-        _channel % (h_factor * w_factor) == 0
-    ), "The channels of input tensor must be divisible by (h_upscale_factor * w_upscale_factor)"
-    _new_c = int(_channel / (h_factor * w_factor))
+        _channel % (factor ** 2) == 0
+    ), "The channels of input tensor must be divisible by (upscale_factor * upscale_factor)"
+    _new_c = int(_channel / (factor ** 2))
 
-    out = np.reshape(input, [_batch, _new_c, h_factor * w_factor, _height, _width])
-    out = np.reshape(out, [_batch, _new_c, h_factor, w_factor, _height, _width])
+    out = np.reshape(input, [_batch, _new_c, factor ** 2, _height, _width])
+    out = np.reshape(out, [_batch, _new_c, factor, factor, _height, _width])
     out = np.transpose(out, [0, 1, 4, 2, 5, 3])
-    out = np.reshape(out, [_batch, _new_c, _height * h_factor, _width * w_factor])
+    out = np.reshape(out, [_batch, _new_c, _height * factor, _width * factor])
     return out
 
 
 def _np_pixel_shuffle_grad(input, factor):
-    return _np_pixel_shuffle_v2_grad(input, factor, factor)
-
-
-def _np_pixel_shuffle_v2_grad(input, h_factor, w_factor):
     _batch, _new_channel, _height_mul_factor, _width_mul_factor = input.shape
-    _channel = _new_channel * (h_factor * w_factor)
-    _height = _height_mul_factor // h_factor
-    _width = _width_mul_factor // w_factor
+    _channel = _new_channel * (factor ** 2)
+    _height = _height_mul_factor // factor
+    _width = _width_mul_factor // factor
 
     out = np.ones(shape=(_batch, _channel, _height, _width))
     return out
