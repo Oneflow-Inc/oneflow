@@ -278,7 +278,7 @@ class Conv2d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    self._cpu_op(in_split_list[i], self.weight[i : i + 1])[0]
+                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
                 )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
