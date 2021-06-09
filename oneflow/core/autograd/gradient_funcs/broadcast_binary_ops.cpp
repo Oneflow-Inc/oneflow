@@ -213,7 +213,7 @@ class BroadcastDiv : public BroadcastBinaryGrad {
     }
     if (y->requires_grad()) {
       in_grads->at(1) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), z, y}, /*attrs=*/{}));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*y_grad_op_, {out_grads.at(0), y, z}, /*attrs=*/{}));
     }
     return Maybe<void>::Ok();
   }
