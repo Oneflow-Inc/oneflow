@@ -66,11 +66,11 @@ if(CUDNN_FOUND)
       find_library(CUDNN_DYNAMIC_LIBRARY NAMES ${CUDNN_DYNAMIC_NAME}
         HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
         PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
-      list(APPEND CUDNN_LIBRARY ${CUDNN_DYNAMIC_LIBRARY})
+      list(APPEND CUDNN_LIBRARIES ${CUDNN_DYNAMIC_LIBRARY})
     endforeach()
   else()
     set(CUDNN_LIBRARIES ${CUDNN_LIBRARY})
   endif()
-  message(STATUS "Found cuDNN: v${CUDNN_VERSION}  (include: ${CUDNN_INCLUDE_DIR}, library: ${CUDNN_LIBRARY})")
+  message(STATUS "Found cuDNN: v${CUDNN_LIBRARIES}  (include: ${CUDNN_INCLUDE_DIR}, library: ${CUDNN_LIBRARIES})")
   mark_as_advanced(CUDNN_ROOT_DIR CUDNN_LIBRARY CUDNN_INCLUDE_DIR)
 endif()
