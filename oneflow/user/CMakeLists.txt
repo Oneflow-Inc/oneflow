@@ -28,10 +28,12 @@ foreach(lib IN
     ITEMS
     oneflow_user_kernel_util
     stateful_local_opkernel
+    oneflow_user_data
     oneflow_user_summary
     oneflow_user_image
     oneflow_user_kernels
     oneflow_user_ops
+    oneflow_user_utils
     # fixme: add cuda optionally
     oneflow_user_cuda_kernels
     oneflow_softmax_cuda_kernel
