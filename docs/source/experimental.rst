@@ -176,3 +176,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.tan
 .. autofunction:: oneflow.experimental.log1p
 .. autofunction:: oneflow.experimental.Tensor.log1p
+.. autofunction:: oneflow.experimental.topk
+.. autofunction:: oneflow.experimental.Tensor.topk

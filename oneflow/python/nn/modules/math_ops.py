@@ -727,7 +727,7 @@ def asinh_op(input):
         >>> print(output.shape)
         flow.Size([3])
         >>> print(output.numpy())
-        [1.4436355 1.8184465 2.0947125]
+        [1.4436355 1.8184464 2.0947125]
 
         >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
@@ -1484,7 +1484,7 @@ def erf_op(input):
 
     Returns:
         oneflow.Tensor: The result Tensor   
-
+               
     For example:
 
     .. code-block:: python
@@ -1516,7 +1516,7 @@ def erf_op(input):
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095],
                [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
-               
+
     """
     return Erf()(input)
 

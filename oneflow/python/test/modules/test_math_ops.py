@@ -496,5 +496,129 @@ class TestAsinh(flow.unittest.TestCase):
             _test_arcsinh(test_case, *arg)
 
 
+def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
+    in_dims = input.shape
+    out_dims = list(in_dims)
+    out_dims[dim] = k
+    out_dims = tuple(out_dims)
+    if dim == -1:
+        dim = len(in_dims) - 1
+    prev_dims = 1
+    next_dims = 1
+    for i in range(dim):
+        prev_dims *= in_dims[i]
+    for i in range(dim + 1, len(in_dims)):
+        next_dims *= in_dims[i]
+    n = in_dims[dim]
+    input_flat = input.reshape((prev_dims, n, next_dims))
+
+    values_ref = np.ndarray(shape=(prev_dims, k, next_dims), dtype=np.float32)
+    values_ref.fill(0)
+    indices_ref = np.ndarray(shape=(prev_dims, k, next_dims), dtype=np.int64)
+    indices_ref.fill(-1)
+    for i in range(prev_dims):
+        for j in range(next_dims):
+            kv = []
+            for x in range(n):
+                val = input_flat[i, x, j]
+                y = x * next_dims + i * in_dims[dim] * next_dims + j
+                kv.append((val, x, y))
+            cnt = 0
+            for val, x, y in sorted(kv, key=lambda x: (x[0], -x[1]), reverse=largest):
+                values_ref[i, cnt, j] = val
+                indices_ref[i, cnt, j] = x
+                cnt += 1
+                if cnt >= k or cnt >= n:
+                    break
+
+    values_ref = values_ref.reshape(out_dims)
+    indices_ref = indices_ref.reshape(out_dims)
+
+    return (values_ref, indices_ref)
+
+
+def _test_topk_dim_negative(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 7), dtype=flow.float32, device=flow.device(device),
+    )
+    dim = -1
+    k = 4
+    (of_values, of_indices) = flow.topk(input, k=k, dim=dim)
+    (np_values, np_indices) = _topk_np(input.numpy(), k=k, dim=dim)
+    test_case.assertTrue(
+        np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
+    )
+
+
+def _test_tensor_topk(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 7), dtype=flow.float32, device=flow.device(device),
+    )
+    dim = 1
+    k = 4
+    (of_values, of_indices) = input.topk(k=k, dim=dim)
+    (np_values, np_indices) = _topk_np(input.numpy(), k=k, dim=dim)
+    test_case.assertTrue(
+        np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
+    )
+
+
+def _test_topk_dim_positive(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 7), dtype=flow.float32, device=flow.device(device),
+    )
+    dim = 2
+    k = 4
+    (of_values, of_indices) = flow.topk(input, k=k, dim=dim)
+    (np_values, np_indices) = _topk_np(input.numpy(), k=k, dim=dim)
+    test_case.assertTrue(
+        np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
+    )
+
+
+def _test_topk_largest(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(2, 6, 5, 7), dtype=flow.float32, device=flow.device(device),
+    )
+    dim = 1
+    k = 4
+    largest = False
+    (of_values, of_indices) = flow.topk(input, k=k, dim=dim, largest=False)
+    (np_values, np_indices) = _topk_np(input.numpy(), k=k, dim=dim, largest=False)
+    test_case.assertTrue(
+        np.array_equal(of_values.numpy().flatten(), np_values.flatten())
+    )
+    test_case.assertTrue(
+        np.array_equal(of_indices.numpy().flatten(), np_indices.flatten())
+    )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
+class TestTopk(flow.unittest.TestCase):
+    def test_topk(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_topk_dim_negative,
+            _test_tensor_topk,
+            _test_topk_dim_positive,
+            _test_topk_largest
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
 if __name__ == "__main__":
     unittest.main()
