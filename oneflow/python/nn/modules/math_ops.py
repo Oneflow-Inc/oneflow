@@ -1761,5 +1761,5 @@ def expm1_op_tensor(x):
 
 if __name__ == "__main__":
     import doctest
-
-    doctest.testmod(name="expm1_op")
+    
+    doctest.testmod(raise_on_error=True)
