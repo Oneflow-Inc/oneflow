@@ -38,8 +38,8 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = x_desc->data_type();
-      *ctx->Dtype4ArgNameAndIndex("softmax_y", 0) = x_desc->data_type();
+      *ctx->OutputDType("y", 0) = x_desc->data_type();
+      *ctx->OutputDType("softmax_y", 0) = x_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

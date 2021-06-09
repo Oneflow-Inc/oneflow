@@ -63,7 +63,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
-      *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->OutputDType("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       *out_desc->mut_data_type() = prediction_desc->data_type();
       return Maybe<void>::Ok();
@@ -109,7 +109,7 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       CHECK_EQ_OR_RETURN(label_desc->data_type(), prob_desc->data_type());
       CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
-      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
+      *ctx->OutputDType("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prob", 0);
       return Maybe<void>::Ok();
     });
 
