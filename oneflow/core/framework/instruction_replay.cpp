@@ -23,7 +23,7 @@ namespace oneflow {
 
 namespace {
 
-bool* RecordingInstructionFlag() {
+bool* RecordingInstructionsFlag() {
   static thread_local bool recording_instruction = false;
   return &recording_instruction;
 }
@@ -37,19 +37,19 @@ std::list<ObjectMsgPtr<vm::InstructionMsg>>* RecordedInstructionList() {
 
 namespace debug {
 
-bool RecordingInstruction() { return *RecordingInstructionFlag(); }
+bool RecordingInstructions() { return *RecordingInstructionsFlag(); }
 
-void StartRecordingInstruction() { *RecordingInstructionFlag() = true; }
+void StartRecordingInstructions() { *RecordingInstructionsFlag() = true; }
 
-void EndRecordingInstruction() { *RecordingInstructionFlag() = false; }
+void EndRecordingInstructions() { *RecordingInstructionsFlag() = false; }
 
-void ClearRecordingInstruction() { RecordedInstructionList()->clear(); }
+void ClearRecordedInstructions() { RecordedInstructionList()->clear(); }
 
 void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction) {
   RecordedInstructionList()->push_back(instruction);
 }
 
-void ReplayInstruction() {
+void ReplayInstructions() {
   vm::InstructionMsgList instr_msg_list;
   for (const auto& instr_msg : *RecordedInstructionList()) {
     instr_msg_list.EmplaceBack(instr_msg->Clone());

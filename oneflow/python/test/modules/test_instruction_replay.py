@@ -31,16 +31,17 @@ def _test_instruction_replay_impl(test_case, device, shape):
     x.determine()
     y.determine()
 
-    oneflow._oneflow_internal.start_recording_instruction()
+    oneflow._oneflow_internal.debug.start_recording_instructions()
     z = x + y
-    oneflow._oneflow_internal.end_recording_instruction()
+    oneflow._oneflow_internal.debug.end_recording_instructions()
 
     test_case.assertTrue(np.allclose(z.numpy(), x.numpy() + y.numpy(), 1e-4, 1e-4))
 
     # init tensor_z and replay
     z.zeros_()
-    oneflow._oneflow_internal.replay_instruction()
+    oneflow._oneflow_internal.debug.replay_instructions()
     test_case.assertTrue(np.allclose(z.numpy(), x.numpy() + y.numpy(), 1e-4, 1e-4))
+    oneflow._oneflow_internal.debug.clear_recorded_instructions()
 
 
 @unittest.skipIf(

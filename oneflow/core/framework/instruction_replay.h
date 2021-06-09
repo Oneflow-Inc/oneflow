@@ -23,17 +23,17 @@ namespace oneflow {
 
 namespace debug {
 
-bool RecordingInstruction();
+bool RecordingInstructions();
 
-void StartRecordingInstruction();
+void StartRecordingInstructions();
 
-void EndRecordingInstruction();
+void EndRecordingInstructions();
 
-void ClearRecordingInstruction();
+void ClearRecordedInstructions();
 
 void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction);
 
-void ReplayInstruction();
+void ReplayInstructions();
 
 }  // namespace debug
 
