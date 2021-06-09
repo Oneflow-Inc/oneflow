@@ -62,6 +62,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ModuleList
 .. autofunction:: oneflow.experimental.nn.ModuleDict
 .. autofunction:: oneflow.experimental.nn.Conv2d
+.. autofunction:: oneflow.experimental.nn.ConvTranspose2d
 .. autofunction:: oneflow.experimental.nn.Dropout
 .. autofunction:: oneflow.experimental.eq
 .. autofunction:: oneflow.experimental.to
@@ -88,6 +89,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
+.. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
