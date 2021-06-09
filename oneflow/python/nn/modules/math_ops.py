@@ -578,6 +578,7 @@ def _add(x, y):
 
     .. math::
         out = x + y
+
     For example:
 
     .. code-block:: python
@@ -635,8 +636,10 @@ def asin_op(input):
 
     .. math::
         \text{out}_{i} = \sin^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
@@ -708,8 +711,10 @@ def asinh_op(input):
 
     .. math::
         \text{out}_{i} = \sinh^{-1}(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
@@ -776,27 +781,50 @@ class Sin(Module):
 
 
 @oneflow_export("sin")
-@register_tensor_op("sin")
 @experimental_api
 def sin_op(tensor):
     r"""
     Returns a new tensor with the sine of the elements of :attr:`input`.
 
     .. math::
+
         \text{out}_{i} = \sin(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
-        arr = np.array([-0.5461,  0.1347, -2.7266, -0.2746])
-        input = flow.Tensor(arr, dtype=flow.float32)
-        output = flow.sin(input)
-        # [-0.51935846  0.13429303 -0.40318328 -0.27116194]
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
+        >>> out1 = flow.sin(x1)
+        >>> out1.numpy() #doctest: +ELLIPSIS
+        array([-0.5193...,  0.1342..., -0.4031..., -0.2711...], dtype=float32)
+        >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
+        >>> out2 = flow.sin(x2)
+        >>> out2.numpy() #doctest: +ELLIPSIS
+        array([-0.9854...,  0.5155..., -0.5298...], dtype=float32)
+
     """
+
+    return Sin()(tensor)
+
+
+@register_tensor_op("sin")
+@experimental_api
+def sin_op_tensor(tensor):
+    r"""
+
+    sin() -> Tensor
+
+    See :func:`oneflow.experimental.sin`
+    
+    """
+
     return Sin()(tensor)
 
 
@@ -818,6 +846,7 @@ def cos_op(tensor):
     
     .. math::
         \text{out}_{i} = \cos(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -834,6 +863,77 @@ def cos_op(tensor):
         
     """
     return Cos()(tensor)
+
+
+class Atan(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._op = flow.builtin_op("atan").Input("x").Output("y").Build()
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("atan")
+@experimental_api
+def atan_op(tensor):
+    r"""
+    Returns a new tensor with the arctangent of the elements of :attr:`input`.
+
+    .. math::
+        \text{out}_{i} = \tan^{-1}(\text{input}_{i})
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input = flow.Tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
+        >>> output = flow.atan(input)
+        >>> print(output.shape)
+        flow.Size([3])
+        >>> print(output.numpy())
+        [0.4636476  0.5404195  0.61072594]
+        
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("atan")
+@experimental_api
+def atan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@oneflow_export("arctan")
+@experimental_api
+def arctan_op(tensor):
+    r"""
+    Alias for :func:`oneflow.experimental.atan`
+    
+    """
+    return Atan()(tensor)
+
+
+@register_tensor_op("arctan")
+@experimental_api
+def arctan_op_tensor(tensor):
+    r"""
+
+    See :func:`oneflow.experimental.arctan`
+    
+    """
+    return Atan()(tensor)
 
 
 class Log(Module):
@@ -854,6 +954,7 @@ def log_op(tensor):
     
     .. math::
         y_{i} = \log_{e} (x_{i})
+
     Args:
         input (Tensor): the input tensor.
     
@@ -1108,6 +1209,221 @@ def pow_op(tensor, exponent):
     return Pow()(tensor, exponent)
 
 
+class Addmm(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self._matmul_op = (
+            flow.builtin_op("matmul")
+            .Input("a")
+            .Input("b")
+            .Output("out")
+            .Attr("transpose_a", False)
+            .Attr("transpose_b", False)
+            .Attr("alpha", 1.0)
+            .Build()
+        )
+
+    def forward(self, x, mat1, mat2, alpha=1, beta=1):
+        if len(x.shape) > 2 or len(mat1.shape) > 2 or len(mat2.shape) > 2:
+            raise ValueError("input matrixes shape can not be greater than 2")
+        else:
+            return _mul(x, beta) + _mul(self._matmul_op(mat1, mat2)[0], alpha)
+
+
+@oneflow_export("addmm")
+@experimental_api
+def addmm_op(input, mat1, mat2, alpha=1, beta=1):
+    r"""addmm(beta=1, input, alpha=1, mat1, mat2, out=None) -> Tensor
+
+    Performs a matrix multiplication of the matrices :attr:`mat1` and :attr:`mat2`.
+    The matrix :attr:`input` is added to the final result.
+
+    If :attr:`mat1` is a :math:`(n \times m)` tensor, :attr:`mat2` is a
+    :math:`(m \times p)` tensor, then :attr:`input` must be
+    broadcastable with a :math:`(n \times p)` tensor
+    and :attr:`out` will be a :math:`(n \times p)` tensor.
+
+    :attr:`alpha` and :attr:`beta` are scaling factors on matrix-vector product between
+    :attr:`mat1` and :attr:`mat2` and the added matrix :attr:`input` respectively.
+
+    .. math::
+        \text{out} = \beta\ \text{input} + \alpha\ (\text{mat1}_i \mathbin{@} \text{mat2}_i)
+
+    For inputs of type `FloatTensor` or `DoubleTensor`, arguments :attr:`beta` and
+    :attr:`alpha` must be real numbers, otherwise they should be integers.
+
+    Args:
+        beta (Number, optional): multiplier for :attr:`input` (:math:`\beta`)
+        input (Tensor): matrix to be added
+        alpha (Number, optional): multiplier for :math:`mat1 @ mat2` (:math:`\alpha`)
+        mat1 (Tensor): the first matrix to be multiplied
+        mat2 (Tensor): the second matrix to be multiplied
+        out (Tensor, optional): the output tensor.
+
+    Example::
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> input = flow.tensor(np.array([[1,2,4],[5,11,9.1]]))
+        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
+        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
+        >>> output = flow.addmm(input, mat1, mat2)
+        >>> output
+        tensor([[100.68,  33.83, 126.87],
+                [110.01,  43.48, 133.61]], dtype=oneflow.float64)
+        >>> output.shape
+        flow.Size([2, 3])
+
+        >>> input2 = flow.tensor(np.array([1.7]))
+        >>> mat1 = flow.tensor(np.array([[1,2],[5,9.1],[7.7,1.4]]))
+        >>> mat2 = flow.tensor(np.array([[1,2,3.7],[5,9.1,6.8]]))
+        >>> output2 = flow.addmm(input2, mat1, mat2, alpha=1, beta=2)
+        >>> output2
+        tensor([[14.4 , 23.6 , 20.7 ],
+                [53.9 , 96.21, 83.78],
+                [18.1 , 31.54, 41.41]], dtype=oneflow.float64)
+        >>> output2.shape
+        flow.Size([3, 3])
+    """
+    return Addmm()(input, mat1, mat2, alpha, beta)
+
+
+@register_tensor_op("addmm")
+@experimental_api
+def addmm_op_tensor(input, mat1, mat2, alpha=1, beta=1):
+    r"""
+    See :func:`oneflow.experimental.addmm`
+    """
+    return Addmm()(input, mat1, mat2, alpha, beta)
+
+
+class Clamp(Module):
+    def __init__(self, min_value=None, max_value=None) -> None:
+        super().__init__()
+        if min_value is not None:
+            floating_min_value = float(min_value)
+            integral_min_value = int(min_value)
+        if max_value is not None:
+            floating_max_value = float(max_value)
+            integral_max_value = int(max_value)
+
+        if min_value is not None and max_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
+        elif min_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar_min")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_min", floating_min_value)
+                .Attr("integral_min", integral_min_value)
+                .Build()
+            )
+        elif max_value is not None:
+            self._op = (
+                flow.builtin_op("clip_by_scalar_max")
+                .Input("x")
+                .Output("y")
+                .Attr("floating_max", floating_max_value)
+                .Attr("integral_max", integral_max_value)
+                .Build()
+            )
+        else:
+            raise ValueError("min_value and max_value cannot be None at the same time")
+
+    def forward(self, x):
+        return self._op(x)[0]
+
+
+@oneflow_export("clamp")
+@experimental_api
+def clamp_op(tensor, min=None, max=None):
+    r"""
+    Clamp all elements in :attr:`input` into the range `[` :attr:`min`, :attr:`max` `]` and return
+    a resulting tensor:
+
+    .. math::
+        y_i = \begin{cases}
+            \text{min} & \text{if } x_i < \text{min} \\
+            x_i & \text{if } \text{min} \leq x_i \leq \text{max} \\
+            \text{max} & \text{if } x_i > \text{max}
+        \end{cases}
+
+    If :attr:`input` is of type `FloatTensor` or `DoubleTensor`, args :attr:`min`
+    and :attr:`max` must be real numbers, otherwise they should be integers.
+
+    Args:
+        input (Tensor): the input tensor.
+        min (Number): lower-bound of the range to be clamped to. Defaults to None.
+        max (Number): upper-bound of the range to be clamped to. Defaults to None.
+        out (Tensor, optional): the output tensor.
+
+    For example:
+
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=0.5).numpy()
+        >>> output
+        array([ 0.2,  0.5, -0.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=None, max=0.5).numpy()
+        >>> output
+        array([ 0.2,  0.5, -1.5, -0.3], dtype=float32)
+
+        >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
+        >>> input = flow.Tensor(arr)
+        >>> output = flow.clamp(input, min=-0.5, max=None).numpy()
+        >>> output
+        array([ 0.2,  0.6, -0.5, -0.3], dtype=float32)
+
+    """
+    return Clamp(min, max)(tensor)
+
+
+@register_tensor_op("clamp")
+@experimental_api
+def clamp_op_tensor(tensor, min=None, max=None):
+    r"""
+    See :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
+@oneflow_export("clip")
+@experimental_api
+def clip_op(tensor, min=None, max=None):
+    r"""
+    Alias for :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
+@register_tensor_op("clip")
+@experimental_api
+def clip_op_tensor(tensor, min=None, max=None):
+    r"""
+    See :func:`oneflow.experimental.clamp`
+    """
+    return Clamp(min, max)(tensor)
+
+
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
@@ -1126,6 +1442,7 @@ def cosh_op(tensor):
 
     .. math::
         \text{out}_{i} = \cosh(\text{input}_{i})
+
     Args:
         input (Tensor): the input tensor.
 
@@ -1144,7 +1461,146 @@ def cosh_op(tensor):
     return Cosh()(tensor)
 
 
+class Erf(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erf_op(input)[0]
+
+
+@oneflow_export("erf")
+@register_tensor_op("erf")
+@experimental_api
+def erf_op(input):
+    r"""Computes the error function of each element. The error function is defined as follows:
+
+    .. math::
+            \operatorname{erf}(x)=\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor   
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> out.shape
+        flow.Size([3])
+        >>> out.numpy()
+        array([ 0.       , -0.8427008,  1.       ], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erf(x)
+        >>> out.shape
+        flow.Size([2, 3])
+        >>> out.numpy()
+        array([[ 0.        , -0.8427008 ,  1.        ],
+               [ 1.        ,  1.        ,  0.74210095]], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erf()
+        >>> out.shape
+        flow.Size([3, 3])
+        >>> out.numpy()
+        array([[ 0.        , -0.8427008 ,  1.        ],
+               [ 1.        ,  1.        ,  0.74210095],
+               [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
+               
+    """
+    return Erf()(input)
+
+
+@register_tensor_op("erf")
+@experimental_api
+def erf_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erf`
+    """
+    return Erf()(input)
+
+
+class Erfc(Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.erfc_op = flow.builtin_op("erfc").Input("x").Output("y").Build()
+
+    def forward(self, input):
+        return self.erfc_op(input)[0]
+
+
+@oneflow_export("erfc")
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op(input):
+    r"""Computes the complementary error function of each element of input. The complementary error 
+    function is defined as follows:
+
+    .. math::
+            \operatorname{erfc}(x)=1-\frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^{2}} d t
+
+    Args:
+        x (oneflow.Tensor): A Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = flow.Tensor(np.array([0, -1., 10.]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> out.shape
+        flow.Size([3])
+        >>> out.numpy()
+        array([1.0000000e+00, 1.8427007e+00, 2.8025969e-45], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8]]), dtype=flow.float32)
+        >>> out = flow.erfc(x)
+        >>> out.shape
+        flow.Size([2, 3])
+        >>> out.numpy()
+        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
+               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01]], dtype=float32)
+
+        >>> x = flow.Tensor(np.array([[0, -1., 10.], [5, 7, 0.8], [2, 3, 4]]), dtype=flow.float32)
+        >>> out = x.erfc()
+        >>> out.shape
+        flow.Size([3, 3])
+        >>> out.numpy()
+        array([[1.0000000e+00, 1.8427007e+00, 2.8025969e-45],
+               [1.5374597e-12, 4.1838257e-23, 2.5789905e-01],
+               [4.6777348e-03, 2.2090499e-05, 1.5417259e-08]], dtype=float32)
+        
+    """
+    return Erfc()(input)
+
+
+@register_tensor_op("erfc")
+@experimental_api
+def erfc_op_tensor(input):
+    r"""
+    See :func:`oneflow.experimental.erfc`
+    """
+    return Erfc()(input)
+
+
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(name="asinh_op")
+    doctest.testmod(raise_on_error=True)

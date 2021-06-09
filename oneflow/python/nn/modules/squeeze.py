@@ -75,4 +75,4 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

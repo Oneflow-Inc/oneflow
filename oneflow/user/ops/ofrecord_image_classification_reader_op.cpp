@@ -70,8 +70,8 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       label_modifier->set_header_infered_before_compute(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("image", 0) = DataType::kTensorBuffer;
-      *ctx->Dtype4ArgNameAndIndex("label", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
