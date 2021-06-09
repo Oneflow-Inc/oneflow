@@ -48,7 +48,7 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->OutputDType("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     });
 
@@ -87,8 +87,7 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) =
-          *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->OutputDType("prediction_diff", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
       return Maybe<void>::Ok();
     });
 
