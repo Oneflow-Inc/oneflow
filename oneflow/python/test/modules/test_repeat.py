@@ -57,6 +57,16 @@ def _test_repeat_same_dim_int(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
 
+def _test_repeat_same_dim_int8(test_case, device):
+    input = flow.Tensor(
+        np.random.randn(1, 2, 5, 3), dtype=flow.int8, device=flow.device(device)
+    )
+    size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
+    sizes = size_tensor.size()
+    of_out = input.repeat(sizes=sizes)
+    np_out = np_repeat(input.numpy(), sizes)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
+
 def _test_repeat_new_dim_backward(test_case, device):
     input = flow.Tensor(
         np.random.randn(2, 4, 1, 3),
@@ -128,6 +138,7 @@ class TestRepeat(flow.unittest.TestCase):
             _test_repeat_new_dim,
             _test_repeat_same_dim,
             _test_repeat_same_dim_int,
+            _test_repeat_same_dim_int8,
             _test_repeat_new_dim_backward,
             _test_repeat_same_dim_backward,
         ]
