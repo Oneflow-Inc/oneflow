@@ -403,9 +403,11 @@ class Session(object):
 
     @contextmanager
     def consistent_scope(self):
-        self.push_mirrored_strategy_enabled(False)
-        yield
-        self.pop_mirrored_strategy_enabled()
+        try:
+            self.push_mirrored_strategy_enabled(False)
+            yield
+        finally:
+            self.pop_mirrored_strategy_enabled()
 
     @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
