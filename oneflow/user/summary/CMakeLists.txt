@@ -1,4 +1,4 @@
-add_library(
+oneflow_add_user_library(
     oneflow_user_summary
 
     ../kernels/summary_kernels.cpp

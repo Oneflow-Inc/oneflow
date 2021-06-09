@@ -1,4 +1,4 @@
-add_library(
+oneflow_add_user_library(
     oneflow_user_ops
     acc_op.cpp
     add_n_op.cpp
