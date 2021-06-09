@@ -1702,6 +1702,7 @@ def sync_dynamic_resize(
 
 
 @oneflow_export("stack")
+@stable_api
 def stack(
     inputs: Sequence[oneflow._oneflow_internal.BlobDesc],
     axis: int = 0,
