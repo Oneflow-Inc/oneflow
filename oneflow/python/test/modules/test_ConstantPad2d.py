@@ -84,8 +84,8 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
     of_out = of_out.sum()
     of_out.backward()
     np_out_grad = _np_constant_pad2d_grad(np_out, np_input, layer.padding)
-    print('1', of_out.grad)
-    # test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
+    print('grad', of_out.grad)
+    test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
@@ -93,7 +93,7 @@ def _test_ConstantPad2d(test_case, shape, padding, value, device):
 )
 
 class TestConstantPad2dModule(flow.unittest.TestCase):
-    def test_add(test_case):
+    def test_ConstantPad2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
         arg_dict["padding"] = [(2), (1, 1, 2, 2)]
