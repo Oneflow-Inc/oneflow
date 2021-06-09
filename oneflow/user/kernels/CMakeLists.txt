@@ -233,10 +233,7 @@ oneflow_add_user_cuda_library(
 	softmax_kernel.cu
 )
 
-target_link_libraries(oneflow_user_cuda_kernels ${CUDA_LIBRARIES} oneflow_user_kernel_util)
-target_link_libraries(oneflow_softmax_cuda_kernel ${CUDA_LIBRARIES})
-list(APPEND ONEFLOW_USER_LIBS oneflow_user_cuda_kernels)
-list(APPEND ONEFLOW_USER_LIBS oneflow_softmax_cuda_kernel)
+target_link_libraries(oneflow_user_cuda_kernels oneflow_user_kernel_util)
 
 # TODO: move this to a proper dir
 oneflow_add_user_library(

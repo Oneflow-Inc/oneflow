@@ -18,6 +18,7 @@ function(oneflow_add_user_cuda_library)
   if (BUILD_CUDA)
     cuda_add_library(${ARGV})
     setup_user_library(${ARGV})
+    target_link_libraries(${ARGV0} ${CUDA_LIBRARIES})
   endif()
 endfunction()
 
