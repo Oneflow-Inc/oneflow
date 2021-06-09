@@ -35,16 +35,17 @@ std::list<ObjectMsgPtr<vm::InstructionMsg>>* RecordedInstructionList() {
 
 }  // namespace
 
+namespace debug {
+
 bool RecordingInstruction() { return *RecordingInstructionFlag(); }
 
 void StartRecordingInstruction() { *RecordingInstructionFlag() = true; }
 
-void EndAndClearRecordingInstruction() {
-  *RecordingInstructionFlag() = false;
-  RecordedInstructionList()->clear();
-}
+void EndRecordingInstruction() { *RecordingInstructionFlag() = false; }
 
-void RecordInstruction(ObjectMsgPtr<vm::InstructionMsg> instruction) {
+void ClearRecordingInstruction() { RecordedInstructionList()->clear(); }
+
+void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction) {
   RecordedInstructionList()->push_back(instruction);
 }
 
@@ -55,5 +56,7 @@ void ReplayInstruction() {
   }
   vm::Run(&instr_msg_list);
 }
+
+}  // namespace debug
 
 }  // namespace oneflow

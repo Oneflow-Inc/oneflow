@@ -21,15 +21,21 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace debug {
+
 bool RecordingInstruction();
 
 void StartRecordingInstruction();
 
-void EndAndClearRecordingInstruction();
+void EndRecordingInstruction();
 
-void RecordInstruction(ObjectMsgPtr<vm::InstructionMsg> instruction);
+void ClearRecordingInstruction();
+
+void RecordInstruction(const ObjectMsgPtr<vm::InstructionMsg>& instruction);
 
 void ReplayInstruction();
+
+}  // namespace debug
 
 }  // namespace oneflow
 

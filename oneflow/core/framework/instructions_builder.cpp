@@ -1579,9 +1579,9 @@ Maybe<void> PhysicalRun(const std::function<void(InstructionsBuilder*)>& Build) 
                                            &instruction_list, &eager_symbol_list,
                                            _ReleasePhysicalObject);
   Build(&instructions_builder);
-  if (RecordingInstruction()) {
+  if (debug::RecordingInstruction()) {
     OBJECT_MSG_LIST_FOR_EACH(instructions_builder.mut_instruction_list(), instruction_msg) {
-      RecordInstruction(instruction_msg);
+      debug::RecordInstruction(instruction_msg);
     }
   }
   JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
