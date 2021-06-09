@@ -41,7 +41,7 @@ REGISTER_USER_OP("constant")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       auto dtype = ctx->Attr<DataType>("dtype");
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
+      *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     });
 
