@@ -105,5 +105,4 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
             _test_ConstantPad2d(test_case, *arg)
 
 if __name__ == "__main__":
-    flow.enable_eager_execution()
     unittest.main()
