@@ -165,11 +165,14 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
-  Shape* OutputShape(const std::string& arg_name, int32_t index) const override {
+  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
     return const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();

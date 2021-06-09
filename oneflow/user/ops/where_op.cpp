@@ -65,7 +65,7 @@ REGISTER_USER_OP("where")
       CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
       DataType x_dtype = *ctx->Dtype4ArgNameAndIndex("x", 0);
       CHECK_EQ_OR_RETURN(x_dtype, *ctx->Dtype4ArgNameAndIndex("y", 0));
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = x_dtype;
+      *ctx->OutputDType("out", 0) = x_dtype;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
