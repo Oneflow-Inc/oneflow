@@ -50,7 +50,7 @@ def abs_op(x):
         >>> x = flow.Tensor(np.array([-1, 2, -3, 4]).astype(np.float32))
         >>> flow.abs(x)
         tensor([1., 2., 3., 4.], dtype=oneflow.float32)
-    
+
     """
     return Abs()(x)
 
@@ -58,4 +58,4 @@ def abs_op(x):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

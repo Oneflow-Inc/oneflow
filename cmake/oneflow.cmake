@@ -318,12 +318,6 @@ add_dependencies(generate_api of_pyscript_copy)
 add_dependencies(generate_api oneflow_internal)
 
 file(RELATIVE_PATH PROJECT_BINARY_DIR_RELATIVE ${PROJECT_SOURCE_DIR} ${PROJECT_BINARY_DIR})
-add_custom_target(pip_install)
-add_dependencies(pip_install generate_api)
-add_custom_command(
-  TARGET pip_install
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  COMMAND export ONEFLOW_CMAKE_BUILD_DIR=${PROJECT_BINARY_DIR_RELATIVE} && ${Python_EXECUTABLE} -m pip install -e ${PROJECT_SOURCE_DIR} --user)
 
 # get_property(include_dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 # foreach(dir ${include_dirs})
@@ -425,5 +419,3 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_b
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
-
-add_dependencies(pip_install of_include_copy)
