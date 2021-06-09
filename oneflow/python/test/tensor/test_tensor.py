@@ -196,6 +196,38 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_register_hook(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape, requires_grad=True)
+        x.register_hook(lambda grad: grad * 2 + 1)
+        y = x.sum() + (x * 2).sum()
+        y.backward()
+        test_case.assertTrue(np.array_equal(x.grad.numpy(), np.ones(shape) * 7))
+
+        x = flow.Tensor(*shape, requires_grad=True)
+        new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        x.register_hook(lambda _: new_grad)
+        y = x.sum() + (x * 2).sum()
+        y.backward()
+        test_case.assertTrue(np.array_equal(x.grad.numpy(), new_grad.numpy()))
+
+        grad_nonlocal = None
+
+        def assign_nonlocal_variable_and_return_none(grad):
+            nonlocal grad_nonlocal
+            grad_nonlocal = grad
+
+        x = flow.Tensor(*shape, requires_grad=True)
+        new_grad = flow.Tensor([[1, 2, 3], [4, 5, 6]])
+        x.register_hook(assign_nonlocal_variable_and_return_none)
+        y = x.sum() + (x * 2).sum()
+        y.backward()
+        test_case.assertTrue(np.array_equal(grad_nonlocal.numpy(), np.ones(shape) * 3))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_user_defined_data(test_case):
         list_data = [5, 5]
         tuple_data = (5, 5)
