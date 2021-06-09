@@ -48,6 +48,34 @@ class TestConsistentCastModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y.numpy(), np_out, rtol=1e-05))
         test_case.assertTrue(np.allclose(x.grad.numpy(), in_diff, rtol=1e-05))
 
+    def test_consistent_cast_function(test_case):
+        def relu_func(x):
+            relu = flow.nn.ReLU()
+            return relu(x)
+
+        arr = np.random.randn(8, 16, 12, 5)
+        np_out = np.maximum(0, arr)
+
+        relu_mask = arr > 0
+        out_diff = np.random.randn(8, 16, 12, 5)
+        in_diff = out_diff * relu_mask
+
+        consisitent_relu_func = flow.consistent_cast(
+            relu_func,
+            (["S(0)"], ["S(0)"]),
+            (
+                [flow.placement("cpu", ["0:0"], None)],
+                [flow.placement("cpu", ["0:0"], None)],
+            ),
+        )
+
+        x = flow.Tensor(arr, requires_grad=True)
+        y = consisitent_relu_func(x)
+        y_diff = flow.Tensor(out_diff)
+        y.backward(y_diff)
+        test_case.assertTrue(np.allclose(y.numpy(), np_out, rtol=1e-05))
+        test_case.assertTrue(np.allclose(x.grad.numpy(), in_diff, rtol=1e-05))
+
 
 if __name__ == "__main__":
     unittest.main()

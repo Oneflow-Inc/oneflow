@@ -18,25 +18,18 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
-import re
 import copy
 
 import numpy as np
 
 import oneflow as flow
-import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.nn.consistent_cast_util as consistent_cast_util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
-from oneflow._oneflow_internal.one import (
-    CastToConsistentOpExpr,
-    CastFromConsistentOpExpr,
-    OpExpr,
-)
-import oneflow._oneflow_internal
 
 
 class _IncompatibleKeys(
@@ -54,31 +47,6 @@ class _IncompatibleKeys(
 # of `T` to annotate `self`. Many methods of `Module` return `self` and we want those return values to be
 # the type of the subclass, not the looser type of `Module`.
 T = TypeVar("T", bound="Module")
-
-
-def _make_cast_consistent_ops(
-    sbp_signature: List[Union[Tuple[str], str]],
-    placement: List[flow.placement],
-    op_expr: OpExpr,
-    name: Optional[str] = None,
-) -> None:
-    assert len(sbp_signature) == len(placement)
-    cast_consistent_op = OrderedDict()
-    for i in range(len(sbp_signature)):
-        parallel_distribution = sbp_signature[i]
-        if isinstance(parallel_distribution, str):
-            parallel_distribution = [parallel_distribution]
-        else:
-            assert isinstance(parallel_distribution, tuple)
-            parallel_distribution = list(parallel_distribution)
-        assert len(parallel_distribution) == len(placement[i].hierarchy)
-        cast_consistent_op_expr = op_expr(
-            name if name is not None else id_util.UniqueStr("cast_consistent"),
-            parallel_distribution,
-            placement[i],
-        )
-        cast_consistent_op[i] = cast_consistent_op_expr
-    return cast_consistent_op
 
 
 @oneflow_export("nn.Module")
@@ -102,53 +70,19 @@ class Module(object):
         return self._consistent
 
     def consistent_cast(self, parallel_distribution, placement_signature):
-        def cast_input_to_consistent(self, input_tensors):
-            input_tensors = list(input_tensors)
-            sess = session_ctx.GetDefaultSession()
-            cast_to_consistent_ops = _make_cast_consistent_ops(
-                parallel_distribution[0],
-                placement_signature[0],
-                CastToConsistentOpExpr,
-                id_util.UniqueStr("cast_to_consistent_op"),
+        def cast_input_to_consistent_hook(self, input_tensors):
+            return consistent_cast_util.cast_input_to_consistent(
+                input_tensors, parallel_distribution[0], placement_signature[0]
             )
-            assert len(input_tensors) == len(cast_to_consistent_ops)
-            with sess.consistent_scope():
-                for i in range(0, len(input_tensors)):
-                    if not input_tensors[i].is_consistent:
-                        input_tensors[i] = cast_to_consistent_ops[i](input_tensors[i])[
-                            0
-                        ]
-            return tuple(input_tensors)
 
-        def cast_output_from_consistent(self, output_tensors):
-            # assume type of output_tensors is TensorTuple or Tensor
-            if isinstance(output_tensors, oneflow._oneflow_internal.TensorTuple):
-                output_tensors = list(output_tensors)
-            elif isinstance(output_tensors, oneflow._oneflow_internal.Tensor):
-                output_tensors = [output_tensors]
-            else:
-                raise NotImplementedError
-            sess = session_ctx.GetDefaultSession()
-            cast_from_consistent_ops = _make_cast_consistent_ops(
-                parallel_distribution[1],
-                placement_signature[1],
-                CastFromConsistentOpExpr,
-                id_util.UniqueStr("cast_from_consistent_op"),
-            )
-            assert len(output_tensors) == len(cast_from_consistent_ops)
-            with sess.consistent_scope():
-                for i in range(0, len(output_tensors)):
-                    if output_tensors[i].is_consistent:
-                        output_tensors[i] = cast_from_consistent_ops[i](
-                            output_tensors[i]
-                        )[0]
-            return (
-                output_tensors[0] if len(output_tensors) == 1 else tuple(output_tensors)
+        def cast_output_from_consistent_hook(self, output_tensors):
+            return consistent_cast_util.cast_output_from_consistent(
+                output_tensors, parallel_distribution[1], placement_signature[1]
             )
 
         consisitent_module = copy.deepcopy(self)
-        consisitent_module.register_forward_pre_hook(cast_input_to_consistent)
-        consisitent_module.register_forward_hook(cast_output_from_consistent)
+        consisitent_module.register_forward_pre_hook(cast_input_to_consistent_hook)
+        consisitent_module.register_forward_hook(cast_output_from_consistent_hook)
 
         def set_consistent(module):
             module._consistent = True
@@ -172,10 +106,13 @@ class Module(object):
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
-        if not self.consistent:
+        sess = session_ctx.GetDefaultSession()
+        if not self.consistent and (
+            sess.has_empty_is_mirrored_strategy_enabled_stack()
+            or sess.is_mirrored_strategy_enabled()
+        ):
             res = self.forward(*args)
         else:
-            sess = session_ctx.GetDefaultSession()
             with sess.consistent_scope():
                 res = self.consistent_forward(*args)
         for hook in itertools.chain(self._forward_hooks.values()):
@@ -629,46 +566,3 @@ class Module(object):
             return t.to(device)
 
         return self._apply(convert)
-
-
-@oneflow_export("consistent_cast")
-def api_consistent_cast(
-    module: Module,
-    parallel_distribution: Tuple[
-        List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]
-    ],
-    placement_signature: Optional[
-        Tuple[List[flow.placement], List[flow.placement],]
-    ] = None,
-):
-    assert (
-        not module.consistent
-    ), "the module is already consistented module, don't cast again!"
-
-    def check_input_is_valid(parallel_distribution, placement_signature):
-        assert len(parallel_distribution) == len(placement_signature)
-        for i in range(len(parallel_distribution)):
-            if isinstance(parallel_distribution[i], (tuple, list)):
-                assert len(parallel_distribution[i]) == len(
-                    placement_signature[i].hierarchy
-                )
-                for sbp_parallel_str in parallel_distribution:
-                    assert re.match("^B|P|(S\(\d+\))$", sbp_parallel_str) is not None, (
-                        "Distribute %s is not valid" % sbp_parallel_str
-                    )
-            else:
-                assert (
-                    re.match("^B|P|(S\(\d+\))$", parallel_distribution[0]) is not None
-                ), ("Distribute %s is not valid" % parallel_distribution)
-                assert len(placement_signature[i].hierarchy) == 1
-
-    if placement_signature is None:
-        cur_scope = flow.current_scope()
-        placement_signature = (
-            [cur_scope.device_parallel_desc_symbol for _ in parallel_distribution[0]],
-            [cur_scope.device_parallel_desc_symbol for _ in parallel_distribution[1]],
-        )
-    check_input_is_valid(parallel_distribution[0], placement_signature[0])
-    check_input_is_valid(parallel_distribution[1], placement_signature[1])
-
-    return module.consistent_cast(parallel_distribution, placement_signature)
