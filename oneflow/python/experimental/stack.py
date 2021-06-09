@@ -39,7 +39,7 @@ class Stack(Module):
         for i in range(input_list_length):
             current_shape = inputs[i].shape
             assert (
-                input_shape == current_shape
+                    input_shape == current_shape
             ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
                 current_shape
             )
@@ -81,6 +81,13 @@ def stack(inputs: Tensor, dim: int = 0) -> None:
         >>> x = flow.Tensor(np.random.rand(1, 3, 5))
         >>> y = flow.Tensor(np.random.rand(1, 3, 5))
         >>> out = flow.stack([x, y], dim = -1)
+        >>> out.shape
         flow.Size([1, 3, 5, 2])
     """
     return Stack(dim)(inputs)
+
+
+if __name__ == '__main__':
+    import doctest
+
+    doctest.testmod()
