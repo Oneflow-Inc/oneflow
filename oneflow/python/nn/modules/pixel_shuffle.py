@@ -44,13 +44,13 @@ class PixelShuffle(Module):
         - Output: :math:`(*, C_{out}, H_{out}, W_{out})`, where
 
     .. math::
-        C_{out} = C_{in} \div \text{upscale\_factor}^2
+        C_{out} = C_{in} \div \text{upscale_factor}^2
 
     .. math::
-        H_{out} = H_{in} \times \text{upscale\_factor}
+        H_{out} = H_{in} \times \text{upscale_factor}
 
     .. math::
-        W_{out} = W_{in} \times \text{upscale\_factor}
+        W_{out} = W_{in} \times \text{upscale_factor}
 
     For example:
 
@@ -92,16 +92,9 @@ class PixelShufflev2(Module):
         ), "The scale factor of height and width must larger than zero"
         self.h_upscale_factor = h_upscale_factor
         self.w_upscale_factor = w_upscale_factor
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, input: Tensor) -> Tensor:
-        assert len(input.shape) == 4, "Only Accept 4D Blob"
+        assert len(input.shape) == 4, "Only Accept 4D Tensor"
 
         _batch, _channel, _height, _width = input.shape
         assert (
@@ -129,7 +122,7 @@ class PixelShufflev2(Module):
                 _width,
             ]
         )
-        out = self._transpose_op(out, perm=[0, 1, 4, 2, 5, 3])[0]
+        out = out.permute(0, 1, 4, 2, 5, 3)
         out = out.reshape(
             [
                 _batch,
