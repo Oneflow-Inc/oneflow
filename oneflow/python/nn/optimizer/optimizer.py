@@ -39,6 +39,12 @@ class ParamGroup(object):
                 if key in parameters:
                     self._options[key] = parameters[key]
 
+    def __getitem__(self, key):
+        return self._options[key]
+
+    def __setitem__(self, key, value):
+        self._options[key] = value
+
     @property
     def options(self):
         return self._options
@@ -50,7 +56,7 @@ class ParamGroup(object):
 
 class Optimizer(object):
     def __init__(self):
-        self._param_groups = list()
+        self.param_groups = list()
         self._default_options = dict()
         self._state = dict()
         self._state["step"] = 0
@@ -73,7 +79,7 @@ class Optimizer(object):
 
     def zero_grad(self, set_to_none: bool = False):
         all_grad_is_none = True
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
                     all_grad_is_none = False
