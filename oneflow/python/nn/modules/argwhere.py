@@ -41,6 +41,7 @@ class Argwhere(Module):
         slice_tup_list = [[0, int(size), 1]]
         return flow.experimental.slice(res, slice_tup_list=slice_tup_list)
 
+
 @oneflow_export("argwhere")
 @experimental_api
 def argwhere_op(x, dtype: Optional[flow.dtype] = None):
