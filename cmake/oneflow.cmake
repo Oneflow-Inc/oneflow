@@ -251,6 +251,12 @@ if (USE_CLANG_FORMAT)
   add_dependencies(of_ccobj of_format)
 endif()
 
+# py ext lib
+add_library(of_pyext_obj ${of_pyext_obj_cc})
+target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
+target_link_libraries(of_pyext_obj of_ccobj)
+add_dependencies(of_pyext_obj of_protoobj generate_py_cfg)
+
 if (BUILD_SHARED_LIBS)
   get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
   get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
@@ -265,12 +271,6 @@ if (BUILD_SHARED_LIBS)
   endif()
   target_link_libraries(of_pyext_obj of_ccobj)
 endif()
-
-# py ext lib
-add_library(of_pyext_obj ${of_pyext_obj_cc})
-target_include_directories(of_pyext_obj PRIVATE ${Python_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
-target_link_libraries(of_pyext_obj of_ccobj)
-add_dependencies(of_pyext_obj of_protoobj generate_py_cfg)
 
 GET_PROPERTY(user_libs GLOBAL PROPERTY ONEFLOW_USER_LIBS)
 if(APPLE)
