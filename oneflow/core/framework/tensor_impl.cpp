@@ -98,7 +98,7 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
                   == tensor_meta()->shape_ptr().get());
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
-  UpdateTensorStorage();
+  JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
 
