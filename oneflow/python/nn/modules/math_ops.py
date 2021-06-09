@@ -1519,7 +1519,6 @@ class Ceil(Module):
     def forward(self, x):
         return self._op(x)[0]
 
-
 @oneflow_export("ceil")
 @experimental_api
 def ceil_op(x):
@@ -1548,17 +1547,17 @@ def ceil_op(x):
         
         >>> x = flow.Tensor(np.array([0.1, -2, 3.4]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [ 1. -2.  4.]
 
 
         >>> x = flow.Tensor(np.array([[2.5, 4.6, 0.6],[7.8, 8.3, 9.2]]).astype(np.float32))
         >>> y = x.ceil()
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([2, 3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [[ 3.  5.  1.]
          [ 8.  9. 10.]]
 
@@ -1567,9 +1566,9 @@ def ceil_op(x):
 
         >>> x = flow.Tensor(np.array([[[2.2, 4.4, 6.5],[7.1, 8.2, 9.3]],[[10.6,11.2,12.2],[13.5,14.8,15.9]]]).astype(np.float32))
         >>> y = flow.ceil(x)
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([2, 2, 3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [[[ 3.  5.  7.]
           [ 8.  9. 10.]]
         <BLANKLINE>
@@ -1589,6 +1588,9 @@ def ceil_op_tensor(x):
     """
 
     return Ceil()(x)
+
+
+
 
 
 class Expm1(Module):
@@ -1628,17 +1630,17 @@ def expm1_op(x):
         
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
         >>> y = flow.expm1(x)
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [ 1.7182817  6.389056  19.085537 ]
 
 
         >>> x = flow.Tensor(np.array([[2, 4, 6],[7, 8, 9]]).astype(np.float32))
         >>> y = x.expm1()
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([2, 3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [[6.3890562e+00 5.3598152e+01 4.0242880e+02]
          [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
 
@@ -1646,9 +1648,9 @@ def expm1_op(x):
 
         >>> x = flow.Tensor(np.array([[[2, 4, 6],[7, 8, 9]],[[10,11,12],[13,14,15]]]).astype(np.float32))
         >>> y = flow.expm1(x)
-        >>> y.shape
+        >>> print(y.shape)
         flow.Size([2, 2, 3])
-        >>> y.numpy()
+        >>> print(y.numpy())
         [[[6.3890562e+00 5.3598152e+01 4.0242880e+02]
           [1.0956332e+03 2.9799580e+03 8.1020840e+03]]
         <BLANKLINE>
@@ -1658,6 +1660,7 @@ def expm1_op(x):
 
     """
     return Expm1()(x)
+
 
 
 @register_tensor_op("expm1")
@@ -1670,8 +1673,7 @@ def expm1_op_tensor(x):
     return Expm1()(x)
 
 
-
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(name='expm1_op')
