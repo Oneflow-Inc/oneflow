@@ -96,8 +96,6 @@ def _test_ReplicationPad2d(test_case, shape, padding, device):
     of_out.backward()
     
     np_out_grad = _np_replication_pad2d_grad(np_out, np_input, boundry)
-    print('np', np_out_grad)
-    print('of', of_out.grad)
     test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
 
 @unittest.skipIf(
