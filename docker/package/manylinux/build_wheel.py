@@ -378,7 +378,7 @@ if __name__ == "__main__":
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
-            if cuda_version == "11.1":
+            if cuda_version in ["11.0", "11.1"]:
                 versioned_img_tag = f"{img_prefix}:0.2"
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
