@@ -59,12 +59,12 @@ def _test_l1loss_impl(test_case, device, shape, reduction):
     loss = loss.to(device)
     of_out = loss(input, target)
     np_out = _np_l1loss(x, y)[reduction]
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-2, 1e-2))
 
     of_out = of_out.sum()
     of_out.backward()
     np_grad = _np_l1loss_grad(x, y)[reduction]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-2, 1e-2))
 
 
 @unittest.skipIf(
