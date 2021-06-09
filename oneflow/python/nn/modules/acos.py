@@ -67,8 +67,5 @@ def acos_op(tensor):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
-<<<<<<< HEAD
-
-=======
->>>>>>> 267027154b858d42fab1beffb5e187abbed0b8fd
+    doctest.testmod()
+    
