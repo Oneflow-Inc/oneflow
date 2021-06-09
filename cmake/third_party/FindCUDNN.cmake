@@ -13,7 +13,7 @@ include(FindPackageHandleStandardArgs)
 
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
-option(CUDNN_STATIC "Look for static cuDNN" ON)
+set(CUDNN_STATIC OFF CACHE BOOL "" FORCE)
 if (CUDNN_STATIC)
 	set(__cudnn_libname "libcudnn_static.a")
 else()
@@ -55,6 +55,16 @@ if(CUDNN_FOUND)
     set(CUDNN_VERSION "?")
   else()
     set(CUDNN_VERSION "${CUDNN_VERSION_MAJOR}.${CUDNN_VERSION_MINOR}.${CUDNN_VERSION_PATCH}")
+  endif()
+  if(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 8)
+	set(CUDNN_DYNAMIC_NAMES libcudnn_adv_infer.so libcudnn_adv_train.so libcudnn_cnn_infer.so libcudnn_cnn_train.so libcudnn_ops_infer.so libcudnn_ops_train.so)
+	foreach(CUDNN_DYNAMIC_NAME ${CUDNN_DYNAMIC_NAMES})
+  	  SET(CUDNN_DYNAMIC_LIBRARY "CUDNN_DYNAMIC_LIBRARY-NOTFOUND")
+	  find_library(CUDNN_DYNAMIC_LIBRARY NAMES ${CUDNN_DYNAMIC_NAME}
+	  	HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
+      	PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
+      list(APPEND CUDNN_LIBRARY ${CUDNN_DYNAMIC_LIBRARY})
+	endforeach()
   endif()
 
   set(CUDNN_INCLUDE_DIRS ${CUDNN_INCLUDE_DIR})
