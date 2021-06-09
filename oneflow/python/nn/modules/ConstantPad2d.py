@@ -49,6 +49,7 @@ class ConstantPad2d(Module):
         >>> flow.enable_eager_execution()
         >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
+        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
         >>> output = constantpad_layer_0(input)
         >>> print(output.shape)
         flow.Size([1, 2, 5, 7])
@@ -64,9 +65,22 @@ class ConstantPad2d(Module):
            [ 1.  1. 12. 13. 14.  1.  1.]
            [ 1.  1. 15. 16. 17.  1.  1.]
            [ 1.  1.  1.  1.  1.  1.  1.]]]]
+        >>> output_int = constantpad_layer_0(input_int)
+        >>> print(output_int.numpy())
+        [[[[ 1.  1.  1.  1.  1.  1.  1.]
+           [ 1.  1.  0.  1.  2.  1.  1.]
+           [ 1.  1.  3.  4.  5.  1.  1.]
+           [ 1.  1.  6.  7.  8.  1.  1.]
+           [ 1.  1.  1.  1.  1.  1.  1.]]
+        <BLANKLINE>
+          [[ 1.  1.  1.  1.  1.  1.  1.]
+           [ 1.  1.  9. 10. 11.  1.  1.]
+           [ 1.  1. 12. 13. 14.  1.  1.]
+           [ 1.  1. 15. 16. 17.  1.  1.]
+           [ 1.  1.  1.  1.  1.  1.  1.]]]]
         >>> constantpad_layer_1 = flow.nn.ConstantPad2d((1, 2, 3, 4), 0.5)
         >>> output_1 = constantpad_layer_1(input)
-        Padding shape must be less than input shape. Please check.
+        Padding size should be less than the corresponding input dimension. Please check.
     """
 
     def __init__(
@@ -84,23 +98,40 @@ class ConstantPad2d(Module):
             raise ValueError("padding must be in or list or tuple!")
 
         self.padding = boundary
-        self._op = (
+        self.value = value
+
+    def forward(self, x):
+        _, _, h, w = x.shape
+
+        if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
+            
+            # *_value depends on x type not value type, so flow.builtin_op has to be in forward
+            if x.dtype in [
+            flow.float32,
+            flow.float16,
+            flow.float64
+            ]:
+                floating_value = float(self.value)
+                integral_value = int(0)
+            else:
+                floating_value = float(0)
+                integral_value = int(self.value)
+
+            self._op = (
             flow.builtin_op("constant_pad2d")
             .Input("x")
             .Output("y")
             .Attr("padding", self.padding)
-            .Attr("floating_value", float(value))
-            .Attr("integral_value", int(0))
+            .Attr("floating_value", floating_value)
+            .Attr("integral_value", integral_value)
             .Build()
-        )
+            )
 
-    def forward(self, x):
-        _, _, h, w = x.shape
-        if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
             res = self._op(x)[0]
             return res
+
         else:
-            print("Padding shape must be less than input shape. Please check.")
+            print("Padding size should be less than the corresponding input dimension. Please check.")
             return
 
 if __name__ == "__main__":
