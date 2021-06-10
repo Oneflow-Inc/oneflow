@@ -136,12 +136,12 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
     Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
-  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
-  Global<EagerJobBuildAndInferCtxMgr>::New();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
 #endif
+  Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
+  Global<EagerJobBuildAndInferCtxMgr>::New();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
     Global<EpollCommNet>::New();
     Global<Transport>::New();
@@ -154,12 +154,12 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
   }
+  Global<EagerJobBuildAndInferCtxMgr>::Delete();
+  Global<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
-  Global<EagerJobBuildAndInferCtxMgr>::Delete();
-  Global<vm::VirtualMachineScope>::Delete();
   Global<ThreadPool>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
