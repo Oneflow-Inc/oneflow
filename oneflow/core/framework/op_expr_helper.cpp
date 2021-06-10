@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace op_expr_helper {
@@ -570,6 +571,32 @@ Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name) {
       .Output("dx")
       .Output("alpha_diff")
       .Build();
+}
+
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
+  return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_distribution,
+                            parallel_desc);
+}
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
+      JUST(one::CastToConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+  return cast_to_consistent_op_expr;
+}
+
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
+  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"), parallel_distribution,
+                              parallel_desc);
+}
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
+      JUST(one::CastFromConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+  return cast_from_consistent_op_expr;
 }
 
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,

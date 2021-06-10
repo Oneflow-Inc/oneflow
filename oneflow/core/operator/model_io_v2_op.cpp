@@ -42,8 +42,8 @@ class ModelInitV2Op : public Operator {
 
  private:
   Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* parallel_distribution_signature,
-      const ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* parallel_distribution_signature,
+      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
@@ -81,8 +81,8 @@ class ModelLoadV2Op : public Operator {
 
  private:
   Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* parallel_distribution_signature,
-      const ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* parallel_distribution_signature,
+      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {
@@ -129,8 +129,8 @@ class ModelSaveV2Op final : public Operator {
 
  private:
   Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* parallel_distribution_signature,
-      const ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* parallel_distribution_signature,
+      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override {

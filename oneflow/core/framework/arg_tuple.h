@@ -37,14 +37,18 @@ class ArgTuple final {
   arg_name2bn_index2tensor_tuple_index() const {
     return arg_name2bn_index2tensor_tuple_index_;
   }
+  const std::unordered_map<std::string, int32_t>& bn_in_op2tensor_tuple_index() const {
+    return bn_in_op2tensor_tuple_index_;
+  }
 
   // return -1 if not found
-  std::size_t TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const;
+  int32_t TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const;
 
  private:
   std::vector<std::string> indexed_bns_;
   std::vector<std::pair<std::string, int32_t>> indexed_arg_name_and_index_;
   std::unordered_map<std::string, std::vector<int32_t>> arg_name2bn_index2tensor_tuple_index_;
+  std::unordered_map<std::string, int32_t> bn_in_op2tensor_tuple_index_;
 };
 
 }  // namespace oneflow

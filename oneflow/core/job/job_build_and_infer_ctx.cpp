@@ -151,12 +151,12 @@ Maybe<void> JobBuildAndInferCtx::AddLbiParallelConf2BlobPlacement(
 }
 
 Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
-    const Operator& op, SbpSignature* sbp_sig_conf,
+    const Operator& op, cfg::SbpSignature* sbp_sig_conf,
     HashMap<std::string, bool>* ibn2disable_boxing) const {
   auto op_conf_without_split_hint = std::make_shared<OperatorConf>(op.op_conf());
   for (const std::string& ibn : op.input_bns()) {
     std::string lbn_may_with_hint = GetInputLbnInOpCustomizedConf(op.op_conf(), ibn);
-    SbpParallel sbp_parallel;
+    cfg::SbpParallel sbp_parallel;
     bool has_sbp_hint = JUST(GetSbpParallelInLbnOrNothing(lbn_may_with_hint, &sbp_parallel));
     bool has_disable_boxing_hint =
         JUST(ParseDisableBoxingFlag(lbn_may_with_hint, &(*ibn2disable_boxing)[ibn]));
@@ -173,7 +173,7 @@ Maybe<OperatorConf> JobBuildAndInferCtx::DecodeLbiHintAndReturnNewOpConf(
 
 void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
     const OperatorConf& operator_conf, const ParallelDesc& parallel_desc,
-    const ParallelDistributionSignature& parallel_distribution_signature,
+    const cfg::ParallelDistributionSignature& parallel_distribution_signature,
     bool is_mirrored_parallel_view) const {
   auto* op_name2sbp_sig =
       job_->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
@@ -181,11 +181,12 @@ void JobBuildAndInferCtx::AddOpAndUpdateJobParallelViewConf(
       job_->mutable_job_parallel_view_conf()
           ->mutable_op_name2parallel_distribution_signature_conf();
   if (parallel_distribution_signature.bn_in_op2parallel_distribution().size() > 0) {
-    (*op_name2parallel_distribution_sig)[operator_conf.name()] = parallel_distribution_signature;
+    parallel_distribution_signature.ToProto(
+        &(*op_name2parallel_distribution_sig)[operator_conf.name()]);
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
-      SbpSignature sbp_signature;
+      cfg::SbpSignature sbp_signature;
       ParallelDistributionSignatureToSbpSignature(parallel_distribution_signature, &sbp_signature);
-      (*op_name2sbp_sig)[operator_conf.name()] = sbp_signature;
+      sbp_signature.ToProto(&(*op_name2sbp_sig)[operator_conf.name()]);
     }
   }
   auto* op_name2is_mirrored_parallel_view =
@@ -227,7 +228,7 @@ Maybe<void> JobBuildAndInferCtx::InferMirroredSignature(Operator* op,
 }
 
 Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
-    Operator* op, const ParallelDistributionSignature& parallel_distribution_sig_conf,
+    Operator* op, const cfg::ParallelDistributionSignature& parallel_distribution_sig_conf,
     const ParallelDesc& parallel_desc) {
   HashMap<std::string, ParallelDistributionInferHint> ibn2parallel_distribution_infer_hint;
   for (const std::string& ibn : op->input_bns()) {
@@ -244,7 +245,7 @@ Maybe<void> JobBuildAndInferCtx::InferOpOutParallelDistribution(
         << Error::LogicalBlobNameNotExistError() << "when infer op_name: " << op->op_name()
         << " consumed op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
         << " not infer parallel distribution";
-    const ParallelDistribution* parallel_distribution = &parallel_distribution_it->second;
+    const cfg::ParallelDistribution* parallel_distribution = &parallel_distribution_it->second;
     ibn2parallel_distribution_infer_hint.emplace(
         ibn, ParallelDistributionInferHint(pd, logical_blob_desc, parallel_distribution));
   }
@@ -334,7 +335,7 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
       const BlobDesc& logical_blob_desc = *(lbi2logical_blob_desc_.at(lbi).get());
       Shape current_shape = logical_blob_desc.shape();
       for (int64_t i = 0; i < pair.second.sbp_parallel_size(); ++i) {
-        const SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
+        const cfg::SbpParallel& sbp_parallel = pair.second.sbp_parallel(i);
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
           CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
@@ -398,7 +399,8 @@ bool JobBuildAndInferCtx::HasAnyMirroredBlobInput(const Operator& op) const {
   return false;
 }
 
-Maybe<const SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
+Maybe<const cfg::SbpParallel*> JobBuildAndInferCtx::SbpParallel4Lbi(
+    const LogicalBlobId& lbi) const {
   const auto& iter = lbi2parallel_distribution_from_producer_view_.find(lbi);
   CHECK_OR_RETURN(iter != lbi2parallel_distribution_from_producer_view_.end())
       << "lbn: " << GenLogicalBlobName(lbi) << " undefined";
@@ -572,7 +574,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   op_name2op_.emplace(op_name, ConstructOp(op_conf));
   Operator* op = op_name2op_.at(op_name).get();
 
-  SbpSignature sbp_sig_conf;
+  cfg::SbpSignature sbp_sig_conf;
   HashMap<std::string, bool> ibn2disable_boxing;
   InitIbn2DisableBoxing(*op, &ibn2disable_boxing);
   auto new_op_conf = JUST(DecodeLbiHintAndReturnNewOpConf(*op, &sbp_sig_conf, &ibn2disable_boxing));
@@ -595,7 +597,7 @@ Maybe<OpAttribute> JobBuildAndInferCtx::AddAndInferOp(const OperatorConf& op_con
   JUST(InferMirroredSignature(op, is_mirrored_parallel_view, parallel_desc));
 
   // infer parallel_distribution signature
-  ParallelDistributionSignature parallel_distribution_sig_conf;
+  cfg::ParallelDistributionSignature parallel_distribution_sig_conf;
   SbpSignatureToParallelDistributionSignature(sbp_sig_conf, &parallel_distribution_sig_conf);
   AddOpAndUpdateJobParallelViewConf(*new_op_conf, parallel_desc, parallel_distribution_sig_conf,
                                     is_mirrored_parallel_view);
@@ -868,7 +870,7 @@ Maybe<LogicalBlobId> LazyJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompati
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
-  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  const cfg::SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(kAutoMirroredBlobNamePrefix + NewUniqueId());
@@ -926,7 +928,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   const std::string& lbn = GenLogicalBlobName(lbi);
   const auto& sbn_it = mut_consistent_lbi2mirrored_lbi()->find(lbi);
   if (sbn_it != mut_consistent_lbi2mirrored_lbi()->end()) { return sbn_it->second; }
-  const SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
+  const cfg::SbpParallel& sbp = *JUST(SbpParallel4Lbi(lbi));
   CHECK_OR_RETURN(!sbp.has_partial_sum_parallel())
       << "`P' consistant blob is not compatible to mirrored blob";
   const ParallelDesc& parallel_desc = *JUST(ParallelDesc4Lbi(lbi));
@@ -943,7 +945,7 @@ Maybe<LogicalBlobId> EagerJobBuildAndInferCtx::FindOrCreateMirroredLbiFromCompat
   auto* cast_to_mirrored_conf = op_conf.mutable_cast_to_mirrored_conf();
   cast_to_mirrored_conf->set_in(lbn);
   cast_to_mirrored_conf->set_out("out");
-  *cast_to_mirrored_conf->mutable_sbp_parallel() = sbp;
+  sbp.ToProto(cast_to_mirrored_conf->mutable_sbp_parallel());
   LogicalBlobId mirrored_lbi;
   mirrored_lbi.set_op_name(op_conf.name());
   mirrored_lbi.set_blob_name("out");

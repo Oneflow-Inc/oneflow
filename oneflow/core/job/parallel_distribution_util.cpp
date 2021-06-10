@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
-                                                const SbpParallel& sbp_parallel,
+                                                const cfg::SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc) {
   std::vector<Range> ranges(blob_desc.shape().NumAxes());
   FOR_RANGE(int64_t, i, 0, blob_desc.shape().NumAxes()) {
@@ -48,10 +48,9 @@ std::vector<TensorSliceView> GetTensorSliceView(const int64_t parallel_num,
   return views;
 }
 
-TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
-                                                const ParallelDistribution& parallel_distribution,
-                                                const Shape& logical_shape,
-                                                const std::vector<int64_t>& parallel_rank) {
+TensorSliceView GetTensorSliceView4ParallelRank(
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, const std::vector<int64_t>& parallel_rank) {
   std::vector<Range> ranges(logical_shape.NumAxes());
   FOR_RANGE(int64_t, i, 0, logical_shape.NumAxes()) {
     ranges[i].mut_begin() = 0;
@@ -59,7 +58,7 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
   }
   if (parallel_hierarchy.elem_cnt() == 1) { return TensorSliceView(ranges); }
   if (parallel_hierarchy.NumAxes() == 1) {
-    const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(0);
+    const cfg::SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(0);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
       CHECK_GE(split_axis, 0);
@@ -73,7 +72,7 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
     }
   } else {
     FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
-      const SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
+      const cfg::SbpParallel& sbp_parallel = parallel_distribution.sbp_parallel(i);
       if (sbp_parallel.has_split_parallel()) {
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
         CHECK_GE(split_axis, 0);
@@ -89,9 +88,9 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
   return TensorSliceView(ranges);
 }
 
-TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
-                                              const ParallelDistribution& parallel_distribution,
-                                              const Shape& logical_shape, int64_t parallel_id) {
+TensorSliceView GetTensorSliceView4ParallelId(
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape, int64_t parallel_id) {
   NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
       parallel_hierarchy.dim_vec().data(), parallel_hierarchy.NumAxes());
   std::vector<int64_t> parallel_rank(SHAPE_MAX_AXIS_SIZE);
@@ -100,9 +99,9 @@ TensorSliceView GetTensorSliceView4ParallelId(const Shape& parallel_hierarchy,
                                          parallel_rank);
 }
 
-std::vector<TensorSliceView> GetTensorSliceView(const Shape& parallel_hierarchy,
-                                                const ParallelDistribution& parallel_distribution,
-                                                const Shape& logical_shape) {
+std::vector<TensorSliceView> GetTensorSliceView(
+    const Shape& parallel_hierarchy, const cfg::ParallelDistribution& parallel_distribution,
+    const Shape& logical_shape) {
   std::vector<TensorSliceView> views;
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.elem_cnt()) {
     views.emplace_back(

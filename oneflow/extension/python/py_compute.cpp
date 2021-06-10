@@ -20,7 +20,7 @@ limitations under the License.
 #include <numpy/arrayobject.h>
 
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/framework/util.h"
 
 namespace oneflow {

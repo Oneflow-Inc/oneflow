@@ -37,7 +37,7 @@ Maybe<void> OpKernelObject::ResetOpAndKernel(
 
 Maybe<void> OpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
+    const cfg::SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
   JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   return Maybe<void>::Ok();
 }
@@ -70,7 +70,7 @@ Maybe<void> SystemOpKernelObject::ResetKernel(
 
 Maybe<void> SystemOpKernelObject::InferBlobDescs(
     const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-    const SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
+    const cfg::SbpSignature* sbp_signature, const ParallelContext* parallel_ctx) {
   JUST(op.InferBlobDescsIf(BlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   return Maybe<void>::Ok();
 }

@@ -39,7 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           }))
       .def_property_readonly(
           "symbol_id", [](const OpNodeSignatureDesc& x) { return x.symbol_id().GetOrThrow(); })
-      .def("data", &OpNodeSignatureDesc::cfg_op_node_signature);
+      .def("data", &OpNodeSignatureDesc::op_node_signature);
 }
 
 }  // namespace oneflow

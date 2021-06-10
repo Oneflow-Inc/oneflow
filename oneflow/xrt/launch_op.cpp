@@ -108,8 +108,8 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
 }
 
 Maybe<void> XrtLaunchOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     XrtLaunchOp::SbpInferHint4IbnFunc SbpInferHint4Ibn, const ParallelDesc& parallel_desc) const {
   *sbp_signature = sbp_sig_conf;
   // Check existence of inputs and outputs sbp parallel.

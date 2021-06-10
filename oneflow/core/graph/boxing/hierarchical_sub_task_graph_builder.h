@@ -33,8 +33,9 @@ class HierarchicalSubTskGphBuilder {
       std::vector<TaskNode*>* sorted_out_tasks,
       std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
       const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-      const BlobDesc& logical_blob_desc, const ParallelDistribution& in_parallel_distribution,
-      const ParallelDistribution& out_parallel_distribution, const Shape& time_shape) const = 0;
+      const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_parallel_distribution,
+      const cfg::ParallelDistribution& out_parallel_distribution,
+      const Shape& time_shape) const = 0;
 };
 
 }  // namespace oneflow

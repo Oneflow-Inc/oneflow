@@ -49,7 +49,7 @@ Maybe<void> DeviceTickOp::InferOutBlobDescs(
 
 Maybe<void> DeviceTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

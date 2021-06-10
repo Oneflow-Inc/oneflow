@@ -18,10 +18,13 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
+import copy
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.nn.consistent_cast_util as consistent_cast_util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
@@ -66,6 +69,31 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
+    def to_consistent(self, parallel_distribution, placement_signature):
+        assert (
+            not self.consistent
+        ), "the module is already consistented module, don't cast again!"
+
+        def cast_input_to_consistent_hook(self, input_tensors):
+            return consistent_cast_util.cast_input_to_consistent(
+                input_tensors, parallel_distribution[0], placement_signature[0]
+            )
+
+        def cast_output_from_consistent_hook(self, output_tensors):
+            return consistent_cast_util.cast_output_from_consistent(
+                output_tensors, parallel_distribution[1], placement_signature[1]
+            )
+
+        consisitent_module = copy.deepcopy(self)
+        consisitent_module.register_forward_pre_hook(cast_input_to_consistent_hook)
+        consisitent_module.register_forward_hook(cast_output_from_consistent_hook)
+
+        def set_consistent(module):
+            module._consistent = True
+
+        consisitent_module.apply(set_consistent)
+        return consisitent_module
+
     def forward(self, *args):
         raise NotImplementedError()
 
@@ -82,9 +110,19 @@ class Module(object):
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
-
-        res = self.forward(*args)
-
+        sess = session_ctx.GetDefaultSession()
+        if not self.consistent and (
+            sess.has_empty_is_mirrored_strategy_enabled_stack()
+            or sess.is_mirrored_strategy_enabled()
+        ):
+            res = self.forward(*args)
+        else:
+            with sess.consistent_scope():
+                res = self.consistent_forward(*args)
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, res)
+            if result is not None:
+                res = result
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
@@ -488,6 +526,9 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+
+    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        self._forward_hooks[len(self._forward_hooks)] = hook
 
     def _apply(self, fn):
         for module in self.children():

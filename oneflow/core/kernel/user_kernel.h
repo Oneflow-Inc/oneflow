@@ -16,7 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"

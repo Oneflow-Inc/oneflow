@@ -402,6 +402,14 @@ class Session(object):
         return self.sess_.is_consistent_strategy_enabled()
 
     @contextmanager
+    def consistent_scope(self):
+        try:
+            self.push_mirrored_strategy_enabled(False)
+            yield
+        finally:
+            self.pop_mirrored_strategy_enabled()
+
+    @contextmanager
     def _EagerGlobalFunctionDescScope(self, function_desc):
         assert len(self.backward_blob_register.blob_name2object) == 0
         assert len(self.job_name2var_name2var_blob_) == 0

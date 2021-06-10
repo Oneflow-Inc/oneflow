@@ -38,7 +38,7 @@ REGISTER_USER_OP("parallel_cast")
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
-        SbpParallel sbp_parallel;
+        cfg::SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
             << "invalid sbp_parallel: " << sbp_parallel_str;
         if (sbp_parallel.has_split_parallel()) {
