@@ -106,10 +106,10 @@ def _test_reflection_pad2d(test_case, shape, padding, device):
 
     m = flow.nn.ReflectionPad2d(padding)
     of_out = m(of_input)
-    # test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-    # of_out.retain_grad()
-    # of_out.backward()
-    # test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
+    of_out.retain_grad()
+    of_out.backward()
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
