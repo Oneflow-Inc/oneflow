@@ -91,10 +91,10 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
-    { 
+    {
       cfg::SbpSignature cfg_sbp_signature(sbp_signatures);
       xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                    &op_parallel_desc, &cfg_sbp_signature, &lbn2logical_blob_desc, &blob_descs);
+                      &op_parallel_desc, &cfg_sbp_signature, &lbn2logical_blob_desc, &blob_descs);
       cfg_sbp_signature.ToProto(&sbp_signatures);
     }
   }
