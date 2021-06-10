@@ -59,28 +59,29 @@ class Conv2DFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    // MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<int32_t>("filters", filters));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    // JUST(attrs.SetAttr<int32_t>("groups", groups));
-    // JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    // return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight}, attrs);
-    const auto& op = JUST(one::OpBuilder("conv2d")
-                              .Input("in")
-                              .Input("weight")
-                              .Output("out")
-                              .Attr<int32_t>("filters", filters)
-                              .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-                              .Attr<std::vector<int32_t>>("strides", strides)
-                              .Attr<std::vector<int32_t>>("padding_before", padding_before)
-                              .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-                              .Attr<int32_t>("groups", groups)
-                              .Attr<std::string>("data_format", data_format)
-                              .Build());
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight});
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("filters", filters));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight}, attrs);
+
+    // const auto& op = JUST(one::OpBuilder("conv2d")
+    //                           .Input("in")
+    //                           .Input("weight")
+    //                           .Output("out")
+    //                           .Attr<int32_t>("filters", filters)
+    //                           .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
+    //                           .Attr<std::vector<int32_t>>("strides", strides)
+    //                           .Attr<std::vector<int32_t>>("padding_before", padding_before)
+    //                           .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
+    //                           .Attr<int32_t>("groups", groups)
+    //                           .Attr<std::string>("data_format", data_format)
+    //                           .Build());
+    // return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight});
   }
 
  private:
