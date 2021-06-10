@@ -49,8 +49,8 @@ class TestConsistentCastModule(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x.grad.numpy(), in_diff, rtol=1e-05))
 
     def test_consistent_cast_function(test_case):
+        relu = flow.nn.ReLU()
         def relu_func(x):
-            relu = flow.nn.ReLU()
             return relu(x)
 
         arr = np.random.randn(8, 16, 12, 5)
