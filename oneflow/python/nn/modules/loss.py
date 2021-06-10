@@ -298,6 +298,139 @@ class NLLLoss(Module):
             return res.mean()
 
 
+@oneflow_export("nn.KLDivLoss")
+@experimental_api
+class KLDivLoss(Module):
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.KLDivLoss.html?highlight=kldivloss#torch.nn.KLDivLoss
+
+    The Kullback-Leibler divergence loss measure
+
+    `Kullback-Leibler divergence`_ is a useful distance measure for continuous
+    distributions and is often useful when performing direct regression over
+    the space of (discretely sampled) continuous output distributions.
+
+    As with :class:`~torch.nn.NLLLoss`, the `input` given is expected to contain
+    *log-probabilities* and is not restricted to a 2D Tensor.
+    The targets are interpreted as *probabilities* by default, but could be considered
+    as *log-probabilities* with :attr:`log_target` set to ``True``.
+
+    This criterion expects a `target` `Tensor` of the same size as the
+    `input` `Tensor`.
+
+    The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
+
+    .. math::
+        l(x,y) = L = \{ l_1,\dots,l_N \}, \quad
+        l_n = y_n \cdot \left( \log y_n - x_n \right)
+
+    where the index :math:`N` spans all dimensions of ``input`` and :math:`L` has the same
+    shape as ``input``. If :attr:`reduction` is not ``'none'`` (default ``'mean'``), then:
+
+    .. math::
+        \ell(x, y) = \begin{cases}
+            \operatorname{mean}(L), & \text{if reduction} = \text{`mean';} \\
+            \operatorname{sum}(L),  & \text{if reduction} = \text{`sum'.}
+        \end{cases}
+
+    In default :attr:`reduction` mode ``'mean'``, the losses are averaged for each minibatch over observations
+    **as well as** over dimensions. ``'batchmean'`` mode gives the correct KL divergence where losses
+    are averaged over batch dimension only. ``'mean'`` mode's behavior will be changed to the same as
+    ``'batchmean'`` in the next major release.
+
+    .. _`kullback-leibler divergence`: https://en.wikipedia.org/wiki/Kullback-Leibler_divergence
+
+    Args:
+        size_average (bool, optional): Deprecated (see :attr:`reduction`). By default,
+            the losses are averaged over each loss element in the batch. Note that for
+            some losses, there are multiple elements per sample. If the field :attr:`size_average`
+            is set to ``False``, the losses are instead summed for each minibatch. Ignored
+            when :attr:`reduce` is ``False``. Default: ``True``
+        reduce (bool, optional): Deprecated (see :attr:`reduction`). By default, the
+            losses are averaged or summed over observations for each minibatch depending
+            on :attr:`size_average`. When :attr:`reduce` is ``False``, returns a loss per
+            batch element instead and ignores :attr:`size_average`. Default: ``True``
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'batchmean'`` | ``'sum'`` | ``'mean'``.
+            ``'none'``: no reduction will be applied.
+            ``'batchmean'``: the sum of the output will be divided by batchsize.
+            ``'sum'``: the output will be summed.
+            ``'mean'``: the output will be divided by the number of elements in the output.
+            Default: ``'mean'``
+        log_target (bool, optional): Specifies whether `target` is passed in the log space.
+            Default: ``False``
+
+    .. note::
+        :attr:`size_average` and :attr:`reduce` are in the process of being deprecated,
+        and in the meantime, specifying either of those two args will override :attr:`reduction`.
+
+    .. note::
+        :attr:`reduction` = ``'mean'`` doesn't return the true kl divergence value, please use
+        :attr:`reduction` = ``'batchmean'`` which aligns with KL math definition.
+        In the next major release, ``'mean'`` will be changed to be the same as ``'batchmean'``.
+
+    Shape:
+        - Input: :math:`(N, *)` where :math:`*` means, any number of additional
+          dimensions
+        - Target: :math:`(N, *)`, same shape as the input
+        - Output: scalar by default. If :attr:``reduction`` is ``'none'``, then :math:`(N, *)`,
+          the same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+    """
+
+    def __init__(
+        self,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+        log_target: bool = False,
+    ) -> None:
+        super().__init__()
+        if size_average is False:
+            raise ValueError("Argument size_average is not supported yet")
+        if reduce is False:
+            raise ValueError("Argument reduce is not supported yet")
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
+        self.reduction = reduction
+        self.log_target = log_target
+        self._rint_op = flow.builtin_op("rint").Input("x").Output("y").Build()
+
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        if self.log_target:
+            _kl_div_loss = flow.experimental.exp(target) * (target - input)
+        else:
+            _kl_div_out_loss = target * (flow.experimental.log(target) - input)
+            _zeros = flow.experimental.zeros_like(_kl_div_out_loss)
+            # when target < 0, we set to `0`, when target > 0, we set to `1`.
+            _condition = flow.experimental.cast(
+                self._rint_op(target + 0.5)[0], dtype=flow.int8,
+            )
+            # To avoid the `nan` value in log operation
+            # We set those positions which `target` is less than zero as `0`
+            _kl_div_loss = flow.experimental.where(_condition, _kl_div_out_loss, _zeros)
+
+        if self.reduction == "mean":
+            return flow.experimental.reduce_mean(_kl_div_loss)
+        elif self.reduction == "sum":
+            return flow.experimental.reduce_sum(_kl_div_loss)
+        else:
+            return _kl_div_loss
+
+
 @oneflow_export("nn.MSELoss")
 @experimental_api
 class MSELoss(Module):
