@@ -343,11 +343,11 @@ class BCEWithLogitsLoss(Module):
         >>> import oneflow.typing as tp
         >>> import numpy as np
 
-        >>> np_input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2]], dtype=flow.float32)
+        >>> np_input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
 
-        >>> np_target = flow.Tensor([[0, 1, 0], [1, 0, 1]],dtype=flow.float32)
+        >>> np_target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]],dtype=flow.float32)
 
-        >>> np_weight = flow.Tensor([[2, 2, 2], [2, 2, 2]],dtype=flow.float32)
+        >>> np_weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]],dtype=flow.float32)
 
         >>> np_pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
@@ -356,16 +356,17 @@ class BCEWithLogitsLoss(Module):
         # >>> print(out)
         # [[2.926565, 1.5551611, 1.1087105],
         #  [0.96764666, 2.074976, 5.9553986]]
+        [[2.9266 1.5552 1.1087], [0.9676 2.0750 5.9554], [0.9676, 2.0750, 5.9554]]
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="mean")
         >>> out = m(np_input, np_target).numpy()
         >>> print(out)
-        [2.4314098]
+        [2.62072]
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="sum")
         >>> out = m(np_input, np_target).numpy()
         >>> print(out)
-        [14.588458]
+        [23.58648]
 
     """
 
@@ -386,33 +387,16 @@ class BCEWithLogitsLoss(Module):
         self.weight = weight
         self.pos_weight = pos_weight
         self.reduction = reduction
-        # self._op = (
-        #     flow.builtin_op("bce_with_logits_loss")
-        #     .Input("prediction")
-        #     .Input("label")
-        #     .Attr("weight", weight)
-        #     .Attr("pos_weight", pos_weight)
-        #     .Attr("reduction", reduction)
-        #     .Output("out")
-        #     .Build()
-        # )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
 
     def forward(self, input, target):
-        assert len(input.shape) <= 4
-        # assert len(target.shape) == len(input.shape) - 1
-        input_shape_len = len(input.shape)
-
-        if input_shape_len == 3:
-            b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = self._transpose_op(input, perm=(0, 2, 1))[0]
-            input = input.reshape(shape=[-1, input.shape[2]])
-            target = target.flatten()
-        elif input_shape_len == 4:
-            b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
-            input = input.reshape(shape=[-1, input.shape[3]])
-            target = target.flatten()
-        elif input_shape_len >= 5:
+        if len(input.shape) >= 5:
             raise NotImplemented
 
         _neg_input = flow.experimental.negative(input)
@@ -447,15 +431,12 @@ class BCEWithLogitsLoss(Module):
         else:
             _weighted_loss = _loss
 
-        # out = self._op(input, target, self.weight, self.pos_weight, self.reduction)
-        # return out
-
         if self.reduction == "mean":
             return flow.experimental.mean(_weighted_loss)
         elif self.reduction == "sum":
             return flow.experimental.sum(_weighted_loss)
         else:
-        # Do no reduction
+            # Do no reduction
             return _weighted_loss
 
 
