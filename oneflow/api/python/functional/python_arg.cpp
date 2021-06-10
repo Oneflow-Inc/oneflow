@@ -18,9 +18,12 @@ limitations under the License.
 
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/common/data_type.cfg.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/user_op_attr.cfg.h"
+#include "oneflow/core/functional/scalar.h"
 
 namespace py = pybind11;
 
@@ -28,14 +31,14 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
-#define INSTANCE_CAST_OBJECT_AS(T)                             \
-  template<>                                                   \
-  T PythonArg::ObjectAs<T>() const {                           \
-    return detail::cast<T>(Borrow());                          \
-  }                                                            \
-  template<>                                                   \
-  std::vector<T> PythonArg::ObjectAs<std::vector<T>>() const { \
-    return detail::cast<std::vector<T>>(Borrow());             \
+#define INSTANCE_CAST_OBJECT_AS(T)                                    \
+  template<>                                                          \
+  Maybe<T> PythonArg::ObjectAs<T>() const {                           \
+    return detail::cast<T>(Borrow());                                 \
+  }                                                                   \
+  template<>                                                          \
+  Maybe<std::vector<T>> PythonArg::ObjectAs<std::vector<T>>() const { \
+    return detail::cast<std::vector<T>>(Borrow());                    \
   }
 
 OF_PP_FOR_EACH_TUPLE(INSTANCE_CAST_OBJECT_AS,
@@ -44,86 +47,89 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_CAST_OBJECT_AS,
 #undef INSTANCE_CAST_OBJECT_AS
 
 template<>
-Scalar PythonArg::ObjectAs<Scalar>() const {
+Maybe<Scalar> PythonArg::ObjectAs<Scalar>() const {
   py::object obj = Borrow();
   if (detail::isinstance<int32_t>(obj)) {
-    return Scalar(detail::cast<int32_t>(obj));
+    return Scalar(JUST(detail::cast<int32_t>(obj)));
   } else if (detail::isinstance<int64_t>(obj)) {
-    return Scalar(detail::cast<int64_t>(obj));
+    return Scalar(JUST(detail::cast<int64_t>(obj)));
   } else if (detail::isinstance<float>(obj)) {
-    return Scalar(detail::cast<float>(obj));
+    return Scalar(JUST(detail::cast<float>(obj)));
   } else if (detail::isinstance<double>(obj)) {
-    return Scalar(detail::cast<double>(obj));
+    return Scalar(JUST(detail::cast<double>(obj)));
   } else if (detail::isinstance<bool>(obj)) {
-    return Scalar(detail::cast<bool>(obj));
+    return Scalar(JUST(detail::cast<bool>(obj)));
   } else {
-    UNIMPLEMENTED_THEN_THROW() << "Can not convert to scalar from python object whose type is "
-                               << detail::cast<std::string>(py::str(py::type::of(obj)));
-    return Scalar(0);
+    UNIMPLEMENTED_THEN_RETURN() << "Can not convert to scalar from python object whose type is "
+                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
 }
 
 template<>
-std::shared_ptr<one::Tensor> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
+Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Tensor>>() const {
   return detail::cast<std::shared_ptr<one::Tensor>>(Borrow());
 }
 
 template<>
-std::shared_ptr<one::TensorTuple> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>() const {
+Maybe<std::shared_ptr<one::TensorTuple>> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>()
+    const {
   py::object obj = Borrow();
   if (detail::isinstance<one::TensorTuple>(obj)) {
     return detail::cast<std::shared_ptr<one::TensorTuple>>(obj);
   }
 
-  auto v = detail::cast<std::vector<std::shared_ptr<one::Tensor>>>(obj);
-  auto values = std::make_shared<one::TensorTuple>(v.size());
-  for (int i = 0; i < v.size(); ++i) { values->at(i) = v[i]; }
+  const auto& v = JUST(detail::cast<std::vector<std::shared_ptr<one::Tensor>>>(obj));
+  auto values = std::make_shared<one::TensorTuple>(v->size());
+  for (int i = 0; i < v->size(); ++i) { values->at(i) = v->at(i); }
   return values;
 }
 
 template<>
-one::TensorTuple PythonArg::ObjectAs<one::TensorTuple>() const {
-  return *ObjectAs<std::shared_ptr<one::TensorTuple>>();
+Maybe<one::TensorTuple> PythonArg::ObjectAs<one::TensorTuple>() const {
+  return *JUST(ObjectAs<std::shared_ptr<one::TensorTuple>>());
 }
 
 template<>
-std::shared_ptr<cfg::AttrValue> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrValue>>() const {
+Maybe<std::shared_ptr<cfg::AttrValue>> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrValue>>()
+    const {
   py::object obj = Borrow();
   if (detail::isinstance<cfg::AttrValue>(obj)) {
     return detail::cast<std::shared_ptr<cfg::AttrValue>>(obj);
   }
   auto attr_value = std::make_shared<cfg::AttrValue>();
   if (detail::isinstance<int32_t>(obj)) {
-    attr_value->set_at_int32(detail::cast<int32_t>(obj));
+    attr_value->set_at_int32(JUST(detail::cast<int32_t>(obj)));
   } else if (detail::isinstance<double>(obj)) {
-    attr_value->set_at_double(detail::cast<double>(obj));
+    attr_value->set_at_double(JUST(detail::cast<double>(obj)));
   } else {
-    UNIMPLEMENTED_THEN_THROW() << "The attribute type was not supported which is "
-                               << detail::cast<std::string>(py::str(py::type::of(obj)));
+    UNIMPLEMENTED_THEN_RETURN() << "The attribute type was not supported which is "
+                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
   return attr_value;
 }
 
 template<>
-AttrMap PythonArg::ObjectAs<AttrMap>() const {
-  return *(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow()));
+Maybe<AttrMap> PythonArg::ObjectAs<AttrMap>() const {
+  const auto& attrs = *(JUST(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow())));
+  return std::make_shared<AttrMap>(*attrs);
+  ;
 }
 
 template<>
-DataType PythonArg::ObjectAs<DataType>() const {
+Maybe<DataType> PythonArg::ObjectAs<DataType>() const {
   py::object obj = Borrow();
   if (detail::isinstance<cfg::DataType>(obj)) {
-    auto dtype = detail::cast<std::shared_ptr<cfg::DataType>>(obj);
+    const auto& dtype = *JUST(detail::cast<std::shared_ptr<cfg::DataType>>(obj));
     return static_cast<DataType>(*dtype);
   } else if (detail::isinstance<DType>(obj)) {
-    return detail::cast<DType&>(obj).data_type();
+    return JUST(detail::cast<DType&>(obj)).data_type();
   } else if (detail::isinstance<int32_t>(obj)) {
-    return static_cast<DataType>(detail::cast<int32_t>(obj));
+    return static_cast<DataType>(JUST(detail::cast<int32_t>(obj)));
   } else if (detail::isinstance<int64_t>(obj)) {
-    return static_cast<DataType>(detail::cast<int64_t>(obj));
+    return static_cast<DataType>(JUST(detail::cast<int64_t>(obj)));
   } else {
-    UNIMPLEMENTED_THEN_THROW() << "Can not convert object to DataType from "
-                               << detail::cast<std::string>(py::str(py::type::of(obj)));
+    UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to DataType from "
+                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
   return kInvalidDataType;
 }

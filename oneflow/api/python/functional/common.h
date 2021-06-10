@@ -22,18 +22,14 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/attr_map.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
-
-class MutableCfgAttrMap;
-
 namespace one {
-
-class Tensor;
-class TensorTuple;
-
 namespace functional {
 
 namespace detail {
@@ -72,17 +68,17 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_IS_INSTANCE,
 
 template<typename T>
 struct type_caster {
-  static T cast(py::handle src) { return py::cast<T>(src); }
+  static Maybe<T> cast(py::handle src) { return py::cast<T>(src); }
 };
 
 template<typename T>
-inline T cast(py::handle obj) {
+inline Maybe<T> cast(py::handle obj) {
   return type_caster<T>::cast(obj);
 }
 
 template<typename T>
 struct type_caster<std::vector<T>> {
-  static std::vector<T> cast(py::handle src);
+  static Maybe<std::vector<T>> cast(py::handle src);
 };
 
 #define SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(T)                           \
@@ -93,10 +89,10 @@ struct type_caster<std::vector<T>> {
                                                                               \
   template<>                                                                  \
   struct type_caster<std::shared_ptr<T>> {                                    \
-    static std::shared_ptr<T> cast(py::handle src) {                          \
-      CHECK_OR_THROW(detail::isinstance<T>(src))                              \
+    static Maybe<std::shared_ptr<T>> cast(py::handle src) {                   \
+      CHECK_OR_RETURN(detail::isinstance<T>(src))                             \
           << "Can not cast to " << #T << " from python object whose type is " \
-          << detail::cast<std::string>(py::str(py::type::of(src)));           \
+          << *JUST(detail::cast<std::string>(py::str(py::type::of(src))));    \
       return py::cast<std::shared_ptr<T>>(src);                               \
     }                                                                         \
   };
@@ -108,17 +104,28 @@ SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST(MutableCfgAttrMap);
 #undef SPECIALIZE_INTERNAL_IS_INSTANCE_ADN_CAST
 
 template<typename T>
-/*static*/ std::vector<T> type_caster<std::vector<T>>::cast(py::handle src) {
+T&& dereference(T&& val) {
+  return std::move(val);
+}
+
+template<typename T>
+T&& dereference(std::shared_ptr<T>&& val) {
+  return std::move(*val);
+}
+
+template<typename T>
+/*static*/ Maybe<std::vector<T>> type_caster<std::vector<T>>::cast(py::handle src) {
   PyObject* obj = src.ptr();
   bool is_tuple = PyTuple_Check(obj);
-  CHECK_OR_THROW(is_tuple || PyList_Check(obj))
+  CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
       << "The python object is not list or tuple, but is "
-      << detail::cast<std::string>(py::str(py::type::of(src)));
+      << *JUST(detail::cast<std::string>(py::str(py::type::of(src))));
   size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
-  std::vector<T> values(size);
+
+  auto values = std::make_shared<std::vector<T>>(size);
   for (int i = 0; i < size; ++i) {
-    values[i] = detail::cast<T>(is_tuple ? py::handle(PyTuple_GET_ITEM(obj, i))
-                                         : py::handle(PyList_GET_ITEM(obj, i)));
+    values->at(i) = detail::dereference<T>(JUST(detail::cast<T>(
+        is_tuple ? py::handle(PyTuple_GET_ITEM(obj, i)) : py::handle(PyList_GET_ITEM(obj, i)))));
   }
   return values;
 }

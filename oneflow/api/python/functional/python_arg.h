@@ -19,12 +19,9 @@ limitations under the License.
 
 #include <pybind11/pybind11.h>
 
-#include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/user_op_attr.cfg.h"
-#include "oneflow/core/functional/scalar.h"
-#include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/functional/value_types.h"
 
 namespace py = pybind11;
 
@@ -73,13 +70,12 @@ class PythonArg {
       return *reinterpret_cast<const T*>(immediate_->Ptr());
     }
     CHECK_EQ_OR_THROW(active_tag_, HAS_OBJECT);
-    return this->ObjectAs<  // NOLINT
-        typename std::remove_cv<typename std::remove_reference<T>::type>::type>();
+    return this->ObjectAs<oneflow::detail::remove_cvref_t<T>>().GetOrThrow();
   }
 
  private:
   template<typename T>
-  T ObjectAs() const;
+  Maybe<T> ObjectAs() const;
   py::object Borrow() const { return py::reinterpret_borrow<py::object>(object_); }
 
   PyObject* object_;
