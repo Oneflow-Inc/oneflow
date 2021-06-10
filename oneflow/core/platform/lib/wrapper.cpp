@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/dl/include/wrapper.h"
+#include "oneflow/core/platform/include/wrapper.h"
 #include <dlfcn.h>
 #include <link.h>
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #if defined(WITH_RDMA)
-#include "oneflow/core/dl/include/ibv.h"
+#include "oneflow/core/platform/include/ibv.h"
 
 namespace oneflow {
 
