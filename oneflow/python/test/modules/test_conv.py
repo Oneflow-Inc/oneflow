@@ -1196,14 +1196,10 @@ def _test_conv2d_backward(
     conv.to(to_device)
     of_out = conv(x)
     of_out.sum().backward()
-    if data_grad is not None:
-        test_case.assertTrue(
-            np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8)
-        )
-    if weight_grad is not None:
-        test_case.assertTrue(
-            np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
-        )
+    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8))
+    test_case.assertTrue(
+        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
+    )
 
 
 @unittest.skipIf(

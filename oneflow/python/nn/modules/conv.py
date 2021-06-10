@@ -210,6 +210,7 @@ class Conv2d(Module):
 
         assert padding_mode == "zeros"
         kernel_size = _pair(kernel_size)
+        self.kernel_size = kernel_size
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
@@ -273,16 +274,14 @@ class Conv2d(Module):
     def forward(self, x):
         if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
-            filter_out_axis = 0
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
-            filter_split_list = ConvUtil.split(
-                self.weight, axis=filter_out_axis, split_num=self.groups
-            )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(self._cpu_op(in_split_list[i], self.weight[i])[0])
+                out_list.append(
+                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
+                )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
