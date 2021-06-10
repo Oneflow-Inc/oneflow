@@ -54,7 +54,7 @@ def eq_op(input, other):
 
     Args:
         input (oneflow.Tensor): the tensor to compare
-        other (oneflow.Tensor): the tensor to compare
+        other (oneflow.Tensor, float or int): the target to compare
 
     Returns:
 
