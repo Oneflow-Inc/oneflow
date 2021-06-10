@@ -207,7 +207,7 @@
   bind_python: True
 
 - name: "argwhere"
-  signature: "Tensor ArgWhere(Tensor x, *, DataType dtype=kInt32)"
+  signature: "TensorTuple ArgWhere(Tensor x, *, DataType dtype=kInt32)"
   bind_python: True
 
 - name: "broadcast_like"

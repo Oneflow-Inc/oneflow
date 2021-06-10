@@ -90,37 +90,6 @@ class Error final {
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
 
-class Throw final {
- public:
-  Throw(const Error& error) : error_(error) {}
-  ~Throw() { ThrowError(error_.error_proto()); }
-
-  Error& error() { return error_; }
-
- private:
-  Error error_;
-};
-
-// r-value reference is used to supporting expressions like `Error() << "invalid value"`
-template<typename T>
-Error&& operator<<(Error&& error, const T& x) {
-  std::ostringstream ss;
-  ss << x;
-  if (error->stack_frame().empty()) {
-    error->set_msg(error->msg() + ss.str());
-  } else {
-    auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
-    stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
-  }
-  return std::move(error);
-}
-
-template<>
-inline Error&& operator<<(Error&& error, const Error& other) {
-  error.Assign(other);
-  return std::move(error);
-}
-
 template<typename T>
 Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
@@ -132,6 +101,19 @@ Error& operator<<(Error& error, const T& x) {
     stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
   }
   return error;
+}
+
+// r-value reference is used to supporting expressions like `Error() << "invalid value"`
+template<typename T>
+Error&& operator<<(Error&& error, const T& x) {
+  error << x;
+  return std::move(error);
+}
+
+template<>
+inline Error&& operator<<(Error&& error, const Error& other) {
+  error.Assign(other);
+  return std::move(error);
 }
 
 }  // namespace oneflow

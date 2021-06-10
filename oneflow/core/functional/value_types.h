@@ -19,11 +19,12 @@ limitations under the License.
 
 #include <memory>
 
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+class Shape;
 class AttrMap;
-enum DataType;
 
 namespace cfg {
 class AttrValue;
