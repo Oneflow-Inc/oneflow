@@ -2026,60 +2026,6 @@ def avg_pool3d(
     return op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
-@oneflow_export("nn.adaptive_avg_pool2d")
-def avg_pool2d(
-    input: oneflow._oneflow_internal.BlobDesc,
-    output_size: Union[int, IntPair],
-    name: Optional[str] = None,
-) -> oneflow._oneflow_internal.BlobDesc:
-    r"""Performs the 2d-average pooling on the input.
-
-    Args:
-        input (oneflow._oneflow_internal.BlobDesc): A 4-D `Blob` of shape [batch, height, width, channels].
-        output_size (Union[int, IntPair]):  An int or list of ints that has length 1, 2. The size of the output `Blob`.
-        name (Optional[str], optional):  This operator's name(optional). Defaults to None.
-
-    Returns:
-        oneflow._oneflow_internal.BlobDesc:  A `Blob` with the same type as '`value'`. The adaptive average pooled output `Blob`.
-
-    For example:
-
-    .. code-block:: python
-
-        import oneflow as flow
-        import numpy as np
-        import oneflow.typing as tp
-
-
-        @flow.global_function()
-        def adaptive_avgpool2d_Job(x: tp.Numpy.Placeholder((1, 2, 6, 6))
-        ) -> tp.Numpy:
-            pool_out = flow.nn.adaptive_avg_pool2d(
-                input=x,
-                output_size=(2, 2)
-            )
-
-            return pool_out
-
-
-        x = np.random.randn(1, 2, 6, 6).astype(np.float32)
-        out = adaptive_avgpool2d_Job(x)
-
-        # out.shape (1, 2, 2, 2)
-
-    """
-    op = (
-        flow.user_op_builder(
-            name if name is not None else id_util.UniqueStr("AdaptiveAvgPool2D_")
-        )
-        .Op("adaptive_avg_pool2d")
-        .Input("x", [input])
-        .Output("y")
-    )
-    op.Attr("output_size", output_size)
-    return op.Build().InferAndTryRun().RemoteBlobList()[0]
-
-
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
