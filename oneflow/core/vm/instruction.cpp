@@ -83,6 +83,7 @@ void InstructionMsg::__Init__(const InstructionMsg& instr_msg) {
     set_parallel_desc_symbol_id(instr_msg.parallel_desc_symbol_id());
   }
   reset_operand_list(instr_msg.operand_list());
+  *mutable_phy_instr_operand() = instr_msg.phy_instr_operand();
 }
 
 void InstructionMsg::ToProto(InstructionProto* proto) const {
@@ -211,6 +212,10 @@ ObjectMsgPtr<InstructionMsg> InstructionMsg::add_del_operand(ObjectId logical_ob
   auto* operand = add_instr_operand()->mutable_del_operand()->mutable_operand();
   operand->__Init__(logical_object_id, AllMirroredObject());
   return this;
+}
+
+ObjectMsgPtr<InstructionMsg> InstructionMsg::Clone() const {
+  return ObjectMsgPtr<InstructionMsg>::NewFrom(mut_allocator(), *this);
 }
 
 ObjectMsgPtr<InstructionMsg> InstructionMsg::MakeInferInstrMsg() const {
