@@ -87,12 +87,12 @@ class ConstantPad2d(Module):
     ):
         super().__init__()
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError("Padding length must be 4")
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError("padding must be in or list or tuple!")
+            raise ValueError("padding must be int or list or tuple!")
 
         self.padding = boundary
         self.value = value
@@ -102,7 +102,6 @@ class ConstantPad2d(Module):
 
         if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
             
-            # *_value depends on x type not value type, so flow.builtin_op has to be in forward
             if x.dtype in [
             flow.float32,
             flow.float16,
@@ -128,8 +127,7 @@ class ConstantPad2d(Module):
             return res
 
         else:
-            print("Padding size should be less than the corresponding input dimension. Please check.")
-            return
+            raise AssertionError("Padding size should be less than the corresponding input dimension. Please check.")
 
 if __name__ == "__main__":
     import doctest
