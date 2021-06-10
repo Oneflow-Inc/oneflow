@@ -67,7 +67,7 @@ REGISTER_USER_OP("relu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = ctx->InputDType("y", 0);
+      const DataType& data_type = ctx->InputDType("y", 0);
       CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type);
       *ctx->OutputDType("dx", 0) = data_type;
       return Maybe<void>::Ok();

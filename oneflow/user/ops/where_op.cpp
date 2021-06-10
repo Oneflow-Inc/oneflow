@@ -61,9 +61,9 @@ REGISTER_USER_OP("where")
       cond_arg_modifier->set_requires_grad(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType cond_dtype = ctx->InputDType("condition", 0);
+      const DataType& cond_dtype = ctx->InputDType("condition", 0);
       CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-      DataType x_dtype = ctx->InputDType("x", 0);
+      const DataType& x_dtype = ctx->InputDType("x", 0);
       CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
       *ctx->OutputDType("out", 0) = x_dtype;
       return Maybe<void>::Ok();

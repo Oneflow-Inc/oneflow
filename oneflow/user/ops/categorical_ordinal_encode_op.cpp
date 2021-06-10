@@ -65,7 +65,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = ctx->InputDType("in", 0);
+      const DataType& data_type = ctx->InputDType("in", 0);
       CHECK_OR_RETURN(IsIndexDataType(data_type));
       CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type);
       CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type);
