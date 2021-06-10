@@ -27,13 +27,13 @@ namespace {
 constexpr size_t kDefaultBufferSize = 32 * 1024;  // 32KB
 
 size_t GetBufferSize() {
-  const char* buf_size_str = std::getenv("ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_BYTE_SIZE");
+  const char* buf_size_str = std::getenv("ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES");
   if (buf_size_str) {
     int buf_size = atoi(buf_size_str);
     if (buf_size > 0) {
       return buf_size;
     } else {
-      LOG(WARNING) << "invalid env ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_BYTE_SIZE " << buf_size_str
+      LOG(WARNING) << "invalid env ONEFLOW_PERSISTENT_IN_STREAM_BUFFER_SIZE_BYTES " << buf_size_str
                    << ", default size " << kDefaultBufferSize << " is set";
       return kDefaultBufferSize;
     }
