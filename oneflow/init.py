@@ -16,6 +16,8 @@ limitations under the License.
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
+import os
+
 import oneflow._oneflow_internal
 
 Size = oneflow._oneflow_internal.Size
@@ -66,6 +68,9 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 import oneflow.python.framework.env_util as env_util
 
 env_util.init_default_physical_env()
+
+env_util.init_with_env()
+
 del env_util
 
 
