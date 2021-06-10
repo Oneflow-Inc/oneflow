@@ -409,8 +409,7 @@ class Tensor:
         if isinstance(key, tuple):
             squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
         elif isinstance(key, int):
-            if self.ndim > 1:
-                squeeze_dims = [key]
+            squeeze_dims = [0]
 
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
