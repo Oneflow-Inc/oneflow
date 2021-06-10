@@ -38,6 +38,13 @@ def _test_squeeze(test_case, device):
     )
 
 
+def _test_squeeze_1d_input(test_case, device):
+    np_arr = np.random.rand(10)
+    input = flow.Tensor(np_arr, device=flow.device(device))
+    output = flow.squeeze(input)
+    test_case.assertTrue(np.allclose(output.numpy(), np_arr, 1e-5, 1e-5))
+
+
 def _test_tensor_squeeze(test_case, device):
     np_arr = np.random.rand(1, 1, 1, 3)
     input = flow.Tensor(np_arr, device=flow.device(device))
@@ -85,6 +92,7 @@ class TestSqueeze(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_squeeze,
+            _test_squeeze_1d_input,
             _test_squeeze_int,
             _test_tensor_squeeze,
             _test_squeeze_backward,
