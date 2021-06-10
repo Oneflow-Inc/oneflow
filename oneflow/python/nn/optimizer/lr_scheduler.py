@@ -17,6 +17,8 @@ limitations under the License.
 from .optimizer import Optimizer
 
 
+@oneflow_export(optim.lr_scheduler._LRScheduler)
+@experimental_api
 class LrScheduler(object):
     def __init__(self, optimizer, last_step=-1, verbose=False):
         if not isinstance(optimizer, Optimizer):
