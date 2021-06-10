@@ -56,7 +56,7 @@ def _np_kldivloss_grad(input, target, np_log_target):
     }
 
 
-def _test_kldivloss_impl(test_case, device, shape, reduction, log_target):
+def _test_kldivloss_forward(test_case, device, shape, reduction, log_target):
     x = np.random.randn(*shape)
     y = np.random.randn(*shape)
     input = flow.Tensor(
@@ -69,6 +69,19 @@ def _test_kldivloss_impl(test_case, device, shape, reduction, log_target):
     of_out = loss(input, target)
     np_out = _np_kldivloss(x, y, log_target)[reduction]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_kldivloss_backward(test_case, device, shape, reduction, log_target):
+    x = np.random.randn(*shape)
+    y = np.random.randn(*shape)
+    input = flow.Tensor(
+        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
+    )
+    target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+
+    loss = flow.nn.KLDivLoss(reduction=reduction, log_target=log_target)
+    loss = loss.to(device)
+    of_out = loss(input, target)
 
     of_out = of_out.sum()
     of_out.backward()
@@ -84,7 +97,8 @@ class TestKLDivLossModule(flow.unittest.TestCase):
     def test_kldivloss(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_kldivloss_impl,
+            _test_kldivloss_forward,
+            _test_kldivloss_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [

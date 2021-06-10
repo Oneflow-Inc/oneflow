@@ -389,16 +389,16 @@ class KLDivLoss(Module):
         >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [ 1.3513819   0.         -0.08356878]
+        >>> out
+        tensor([ 1.3514,  0.    , -0.0836], dtype=oneflow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="mean", log_target=False)
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [0.42260438]
+        >>> out
+        tensor([0.4226], dtype=oneflow.float32)
         >>> m = flow.nn.KLDivLoss(reduction="sum", log_target=True)
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [5.7800508]
+        >>> out
+        tensor([5.7801], dtype=oneflow.float32)
 
     """
 
@@ -428,7 +428,9 @@ class KLDivLoss(Module):
             _kl_div_loss = flow.experimental.exp(target) * (target - input)
         else:
             _kl_div_out_loss = target * (flow.experimental.log(target) - input)
-            _zeros = flow.experimental.zeros_like(_kl_div_out_loss)
+            _zeros = flow.experimental.zeros(
+                size=_kl_div_out_loss.shape, dtype=_kl_div_out_loss.dtype
+            )
             # when target < 0, we set to `0`, when target > 0, we set to `1`.
             _condition = flow.experimental.gt(target, 0)
             # To avoid the `nan` value in log operation
@@ -514,17 +516,17 @@ class MSELoss(Module):
         ... [-0.49158347, 0.93673637, 0.1324141]], dtype=flow.float32)
         >>> m = flow.nn.MSELoss(reduction="none")
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [[2.266468   0.50750285 0.61121327]
-         [0.55887264 4.082267   0.1172941 ]]
+        >>> out
+        tensor([[2.2665, 0.5075, 0.6112],
+                [0.5589, 4.0823, 0.1173]], dtype=oneflow.float32)
         >>> m = flow.nn.MSELoss(reduction="mean")
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [1.3572696]
+        >>> out
+        tensor([1.3573], dtype=oneflow.float32)
         >>> m = flow.nn.MSELoss(reduction="sum")
         >>> out = m(input, target)
-        >>> print(out.numpy())
-        [8.143618]
+        >>> out
+        tensor([8.1436], dtype=oneflow.float32)
 
     """
 
