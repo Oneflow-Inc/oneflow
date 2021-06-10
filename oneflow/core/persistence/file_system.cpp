@@ -141,7 +141,7 @@ fs::FileSystem* DataFS(int64_t session_id) {
 }
 fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 
-void GetLocalFS(fs::FileSystem** fs) {
+void CreateLocalFS(fs::FileSystem** fs) {
 #ifdef OF_PLATFORM_POSIX
   *fs = new fs::PosixFileSystem;
 #else
@@ -149,7 +149,7 @@ void GetLocalFS(fs::FileSystem** fs) {
 #endif
 }
 
-void GetHadoopFS(fs::FileSystem** fs, const std::string& namenode) {
+void CreateHadoopFS(fs::FileSystem** fs, const std::string& namenode) {
   *fs = new fs::HadoopFileSystem(namenode);
 }
 
@@ -165,12 +165,12 @@ void GetFS(fs::FileSystem** fs, const char* fs_type, const char* hdfs_namenode) 
   }
 
   if (fs_type_str == "local") {
-    GetLocalFS(fs);
+    CreateLocalFS(fs);
   } else if (fs_type_str == "network") {
-    GetLocalFS(fs);
+    CreateLocalFS(fs);
   } else if (fs_type_str == "hdfs") {
     CHECK_NOTNULL(hdfs_namenode);
-    GetHadoopFS(fs, hdfs_namenode);
+    CreateHadoopFS(fs, hdfs_namenode);
   } else {
     // pass
   }
@@ -189,7 +189,7 @@ fs::FileSystem* GetDataFS() {
     }
     GetFS(&data_fs, data_fs_type, data_hdfs_namenode);
     if (data_fs == nullptr) {
-      GetLocalFS(&data_fs);
+      CreateLocalFS(&data_fs);
       LOG(WARNING) << "invalid env ONEFLOW_DATA_FILE_SYSTEM_TYPE " << data_fs_type
                    << ", return the local file system instead";
     }
@@ -209,7 +209,7 @@ fs::FileSystem* GetSnapshotFS() {
     }
     GetFS(&snapshot_fs, snapshot_fs_type, snapshot_hdfs_namenode);
     if (snapshot_fs == nullptr) {
-      GetLocalFS(&snapshot_fs);
+      CreateLocalFS(&snapshot_fs);
       LOG(WARNING) << "invalid env ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE " << snapshot_fs_type
                    << ", return the local file system instead";
     }
