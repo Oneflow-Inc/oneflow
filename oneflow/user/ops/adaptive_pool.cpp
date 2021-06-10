@@ -92,8 +92,8 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
       const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("adaptive_avg_pool2d_grad")
-            .InputBind("x", ctx->FwOp().input("in", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .InputBind("x", ctx->FwOp().input("x", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .Attr("output_size", ctx->FwOp().attr<std::vector<int64_t>>("output_size"))
             .Output("dx")
             .Build();
