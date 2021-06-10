@@ -50,11 +50,11 @@ def acosh_op(x):
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> out1 = flow.acosh(x1)
-        >>> out1 #doctest: +ELLIPSIS
+        >>> out1
         tensor([1.317 , 1.7627, 2.0634], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([1.5, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.acosh(x2)
-        >>> out2 #doctest: +ELLIPSIS
+        >>> out2
         tensor([0.9624, 1.6094, 1.9827], device='cuda:0', dtype=oneflow.float32)
 
     """

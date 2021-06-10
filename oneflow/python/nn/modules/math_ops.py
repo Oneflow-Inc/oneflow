@@ -802,11 +802,11 @@ def sin_op(tensor):
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> out1 = flow.sin(x1)
-        >>> out1 #doctest: +ELLIPSIS
+        >>> out1
         tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.sin(x2)
-        >>> out2 #doctest: +ELLIPSIS
+        >>> out2
         tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
 
     """

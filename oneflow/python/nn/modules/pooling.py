@@ -231,7 +231,7 @@ class MaxPool2d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
         >>> y = m(x)
-        >>> y #doctest: +ELLIPSIS
+        >>> y
        tensor([[[[0.5488, 0.7152, 0.7152, 0.7152, 0.6459],
                  [0.5488, 0.8918, 0.9637, 0.9637, 0.9637],
                  [0.5449, 0.8918, 0.9637, 0.9637, 0.9637],
@@ -369,7 +369,7 @@ class MaxPool3d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
         >>> y = m(x)
-        >>> y #doctest: +ELLIPSIS
+        >>> y
         tensor([[[[[0.7782, 0.87  , 0.9786, 0.9786, 0.9786],
                    [0.7992, 0.8918, 0.9786, 0.9786, 0.9786],
                    [0.7992, 0.8918, 0.9786, 0.9786, 0.9786],
