@@ -21,6 +21,7 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
+
 @oneflow_export("nn.ReplicationPad2d")
 @experimental_api
 class ReplicationPad2d(Module):
@@ -81,10 +82,8 @@ class ReplicationPad2d(Module):
                   [15., 15., 15., 16., 17., 17., 17.]]]], dtype=oneflow.float32)
 
     """
-    def __init__(
-        self,
-        padding: Union[int, tuple, list]
-    ):
+
+    def __init__(self, padding: Union[int, tuple, list]):
         super().__init__()
 
         if isinstance(padding, (tuple, list)):
@@ -106,12 +105,21 @@ class ReplicationPad2d(Module):
 
     def forward(self, x):
         _, _, h, w = x.shape
-        if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
+        if (
+            self.padding[2] < h
+            and self.padding[3] < h
+            and self.padding[0] < w
+            and self.padding[1] < w
+        ):
             res = self._op(x)[0]
             return res
         else:
-            raise AssertionError("Padding size should be less than the corresponding input dimension. Please check.")
+            raise AssertionError(
+                "Padding size should be less than the corresponding input dimension. Please check."
+            )
+
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)
