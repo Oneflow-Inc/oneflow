@@ -232,8 +232,8 @@ class TensorDataset(Dataset[Tuple[Tensor, ...]]):
         self.tensors = tensors
 
     def __getitem__(self, index):
-        # print("self.tensors.size >>>>>>>>>>>>>> ", len(self.tensors), " >>>>>> index:", index)
-        return tuple(tensor[index] for tensor in self.tensors)
+        res = tuple(tensor[index] for tensor in self.tensors)
+        return res
 
     def __len__(self):
         return self.tensors[0].size(0)

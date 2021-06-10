@@ -83,7 +83,7 @@ print(optimizer)
 
 
 # 调整学习率
-for param_group in optimizer._param_groups:
+for param_group in optimizer.param_groups:
     param_group.options['lr'] *= 0.1 # 学习率为之前的0.1倍
 
 
@@ -91,7 +91,6 @@ num_epochs = 10
 for epoch in range(1, num_epochs + 1):
     for X, y in data_iter:
         output = net(X)
-        # y = y.reshape(shape=[y.size(0)])
         l = loss(output, y)
         optimizer.zero_grad() # 梯度清零，等价于net.zero_grad()
         l.backward()

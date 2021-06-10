@@ -1,15 +1,15 @@
+import os
+import time
+
 import oneflow.experimental as flow
 import oneflow.experimental.nn as nn
-
 import transforms as transforms
 import oneflow.python.utils.data as data
 from datasets.mnist import FashionMNIST
-import os
-from time import time
 
 flow.enable_eager_execution()
 
-# ref:http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.5_fashion-mnist
+# ref: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter03_DL-basics/3.10_mlp-pytorch
 
 def load_data_fashion_mnist(batch_size, resize=None, root='./test/FashionMNIST'):
     """Download the Fashion-MNIST dataset and then load into memory."""
@@ -54,17 +54,19 @@ net = nn.Sequential(
 for params in net.parameters():
     nn.init.normal_(params, mean=0, std=0.01)
 
-net.to(flow.device('cuda'))
+
+device = flow.device("cuda")
+net.to(device)
 
 
 batch_size = 256
 train_iter, test_iter = load_data_fashion_mnist(batch_size)
 loss = nn.CrossEntropyLoss()
-loss.to(flow.device('cuda'))
+loss.to(device)
 
-optimizer = flow.optim.SGD(parameters=net.parameters(), lr=0.1)
+optimizer = flow.optim.SGD(net.parameters(), lr=0.1)
 
-num_epochs = 5
+num_epochs = 10
 
 
 # ############################ 5.5 #########################
@@ -75,8 +77,8 @@ def evaluate_accuracy(data_iter, net, device=None):
     acc_sum, n = 0.0, 0
     with flow.no_grad():
         for X, y in data_iter:
-            X = X.to(flow.device('cuda'))
-            y = y.to(flow.device('cuda'))
+            X = X.to(device=device)
+            y = y.to(device=device)
             if isinstance(net, nn.Module):
                 net.eval() # 评估模式, 这会关闭dropout
                 acc_sum += (net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum()
@@ -95,33 +97,30 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size,
               params=None, lr=None, optimizer=None):
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
-        start = time()
+        start = time.time()
+        last_time=start
         for X, y in train_iter:
-            iter_start = time()
+            iter_start = time.time()
             X.requires_grad=True
-            X = X.to(flow.device('cuda'))
-            y = y.to(flow.device('cuda'))
+            X = X.to(device=device)
+            y = y.to(device=device)
             y_hat = net(X)
             l = loss(y_hat, y).sum()
-            
-            # 梯度清零
-            if optimizer is not None:
-                optimizer.zero_grad()
-            elif params is not None and params[0].grad is not None:
-                for param in params:
-                    param.grad.data.zero_()
-            
+
+            optimizer.zero_grad()
             l.backward()
-            optimizer.step()  # “softmax回归的简洁实现”一节将用到  
+            optimizer.step()
+
             train_l_sum += l.numpy()
             train_acc_sum += (y_hat.argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
-            print("iter cost >>>>>>> "+str(time()-iter_start) + "s")
+            iter_end = time.time()
+            # print("prepare data iter cost >>>", str(iter_start-last_time)+"(s)","train iter cost >>> ", str(iter_end-iter_start)+"(s)", "train_acc_sum >>>", train_acc_sum)
+            last_time = iter_end
         
-        print("epoch:" + str(epoch+1) + " cost >>>>>>> "+str(time()-start) + "s")
         test_acc = evaluate_accuracy(test_iter, net)
-        print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f'
-              % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc))
+        print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, cost >>>>>>> %s(s)'
+              % (epoch + 1, train_l_sum / n, train_acc_sum / n, test_acc, str(time.time()-start)))
 
 
 train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size, None, None, optimizer)

@@ -225,6 +225,7 @@ class DataLoader(Generic[T_co]):
         # samplers first, so that they don't learn that this combo doesn't work
         # after spending time fixing the custom sampler errors.
         if isinstance(dataset, IterableDataset):
+            print(">>>>>>>>>>>>>>>>>>>>> if isinstance(dataset, IterableDataset):")
             self._dataset_kind = _DatasetKind.Iterable
             # NOTE [ Custom Samplers and IterableDataset ]
             #
@@ -266,6 +267,7 @@ class DataLoader(Generic[T_co]):
                     "DataLoader with IterableDataset: expected unspecified "
                     "batch_sampler option, but got batch_sampler={}".format(batch_sampler))
         else:
+            print(">>>>>>>>>>>>>>>>>>>>> self._dataset_kind = _DatasetKind.Map")
             self._dataset_kind = _DatasetKind.Map
 
         if sampler is not None and shuffle:
@@ -292,10 +294,12 @@ class DataLoader(Generic[T_co]):
                 sampler = _InfiniteConstantSampler()
             else:  # map-style
                 if shuffle:
+                    print("DataLoader if shuffle >>>>> True")
                     # Cannot statically verify that dataset is Sized
                     # Somewhat related: see NOTE [ Lack of Default `__len__` in Python Abstract Base Classes ]
                     sampler = RandomSampler(dataset, generator=generator)  # type: ignore
                 else:
+                    print("DataLoader if shuffle >>>>> False")
                     sampler = SequentialSampler(dataset)
 
         if batch_size is not None and batch_sampler is None:

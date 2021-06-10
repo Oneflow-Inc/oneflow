@@ -7,6 +7,7 @@ from datasets.mnist import FashionMNIST
 import os
 import time
 
+# ref: http://tangshusen.me/Dive-into-DL-PyTorch/#/chapter05_CNN/5.5_lenet
 device = flow.device("cuda")
 
 class LeNet(nn.Module):
@@ -36,7 +37,7 @@ class LeNet(nn.Module):
 
 
 net = LeNet()
-net.to(flow.device('cuda'))
+net.to(device)
 print(net)
 
 def load_data_fashion_mnist(batch_size, resize=None, root='./test/FashionMNIST'):
@@ -68,10 +69,8 @@ def evaluate_accuracy(data_iter, net, device=None):
     acc_sum, n = 0.0, 0
     with flow.no_grad():
         for X, y in data_iter:
-            X = X.unsqueeze(dim=1)
             if isinstance(net, nn.Module):
                 net.eval() # 评估模式, 这会关闭dropout
-                print("(net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum() >>>>> ", (net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum())
                 acc_sum += (net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum()
                 net.train() # 改回训练模式
             else: # 自定义的模型, 3.13节之后不会用到, 不考虑GPU
@@ -92,7 +91,6 @@ def train_ch5(net, train_iter, test_iter, batch_size, optimizer, device, num_epo
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
-            X = X.unsqueeze(dim=1) # NOTE:image shape of dataloader should be flow.Size([256, 1, 28, 28])
             X = X.to(device)
             X.requires_grad=True
             y = y.to(device)

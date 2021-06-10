@@ -7,7 +7,7 @@ from oneflow.python.framework.tensor import Tensor
 T_co = TypeVar('T_co', covariant=True)
 # Defined in torch/csrc/Generator.cpp
 class Generator(object):
-    _device = "cuda"
+    _device = "cpu"
     device: _device
     def __init__(self, device: Union[_device, str, None] = None) -> None: ...
     def get_state(self) -> Tensor: ...
@@ -124,16 +124,17 @@ class RandomSampler(Sampler[int]):
         n = len(self.data_source)
         if self.generator is None:
             generator = Generator()
-            generator.manual_seed(np.random.randint(1,1024))
-            # generator.manual_seed(int(flow.empty((), dtype=flow.int64).random_().item()))
+            # TODO
+            generator.manual_seed(int(flow.Tensor(1,dtype=flow.int64).xavier_uniform_().numpy()[0]))
         else:
             generator = self.generator
         if self.replacement:
+            # TODO: flow.randint
             for _ in range(self.num_samples // 32):
                 yield from flow.randint(high=n, size=(32,), dtype=flow.int64, generator=generator).tolist()
             yield from flow.randint(high=n, size=(self.num_samples % 32,), dtype=flow.int64, generator=generator).tolist()
         else:
-            arr = np.arange(n)
+            arr = np.arange(self.num_samples)
             yield from np.random.permutation(arr).tolist()
             # yield from flow.randperm(n, generator=generator).tolist()
 
