@@ -44,7 +44,7 @@ REGISTER_USER_OP("upsample")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -58,7 +58,7 @@ REGISTER_USER_OP("upsample_grad")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
       if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
@@ -74,7 +74,7 @@ REGISTER_USER_OP("upsample_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
       return Maybe<void>::Ok();
     });
 

@@ -34,7 +34,7 @@ REGISTER_USER_OP("expand_dims")
     .Attr<int32_t>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const int32_t axis =
           TransformNegativeAxisToPositive(ctx->Attr<int32_t>("axis"), in_shape.NumAxes());
 
@@ -62,7 +62,7 @@ REGISTER_USER_OP("expand_dims")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

@@ -43,7 +43,7 @@ REGISTER_USER_OP("fake_quantization")
         CHECK_EQ_OR_RETURN(zero_point_shape.elem_cnt(), in_shape.At(0));
       }
 
-      *ctx->Shape4ArgNameAndIndex("out", 0) = in_shape;
+      *ctx->OutputShape("out", 0) = in_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -108,7 +108,7 @@ REGISTER_USER_OP("fake_quantization")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

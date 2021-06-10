@@ -160,10 +160,16 @@ class UserOpInferContext final : public user_op::InferContext {
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
+  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+    return const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_shape();
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -559,8 +565,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
     JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-      out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
-      out_blob_desc->mut_shape() = *(infer_ctx.Shape4ArgNameAndIndex(pair.first, pair.second));
+      out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
+      out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
       out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
     }
     return Maybe<void>::Ok();

@@ -99,16 +99,14 @@ class Conv2d(Module):
 
     * :attr:`stride` controls the stride for the cross-correlation, a single
       number or a tuple.
-
     * :attr:`padding` controls the amount of implicit padding on both
       sides for :attr:`padding` number of points for each dimension.
-
     * :attr:`dilation` controls the spacing between the kernel points; also
       known as the à trous algorithm. It is harder to describe, but this `link`_
       has a nice visualization of what :attr:`dilation` does.
-
-    * :attr:`groups` controls the connections between inputs and outputs. :attr:`in_channels` 
-       and :attr:`out_channels` must both be divisible by :attr:`groups`. For example,
+    * :attr:`groups` controls the connections between inputs and outputs.
+      :attr:`in_channels` and :attr:`out_channels` must both be divisible by
+      :attr:`groups`. For example,
 
         * At groups=1, all inputs are convolved to all outputs.
         * At groups=2, the operation becomes equivalent to having two conv
@@ -179,11 +177,15 @@ class Conv2d(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
 
-        m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
-        input = flow.randn(20, 16, 50, 100)
-        output = m(input)
+        >>> arr = np.random.randn(20, 16, 50, 100)
+        >>> input = flow.Tensor(arr)
+        >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
+        >>> output = m(input)
 
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
@@ -208,6 +210,7 @@ class Conv2d(Module):
 
         assert padding_mode == "zeros"
         kernel_size = _pair(kernel_size)
+        self.kernel_size = kernel_size
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
@@ -269,16 +272,14 @@ class Conv2d(Module):
     def forward(self, x):
         if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
-            filter_out_axis = 0
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
-            filter_split_list = ConvUtil.split(
-                self.weight, axis=filter_out_axis, split_num=self.groups
-            )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(self._cpu_op(in_split_list[i], self.weight[i])[0])
+                out_list.append(
+                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
+                )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
@@ -286,3 +287,9 @@ class Conv2d(Module):
         if self._bias_add_op is not None:
             res = self._bias_add_op(res, self.bias)[0]
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

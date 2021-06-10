@@ -45,11 +45,11 @@ class Upsample(Module):
             Default: ``'nearest'``
         align_corners (bool, optional): if ``True``, the corner pixels of the input
             and output tensors are aligned, and thus preserving the values at
-            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``. 
+            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``.
             Default: ``False``
 
     Shape:
-        - Input: : :math:`(N, C, H_{in}, W_{in})` 
+        - Input: : :math:`(N, C, H_{in}, W_{in})`
         - Output: :math:`(N, C, H_{out}, W_{out})` , where
 
     .. math::
@@ -63,7 +63,7 @@ class Upsample(Module):
 
     .. note::
         If you want downsampling/general resizing, you should use :func:`~nn.functional.interpolate`.
-    
+
     For example:
 
     .. code-block:: python
@@ -71,7 +71,7 @@ class Upsample(Module):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
-        
+
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
@@ -81,7 +81,7 @@ class Upsample(Module):
            [1. 1. 2. 2.]
            [3. 3. 4. 4.]
            [3. 3. 4. 4.]]]]
-    
+
     """
 
     def __init__(
@@ -192,7 +192,7 @@ class UpsamplingNearest2d(Upsample):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
-        
+
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
@@ -202,7 +202,7 @@ class UpsamplingNearest2d(Upsample):
            [1. 1. 2. 2.]
            [3. 3. 4. 4.]
            [3. 3. 4. 4.]]]]
-        
+
     """
 
     def __init__(
@@ -250,7 +250,7 @@ class UpsamplingBilinear2d(Upsample):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
-        
+
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
@@ -260,7 +260,7 @@ class UpsamplingBilinear2d(Upsample):
            [1.6666667 2.        2.3333335 2.6666667]
            [2.3333335 2.6666667 3.        3.3333335]
            [3.        3.3333333 3.6666667 4.       ]]]]
-        
+
     """
 
     def __init__(
@@ -276,4 +276,4 @@ class UpsamplingBilinear2d(Upsample):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

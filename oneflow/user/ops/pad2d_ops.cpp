@@ -76,11 +76,11 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         y_dim_vec[h_idx] = h_x + padding[2] + padding[3];                                    \
         y_dim_vec[w_idx] = w_x + padding[0] + padding[1];                                    \
                                                                                              \
-        *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(y_dim_vec);                              \
+        *ctx->OutputShape("y", 0) = Shape(y_dim_vec);                                        \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);           \
+        *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);                     \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetGetSbpFn(GetOpSbpSignature)                                                        \
@@ -91,7 +91,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         x_modifier->set_requires_grad(true);                                                 \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);           \
+        *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);                     \
         return Maybe<void>::Ok();                                                            \
       });                                                                                    \
                                                                                              \
@@ -120,16 +120,16 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         dx_dim_vec[h_idx] = h_dy - padding[2] - padding[3];                                  \
         dx_dim_vec[w_idx] = w_dy - padding[0] - padding[1];                                  \
                                                                                              \
-        *ctx->Shape4ArgNameAndIndex("dx", 0) = Shape(dx_dim_vec);                            \
+        *ctx->OutputShape("dx", 0) = Shape(dx_dim_vec);                                      \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);         \
+        *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);                   \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetGetSbpFn(GetOpGradSbpSignature)                                                    \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);         \
+        *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);                   \
         return Maybe<void>::Ok();                                                            \
       });                                                                                    \
                                                                                              \

@@ -20,7 +20,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferClipTensorDesc(user_op::InferContext* ctx) {
-  *ctx->Shape4ArgNameAndIndex("y", 0) = ctx->InputShape("x", 0);
+  *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -33,7 +33,7 @@ Maybe<void> GetClipSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipGradTensorDesc(user_op::InferContext* ctx) {
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -55,12 +55,12 @@ Maybe<void> GetClipGradSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferClipTensorDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 

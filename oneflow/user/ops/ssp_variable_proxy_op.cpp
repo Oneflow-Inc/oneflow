@@ -26,8 +26,8 @@ REGISTER_USER_OP("ssp_variable_proxy")
     .Attr<int64_t>("buffer_size", 1)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& var_shape = ctx->InputShape("var", 0);
-      *ctx->Shape4ArgNameAndIndex("ref", 0) = var_shape;
-      *ctx->Shape4ArgNameAndIndex("value", 0) = var_shape;
+      *ctx->OutputShape("ref", 0) = var_shape;
+      *ctx->OutputShape("value", 0) = var_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -42,8 +42,8 @@ REGISTER_USER_OP("ssp_variable_proxy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("ref", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
-      *ctx->Dtype4ArgNameAndIndex("value", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
+      *ctx->OutputDType("ref", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
+      *ctx->OutputDType("value", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,

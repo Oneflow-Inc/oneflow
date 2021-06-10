@@ -24,7 +24,7 @@ REGISTER_USER_OP("parallel_cast")
     .Attr<std::string>("sbp_parallel", "")
     .Attr<std::string>("grad_sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
@@ -54,7 +54,7 @@ REGISTER_USER_OP("parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

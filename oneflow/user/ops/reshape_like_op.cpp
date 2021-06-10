@@ -36,7 +36,7 @@ REGISTER_USER_OP("reshape_like")
       const Shape& in_shape = ctx->InputShape("in", 0);
       const Shape& like_shape = ctx->InputShape("like", 0);
       CHECK_EQ_OR_RETURN(in_shape.elem_cnt(), like_shape.elem_cnt());
-      *ctx->Shape4ArgNameAndIndex("out", 0) = like_shape;
+      *ctx->OutputShape("out", 0) = like_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -65,7 +65,7 @@ REGISTER_USER_OP("reshape_like")
     })
     .SetParallelDistributionInferFn(InferParallelDistributionFn)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 

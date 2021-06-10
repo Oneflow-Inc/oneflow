@@ -31,7 +31,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   }
   *ctx->IsDynamic4ArgNameAndIndex("prob", 0) = prediction_desc->is_dynamic();
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
-  *ctx->Shape4ArgNameAndIndex("prob", 0) = prediction_desc->shape();
+  *ctx->OutputShape("prob", 0) = prediction_desc->shape();
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
   *out_desc->mut_shape() = label_desc->shape();
@@ -50,7 +50,7 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(prob_desc->shape().At(i), label_desc->shape().At(i));
   }
   CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->Shape4ArgNameAndIndex("prediction_diff", 0) = prob_desc->shape();
+  *ctx->OutputShape("prediction_diff", 0) = prob_desc->shape();
   *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prob_desc->is_dynamic();
   return Maybe<void>::Ok();
 }
@@ -58,8 +58,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  *ctx->Dtype4ArgNameAndIndex("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  *ctx->OutputDType("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
   return Maybe<void>::Ok();
 }
 
@@ -69,7 +69,7 @@ Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
   const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   CHECK_EQ_OR_RETURN(dy_desc->data_type(), prob_desc->data_type());
-  *ctx->Dtype4ArgNameAndIndex("prediction_diff", 0) = prob_desc->data_type();
+  *ctx->OutputDType("prediction_diff", 0) = prob_desc->data_type();
   return Maybe<void>::Ok();
 }
 

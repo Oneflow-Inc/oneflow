@@ -31,7 +31,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       const Shape& size_shape = ctx->InputShape("size", 0);
       CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
       CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -41,7 +41,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       const Shape& size_shape = ctx->InputShape("size", 0);
       CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
       CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -69,7 +69,7 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       CHECK_OR_RETURN(IsIndexDataType(data_type));
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
+      *ctx->OutputDType("out", 0) = data_type;
       return Maybe<void>::Ok();
     });
 

@@ -79,9 +79,9 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("mapped_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
-      *ctx->Dtype4ArgNameAndIndex("sampled_weight", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
-      *ctx->Dtype4ArgNameAndIndex("sampled_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
+      *ctx->OutputDType("mapped_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
+      *ctx->OutputDType("sampled_weight", 0) = *ctx->Dtype4ArgNameAndIndex("weight", 0);
+      *ctx->OutputDType("sampled_label", 0) = *ctx->Dtype4ArgNameAndIndex("label", 0);
       return Maybe<void>::Ok();
     });
 
@@ -111,12 +111,11 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+      *ctx->OutputShape("boxing_disabled_sampled_weight_diff", 0) =
           ctx->InputShape("sampled_weight_diff", 0);
       *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
-      *ctx->Shape4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
-          ctx->InputShape("sampled_label", 0);
+      *ctx->OutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
       *ctx->IsDynamic4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
           *ctx->IsDynamic4ArgNameAndIndex("sampled_label", 0);
       return Maybe<void>::Ok();
@@ -131,9 +130,9 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
+      *ctx->OutputDType("boxing_disabled_sampled_weight_diff", 0) =
           *ctx->Dtype4ArgNameAndIndex("sampled_weight_diff", 0);
-      *ctx->Dtype4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
+      *ctx->OutputDType("boxing_disabled_sampled_label", 0) =
           *ctx->Dtype4ArgNameAndIndex("sampled_label", 0);
       return Maybe<void>::Ok();
     });
