@@ -177,18 +177,21 @@ class GpuDecodeHandle final : public DecodeHandle {
   cudaStream_t cuda_stream_ = nullptr;
   nvjpegHandle_t jpeg_handle_ = nullptr;
   nvjpegJpegState_t jpeg_state_ = nullptr;
+  nvjpegJpegState_t hw_jpeg_state_ = nullptr;
   nvjpegBufferPinned_t jpeg_pinned_buffer_ = nullptr;
   nvjpegBufferDevice_t jpeg_device_buffer_ = nullptr;
   nvjpegDecodeParams_t jpeg_decode_params_ = nullptr;
   nvjpegJpegDecoder_t jpeg_decoder_ = nullptr;
+  nvjpegJpegDecoder_t hw_jpeg_decoder_ = nullptr;
   nvjpegJpegStream_t jpeg_stream_ = nullptr;
   NppStreamContext npp_stream_ctx_{};
   nvjpegDevAllocator_t dev_allocator_{};
   nvjpegPinnedAllocator_t pinned_allocator_{};
   bool warmup_done_;
+  bool use_hardware_acceleration_;
 };
 
-GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false) {
+GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false), use_hardware_acceleration_(false) {
   OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, cudaStreamNonBlocking));
   dev_allocator_.dev_malloc = &GpuDeviceMalloc;
   dev_allocator_.dev_free = &GpuDeviceFree;
@@ -198,6 +201,16 @@ GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false) {
                                  &jpeg_handle_));
   OF_NVJPEG_CHECK(nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_DEFAULT, &jpeg_decoder_));
   OF_NVJPEG_CHECK(nvjpegDecoderStateCreate(jpeg_handle_, jpeg_decoder_, &jpeg_state_));
+#if NVJPEG_VER_MAJOR >= 11
+  if (nvjpegDecoderCreate(jpeg_handle_, NVJPEG_BACKEND_HARDWARE, &hw_jpeg_decoder_)
+      == NVJPEG_STATUS_SUCCESS) {
+    OF_NVJPEG_CHECK(nvjpegDecoderStateCreate(jpeg_handle_, hw_jpeg_decoder_, &hw_jpeg_state_));
+    use_hardware_acceleration_ = true;
+  } else {
+    hw_jpeg_decoder_ = nullptr;
+    hw_jpeg_state_ = nullptr;
+  }
+#endif
   OF_NVJPEG_CHECK(nvjpegBufferPinnedCreate(jpeg_handle_, &pinned_allocator_, &jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegBufferDeviceCreate(jpeg_handle_, &dev_allocator_, &jpeg_device_buffer_));
   OF_NVJPEG_CHECK(nvjpegDecodeParamsCreate(jpeg_handle_, &jpeg_decode_params_));
@@ -213,6 +226,10 @@ GpuDecodeHandle::~GpuDecodeHandle() {
   OF_NVJPEG_CHECK(nvjpegBufferPinnedDestroy(jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegJpegStateDestroy(jpeg_state_));
   OF_NVJPEG_CHECK(nvjpegDecoderDestroy(jpeg_decoder_));
+  if (use_hardware_acceleration_) {
+    OF_NVJPEG_CHECK(nvjpegJpegStateDestroy(hw_jpeg_state_));
+    OF_NVJPEG_CHECK(nvjpegDecoderDestroy(hw_jpeg_decoder_));
+  }
   OF_NVJPEG_CHECK(nvjpegDestroy(jpeg_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
 }
@@ -243,16 +260,31 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   image.channel[0] = dst;
   image.pitch[0] = roi_width * kNumChannels;
   OF_NVJPEG_CHECK(nvjpegDecodeParamsSetOutputFormat(jpeg_decode_params_, NVJPEG_OUTPUT_RGBI));
-  OF_NVJPEG_CHECK(
-      nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi_x, roi_y, roi_width, roi_height));
-  OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state_, jpeg_pinned_buffer_));
-  OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state_, jpeg_device_buffer_));
-  OF_NVJPEG_CHECK(nvjpegDecodeJpegHost(jpeg_handle_, jpeg_decoder_, jpeg_state_,
-                                       jpeg_decode_params_, jpeg_stream_));
-  OF_NVJPEG_CHECK(nvjpegDecodeJpegTransferToDevice(jpeg_handle_, jpeg_decoder_, jpeg_state_,
+
+  nvjpegJpegDecoder_t jpeg_decoder;
+  nvjpegJpegState_t jpeg_state;
+  int is_hardware_acceleration_supported = -1;
+  if (use_hardware_acceleration_) {
+    nvjpegDecoderJpegSupported(hw_jpeg_decoder_, jpeg_stream_, jpeg_decode_params_,
+                               &is_hardware_acceleration_supported);
+  }
+  if (is_hardware_acceleration_supported == 0) {
+    jpeg_decoder = hw_jpeg_decoder_;
+    jpeg_state = hw_jpeg_state_;
+  } else {
+    jpeg_decoder = jpeg_decoder_;
+    jpeg_state = jpeg_state_;
+    OF_NVJPEG_CHECK(
+        nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi_x, roi_y, roi_width, roi_height));
+  }
+  OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state, jpeg_pinned_buffer_));
+  OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state, jpeg_device_buffer_));
+  OF_NVJPEG_CHECK(nvjpegDecodeJpegHost(jpeg_handle_, jpeg_decoder, jpeg_state, jpeg_decode_params_,
+                                       jpeg_stream_));
+  OF_NVJPEG_CHECK(nvjpegDecodeJpegTransferToDevice(jpeg_handle_, jpeg_decoder, jpeg_state,
                                                    jpeg_stream_, cuda_stream_));
   OF_NVJPEG_CHECK(
-      nvjpegDecodeJpegDevice(jpeg_handle_, jpeg_decoder_, jpeg_state_, &image, cuda_stream_));
+      nvjpegDecodeJpegDevice(jpeg_handle_, jpeg_decoder, jpeg_state, &image, cuda_stream_));
   *dst_width = roi_width;
   *dst_height = roi_height;
 }
