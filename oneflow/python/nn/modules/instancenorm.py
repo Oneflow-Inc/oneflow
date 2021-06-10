@@ -30,11 +30,7 @@ class _InstanceNorm(_NormBase):
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
 
-    def _init_param(self):
-        raise NotImplementedError
-
     def _forward(self, x):
-
         axis = 1
         params_shape = [x.shape[axis]]
         weight = self.weight
