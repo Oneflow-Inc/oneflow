@@ -87,9 +87,9 @@ def arange_op(
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
@@ -108,4 +108,4 @@ def arange_op(
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

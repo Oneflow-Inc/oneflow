@@ -49,7 +49,7 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
