@@ -69,7 +69,11 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
-    def consistent_cast(self, parallel_distribution, placement_signature):
+    def to_consistent(self, parallel_distribution, placement_signature):
+        assert (
+            not self.consistent
+        ), "the module is already consistented module, don't cast again!"
+
         def cast_input_to_consistent_hook(self, input_tensors):
             return consistent_cast_util.cast_input_to_consistent(
                 input_tensors, parallel_distribution[0], placement_signature[0]
