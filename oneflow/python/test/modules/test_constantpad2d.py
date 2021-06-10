@@ -26,6 +26,7 @@ from test_util import (
     Index2Coordinate,
 )
 
+
 def _np_constant_pad2d_grad(src, dest, padding):
     c_idx, h_idx, w_idx = 1, 2, 3
     pad_left = padding[0]
@@ -63,34 +64,42 @@ def _np_constant_pad2d_grad(src, dest, padding):
     numpy_dest = Array2Numpy(array_dest, dest.shape)
     return numpy_dest
 
+
 def _test_ConstantPad2d(test_case, shape, padding, value, device):
     np_input = np.random.random(shape)
-    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
 
     if isinstance(padding, int):
         np_boundary = ((0, 0), (0, 0), (padding, padding), (padding, padding))
 
     elif isinstance(padding, (tuple, int)) and len(padding) == 4:
-        np_boundary = ((0, 0), (0, 0), (padding[2], padding[3]), (padding[0], padding[1]))
+        np_boundary = (
+            (0, 0),
+            (0, 0),
+            (padding[2], padding[3]),
+            (padding[0], padding[1]),
+        )
     else:
-        raise ValueError("padding must be in or list or tuple!") 
-    
-    layer = flow.nn.ConstantPad2d(padding = padding, value=value)
+        raise ValueError("padding must be in or list or tuple!")
+
+    layer = flow.nn.ConstantPad2d(padding=padding, value=value)
     of_out = layer(of_input)
-    np_out = np.pad(np_input, np_boundary, mode='constant', constant_values=value)
+    np_out = np.pad(np_input, np_boundary, mode="constant", constant_values=value)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
-    
+
     np_out_grad = _np_constant_pad2d_grad(np_out, np_input, layer.padding)
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-
 class TestConstantPad2dModule(flow.unittest.TestCase):
     def test_ConstantPad2d(test_case):
         arg_dict = OrderedDict()
@@ -98,9 +107,10 @@ class TestConstantPad2dModule(flow.unittest.TestCase):
         arg_dict["padding"] = [(2), (1, 1, 2, 2)]
         arg_dict["value"] = [0.8, 1]
         arg_dict["device"] = ["cpu", "cuda"]
-        
+
         for arg in GenArgList(arg_dict):
             _test_ConstantPad2d(test_case, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

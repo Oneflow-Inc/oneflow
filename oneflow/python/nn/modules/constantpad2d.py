@@ -80,11 +80,7 @@ class ConstantPad2d(Module):
                   [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
     """
 
-    def __init__(
-        self,
-        padding: Union[int, tuple, list],
-        value: Union[int, float] = 0
-    ):
+    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
         super().__init__()
         if isinstance(padding, (tuple, list)):
             assert len(padding) == 4, ValueError("Length of padding must be 4")
@@ -100,13 +96,14 @@ class ConstantPad2d(Module):
     def forward(self, x):
         _, _, h, w = x.shape
 
-        if self.padding[2] < h and self.padding[3] < h and self.padding[0] < w and self.padding[1] < w:
-            
-            if x.dtype in [
-            flow.float32,
-            flow.float16,
-            flow.float64
-            ]:
+        if (
+            self.padding[2] < h
+            and self.padding[3] < h
+            and self.padding[0] < w
+            and self.padding[1] < w
+        ):
+
+            if x.dtype in [flow.float32, flow.float16, flow.float64]:
                 floating_value = float(self.value)
                 integral_value = int(0)
             else:
@@ -114,21 +111,25 @@ class ConstantPad2d(Module):
                 integral_value = int(self.value)
 
             self._op = (
-            flow.builtin_op("constant_pad2d")
-            .Input("x")
-            .Output("y")
-            .Attr("padding", self.padding)
-            .Attr("floating_value", floating_value)
-            .Attr("integral_value", integral_value)
-            .Build()
+                flow.builtin_op("constant_pad2d")
+                .Input("x")
+                .Output("y")
+                .Attr("padding", self.padding)
+                .Attr("floating_value", floating_value)
+                .Attr("integral_value", integral_value)
+                .Build()
             )
 
             res = self._op(x)[0]
             return res
 
         else:
-            raise AssertionError("Padding size should be less than the corresponding input dimension. Please check.")
+            raise AssertionError(
+                "Padding size should be less than the corresponding input dimension. Please check."
+            )
+
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)
