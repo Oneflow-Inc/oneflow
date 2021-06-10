@@ -11,9 +11,9 @@ num_inputs = 2
 num_examples = 1000
 true_w = [2, -3.4]
 true_b = 4.2
-features = flow.Tensor(np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float)
+features = flow.tensor(np.random.normal(0, 1, (num_examples, num_inputs)), dtype=flow.float)
 labels = true_w[0] * features[:, 0] + true_w[1] * features[:, 1] + true_b
-labels += flow.Tensor(np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float)
+labels += flow.tensor(np.random.normal(0, 0.01, size=labels.size()), dtype=flow.float)
 
 
 batch_size = 10
@@ -76,15 +76,8 @@ flow.nn.init.constant_(net.linear.bias, val=0)  # 也可以直接修改bias的da
 
 loss = MSELoss()
 
-optimizer = flow.optim.SGD(parameters=net.parameters(), lr=0.03)
+optimizer = flow.optim.SGD(net.parameters(), lr=0.03)
 print(optimizer)
-
-
-
-
-# 调整学习率
-for param_group in optimizer.param_groups:
-    param_group.options['lr'] *= 0.1 # 学习率为之前的0.1倍
 
 
 num_epochs = 10

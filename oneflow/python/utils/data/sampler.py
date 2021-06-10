@@ -134,9 +134,9 @@ class RandomSampler(Sampler[int]):
                 yield from flow.randint(high=n, size=(32,), dtype=flow.int64, generator=generator).tolist()
             yield from flow.randint(high=n, size=(self.num_samples % 32,), dtype=flow.int64, generator=generator).tolist()
         else:
-            arr = np.arange(self.num_samples)
-            yield from np.random.permutation(arr).tolist()
-            # yield from flow.randperm(n, generator=generator).tolist()
+            yield from np.random.permutation(n).tolist()
+            # NOTE: np permutation is inefficient, yield from [7, 1, 3, 8, 4, 5, 9, 6, 2, 0]
+            # or yield from flow.randperm(n, generator=generator).tolist() will speed up
 
     def __len__(self):
         return self.num_samples

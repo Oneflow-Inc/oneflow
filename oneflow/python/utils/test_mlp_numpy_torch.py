@@ -51,13 +51,6 @@ optimizer = torch.optim.SGD(net.parameters(), lr=0.03)
 print(optimizer)
 
 
-
-
-# 调整学习率
-for param_group in optimizer.param_groups:
-    param_group['lr'] *= 0.1 # 学习率为之前的0.1倍
-
-
 num_epochs = 10
 for epoch in range(1, num_epochs + 1):
     for X, y in data_iter:
