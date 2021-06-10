@@ -86,7 +86,7 @@ class TestKLDivLossModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_kldivloss_impl,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [
             (3, 5),
             (10, 9, 21),

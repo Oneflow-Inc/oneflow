@@ -416,17 +416,15 @@ class KLDivLoss(Module):
             _kl_div_out_loss = target * (flow.experimental.log(target) - input)
             _zeros = flow.experimental.zeros_like(_kl_div_out_loss)
             # when target < 0, we set to `0`, when target > 0, we set to `1`.
-            _condition = flow.experimental.cast(
-                self._rint_op(target + 0.5)[0], dtype=flow.int8,
-            )
+            _condition = flow.experimental.gt(target, 0)
             # To avoid the `nan` value in log operation
             # We set those positions which `target` is less than zero as `0`
             _kl_div_loss = flow.experimental.where(_condition, _kl_div_out_loss, _zeros)
 
         if self.reduction == "mean":
-            return flow.experimental.reduce_mean(_kl_div_loss)
+            return flow.experimental.mean(_kl_div_loss)
         elif self.reduction == "sum":
-            return flow.experimental.reduce_sum(_kl_div_loss)
+            return flow.experimental.sum(_kl_div_loss)
         else:
             return _kl_div_loss
 
