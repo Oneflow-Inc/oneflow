@@ -141,21 +141,23 @@ fs::FileSystem* DataFS(int64_t session_id) {
 }
 fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
 
-void CreateLocalFS(fs::FileSystem** fs) {
+void CreateLocalFS(std::unique_ptr<fs::FileSystem>& fs) {
 #ifdef OF_PLATFORM_POSIX
-  *fs = new fs::PosixFileSystem;
+  fs.reset(new fs::PosixFileSystem);
 #else
   OF_UNIMPLEMENTED();
 #endif
 }
 
-void CreateHadoopFS(fs::FileSystem** fs, const std::string& namenode) {
-  *fs = new fs::HadoopFileSystem(namenode);
+void CreateHadoopFS(std::unique_ptr<fs::FileSystem>& fs, const std::string& namenode) {
+  fs.reset(new fs::HadoopFileSystem(namenode));
 }
 
-void CreateFS(fs::FileSystem** fs, const char* fs_type, const char* hdfs_namenode) {
-  CHECK_EQ(*fs, nullptr);
+void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::string& env_prefix) {
+  CHECK(!fs);
 
+  auto fs_type_env = env_prefix + "_TYPE";
+  const char* fs_type = std::getenv(fs_type_env.c_str());
   std::string fs_type_str;
   if (fs_type) {
     fs_type_str = ToLower(fs_type);
@@ -169,52 +171,41 @@ void CreateFS(fs::FileSystem** fs, const char* fs_type, const char* hdfs_namenod
   } else if (fs_type_str == "network") {
     CreateLocalFS(fs);
   } else if (fs_type_str == "hdfs") {
-    CHECK_NOTNULL(hdfs_namenode);
+    auto hdfs_nn_env = env_prefix + "_HDFS_NAMENODE";
+    const char* hdfs_namenode = std::getenv(hdfs_nn_env.c_str());
+    if (hdfs_namenode == nullptr) {
+      LOG(FATAL) << "env " << hdfs_nn_env << " must be set when " << fs_type_env
+                 << " be set to hdfs";
+    }
     CreateHadoopFS(fs, hdfs_namenode);
   } else {
-    // pass
+    CreateLocalFS(fs);
+    LOG(WARNING) << "invalid env " << fs_type_env << " " << fs_type
+                 << ", return the local file system instead";
   }
 }
 
 // New data & snapshot file system inferface
 fs::FileSystem* GetDataFS() {
-  static fs::FileSystem* data_fs = nullptr;
-  if (data_fs == nullptr) {
-    const char* data_fs_type = std::getenv("ONEFLOW_DATA_FILE_SYSTEM_TYPE");
-    const char* data_hdfs_namenode = std::getenv("ONEFLOW_DATA_FILE_SYSTEM_HDFS_NAMENODE");
-    if (data_fs_type != nullptr && ToLower(data_fs_type) == "hdfs") {
-      CHECK(data_hdfs_namenode != nullptr)
-          << "env ONEFLOW_DATA_FILE_SYSTEM_HDFS_NAMENODE must be set when "
-             "ONEFLOW_DATA_FILE_SYSTEM_TYPE be set to hdfs";
-    }
-    CreateFS(&data_fs, data_fs_type, data_hdfs_namenode);
-    if (data_fs == nullptr) {
-      CreateLocalFS(&data_fs);
-      LOG(WARNING) << "invalid env ONEFLOW_DATA_FILE_SYSTEM_TYPE " << data_fs_type
-                   << ", return the local file system instead";
-    }
+  static std::unique_ptr<fs::FileSystem> data_fs;
+  static std::mutex data_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(data_fs_mutex);
+    if (!data_fs) { CreateFileSystemFromEnv(data_fs, "ONEFLOW_DATA_FILE_SYSTEM"); }
+    CHECK(data_fs);
   }
-  return data_fs;
+  return data_fs.get();
 }
 
 fs::FileSystem* GetSnapshotFS() {
-  static fs::FileSystem* snapshot_fs = nullptr;
-  if (snapshot_fs == nullptr) {
-    const char* snapshot_fs_type = std::getenv("ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE");
-    const char* snapshot_hdfs_namenode = std::getenv("ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE");
-    if (snapshot_fs_type != nullptr && ToLower(snapshot_fs_type) == "hdfs") {
-      CHECK(snapshot_hdfs_namenode != nullptr)
-          << "env ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE not set when "
-             "ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE set to hdfs";
-    }
-    CreateFS(&snapshot_fs, snapshot_fs_type, snapshot_hdfs_namenode);
-    if (snapshot_fs == nullptr) {
-      CreateLocalFS(&snapshot_fs);
-      LOG(WARNING) << "invalid env ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE " << snapshot_fs_type
-                   << ", return the local file system instead";
-    }
+  static std::unique_ptr<fs::FileSystem> snapshot_fs;
+  static std::mutex snapshot_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(snapshot_fs_mutex);
+    if (!snapshot_fs) { CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM"); }
+    CHECK(snapshot_fs);
   }
-  return snapshot_fs;
+  return snapshot_fs.get();
 }
 
 }  // namespace oneflow
