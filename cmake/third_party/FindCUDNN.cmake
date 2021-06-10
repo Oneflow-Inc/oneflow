@@ -64,13 +64,11 @@ if(CUDNN_FOUND)
   set(CUDNN_INCLUDE_DIRS ${CUDNN_INCLUDE_DIR})
 
   if(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 8)
-    set(CUDNN_DYNAMIC_NAMES libcudnn_adv_infer.so libcudnn_adv_train.so libcudnn_cnn_infer.so libcudnn_cnn_train.so libcudnn_ops_infer.so libcudnn_ops_train.so)
+    # skipping: libcudnn_adv_infer.so libcudnn_adv_train.so
+    set(CUDNN_DYNAMIC_NAMES libcudnn_cnn_infer.so libcudnn_cnn_train.so libcudnn_ops_infer.so libcudnn_ops_train.so)
+    get_filename_component(CUDNN_LIBRARY_DIRECTORY ${CUDNN_LIBRARY} DIRECTORY)
     foreach(CUDNN_DYNAMIC_NAME ${CUDNN_DYNAMIC_NAMES})
-      SET(CUDNN_DYNAMIC_LIBRARY "CUDNN_DYNAMIC_LIBRARY-NOTFOUND")
-      find_library(CUDNN_DYNAMIC_LIBRARY NAMES ${CUDNN_DYNAMIC_NAME}
-        HINTS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
-        PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
-      list(APPEND CUDNN_LIBRARIES ${CUDNN_DYNAMIC_LIBRARY})
+      list(APPEND CUDNN_LIBRARIES ${CUDNN_LIBRARY_DIRECTORY}/${CUDNN_DYNAMIC_NAME})
     endforeach()
   else()
     set(CUDNN_LIBRARIES ${CUDNN_LIBRARY})
