@@ -23,6 +23,7 @@ namespace {
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
+  std::cout << output_size.size() << std::endl;
   DimVector out_dim_vec = x_desc->shape().dim_vec();
   int h = out_dim_vec[2];
   int w = out_dim_vec[3];

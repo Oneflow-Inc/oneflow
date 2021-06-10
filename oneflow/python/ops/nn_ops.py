@@ -2072,7 +2072,7 @@ def avg_pool2d(
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("AdaptiveAvgPool2D_")
         )
-        .Op("avg_pool_2d")
+        .Op("adaptive_avg_pool2d")
         .Input("x", [input])
         .Output("y")
     )
