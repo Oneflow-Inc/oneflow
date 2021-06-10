@@ -339,6 +339,8 @@ SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
 }
 
 void JobBuilder::SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel) {
+  LOG(INFO) << "sbp_parallel: " << sbp_parallel.DebugString() << " " << oba.op_name() << " "
+            << oba.bn_in_op();
   CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, oba.op_name()), 1);
   SetSbpSignature4Oba(job_, oba, sbp_parallel);
   cfg::ParallelDistribution parallel_distribution;
@@ -349,6 +351,8 @@ void JobBuilder::SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel
 
 void JobBuilder::SetParallelDistribution4Oba(
     const OpBlobArg& oba, const cfg::ParallelDistribution& parallel_distribution) {
+  LOG(INFO) << "parallel_distribution: " << parallel_distribution.DebugString() << " "
+            << oba.op_name() << " " << oba.bn_in_op();
   SetParallelDistributionSignature4Oba(job_, &op_name2parallel_distribution_signature_conf_, oba,
                                        parallel_distribution);
   if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, oba.op_name()) == 1) {

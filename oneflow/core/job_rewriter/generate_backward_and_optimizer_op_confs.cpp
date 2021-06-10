@@ -59,6 +59,7 @@ void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
   auto HasParallelDistribution = [&](const OpBlobArg& oba) {
     return oba2parallel_distribution.find(oba) != oba2parallel_distribution.end();
   };
+  int count = 0;
   for (const auto& pair : identical_sbp_oba_pairs.pair()) {
     const cfg::ParallelDistribution* parallel_distribution = nullptr;
     if (HasParallelDistribution(pair.first()) && HasParallelDistribution(pair.second())) {
@@ -72,8 +73,11 @@ void SetParallelDistributionSignatureHintByIdenticalSbpObaPairs(
     } else {
       UNIMPLEMENTED();
     }
+    LOG(INFO) << count;
     job_builder->SetParallelDistribution4Oba(pair.first(), *parallel_distribution);
+    LOG(INFO) << "after first call";
     job_builder->SetParallelDistribution4Oba(pair.second(), *parallel_distribution);
+    count++;
   }
 }
 
