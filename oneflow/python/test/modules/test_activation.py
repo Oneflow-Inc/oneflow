@@ -331,8 +331,12 @@ def _test_softmax_backward_1(test_case, device):
 
 
 def _test_softmax_backward_2(test_case, device):
-    a = flow.tensor([1, 2],dtype=flow.float64, device=flow.device(device), requires_grad=True)
-    b = flow.tensor([3, 4],dtype=flow.float64, device=flow.device(device), requires_grad=True)
+    a = flow.tensor(
+        [1, 2], dtype=flow.float64, device=flow.device(device), requires_grad=True
+    )
+    b = flow.tensor(
+        [3, 4], dtype=flow.float64, device=flow.device(device), requires_grad=True
+    )
     c = a * b
     m = flow.nn.Softmax(dim=None)
     d = m(c)
