@@ -26,11 +26,11 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   DimVector out_dim_vec = first_in_desc->shape().dim_vec();
   int h = out_dim_vec[2];
   int w = out_dim_vec[3];
-  if(output_size.size() >= 1){
-    h = output_size[0]; //h
+  if (output_size.size() >= 1) {
+    h = output_size[0];  // h
     w = output_size[0];
-    if(output_size.size() == 2){
-      h = output_size[1]; //w
+    if (output_size.size() == 2) {
+      h = output_size[1];  // w
     }
   }
   out_dim_vec[2] = h;
@@ -64,21 +64,23 @@ REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(FwGetSbpFn);
 
-REGISTER_USER_OP_GRAD("adaptive_avg_pool2d").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
-  const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
-  ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
-    return builder.OpTypeName("adaptive_avg_pool2d_grad")
-        .InputBind("x", ctx->FwOp().input("in", 0))
-        .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("output_size", ctx->FwOp().attr<std::vector<int64_t>>("output_size"))
-        .Output("dx")
-        .Build();
-  });
-  ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
-                            [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
-                              return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
-                            });
-});
+REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+      const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
+      ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+        return builder.OpTypeName("adaptive_avg_pool2d_grad")
+            .InputBind("x", ctx->FwOp().input("in", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .Attr("output_size", ctx->FwOp().attr<std::vector<int64_t>>("output_size"))
+            .Output("dx")
+            .Build();
+      });
+      ctx->FwOp().InputGradBind(
+          user_op::OpArg("in", 0),
+          [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
+            return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
+          });
+    });
 
 }  // namespace
 
