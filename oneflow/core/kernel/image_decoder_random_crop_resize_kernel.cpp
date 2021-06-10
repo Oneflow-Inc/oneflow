@@ -49,6 +49,45 @@ struct Work {
   std::shared_ptr<std::atomic<int>> task_counter;
 };
 
+struct ROI {
+  int x;
+  int y;
+  int w;
+  int h;
+};
+
+class ROIGenerator {
+ public:
+  virtual void Generate(int width, int height, ROI* roi) {}
+};
+
+class RandomCropROIGenerator : public ROIGenerator {
+ public:
+  RandomCropROIGenerator(RandomCropGenerator* crop_generator) : crop_generator_(crop_generator) {}
+
+  void Generate(int width, int height, ROI* roi) override {
+    CropWindow window;
+    crop_generator_->GenerateCropWindow({height, width}, &window);
+    roi->x = window.anchor.At(1);
+    roi->y = window.anchor.At(0);
+    roi->w = window.shape.At(1);
+    roi->h = window.shape.At(0);
+  }
+
+ private:
+  RandomCropGenerator* crop_generator_;
+};
+
+class NoChangeROIGenerator : public ROIGenerator {
+ public:
+  void Generate(int width, int height, ROI* roi) override {
+    roi->x = 0;
+    roi->y = 0;
+    roi->w = width;
+    roi->h = height;
+  }
+};
+
 void GenerateRandomCropRoi(RandomCropGenerator* crop_generator, int width, int height, int* roi_x,
                            int* roi_y, int* roi_width, int* roi_height) {
   CropWindow window;
@@ -166,13 +205,12 @@ class GpuDecodeHandle final : public DecodeHandle {
   void Synchronize() override;
 
  private:
-  void DecodeRandomCrop(const unsigned char* data, size_t length,
-                        RandomCropGenerator* crop_generator, unsigned char* dst,
-                        size_t dst_max_length, int* dst_width, int* dst_height);
+  void DecodeRandomCrop(const unsigned char* data, size_t length, ROIGenerator* roi_generator,
+                        unsigned char* dst, size_t dst_max_length, int* dst_width, int* dst_height);
   void Decode(const unsigned char* data, size_t length, unsigned char* dst, size_t dst_max_length,
               int* dst_width, int* dst_height);
-  void Resize(const unsigned char* src, int src_width, int src_height, unsigned char* dst,
-              int dst_width, int dst_height);
+  void CropResize(const unsigned char* src, int src_width, int src_height,
+                  ROIGenerator* roi_generator, unsigned char* dst, int dst_width, int dst_height);
 
   cudaStream_t cuda_stream_ = nullptr;
   nvjpegHandle_t jpeg_handle_ = nullptr;
@@ -235,30 +273,19 @@ GpuDecodeHandle::~GpuDecodeHandle() {
 }
 
 void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
-                                       RandomCropGenerator* crop_generator, unsigned char* dst,
+                                       ROIGenerator* roi_generator, unsigned char* dst,
                                        size_t dst_max_length, int* dst_width, int* dst_height) {
   // https://docs.nvidia.com/cuda/archive/10.2/nvjpeg/index.html#nvjpeg-decoupled-decode-api
   OF_NVJPEG_CHECK(nvjpegJpegStreamParse(jpeg_handle_, data, length, 0, 0, jpeg_stream_));
   unsigned int orig_width;
   unsigned int orig_height;
   OF_NVJPEG_CHECK(nvjpegJpegStreamGetFrameDimensions(jpeg_stream_, &orig_width, &orig_height));
-  int roi_x;
-  int roi_y;
-  int roi_width;
-  int roi_height;
-  if (crop_generator) {
-    GenerateRandomCropRoi(crop_generator, static_cast<int>(orig_width),
-                          static_cast<int>(orig_height), &roi_x, &roi_y, &roi_width, &roi_height);
-  } else {
-    roi_x = 0;
-    roi_y = 0;
-    roi_width = static_cast<int>(orig_width);
-    roi_height = static_cast<int>(orig_height);
-  }
-  CHECK_LE(roi_width * roi_height * kNumChannels, dst_max_length);
+  ROI roi;
+  roi_generator->Generate(static_cast<int>(orig_width), static_cast<int>(orig_height), &roi);
+  CHECK_LE(roi.w * roi.h * kNumChannels, dst_max_length);
   nvjpegImage_t image;
   image.channel[0] = dst;
-  image.pitch[0] = roi_width * kNumChannels;
+  image.pitch[0] = roi.w * kNumChannels;
   OF_NVJPEG_CHECK(nvjpegDecodeParamsSetOutputFormat(jpeg_decode_params_, NVJPEG_OUTPUT_RGBI));
 
   nvjpegJpegDecoder_t jpeg_decoder;
@@ -274,8 +301,7 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
   } else {
     jpeg_decoder = jpeg_decoder_;
     jpeg_state = jpeg_state_;
-    OF_NVJPEG_CHECK(
-        nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi_x, roi_y, roi_width, roi_height));
+    OF_NVJPEG_CHECK(nvjpegDecodeParamsSetROI(jpeg_decode_params_, roi.x, roi.y, roi.w, roi.h));
   }
   OF_NVJPEG_CHECK(nvjpegStateAttachPinnedBuffer(jpeg_state, jpeg_pinned_buffer_));
   OF_NVJPEG_CHECK(nvjpegStateAttachDeviceBuffer(jpeg_state, jpeg_device_buffer_));
@@ -285,26 +311,31 @@ void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
                                                    jpeg_stream_, cuda_stream_));
   OF_NVJPEG_CHECK(
       nvjpegDecodeJpegDevice(jpeg_handle_, jpeg_decoder, jpeg_state, &image, cuda_stream_));
-  *dst_width = roi_width;
-  *dst_height = roi_height;
+  *dst_width = roi.w;
+  *dst_height = roi.h;
 }
 
 void GpuDecodeHandle::Decode(const unsigned char* data, size_t length, unsigned char* dst,
                              size_t dst_max_length, int* dst_width, int* dst_height) {
-  DecodeRandomCrop(data, length, nullptr, dst, dst_max_length, dst_width, dst_height);
+  NoChangeROIGenerator no_change_roi_generator;
+  DecodeRandomCrop(data, length, &no_change_roi_generator, dst, dst_max_length, dst_width,
+                   dst_height);
 }
 
-void GpuDecodeHandle::Resize(const unsigned char* src, int src_width, int src_height,
-                             unsigned char* dst, int dst_width, int dst_height) {
+void GpuDecodeHandle::CropResize(const unsigned char* src, int src_width, int src_height,
+                                 ROIGenerator* roi_generator, unsigned char* dst, int dst_width,
+                                 int dst_height) {
+  ROI roi;
+  roi_generator->Generate(static_cast<int>(src_width), static_cast<int>(src_height), &roi);
   const NppiSize src_size{
       .width = src_width,
       .height = src_height,
   };
   const NppiRect src_rect{
-      .x = 0,
-      .y = 0,
-      .width = src_width,
-      .height = src_height,
+      .x = roi.x,
+      .y = roi.y,
+      .width = roi.w,
+      .height = roi.h,
   };
   const NppiSize dst_size{
       .width = dst_width,
@@ -329,8 +360,19 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              int target_height) {
   int width;
   int height;
-  DecodeRandomCrop(data, length, crop_generator, workspace, workspace_size, &width, &height);
-  Resize(workspace, width, height, dst, target_width, target_height);
+  NoChangeROIGenerator no_change_roi_generator;
+  RandomCropROIGenerator random_crop_roi_generator(crop_generator);
+  if (use_hardware_acceleration_) {
+    DecodeRandomCrop(data, length, &no_change_roi_generator, workspace, workspace_size, &width,
+                     &height);
+    CropResize(workspace, width, height, &random_crop_roi_generator, dst, target_width,
+               target_height);
+  } else {
+    DecodeRandomCrop(data, length, &random_crop_roi_generator, workspace, workspace_size, &width,
+                     &height);
+    CropResize(workspace, width, height, &no_change_roi_generator, dst, target_width,
+               target_height);
+  }
 }
 
 void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) {
