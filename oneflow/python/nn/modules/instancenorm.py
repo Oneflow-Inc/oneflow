@@ -67,7 +67,10 @@ class _InstanceNorm(_NormBase):
 @oneflow_export("nn.InstanceNorm1d")
 @experimental_api
 class InstanceNorm1d(_InstanceNorm):
-    r"""Applies Instance Normalization over a 3D input (a mini-batch of 1D
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm1d.html
+
+    Applies Instance Normalization over a 3D input (a mini-batch of 1D
     inputs with optional additional channel dimension) as described in the paper
     `Instance Normalization: The Missing Ingredient for Fast Stylization
     <https://arxiv.org/abs/1607.08022>`__.
@@ -158,7 +161,10 @@ class InstanceNorm1d(_InstanceNorm):
 @oneflow_export("nn.InstanceNorm2d")
 @experimental_api
 class InstanceNorm2d(_InstanceNorm):
-    r"""Applies Instance Normalization over a 4D input (a mini-batch of 2D inputs
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm2d.html
+
+    Applies Instance Normalization over a 4D input (a mini-batch of 2D inputs
     with additional channel dimension) as described in the paper
     `Instance Normalization: The Missing Ingredient for Fast Stylization
     <https://arxiv.org/abs/1607.08022>`__.
@@ -242,7 +248,10 @@ class InstanceNorm2d(_InstanceNorm):
 @oneflow_export("nn.InstanceNorm3d")
 @experimental_api
 class InstanceNorm3d(_InstanceNorm):
-    r"""Applies Instance Normalization over a 5D input (a mini-batch of 3D inputs
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.InstanceNorm3d.html
+
+    Applies Instance Normalization over a 5D input (a mini-batch of 3D inputs
     with additional channel dimension) as described in the paper
     `Instance Normalization: The Missing Ingredient for Fast Stylization
     <https://arxiv.org/abs/1607.08022>`__.
