@@ -97,12 +97,12 @@ class Adam(Optimizer):
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
-            self._param_groups.append(ParamGroup(parameters, self._default_options))
+            self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:  # List[Dict]
             for param in parameters:
-                self._param_groups.append(ParamGroup(param, self._default_options))
+                self.param_groups.append(ParamGroup(param, self._default_options))
 
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
@@ -132,14 +132,14 @@ class Adam(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            for param_group in self._param_groups:
+            for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate_val": param_group.options["lr"],
-                    "scale": param_group.options["scale"],
-                    "l2": param_group.options["weight_decay"],
-                    "beta1": param_group.options["betas"][0],
-                    "beta2": param_group.options["betas"][1],
-                    "epsilon": param_group.options["eps"],
+                    "learning_rate_val": param_group["lr"],
+                    "scale": param_group["scale"],
+                    "l2": param_group["weight_decay"],
+                    "beta1": param_group["betas"][0],
+                    "beta2": param_group["betas"][1],
+                    "epsilon": param_group["eps"],
                 }
                 for param in param_group.parameters:
                     if param.grad is None:

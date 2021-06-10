@@ -114,17 +114,17 @@ class RMSprop(Optimizer):
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
-            self._param_groups.append(ParamGroup(parameters, self._default_options))
+            self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:  # List[Dict]
             for param in parameters:
-                self._param_groups.append(ParamGroup(param, self._default_options))
+                self.param_groups.append(ParamGroup(param, self._default_options))
 
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 self._state[param]["square_avg"] = flow.experimental.zeros_like(param)
-                if param_group.options["centered"]:
+                if param_group["centered"]:
                     self._state[param]["grad_avg"] = flow.experimental.zeros_like(param)
 
         self._centered_rmsprop = (
@@ -161,19 +161,19 @@ class RMSprop(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            for param_group in self._param_groups:
+            for param_group in self.param_groups:
                 kwargs = {
-                    "learning_rate_val": param_group.options["lr"],
-                    "scale": param_group.options["scale"],
-                    "epsilon": param_group.options["eps"],
-                    "decay_rate": param_group.options["alpha"],
-                    "weight_decay": param_group.options["weight_decay"],
+                    "learning_rate_val": param_group["lr"],
+                    "scale": param_group["scale"],
+                    "epsilon": param_group["eps"],
+                    "decay_rate": param_group["alpha"],
+                    "weight_decay": param_group["weight_decay"],
                 }
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
                     ms_tensor = self._state[param]["square_avg"]
-                    if param_group.options["centered"]:
+                    if param_group["centered"]:
                         mg_tensor = self._state[param]["grad_avg"]
                         self._centered_rmsprop(
                             param, param.grad, ms_tensor, mg_tensor, **kwargs
