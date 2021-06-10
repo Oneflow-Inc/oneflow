@@ -53,6 +53,10 @@ def build_img(
     cuda_version_img = cuda_version
     if cuda_version == "11.2":
         cuda_version_img = "11.2.2"
+    if cuda_version == "11.1":
+        cuda_version_img = "11.1.1"
+    if cuda_version == "11.0":
+        cuda_version_img = "11.0.3"
     from_img = f"nvidia/cuda:{cuda_version_img}-cudnn{cudnn_version}-devel-centos7"
     tuna_build_arg = ""
     if use_tuna:
@@ -374,6 +378,14 @@ if __name__ == "__main__":
             img_prefix = f"oneflow-manylinux2014-cuda{cuda_version}"
             user = getpass.getuser()
             versioned_img_tag = f"{img_prefix}:0.1"
+            if cuda_version in ["11.0", "11.1"]:
+                versioned_img_tag = f"{img_prefix}:0.2"
+            enforced_oneflow_cmake_args = ""
+            if float(cuda_version) >= 11:
+                assert (
+                    "CUDNN_STATIC" not in extra_oneflow_cmake_args
+                ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
+                enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:
@@ -384,7 +396,9 @@ if __name__ == "__main__":
                 img_tag = args.custom_img_tag
                 skip_img = True
             elif skip_img:
-                assert is_img_existing(versioned_img_tag)
+                assert is_img_existing(
+                    versioned_img_tag
+                ), f"img not found: {versioned_img_tag}"
                 img_tag = versioned_img_tag
             else:
                 img_tag = user_img_tag
@@ -437,7 +451,7 @@ gcc --version
                     img_tag,
                     args.oneflow_src_dir,
                     cache_dir,
-                    extra_oneflow_cmake_args,
+                    extra_oneflow_cmake_args + enforced_oneflow_cmake_args,
                     extra_docker_args,
                     bash_args,
                     bash_wrap,
@@ -455,7 +469,7 @@ gcc --version
                     img_tag,
                     args.oneflow_src_dir,
                     cache_dir,
-                    extra_oneflow_cmake_args,
+                    extra_oneflow_cmake_args + enforced_oneflow_cmake_args,
                     extra_docker_args,
                     python_version,
                     args.skip_wheel,
