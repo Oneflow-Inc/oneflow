@@ -92,11 +92,10 @@ def _test_ReplicationPad2d(test_case, shape, padding, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
-    of_out.retain_grad()
     of_out.backward()
     
     np_out_grad = _np_replication_pad2d_grad(np_out, np_input, boundry)
-    test_case.assertTrue(np.allclose(of_out.grad.numpy(), np_out_grad, 1e-3, 1e-3))
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out_grad, 1e-3, 1e-3))
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),

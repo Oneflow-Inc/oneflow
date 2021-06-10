@@ -84,12 +84,12 @@ class ReplicationPad2d(Module):
         super().__init__()
 
         if isinstance(padding, (tuple, list)):
-            assert len(padding) == 4, ValueError("Padding length must be 4")
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError("padding must be in or list or tuple!")
+            raise ValueError("padding must be int or list or tuple!")
 
         self.padding = boundary
         self._op = (
@@ -106,8 +106,7 @@ class ReplicationPad2d(Module):
             res = self._op(x)[0]
             return res
         else:
-            print("Padding size should be less than the corresponding input dimension. Please check.")
-            return
+            raise AssertionError("Padding size should be less than the corresponding input dimension. Please check.")
 
 if __name__ == "__main__":
     import doctest
