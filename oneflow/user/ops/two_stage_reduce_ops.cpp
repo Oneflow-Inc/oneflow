@@ -22,9 +22,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
-  *ctx->Dtype4ArgNameAndIndex("count", 0) = DataType::kInt32;
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("count", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
 
@@ -90,7 +90,7 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("count", 0), DataType::kInt32);
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  *ctx->OutputDType("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
   return Maybe<void>::Ok();
 }
 
@@ -102,8 +102,8 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
-  *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-  *ctx->Dtype4ArgNameAndIndex("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->OutputDType("mask", 0) = DataType::kInt8;
 
   return Maybe<void>::Ok();
 }
@@ -140,7 +140,7 @@ Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
   CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("device_count", 0), DataType::kInt32);
 
-  *ctx->Dtype4ArgNameAndIndex("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
+  *ctx->OutputDType("in_diff", 0) = *ctx->Dtype4ArgNameAndIndex("out_diff", 0);
 
   return Maybe<void>::Ok();
 }
