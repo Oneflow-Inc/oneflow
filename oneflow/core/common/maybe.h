@@ -340,4 +340,39 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #define UNIMPLEMENTED_THEN_RETURN() OF_UNIMPLEMENTED()
 
+#define CHECK_OR_THROW(expr)                                                             \
+  if (!(expr))                                                                           \
+  Throw(Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error() \
+      << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+
+#define CHECK_EQ_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_GE_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) >= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_GT_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) > (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_LE_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) <= (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_LT_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) < (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_NE_OR_THROW(lhs, rhs) \
+  CHECK_OR_THROW((lhs) != (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "
+
+#define CHECK_STREQ_OR_THROW(lhs, rhs) CHECK_EQ_OR_THROW(std::string(lhs), std::string(rhs))
+
+#define CHECK_STRNE_OR_THROW(lhs, rhs) CHECK_NE_OR_THROW(std::string(lhs), std::string(rhs))
+
+#define CHECK_NOTNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr != nullptr)
+
+#define CHECK_ISNULL_OR_THROW(ptr) CHECK_OR_THROW(ptr == nullptr)
+
+#define TODO_THEN_THROW() Throw(Error::Todo().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error()
+#define UNIMPLEMENTED_THEN_THROW() \
+  Throw(Error::Unimplemented().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__)).error()
+
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_

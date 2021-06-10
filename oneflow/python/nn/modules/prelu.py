@@ -60,10 +60,10 @@ class PReLU(Module):
         >>> flow.enable_eager_execution()
 
         >>> m = flow.nn.PReLU()
-        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> out = m(input).numpy().shape
-        >>> print(out)
-        (6, 2, 5, 3)
+        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> print(m(input).numpy())
+        [[[[ 1.  -0.5]
+           [ 3.   4. ]]]]
 
     """
 
@@ -82,4 +82,4 @@ class PReLU(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

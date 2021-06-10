@@ -57,8 +57,8 @@ Scalar PythonArg::ObjectAs<Scalar>() const {
   } else if (detail::isinstance<bool>(obj)) {
     return Scalar(detail::cast<bool>(obj));
   } else {
-    UNIMPLEMENTED() << "Can not convert to scalar from python object whose type is "
-                    << detail::cast<std::string>(py::str(py::type::of(obj)));
+    UNIMPLEMENTED_THEN_THROW() << "Can not convert to scalar from python object whose type is "
+                               << detail::cast<std::string>(py::str(py::type::of(obj)));
     return Scalar(0);
   }
 }
@@ -74,6 +74,7 @@ std::shared_ptr<one::TensorTuple> PythonArg::ObjectAs<std::shared_ptr<one::Tenso
   if (detail::isinstance<one::TensorTuple>(obj)) {
     return detail::cast<std::shared_ptr<one::TensorTuple>>(obj);
   }
+
   auto v = detail::cast<std::vector<std::shared_ptr<one::Tensor>>>(obj);
   auto values = std::make_shared<one::TensorTuple>(v.size());
   for (int i = 0; i < v.size(); ++i) { values->at(i) = v[i]; }
@@ -87,7 +88,6 @@ one::TensorTuple PythonArg::ObjectAs<one::TensorTuple>() const {
 
 template<>
 std::shared_ptr<cfg::AttrValue> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrValue>>() const {
-  // TODO()
   py::object obj = Borrow();
   if (detail::isinstance<cfg::AttrValue>(obj)) {
     return detail::cast<std::shared_ptr<cfg::AttrValue>>(obj);
@@ -98,17 +98,15 @@ std::shared_ptr<cfg::AttrValue> PythonArg::ObjectAs<std::shared_ptr<cfg::AttrVal
   } else if (detail::isinstance<double>(obj)) {
     attr_value->set_at_double(detail::cast<double>(obj));
   } else {
-    LOG(FATAL) << "The attribute type was not supported which is "
-               << detail::cast<std::string>(py::str(py::type::of(obj)));
+    UNIMPLEMENTED_THEN_THROW() << "The attribute type was not supported which is "
+                               << detail::cast<std::string>(py::str(py::type::of(obj)));
   }
   return attr_value;
 }
 
 template<>
 AttrMap PythonArg::ObjectAs<AttrMap>() const {
-  py::object obj = Borrow();
-  CHECK(detail::isinstance<MutableCfgAttrMap>(obj));
-  return *(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(obj));
+  return *(detail::cast<std::shared_ptr<MutableCfgAttrMap>>(Borrow()));
 }
 
 template<>
@@ -124,8 +122,8 @@ DataType PythonArg::ObjectAs<DataType>() const {
   } else if (detail::isinstance<int64_t>(obj)) {
     return static_cast<DataType>(detail::cast<int64_t>(obj));
   } else {
-    UNIMPLEMENTED() << "Can not convert object to DataType from "
-                    << detail::cast<std::string>(py::str(py::type::of(obj)));
+    UNIMPLEMENTED_THEN_THROW() << "Can not convert object to DataType from "
+                               << detail::cast<std::string>(py::str(py::type::of(obj)));
   }
   return kInvalidDataType;
 }

@@ -66,12 +66,20 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
 
     .. code-block:: python 
 
-        import oneflow as flow
-        input = flow.Tensor(32, 1, 5, 5)
-        output = input.flatten(start_dim=1)
-        # output = flow.flatten(input, start_dim=1)
-        output.size()
-        # out flow.Size([32, 25])
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(32, 1, 5, 5)
+        >>> output = input.flatten(start_dim=1)
+        >>> output.size()
+        flow.Size([32, 25])
 
     """
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

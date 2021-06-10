@@ -67,12 +67,12 @@ class PythonArg {
   template<typename T>
   operator T() const {
     if (active_tag_ == HAS_IMMEDIATE) {
-      CHECK_EQ(ValueTypeOf<T>(), immediate_->value_type())
+      CHECK_EQ_OR_THROW(ValueTypeOf<T>(), immediate_->value_type())
           << "Could not convert immediate value from type " << immediate_->value_type()
           << " to type " << ValueTypeOf<T>();
       return *reinterpret_cast<const T*>(immediate_->Ptr());
     }
-    CHECK_EQ(active_tag_, HAS_OBJECT);
+    CHECK_EQ_OR_THROW(active_tag_, HAS_OBJECT);
     return this->ObjectAs<  // NOLINT
         typename std::remove_cv<typename std::remove_reference<T>::type>::type>();
   }

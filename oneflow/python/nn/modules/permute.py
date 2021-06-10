@@ -45,7 +45,7 @@ def permute_op(tensor, *dims):
 
     Args:
         *dims (int...): The desired ordering of dimensions
-    
+
     For example:
 
     .. code-block:: python
@@ -66,4 +66,4 @@ def permute_op(tensor, *dims):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

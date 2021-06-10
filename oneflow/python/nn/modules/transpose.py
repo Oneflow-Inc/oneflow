@@ -72,7 +72,7 @@ def transpose_op(tensor, dim0, dim1):
         dim1 (int): the second dimension to be transposed.
     Returns:
         Tensor: A transposed tensor.
-    
+
     For example:
 
     .. code-block:: python
@@ -85,7 +85,7 @@ def transpose_op(tensor, dim0, dim1):
         >>> out = flow.transpose(input, 0, 1).numpy().shape
         >>> print(out)
         (6, 2, 5, 3)
-    
+
     """
     return Transpose(dim0=dim0, dim1=dim1)(tensor)
 
@@ -93,4 +93,4 @@ def transpose_op(tensor, dim0, dim1):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

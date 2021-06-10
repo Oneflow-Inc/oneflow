@@ -34,21 +34,22 @@ class Embedding(Module):
         num_embeddings (int): size of the dictionary of embeddings
         embedding_dim (int): the size of each embedding vector
         padding_idx (int, optional): If specified, the entries at :attr:`padding_idx` do not contribute to the gradient;
-        therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
-        i.e. it remains as a fixed "pad". For a newly constructed Embedding,
-        the embedding vector at :attr:`padding_idx` will default to all zeros,
-        but can be updated to another value to be used as the padding vector.
+                                    therefore, the embedding vector at :attr:`padding_idx` is not updated during training,
+                                    i.e. it remains as a fixed "pad". For a newly constructed Embedding,
+                                    the embedding vector at :attr:`padding_idx` will default to all zeros,
+                                    but can be updated to another value to be used as the padding vector.
     
     For example:
 
     .. code-block:: python
         
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
-        m = flow.nn.Embedding(10, 3)
-        y = m(indices)
-
+        >>> indices = flow.Tensor([[1, 2, 4, 5], [4, 3, 2, 9]], dtype=flow.int)
+        >>> m = flow.nn.Embedding(10, 3)
+        >>> y = m(indices)
 
     """
 
@@ -109,3 +110,9 @@ class Embedding(Module):
     def forward(self, indices):
         res = flow.F.gather(self.weight, indices, axis=0)
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

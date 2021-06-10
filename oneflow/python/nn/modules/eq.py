@@ -53,7 +53,7 @@ def eq_op(input, other):
         other (oneflow.Tensor): the tensor to compare
 
     Returns:
-        
+
         - A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
 
     For example:
@@ -78,4 +78,4 @@ def eq_op(input, other):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

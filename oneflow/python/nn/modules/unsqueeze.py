@@ -55,11 +55,19 @@ def unsqueeze_op(input, dim):
 
     .. code-block:: python 
 
-        import numpy as np
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.random.rand(2, 3, 4))
-        y = x.unsqueeze(2)
-
+        >>> x = flow.Tensor(np.random.rand(2, 3, 4))
+        >>> y = x.unsqueeze(2)
+        >>> y.shape
+        flow.Size([2, 3, 1, 4])
     """
     return Unsqueeze(dim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

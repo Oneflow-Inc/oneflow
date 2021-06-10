@@ -235,7 +235,7 @@ class Argument:
         self._default_value = None
 
         fmt = _normalize(fmt)
-        sp = fmt.find(" ")
+        sp = fmt.rfind(" ")
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
         self._type = _normalize(fmt[0:sp])
@@ -368,8 +368,9 @@ class FunctionalGenerator:
             fmt += '  static thread_local const auto& op = CHECK_JUST(FunctionLibrary::Global()->find("{0}"));\n'.format(
                 signature._name
             )
-            fmt += "  return op->call<{0}>({1});\n".format(
+            fmt += "  return op->call<{0}, {1}>({2});\n".format(
                 signature._ret._cpp_type,
+                ", ".join([arg._cpp_type for arg in signature._args]),
                 ", ".join([arg._name for arg in signature._args]),
             )
             fmt += "}\n"

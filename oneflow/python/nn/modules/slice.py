@@ -49,14 +49,15 @@ def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
     .. code-block:: python 
 
-        import oneflow as flow 
-        import oneflow.typing as tp 
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
-        tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
-        y = flow.experimental.slice(input, slice_tup_list=tup_list)
-
-        # y.shape >> flow.Size([3, 3, 2]
+        >>> input = flow.Tensor(np.random.randn(3, 6, 9).astype(np.float32))
+        >>> tup_list = [[None, None, None], [0, 5, 2], [0, 6, 3]]
+        >>> y = flow.slice(input, slice_tup_list=tup_list)
+        >>> y.shape
+        flow.Size([3, 3, 2])
     """
     start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
     return Slice(start, stop, step)(x)
@@ -91,16 +92,17 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
     .. code-block:: python 
 
-        import oneflow as flow 
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
-        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        y = flow.experimental.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
-
-        # [1. 2. 3. 4. 1.] 
+        >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
+        >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        >>> y = flow.slice_update(input, update, slice_tup_list=[[1, 4, 1]])
+        >>> y.numpy()
+        array([1., 2., 3., 4., 1.], dtype=float32)
     """
-    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
 
 
@@ -134,14 +136,19 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
 
     .. code-block:: python 
 
-        import oneflow as flow 
-        import oneflow.typing as tp
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
-        update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
-        y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
-
-        # [1. 2. 3. 4. 1.] 
+        >>> input = flow.Tensor(np.array([1, 1, 1, 1, 1]).astype(np.float32))
+        >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
+        >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
     """
     start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

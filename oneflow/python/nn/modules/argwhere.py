@@ -50,19 +50,22 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([[0, 1, 0],
-                    [2, 0, 2]]).astype(np.float32)
+        >>> x = np.array([[0, 1, 0],
+        ...            [2, 0, 2]]).astype(np.float32)
         
-        input = flow.Tensor(x)
-        output = flow.argwhere(input)
-
-        # output.numpy() [[0, 1],
-        #             [1, 0],
-        #             [1, 2]]
-
+        >>> input = flow.Tensor(x)
+        >>> output = flow.argwhere(input)
+        >>> print(output.numpy())
+        [[0 1]
+         [1 0]
+         [1 2]
+         [0 0]
+         [0 0]
+         [0 0]]
 
     """
     return Argwhere(dtype=dtype)(x)
@@ -79,3 +82,9 @@ def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
 
     """
     return Argwhere(dtype=dtype)(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

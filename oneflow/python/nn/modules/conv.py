@@ -22,6 +22,45 @@ from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
 
 
+def slice(x, begin, size):
+    ndim = len(x.shape)
+    if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
+        raise ValueError(
+            "begin must be a list/tuple with the same length as input tensor's number of dimensions"
+        )
+
+    if not all(isinstance(b, int) or b is None for b in begin):
+        raise ValueError("element of begin must be a int or None")
+
+    if not isinstance(size, (list, tuple)) or len(size) != ndim:
+        raise ValueError(
+            "size must be a list/tuple with the same length as input tensor's number of dimensions."
+        )
+
+    if not all(isinstance(s, int) or s is None for s in size):
+        raise ValueError("element of size must be a int or None")
+
+    slice_tup_list = []
+    for b, s, dim_size in zip(begin, size, x.shape):
+        start, stop, step = (None, None, 1)
+        if b is not None:
+            if b < -dim_size or b >= dim_size:
+                raise ValueError("element of begin is out of range")
+            start = b
+
+        if s is not None:
+            if s == -1:
+                stop = dim_size
+            else:
+                if s <= 0 or s > dim_size:
+                    raise ValueError("element of size is invalid")
+                if b + s < dim_size:
+                    stop = b + s
+
+        slice_tup_list.append((start, stop, step))
+    return flow.experimental.slice(x, slice_tup_list)
+
+
 class ConvUtil(object):
     @classmethod
     def split(cls, x, axis, split_num):
@@ -32,7 +71,7 @@ class ConvUtil(object):
         slice_size[axis] = split_len
         for i in range(split_num):
             slice_begin[axis] = i * split_len
-            result = flow.slice(x, slice_begin, slice_size)
+            result = slice(x, slice_begin, slice_size)
             result_list.append(result)
         return result_list
 
@@ -60,16 +99,14 @@ class Conv2d(Module):
 
     * :attr:`stride` controls the stride for the cross-correlation, a single
       number or a tuple.
-
     * :attr:`padding` controls the amount of implicit padding on both
       sides for :attr:`padding` number of points for each dimension.
-
     * :attr:`dilation` controls the spacing between the kernel points; also
       known as the à trous algorithm. It is harder to describe, but this `link`_
       has a nice visualization of what :attr:`dilation` does.
-
-    * :attr:`groups` controls the connections between inputs and outputs. :attr:`in_channels` 
-       and :attr:`out_channels` must both be divisible by :attr:`groups`. For example,
+    * :attr:`groups` controls the connections between inputs and outputs.
+      :attr:`in_channels` and :attr:`out_channels` must both be divisible by
+      :attr:`groups`. For example,
 
         * At groups=1, all inputs are convolved to all outputs.
         * At groups=2, the operation becomes equivalent to having two conv
@@ -140,11 +177,15 @@ class Conv2d(Module):
 
     .. code-block:: python 
 
-        import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
 
-        m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
-        input = flow.randn(20, 16, 50, 100)
-        output = m(input)
+        >>> arr = np.random.randn(20, 16, 50, 100)
+        >>> input = flow.Tensor(arr)
+        >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
+        >>> output = m(input)
 
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
@@ -190,31 +231,17 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device == flow.device("cpu") and self.groups > 1:
+        if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
-            filter_out_axis = 0
             in_split_list = ConvUtil.split(
-                inputs, axis=in_channel_axis, split_num=groups
-            )
-            filter_split_list = ConvUtil.split(
-                filters, axis=filter_out_axis, split_num=groups
+                x, axis=in_channel_axis, split_num=self.groups
             )
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    self._op(
-                        in_split_list[i],
-                        filter_split_list[i],
-                        padding_before,
-                        channel_pos,
-                        kernel_size_list,
-                        strides,
-                        dilations,
-                        groups=1,
-                        name=name + str(i),
-                    )[0]
+                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
                 )
-            res = flow.cat(out_list, axis=in_channel_axis)
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = flow.F.conv2d(
                 x,
@@ -231,3 +258,9 @@ class Conv2d(Module):
         if self.bias is not None:
             res = flow.F.bias_add(res, self.bias, axis=1)
         return res
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
