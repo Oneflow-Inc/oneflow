@@ -20,6 +20,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.math_ops import Subtract, Square, Sum, Mean
+from oneflow.python.nn.modules.constant import _ConstantBase
 
 
 @oneflow_export("nn.CrossEntropyLoss")
@@ -504,6 +505,159 @@ class MarginRankingLoss(Module):
             return res.sum()
         else:
             return res.mean()
+
+
+@oneflow_export("nn.CTCLoss")
+@experimental_api
+class CTCLoss(Module):
+    r"""The Connectionist Temporal Classification loss.
+    The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.CTCLoss.html#torch.nn.CTCLoss
+
+    Calculates loss between a continuous (unsegmented) time series and a target sequence. CTCLoss sums over the
+    probability of possible alignments of input to target, producing a loss value which is differentiable
+    with respect to each input node. The alignment of input to target is assumed to be "many-to-one", which
+    limits the length of the target sequence such that it must be :math:`\leq` the input length.
+
+    Args:
+        blank (int, optional): blank label. Default :math:`0`.
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            ``'none'`` | ``'mean'`` | ``'sum'``. ``'none'``: no reduction will be applied,
+            ``'mean'``: the output losses will be divided by the target lengths and
+            then the mean over the batch is taken. Default: ``'mean'``
+        zero_infinity (bool, optional):
+            Whether to zero infinite losses and the associated gradients.
+            Default: ``False``
+            Infinite losses mainly occur when the inputs are too short
+            to be aligned to the targets.
+
+    Shape:
+        - Log_probs: Tensor of size :math:`(T, N, C)`,
+          where :math:`T = \text{input length}`,
+          :math:`N = \text{batch size}`, and
+          :math:`C = \text{number of classes (including blank)}`.
+        - Targets: Tensor of size :math:`(N, S)` or
+          :math:`(\operatorname{sum}(\text{target\_lengths}))`,
+          where :math:`N = \text{batch size}` and
+          :math:`S = \text{max target length, if shape is } (N, S)`.
+          It represent the target sequences. Each element in the target
+          sequence is a class index. And the target index cannot be blank (default=0).
+          In the :math:`(N, S)` form, targets are padded to the
+          length of the longest sequence, and stacked.
+          In the :math:`(\operatorname{sum}(\text{target\_lengths}))` form,
+          the targets are assumed to be un-padded and
+          concatenated within 1 dimension.
+        - Input_lengths: Tuple or tensor of size :math:`(N)`,
+          where :math:`N = \text{batch size}`. It represent the lengths of the
+          inputs (must each be :math:`\leq T`). And the lengths are specified
+          for each sequence to achieve masking under the assumption that sequences
+          are padded to equal lengths.
+        - Target_lengths: Tuple or tensor of size :math:`(N)`,
+          where :math:`N = \text{batch size}`. It represent lengths of the targets.
+          Lengths are specified for each sequence to achieve masking under the
+          assumption that sequences are padded to equal lengths. If target shape is
+          :math:`(N,S)`, target_lengths are effectively the stop index
+          :math:`s_n` for each target sequence, such that ``target_n = targets[n,0:s_n]`` for
+          each target in a batch. Lengths must each be :math:`\leq S`
+          If the targets are given as a 1d tensor that is the concatenation of individual
+          targets, the target_lengths must add up to the total length of the tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import numpy as np
+        >>> log_probs = np.array(
+        ...             [
+        ...                 [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],
+        ...                 [[-1.2258, -1.0665, -1.0153], [-1.1135, -1.2331, -0.9671]],
+        ...                 [[-1.3348, -0.6611, -1.5118], [-0.9823, -1.2355, -1.0941]],
+        ...                 [[-1.3850, -1.3273, -0.7247], [-0.8235, -1.4783, -1.0994]],
+        ...                 [[-0.9049, -0.8867, -1.6962], [-1.4938, -1.3630, -0.6547]],
+        ...             ]
+        ...         ).astype(np.float32)
+        >>> log_probs = flow.Tensor(log_probs, dtype=flow.float32)
+        >>> targets = flow.Tensor(np.array([[1, 2, 2], [1, 2, 2]]).astype("int32"), dtype=flow.int32)
+        >>> input_lengths = flow.Tensor(np.array([5, 5]).astype("int32"), dtype=flow.int32)
+        >>> target_lengths = flow.Tensor(np.array([3, 3]).astype("int32"), dtype=flow.int32)
+        >>> loss_mean = flow.nn.CTCLoss()
+        >>> out = loss_mean(log_probs, targets, input_lengths, target_lengths)
+        >>> out
+        tensor([1.1376], dtype=oneflow.float32)
+        >>> loss_sum = flow.nn.CTCLoss(blank=0, reduction="sum")
+        >>> out = loss_sum(log_probs, targets, input_lengths, target_lengths)
+        >>> out
+        tensor([6.8257], dtype=oneflow.float32)
+        >>> 
+
+    """
+
+    def __init__(
+        self, blank: int = 0, reduction: str = "mean", zero_infinity: bool = False,
+    ) -> None:
+        super().__init__()
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.reduction = reduction
+        self.zero_infinity = zero_infinity
+
+        self._op = (
+            flow.builtin_op("ctc_loss")
+            .Input("log_probs")
+            .Input("targets")
+            .Input("input_lengths")
+            .Input("target_lengths")
+            .Output("loss")
+            .Output("alpha")
+            .Attr("blank", int(blank))
+            .Attr("zero_infinity", zero_infinity)
+            .Build()
+        )
+        self._xdivy_op = (
+            flow.builtin_op("xdivy").Input("x").Input("y").Output("z").Build()
+        )
+        self.constant = _ConstantBase
+
+    def forward(
+        self,
+        log_probs: Tensor,
+        targets: Tensor,
+        input_lengths: Tensor,
+        target_lengths: Tensor,
+    ) -> Tensor:
+        loss, _ = self._op(log_probs, targets, input_lengths, target_lengths)
+        if self.zero_infinity:
+            cond = flow.experimental.eq(
+                loss,
+                self.constant(size=loss.shape, value=float("inf"), dtype=loss.dtype)(),
+            )
+            loss = flow.experimental.where(
+                cond, flow.experimental.zeros(size=loss.shape, dtype=loss.dtype), loss
+            )
+
+        if self.reduction == "mean":
+
+            return flow.experimental.mean(
+                self._xdivy_op(
+                    loss,
+                    flow.experimental.cast(
+                        flow.experimental.clamp(target_lengths, min=1),
+                        dtype=log_probs.dtype,
+                    ),
+                )[0]
+            )
+        elif self.reduction == "sum":
+            return flow.experimental.sum(loss)
+        else:
+            return loss
 
 
 if __name__ == "__main__":
