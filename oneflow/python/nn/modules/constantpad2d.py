@@ -25,7 +25,11 @@ from oneflow.python.nn.module import Module
 @oneflow_export("nn.ConstantPad2d")
 @experimental_api
 class ConstantPad2d(Module):
-    r"""This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
+
+    This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
         padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
