@@ -22,7 +22,7 @@ namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  std::vector<int> output_size = ctx->Attr<std::vector<int>>("output_size");
+  std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   DimVector out_dim_vec = first_in_desc->shape().dim_vec();
   int h = out_dim_vec[2];
   int w = out_dim_vec[3];
@@ -33,6 +33,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       h = output_size[1]; //w
     }
   }
+  out_dim_vec[2] = h;
+  out_dim_vec[3] = w;
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
   *out_desc->mut_shape() = Shape(out_dim_vec);
   *out_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
@@ -49,7 +51,7 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
 
 REGISTER_USER_OP("adaptive_avg_pool2d")
     .Input("in")
-    .Attr<std::vector<int>>("output_size")
+    .Attr<std::vector<int64_t>>("output_size")
     .Output("out")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(FwGetSbpFn);
@@ -57,7 +59,7 @@ REGISTER_USER_OP("adaptive_avg_pool2d")
 REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .Input("x")
     .Input("dy")
-    .Attr<std::vector<int>>("output_size")
+    .Attr<std::vector<int64_t>>("output_size")
     .Output("dx")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetGetSbpFn(FwGetSbpFn);
@@ -68,7 +70,7 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d").SetBackwardOpConfGenFn([](user_op::
     return builder.OpTypeName("adaptive_avg_pool2d_grad")
         .InputBind("x", ctx->FwOp().input("in", 0))
         .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-        .Attr("output_size", ctx->FwOp().attr<std::vector<int>>("output_size"))
+        .Attr("output_size", ctx->FwOp().attr<double>("scale"))
         .Output("dx")
         .Build();
   });

@@ -1,0 +1,104 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+#include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
+
+namespace oneflow {
+
+namespace {
+
+template<DeviceType device_type, typename T>
+class ConcatKernel final : public user_op::OpKernel {
+ public:
+  ConcatKernel() = default;
+  ~ConcatKernel() = default;
+
+ private:
+  void InferShape(user_op::KernelInferContext* ctx) const override {
+    std::vector <int> out_size = ctx->Attr<std::vector<int64_t>>("output_size"); 
+    const auto& in_arg_pair =  ctx->inputs()[0];
+    const ShapeView& input_shape_view =
+          ctx->ShapeView4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
+    DimVector dim_vec;
+    input_shape_view.ToDimVector(&dim_vec);
+    int h = dim_vec[2];
+    int w = dim_vec[3];
+    if(out_size.size() >= 1){
+      h = out_size[0]; //h
+      w = out_size[0];
+      if(out_size.size() == 2){
+        h = out_size[1]; //w
+      }
+    }
+    dim_vec[2] = h;
+    dim_vec[3] = w;
+    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
+  }
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const std::vector <int> out_size = ctx->Attr<std::vector<int64_t>>("output_size"); 
+    const T* in_ptr = in_tensor->dptr<T>();
+    T* out_ptr = out_tensor->mut_dptr<T>();
+
+    const int64_t ndims = x->shape().NumAxes();
+    CHECK_EQ(ndims, 4);
+
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
+
+    const int64_t n_batch = in_tensor->shape().At(n_idx);
+    const int64_t n_channnel = in_tensor->shape().At(c_idx);
+    const int in_height = in_tensor->shape().At(h_idx);
+    const int in_width = in_tensor->shape().At(w_idx);
+    const int out_height = out_tensor->shape().At(h_idx);
+    const int out_width = out_tensor->shape().At(w_idx);
+
+    FOR_RANGE(int64_t, b, 0, n_bacth){
+      FOR_RANGE(int64_t, c, 0, n_channnel){
+        T* input_ptr = in_ptr + b * n_channnel * in_height * in_width;
+        
+      }
+    }
+  }
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+}  // namespace
+
+#define REGISTER_CONCAT_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d").SetCreateFn<ConcatKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceTag() == device)                                                    \
+      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_CONCAT_KERNEL_WITH_DEVICE(device) \
+  REGISTER_CONCAT_KERNEL(device, float)            \
+  REGISTER_CONCAT_KERNEL(device, double)           \
+  REGISTER_CONCAT_KERNEL(device, int8_t)           \
+  REGISTER_CONCAT_KERNEL(device, int32_t)          \
+  REGISTER_CONCAT_KERNEL(device, int64_t)
+
+REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kCPU)
+#ifdef WITH_CUDA
+REGISTER_CONCAT_KERNEL_WITH_DEVICE(DeviceType::kGPU)
+REGISTER_CONCAT_KERNEL(DeviceType::kGPU, float16)
+#endif
+
+}  // namespace oneflow
