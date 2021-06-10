@@ -1032,11 +1032,11 @@ class Std(Module):
                     self.reduce_count *= x.shape[i]
 
             sum = (
-                flow.experimental.sum(self.axis, self.keepdim)(self.square_op(x))
+                flow.experimental.sum(self.square_op(x), self.axis, self.keepdim)
                 / self.reduce_count
             )
             square = self.square_op(
-                flow.experimental.sum(self.axis, self.keepdim)(x) / self.reduce_count
+                flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count
             )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
