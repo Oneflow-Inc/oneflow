@@ -14,9 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from .optimizer import Optimizer
 
 
+@oneflow_export("optim.lr_scheduler._LRScheduler")
+@experimental_api
 class LrScheduler(object):
     def __init__(self, optimizer, last_step=-1, verbose=False):
         if not isinstance(optimizer, Optimizer):
