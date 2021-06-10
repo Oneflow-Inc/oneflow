@@ -66,7 +66,7 @@ def floor_op(x):
         flow.Size([2, 2])
         >>> output1.numpy()
         array([[ 0.,  1.],
-            [-1.,  2.]], dtype=float32)
+               [-1.,  2.]], dtype=float32)
 
     """
 
