@@ -233,7 +233,7 @@ class Argument:
         self._default_value = None
 
         fmt = _normalize(fmt)
-        sp = fmt.find(" ")
+        sp = fmt.rfind(" ")
         if sp == -1:
             raise ValueError("Missing argument type or name for argument def: " + fmt)
         self._type = _normalize(fmt[0:sp])
