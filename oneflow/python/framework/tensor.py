@@ -402,9 +402,18 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        assert (
+            isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
+        ), "Unsupported key type!"
+        squeeze_dims = None
+        if isinstance(key, tuple):
+            squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
+        elif isinstance(key, int):
+            squeeze_dims = [0]
+
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
+        return res.squeeze(dim=squeeze_dims)
 
     @_auto_determine
     @register_local_tensor_method()
@@ -627,8 +636,23 @@ class Tensor:
         internal_tensor.zeros_()
 
     @_auto_determine
+    @register_local_tensor_method()
     def register_hook(self, hook):
-        self._local_or_consistent_tensor.register_hook(hook)
+        assert self.is_leaf, "register_hook only supports leaf tensor for now"
+        assert (
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
+
+        def hook_returning_determined_tensor(grad):
+            new_grad = hook(grad)
+            if isinstance(new_grad, Tensor) and not new_grad.is_determined:
+                new_grad.determine()
+                new_grad = new_grad._local_or_consistent_tensor
+            return new_grad
+
+        self._local_or_consistent_tensor._register_hook(
+            hook_returning_determined_tensor
+        )
 
     @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):
