@@ -105,7 +105,8 @@ class ArgWhereFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("argwhere").Input("input").Output("output").Output("output_size").Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const DataType& dtype) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+                                const DataType& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
