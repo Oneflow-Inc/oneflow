@@ -50,13 +50,19 @@ class AdaptiveAvgPool2d(Module):
         >>> output = m(input)
 
     """
+
     def __init__(self, output_size) -> None:
         super().__init__()
-        self._op = flow.builtin_op("adaptive_avg_pool2d").Input("x").Attr("output_size", output_size).Output("y").Build()
+        self._op = (
+            flow.builtin_op("adaptive_avg_pool2d")
+            .Input("x")
+            .Attr("output_size", output_size)
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         return self._op(x)[0]
-
 
 
 if __name__ == "__main__":

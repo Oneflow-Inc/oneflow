@@ -35,8 +35,8 @@ def _test_adaptive_avgpool2d_forward(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestAbs(flow.unittest.TestCase):
-    def test_cosh(test_case):
+class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
+    def test_adaptive_avgpool2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_adaptive_avgpool2d_forward,
