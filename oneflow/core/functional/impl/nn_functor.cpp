@@ -80,7 +80,7 @@ class Conv2DFunctor {
                               .Attr<int32_t>("groups", groups)
                               .Attr<std::string>("data_format", data_format)
                               .Build());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight});
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight});
   }
 
  private:

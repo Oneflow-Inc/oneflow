@@ -239,7 +239,17 @@ class Conv2d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
+                    flow.F.conv2d(
+                        in_split_list[i],
+                        self.weight[i : i + 1, :, :, :],
+                        filters=self.out_channels // self.groups,
+                        kernel_size=self.kernel_size,
+                        strides=self.stride,
+                        padding_before=self.padding,
+                        dilation_rate=self.dilation,
+                        groups=1,
+                        data_format="channels_first",
+                    )
                 )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
