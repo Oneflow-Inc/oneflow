@@ -18,7 +18,7 @@ limitations under the License.
 #include <link.h>
 
 namespace oneflow {
-namespace dl {
+namespace platform {
 
 namespace {
 
@@ -58,5 +58,5 @@ std::string DynamicLibrary::AbsolutePath() {
 
 DynamicLibrary::~DynamicLibrary() { dlclose(handle_); }
 
-}  // namespace dl
+}  // namespace platform
 }  // namespace oneflow

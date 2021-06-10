@@ -29,13 +29,14 @@ std::vector<std::string> GetLibPaths() {
   }
 }
 
-dl::DynamicLibrary* GetIBVLibraryPtr() {
-  static std::unique_ptr<dl::DynamicLibrary> lib = dl::DynamicLibrary::Load(GetLibPaths());
+platform::DynamicLibrary* GetIBVLibraryPtr() {
+  static std::unique_ptr<platform::DynamicLibrary> lib =
+      platform::DynamicLibrary::Load(GetLibPaths());
   return lib.get();
 }
 
-dl::DynamicLibrary& GetIBVLibrary() {
-  dl::DynamicLibrary* lib = GetIBVLibraryPtr();
+platform::DynamicLibrary& GetIBVLibrary() {
+  platform::DynamicLibrary* lib = GetIBVLibraryPtr();
   CHECK(lib != nullptr) << "fail to find libibverbs";
   return *lib;
 }

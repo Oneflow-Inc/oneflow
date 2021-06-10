@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace dl {
+namespace platform {
 
 class DynamicLibrary {
  public:
@@ -36,7 +36,7 @@ class DynamicLibrary {
   void* handle_ = nullptr;
 };
 
-}  // namespace dl
+}  // namespace platform
 
 }  // namespace oneflow
 
