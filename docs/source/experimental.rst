@@ -90,6 +90,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
+.. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
 .. autofunction:: oneflow.experimental.masked_fill

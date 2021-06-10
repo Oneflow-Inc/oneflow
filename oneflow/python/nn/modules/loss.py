@@ -385,6 +385,21 @@ class KLDivLoss(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
+        >>> input = flow.Tensor([-0.9021705, 0.08798598, 1.04686249], dtype=flow.float32)
+        >>> target = flow.Tensor([1.22386942, -0.89729659, 0.01615712], dtype=flow.float32)
+        >>> m = flow.nn.KLDivLoss(reduction="none", log_target=False)
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [ 1.3513819   0.         -0.08356878]
+        >>> m = flow.nn.KLDivLoss(reduction="mean", log_target=False)
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [0.42260438]
+        >>> m = flow.nn.KLDivLoss(reduction="sum", log_target=True)
+        >>> out = m(input, target)
+        >>> print(out.numpy())
+        [5.7800508]
+
     """
 
     def __init__(
@@ -407,7 +422,6 @@ class KLDivLoss(Module):
         ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
         self.reduction = reduction
         self.log_target = log_target
-        self._rint_op = flow.builtin_op("rint").Input("x").Output("y").Build()
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         if self.log_target:
