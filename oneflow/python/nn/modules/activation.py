@@ -24,7 +24,7 @@ from typing import Optional
 def _softmax_need_transpose(x, axis):
     assert type(axis) is int
     dim_num = len(x.shape)
-    if dim_num <= 1:
+    if dim_num == 1:
         return False, None
     if axis < 0:
         axis += dim_num
