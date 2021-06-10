@@ -37,7 +37,7 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
  private:
 
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
+    user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     const std::vector <int> out_size = ctx->Attr<std::vector<int64_t>>("output_size"); 
     const T* in_ptr = in_tensor->dptr<T>();
@@ -91,7 +91,7 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
 #define REGISTER_ADAPTIVE_POOL_KERNEL(device, dtype)                                                \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d").SetCreateFn<AdaptivePoolCpuKernel<device, dtype>>().SetIsMatchedHob( \
       (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_KERNEL_WITH_DEVICE(device) \
   REGISTER_ADAPTIVE_POOL_KERNEL(device, float)            \
