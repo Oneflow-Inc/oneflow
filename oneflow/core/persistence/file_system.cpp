@@ -153,7 +153,7 @@ void CreateHadoopFS(fs::FileSystem** fs, const std::string& namenode) {
   *fs = new fs::HadoopFileSystem(namenode);
 }
 
-void GetFS(fs::FileSystem** fs, const char* fs_type, const char* hdfs_namenode) {
+void CreateFS(fs::FileSystem** fs, const char* fs_type, const char* hdfs_namenode) {
   CHECK_EQ(*fs, nullptr);
 
   std::string fs_type_str;
@@ -187,7 +187,7 @@ fs::FileSystem* GetDataFS() {
           << "env ONEFLOW_DATA_FILE_SYSTEM_HDFS_NAMENODE must be set when "
              "ONEFLOW_DATA_FILE_SYSTEM_TYPE be set to hdfs";
     }
-    GetFS(&data_fs, data_fs_type, data_hdfs_namenode);
+    CreateFS(&data_fs, data_fs_type, data_hdfs_namenode);
     if (data_fs == nullptr) {
       CreateLocalFS(&data_fs);
       LOG(WARNING) << "invalid env ONEFLOW_DATA_FILE_SYSTEM_TYPE " << data_fs_type
@@ -207,7 +207,7 @@ fs::FileSystem* GetSnapshotFS() {
           << "env ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE not set when "
              "ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE set to hdfs";
     }
-    GetFS(&snapshot_fs, snapshot_fs_type, snapshot_hdfs_namenode);
+    CreateFS(&snapshot_fs, snapshot_fs_type, snapshot_hdfs_namenode);
     if (snapshot_fs == nullptr) {
       CreateLocalFS(&snapshot_fs);
       LOG(WARNING) << "invalid env ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE " << snapshot_fs_type
