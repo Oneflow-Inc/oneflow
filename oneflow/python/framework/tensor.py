@@ -407,9 +407,12 @@ class Tensor:
         assert (
             isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
         ), "Unsupported key type!"
+
         squeeze_dims = None
         if isinstance(key, tuple):
-            squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
+            squeeze_dims = list(
+                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
+            )
         elif isinstance(key, int):
             squeeze_dims = [0]
 
