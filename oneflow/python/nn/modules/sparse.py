@@ -16,10 +16,108 @@ limitations under the License.
 import oneflow as flow
 
 from oneflow.python.framework.tensor import Tensor
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import experimental_api, oneflow_export
 from oneflow.python.nn.module import Module
 
 from typing import Optional, List, Tuple
+
+
+@oneflow_export("nn.Onehot")
+@experimental_api
+class Onehot(Module):
+    """This operator generates a onehot Blob from input Blob.
+
+    If input Blob's rank is `N`, the corresponding onehot Blob's rank is `N+1`. The new axis is generated on the specified dimension according to the parameter `axis`.
+
+    The locations represented by `indices` take value `on_value`, while other locations take `off_value`
+
+    Args:
+        indices (oneflow._oneflow_internal.BlobDesc): The input Blob.
+        depth (int): The length of onehot Blob.
+        on_value (Union[int, float], optional): The fill value when `indices[i] == i`. Defaults to 1.
+        off_value (Union[int, float], optional): The fill value when `indice[i] != i`. Defaults to 0.
+        axis (int, optional): The specified dimension that the new axis is generated on. Defaults to -1.
+        dtype (Optional[flow.dtype], optional): The output data type, it can be "oneflow.int32", "oneflow.int64", "oneflow.float", "oneflow.double". Defaults to None.
+        name (Optional[str], optional): The name for the operation. Defaults to None.
+
+    Note:
+
+        The data type of input blob should be `int32` or `int64`
+
+    For example:
+
+    Example 1:
+
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.typing as tp
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([0, 3, 1, 2]).astype(np.int32)
+        >>> m = nn.Onehot(x, 5, -1, flow.int32)
+        [[1 0 0 0 0]
+        [0 0 0 1 0]
+        [0 1 0 0 0]
+        [0 0 1 0 0]]
+
+    Example 2:
+
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> import oneflow.typing as tp
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([0, 3, 1, 2]).astype(np.int32)
+        >>> m = nn.Onehot(indices=x,
+                                depth=5,
+                                axis=0,
+                                dtype=flow.int32)
+       [[1 0 0 0]
+       [0 0 1 0]
+       [0 0 0 1]
+       [0 1 0 0]
+       [0 0 0 0]]
+
+    """
+
+    def __init__(
+        self,
+        indices: oneflow._oneflow_internal.BlobDesc,
+        depth: int,
+        on_value: Union[int, float] = 1,
+        off_value: Union[int, float] = 0,
+        axis: int = -1,
+        dtype: Optional[flow.dtype] = None,
+        name: Optional[str] = None,
+    ) -> oneflow._oneflow_internal.BlobDesc:
+        super().__init__()
+
+    self._op = (
+        flow.builtin_op("OneHot_")
+        .Op("one_hot")
+        .Input("indices", [indices])
+        .Attr("depth", int(depth))
+        .Attr("floating_on_value", float(on_value))
+        .Attr("integer_on_value", int(on_value))
+        .Attr("floating_off_value", float(off_value))
+        .Attr("integer_off_value", int(off_value))
+        .Attr("dtype", dtype)
+        .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+    def forward(self, x):
+        res = self._op()
+        if self.axis != (self.out_ndims - 1):
+            dim_list = list(range(0, self.out_ndims))
+            dim_list.insert(self.axis, self.out_ndims - 1)
+            dim_list.pop()
+            res = flow.transpose(res, self.dim_list)
+        return res
 
 
 @oneflow_export("nn.Embedding")
