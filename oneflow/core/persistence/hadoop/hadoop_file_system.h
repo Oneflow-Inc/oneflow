@@ -78,6 +78,7 @@ class HadoopFileSystem final : public FileSystem {
   HadoopFileSystem() = delete;
   ~HadoopFileSystem() = default;
 
+  HadoopFileSystem(const std::string&);
   HadoopFileSystem(const HdfsConf&);
 
   void NewRandomAccessFile(const std::string& fname,

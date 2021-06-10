@@ -122,6 +122,11 @@ fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
   return fs;
 }
 
+fs::FileSystem* HadoopFS(const std::string& namenode) {
+  static fs::FileSystem* fs = new fs::HadoopFileSystem(namenode);
+  return fs;
+}
+
 fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
   if (file_system_conf.has_localfs_conf()) {
     return LocalFS();
@@ -134,9 +139,56 @@ fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
   }
 }
 
+fs::FileSystem* GetFS(const char* fs_type, const char* fs_param) {
+  if (fs_type == nullptr) {
+    // get local file system by default
+    return LocalFS();
+  }
+
+  auto fs_type_str = ToLower(fs_type);
+  if (fs_type_str == "local") { return LocalFS(); }
+
+  if (fs_type_str == "network") { return LocalFS(); }
+
+  if (fs_type_str == "hdfs") {
+    CHECK_NOTNULL(fs_param);
+    return HadoopFS(fs_param);
+  }
+
+  // invalid data file system env, warning and return local fs
+  LOG(WARNING) << "invalid env ONEFLOW_DATA_FILE_SYSTEM_TYPE " << fs_type
+               << ", return the local file system instead";
+  return LocalFS();
+}
+
+// Will be deprecated
 fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
 fs::FileSystem* DataFS(int64_t session_id) {
   return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
 }
 fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
+
+// New data & snapshot file system inferface
+fs::FileSystem* GetDataFS() {
+  const char* fs_type = std::getenv("ONEFLOW_DATA_FILE_SYSTEM_TYPE");
+  const char* hdfs_namenode = std::getenv("ONEFLOW_DATA_FILE_SYSTEM_HDFS_NAMENODE");
+  if (fs_type != nullptr && ToLower(fs_type) == "hdfs") {
+    CHECK(hdfs_namenode != nullptr)
+        << "env ONEFLOW_DATA_FILE_SYSTEM_HDFS_NAMENODE must be set when "
+           "ONEFLOW_DATA_FILE_SYSTEM_TYPE be set to hdfs";
+  }
+  return GetFS(fs_type, hdfs_namenode);
+}
+
+fs::FileSystem* GetSnapshotFS() {
+  const char* fs_type = std::getenv("ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE");
+  const char* hdfs_namenode = std::getenv("ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE");
+  if (fs_type != nullptr && ToLower(fs_type) == "hdfs") {
+    CHECK(hdfs_namenode != nullptr)
+        << "env ONEFLOW_SNAPSHOT_FILE_SYSTEM_HDFS_NAMENODE not set when "
+           "ONEFLOW_SNAPSHOT_FILE_SYSTEM_TYPE set to hdfs";
+  }
+  return GetFS(fs_type, hdfs_namenode);
+}
+
 }  // namespace oneflow

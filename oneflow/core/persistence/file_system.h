@@ -171,9 +171,14 @@ class FileSystem {
 fs::FileSystem* LocalFS();
 
 fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
+fs::FileSystem* GetFS(const char* data_fs_type, const char* data_fs_param);
 fs::FileSystem* DataFS();
 fs::FileSystem* DataFS(int64_t session_id);
 fs::FileSystem* SnapshotFS();
+
+fs::FileSystem* GetDataFS();
+fs::FileSystem* GetSnapshotFS();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
