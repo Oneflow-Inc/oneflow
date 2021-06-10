@@ -40,6 +40,12 @@ def _test_slice_1_dim(test_case, device):
     test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-5, 1e-5))
 
 
+def _test_slice_3_dim(test_case, device):
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-5, 1e-5))
+
+
 def _test_slice_4_dim(test_case, device):
     np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -99,6 +105,7 @@ class TestSlice(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_slice,
             _test_slice_1_dim,
+            _test_slice_3_dim,
             _test_slice_4_dim,
             _test_slice_with_int_index,
             _test_slice_backward,
