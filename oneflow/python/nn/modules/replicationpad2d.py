@@ -24,7 +24,11 @@ from oneflow.python.nn.module import Module
 @oneflow_export("nn.ReplicationPad2d")
 @experimental_api
 class ReplicationPad2d(Module):
-    r"""Pads the input tensor using the replication of the input boundary.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ReplicationPad2d.html?highlight=replicationpad2d#torch.nn.ReplicationPad2d
+    
+    Pads the input tensor using the replication of the input boundary.
 
     Args:
         padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
