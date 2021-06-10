@@ -398,17 +398,15 @@ class MSELoss(Module):
         ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
 
         self.reduction = reduction
-        self.square_op = flow.experimental.square()
-        self.subtract_op = flow.experimental.subtract()
-        self.sum_op = flow.experimental.sum()
-        self.mean_op = flow.experimental.mean()
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        mean_squared_difference = self.square_op(self.subtract_op(input, target))
+        mean_squared_difference = flow.experimental.square(
+            flow.experimental.sub(input, target)
+        )
         if self.reduction == "mean":
-            return self.mean_op(mean_squared_difference)
+            return flow.experimental.mean(mean_squared_difference)
         elif self.reduction == "sum":
-            return self.sum_op(mean_squared_difference)
+            return flow.experimental.sum(mean_squared_difference)
         else:
             # Do no reduction
             return mean_squared_difference
