@@ -20,6 +20,14 @@ namespace oneflow {
 
 namespace {
 
+static inline int64_t start_index(int64_t a, int64_t b, int64_t c) {
+  return (int64_t)std::floor((float)(a * c) / b);
+}
+
+static inline int64_t end_index(int64_t a, int64_t b, int64_t c) {
+  return (int64_t)std::ceil((float)((a + 1) * c) / b);
+}
+
 template<DeviceType device_type, typename T>
 class ConcatKernel final : public user_op::OpKernel {
  public:
@@ -65,15 +73,33 @@ class ConcatKernel final : public user_op::OpKernel {
 
     const int64_t n_batch = in_tensor->shape().At(n_idx);
     const int64_t n_channnel = in_tensor->shape().At(c_idx);
-    const int in_height = in_tensor->shape().At(h_idx);
-    const int in_width = in_tensor->shape().At(w_idx);
-    const int out_height = out_tensor->shape().At(h_idx);
-    const int out_width = out_tensor->shape().At(w_idx);
+    const int input_height = in_tensor->shape().At(h_idx);
+    const int input_width = in_tensor->shape().At(w_idx);
+    const int output_height = out_tensor->shape().At(h_idx);
+    const int output_width = out_tensor->shape().At(w_idx);
 
     FOR_RANGE(int64_t, b, 0, n_bacth){
       FOR_RANGE(int64_t, c, 0, n_channnel){
-        T* input_ptr = in_ptr + b * n_channnel * in_height * in_width;
-        
+        T* input_ptr = in_ptr + b * n_channnel * input_height * input_width;
+        T* output_ptr = out_ptr + b * n_channnel * output_height * output_width;
+        FOR_RANGE(int64_t, oh, 0, output_height){
+          int64_t ih0 = start_index(oh, output_height, input_height);
+          int64_t ih1 = end_index(oh, output_height, input_height);
+          int64_t kh = ih1 - ih0;
+          FOR_RANGE(int64_t, ow, 0, output_width){
+            int64_t iw0 = start_index(ow, output_width, input_width);
+            int64_t iw1 = end_index(ow, output_width, input_width);
+            int64_t kw = iw1 - iw0;
+            // compute local average
+            T sum = static_cast<T>(0);
+            FOR_RANGE(int64_t, ih, ih0, ih1){
+              FOR_RANGE(int64_t, iw, iw0, iw1){
+                sum += input_ptr[ih * input_width + iw];
+              }
+            }
+            output_ptr[oh * output_width + ow] = sum / kh / kw;
+          }
+        }
       }
     }
   }
