@@ -21,9 +21,9 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
-  DimVector out_dim_vec = first_in_desc->shape().dim_vec();
+  DimVector out_dim_vec = x_desc->shape().dim_vec();
   int h = out_dim_vec[2];
   int w = out_dim_vec[3];
   if (output_size.size() >= 1) {
@@ -35,9 +35,9 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   }
   out_dim_vec[2] = h;
   out_dim_vec[3] = w;
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  *out_desc->mut_shape() = Shape(out_dim_vec);
-  *out_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+  user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  *y_desc->mut_shape() = Shape(out_dim_vec);
+  *y_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
@@ -49,12 +49,20 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  *y_desc->mut_data_type() = x_desc->data_type();
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP("adaptive_avg_pool2d")
     .Input("x")
     .Attr<std::vector<int64_t>>("output_size")
     .Output("y")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .Input("x")
@@ -62,7 +70,8 @@ REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .Attr<std::vector<int64_t>>("output_size")
     .Output("dx")
     .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(FwGetSbpFn);
+    .SetGetSbpFn(FwGetSbpFn)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
