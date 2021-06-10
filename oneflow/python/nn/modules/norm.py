@@ -31,7 +31,7 @@ class Norm(Module):
 
 
     def _vector_norm(self, x, ord = 2):
-        if ord in ["fro","nuc"]:
+        if ord in ["fro", "nuc"]:
             raise ValueError("Norm order {} is not supported for vectors".format(ord))
         elif ord in [float('inf'),float('-inf')]:
             return self._max_op(self._abs_op(x)[0])[0]
@@ -42,9 +42,10 @@ class Norm(Module):
                 return flow.experimental.pow(flow.experimental.sum(flow.experimental.pow(flow.experimental.abs(x)[0], ord)), 1./ord)
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
+        
     
-    def _matrix_norm(self, x, dim, ord = "fro"):
-        if ord in ["fro","nuc"]:
+    def _matrix_norm(self, x, ord = "fro", dim = None):
+        if ord in ["fro", "nuc"]:
             assert len(x.shape) == 2, "Both the Frobenius and nuclear norm orders are only defined for matrices"
             if ord == "nuc":
                 raise NotImplementedError
@@ -70,10 +71,28 @@ class Norm(Module):
 
 
     def forward(self, x):
-        if len(x.shape) == 1:
-            return self._vector_norm(x, self.dim, self.ord)
+        num_axes = len(x.shape)
+        axis = self.dim if self.dim >= 0 else self.dim + num_axes
+        assert 0 <= axis < num_axes, "axis out of range"
+        if num_axes == 1:
+            res = self._vector_norm(x, self.ord)
         else:
-            return self._matrix_norm(x, self.dim,)
+            res = self._matrix_norm(x, self.dim)
+
+        if axis == num_axes - 1:
+            if self.keepdim == True:
+                res = flow.experimental.unsqueeze(res, -1)
+            return res
+        else:
+            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+            x = self._transpose_op(input, perm=perm)[0]
+            x = self._op_softmax_last_dim(x)[0]
+            x = flow.experimental.unsqueeze(x, -1)
+            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
+            if self.keepdim == False:
+                x = x.squeeze(dim=[axis])
+            return x
+        
 
 
 @oneflow_export("norm")
