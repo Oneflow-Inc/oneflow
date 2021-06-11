@@ -299,7 +299,6 @@ class NLLLoss(Module):
 @oneflow_export("nn.BCEWithLogitsLoss")
 @experimental_api
 class BCEWithLogitsLoss(Module):
-
     r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
     we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
 
@@ -351,22 +350,23 @@ class BCEWithLogitsLoss(Module):
 
         >>> np_pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
-        # >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="none")
-        # >>> out = m(np_input, np_target).numpy()
-        # >>> print(out)
-        # [[2.926565, 1.5551611, 1.1087105],
-        #  [0.96764666, 2.074976, 5.9553986]]
-        [[2.9266 1.5552 1.1087], [0.9676 2.0750 5.9554], [0.9676, 2.0750, 5.9554]]
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="none")
+        >>> out = m(np_input, np_target)
+        >>> out
+        tensor([[2.9266, 1.5552, 1.1087],
+                [0.9676, 2.075 , 5.9554],
+                [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="mean")
-        >>> out = m(np_input, np_target).numpy()
-        >>> print(out)
-        [2.62072]
+        >>> out = m(np_input, np_target)
+        >>> out
+        tensor([2.6207], dtype=oneflow.float32)
 
         >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="sum")
-        >>> out = m(np_input, np_target).numpy()
-        >>> print(out)
-        [23.58648]
+        >>> out = m(np_input, np_target)
+        >>> out
+        tensor([23.5865], dtype=oneflow.float32)
+
 
     """
 
@@ -443,4 +443,4 @@ class BCEWithLogitsLoss(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
