@@ -402,9 +402,21 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        assert (
+            isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
+        ), "Unsupported key type!"
+
+        squeeze_dims = None
+        if isinstance(key, tuple):
+            squeeze_dims = list(
+                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
+            )
+        elif isinstance(key, int):
+            squeeze_dims = [0]
+
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
+        return res.squeeze(dim=squeeze_dims)
 
     @_auto_determine
     @register_local_tensor_method()
