@@ -13,36 +13,48 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
 from collections import OrderedDict
 
+import oneflow
 import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_argwhere(test_case, shape, device):
-    np_input = np.random.randn(*shape)
-    input = flow.Tensor(np_input, device=flow.device(device))
-    of_out = flow.argwhere(input)
-    np_out = np.argwhere(np_input)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-    test_case.assertTrue(np.array_equal(of_out.numpy().shape, np_out.shape))
+def _test_instruction_replay_impl(test_case, device, shape):
+    x = flow.Tensor(np.random.rand(*shape), device=flow.device(device))
+    y = flow.Tensor(np.random.rand(*shape), device=flow.device(device))
+
+    x.determine()
+    y.determine()
+
+    oneflow._oneflow_internal.debug.start_recording_instructions()
+    z = x + y
+    oneflow._oneflow_internal.debug.end_recording_instructions()
+
+    test_case.assertTrue(np.allclose(z.numpy(), x.numpy() + y.numpy(), 1e-4, 1e-4))
+
+    # init tensor_z and replay
+    z.zeros_()
+    oneflow._oneflow_internal.debug.replay_instructions()
+    test_case.assertTrue(np.allclose(z.numpy(), x.numpy() + y.numpy(), 1e-4, 1e-4))
+    oneflow._oneflow_internal.debug.clear_recorded_instructions()
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestArgwhere(flow.unittest.TestCase):
-    def test_argwhere(test_case):
+class TestIntructionReplay(flow.unittest.TestCase):
+    def test_instruction_replay(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_argwhere]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["shape"] = [[2, 3], [1, 10]]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            _test_instruction_replay_impl(test_case, *arg)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ import warnings
 from typing import Dict, Callable, Union, Any, Iterator
 from types import GeneratorType
 
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 
@@ -54,6 +55,8 @@ class ParamGroup(object):
         return self._parameters
 
 
+@oneflow_export("optim.Optimizer")
+@experimental_api
 class Optimizer(object):
     def __init__(self):
         self.param_groups = list()
