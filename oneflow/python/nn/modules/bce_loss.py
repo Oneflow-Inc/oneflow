@@ -98,7 +98,6 @@ class BCELoss(Module):
         self.negative = Negative()
         self.log = Log()
 
-
     def forward(self, input, target, weight):
         assert (
             input.shape == target.shape
