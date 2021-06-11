@@ -80,18 +80,25 @@ def transpose_op(tensor, dim0, dim1):
         dim1 (int): the second dimension to be transposed.
     Returns:
         Tensor: A transposed tensor.
-    
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        out = flow.transpose(input, 0, 1)
+        >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
+        >>> out = flow.transpose(input, 0, 1).numpy().shape
+        >>> print(out)
+        (6, 2, 5, 3)
 
-        # out.shape (6, 2, 5, 3)
-    
     """
     return Transpose(dim0=dim0, dim1=dim1)(tensor)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

@@ -24,27 +24,35 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                 const std::shared_ptr<const DType>& dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool is_lazy, bool requires_grad, bool is_leaf) {
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
+    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<MirroredTensorImpl> impl;
   if (is_lazy) {
     impl = std::make_shared<LazyMirroredTensorImpl>(shape, dtype, device, requires_grad, is_leaf);
   } else {
     const auto eager_blob_object =
-        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype->data_type(), *shape, device));
+        CHECK_JUST(GenerateAllocatedEagerBlobObject(dtype, *shape, device));
     impl = std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad,
                                                      is_leaf);
   }
   return std::make_shared<MirroredTensor>(impl);
 }
 
-std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+/*static*/ std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf) {
   std::shared_ptr<MirroredTensorImpl> impl =
       std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, requires_grad, is_leaf);
+  return std::make_shared<MirroredTensor>(impl);
+}
+
+/*static*/ std::shared_ptr<MirroredTensor> MirroredTensor::MakeEagerTensor(
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device,
+    const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf) {
+  std::shared_ptr<MirroredTensorImpl> impl = std::make_shared<EagerMirroredTensorImpl>(
+      eager_blob_object, device, tensor_storage, requires_grad, is_leaf);
   return std::make_shared<MirroredTensor>(impl);
 }
 
@@ -61,13 +69,17 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> MirroredTensor::detach() const {
-  std::shared_ptr<MirroredTensor> t = std::make_shared<MirroredTensor>(impl_);
+Maybe<MirroredTensor> MirroredTensor::api_detach() const {
+  const auto& eager_blob_object = JUST(impl_->eager_blob_object());
+  const auto& device = impl_->device();
+  const auto& tensor_storage = JUST(this->tensor_storage());
+  std::shared_ptr<MirroredTensor> t =
+      MirroredTensor::MakeEagerTensor(eager_blob_object, device, tensor_storage, false, true);
   return t;
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(
-    const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
     Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc,
     bool is_lazy, bool requires_grad, bool is_leaf) {
   std::shared_ptr<ConsistentTensorImpl> impl;
@@ -97,7 +109,7 @@ std::shared_ptr<ConsistentTensor> ConsistentTensor::data() const {
   return t;
 }
 
-std::shared_ptr<Tensor> ConsistentTensor::detach() const {
+Maybe<ConsistentTensor> ConsistentTensor::api_detach() const {
   std::shared_ptr<ConsistentTensor> t = std::make_shared<ConsistentTensor>(impl_);
   return t;
 }

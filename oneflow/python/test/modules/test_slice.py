@@ -32,6 +32,50 @@ def _test_slice(test_case, device):
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
 
+def _test_slice_1_dim(test_case, device):
+    np_arr = np.random.randn(100).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    test_case.assertTrue(np.allclose(x[1].numpy(), np_arr[1], 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-5, 1e-5))
+
+
+def _test_slice_4_dim(test_case, device):
+    np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    tup_list = [[0, 5, 2], [None, None, None], [0, 5, 2], [0, 6, 3]]
+    y = flow.slice(x, slice_tup_list=tup_list)
+    tmp = np_arr[0:5, 0:3, 0:5, 0:6]
+    np_out = tmp[::2, ::1, ::2, ::3]
+    test_case.assertTrue(np.array_equal(y.numpy(), np_out))
+
+
+def _test_slice_with_int_index(test_case, device):
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, 1:2]
+    np_out = np_arr[0, 1:2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :]
+    np_out = np_arr[0, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :, :]
+    np_out = np_arr[0, :, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :, :, :]
+    np_out = np_arr[0, :, :, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 def _test_slice_backward(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
@@ -52,7 +96,13 @@ def _test_slice_backward(test_case, device):
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_slice, _test_slice_backward]
+        arg_dict["test_fun"] = [
+            _test_slice,
+            _test_slice_1_dim,
+            _test_slice_4_dim,
+            _test_slice_with_int_index,
+            _test_slice_backward,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
@@ -77,6 +127,7 @@ class TestSliceUpdate(flow.unittest.TestCase):
     ".numpy() doesn't work in lazy mode",
 )
 class TestLogicalSliceAssign(flow.unittest.TestCase):
+    # this is an in-place operation, so requires_grad should be False(no grad in backward)
     def test_logical_slice_assign(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.Tensor(x)

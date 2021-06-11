@@ -68,17 +68,17 @@ bool IsAxesLegal(const AxisVector& axis_vec, const Shape& like_shape, const Shap
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
   CHECK_OR_RETURN(!broadcast_axes.empty());
-  const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-  Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
   const AxisVector axis_vec = {broadcast_axes.begin(), broadcast_axes.end()};
-  CHECK_OR_RETURN(IsAxesLegal(axis_vec, *like_shape, *in_shape));
-  *out_shape = *like_shape;
+  CHECK_OR_RETURN(IsAxesLegal(axis_vec, like_shape, in_shape));
+  *out_shape = like_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
   return Maybe<void>::Ok();
 }
 
