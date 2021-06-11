@@ -326,12 +326,15 @@ class BCEWithLogitsLoss(Module):
         input (oneflow._oneflow_internal.BlobDesc): The input Tensor.
         target (oneflow._oneflow_internal.BlobDesc): The target Tensor.
         weight (remote_blob_util, optional): The manual rescaling weight to the loss. Defaults to None.
-        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
+        size_average (bool, optional) – Deprecated (see reduction). Default: True
+        reduce (bool, optional) – Deprecated (see reduction). Default: True
         reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
-        name (Optional[str], optional): The name for the operation. Defaults to None.
+        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
 
-    Returns:
-        oneflow._oneflow_internal.BlobDesc: The result Blob.
+    Shape:
+        Input: (N,*) where * means, any number of additional dimensions
+        Target: (N,*), same shape as the input
+        Output: scalar. If `reduction` is `none`, then (N,*), same shape as input.
 
     For example:
 
@@ -340,30 +343,26 @@ class BCEWithLogitsLoss(Module):
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import oneflow.typing as tp
-        >>> import numpy as np
 
-        >>> np_input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
+        >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
+        >>> target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]], dtype=flow.float32)
+        >>> weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]], dtype=flow.float32)
+        >>> pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
 
-        >>> np_target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]],dtype=flow.float32)
-
-        >>> np_weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]],dtype=flow.float32)
-
-        >>> np_pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
-
-        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="none")
-        >>> out = m(np_input, np_target)
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="none")
+        >>> out = m(input, target)
         >>> out
         tensor([[2.9266, 1.5552, 1.1087],
                 [0.9676, 2.075 , 5.9554],
                 [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
 
-        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="mean")
-        >>> out = m(np_input, np_target)
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
+        >>> out = m(input, target)
         >>> out
         tensor([2.6207], dtype=oneflow.float32)
 
-        >>> m = flow.nn.BCEWithLogitsLoss(weight=np_weight, pos_weight=np_pos_weight, reduction="sum")
-        >>> out = m(np_input, np_target)
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="sum")
+        >>> out = m(input, target)
         >>> out
         tensor([23.5865], dtype=oneflow.float32)
 
@@ -373,8 +372,10 @@ class BCEWithLogitsLoss(Module):
     def __init__(
         self,
         weight=None,
-        pos_weight=None,
+        size_average: bool = True,
+        reduce: bool = True,
         reduction: Optional[str] = "mean",
+        pos_weight=None,
     ) -> None:
         super().__init__()
         assert reduction in [
@@ -385,8 +386,10 @@ class BCEWithLogitsLoss(Module):
         ], "only 'sum', 'mean' and None supported by now"
 
         self.weight = weight
-        self.pos_weight = pos_weight
+        self.size_average = size_average
+        self.reduce = reduce
         self.reduction = reduction
+        self.pos_weight = pos_weight
         self._transpose_op = (
             flow.builtin_op("transpose")
             .Input("input")
@@ -398,6 +401,8 @@ class BCEWithLogitsLoss(Module):
     def forward(self, input, target):
         if len(input.shape) >= 5:
             raise NotImplemented
+        if not (target.shape == input.shape):
+            raise ValueError("Target size ({}) must be the same as input size ({})".format(target.size(), input.size()))
 
         _neg_input = flow.experimental.negative(input)
         _max_val = flow.experimental.clip(_neg_input,0)
