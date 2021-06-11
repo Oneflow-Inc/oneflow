@@ -58,17 +58,12 @@ class BCELoss(Module):
         The input value must be in the range of (0, 1). Or the loss function may return `nan` value.
 
     Returns:
-        oneflow._oneflow_internal.BlobDesc: The result Blob.
+        oneflow.experimental.Tensor: The result Tensor.
 
     For example:
 
     .. code-block:: python
-
-        import oneflow as flow
-        import oneflow.typing as tp
-        import numpy as np
-
-
+    
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -81,7 +76,8 @@ class BCELoss(Module):
         >>> m = flow.nn.BCELoss(reduction="none")
         >>> out = m(sigmoid_input, target, weight)
         >>> out
-        [2.0611262]
+        tensor([[2.9266, 1.1963, 1.1087],
+                [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
         
     """
 
