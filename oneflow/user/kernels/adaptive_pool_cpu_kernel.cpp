@@ -158,18 +158,18 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_ELU_BACKWARD_KERNEL(device, dtype)        \
+#define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, dtype)  \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")             \
       .SetCreateFn<AdaptivePoolCpuGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((HobDeviceTag() == device)              \
-                       & (HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)     \
+                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 #define REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(device) \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, float)                     \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, double)                    \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int8_t)                    \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int32_t)                   \
-  REGISTER_ADAPTIVE_POOL_KERNEL(device, int64_t)
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, float)            \
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, double)           \
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int8_t)           \
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int32_t)          \
+  REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL(device, int64_t)
 
 REGISTER_ADAPTIVE_POOL_BACKWARD_KERNEL_WITH_DEVICE(DeviceType::kCPU)
 

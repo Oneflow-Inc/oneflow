@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
+Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
   std::vector<int64_t> output_size = ctx->Attr<std::vector<int64_t>>("output_size");
   const Shape& x_shape = ctx->InputShape("x", 0);
   int h = 0;
@@ -42,6 +42,12 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferBWTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   // only for nchw
@@ -51,10 +57,26 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  *y_desc->mut_data_type() = x_desc->data_type();
+Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferFWDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferBWDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -62,18 +84,18 @@ REGISTER_USER_OP("adaptive_avg_pool2d")
     .Input("x")
     .Attr<std::vector<int64_t>>("output_size")
     .Output("y")
-    .SetTensorDescInferFn(InferTensorDesc)
+    .SetTensorDescInferFn(InferFWTensorDesc)
     .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(InferDataType);
+    .SetDataTypeInferFn(InferFWDataType);
 
 REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .Input("x")
     .Input("dy")
     .Attr<std::vector<int64_t>>("output_size")
     .Output("dx")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(FwGetSbpFn)
-    .SetDataTypeInferFn(InferDataType);
+    .SetTensorDescInferFn(InferBWTensorDesc)
+    .SetGetSbpFn(BwGetSbpFn)
+    .SetDataTypeInferFn(InferBWDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
@@ -87,7 +109,7 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
             .Build();
       });
       ctx->FwOp().InputGradBind(
-          user_op::OpArg("in", 0),
+          user_op::OpArg("x", 0),
           [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
             return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
           });
