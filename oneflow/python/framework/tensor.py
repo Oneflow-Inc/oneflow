@@ -368,7 +368,7 @@ class Tensor:
             return slice(x, x + 1)
 
         if isinstance(key, tuple):
-            assert all(isinstance(x, (slice, int)) for x in key)
+            assert all(isinstance(x, (slice, int, type(Ellipsis))) for x in key)
         else:
             assert isinstance(key, (slice, int))
             key = (key,)
@@ -408,9 +408,23 @@ class Tensor:
 
         squeeze_dims = None
         if isinstance(key, tuple):
+            d = self.ndim - len(key)
+            if d > 0:  # d > 0 indicates the existence of Ellipsis type
+                new_key = list()
+                for k in key:
+                    if isinstance(k, type(Ellipsis)):
+                        new_key.append(slice(None, None, None))
+                        while d > 0:
+                            new_key.append(slice(None, None, None))
+                            d -= 1
+                    else:
+                        new_key.append(k)
+                key = tuple(new_key)
+
             squeeze_dims = list(
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
+            key = tuple(key)
         elif isinstance(key, int):
             squeeze_dims = [0]
 

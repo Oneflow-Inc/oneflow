@@ -82,6 +82,23 @@ def _test_slice_with_int_index(test_case, device):
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
+def _test_slice_special_cases(test_case, device):
+    np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+
+    of_out = x[..., ::2, ::2]
+    np_out = np_arr[..., ::2, ::2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    of_out = x[..., 1:2, ::2]
+    np_out = np_arr[..., 1:2, ::2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    of_out = x[::2, ..., 1:2]
+    np_out = np_arr[::2, ..., 1:2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 def _test_slice_backward(test_case, device):
     np_arr = np.random.randn(3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
@@ -108,6 +125,7 @@ class TestSlice(flow.unittest.TestCase):
             _test_slice_3_dim,
             _test_slice_4_dim,
             _test_slice_with_int_index,
+            _test_slice_special_cases,
             _test_slice_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
