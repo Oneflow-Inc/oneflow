@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow.experimental as flow
-from test_util import GenArgList, type_name_to_flow_type
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 
 
 def _test_variance_keepdim(test_case, shape, device):
@@ -607,14 +607,19 @@ def _test_topk_largest(test_case, device):
 
 def _test_topk_original(test_case, device):
     arg_dict = OrderedDict()
-    arg_dict["shape"] = [(10, 10, 500)]
+    arg_dict["shape"] = [(10, 10, 200)]
     arg_dict["axis"] = [-2, 0, 2]
     arg_dict["k"] = [1, 50, 200]
     arg_dict["largest"] = [True, False]
     arg_dict["data_type"] = ["float32", "double"]
+    rng = np.random.default_rng()
     for (shape, axis, k, largest, data_type) in GenArgList(arg_dict):
+        np_type = type_name_to_np_type[data_type]
+        random_data = rng.standard_normal(size=shape, dtype=np_type)
+        while np.unique(random_data).size != random_data.size:
+            random_data = rng.standard_normal(size=shape, dtype=np_type)
         input = flow.Tensor(
-            np.random.randn(*shape),
+            random_data,
             dtype=type_name_to_flow_type[data_type],
             device=flow.device(device),
         )
