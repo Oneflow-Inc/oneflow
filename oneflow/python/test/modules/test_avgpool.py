@@ -159,6 +159,40 @@ class AvgPoolNumpy:
         dx = dx.reshape(self.x_shape)
         return dx
 
+def _test_avgpool3d(test_case, device):
+    input_arr = np.array(
+        [[[[[-1.1132425 , -0.79719835],
+          [ 1.99409501,  0.23270504]],
+         [[-0.69827855, -0.19336448],
+          [ 0.86132664, -0.86734113]]],
+
+        [[[ 0.90614991, -1.11548232],
+          [-0.17957948, -0.14095705]],
+         [[ 0.12856562, -0.82078871],
+          [-0.79095713, -0.86583306]]]],
+
+       [[[[-1.99924145,  0.39951706],
+          [-1.31197624, -0.68801404]],
+         [[-0.09358264,  0.12486073],
+          [-0.45929356,  0.31948792]]],
+
+        [[[ 0.72989192,  1.65362442],
+          [ 0.12919752, -1.45644394]],
+         [[-0.33608345, -0.4950027 ],
+          [-0.30841882,  1.06204887]]]]]
+    )
+    dim = 3
+    kernel_size, stride, padding = (1, 1, 1), (1, 1, 1), (0, 0, 0)
+    m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
+    numpy_output = m_numpy(input_arr)
+
+    m = flow.nn.AvgPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
+    m.to(flow.device(device))
+    x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
+    output = m(x)
+    print("numpy_output:",numpy_output)
+    print("output:",output.numpy())
+    test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
 def _test_avgpool3d_backward(test_case, device):
     dim = 3
@@ -270,10 +304,11 @@ class TestPoolingModule(flow.unittest.TestCase):
     def test_avgpool3d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_avgpool3d_backward,
-            _test_avgpool3d_special_kernel_size_backward,
-            _test_avgpool3d_diff_kernel_stride_backward,
-            _test_avgpool3d_negative_input_backward,
+            _test_avgpool3d,
+            # _test_avgpool3d_backward,
+            # _test_avgpool3d_special_kernel_size_backward,
+            # _test_avgpool3d_diff_kernel_stride_backward,
+            # _test_avgpool3d_negative_input_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

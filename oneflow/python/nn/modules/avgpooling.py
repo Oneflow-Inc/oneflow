@@ -119,7 +119,6 @@ class AvgPool3d(Module):
         ceil_mode: bool = False,
         count_include_pad: Optional[bool] = None,
         divisor_override: Optional[int] = None,
-        name: Optional[str] = None,
     ):
         super().__init__()
         kernel_size = _pair(kernel_size)
@@ -143,7 +142,7 @@ class AvgPool3d(Module):
         _padding_after = [pad[1] for pad in _pads_list]
 
         self._op = (
-            flow.builtin_op("avg_pool_3d", name)
+            flow.builtin_op("avg_pool_3d")
             .Attr("data_format", _channel_pos)
             .Attr("pool_size", kernel_size)
             .Attr("strides", stride)
