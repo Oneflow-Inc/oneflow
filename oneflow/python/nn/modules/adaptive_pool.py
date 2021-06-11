@@ -68,7 +68,7 @@ class AdaptiveAvgPool2d(Module):
         self._op = (
             flow.builtin_op("adaptive_avg_pool2d")
             .Input("x")
-            .Attr("output_size", output_size)
+            .Attr("output_size", [])
             .Output("y")
             .Build()
         )
@@ -97,4 +97,4 @@ class AdaptiveAvgPool2d(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)

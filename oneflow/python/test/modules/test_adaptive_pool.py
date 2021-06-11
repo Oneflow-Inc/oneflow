@@ -144,7 +144,8 @@ class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
             _test_adaptive_avgpool2d_backward,
         ]
         arg_dict["device"] = [
-            "cpu", "cuda",
+            "cpu",
+            "cuda",
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

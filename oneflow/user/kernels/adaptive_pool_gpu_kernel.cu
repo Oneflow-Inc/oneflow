@@ -103,7 +103,6 @@ struct GpuAdaptiveAvgPool2dFunctor final {
   }
 };
 
-
 template<typename T>
 struct GpuAdaptiveAvgpool2dGradFunctor final {
   void operator()(DeviceCtx* ctx, T* input, const T* output, int num_elems, int in_h, int in_w,
@@ -112,7 +111,6 @@ struct GpuAdaptiveAvgpool2dGradFunctor final {
                     in_h, in_w, out_h, out_w);
   }
 };
-
 
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
