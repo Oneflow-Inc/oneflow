@@ -102,8 +102,7 @@ REGISTER_USER_OP("l2_normalize_grad")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("dy", 0));
-      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0),
-                         ctx->InputDType("square_x_sum", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("y", 0), ctx->InputDType("square_x_sum", 0));
       *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
       return Maybe<void>::Ok();
     });

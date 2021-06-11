@@ -45,8 +45,7 @@ REGISTER_USER_OP("smooth_l1_loss")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0),
-                         ctx->InputDType("label", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0), ctx->InputDType("label", 0));
       *ctx->OutputDType("loss", 0) = ctx->InputDType("prediction", 0);
       return Maybe<void>::Ok();
     });
@@ -76,10 +75,8 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->InputDType("loss_grad", 0),
-                         ctx->InputDType("prediction", 0));
-      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0),
-                         ctx->InputDType("label", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("loss_grad", 0), ctx->InputDType("prediction", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0), ctx->InputDType("label", 0));
       *ctx->OutputDType("prediction_grad", 0) = ctx->InputDType("loss_grad", 0);
       return Maybe<void>::Ok();
     });

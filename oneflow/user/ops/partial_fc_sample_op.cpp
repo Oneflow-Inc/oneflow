@@ -132,8 +132,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("boxing_disabled_sampled_weight_diff", 0) =
           ctx->InputDType("sampled_weight_diff", 0);
-      *ctx->OutputDType("boxing_disabled_sampled_label", 0) =
-          ctx->InputDType("sampled_label", 0);
+      *ctx->OutputDType("boxing_disabled_sampled_label", 0) = ctx->InputDType("sampled_label", 0);
       return Maybe<void>::Ok();
     });
 
