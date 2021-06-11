@@ -31,11 +31,20 @@ class Randperm(Module):
         assert isinstance(requires_grad, bool)
         assert isinstance(pin_memory, bool)
 
-        self.device = device
-        self.dtype = dtype
-        self.requires_grad = requires_grad
-        self.pin_memory = pin_memory
-        self._op = flow.builtin_op("randperm").Input("in").Output("out").Build()
+        # self.device = device
+        # self.dtype = dtype
+        # self.requires_grad = requires_grad
+        # self.pin_memory = pin_memory
+        self._op = (
+            flow.builtin_op("randperm")
+                .Input("n")
+                .Output("out")
+                .Attr("device", device)
+                .Attr("dtype", dtype)
+                .Attr("requires_grad", requires_grad)
+                .Attr("pin_memory", pin_memory)
+                .Build()
+        )
 
     def forward(self, n, out=None):
         res = self._op(n)[0]
