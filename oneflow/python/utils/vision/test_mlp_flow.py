@@ -98,9 +98,7 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size,
     for epoch in range(num_epochs):
         train_l_sum, train_acc_sum, n = 0.0, 0.0, 0
         start = time.time()
-        last_time=start
         for X, y in train_iter:
-            iter_start = time.time()
             X.requires_grad=True
             X = X.to(device=device)
             y = y.to(device=device)
@@ -114,9 +112,6 @@ def train_ch3(net, train_iter, test_iter, loss, num_epochs, batch_size,
             train_l_sum += l.numpy()
             train_acc_sum += (y_hat.argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
-            iter_end = time.time()
-            # print("prepare data iter cost >>>", str(iter_start-last_time)+"(s)","train iter cost >>> ", str(iter_end-iter_start)+"(s)", "train_acc_sum >>>", train_acc_sum)
-            last_time = iter_end
         
         test_acc = evaluate_accuracy(test_iter, net)
         print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, cost >>>>>>> %s(s)'
