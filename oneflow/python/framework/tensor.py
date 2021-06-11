@@ -424,7 +424,6 @@ class Tensor:
             squeeze_dims = list(
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
-            key = tuple(key)
         elif isinstance(key, int):
             squeeze_dims = [0]
 
