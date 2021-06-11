@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
-#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
@@ -123,6 +122,33 @@ __global__ void AdaptiveAvgPool2dGradCudaKernel(T *gradInput, T *gradOutput,
     }
 }
 
+template<typename T>
+struct GpuAdaptiveAvgPool2dFunctor final {
+  void operator()(DeviceCtx* ctx, T* in_ptr, T* out_ptr, int isizeH, int isizeW, int osizeH, int osizeW,
+                          int64_t istrideD, int64_t istrideH, int64_t istrideW) {
+    RUN_CUDA_KERNEL((AdaptiveAvgPool2dCudaKernel<T>), ctx, in_ptr, out_ptr, isizeH, isizeW, osizeH, osizeW, istrideD, istrideH, istrideW);
+  }
+};
+
+template<>
+void GpuAdaptiveAvgPool2dFunctor<float16>::operator()(DeviceCtx* ctx, float16* in_ptr, float16* out_ptr, int isizeH, int isizeW, int osizeH, int osizeW,
+                          int64_t istrideD, int64_t istrideH, int64_t istrideW) {
+  RUN_CUDA_KERNEL((AdaptiveAvgPool2dCudaKernel<half>), ctx, reinterpret_cast<const half*>(in_ptr), reinterpret_cast<const half*>(out_ptr), isizeH, isizeW, osizeH, osizeW, istrideD, istrideH, istrideW);
+}
+
+template<typename T>
+struct GpuAdaptiveAvgpool2dGradFunctor final {
+  void operator()(T *gradInput, T *gradOutput, int isizeH, int isizeW, int osizeH, int osizeW) {
+    RUN_CUDA_KERNEL((AdaptiveAvgPool2dGradCudaKernel<T>), ctx, gradInput, gradOutput, isizeH, isizeW, osizeH, osizeW);
+  }
+};
+
+template<>
+void GpuAdaptiveAvgpool2dGradFunctor<float16>::operator()(float16* gradInput, float16* gradOutput, int isizeH, int isizeW, int osizeH, int osizeW) {
+  RUN_CUDA_KERNEL((AdaptiveAvgPool2dGradCudaKernel<half>), ctx, reinterpret_cast<const half*>(gradInput), reinterpret_cast<half*>(gradOutput), isizeH, isizeW, osizeH, osizeW);
+}
+
+
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
  public:
@@ -131,10 +157,13 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    const T* in_ptr = in_tensor->dptr<T>();
+    T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
+
+    const int64_t ndims = in_tensor->shape().NumAxes();
+    CHECK_EQ(ndims, 4);
 
     const int64_t n_idx = 0;
     const int64_t c_idx = 1;
@@ -146,6 +175,11 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
     const int osizeH = out_tensor->shape().At(h_idx);
     const int osizeW = out_tensor->shape().At(w_idx);
 
+    int64_t istrideD = in_tensor->shape().At(c_idx);
+    int64_t istrideH = isizeH;
+    int64_t istrideW = isizeW;
+
+    GpuAdaptiveAvgPool2dFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, isizeH, isizeW, osizeH, osizeW, istrideD, istrideH, istrideW);
 
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -163,23 +197,40 @@ REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, int);
 
 template<DeviceType device_type, typename T>
-class GpuEluGradKernel final : public OpKernel {
+class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
  public:
-  GpuEluGradKernel() = default;
-  ~GpuEluGradKernel() = default;
+  GpuAdaptiveAvgPool2dGradKernel() = default;
+  ~GpuAdaptiveAvgPool2dGradKernel() = default;
 
  private:
   void Compute(KernelComputeContext* ctx) const override {
-    const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
-    Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    T* out_ptr = grad_output->dptr<T>();
+    T* in_ptr = grad_input->mut_dptr<T>();
+
+    const int64_t ndims = grad_output->shape().NumAxes();
+    CHECK_EQ(ndims, 4);
+
+    const int64_t n_idx = 0;
+    const int64_t c_idx = 1;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
+
+    const int isizeH = grad_input->shape().At(h_idx);
+    const int isizeW = grad_input->shape().At(w_idx);
+    const int osizeH = grad_output->shape().At(h_idx);
+    const int osizeW = grad_output->shape().At(w_idx);
+
+    GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, isizeH, isizeW, osizeH, osizeW);
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("elu_grad")                                     \
-      .SetCreateFn<GpuEluGradKernel<device, dtype>>()                  \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d_grad")                                     \
+      .SetCreateFn<GpuAdaptiveAvgPool2dGradKernel<device, dtype>>()                  \
       .SetIsMatchedHob((HobDeviceTag() == device)                      \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
