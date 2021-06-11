@@ -38,7 +38,6 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* in_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
-    const std::vector<int64_t> out_size = ctx->Attr<std::vector<int64_t>>("output_size");
     const T* in_ptr = in_tensor->dptr<T>();
     T* out_ptr = out_tensor->mut_dptr<T>();
 
@@ -110,7 +109,6 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* grad_output = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* grad_input = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    const std::vector<int64_t> out_size = ctx->Attr<std::vector<int64_t>>("output_size");
 
     const T* out_ptr = grad_output->dptr<T>();
     T* in_ptr = grad_input->mut_dptr<T>();

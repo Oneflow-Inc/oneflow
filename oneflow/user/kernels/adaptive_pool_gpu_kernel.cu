@@ -38,13 +38,13 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ELU_KERNEL(device, dtype)                                            \
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(device, dtype)                                            \
   REGISTER_USER_KERNEL("adaptive_avg_pool2d").SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>().SetIsMatchedHob( \
       (HobDeviceTag() == device) & (HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, half);
-REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ELU_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
 
 template<DeviceType device_type, typename T>
 class GpuEluGradKernel final : public OpKernel {
@@ -62,15 +62,15 @@ class GpuEluGradKernel final : public OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ELU_BACKWARD_KERNEL(device, dtype) \
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("elu_grad")                      \
       .SetCreateFn<GpuEluGradKernel<device, dtype>>()   \
       .SetIsMatchedHob((HobDeviceTag() == device)       \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, half);
-REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, float);
-REGISTER_GPU_ELU_BACKWARD_KERNEL(DeviceType::kGPU, double);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, half);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, float);
+REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, double);
 
 }  // namespace user_op
 
