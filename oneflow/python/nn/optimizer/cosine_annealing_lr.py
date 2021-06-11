@@ -42,7 +42,7 @@ class CosineAnnealingLR(LrScheduler):
         learning\_rate = {base\_learning\_rate}*{\alpha}
 
     It has been proposed in
-    [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983). Note that this only
+    `SGDR: Stochastic Gradient Descent with Warm Restarts`_. Note that this only
     implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
@@ -64,6 +64,8 @@ class CosineAnnealingLR(LrScheduler):
             train(...)
             cosine_annealing_lr.step()
 
+    .. _SGDR\: Stochastic Gradient Descent with Warm Restarts:
+        https://arxiv.org/abs/1608.03983
     """
 
 
