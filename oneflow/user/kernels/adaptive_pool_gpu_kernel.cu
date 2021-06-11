@@ -103,14 +103,6 @@ struct GpuAdaptiveAvgPool2dFunctor final {
   }
 };
 
-// template<>
-// void GpuAdaptiveAvgPool2dFunctor<float16>::operator()(DeviceCtx* ctx, const float16* input,
-//                                                       float16* output, int num_elems, int in_h,
-//                                                       int in_w, int out_h, int out_w) {
-//   RUN_CUDA_KERNEL((AdaptiveAvgPool2dCudaKernel<half>), ctx, num_elems,
-//                   reinterpret_cast<const half*>(input), reinterpret_cast<half*>(output),
-//                   num_elems, in_h, in_w, out_h, out_w);
-// }
 
 template<typename T>
 struct GpuAdaptiveAvgpool2dGradFunctor final {
@@ -121,15 +113,6 @@ struct GpuAdaptiveAvgpool2dGradFunctor final {
   }
 };
 
-// template<>
-// void GpuAdaptiveAvgpool2dGradFunctor<float16>::operator()(DeviceCtx* ctx, float16* input,
-//                                                           const float16* output, int num_elems,
-//                                                           int in_h, int in_w, int out_h,
-//                                                           int out_w) {
-//   RUN_CUDA_KERNEL((AdaptiveAvgPool2dGradCudaKernel<half>), ctx, num_elems,
-//                   reinterpret_cast<half*>(input), reinterpret_cast<const half*>(output),
-//                   num_elems, in_h, in_w, out_h, out_w);
-// }
 
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
@@ -174,7 +157,6 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, double);
-// REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float16);
 
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
@@ -218,7 +200,6 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, float);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, double);
-// REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, float16);
 
 }  // namespace user_op
 

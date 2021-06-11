@@ -36,23 +36,35 @@ class AdaptiveAvgPool2d(Module):
 
     .. code-block:: python
 
-        >>> # target output size of 5x7
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import oneflow.experimental.nn as nn
+        >>> flow.enable_eager_execution()
+
         >>> m = nn.AdaptiveAvgPool2d((5,7))
-        >>> input = flow.randn(1, 64, 8, 9)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 8, 9))
         >>> output = m(input)
-        >>> # target output size of 7x7 (square)
-        >>> m = nn.AdaptiveAvgPool2d(7)
-        >>> input = flow.randn(1, 64, 10, 9)
-        >>> output = m(input)
-        >>> # target output size of 10x7
-        >>> m = nn.AdaptiveAvgPool2d((None, 7))
-        >>> input = flow.randn(1, 64, 10, 9)
-        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 5, 7])
+
+        # >>> m = nn.AdaptiveAvgPool2d(7)
+        # >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        # >>> output = m(input)
+        # >>> output.size()
+        # flow.Size([1, 64, 7, 7])
+
+        # >>> m = nn.AdaptiveAvgPool2d((None, 7))
+        # >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        # >>> output = m(input)
+        # >>> output.size()
+        
 
     """
 
     def __init__(self, output_size) -> None:
         super().__init__()
+        self.output_size = output_size
+
         self._op = (
             flow.builtin_op("adaptive_avg_pool2d")
             .Input("x")
@@ -62,10 +74,27 @@ class AdaptiveAvgPool2d(Module):
         )
 
     def forward(self, x):
-        return self._op(x)[0]
+        new_output_size = []
+        assert len(x.shape) == 4
+
+        if isinstance(self.output_size, int) == True:
+            new_output_size.append(self.output_size)
+            new_output_size.append(self.output_size)
+        elif isinstance(self.output_size, tuple) == True:
+            new_output_size = list(self.output_size)
+            if self.output_size[0] == None:
+                new_output_size[0] = x.shape[2]
+            if self.output_size[1] == None:
+                new_output_size[1] = x.shape[3]
+        else:
+            raise NotImplementedError("output_size param wrong, please check!")
+
+        new_output_size = tuple(new_output_size)
+
+        return self._op(x, output_size=new_output_size)[0]
 
 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
