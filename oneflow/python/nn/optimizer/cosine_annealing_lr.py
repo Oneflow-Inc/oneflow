@@ -23,7 +23,10 @@ from .lr_scheduler import LrScheduler
 @oneflow_export("optim.lr_scheduler.CosineAnnealingLR")
 @experimental_api
 class CosineAnnealingLR(LrScheduler):
-    r"""This operator creates a Cosine decayed learning rate scheduler.
+
+
+
+r"""This operator creates a Cosine decayed learning rate scheduler.
 
     Before the steps are specified by user, the learning rate will be updated as:
 
@@ -40,6 +43,10 @@ class CosineAnnealingLR(LrScheduler):
     .. math::
 
         learning\_rate = {base\_learning\_rate}*{\alpha}
+
+    It has been proposed in
+    [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983). Note that this only
+    implements the cosine annealing part of SGDR, and not the restarts.
 
     Args:
         optimizer(Optimizer): Wrapped optimizer.
