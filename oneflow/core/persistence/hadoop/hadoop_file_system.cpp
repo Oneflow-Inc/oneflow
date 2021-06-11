@@ -115,9 +115,6 @@ void LibHDFS::LoadAndBind() {
 HadoopFileSystem::HadoopFileSystem(const std::string& namenode)
     : namenode_(namenode), hdfs_(LibHDFS::Load()) {}
 
-HadoopFileSystem::HadoopFileSystem(const HdfsConf& hdfs_conf)
-    : HadoopFileSystem(hdfs_conf.namenode()) {}
-
 bool HadoopFileSystem::Connect(hdfsFS* fs) {
   FS_RETURN_FALSE_IF_FALSE(hdfs_->status());
   hdfsBuilder* builder = hdfs_->hdfsNewBuilder();

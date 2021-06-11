@@ -56,7 +56,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     range_ = bs.At(parallel_id_);
     std::vector<std::string> local_file_paths = GetLocalFilePaths();
     in_stream_.reset(
-        new PersistentInStream(GetDataFS(), local_file_paths, !shuffle_after_epoch_, false));
+        new PersistentInStream(DataFS(), local_file_paths, !shuffle_after_epoch_, false));
   }
   ~OFRecordDataset() = default;
 
@@ -87,7 +87,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
     std::mt19937 g(kOneflowDatasetSeed + current_epoch_);
     std::shuffle(data_file_paths_.begin(), data_file_paths_.end(), g);
     std::vector<std::string> local_file_paths = GetLocalFilePaths();
-    in_stream_.reset(new PersistentInStream(GetDataFS(), local_file_paths, false, false));
+    in_stream_.reset(new PersistentInStream(DataFS(), local_file_paths, false, false));
   }
 
   std::vector<std::string> GetLocalFilePaths() {

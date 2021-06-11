@@ -108,39 +108,6 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
 }  // namespace fs
 
-fs::FileSystem* LocalFS() {
-#ifdef OF_PLATFORM_POSIX
-  static fs::FileSystem* fs = new fs::PosixFileSystem;
-#endif
-  return fs;
-}
-
-fs::FileSystem* NetworkFS() { return LocalFS(); }
-
-fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
-  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
-  return fs;
-}
-
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
-  if (file_system_conf.has_localfs_conf()) {
-    return LocalFS();
-  } else if (file_system_conf.has_networkfs_conf()) {
-    return NetworkFS();
-  } else if (file_system_conf.has_hdfs_conf()) {
-    return HadoopFS(file_system_conf.hdfs_conf());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-// Will be deprecated
-fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
-fs::FileSystem* DataFS(int64_t session_id) {
-  return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
-}
-fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
-
 void CreateLocalFS(std::unique_ptr<fs::FileSystem>& fs) {
 #ifdef OF_PLATFORM_POSIX
   fs.reset(new fs::PosixFileSystem);
@@ -181,8 +148,7 @@ void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::str
   }
 }
 
-// New data & snapshot file system inferface
-fs::FileSystem* GetDataFS() {
+fs::FileSystem* DataFS() {
   static std::unique_ptr<fs::FileSystem> data_fs;
   static std::mutex data_fs_mutex;
   {
@@ -192,7 +158,7 @@ fs::FileSystem* GetDataFS() {
   return data_fs.get();
 }
 
-fs::FileSystem* GetSnapshotFS() {
+fs::FileSystem* SnapshotFS() {
   static std::unique_ptr<fs::FileSystem> snapshot_fs;
   static std::mutex snapshot_fs_mutex;
   {
@@ -200,6 +166,16 @@ fs::FileSystem* GetSnapshotFS() {
     if (!snapshot_fs) { CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM"); }
   }
   return snapshot_fs.get();
+}
+
+fs::FileSystem* LocalFS() {
+  static std::unique_ptr<fs::FileSystem> local_fs;
+  static std::mutex local_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(local_fs_mutex);
+    if (!local_fs) { CreateLocalFS(local_fs); }
+  }
+  return local_fs.get();
 }
 
 }  // namespace oneflow

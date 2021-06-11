@@ -142,7 +142,7 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
       std::shuffle(data_file_paths_.begin(), data_file_paths_.end(), g);
     }
     std::vector<std::string> file_paths = GetLocalFilePaths();
-    in_stream_.reset(new PersistentInStream(GetDataFS(), file_paths, false, false));
+    in_stream_.reset(new PersistentInStream(DataFS(), file_paths, false, false));
   }
 
   std::vector<std::string> GetLocalFilePaths() {

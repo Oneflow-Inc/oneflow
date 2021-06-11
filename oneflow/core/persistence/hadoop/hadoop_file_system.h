@@ -79,7 +79,6 @@ class HadoopFileSystem final : public FileSystem {
   ~HadoopFileSystem() = default;
 
   HadoopFileSystem(const std::string&);
-  HadoopFileSystem(const HdfsConf&);
 
   void NewRandomAccessFile(const std::string& fname,
                            std::unique_ptr<RandomAccessFile>* result) override;
