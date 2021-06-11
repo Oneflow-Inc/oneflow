@@ -52,32 +52,31 @@ class AdaptivePoolCpuKernel final : public user_op::OpKernel {
 
     const int64_t n_batch = in_tensor->shape().At(n_idx);
     const int64_t n_channnel = in_tensor->shape().At(c_idx);
+    const int64_t n_batch_channel = n_batch * n_channnel;
     const int input_height = in_tensor->shape().At(h_idx);
     const int input_width = in_tensor->shape().At(w_idx);
+    const int input_size = input_height * input_width;
     const int output_height = out_tensor->shape().At(h_idx);
     const int output_width = out_tensor->shape().At(w_idx);
+    const int output_size = output_height * output_width;
 
-    FOR_RANGE(int64_t, b, 0, n_batch) {
-      FOR_RANGE(int64_t, c, 0, n_channnel) {
-        const T* input_ptr =
-            in_ptr + b * n_channnel * input_height * input_width + c * input_height * input_width;
-        T* output_ptr = out_ptr + b * n_channnel * output_height * output_width
-                        + c * output_height * output_width;
-        FOR_RANGE(int64_t, oh, 0, output_height) {
-          int64_t ih0 = start_index(oh, output_height, input_height);
-          int64_t ih1 = end_index(oh, output_height, input_height);
-          int64_t kh = ih1 - ih0;
-          FOR_RANGE(int64_t, ow, 0, output_width) {
-            int64_t iw0 = start_index(ow, output_width, input_width);
-            int64_t iw1 = end_index(ow, output_width, input_width);
-            int64_t kw = iw1 - iw0;
-            // compute local average
-            T sum = static_cast<T>(0);
-            FOR_RANGE(int64_t, ih, ih0, ih1) {
-              FOR_RANGE(int64_t, iw, iw0, iw1) { sum += input_ptr[ih * input_width + iw]; }
-            }
-            output_ptr[oh * output_width + ow] = sum / kh / kw;
+    FOR_RANGE(int64_t, bc, 0, n_batch_channel) {
+      const T* input_ptr = in_ptr + bc * input_size;
+      T* output_ptr = out_ptr + bc * output_size;
+      FOR_RANGE(int64_t, oh, 0, output_height) {
+        int64_t ih0 = start_index(oh, output_height, input_height);
+        int64_t ih1 = end_index(oh, output_height, input_height);
+        int64_t kh = ih1 - ih0;
+        FOR_RANGE(int64_t, ow, 0, output_width) {
+          int64_t iw0 = start_index(ow, output_width, input_width);
+          int64_t iw1 = end_index(ow, output_width, input_width);
+          int64_t kw = iw1 - iw0;
+          // compute local average
+          T sum = static_cast<T>(0);
+          FOR_RANGE(int64_t, ih, ih0, ih1) {
+            FOR_RANGE(int64_t, iw, iw0, iw1) { sum += input_ptr[ih * input_width + iw]; }
           }
+          output_ptr[oh * output_width + ow] = sum / kh / kw;
         }
       }
     }
@@ -126,30 +125,29 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
 
     const int64_t n_batch = grad_output->shape().At(n_idx);
     const int64_t n_channnel = grad_output->shape().At(c_idx);
+    const int64_t n_batch_channel = n_batch * n_channnel;
     const int input_height = grad_input->shape().At(h_idx);
     const int input_width = grad_input->shape().At(w_idx);
+    const int input_size = input_height * input_width;
     const int output_height = grad_output->shape().At(h_idx);
     const int output_width = grad_output->shape().At(w_idx);
+    const int output_size = output_height * output_width;
 
-    FOR_RANGE(int64_t, b, 0, n_batch) {
-      FOR_RANGE(int64_t, c, 0, n_channnel) {
-        T* input_ptr =
-            in_ptr + b * n_channnel * input_height * input_width + c * input_height * input_width;
-        const T* output_ptr = out_ptr + b * n_channnel * output_height * output_width
-                              + c * output_height * output_width;
-        FOR_RANGE(int64_t, oh, 0, output_height) {
-          int64_t ih0 = start_index(oh, output_height, input_height);
-          int64_t ih1 = end_index(oh, output_height, input_height);
-          int64_t kh = ih1 - ih0;
-          FOR_RANGE(int64_t, ow, 0, output_width) {
-            int64_t iw0 = start_index(ow, output_width, input_width);
-            int64_t iw1 = end_index(ow, output_width, input_width);
-            int64_t kw = iw1 - iw0;
+    FOR_RANGE(int64_t, bc, 0, n_batch_channel) {
+      T* input_ptr = in_ptr + bc * input_size;
+      const T* output_ptr = out_ptr + bc * output_size;
+      FOR_RANGE(int64_t, oh, 0, output_height) {
+        int64_t ih0 = start_index(oh, output_height, input_height);
+        int64_t ih1 = end_index(oh, output_height, input_height);
+        int64_t kh = ih1 - ih0;
+        FOR_RANGE(int64_t, ow, 0, output_width) {
+          int64_t iw0 = start_index(ow, output_width, input_width);
+          int64_t iw1 = end_index(ow, output_width, input_width);
+          int64_t kw = iw1 - iw0;
 
-            T grad_delta = output_ptr[oh * output_width + ow] / kh / kw;
-            FOR_RANGE(int64_t, ih, ih0, ih1) {
-              FOR_RANGE(int64_t, iw, iw0, iw1) { input_ptr[ih * input_width + iw] += grad_delta; }
-            }
+          T grad_delta = output_ptr[oh * output_width + ow] / kh / kw;
+          FOR_RANGE(int64_t, ih, ih0, ih1) {
+            FOR_RANGE(int64_t, iw, iw0, iw1) { input_ptr[ih * input_width + iw] += grad_delta; }
           }
         }
       }

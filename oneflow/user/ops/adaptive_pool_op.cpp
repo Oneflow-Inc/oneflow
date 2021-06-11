@@ -29,7 +29,7 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
     h = output_size[0];  // h
     w = output_size[0];
     if (output_size.size() == 2) {
-      h = output_size[1];  // w
+      w = output_size[1];  // w
     }
   }
   DimVector out_shape(4);
