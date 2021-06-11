@@ -87,15 +87,18 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
   {
     // Run InferShape pass
     const auto& sbp_signatures = launch_conf.sbp_signatures();
+    util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
+    for (auto& pair : sbp_signatures) {
+      cfg_sbp_signatures.insert(pair->first, pair->second);
+    }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
-    {
-      cfg::SbpSignature cfg_sbp_signature(sbp_signatures);
-      xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                      &op_parallel_desc, &cfg_sbp_signature, &lbn2logical_blob_desc, &blob_descs);
-      cfg_sbp_signature.ToProto(&sbp_signatures);
+    xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
+                  &op_parallel_desc, &cfg_sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
+    for (auto& pair : cfg_sbp_signatures) {
+      pair->second.ToProto(&sbp_signatures.at(pair->first));
     }
   }
 
