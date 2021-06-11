@@ -22,7 +22,12 @@ from typing import Union
 @oneflow_export("nn.ReflectionPad2d")
 @experimental_api
 class ReflectionPad2d(Module):
-    r"""Pads the input tensor using the reflection of the input boundary.
+    r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.nn.ReflectionPad2d.html
+
+
+    This operator pads the input tensor using the reflection of the input boundary.
 
     Args:
         padding (Union[int,tuple]): The size or bundary of padding, if is `int` uses the same padding in all dimension; if 4-dims `tuple`, uses :math:`(\text{padding}_{\text{left}}, \text{padding}_{\text{right}}, \text{padding}_{\text{top}}, \text{padding}_{\text{bottom}} )`
@@ -76,7 +81,9 @@ class ReflectionPad2d(Module):
         self._op = (flow.builtin_op("reflection_pad2d")
                     .Input("x")
                     .Output("y")
-                    .Attr("padding", list(self.padding))
+                    .Attr("padding", boundary)
+                    .Attr("floating_value", float(1.))
+                    .Attr("integral_value", int(0))
                     .Build()
                     )
 
@@ -86,7 +93,9 @@ class ReflectionPad2d(Module):
             res = self._op(x)[0]
             return res
         else:
-            raise ValueError("padding size should be less than the corresponding input dimension!")
+            raise ValueError(
+                "padding size should be less than the corresponding input dimension!")
+
 
 if __name__ == "__main__":
     import doctest

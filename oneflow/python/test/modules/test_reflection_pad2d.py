@@ -17,17 +17,12 @@ import unittest
 from collections import OrderedDict
 import oneflow.experimental as flow
 import numpy as np
-from oneflow.python.nn.modules.utils import _quadruple
-from oneflow.python.nn.common_types import _size_4_t
 
 from test_util import (
-    Args,
-    GenArgDict,
     GenArgList,
     FlattenArray,
     Array2Numpy,
     Index2Coordinate,
-    Coordinate2Index,
 )
 
 
@@ -89,27 +84,29 @@ def gen_numpy_test_sample(input, padding):
 
     return output, grad
 
+
 def _test_reflection_pad2d(test_case, shape, padding, device):
     np_input = np.random.randn(*shape).astype(np.float32)
 
     of_input = flow.Tensor(np_input, dtype=flow.float32,
-                    device=flow.device(device), requires_grad=True)
+                           device=flow.device(device), requires_grad=True)
 
     if isinstance(padding, int):
-        boundry = [padding, padding, padding, padding]
+        boundary = [padding, padding, padding, padding]
 
     elif isinstance(padding, tuple) and len(padding) == 4:
-        boundry = [padding[0], padding[1], padding[2], padding[3]]
+        boundary = [padding[0], padding[1], padding[2], padding[3]]
     else:
-        raise ValueError("padding must be in or list or tuple!") 
-    np_out, np_grad = gen_numpy_test_sample(np_input, boundry)
+        raise ValueError("padding must be in or list or tuple!")
+    np_out, np_grad = gen_numpy_test_sample(np_input, boundary)
 
-    m = flow.nn.ReflectionPad2d(padding)
-    of_out = m(of_input)
+    layer = flow.nn.ReflectionPad2d(padding=padding)
+    of_out = layer(of_input)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
-    of_out.retain_grad()
+    of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(
+        of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
