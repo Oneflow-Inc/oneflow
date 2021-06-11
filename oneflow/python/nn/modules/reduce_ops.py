@@ -54,7 +54,7 @@ class Sum(Module):
 @oneflow_export("sum")
 @register_tensor_op("sum")
 @experimental_api
-def _sum(input, dim=None, keepdims=False):
+def _sum(input, dim=None, keepdim=False):
     r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
     For example:
@@ -73,7 +73,7 @@ def _sum(input, dim=None, keepdims=False):
 
     """
 
-    return Sum(dim, keepdims)(input)
+    return Sum(dim, keepdim)(input)
 
 
 class Mean(Module):
@@ -93,7 +93,7 @@ class Mean(Module):
         axis_checked = _check_axis(self.axis, input.shape)
         if len(axis_checked) == 0:
             return input
-        reduce_sum = flow.experimental.sum(input, dim=self.axis, keepdims=self.keepdims)
+        reduce_sum = flow.experimental.sum(input, dim=self.axis, keepdim=self.keepdims)
         reduce_count = 1
         if len(self.axes) == 0:
             for dim in input.shape:
@@ -107,7 +107,7 @@ class Mean(Module):
 @oneflow_export("mean")
 @register_tensor_op("mean")
 @experimental_api
-def _mean(input, dim=None, keepdims=False):
+def _mean(input, dim=None, keepdim=False):
     r"""Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
     For example:
@@ -126,7 +126,7 @@ def _mean(input, dim=None, keepdims=False):
 
     """
 
-    return Mean(dim, keepdims)(input)
+    return Mean(dim, keepdim)(input)
 
 
 class Min(Module):
@@ -149,7 +149,7 @@ class Min(Module):
 @oneflow_export("min")
 @register_tensor_op("min")
 @experimental_api
-def _min(input, dim=None, keepdims=False):
+def _min(input, dim=None, keepdim=False):
     r"""Computes the minimum value of all elements in the input tensor.
     
     For example:
@@ -168,7 +168,7 @@ def _min(input, dim=None, keepdims=False):
 
     """
 
-    return Min(dim, keepdims)(input)
+    return Min(dim, keepdim)(input)
 
 
 class Max(Module):
@@ -191,7 +191,7 @@ class Max(Module):
 @oneflow_export("max")
 @register_tensor_op("max")
 @experimental_api
-def _max(input, dim=None, keepdims=False):
+def _max(input, dim=None, keepdim=False):
     r"""Computes the maximum value of all elements in the input tensor.
     
     For example:
@@ -210,7 +210,7 @@ def _max(input, dim=None, keepdims=False):
 
     """
 
-    return Max(dim, keepdims)(input)
+    return Max(dim, keepdim)(input)
 
 
 if __name__ == "__main__":
