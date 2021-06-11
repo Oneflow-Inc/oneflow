@@ -25,7 +25,11 @@ from test_util import GenArgList
 
 
 def _test_adaptive_avgpool2d_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(1, 1, 4, 4).astype(np.float32), dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        np.random.randn(1, 1, 4, 4).astype(np.float32),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
     m = flow.nn.AdaptiveAvgPool2d((2, 2))
     of_out = m(input)
     print(of_out.numpy())
@@ -41,7 +45,9 @@ class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_adaptive_avgpool2d_forward,
         ]
-        arg_dict["device"] = ["cpu",]
+        arg_dict["device"] = [
+            "cpu",
+        ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
