@@ -19,8 +19,8 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.nn.modules.math_ops import Sum, Mean
-from oneflow.python.nn.modules.CrossEntropyLoss import CrossEntropyLoss
+from oneflow.python.nn.modules.math_ops import Sum, Mean, Log
+from oneflow.python.nn.modules.negative import Negative
 
 
 @oneflow_export("nn.BCELoss")
@@ -99,7 +99,8 @@ class BCELoss(Module):
         self.reduction = reduction
         self.mean = Mean()
         self.sum = Sum()
-        self.cross_entropy = CrossEntropyLoss(reduction=None)
+        self.negative = Negative()
+        self.log = Log()
 
 
     def forward(self, input, target, weight):
@@ -107,7 +108,9 @@ class BCELoss(Module):
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        _cross_entropy_loss = self.cross_entropy(input, target)
+        _cross_entropy_loss = self.negative(
+            target * self.log(input) + (1 - target) * self.log(1 - input)
+            )
 
         if weight is not None:
             assert (
@@ -118,9 +121,9 @@ class BCELoss(Module):
             _weighted_loss = _cross_entropy_loss
 
         if self.reduction == "mean":
-            return flow.math.reduce_mean(_weighted_loss)
+            return self.mean(_weighted_loss)
         elif self.reduction == "sum":
-            return flow.math.reduce_sum(_weighted_loss)
+            return self.sum(_weighted_loss)
         else:
             return _weighted_loss
 
