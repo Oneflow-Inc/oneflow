@@ -20,9 +20,9 @@ from oneflow.python.oneflow_export import experimental_api, oneflow_export
 from .lr_scheduler import LrScheduler
 
 
-@oneflow_export("optim.lr_scheduler.CosineScheduler")
+@oneflow_export("optim.lr_scheduler.CosineAnnealingLR")
 @experimental_api
-class CosineScheduler(LrScheduler):
+class CosineAnnealingLR(LrScheduler):
     r"""This operator creates a Cosine decayed learning rate scheduler.
 
     Before the steps are specified by user, the learning rate will be updated as:
@@ -55,10 +55,10 @@ class CosineScheduler(LrScheduler):
         import oneflow.experimental as flow
 
         ...
-        cosine_scheduler = flow.optim.lr_scheduler.CosineScheduler(optimizer, steps=100, alpha=0.0)
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, steps=100, alpha=0.0)
         for epoch in range(num_epoch):
             train(...)
-            cosine_scheduler.step()
+            cosine_annealing_lr.step()
 
     """
 
