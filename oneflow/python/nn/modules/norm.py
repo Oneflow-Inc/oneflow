@@ -20,7 +20,6 @@ from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 
-
 class Norm(Module):
     def __init__(self, ord = None, dim = None, keepdim = False) -> None:
         super().__init__()
@@ -29,35 +28,33 @@ class Norm(Module):
         self.dim = dim
         self.keepdim = keepdim
 
-
     def _vector_norm(self, x, ord = 2):
-        if ord in ["fro", "nuc"]:
+        if isinstance(ord, str) and ord in ["fro", "nuc"]:
             raise ValueError("Norm order {} is not supported for vectors".format(ord))
-        elif ord in [float('inf'),float('-inf')]:
-            return self._max_op(self._abs_op(x)[0])[0]
-        elif ord.isdigit():
+        elif isinstance(ord, float) and ord in [float('inf'),float('-inf')]:
+            raise NotImplementedError
+        elif isinstance(ord, int):
             if ord == 0:
-                raise NotImplementedError
+                return flow.argwhere(x).shape
             else:
-                return flow.experimental.pow(flow.experimental.sum(flow.experimental.pow(flow.experimental.abs(x)[0], ord)), 1./ord)
+                return flow.experimental.pow(flow.experimental.sum(flow.experimental.pow(flow.experimental.abs(x), ord)), 1./ord)
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
         
     
     def _matrix_norm(self, x, ord = "fro", dim = None):
-        if ord in ["fro", "nuc"]:
-            assert len(x.shape) == 2, "Both the Frobenius and nuclear norm orders are only defined for matrices"
+        if isinstance(ord, str) and ord in ["fro", "nuc"]:
             if ord == "nuc":
                 raise NotImplementedError
             else:
                 return flow.experimental.sqrt(flow.experimental.sum(flow.experimental.square(x), dim = dim))
-        elif ord in [float('inf'),float('-inf')]:
-            return self._max_op((flow.experimental.abs(x)))
-        elif ord.isdigit():
+        elif isinstance(ord, float) and ord in [float('inf'),float('-inf')]:
+            raise NotImplementedError
+        elif isinstance(ord, int):
             if ord == 1:
-                return
+                raise NotImplementedError
             elif ord == -1:
-                return 
+                raise NotImplementedError
             elif ord == 2:
                 raise NotImplementedError
             elif ord == -2:
@@ -67,60 +64,73 @@ class Norm(Module):
         else:
             raise ValueError("Invalid norm order: {}".format(ord))
 
+    def _which_norm(self, x, num_axes, ord, dim = None):
+        if num_axes == 1:
+            return self._vector_norm(x, ord)
+        else:
+            return self._matrix_norm(x, ord, dim)
 
-
+    def _whether_keepdim(self, x, axis):
+        if self.keepdim == True and axis:
+            return flow.experimental.unsqueeze(x, axis)
+        else:
+            return x
 
     def forward(self, x):
         num_axes = len(x.shape)
-        axis = self.dim if self.dim >= 0 else self.dim + num_axes
-        assert 0 <= axis < num_axes, "axis out of range"
-        if num_axes == 1:
-            res = self._vector_norm(x, self.ord)
+        if isinstance(self.dim, (int,tuple)):
+            if isinstance(self.dim, int):
+                axis = self.dim if self.dim >= 0 else self.dim + num_axes
+                assert 0 <= axis < num_axes, "axis out of range"
+            else:
+                raise NotImplementedError
+            res = self._which_norm(x, num_axes, self.ord, self.dim)
+        elif self.dim == None:
+            axis = -1
+            res = self._which_norm(x, num_axes, self.ord, self.dim)
         else:
-            res = self._matrix_norm(x, self.dim)
+            raise ValueError("Invalid dimension: {}".format(self.dim))
+        
 
-        if axis == num_axes - 1:
-            if self.keepdim == True:
-                res = flow.experimental.unsqueeze(res, -1)
-            return res
-        else:
-            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = self._transpose_op(input, perm=perm)[0]
-            x = self._op_softmax_last_dim(x)[0]
-            x = flow.experimental.unsqueeze(x, -1)
-            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
-            if self.keepdim == False:
-                x = x.squeeze(dim=[axis])
-            return x
         
 
 
-@oneflow_export("norm")
-@register_tensor_op("norm")
-@experimental_api
-def norm_op(input, ord = None, dim = None, keepdim = False):
-    r"""Returns a new tensor with the natural logarithm of (1 + input).
+# @oneflow_export("norm")
+# @register_tensor_op("norm")
+# @experimental_api
+# def norm_op(input, ord = None, dim = None, keepdim = False):
+#     r"""Returns a new tensor with the natural logarithm of (1 + input).
 
-    .. math::
-        \text{out}_{i}=\log_e(1+\text{input}_{i})
+#     .. math::
+#         \text{out}_{i}=\log_e(1+\text{input}_{i})
 
-    For example:
+#     For example:
 
-    .. code-block:: python
+#     .. code-block:: python
 
-        >>> import oneflow.experimental as flow
-        >>> import numpy as np
-        >>> flow.enable_eager_execution()
-        >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
-        >>> out = flow.log1p(x).numpy()
-        >>> out
-        array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
+#         >>> import oneflow.experimental as flow
+#         >>> import numpy as np
+#         >>> flow.enable_eager_execution()
+#         >>> x = flow.Tensor(np.array([1.3, 1.5, 2.7]))
+#         >>> out = flow.log1p(x).numpy()
+#         >>> out
+#         array([0.8329091 , 0.91629076, 1.3083328 ], dtype=float32)
 
-    """
-    return Norm(ord = None, dim = None, keepdim = False)(input)
+#     """
+#     return Norm(ord = None, dim = None, keepdim = False)(input)
 
 
 if __name__ == "__main__":
-    import doctest
+    import numpy as np
+    flow.experimental.enable_eager_execution()
+    np_a = np.arange(8).astype(np.float32) - 4
+    np_b = np_a.reshape(2,2,2)
+    f_a = flow.experimental.tensor(np_a,dtype=flow.float32)
+    f_b = flow.experimental.tensor(np_b,dtype=flow.float32)
+    # print(f_a,f_b)
+    # x = Norm(ord = "fro",keepdim=True)(f_b)
+    # x = Norm(ord = 2)(f_a)
+    print(flow.experimental.argwhere(f_a).shape)
+    # import doctest
 
-    doctest.testmod(raise_on_error=True)
+    # doctest.testmod(raise_on_error=True)
