@@ -59,7 +59,7 @@ Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
+  FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
         .Split(user_op::OpArg("y", 0), i)
