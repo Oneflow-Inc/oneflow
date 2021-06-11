@@ -353,19 +353,17 @@ class Tensor:
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     def _transform_ellipsis_type(self, key):
-        d = self.ndim - len(key)
-        if d >= 0:  # exclude all Ellipsis type
-            new_key = list()
-            for k in key:
-                if isinstance(k, type(Ellipsis)):
+        d = self.ndim - len(key)  # exclude all Ellipsis type
+        new_key = list()
+        for k in key:
+            if isinstance(k, type(Ellipsis)):
+                new_key.append(slice(None, None, None))
+                while d > 0:
                     new_key.append(slice(None, None, None))
-                    while d > 0:
-                        new_key.append(slice(None, None, None))
-                        d -= 1
-                else:
-                    new_key.append(k)
-            return tuple(new_key)
-        return key
+                    d -= 1
+            else:
+                new_key.append(k)
+        return tuple(new_key)
 
     @register_local_tensor_method()
     def _get_slice_obj(self, key):
