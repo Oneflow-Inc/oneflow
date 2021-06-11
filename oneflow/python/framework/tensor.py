@@ -352,6 +352,21 @@ class Tensor:
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
+    def _transform_ellipsis_type(self, key):
+        d = self.ndim - len(key)
+        if d >= 0:  # exclude all Ellipsis type
+            new_key = list()
+            for k in key:
+                if isinstance(k, type(Ellipsis)):
+                    new_key.append(slice(None, None, None))
+                    while d > 0:
+                        new_key.append(slice(None, None, None))
+                        d -= 1
+                else:
+                    new_key.append(k)
+            return tuple(new_key)
+        return key
+
     @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
@@ -408,19 +423,7 @@ class Tensor:
 
         squeeze_dims = None
         if isinstance(key, tuple):
-            d = self.ndim - len(key)
-            if d > 0:  # d > 0 indicates the existence of Ellipsis type
-                new_key = list()
-                for k in key:
-                    if isinstance(k, type(Ellipsis)):
-                        new_key.append(slice(None, None, None))
-                        while d > 0:
-                            new_key.append(slice(None, None, None))
-                            d -= 1
-                    else:
-                        new_key.append(k)
-                key = tuple(new_key)
-
+            key = self._transform_ellipsis_type(key)
             squeeze_dims = list(
                 filter(lambda idx: isinstance(key[idx], int), range(len(key)))
             )
@@ -434,6 +437,8 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            key = self._transform_ellipsis_type(key)
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
