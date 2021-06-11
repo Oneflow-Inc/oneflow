@@ -74,8 +74,6 @@ def _test_adaptive_avgpool2d_forward(test_case, device):
             ]
         ]
     )
-    print(of_out.numpy())
-    print(np_out)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
@@ -143,10 +141,10 @@ class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_adaptive_avgpool2d_forward,
-            # _test_adaptive_avgpool2d_backward,
+            _test_adaptive_avgpool2d_backward,
         ]
         arg_dict["device"] = [
-            "cuda",
+            "cpu", "cuda",
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
