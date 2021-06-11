@@ -227,6 +227,19 @@ def parse_function_params(fmt):
     return function_name, params
 
 
+def render_file_if_different(target_file, content):
+    if not os.path.isfile(target_file):
+        with open(target_file, "w") as f:
+            f.write(content)
+    else:
+        org_content = None
+        with open(target_file, "r") as f:
+            org_content = f.read()
+        if org_content is None or org_content != content:
+            with open(target_file, "w") as f:
+                f.write(content)
+
+
 class Argument:
     def __init__(self, fmt, keyword_allowed=False):
         self._keyword_allowed = keyword_allowed
@@ -355,8 +368,7 @@ class FunctionalGenerator:
             fmt += block._signature.to_string(to_cpp=True)
             fmt += ";\n"
 
-        with open(target_header_file, "w") as f:
-            f.write(header_fmt.format(fmt))
+        render_file_if_different(target_header_file, header_fmt.format(fmt))
 
     def generate_cpp_source_file(self, target_source_file):
         fmt = ""
@@ -375,8 +387,9 @@ class FunctionalGenerator:
             )
             fmt += "}\n"
 
-        with open(target_source_file, "w") as f:
-            f.write(source_fmt.format(api_generate_dir, fmt))
+        render_file_if_different(
+            target_source_file, source_fmt.format(api_generate_dir, fmt)
+        )
 
     def generate_pybind_for_python(self, target_pybind_source_file):
         schema_fmt = ""
@@ -438,8 +451,9 @@ class FunctionalGenerator:
                 name, signature._name
             )
 
-        with open(target_pybind_source_file, "w") as f:
-            f.write(pybind_fmt.format(schema_fmt, module_fmt))
+        render_file_if_different(
+            target_pybind_source_file, pybind_fmt.format(schema_fmt, module_fmt)
+        )
 
 
 if __name__ == "__main__":
