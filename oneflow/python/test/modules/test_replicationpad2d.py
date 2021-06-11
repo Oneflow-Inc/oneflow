@@ -110,7 +110,7 @@ def _test_ReplicationPad2d(test_case, shape, padding, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestReplicationPad2dModule(flow.unittest.TestCase):
-    def test_add(test_case):
+    def test_ReplicationPad2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2, 3, 4), (8, 3, 4, 4)]
         arg_dict["padding"] = [(2), (1, 1, 2, 2)]
