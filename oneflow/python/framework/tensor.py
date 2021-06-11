@@ -368,7 +368,7 @@ class Tensor:
             return slice(x, x + 1)
 
         if isinstance(key, tuple):
-            assert all(isinstance(x, (slice, int, type(Ellipsis))) for x in key)
+            assert all(isinstance(x, (slice, int)) for x in key)
         else:
             assert isinstance(key, (slice, int))
             key = (key,)
