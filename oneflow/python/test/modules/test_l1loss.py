@@ -45,7 +45,7 @@ def _np_l1loss_grad(np_input, np_target):
         "mean": np_l1_grad_mean,
         "sum": np_l1_grad_sum,
     }
-    
+
 
 def _test_l1loss_impl(test_case, device, shape, reduction):
     x = np.random.randn(*shape)
