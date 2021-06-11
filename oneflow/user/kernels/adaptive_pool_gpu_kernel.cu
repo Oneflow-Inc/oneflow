@@ -22,7 +22,6 @@ namespace oneflow {
 
 namespace user_op {
 
-
 template<DeviceType device_type, typename T>
 class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
  public:
@@ -33,14 +32,15 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
   void Compute(KernelComputeContext* ctx) const override {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(device, dtype)                                            \
-  REGISTER_USER_KERNEL("adaptive_avg_pool2d").SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>().SetIsMatchedHob( \
-      (HobDeviceTag() == device) & (HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(device, dtype)   \
+  REGISTER_USER_KERNEL("adaptive_avg_pool2d")                   \
+      .SetCreateFn<GpuAdaptiveAvgPool2dKernel<device, dtype>>() \
+      .SetIsMatchedHob((HobDeviceTag() == device)               \
+                       & (HobDataType("y", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, half);
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_KERNEL(DeviceType::kGPU, float);
@@ -57,15 +57,14 @@ class GpuEluGradKernel final : public OpKernel {
     const Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("elu_grad")                      \
-      .SetCreateFn<GpuEluGradKernel<device, dtype>>()   \
-      .SetIsMatchedHob((HobDeviceTag() == device)       \
+  REGISTER_USER_KERNEL("elu_grad")                                     \
+      .SetCreateFn<GpuEluGradKernel<device, dtype>>()                  \
+      .SetIsMatchedHob((HobDeviceTag() == device)                      \
                        & (HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_GPU_ADAPTIVE_AVGPOOL2D_BACKWARD_KERNEL(DeviceType::kGPU, half);
