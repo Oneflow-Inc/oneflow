@@ -118,7 +118,16 @@ def _test_adaptive_avgpool2d_backward(test_case, device):
     of_out = m(input)
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = [[[[0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25], [0.25, 0.25, 0.25, 0.25]]]]
+    np_grad = [
+        [
+            [
+                [0.25, 0.25, 0.25, 0.25],
+                [0.25, 0.25, 0.25, 0.25],
+                [0.25, 0.25, 0.25, 0.25],
+                [0.25, 0.25, 0.25, 0.25],
+            ]
+        ]
+    ]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
