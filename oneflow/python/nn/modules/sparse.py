@@ -19,7 +19,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import experimental_api, oneflow_export
 from oneflow.python.nn.module import Module
 
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Union
 
 
 @oneflow_export("nn.Onehot")
@@ -84,14 +84,14 @@ class Onehot(Module):
 
     def __init__(
         self,
-        indices: oneflow._oneflow_internal.BlobDesc,
+        indices: flow._oneflow_internal.BlobDesc,
         depth: int,
         on_value: Union[int, float] = 1,
         off_value: Union[int, float] = 0,
         axis: int = -1,
         dtype: Optional[flow.dtype] = None,
         name: Optional[str] = None,
-    ) -> oneflow._oneflow_internal.BlobDesc:
+    ) -> flow._oneflow_internal.BlobDesc:
         super().__init__()
 
     self._op = (
