@@ -23,10 +23,7 @@ from .lr_scheduler import LrScheduler
 @oneflow_export("optim.lr_scheduler.CosineAnnealingLR")
 @experimental_api
 class CosineAnnealingLR(LrScheduler):
-
-
-
-r"""This operator creates a Cosine decayed learning rate scheduler.
+    r"""This operator creates a Cosine decayed learning rate scheduler.
 
     Before the steps are specified by user, the learning rate will be updated as:
 
@@ -69,19 +66,21 @@ r"""This operator creates a Cosine decayed learning rate scheduler.
 
     """
 
-    def __init__(
+
+def __init__(
         self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
-    ):
-        assert steps > 0, f"steps must greater than zero, but got {steps}"
+):
+    assert steps > 0, f"steps must greater than zero, but got {steps}"
 
-        self.steps = steps
-        self.alpha = alpha
-        super().__init__(optimizer, last_step, verbose)
+    self.steps = steps
+    self.alpha = alpha
+    super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step < self.steps:
-            cos_decay = 0.5 * (1 + math.cos(math.pi * self.last_step / self.steps))
-            decay_factor = (1 - self.alpha) * cos_decay + self.alpha
-            return [base_lr * decay_factor for base_lr in self.base_lrs]
-        else:
-            return [base_lr * self.alpha for base_lr in self.base_lrs]
+
+def get_lr(self):
+    if self.last_step < self.steps:
+        cos_decay = 0.5 * (1 + math.cos(math.pi * self.last_step / self.steps))
+        decay_factor = (1 - self.alpha) * cos_decay + self.alpha
+        return [base_lr * decay_factor for base_lr in self.base_lrs]
+    else:
+        return [base_lr * self.alpha for base_lr in self.base_lrs]
