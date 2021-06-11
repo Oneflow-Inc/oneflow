@@ -168,8 +168,6 @@ void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::str
 
   if (fs_type_str == "local") {
     CreateLocalFS(fs);
-  } else if (fs_type_str == "network") {
-    CreateLocalFS(fs);
   } else if (fs_type_str == "hdfs") {
     auto hdfs_nn_env = env_prefix + "_HDFS_NAMENODE";
     const char* hdfs_namenode = std::getenv(hdfs_nn_env.c_str());
@@ -179,9 +177,7 @@ void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::str
     }
     CreateHadoopFS(fs, hdfs_namenode);
   } else {
-    CreateLocalFS(fs);
-    LOG(WARNING) << "invalid env " << fs_type_env << " " << fs_type
-                 << ", return the local file system instead";
+    LOG(FATAL) << "invalid value " << fs_type << " of env " << fs_type_env;
   }
 }
 
@@ -191,10 +187,7 @@ fs::FileSystem* GetDataFS() {
   static std::mutex data_fs_mutex;
   {
     std::lock_guard<std::mutex> lock(data_fs_mutex);
-    if (!data_fs) {
-      CreateFileSystemFromEnv(data_fs, "ONEFLOW_DATA_FILE_SYSTEM");
-      CHECK(data_fs);
-    }
+    if (!data_fs) { CreateFileSystemFromEnv(data_fs, "ONEFLOW_DATA_FILE_SYSTEM"); }
   }
   return data_fs.get();
 }
@@ -204,10 +197,7 @@ fs::FileSystem* GetSnapshotFS() {
   static std::mutex snapshot_fs_mutex;
   {
     std::lock_guard<std::mutex> lock(snapshot_fs_mutex);
-    if (!snapshot_fs) {
-      CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM");
-      CHECK(snapshot_fs);
-    }
+    if (!snapshot_fs) { CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM"); }
   }
   return snapshot_fs.get();
 }
