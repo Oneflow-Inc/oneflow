@@ -4290,6 +4290,7 @@ def triplet_margin_loss(
 
 
 @oneflow_export("nn.PixelShuffle")
+@stable_api
 def pixel_shuffle(
     input: oneflow._oneflow_internal.BlobDesc,
     upscale_factor: int,
