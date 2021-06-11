@@ -36,8 +36,7 @@ def _np_l1loss(np_input, np_target):
 
 def _np_l1loss_grad(np_input, np_target):
     elem_cnt = np_input.size
-    tem = np_target - np_input
-    np_grad = np.where(tem > 0, -1, 1)
+    np_grad = np.where(np_target - np_input > 0, -1, 1)
     np_l1_grad_sum = np_grad
     np_l1_grad_mean = np_l1_grad_sum / elem_cnt
 
@@ -80,7 +79,11 @@ class TestL1LossModule(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [
-            (3, 5)
+            (3, 5),
+            (10, 9, 21),
+            (14, 22, 9, 21),
+            (3, 2, 4, 16, 5),
+            (1,),
         ]
         arg_dict["reduction"] = ["none", "sum", "mean"]
         for arg in GenArgList(arg_dict):
