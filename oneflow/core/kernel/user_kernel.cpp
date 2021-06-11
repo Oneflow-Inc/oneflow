@@ -117,11 +117,12 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
-        parallel_distribution_signature_(
-            &(kernel_conf.op_attribute().parallel_distribution_signature())) {
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
+        kernel_conf.op_attribute().parallel_distribution_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = &kernel_conf.op_attribute().sbp_signature();
+      sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      /* sbp_signature_ = &kernel_conf.op_attribute().sbp_signature(); */
     }
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
@@ -183,10 +184,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
-  const SbpSignature* sbp_signature_;
+  const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
