@@ -168,6 +168,9 @@ class UserOpInferContext final : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_shape();
   }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
@@ -412,7 +415,7 @@ class UserOpInferParallelDistributionFnContext
   }
 
   const cfg::ParallelDistribution& ParallelDistributionHint4InputArgNameAndIndex(
-      const std::string& arg_name, int32_t index) override {
+      const std::string& arg_name, int32_t index) const override {
     auto hint =
         CHECK_JUST(parallel_distribution_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
     return hint->parallel_distribution();
@@ -562,7 +565,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
     JUST(val_->physical_tensor_desc_infer_fn(&infer_ctx));
     for (const auto& pair : infer_ctx.outputs()) {
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-      out_blob_desc->set_data_type(*(infer_ctx.Dtype4ArgNameAndIndex(pair.first, pair.second)));
+      out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
       out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
       out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
     }

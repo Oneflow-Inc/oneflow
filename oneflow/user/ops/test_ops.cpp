@@ -28,7 +28,7 @@ REGISTER_USER_OP("ccrelu")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -49,7 +49,7 @@ REGISTER_USER_OP("ccrelu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -89,7 +89,7 @@ REGISTER_USER_OP("TestReshape")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -105,7 +105,7 @@ REGISTER_USER_OP("TestSource")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -124,8 +124,8 @@ REGISTER_USER_OP("TestMultiOutputOrder")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out1", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("out2", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out1", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out2", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -154,7 +154,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -179,7 +179,7 @@ REGISTER_USER_OP("TestMultiInput")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
+      *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -206,8 +206,8 @@ REGISTER_USER_OP("TestMultiInputGrad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("x1_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
-      *ctx->Dtype4ArgNameAndIndex("x2_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x2", 0);
+      *ctx->OutputDType("x1_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x1", 0);
+      *ctx->OutputDType("x2_diff", 0) = *ctx->Dtype4ArgNameAndIndex("x2", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -245,7 +245,7 @@ REGISTER_USER_OP("TestDynamicSource")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -268,7 +268,7 @@ REGISTER_USER_OP("TestRandomSource")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kFloat;
+      *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
     });
 
@@ -283,7 +283,7 @@ REGISTER_USER_OP("TestDataTypeAttr")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("output_type");
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("output_type");
       return Maybe<void>::Ok();
     });
 
@@ -305,7 +305,7 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto& out_types = ctx->Attr<std::vector<DataType>>("out_types");
       FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-        *ctx->Dtype4ArgNameAndIndex("out", i) = out_types.at(i);
+        *ctx->OutputDType("out", i) = out_types.at(i);
       }
       return Maybe<void>::Ok();
     });
@@ -329,7 +329,7 @@ REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
