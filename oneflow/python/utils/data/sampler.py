@@ -3,6 +3,7 @@ from typing import Iterator, Union, Optional, Sequence, List, TypeVar, Generic, 
 import numpy as np
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
+import torch
 
 T_co = TypeVar('T_co', covariant=True)
 # Defined in torch/csrc/Generator.cpp
@@ -134,9 +135,9 @@ class RandomSampler(Sampler[int]):
                 yield from flow.randint(high=n, size=(32,), dtype=flow.int64, generator=generator).tolist()
             yield from flow.randint(high=n, size=(self.num_samples % 32,), dtype=flow.int64, generator=generator).tolist()
         else:
+            # yield from torch.randperm(n, generator=torch.Generator()).tolist()
             yield from np.random.permutation(n).tolist()
-            # NOTE: np permutation is inefficient, yield from [7, 1, 3, 8, 4, 5, 9, 6, 2, 0]
-            # or yield from flow.randperm(n, generator=generator).tolist() will speed up
+            # yield from flow.randperm(n, generator=generator).tolist()
 
     def __len__(self):
         return self.num_samples

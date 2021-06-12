@@ -313,9 +313,12 @@ class DataLoader(Generic[T_co]):
         self.generator = generator
 
         if collate_fn is None:
+            print("dataloader >> collate_fn is None!")
             if self._auto_collation:
+                print("dataloader >> self._auto_collation is True")
                 collate_fn = _utils.collate.default_collate
             else:
+                print("dataloader >> self._auto_collation is False")
                 collate_fn = _utils.collate.default_convert
 
         self.collate_fn = collate_fn

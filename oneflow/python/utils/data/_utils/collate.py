@@ -46,14 +46,15 @@ def default_collate(batch):
 
     elem = batch[0]
     elem_type = type(elem)
+    # print("collate.py >> default_collate() >> elem_type = type(elem) >> ", elem_type)
     if isinstance(elem, flow.Tensor) or isinstance(elem, flow._oneflow_internal.LocalTensor):
-        out = None
-        if utils.data.get_worker_info() is not None:
+        # out = None
+        # if utils.data.get_worker_info() is not None:
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
-            numel = sum([x.numel() for x in batch])
-            storage = elem.storage()._new_shared(numel)
-            out = elem.new(storage)
+            # numel = sum([x.numel() for x in batch])
+            # storage = elem.storage()._new_shared(numel)
+            # out = elem.new(storage)
         res = flow.experimental.stack(list(batch), dim = 0)
         return res
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \

@@ -9,7 +9,8 @@ try:
 except ImportError:
     accimage = None
 
-import oneflow as flow
+import oneflow.experimental as flow
+
 
 def _is_pil_image(img: Any) -> bool:
     if accimage is not None:
@@ -51,7 +52,7 @@ def to_tensor(pic):
 
         img = flow.Tensor(pic.transpose((2, 0, 1)))
         # backward compatibility
-        if isinstance(img, flow.ByteTensor):
+        if img.dtype == flow.int:
             return img.to(dtype=default_float_dtype).div(255)
         else:
             return img
@@ -63,15 +64,22 @@ def to_tensor(pic):
 
     # handle PIL Image
     mode_to_nptype = {'I': np.int32, 'I;16': np.int16, 'F': np.float32}
+    if mode_to_nptype.get(pic.mode, np.uint8) == np.uint8:
+        dtype = flow.int32
+    else:
+        dtype = flow.float32
+
     img = flow.Tensor(
-        np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True)
+        np.array(pic, mode_to_nptype.get(pic.mode, np.uint8), copy=True), dtype=dtype,
     )
+    flow.sub
 
     if pic.mode == '1':
         img = 255 * img
+
     img = img.reshape(shape=(pic.size[1], pic.size[0], len(pic.getbands())))
     # put it from HWC to CHW format
     res = img.permute(2, 0, 1)
-    # if isinstance(img, flow.ByteTensor):
-    #     res = img.to(dtype=default_float_dtype).div(255)
+    if img.dtype == flow.int:
+        res = res.to(dtype=default_float_dtype).div(255)
     return res 
