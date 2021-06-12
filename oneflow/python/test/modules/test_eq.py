@@ -35,6 +35,24 @@ def _test_eq(test_case, shape, device):
     test_case.assertTrue(np.array_equal(of_out2.numpy(), np_out))
 
 
+def _test_eq_int(test_case, shape, device):
+    arr = np.random.randn(*shape)
+    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    num = 1
+    of_out = flow.eq(input, num)
+    np_out = np.equal(arr, num)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
+def _test_eq_float(test_case, shape, device):
+    arr = np.random.randn(*shape)
+    input = flow.Tensor(arr, dtype=flow.float32, device=flow.device(device))
+    num = 1
+    of_out = flow.eq(input, num)
+    np_out = np.equal(arr, num)
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -42,10 +60,11 @@ def _test_eq(test_case, shape, device):
 class TestEq(flow.unittest.TestCase):
     def test_eq(test_case):
         arg_dict = OrderedDict()
+        arg_dict["test_func"] = [_test_eq, _test_eq_int, _test_eq_float]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            _test_eq(test_case, *arg)
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
