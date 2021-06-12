@@ -21,7 +21,11 @@ set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
 execute_process(
   COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
+  RESULT_VARIABLE PIP_INSTALL_STATUS
 )
+if(NOT PIP_INSTALL_STATUS EQUAL 0)
+  message(FATAL_ERROR "fail to install pip packages")
+endif()
 message(STATUS "Python packages are installed.")
 
 find_package(Python3 COMPONENTS Development NumPy)
