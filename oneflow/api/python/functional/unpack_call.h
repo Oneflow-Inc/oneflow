@@ -54,11 +54,9 @@ struct unpack_call {
   }
 };
 
-#define INSTANCE_MAYBE_UNPACK_CALL(K, return_fn)                                        \
+#define INSTANCE_MAYBE_UNPACK_CALL(K, R, return_fn)                                     \
   template<typename F, typename T>                                                      \
   struct unpack_call<F, K, T> {                                                         \
-    static constexpr auto return_fn_ = (return_fn);                                     \
-    using R = typename function_traits<decltype(return_fn_)>::return_type;              \
     static R apply(const F& f, const std::vector<T>& args) {                            \
       constexpr size_t nargs = function_traits<F>::nargs;                               \
       CHECK_EQ(nargs, args.size())                                                      \
@@ -67,9 +65,9 @@ struct unpack_call {
     }                                                                                   \
   };
 
-INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>,
+INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::Tensor>, std::shared_ptr<one::Tensor>,
                            ([](const Maybe<one::Tensor>& t) { return t.GetPtrOrThrow(); }));
-INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>,
+INSTANCE_MAYBE_UNPACK_CALL(Maybe<one::TensorTuple>, std::shared_ptr<one::TensorTuple>,
                            ([](const Maybe<one::TensorTuple>& t) { return t.GetPtrOrThrow(); }));
 
 #undef INSTANCE_MAYBE_UNPACK_CALL
