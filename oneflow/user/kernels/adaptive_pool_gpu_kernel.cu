@@ -141,15 +141,13 @@ class GpuAdaptiveAvgPool2dKernel final : public OpKernel {
 
     const int out_elems = out_tensor->shape().elem_cnt();
 
-    int n_idx = 0;
-    int c_idx = 1;
-    int h_idx = 2;
-    int w_idx = 3;
+    const int h_idx = 2;
+    const int w_idx = 3;
 
-    int in_h = in_tensor->shape().At(h_idx);
-    int in_w = in_tensor->shape().At(w_idx);
-    int out_h = out_tensor->shape().At(h_idx);
-    int out_w = out_tensor->shape().At(w_idx);
+    const int in_h = in_tensor->shape().At(h_idx);
+    const int in_w = in_tensor->shape().At(w_idx);
+    const int out_h = out_tensor->shape().At(h_idx);
+    const int out_w = out_tensor->shape().At(w_idx);
 
     GpuAdaptiveAvgPool2dFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_h, in_w,
                                      out_h, out_w);
@@ -186,15 +184,13 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
     const int in_elems = in_tensor->shape().elem_cnt();
     const int out_elems = out_tensor->shape().elem_cnt();
 
-    int64_t n_idx = 0;
-    int64_t c_idx = 1;
-    int64_t h_idx = 2;
-    int64_t w_idx = 3;
+    const int64_t h_idx = 2;
+    const int64_t w_idx = 3;
 
-    int in_h = in_tensor->shape().At(h_idx);
-    int in_w = in_tensor->shape().At(w_idx);
-    int out_h = out_tensor->shape().At(h_idx);
-    int out_w = out_tensor->shape().At(w_idx);
+    const int in_h = in_tensor->shape().At(h_idx);
+    const int in_w = in_tensor->shape().At(w_idx);
+    const int out_h = out_tensor->shape().At(h_idx);
+    const int out_w = out_tensor->shape().At(w_idx);
 
     GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_elems,
                                          in_h, in_w, out_h, out_w);

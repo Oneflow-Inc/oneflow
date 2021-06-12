@@ -90,8 +90,12 @@ class AdaptiveAvgPool2d(Module):
             raise NotImplementedError("output_size param wrong, please check!")
 
         new_output_size = tuple(new_output_size)
-        assert new_output_size[0] <= x.shape[2], f"output_size param wrong, please check!"
-        assert new_output_size[1] <= x.shape[3], f"output_size param wrong, please check!"
+        assert (
+            new_output_size[0] <= x.shape[2]
+        ), f"output_size param wrong, please check!"
+        assert (
+            new_output_size[1] <= x.shape[3]
+        ), f"output_size param wrong, please check!"
 
         return self._op(x, output_size=new_output_size)[0]
 
