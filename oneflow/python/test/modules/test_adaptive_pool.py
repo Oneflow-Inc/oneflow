@@ -132,6 +132,62 @@ def _test_adaptive_avgpool2d_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+def _test_adaptive_avgpool2d_hw_forward(test_case, device):
+    input = flow.Tensor(
+        np.array(
+            [
+                [
+                    [
+                        [0.28242185711860657, -0.7742040753364563, -0.5439430475234985],
+                        [-0.1706847995519638, 0.0430854931473732, 0.34247592091560364],
+                        [-1.036131501197815, -1.033642292022705, 0.3455536365509033],
+                    ]
+                ]
+            ]
+        ),
+        dtype=flow.float32,
+        device=flow.device(device),
+    )
+    m = flow.nn.AdaptiveAvgPool2d((1, 2))
+    m.to(device)
+    of_out = m(input)
+    np_out = np.array([[[[-0.4481925666332245, -0.27011242508888245]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+
+def _test_adaptive_avgpool2d_hw_backward(test_case, device):
+    input = flow.Tensor(
+        np.array(
+            [
+                [
+                    [
+                        [0.28242185711860657, -0.7742040753364563, -0.5439430475234985],
+                        [-0.1706847995519638, 0.0430854931473732, 0.34247592091560364],
+                        [-1.036131501197815, -1.033642292022705, 0.3455536365509033],
+                    ]
+                ]
+            ]
+        ),
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
+    )
+    m = flow.nn.AdaptiveAvgPool2d((1, 2))
+    of_out = m(input)
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [
+            [
+                [0.1666666716337204, 0.3333333432674408, 0.1666666716337204],
+                [0.1666666716337204, 0.3333333432674408, 0.1666666716337204],
+                [0.1666666716337204, 0.3333333432674408, 0.1666666716337204],
+            ]
+        ]
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -142,6 +198,8 @@ class TestAdaptiveAvgPool2d(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_adaptive_avgpool2d_forward,
             _test_adaptive_avgpool2d_backward,
+            _test_adaptive_avgpool2d_hw_forward,
+            _test_adaptive_avgpool2d_hw_backward,
         ]
         arg_dict["device"] = [
             "cpu",

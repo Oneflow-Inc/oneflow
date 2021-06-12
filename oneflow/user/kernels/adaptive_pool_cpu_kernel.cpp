@@ -131,6 +131,8 @@ class AdaptivePoolCpuGradKernel final : public user_op::OpKernel {
     const int output_width = grad_output->shape().At(w_idx);
     const int output_size = output_height * output_width;
 
+    std::fill(in_ptr, in_ptr + grad_input->shape().elem_cnt(), static_cast<T>(0));
+
     FOR_RANGE(int64_t, bc, 0, n_batch_channel) {
       T* input_ptr = in_ptr + bc * input_size;
       const T* output_ptr = out_ptr + bc * output_size;

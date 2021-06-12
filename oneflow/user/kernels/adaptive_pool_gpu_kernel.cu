@@ -34,6 +34,16 @@ namespace user_op {
 #define END_IND_INT(a, b, c) (((a + 1) * c + b - 1) / b)
 
 template<typename T>
+__global__ void InitPtr(int elements, T* ptr) {
+  int gid = (blockDim.x * blockIdx.x) + threadIdx.x;
+  int step = gridDim.x * blockDim.x;
+  while (gid < elements) {
+    ptr[gid] = static_cast<T>(0);
+    gid += step;
+  }
+}
+
+template<typename T>
 __global__ void AdaptiveAvgPool2dCudaKernel(const T* input, T* output, int num_elems, int in_h,
                                             int in_w, int out_h, int out_w) {
   const int out_panel_size = out_h * out_w;
@@ -105,8 +115,9 @@ struct GpuAdaptiveAvgPool2dFunctor final {
 
 template<typename T>
 struct GpuAdaptiveAvgpool2dGradFunctor final {
-  void operator()(DeviceCtx* ctx, T* input, const T* output, int num_elems, int in_h, int in_w,
-                  int out_h, int out_w) {
+  void operator()(DeviceCtx* ctx, T* input, const T* output, int num_elems, int input_elems,
+                  int in_h, int in_w, int out_h, int out_w) {
+    RUN_CUDA_KERNEL((InitPtr<T>), ctx, input_elems, input_elems, input);
     RUN_CUDA_KERNEL((AdaptiveAvgPool2dGradCudaKernel<T>), ctx, num_elems, input, output, num_elems,
                     in_h, in_w, out_h, out_w);
   }
@@ -172,6 +183,7 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
     const int64_t ndims = out_tensor->shape().NumAxes();
     CHECK_EQ(ndims, 4);
 
+    const int in_elems = in_tensor->shape().elem_cnt();
     const int out_elems = out_tensor->shape().elem_cnt();
 
     int64_t n_idx = 0;
@@ -184,8 +196,8 @@ class GpuAdaptiveAvgPool2dGradKernel final : public OpKernel {
     int out_h = out_tensor->shape().At(h_idx);
     int out_w = out_tensor->shape().At(w_idx);
 
-    GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_h, in_w,
-                                         out_h, out_w);
+    GpuAdaptiveAvgpool2dGradFunctor<T>()(ctx->device_ctx(), in_ptr, out_ptr, out_elems, in_elems,
+                                         in_h, in_w, out_h, out_w);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

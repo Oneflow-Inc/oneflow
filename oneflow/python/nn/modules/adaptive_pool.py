@@ -77,10 +77,10 @@ class AdaptiveAvgPool2d(Module):
         new_output_size = []
         assert len(x.shape) == 4
 
-        if isinstance(self.output_size, int) == True:
+        if isinstance(self.output_size, int):
             new_output_size.append(self.output_size)
             new_output_size.append(self.output_size)
-        elif isinstance(self.output_size, tuple) == True:
+        elif isinstance(self.output_size, tuple):
             new_output_size = list(self.output_size)
             if self.output_size[0] == None:
                 new_output_size[0] = x.shape[2]
