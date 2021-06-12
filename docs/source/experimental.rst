@@ -86,8 +86,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.lt
 .. autofunction:: oneflow.experimental.Tensor.lt
 .. autofunction:: oneflow.experimental.nn.Identity
+.. autofunction:: oneflow.experimental.nn.PixelShuffle
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
+.. autofunction:: oneflow.experimental.nn.L1Loss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
@@ -176,5 +178,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.tan
 .. autofunction:: oneflow.experimental.log1p
 .. autofunction:: oneflow.experimental.Tensor.log1p
+.. autofunction:: oneflow.experimental.ceil
+.. autofunction:: oneflow.experimental.Tensor.ceil
+.. autofunction:: oneflow.experimental.expm1
+.. autofunction:: oneflow.experimental.Tensor.expm1
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
