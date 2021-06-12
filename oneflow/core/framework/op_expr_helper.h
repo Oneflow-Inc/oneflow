@@ -260,6 +260,10 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
                                     const std::vector<int32_t>& strides, const bool& ceil_mode,
                                     const std::string& name);
 
+Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::vector<int64_t>& output_size);
+Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::vector<int64_t>& output_size,
+                                          const std::string& name);
+
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);
 

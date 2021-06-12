@@ -47,17 +47,17 @@ class AdaptiveAvgPool2d(Module):
         >>> output.size()
         flow.Size([1, 64, 5, 7])
 
-        # >>> m = nn.AdaptiveAvgPool2d(7)
-        # >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
-        # >>> output = m(input)
-        # >>> output.size()
-        # flow.Size([1, 64, 7, 7])
+        >>> m = nn.AdaptiveAvgPool2d(7)
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 7, 7])
 
-        # >>> m = nn.AdaptiveAvgPool2d((None, 7))
-        # >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
-        # >>> output = m(input)
-        # >>> output.size()
-        
+        >>> m = nn.AdaptiveAvgPool2d((None, 7))
+        >>> input = flow.Tensor(np.random.randn(1, 64, 10, 9))
+        >>> output = m(input)
+        >>> output.size()
+        flow.Size([1, 64, 10, 7])
 
     """
 
