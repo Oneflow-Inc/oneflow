@@ -19,7 +19,6 @@ import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-from oneflow.python.nn.modules.math_ops import Subtract, Square, Sum, Mean
 
 
 @oneflow_export("nn.CrossEntropyLoss")
@@ -500,17 +499,15 @@ class MSELoss(Module):
         ], "Argument reduction only support 'sum'/'mean'/'none'/None for now!"
 
         self.reduction = reduction
-        self.square_op = Square()
-        self.subtract_op = Subtract()
-        self.sum_op = Sum()
-        self.mean_op = Mean()
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        mean_squared_difference = self.square_op(self.subtract_op(input, target))
+        mean_squared_difference = flow.experimental.square(
+            flow.experimental.sub(input, target)
+        )
         if self.reduction == "mean":
-            return self.mean_op(mean_squared_difference)
+            return flow.experimental.mean(mean_squared_difference)
         elif self.reduction == "sum":
-            return self.sum_op(mean_squared_difference)
+            return flow.experimental.sum(mean_squared_difference)
         else:
             # Do no reduction
             return mean_squared_difference
