@@ -14,14 +14,15 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
   list(APPEND HDRS ${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h)
   list(APPEND PYBIND_SRCS ${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp)
 
-  add_custom_command(
-      OUTPUT "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.cpp"
-             "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h"
-             "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp"
+  add_custom_target(
+      ALL
       COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py
               --yaml_file_path ${YAML_FILE} --generate_pybind
       DEPENDS ${Python_EXECUTABLE} create_functional_api_dir create_functional_pybind_dir
               ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py ${YAML_FILE}
+      BYPRODUCTS "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.cpp"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h"
+                 "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp"
       VERBATIM)
 
   set_source_files_properties(${${SRCS}} ${${HDRS}} ${${PYBIND_SRCS}} PROPERTIES GENERATED TRUE)
