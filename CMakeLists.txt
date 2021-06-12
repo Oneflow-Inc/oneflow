@@ -39,6 +39,12 @@ project(oneflow C CXX)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
+get_filename_component(real_src_dir "${CMAKE_SOURCE_DIR}" REALPATH)
+get_filename_component(real_bin_dir "${CMAKE_BINARY_DIR}" REALPATH)
+if("${real_src_dir}" STREQUAL "${real_bin_dir}")
+  message(FATAL_ERROR "In-source build not allowed")
+endif()
+
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir})
