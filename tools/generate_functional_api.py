@@ -230,10 +230,10 @@ def render_file_if_different(target_file, content):
         with open(target_file, "w") as f:
             f.write(content)
     else:
-        org_content = None
+        old_content = None
         with open(target_file, "r") as f:
-            org_content = f.read()
-        if org_content is None or org_content != content:
+            old_content = f.read()
+        if old_content is None or old_content != content:
             with open(target_file, "w") as f:
                 f.write(content)
 
