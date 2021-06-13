@@ -352,6 +352,7 @@ class Tensor:
     def backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
+    @register_local_tensor_method()
     def _transform_ellipsis_type(self, key):
         d = self.ndim - len(key)  # exclude all Ellipsis type
         new_key = list()
