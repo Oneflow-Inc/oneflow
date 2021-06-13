@@ -128,7 +128,7 @@
     python3 -m oneflow --doctor
     ```
 
-  - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
+  - If you are in China, please add these CMake flags `-DTHIRD_PARTY_MIRROR=aliyun -DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple` to speed up the downloading procedure for dependencies.
   - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 </details>
 
