@@ -832,6 +832,17 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Build();
 }
 
+Maybe<one::UserOpExpr> AdaptivePoolGradOp() {
+  return AdaptivePoolGradOp(UniqueOpName("adaptive_pool_grad"));
+}
+Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name) {
+  return one::OpBuilder("adaptive_avg_pool2d_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Output("dx")
+      .Build();
+}
+
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis) {
   return UnsortedSegmentSumLikeOp(axis, UniqueOpName("unsorted_segment_sum_like"));
 }
