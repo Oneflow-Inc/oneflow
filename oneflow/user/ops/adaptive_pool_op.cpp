@@ -104,7 +104,6 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
         return builder.OpTypeName("adaptive_avg_pool2d_grad")
             .InputBind("x", ctx->FwOp().input("x", 0))
             .InputBind("dy", ctx->FwOp().output_grad("y", 0))
-            .Attr("output_size", ctx->FwOp().attr<std::vector<int64_t>>("output_size"))
             .Output("dx")
             .Build();
       });

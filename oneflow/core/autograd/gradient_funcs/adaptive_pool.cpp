@@ -24,7 +24,6 @@ namespace one {
 
 struct AdaptivePoolInterpState : public OpExprInterpState {
   bool requires_grad;
-  std::vector<int64_t> output_size;
 };
 
 class AdaptivePool : public OpExprGradFunction<AdaptivePoolInterpState> {
@@ -45,8 +44,7 @@ Maybe<void> AdaptivePool::Init(const OpExpr& op) {
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
-  std::vector<int64_t> output_size;
-  grad_op_ = JUST(op_expr_helper::AdaptivePoolGradOp(output_size, GradientOpName(op_name)));
+  grad_op_ = JUST(op_expr_helper::AdaptivePoolGradOp(GradientOpName(op_name)));
   return Maybe<void>::Ok();
 }
 
@@ -55,8 +53,6 @@ Maybe<void> AdaptivePool::Capture(AdaptivePoolInterpState* ctx, const TensorTupl
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->output_size = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("output_size"));
   ctx->SaveTensorForBackward(inputs.at(0));
   return Maybe<void>::Ok();
 }
@@ -67,10 +63,8 @@ Maybe<void> AdaptivePool::Apply(const AdaptivePoolInterpState* ctx, const Tensor
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
   const std::shared_ptr<oneflow::one::Tensor>& x = ctx->SavedTensors().at(0);
-  MutableAttrMap attrs;
-  JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", ctx->output_size));
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}, attrs));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {x, out_grads.at(0)}, {}));
   return Maybe<void>::Ok();
 }
 
