@@ -435,6 +435,7 @@ jobs:
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
@@ -444,6 +445,7 @@ jobs:
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             ${image_name} \
