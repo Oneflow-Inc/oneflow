@@ -10,7 +10,7 @@ from oneflow.python.framework.tensor import Tensor
 T_co = TypeVar('T_co', covariant=True)
 # Defined in torch/csrc/Generator.cpp
 class Generator(object):
-    _device = "cuda"
+    _device = "cpu"
     device: _device
     def __init__(self, device: Union[_device, str, None] = None) -> None: ...
     def get_state(self) -> Tensor: ...

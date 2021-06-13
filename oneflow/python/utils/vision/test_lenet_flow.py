@@ -53,22 +53,26 @@ class LeNet(nn.Module):
         output = self.fc(feature.reshape(shape=[img.shape[0], -1]))
         return output
 
-net = LeNet()
-device = flow.device("cuda")
-net.to(device)
+network = LeNet()
+
+for params in network.parameters():
+    nn.init.normal_(params, mean=0, std=0.01)
+
+device = flow.device("cuda") # segmentfault in cpu mode
+network.to(device)
 
 
-batch_size = 256
+batch_size = 64
 train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
 loss = nn.CrossEntropyLoss()
 loss.to(device)
 
 lr, num_epochs = 0.001, 10
-optimizer = flow.optim.SGD(net.parameters(), lr=lr)
+optimizer = flow.optim.Adam(network.parameters(), lr=lr)
 
 
 # 本函数已保存在d2lzh_pytorch包中方便以后使用。该函数将被逐步改进。
-def evaluate_accuracy(data_iter, net, device=None):
+def evaluate_accuracy(net, device, data_iter):
     if device is None and isinstance(net, nn.Module):
         # 如果没指定device就使用net的device
         device = list(net.parameters())[0].device
@@ -76,7 +80,7 @@ def evaluate_accuracy(data_iter, net, device=None):
     with flow.no_grad():
         for X, y in data_iter:
             X = X.to(device=device)
-            y = y.to(device=device, dtype=flow.int)
+            y = y.to(device=device)
             if isinstance(net, nn.Module):
                 net.eval() # 评估模式, 这会关闭dropout 
                 acc_sum += (net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum()
@@ -92,7 +96,7 @@ def evaluate_accuracy(data_iter, net, device=None):
 
 
 # 本函数已保存在d2lzh_pytorch包中方便以后使用
-def train_ch5(net, train_iter, test_iter, batch_size, optimizer, device, num_epochs):
+def train_ch5(net, device, train_iter, test_iter, num_epochs):
     net = net.to(device)
     print("training on ", device)
     for epoch in range(num_epochs):
@@ -100,22 +104,23 @@ def train_ch5(net, train_iter, test_iter, batch_size, optimizer, device, num_epo
         for X, y in train_iter:
             X.requires_grad=True
             X = X.to(device=device)
-            y = y.to(device=device, dtype=flow.int)
+            y = y.to(device=device)
             y_hat = net(X)
             l = loss(y_hat, y)
 
+            optimizer.zero_grad()
             l.backward()
             optimizer.step()
-            optimizer.zero_grad()
 
             train_l_sum += l.numpy()
             train_acc_sum += (y_hat.argmax(dim=1).numpy() == y.numpy()).sum()
             n += y.shape[0]
             batch_count += 1
-        test_acc = evaluate_accuracy(test_iter, net, device)
+
+        test_acc = evaluate_accuracy(net, device, test_iter)
         print('epoch %d, loss %.4f, train acc %.3f, test acc %.3f, time %.1f sec'
               % (epoch + 1, train_l_sum / batch_count, train_acc_sum / n, test_acc, time.time() - start))
             
 
-train_ch5(net, train_iter, test_iter, batch_size, optimizer, device, num_epochs)
+train_ch5(network, device, train_iter, test_iter, num_epochs)
 

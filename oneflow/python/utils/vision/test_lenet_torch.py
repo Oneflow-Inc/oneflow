@@ -7,7 +7,7 @@ import torch.utils.data as data
 from torchvision import transforms
 from torchvision.datasets.mnist import FashionMNIST
 
-device = torch.device("cuda")
+device = torch.device("cuda") # or cpu
 
 class LeNet(nn.Module):
     def __init__(self):
@@ -55,7 +55,7 @@ def load_data_fashion_mnist(batch_size, resize=None, root='./test_torch/FashionM
     return train_iter, test_iter
 
 
-batch_size = 128
+batch_size = 256 # or 128 64 ..
 train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
 
 # 本函数已保存在d2lzh_pytorch包中方便以后使用。该函数将被逐步改进。
