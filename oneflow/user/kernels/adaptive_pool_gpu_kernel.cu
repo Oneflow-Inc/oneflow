@@ -95,11 +95,11 @@ __global__ void AdaptiveAvgPool2dGradCudaKernel(T* input, const T* output, int n
     int in_end_w = END_IND(out_w_idx, out_w, in_w);
     int k_w = in_end_w - in_start_w;
 
-    T grad_delta = output[bc_idx * out_panel_size + out_h_idx * out_w + out_w_idx] / k_h / k_w;
+    const T grad_delta = output[idx] / k_h / k_w;
+    T* input_ptr = input + bc_idx * in_panel_size + in_start_h * in_w + in_start_w;
     for (int ih = 0; ih < k_h; ++ih) {
-      for (int iw = 0; iw < k_w; ++iw) {
-        input[bc_idx * in_panel_size + (in_start_h + ih) * in_w + (in_start_w + iw)] += grad_delta;
-      }
+      for (int iw = 0; iw < k_w; ++iw) { input_ptr[iw] += grad_delta; }
+      input_ptr += in_w;
     }
   }
 }
