@@ -22,56 +22,14 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.modules.utils import _check_axis
+from oneflow.python.ops.transpose_util import (
+    get_perm_when_transpose_axis_to_last_dim,
+    get_inversed_perm,
+)
 
 
 def _build_math_binary_elementwise_op(math_op):
     return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
-
-
-class Sum(Module):
-    def __init__(
-        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
-    ) -> None:
-        super().__init__()
-
-        self.axis = axis
-        self.keepdims = keepdims
-        self._op = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-            .Build()
-        )
-
-    def forward(self, input):
-        axis_checked = _check_axis(self.axis, input.shape)
-        if len(axis_checked) == 0:
-            return input
-        return self._op(input, axis=axis_checked)[0]
-
-
-@oneflow_export("sum")
-@register_tensor_op("sum")
-@experimental_api
-def _sum(input, dim=None, keepdims=False):
-    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        >>> of_out = flow.sum(input, dim=(2, 1))
-        >>> of_out.shape
-        flow.Size([4])
-    """
-
-    return Sum(dim, keepdims)(input)
 
 
 class ScalarMul(Module):
@@ -194,86 +152,6 @@ def _mul(x, y):
         return BroadcastMul()(x, y)
 
 
-class Mean(Module):
-    def __init__(
-        self,
-        axis: Optional[Union[collections.Sized, int]] = None,
-        keepdims: bool = False,
-    ) -> None:
-        super().__init__()
-        self.keepdims = keepdims
-        self.axis = axis
-        # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
-        if axis is None:
-            self.axes = []
-        else:
-            self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
-
-    def forward(self, input_tensor):
-        ndim = input_tensor.ndimension()
-        if isinstance(self.axis, int) and self.axis < 0:
-            assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
-            self.axis = ndim + self.axis
-            self.axes = [self.axis]
-
-        if isinstance(self.axis, collections.Sized):
-            for i in range(len(self.axes)):
-                assert (
-                    -ndim <= self.axes[i] <= ndim - 1
-                ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
-                    ndim, ndim - 1, self.axes[i]
-                )
-                if self.axes[i] < 0:
-                    self.axes[i] = self.axes[i] + ndim
-
-        reduce_sum = flow.experimental.sum(
-            input_tensor, dim=self.axis, keepdims=self.keepdims
-        )
-        reduce_count = 1
-        if len(self.axes) == 0:
-            for dim in input_tensor.shape:
-                reduce_count *= dim
-        else:
-            for i in self.axes:
-                reduce_count *= input_tensor.shape[i]
-        return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
-
-
-@oneflow_export("mean")
-@register_tensor_op("mean")
-@experimental_api
-def _mean(input_tensor, dim=None, keepdim=False):
-    r"""Computes the mean of row of elements in a tensor in the given axis,
-    if the axis is None, mean of all elements will be caculated.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input)
-        >>> out.numpy()
-        array([3.5], dtype=float32)
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input, dim=0)
-        >>> out.numpy()
-        array([2.5, 3.5, 4.5], dtype=float32)
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input, dim=1)
-        >>> out.numpy()
-        array([2., 5.], dtype=float32)
-
-    """
-
-    return Mean(axis=dim, keepdims=keepdim)(input_tensor)
-
-
 class Variance(Module):
     def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
@@ -356,31 +234,14 @@ class BroadcastSub(Module):
 
 
 class ScalarAdd(Module):
-    def __init__(self, operand) -> None:
+    def __init__(self, alpha) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_add").Input("in").Output("out")
-
-        if isinstance(operand, int):
-            self._op = (
-                self._op.Attr("has_int_operand", True)
-                .Attr("has_float_operand", False)
-                .Attr("int_operand", operand)
-                .Attr("float_operand", 0.0)
-                .Build()
-            )
-        elif isinstance(operand, float):
-            self._op = (
-                self._op.Attr("has_int_operand", False)
-                .Attr("has_float_operand", True)
-                .Attr("int_operand", 0)
-                .Attr("float_operand", operand)
-                .Build()
-            )
-        else:
-            raise ValueError("operand type can only be int or float")
+        if not isinstance(alpha, int) and not isinstance(alpha, float):
+            raise ValueError("scalar type can only be int or float")
+        self.alpha = alpha
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.add_scalar(x, self.alpha)
 
 
 @oneflow_export("sub")
@@ -576,10 +437,9 @@ class ScalarAddByTensor(Module):
 class ElementwiseAdd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("add_n").Input("in", 2).Output("out").Build()
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.add(x, y)
 
 
 class BroadcastAdd(Module):
@@ -757,7 +617,6 @@ def asinh_op(input):
         flow.Size([3])
         >>> print(output.numpy())
         [1.4436355 1.8184465 2.0947125]
-
         >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> print(output1.shape)
@@ -1158,8 +1017,13 @@ class Std(Module):
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
 
-            sum = Sum(self.axis, self.keepdim)(self.square_op(x)) / self.reduce_count
-            square = self.square_op(Sum(self.axis, self.keepdim)(x) / self.reduce_count)
+            sum = (
+                flow.experimental.sum(self.square_op(x), self.axis, self.keepdim)
+                / self.reduce_count
+            )
+            square = self.square_op(
+                flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count
+            )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
             return res
@@ -1524,7 +1388,7 @@ def erf_op(input):
 
     Returns:
         oneflow.Tensor: The result Tensor   
-
+               
     For example:
 
     .. code-block:: python
@@ -1556,7 +1420,7 @@ def erf_op(input):
         array([[ 0.        , -0.8427008 ,  1.        ],
                [ 1.        ,  1.        ,  0.74210095],
                [ 0.9953223 ,  0.9999779 ,  1.        ]], dtype=float32)
-               
+
     """
     return Erf()(input)
 
@@ -1797,6 +1661,107 @@ def expm1_op_tensor(x):
     """
 
     return Expm1()(x)
+
+
+class Topk(Module):
+    def __init__(
+        self, k, dim: int = None, largest: bool = True, sorted: bool = True
+    ) -> None:
+        super().__init__()
+        self._op_topk_last_dim = (
+            flow.builtin_op("top_k")
+            .Input("in")
+            .Output("out")
+            .Attr("k", k)
+            .Attr("sorted", sorted)
+            .Build()
+        )
+        self._transpose_op = (
+            flow.builtin_op("transpose")
+            .Input("input")
+            .Output("output")
+            .Attr("perm", [])
+            .Build()
+        )
+
+        self.dim = dim
+        self.largest = largest
+
+    def forward(self, input):
+        if self.dim == None:
+            self.dim = -1
+
+        num_axes = len(input.shape)
+        axis = self.dim if self.dim >= 0 else self.dim + num_axes
+        assert 0 <= axis < num_axes, "axis out of range"
+        if axis == num_axes - 1:
+            if self.largest:
+                indices = self._op_topk_last_dim(input)[0]
+            else:
+                neg_input = flow.experimental.mul(input, -1)
+                indices = self._op_topk_last_dim(neg_input)[0]
+            return (flow.experimental.gather(input, indices, dim=axis), indices)
+        else:
+            perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
+            x = self._transpose_op(input, perm=perm)[0]
+            if self.largest:
+                indices = self._op_topk_last_dim(x)[0]
+            else:
+                neg_input = flow.experimental.mul(x, -1)
+                indices = self._op_topk_last_dim(neg_input)[0]
+            indices = self._transpose_op(indices, perm=get_inversed_perm(perm))[0]
+            return (flow.experimental.gather(input, indices, dim=axis), indices)
+
+
+@oneflow_export("topk")
+@register_tensor_op("topk")
+@experimental_api
+def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):
+    r"""Finds the values and indices of the k largest entries at specified axis.
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+        dim (int, optional): the dimension to sort along. Defaults to the last dim (-1)
+        largest (bool, optional): controls whether to return largest or smallest elements
+        sorted (bool, optional): controls whether to return the elements in sorted order
+
+    Returns:
+        Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int32)): A tuple of (values, indices), where
+        the indices are the indices of the elements in the original input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> x = np.array([[1, 3, 8, 7, 2], [1, 9, 4, 3, 2]], dtype=np.float32)
+        >>> (values, indices) = flow.topk(flow.Tensor(x), k=3, dim=1)
+        >>> values
+        tensor([[8., 7., 3.],
+                [9., 4., 3.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[2, 3, 1],
+                [1, 2, 3]], dtype=oneflow.int32)
+        >>> values.shape
+        flow.Size([2, 3])
+        >>> indices.shape
+        flow.Size([2, 3])
+        >>> (values, indices) = flow.topk(flow.Tensor(x), k=2, dim=1, largest=False)
+        >>> values
+        tensor([[1., 2.],
+                [1., 2.]], dtype=oneflow.float32)
+        >>> indices
+        tensor([[0, 4],
+                [0, 4]], dtype=oneflow.int32)
+        >>> values.shape
+        flow.Size([2, 2])
+        >>> indices.shape
+        flow.Size([2, 2])
+
+    """
+    return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
 if __name__ == "__main__":
