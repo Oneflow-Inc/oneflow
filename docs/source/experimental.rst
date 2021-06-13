@@ -97,6 +97,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.sum
 .. autofunction:: oneflow.experimental.Tensor.sum
+.. autofunction:: oneflow.experimental.min
+.. autofunction:: oneflow.experimental.Tensor.min
+.. autofunction:: oneflow.experimental.max
+.. autofunction:: oneflow.experimental.Tensor.max
 .. autofunction:: oneflow.experimental.mul
 .. autofunction:: oneflow.experimental.Tensor.mul
 .. autofunction:: oneflow.experimental.mean
@@ -133,6 +137,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.pow
 .. autofunction:: oneflow.experimental.cosh
 .. autofunction:: oneflow.experimental.Tensor.cosh
+.. autofunction:: oneflow.experimental.acos
+.. autofunction:: oneflow.experimental.Tensor.acos
 .. autofunction:: oneflow.experimental.matmul
 .. autofunction:: oneflow.experimental.Tensor.matmul
 .. autofunction:: oneflow.experimental.negative
