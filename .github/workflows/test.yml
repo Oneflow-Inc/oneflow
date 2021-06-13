@@ -440,7 +440,7 @@ jobs:
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
@@ -449,7 +449,7 @@ jobs:
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
