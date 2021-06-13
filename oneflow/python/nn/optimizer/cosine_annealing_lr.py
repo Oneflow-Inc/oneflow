@@ -70,7 +70,7 @@ class CosineAnnealingLR(LrScheduler):
 
 
 def __init__(
-        self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
+    self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
 ):
     assert steps > 0, f"steps must greater than zero, but got {steps}"
 
