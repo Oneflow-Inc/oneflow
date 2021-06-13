@@ -46,6 +46,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
+.. autofunction:: oneflow.experimental.nn.InstanceNorm1d
+.. autofunction:: oneflow.experimental.nn.InstanceNorm2d
+.. autofunction:: oneflow.experimental.nn.InstanceNorm3d
 .. autofunction:: oneflow.experimental.nn.LayerNorm
 .. autofunction:: oneflow.experimental.cast
 .. autofunction:: oneflow.experimental.Tensor.cast
