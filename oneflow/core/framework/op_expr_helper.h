@@ -275,5 +275,7 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);
 
+Maybe<one::UserOpExpr> SoftmaxGradOp();
+Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow
