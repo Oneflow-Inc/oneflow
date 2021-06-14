@@ -496,7 +496,6 @@ class TestAsinh(flow.unittest.TestCase):
             _test_arcsinh(test_case, *arg)
 
 
-
 def _topk_np(input, k, dim: int = None, largest: bool = True, _sorted: bool = True):
     in_dims = input.shape
     out_dims = list(in_dims)
@@ -653,6 +652,7 @@ class TestPow(flow.unittest.TestCase):
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -670,7 +670,6 @@ class TestTopk(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
-
 
 
 if __name__ == "__main__":
