@@ -115,7 +115,7 @@ jobs:
 
   build:
     name: Build
-    needs: [check_license_and_format, mirror_third_party]
+    needs: [check_license_and_format, mirror_third_party, cancel_previous]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
