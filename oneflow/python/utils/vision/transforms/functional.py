@@ -1,8 +1,11 @@
+import math
 import numbers
-from typing import Any, List, Sequence
+import warnings
+from enum import Enum
 
 import numpy as np
-from PIL import Image, ImageOps, ImageEnhance
+from PIL import Image
+from typing import List, Tuple, Any, Optional
 
 try:
     import accimage
@@ -10,7 +13,41 @@ except ImportError:
     accimage = None
 
 import oneflow.experimental as flow
+from oneflow.experimental import Tensor
 
+from . import functional_pil as F_pil
+from . import functional_tensor as F_t
+
+class InterpolationMode(Enum):
+    """Interpolation modes
+    """
+    NEAREST = "nearest"
+    BILINEAR = "bilinear"
+    BICUBIC = "bicubic"
+    # For PIL compatibility
+    BOX = "box"
+    HAMMING = "hamming"
+    LANCZOS = "lanczos"
+
+def _interpolation_modes_from_int(i: int) -> InterpolationMode:
+    inverse_modes_mapping = {
+        0: InterpolationMode.NEAREST,
+        2: InterpolationMode.BILINEAR,
+        3: InterpolationMode.BICUBIC,
+        4: InterpolationMode.BOX,
+        5: InterpolationMode.HAMMING,
+        1: InterpolationMode.LANCZOS,
+    }
+    return inverse_modes_mapping[i]
+
+pil_modes_mapping = {
+    InterpolationMode.NEAREST: 0,
+    InterpolationMode.BILINEAR: 2,
+    InterpolationMode.BICUBIC: 3,
+    InterpolationMode.BOX: 4,
+    InterpolationMode.HAMMING: 5,
+    InterpolationMode.LANCZOS: 1,
+}
 
 def _is_pil_image(img: Any) -> bool:
     if accimage is not None:
@@ -83,3 +120,43 @@ def to_tensor(pic):
     if img.dtype == flow.int:
         res = res.to(dtype=default_float_dtype).div(255)
     return res 
+
+
+def resize(img: Tensor, size: List[int], interpolation: InterpolationMode = InterpolationMode.BILINEAR) -> Tensor:
+    r"""Resize the input image to the given size.
+    If the image is torch Tensor, it is expected
+    to have [..., H, W] shape, where ... means an arbitrary number of leading dimensions
+
+    Args:
+        img (PIL Image or Tensor): Image to be resized.
+        size (sequence or int): Desired output size. If size is a sequence like
+            (h, w), the output size will be matched to this. If size is an int,
+            the smaller edge of the image will be matched to this number maintaining
+            the aspect ratio. i.e, if height > width, then image will be rescaled to
+            :math:`\left(\text{size} \times \frac{\text{height}}{\text{width}}, \text{size}\right)`.
+            In torchscript mode size as single int is not supported, use a sequence of length 1: ``[size, ]``.
+        interpolation (InterpolationMode): Desired interpolation enum defined by
+            :class:`torchvision.transforms.InterpolationMode`.
+            Default is ``InterpolationMode.BILINEAR``. If input is Tensor, only ``InterpolationMode.NEAREST``,
+            ``InterpolationMode.BILINEAR`` and ``InterpolationMode.BICUBIC`` are supported.
+            For backward compatibility integer values (e.g. ``PIL.Image.NEAREST``) are still acceptable.
+
+    Returns:
+        PIL Image or Tensor: Resized image.
+    """
+    # Backward compatibility with integer value
+    if isinstance(interpolation, int):
+        warnings.warn(
+            "Argument interpolation should be of type InterpolationMode instead of int. "
+            "Please, use InterpolationMode enum."
+        )
+        interpolation = _interpolation_modes_from_int(interpolation)
+
+    if not isinstance(interpolation, InterpolationMode):
+        raise TypeError("Argument interpolation should be a InterpolationMode")
+
+    if not isinstance(img, flow.Tensor):
+        pil_interpolation = pil_modes_mapping[interpolation]
+        return F_pil.resize(img, size=size, interpolation=pil_interpolation)
+
+    return F_t.resize(img, size=size, interpolation=interpolation.value)
