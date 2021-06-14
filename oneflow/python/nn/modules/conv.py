@@ -132,7 +132,7 @@ class Conv2d(Module):
         In other words, for an input of size :math:`(N, C_{in}, L_{in})`,
         a depthwise convolution with a depthwise multiplier `K` can be performed with the arguments
         :math:`(C_\text{in}=C_\text{in}, C_\text{out}=C_\text{in} \times \text{K}, ..., \text{groups}=C_\text{in})`.
-    
+
 
     Args:
         in_channels (int): Number of channels in the input image
@@ -177,7 +177,7 @@ class Conv2d(Module):
 
     For example: 
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -212,10 +212,13 @@ class Conv2d(Module):
 
         assert padding_mode == "zeros"
         kernel_size = _pair(kernel_size)
+        self.kernel_size = kernel_size
         stride = _pair(stride)
         padding = _pair(padding)
         dilation = _pair(dilation)
         self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
         self.out_channels = out_channels
         self.weight = Parameter(
             Tensor(out_channels, in_channels // groups, *kernel_size)
@@ -273,16 +276,14 @@ class Conv2d(Module):
     def forward(self, x):
         if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
-            filter_out_axis = 0
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
-            filter_split_list = ConvUtil.split(
-                self.weight, axis=filter_out_axis, split_num=self.groups
-            )
             out_list = []
             for i in range(len(in_split_list)):
-                out_list.append(self._cpu_op(in_split_list[i], self.weight[i])[0])
+                out_list.append(
+                    self._cpu_op(in_split_list[i], self.weight[i : i + 1, :, :, :])[0]
+                )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
             res = self._op(x, self.weight)[0]
