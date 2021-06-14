@@ -57,7 +57,7 @@ class ConstantLikeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const {
+      cfg::SbpSignatureList* sbp_sig_list) const {
     SbpSignatureBuilder()
         .Split("like", 0)
         .Split("out", 0)

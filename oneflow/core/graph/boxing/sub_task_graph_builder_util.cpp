@@ -25,7 +25,7 @@ bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_des
 }
 
 bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
-                                                const SbpParallel& sbp_parallel,
+                                                const cfg::SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc) {
   if (sbp_parallel.has_split_parallel()) {
     return blob_desc.shape().At(sbp_parallel.split_parallel().axis()) < parallel_num;
@@ -39,27 +39,27 @@ bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs)
          && rhs->device_type() == DeviceType::kGPU && lhs->GpuPhyId() == rhs->GpuPhyId();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_split_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_partial_sum_parallel() && dst.has_split_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_partial_sum_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingB2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_split_parallel();
 }
 

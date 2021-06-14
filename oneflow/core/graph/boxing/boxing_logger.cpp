@@ -56,7 +56,7 @@ std::string ParallelDescToString(const ParallelDesc& parallel_desc) {
   return serialized_parallel_desc;
 }
 
-std::string ParallelDistributionToString(const ParallelDistribution& parallel_distribution) {
+std::string ParallelDistributionToString(const cfg::ParallelDistribution& parallel_distribution) {
   std::string serialized_parallel_distribution;
   const int64_t num_axes = parallel_distribution.sbp_parallel_size();
   serialized_parallel_distribution += "[";
@@ -73,8 +73,8 @@ std::string MakeBoxingLoggerCsvRow(const SubTskGphBuilderStatus& status,
                                    const std::string& src_op_name, const std::string& dst_op_name,
                                    const ParallelDesc& src_parallel_desc,
                                    const ParallelDesc& dst_parallel_desc,
-                                   const ParallelDistribution& src_parallel_distribution,
-                                   const ParallelDistribution& dst_parallel_distribution,
+                                   const cfg::ParallelDistribution& src_parallel_distribution,
+                                   const cfg::ParallelDistribution& dst_parallel_distribution,
                                    const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
   std::string serialized_status;
   serialized_status += src_op_name + ",";
@@ -108,8 +108,8 @@ CsvBoxingLogger::~CsvBoxingLogger() { log_stream_->Flush(); }
 void CsvBoxingLogger::Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
                           const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
                           const ParallelDesc& dst_parallel_desc,
-                          const ParallelDistribution& src_parallel_distribution,
-                          const ParallelDistribution& dst_parallel_distribution,
+                          const cfg::ParallelDistribution& src_parallel_distribution,
+                          const cfg::ParallelDistribution& dst_parallel_distribution,
                           const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) {
   log_stream_ << MakeBoxingLoggerCsvRow(status, src_op_name, dst_op_name, src_parallel_desc,
                                         dst_parallel_desc, src_parallel_distribution,

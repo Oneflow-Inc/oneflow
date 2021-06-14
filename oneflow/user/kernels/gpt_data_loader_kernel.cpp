@@ -24,7 +24,7 @@ namespace {
 using namespace user_op;
 using namespace data;
 
-size_t GetNumShards(const Shape& hierarchy, const ParallelDistribution& parallel_dist) {
+size_t GetNumShards(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist) {
   size_t num_shards = 1;
   FOR_RANGE(size_t, i, 0, parallel_dist.sbp_parallel_size()) {
     const auto& sbp_parallel = parallel_dist.sbp_parallel(i);
@@ -35,7 +35,7 @@ size_t GetNumShards(const Shape& hierarchy, const ParallelDistribution& parallel
   return num_shards;
 }
 
-size_t GetShardIndex(const Shape& hierarchy, const ParallelDistribution& parallel_dist,
+size_t GetShardIndex(const Shape& hierarchy, const cfg::ParallelDistribution& parallel_dist,
                      size_t rank) {
   using index_helper_t = NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>;
   size_t ndim = hierarchy.NumAxes();
@@ -69,7 +69,8 @@ class GPTDataLoader final : public OpKernelState {
         ctx->Attr<bool>("shuffle"), ctx->Attr<int64_t>("random_seed"));
 
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-    const ParallelDistribution& paral_dist = ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
+    const cfg::ParallelDistribution& paral_dist =
+        ctx->ParallelDistribution4ArgNameAndIndex("out", 0);
     CHECK_EQ(hierarchy.NumAxes(), paral_dist.sbp_parallel_size());
     num_shards_ = GetNumShards(hierarchy, paral_dist);
     CHECK_EQ(num_samples % num_shards_, 0);

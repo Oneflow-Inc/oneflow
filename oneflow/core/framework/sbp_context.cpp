@@ -21,15 +21,15 @@ namespace oneflow {
 
 namespace {
 
-inline void SplitImpl(SbpSignature* sbp_sign, const std::string& bn, int64_t axis) {
+inline void SplitImpl(cfg::SbpSignature* sbp_sign, const std::string& bn, int64_t axis) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_split_parallel()->set_axis(axis);
 }
 
-inline void BroadcastImpl(SbpSignature* sbp_sign, const std::string& bn) {
+inline void BroadcastImpl(cfg::SbpSignature* sbp_sign, const std::string& bn) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_broadcast_parallel();
 }
 
-inline void PartialSumImpl(SbpSignature* sbp_sign, const std::string& bn) {
+inline void PartialSumImpl(cfg::SbpSignature* sbp_sign, const std::string& bn) {
   (*sbp_sign->mutable_bn_in_op2sbp_parallel())[bn].mutable_partial_sum_parallel();
 }
 
