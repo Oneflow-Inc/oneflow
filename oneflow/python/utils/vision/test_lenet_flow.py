@@ -53,7 +53,39 @@ class LeNet(nn.Module):
         output = self.fc(feature.reshape(shape=[img.shape[0], -1]))
         return output
 
-network = LeNet()
+# define LeNet module
+class LeNet5(nn.Module):
+    def __init__(self, n_classes):
+        super(LeNet5, self).__init__()
+        self.feature_extractor = nn.Sequential(            
+            nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5, stride=1),
+            nn.Tanh(),
+            nn.AvgPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=6, out_channels=16, kernel_size=5, stride=1),
+            nn.Tanh(),
+            nn.AvgPool2d(kernel_size=2),
+            nn.Conv2d(in_channels=16, out_channels=120, kernel_size=5, stride=1),
+            nn.Tanh()
+        )
+        self.classifier = nn.Sequential(
+            nn.Linear(in_features=120, out_features=84),
+            nn.Tanh(),
+            nn.Linear(in_features=84, out_features=n_classes),
+        )
+        self.m1 = nn.Linear(in_features=120, out_features=84)
+        self.m2 = nn.Tanh()
+        self.m3 = nn.Linear(in_features=84, out_features=n_classes)
+
+    def forward(self, x):
+        x = self.feature_extractor(x)
+        x = flow.flatten(x, 1)
+        logits = self.classifier(x)
+        probs = flow.softmax(logits, dim=1)
+        return logits
+
+
+# network = LeNet()
+network = LeNet5(n_classes=10)
 
 for params in network.parameters():
     nn.init.normal_(params, mean=0, std=0.01)
@@ -62,8 +94,8 @@ device = flow.device("cuda") # segmentfault in cpu mode
 network.to(device)
 
 
-batch_size = 64
-train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=None)
+batch_size = 128
+train_iter, test_iter = load_data_fashion_mnist(batch_size=batch_size, resize=32)
 loss = nn.CrossEntropyLoss()
 loss.to(device)
 
@@ -79,11 +111,11 @@ def evaluate_accuracy(net, device, data_iter):
     acc_sum, n = 0.0, 0
     with flow.no_grad():
         for X, y in data_iter:
-            X = X.to(device=device)
-            y = y.to(device=device)
+            X = X.to(device=device, dtype=flow.float32)
+            y = y.to(device=device, dtype=flow.int64)
             if isinstance(net, nn.Module):
                 net.eval() # 评估模式, 这会关闭dropout 
-                acc_sum += (net(X.to(device)).argmax(dim=1).numpy() == y.to(device).numpy()).sum()
+                acc_sum += (net(X).argmax(dim=1).numpy() == y.numpy()).sum()
                 net.train() # 改回训练模式
             else: # 自定义的模型, 3.13节之后不会用到, 不考虑GPU
                 if('is_training' in net.__code__.co_varnames): # 如果有is_training这个参数
@@ -103,8 +135,8 @@ def train_ch5(net, device, train_iter, test_iter, num_epochs):
         train_l_sum, train_acc_sum, n, batch_count, start = 0.0, 0.0, 0, 0, time.time()
         for X, y in train_iter:
             X.requires_grad=True
-            X = X.to(device=device)
-            y = y.to(device=device)
+            X = X.to(device=device, dtype=flow.float32)
+            y = y.to(device=device, dtype=flow.int64)
             y_hat = net(X)
             l = loss(y_hat, y)
 
