@@ -125,6 +125,7 @@ void JobCompleter::Complete(Job* job) const {
     JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx);
   }
 #endif  // WITH_CUDA
+  JobPass4Name("ReplaceMatmulOpPass")(job, &job_pass_ctx);
   CheckOpGraph(OpGraph(*job));
 }
 
