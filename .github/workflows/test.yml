@@ -10,6 +10,15 @@ on:
         description: "placeholder, no effect"
         required: false
 jobs:
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs of outdated commit
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
@@ -106,7 +115,7 @@ jobs:
 
   build:
     name: Build
-    needs: [check_license_and_format, mirror_third_party]
+    needs: [check_license_and_format, mirror_third_party, cancel_previous]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
