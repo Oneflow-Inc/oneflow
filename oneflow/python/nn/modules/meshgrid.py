@@ -39,7 +39,7 @@ class MeshGrid(Module):
         for i in range(size - 1):
             assert (
                 inputs[i].dtype == inputs[i + 1].dtype
-                and inputs[i].device() == inputs[i + 1].device()
+                and inputs[i].device == inputs[i + 1].device
             ), f"meshgrid expects all tensors to have the same dtype and device"
         outputs = []
         for i in range(size):
@@ -57,11 +57,11 @@ class MeshGrid(Module):
 @oneflow_export("meshgrid")
 @register_tensor_op("meshgrid")
 @experimental_api
-def meshgrid_op(inputs):
+def meshgrid_op(*inputs):
     r"""
 
     """
-
+    return MeshGrid()(inputs)
 
 if __name__ == "__main__":
     import doctest
