@@ -41,9 +41,9 @@ class GatherOpKernelState final : public user_op::OpKernelState {
 };
 
 void CheckParallelDistribution(const Shape& hierarchy, int64_t gather_axis,
-                               const ParallelDistribution& in_parallel_distribution,
-                               const ParallelDistribution& indices_parallel_distribution,
-                               const ParallelDistribution& out_parallel_distribution) {
+                               const cfg::ParallelDistribution& in_parallel_distribution,
+                               const cfg::ParallelDistribution& indices_parallel_distribution,
+                               const cfg::ParallelDistribution& out_parallel_distribution) {
   CHECK_EQ(hierarchy.NumAxes(), in_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), indices_parallel_distribution.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), in_parallel_distribution.sbp_parallel_size());
@@ -69,7 +69,7 @@ class GatherKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");
-      const ParallelDistribution& in_parallel_distribution =
+      const cfg::ParallelDistribution& in_parallel_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("in", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       CheckParallelDistribution(hierarchy, axis, in_parallel_distribution,

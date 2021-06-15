@@ -92,7 +92,7 @@ class IndexedSlicesUpdateOpKernelState final : public user_op::OpKernelState {
 
 std::shared_ptr<user_op::OpKernelState> CreateIndexedSlicesUpdateOpKernelState(
     user_op::KernelInitContext* ctx) {
-  const SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
+  const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
       ctx->LogicalTensorDesc4ArgNameAndIndex("model", 0);
   const int64_t num_model_instances = model_logical_desc->shape().At(0);
