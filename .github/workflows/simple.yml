@@ -1,0 +1,118 @@
+name: Simple CI
+on:
+  push:
+    branches:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: "placeholder, no effect"
+        required: false
+jobs:
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs of outdated commit
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+  hosted:
+    name: CPU-only
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_fail }}
+    needs: [cancel_previous]
+    strategy:
+      max-parallel: 5
+      matrix:
+        test_suite: ["mac", "ubuntu"]
+        include:
+          - test_suite: mac
+            os: "macos-10.15"
+            allow_fail: true
+          - test_suite: ubuntu
+            os: "ubuntu-20.04"
+            allow_fail: true
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install dependencies (homebrew)
+        if: matrix.test_suite == 'mac'
+        run: |
+          brew install nasm
+        shell: bash
+      - name: Install dependencies (apt)
+        if: matrix.test_suite == 'ubuntu'
+        run: |
+          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
+        shell: bash
+      - name: Cache pip (Linux)
+        if: startsWith(runner.os, 'Linux')
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Cache pip (macOS)
+        if: startsWith(runner.os, 'macOS')
+        uses: actions/cache@v2
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Install dependencies (pip)
+        run: |
+          python3 -m pip install -r dev-requirements.txt
+        shell: bash
+      - name: Cache third party dir
+        uses: actions/cache@v2
+        with:
+          path: |
+            build-third_party
+            third_party
+          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
+      - name: Set environment variables
+        run: |
+          set -x
+          cmake_flags=""
+          cmake_flags+=" -DRPC_BACKEND=LOCAL"
+          cmake_flags+=" -DBUILD_CUDA=OFF"
+          echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+        shell: bash
+      - name: Build (third party)
+        run: |
+          mkdir -p build-third_party
+          cd build-third_party
+          cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          make -j $(nproc)
+        shell: bash
+      - name: Build (of_ccobj)
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 of_ccobj
+        shell: bash
+      - name: Build (oneflow_internal)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 oneflow_internal
+        shell: bash
+      - name: Build (generate_api)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 generate_api
+        shell: bash
+      - name: Build (ALL)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2
+        shell: bash
