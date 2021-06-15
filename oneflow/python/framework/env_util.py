@@ -318,9 +318,6 @@ def init_with_env():
     print(env_list)
     x_is_not_none = [x is not None for x in env_list]
     if all(x_is_not_none):
-        # flow.env.master_port(os.getenv(..))
-        flow.env.init()
-
         env_proto = GetEnvProto(
             master_addr, master_port, world_size, rank, local_rank, nproc
         )
