@@ -41,13 +41,9 @@ class MeshGrid(Module):
             ), f"meshgrid expects all tensors to have the same dtype and device"
         outputs = []
         for i in range(size):
-            view_shape = list()
-            for j in range(size):
-                if j == i:
-                    view_shape.append(-1)
-                else:
-                    view_shape.append(1)
-        # TODO(BBuf) change reshape to view
+            view_shape = [1] * size
+            view_shape[i] = -1
+            # TODO(BBuf) change reshape to view
             outputs.append(inputs[i].reshape(view_shape).expand(*shape))
         return outputs
 
