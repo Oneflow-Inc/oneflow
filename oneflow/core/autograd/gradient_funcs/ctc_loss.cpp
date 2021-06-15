@@ -53,7 +53,7 @@ Maybe<void> CTCLoss::Init(const OpExpr& op) {
 Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
-  ctx->blank = JUST(composed_attrs.GetAttr<int64_t>("blank"));
+  ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
 
   CHECK_EQ_OR_RETURN(inputs.size(), 4);
@@ -78,7 +78,7 @@ Maybe<void> CTCLoss::Apply(const CTCLossInterpState* ctx, const TensorTuple& out
   const auto& input_lengths = ctx->SavedTensors().at(4);
   const auto& target_lengths = ctx->SavedTensors().at(5);
   MutableAttrMap attrs;
-  JUST(attrs.SetAttr<int64_t>("blank", ctx->blank));
+  JUST(attrs.SetAttr<int32_t>("blank", ctx->blank));
   JUST(attrs.SetAttr<bool>("zero_infinity", ctx->zero_infinity));
   in_grads->resize(4);
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(

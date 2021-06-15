@@ -282,6 +282,7 @@ def compare_with_np(
     of_out = ctc_loss(log_probs, targets, input_lengths, target_lengths,)
     assert np.allclose(of_out.numpy(), np_out, atol=1e-5)
     # print("*" * 30)
+    of_out = of_out.sum()
     of_out.backward()
     assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-5, equal_nan=True)
 
