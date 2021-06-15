@@ -8,9 +8,10 @@ set(FLATBUFFERS_INSTALL_LIBDIR lib)
 set(FLATBUFFERS_INSTALL_BINDIR bin)
 
 if (THIRD_PARTY)
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(FLATBUFFERS_BUILD_TESTS OFF)
     else()
+        message(FATAL_ERROR ${CMAKE_CXX_COMPILER_ID})
         set(FLATBUFFERS_BUILD_TESTS ON)
     endif()
     ExternalProject_Add(flatbuffers
