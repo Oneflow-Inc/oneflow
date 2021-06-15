@@ -53,7 +53,7 @@ REGISTER_USER_OP("bias_add")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("a", 0);
       return Maybe<void>::Ok();
     });
 

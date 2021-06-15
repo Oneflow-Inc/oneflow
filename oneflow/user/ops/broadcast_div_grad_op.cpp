@@ -58,7 +58,7 @@ REGISTER_USER_OP("broadcast_div_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dy", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      *ctx->OutputDType("dy", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
 
