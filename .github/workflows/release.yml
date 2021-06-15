@@ -184,16 +184,8 @@ jobs:
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
-      - name: Upload bin
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${{ matrix.compute_platform }}
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cu102' && contains(env.compute_platforms, matrix.compute_platform)
+        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
