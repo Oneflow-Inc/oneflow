@@ -510,6 +510,10 @@ class Tensor:
     def __neg__(self):
         return flow.experimental.neg(self)
 
+    @register_local_tensor_method()
+    def __pow__(self, b):
+        return flow.experimental.pow(self, b)
+
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:
             self.determine(determining_initializer)

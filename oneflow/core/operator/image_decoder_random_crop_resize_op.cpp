@@ -82,7 +82,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+      cfg::SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split("in", 0)
         .Split("out", 0)
