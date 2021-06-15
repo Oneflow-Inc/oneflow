@@ -54,7 +54,6 @@ class AvgPoolNumpy:
         self.w_depth = self.kernel_size[0]
         self.w_height = self.kernel_size[1]
         self.w_width = self.kernel_size[2]
-        # self.min_val = np.finfo(np.float64).min
         self.min_val = 0.0
 
     def __call__(self, x):
@@ -104,7 +103,7 @@ class AvgPoolNumpy:
                 self.pad_out_width,
             )
         )
-        self.arg_max = np.zeros_like(out, dtype=np.int32)
+        self.arg_avg = np.zeros_like(out, dtype=np.int32)
         for n in range(self.in_batch):
             for c in range(self.in_channel):
                 for i in range(self.pad_out_depth):
@@ -120,7 +119,7 @@ class AvgPoolNumpy:
                                 pad_x[n, c, start_i:end_i, start_j:end_j, start_k:end_k]
                             )
                             # print("out:",out[n, c, i, j, k] )
-                            self.arg_max[n, c, i, j, k] = np.average(
+                            self.arg_avg[n, c, i, j, k] = np.average(
                                 pad_x[n, c, start_i:end_i, start_j:end_j, start_k:end_k]
                             )
 
@@ -144,7 +143,7 @@ class AvgPoolNumpy:
                             end_j = start_j + self.w_height
                             end_k = start_k + self.w_width
                             index = np.unravel_index(
-                                self.arg_max[n, c, i, j, k], self.kernel_size
+                                self.arg_avg[n, c, i, j, k], self.kernel_size
                             )
                             dx[n, c, start_i:end_i, start_j:end_j, start_k:end_k][
                                 index
@@ -182,7 +181,7 @@ def _test_avgpool3d(test_case, device):
           [-0.30841882,  1.06204887]]]]]
     )
     dim = 3
-    kernel_size, stride, padding = (1, 1, 1), (1, 1, 1), (0, 0, 0)
+    kernel_size, stride, padding = (2, 2, 2), (1, 1, 1), (1, 1, 1)
     m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
@@ -198,7 +197,7 @@ def _test_avgpool3d_backward(test_case, device):
     dim = 3
     input_arr = np.random.randn(6, 4, 8, 7, 9)
     #kernel_size, stride, padding = (4, 4, 4), (1, 1, 1), (2, 1, 2)
-    kernel_size, stride, padding = (1, 1, 1), (1, 1, 1), (1, 1, 1)
+    kernel_size, stride, padding = (2, 2, 2), (1, 1, 1), (1, 1, 1)
     m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
@@ -206,8 +205,6 @@ def _test_avgpool3d_backward(test_case, device):
     m.to(flow.device(device))
     x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
     output = m(x)
-    print("numpy_output:",numpy_output[0][0][0])
-    print("output:",output.numpy()[0][0][0])
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
     output = output.sum()
@@ -285,30 +282,15 @@ def _test_avgpool3d_negative_input_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestPoolingModule(flow.unittest.TestCase):
-    def test_avgpool1d(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            #_test_avgpool1d,
-            # _test_maxpool2d_special_kernel_size,
-            # _test_maxpool2d_diff_kernel_stride,
-            # _test_maxpool2d_negative_input,
-            # _test_maxpool2d_backward,
-            # _test_maxpool2d_special_kernel_size_backward,
-            # _test_maxpool2d_diff_kernel_stride_backward,
-            # _test_maxpool2d_negative_input_backward,
-        ]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
 
     def test_avgpool3d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_avgpool3d,
-            # _test_avgpool3d_backward,
-            # _test_avgpool3d_special_kernel_size_backward,
-            # _test_avgpool3d_diff_kernel_stride_backward,
-            # _test_avgpool3d_negative_input_backward,
+            _test_avgpool3d_backward,
+            _test_avgpool3d_special_kernel_size_backward,
+            _test_avgpool3d_diff_kernel_stride_backward,
+            _test_avgpool3d_negative_input_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
