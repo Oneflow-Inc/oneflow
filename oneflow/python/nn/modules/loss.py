@@ -89,8 +89,6 @@ class CrossEntropyLoss(Module):
         super().__init__()
         if weight is not None:
             raise ValueError("Argument weight is not supported yet")
-        if ignore_index is not None:
-            raise ValueError("Argument ignore_index is not supported yet")
         assert reduction in [
             "sum",
             "none",
@@ -98,6 +96,7 @@ class CrossEntropyLoss(Module):
             None,
         ], "only 'sum', 'mean' and None supported by now"
 
+        self.ignore_index = ignore_index
         self.reduction = reduction
         self._op = (
             flow.builtin_op("sparse_softmax_cross_entropy")
@@ -133,8 +132,23 @@ class CrossEntropyLoss(Module):
             raise NotImplemented
 
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
+        if self.ignore_index is not None:
+            zeros = flow.experimental.zeros(
+                size=out.shape, dtype=out.dtype, device=out.device
+            )
+            condition = flow.experimental.eq(target, self.ignore_index)
+            out = flow.experimental.where(condition, zeros, out)
         if self.reduction == "mean":
-            return flow.experimental.mean(out)
+            if self.ignore_index is not None:
+                reduce_sum = flow.experimental.sum(out)
+                ones = flow.experimental.ones(
+                    size=condition.shape, dtype=condition.dtype, device=condition.device
+                )
+                condition = ones.sub(condition)
+                reduce_count = condition.argwhere().shape[0]
+                return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+            else:
+                return flow.experimental.mean(out)
         elif self.reduction == "sum":
             return flow.experimental.sum(out)
         else:
