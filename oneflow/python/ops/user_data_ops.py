@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.module as module_util
 import oneflow._oneflow_internal
 from oneflow.python.oneflow_export import oneflow_export
@@ -143,65 +142,28 @@ def api_ofrecord_image_decoder_random_crop(
             # images.shape (16, 224, 224, 3)
 
     """
-    assert isinstance(name, str)
-    if seed is not None:
-        assert name is not None
-    module = flow.find_or_create_module(
-        name,
-        lambda: OFRecordImageDecoderRandomCropModule(
-            blob_name=blob_name,
-            color_space=color_space,
-            num_attempts=num_attempts,
-            random_seed=seed,
-            random_area=random_area,
-            random_aspect_ratio=random_aspect_ratio,
-            name=name,
-        ),
+    return (
+        flow.user_op_builder(
+            name
+            if name is not None
+            else id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
+        )
+        .Op("ofrecord_image_decoder_random_crop")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("name", blob_name)
+        .Attr("color_space", color_space)
+        .Attr("num_attempts", num_attempts)
+        .Attr(
+            "seed",
+            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Attr("random_area", random_area)
+        .Attr("random_aspect_ratio", random_aspect_ratio)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    return module(input_blob)
-
-
-class OFRecordImageDecoderRandomCropModule(module_util.Module):
-    def __init__(
-        self,
-        blob_name: str,
-        color_space: str,
-        num_attempts: int,
-        random_seed: Optional[int],
-        random_area: Sequence[float],
-        random_aspect_ratio: Sequence[float],
-        name: str,
-    ):
-        module_util.Module.__init__(self, name)
-        seed, has_seed = flow.random.gen_seed(random_seed)
-        self.op_module_builder = (
-            flow.user_op_module_builder("ofrecord_image_decoder_random_crop")
-            .InputSize("in", 1)
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("color_space", color_space)
-            .Attr("num_attempts", num_attempts)
-            .Attr("random_area", random_area)
-            .Attr("random_aspect_ratio", random_aspect_ratio)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self, input: oneflow._oneflow_internal.BlobDesc):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("OFRecordImageDecoderRandomCrop_")
-
-        return (
-            self.op_module_builder.OpName(name)
-            .Input("in", [input])
-            .Build()
-            .InferAndTryRun()
-            .SoleOutputBlob()
-        )
 
 
 @oneflow_export("data.OFRecordImageDecoder", "data.ofrecord_image_decoder")

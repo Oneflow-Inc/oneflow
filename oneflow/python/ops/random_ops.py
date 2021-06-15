@@ -70,23 +70,20 @@ def Bernoulli(
         #      [0. 0. 0.]]
 
     """
-    assert isinstance(name, str)
-    if dtype is None:
-        dtype = x.dtype
-    if seed is not None:
-        assert name is not None
-    bernoulli_op = flow.user_op_builder(
-        name
-        if name is not None
-        else id_util.UniqueStr("Bernoulli_")
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("Bernoulli_")
+        )
         .Op("bernoulli")
         .Input("x", [x])
         .Attr("dtype", dtype)
+        .Attr(
+            "seed",
+            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Attr("has_seed", True)
         .Output("out")
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    if seed is not None:
-        bernoulli_op.Attr("seed", seed)
-    else:
-        bernoulli_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
-
-    return bernoulli_op.Build().InferAndTryRun().RemoteBlobList()[0]

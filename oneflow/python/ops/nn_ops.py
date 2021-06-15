@@ -2637,9 +2637,8 @@ def random_mask_like(
     if noise_shape is not None:
         assert 0, "noise_shape will be supported later."
         assert isinstance(noise_shape, (list, tuple))
-    if seed is not None:
-        assert name is not None
-    mask_op = (
+
+    return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("RandomMaskLike_")
         )
@@ -2647,12 +2646,14 @@ def random_mask_like(
         .Input("like", [like])
         .Output("out")
         .Attr("rate", float(rate))
+        .Attr(
+            "seed",
+            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    if seed is not None:
-        mask_op.Attr("seed", seed)
-    else:
-        mask_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
-    return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.dropout")
