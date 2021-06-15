@@ -18,6 +18,7 @@ import warnings
 from typing import Dict, Callable, Union, Any, Iterator
 from types import GeneratorType
 
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.framework.tensor import Tensor
 
@@ -39,6 +40,12 @@ class ParamGroup(object):
                 if key in parameters:
                     self._options[key] = parameters[key]
 
+    def __getitem__(self, key):
+        return self._options[key]
+
+    def __setitem__(self, key, value):
+        self._options[key] = value
+
     @property
     def options(self):
         return self._options
@@ -48,9 +55,11 @@ class ParamGroup(object):
         return self._parameters
 
 
+@oneflow_export("optim.Optimizer")
+@experimental_api
 class Optimizer(object):
     def __init__(self):
-        self._param_groups = list()
+        self.param_groups = list()
         self._default_options = dict()
         self._state = dict()
         self._state["step"] = 0
@@ -73,7 +82,7 @@ class Optimizer(object):
 
     def zero_grad(self, set_to_none: bool = False):
         all_grad_is_none = True
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 if param.grad is not None:
                     all_grad_is_none = False
