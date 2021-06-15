@@ -33,7 +33,6 @@ runs:
       shell: bash
     - name: Build (oneflow_internal)
       run: |
-        exit 0
         mkdir -p build
         cd build
         cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
@@ -41,7 +40,6 @@ runs:
       shell: bash
     - name: Build (generate_api)
       run: |
-        exit 0
         mkdir -p build
         cd build
         cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
