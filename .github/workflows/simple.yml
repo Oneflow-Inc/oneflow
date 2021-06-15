@@ -56,9 +56,9 @@ jobs:
             third_party
           key: ${{ runner.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ github.repository }}-build-
-            ${{ runner.os }}-${{ github.repository }}-
-            ${{ runner.os }}-
+            ${{ matrix.os }}-${{ github.repository }}-build-
+            ${{ matrix.os }}-${{ github.repository }}-
+            ${{ matrix.os }}-
       - name: Set environment variables
         run: |
           set -x
