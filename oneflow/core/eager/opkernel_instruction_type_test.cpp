@@ -118,7 +118,11 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
 
 TEST(OpkernelInstructionType, new_opkernel) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -140,7 +144,11 @@ TEST(OpkernelInstructionType, new_opkernel) {
 
 TEST(OpkernelInstructionType, delete_opkernel) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
@@ -164,7 +172,11 @@ TEST(OpkernelInstructionType, delete_opkernel) {
 
 TEST(OpkernelInstructionType, call_opkernel) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
@@ -204,7 +216,11 @@ TEST(OpkernelInstructionType, call_opkernel) {
 
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
@@ -283,7 +299,11 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
@@ -327,7 +347,11 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
 
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   InitNumProcessPerNode();
-  vm::TestResourceDescScope scope(1, 1);
+#ifdef WITH_CUDA
+  vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
