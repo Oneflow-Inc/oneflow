@@ -21,13 +21,9 @@ import sys
 import random
 from typing import Union, Optional, Sequence, Tuple, List
 import oneflow as flow
-import oneflow.core.operator.op_conf_pb2 as op_conf_util
-import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.module as module_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.distribute as distribute_util
 from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow._oneflow_internal
 
@@ -2644,56 +2640,20 @@ def random_mask_like(
         assert isinstance(noise_shape, (list, tuple))
     if seed is not None:
         assert name is not None
-    if name is None:
-        mask_op = (
-            flow.user_op_builder(id_util.UniqueStr("RandomMaskLike_"))
-            .Op("random_mask_like")
-            .Input("like", [like])
-            .Output("out")
-            .Attr("rate", float(rate))
+    mask_op = (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("RandomMaskLike_")
         )
-        if seed is not None:
-            mask_op.Attr("seed", seed)
-        else:
-            mask_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
-        return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
+        .Op("random_mask_like")
+        .Input("like", [like])
+        .Output("out")
+        .Attr("rate", float(rate))
+    )
+    if seed is not None:
+        mask_op.Attr("seed", seed)
     else:
-        module = flow.find_or_create_module(
-            name, lambda: RandomMaskLike(rate=rate, seed=seed, name=name,),
-        )
-        return module(like)
-
-
-class RandomMaskLike(module_util.Module):
-    def __init__(
-        self, rate: float, seed: Optional[int] = None, name: str = None,
-    ):
-        module_util.Module.__init__(self, name)
-        if seed is None:
-            seed = random.randint(-sys.maxsize, sys.maxsize)
-
-        self.op_module_builder = (
-            flow.user_op_module_builder("random_mask_like")
-            .InputSize("like", 1)
-            .Output("out")
-            .Attr("rate", float(rate))
-            .Attr("seed", seed)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self, like: oneflow._oneflow_internal.BlobDesc):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("RandomMaskLike_")
-        return (
-            self.op_module_builder.OpName(name)
-            .Input("like", [like])
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()[0]
-        )
+        mask_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
+    return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.dropout")
