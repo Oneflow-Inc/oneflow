@@ -38,7 +38,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
       user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       if (sbp.has_split_parallel() && parallel_num > 1) {
         CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
@@ -70,8 +70,8 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       label_modifier->set_header_infered_before_compute(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("image", 0) = DataType::kTensorBuffer;
-      *ctx->Dtype4ArgNameAndIndex("label", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("image", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("label", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 

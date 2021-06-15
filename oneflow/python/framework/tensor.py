@@ -47,6 +47,12 @@ def register_local_tensor_method(name=None):
 
 @register_local_tensor_method("numpy")
 def _local_tensor_numpy(eager_local_tensor):
+    if eager_local_tensor.dtype == flow.tensor_buffer:
+        shapes, dtypes = eager_local_tensor._tensor_buffer_shapes_and_dtypes
+        tensors = flow.experimental.tensor_buffer_to_list_of_tensors(
+            Tensor(eager_local_tensor), shapes, dtypes
+        )
+        return [t.numpy() for t in tensors]
     method_name = eager_local_tensor._get_copy_mirrored_tensor_to_numpy_func_name()
     copy_to_numpy = getattr(eager_local_tensor, method_name)
     ndarray = np.empty(
@@ -347,6 +353,20 @@ class Tensor:
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     @register_local_tensor_method()
+    def _transform_ellipsis_type(self, key):
+        d = self.ndim - len(key)  # exclude all Ellipsis type
+        new_key = list()
+        for k in key:
+            if isinstance(k, type(Ellipsis)):
+                new_key.append(slice(None, None, None))
+                while d > 0:
+                    new_key.append(slice(None, None, None))
+                    d -= 1
+            else:
+                new_key.append(k)
+        return tuple(new_key)
+
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -396,13 +416,28 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        assert (
+            isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
+        ), "Unsupported key type!"
+
+        squeeze_dims = None
+        if isinstance(key, tuple):
+            key = self._transform_ellipsis_type(key)
+            squeeze_dims = list(
+                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
+            )
+        elif isinstance(key, int):
+            squeeze_dims = [0]
+
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res
+        return res.squeeze(dim=squeeze_dims)
 
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            key = self._transform_ellipsis_type(key)
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
@@ -619,6 +654,25 @@ class Tensor:
         if internal_tensor.is_consistent:
             TODO()
         internal_tensor.zeros_()
+
+    @_auto_determine
+    @register_local_tensor_method()
+    def register_hook(self, hook):
+        assert self.is_leaf, "register_hook only supports leaf tensor for now"
+        assert (
+            self.requires_grad
+        ), "register_hook only supports tensor with requires_grad=True"
+
+        def hook_returning_determined_tensor(grad):
+            new_grad = hook(grad)
+            if isinstance(new_grad, Tensor) and not new_grad.is_determined:
+                new_grad.determine()
+                new_grad = new_grad._local_or_consistent_tensor
+            return new_grad
+
+        self._local_or_consistent_tensor._register_hook(
+            hook_returning_determined_tensor
+        )
 
     @_auto_determine
     def copy_(self, other: Union["Tensor", np.ndarray]):

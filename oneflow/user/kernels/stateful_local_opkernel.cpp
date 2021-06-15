@@ -179,10 +179,12 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                       const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                       const EagerBlobObjectListPtr& inputs,
-                                      const EagerBlobObjectListPtr& outputs)
+                                      const EagerBlobObjectListPtr& outputs,
+                                      const ComposedAttrMap* composed_attrs)
       : user_op_conf_(user_op_conf),
         device_ctx_(device_ctx),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {
+        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
+        composed_attrs_(composed_attrs) {
     base_ctx_.Update(inputs, outputs);
   }
   ~LocalUserKernelInitContext() override = default;
@@ -207,13 +209,13 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     UNIMPLEMENTED();
   }
 
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     UNIMPLEMENTED();
   }
 
@@ -224,7 +226,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return user_op_conf().Attr4Name(attr_name);
+    return composed_attrs_->Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -232,6 +234,7 @@ class LocalUserKernelInitContext final : public user_op::KernelInitContext {
   const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
+  const ComposedAttrMap* composed_attrs_;
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(
@@ -344,7 +347,8 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
   opkernel->device_ = device;
-  opkernel->composed_attrs_.reset(new ComposedAttrMap(base_attrs));
+  opkernel->composed_attrs_for_scheduler_thread_.reset(new ComposedAttrMap(base_attrs));
+  opkernel->composed_attrs_for_main_thread_.reset(new ComposedAttrMap(base_attrs));
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
@@ -355,17 +359,20 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  const ComposedAttrMap* composed_attrs = opkernel->composed_attrs_.get();
-  opkernel->op_infer_ctx_for_thread_a_.reset(
-      new LocalUserOpInferContext(user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple));
-  opkernel->op_infer_ctx_for_thread_b_.reset(
-      new LocalUserOpInferContext(user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple));
+  opkernel->op_infer_ctx_for_scheduler_thread_.reset(new LocalUserOpInferContext(
+      user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(), input_arg_tuple,
+      output_arg_tuple));
+  opkernel->op_infer_ctx_for_main_thread_.reset(
+      new LocalUserOpInferContext(user_op_conf, opkernel->composed_attrs_for_main_thread_.get(),
+                                  input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, device_tag, user_op_conf, composed_attrs, input_arg_tuple, output_arg_tuple,
-      opkernel->mut_temp_blob_object()));
-  opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(user_op_conf, composed_attrs));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(device_tag, user_op_conf, composed_attrs,
-                                                         input_arg_tuple, output_arg_tuple));
+      nullptr, device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
+      input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
+  opkernel->create_ctx_.reset(new LocalUserKernelCreateContext(
+      user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get()));
+  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
+      device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
+      input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -419,7 +426,7 @@ void StatefulLocalOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_ker
 
   auto init_ctx = std::make_shared<LocalUserKernelInitContext>(
       device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
-      inputs, outputs);
+      inputs, outputs, composed_attrs_for_scheduler_thread());
   auto created_state = op_kernel->CreateOpKernelState(init_ctx.get());
   op_kernel_state_map_.emplace(op_kernel, created_state);
   *state = created_state.get();
@@ -465,8 +472,5 @@ LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
   return compute_ctx_.get();
 }
 
-void StatefulLocalOpKernel::ResetDynamicOpAttrs(const AttrMap& attrs) {
-  composed_attrs_->ResetPrior(attrs);
-}
 }  // namespace one
 }  // namespace oneflow

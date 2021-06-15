@@ -81,6 +81,8 @@ class Error final {
 
   static Error CompileOptionWrong();
 
+  static Error InputDeviceNotMatchError();
+
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
@@ -88,9 +90,8 @@ class Error final {
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
 
-// r-value reference is used to supporting expressions like `Error() << "invalid value"`
 template<typename T>
-Error&& operator<<(Error&& error, const T& x) {
+Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
   ss << x;
   if (error->stack_frame().empty()) {
@@ -99,6 +100,13 @@ Error&& operator<<(Error&& error, const T& x) {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
     stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
   }
+  return error;
+}
+
+// r-value reference is used to supporting expressions like `Error() << "invalid value"`
+template<typename T>
+Error&& operator<<(Error&& error, const T& x) {
+  error << x;
   return std::move(error);
 }
 

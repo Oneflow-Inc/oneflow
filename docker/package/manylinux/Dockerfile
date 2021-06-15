@@ -35,10 +35,13 @@ RUN yum-config-manager --add-repo https://yum.repos.intel.com/oneapi && \
     yum -y install centos-release-scl && \
     yum install -y intel-oneapi-mkl-devel-2021.2.0 nasm rdma-core-devel devtoolset-7-gcc* rsync gdb
 
-RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
+RUN /opt/python/cp35-cp35m/bin/pip install $pip_args -U cmake==3.18.4.post1 && ln -s /opt/_internal/cpython-3.5.9/bin/cmake /usr/bin/cmake
 
-# overwrite patchelf to fix "maximum size exceed" problem
-RUN mkdir -p /tmp && curl -L -o 0.11.zip https://github.com/NixOS/patchelf/archive/0.11.zip && unzip 0.11.zip && cd patchelf-0.11 && sed -i 's/32/64/g' src/patchelf.cc && ./bootstrap.sh && ./configure && make -j`nproc` && make install && cd .. && rm -rf patchelf-0.11 0.11.zip
+RUN mkdir -p /tmp && cd /tmp && \
+    curl -L -o patchelf-src.zip \
+    https://github.com/Oneflow-Inc/patchelf/archive/64bf5388ef7d45d3697c4aadbd3f5d7d68a22aa3.zip && \
+    unzip patchelf-src.zip && cd patchelf-* && ./bootstrap.sh && ./configure && make -j`nproc` && \
+    make install && cd .. && rm -rf patchelf-*
 
 RUN curl -L $bazel_url -o /usr/local/bin/bazel \
     && chmod +x /usr/local/bin/bazel \

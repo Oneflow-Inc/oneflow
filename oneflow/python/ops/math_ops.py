@@ -1623,6 +1623,7 @@ def broadcast_to_compatible_with(
 @oneflow_export(
     "math.clip_by_value", "clip_by_value", "clip_by_scalar", "clip", "clamp"
 )
+@stable_api
 def clip_by_value(
     values: oneflow._oneflow_internal.BlobDesc,
     min_value: Optional[Union[int, float]] = None,

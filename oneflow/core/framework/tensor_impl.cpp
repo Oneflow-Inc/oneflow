@@ -54,9 +54,19 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
   Init();
 }
 
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
+    const std::shared_ptr<const Device>& device, std::shared_ptr<TensorStorage> tensor_storage,
+    bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
+      tensor_storage_(tensor_storage),
+      eager_blob_object_(eager_blob_object) {
+  dtype_ = eager_blob_object->blob_desc().data_type();
+}
+
 void EagerMirroredTensorImpl::Init() {
   const auto& eager_blob_object = eager_blob_object_;
-  dtype_ = CHECK_JUST(DType::GetDTypeByDataType(eager_blob_object->blob_desc().data_type()));
+  dtype_ = eager_blob_object->blob_desc().data_type();
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
@@ -91,13 +101,13 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 }
 
 bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
-  return *this->shape() == *other.shape() && *this->dtype() == *other.dtype()
+  return *this->shape() == *other.shape() && this->dtype() == other.dtype()
          && this->parallel_distribution() == other.parallel_distribution()
          && this->parallel_desc() == other.parallel_desc();
 }
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
-  return std::hash<Shape>()(*shape()) ^ std::hash<DType>()(*dtype())
+  return std::hash<Shape>()(*shape()) ^ std::hash<DataType>()(dtype())
          ^ std::hash<Symbol<cfg::ParallelDistribution>>()(parallel_distribution())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
@@ -146,8 +156,8 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
         JUST(GetPhysicalShape(*shape, *parallel_distribution, *parallel_desc, parallel_id));
     const auto& device = JUST(Device::ThreadLocalGetOrNew(parallel_desc->device_tag(), device_id));
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        device->mem_case(), cur_rank_phy_shape, dtype->data_type(),
-        std::make_shared<vm::TensorBuffer>(), device->parallel_desc_ptr());
+        device->mem_case(), cur_rank_phy_shape, dtype, std::make_shared<vm::TensorBuffer>(),
+        device->parallel_desc_ptr());
     const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
     const auto& cur_rank_phy_tensor_impl =
         std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, autograd_meta);
