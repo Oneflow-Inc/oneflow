@@ -17,7 +17,6 @@ import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.compile_context as compile_context
-import oneflow.python.framework.distribute as distribute
 import oneflow.python.framework.hob as hob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
@@ -31,10 +30,7 @@ import oneflow
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.hob as hob
 import oneflow.python.experimental.name_scope as name_scope
-import oneflow.core.eager.eager_symbol_pb2 as eager_symbol_util
-import oneflow.python.eager.eager_blob_util as eager_blob_util
 import oneflow.python.lib.core.enable_if as enable_if
-import random
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow as flow
 import oneflow._oneflow_internal
