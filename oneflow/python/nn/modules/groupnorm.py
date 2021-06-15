@@ -85,8 +85,8 @@ class GroupNorm(Module):
         self.eps = eps
         self.affine = affine
         if self.affine:
-            self.weight = flow.nn.Parameter(flow.Tensor(num_channels))
-            self.bias = flow.nn.Parameter(flow.Tensor(num_channels))
+            self.weight = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
+            self.bias = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
         else:
             self.register_parameter('weight', None)
             self.register_parameter('bias', None)
@@ -103,11 +103,12 @@ class GroupNorm(Module):
         assert (input.shape[1] == self.num_channels), "The channels of input tensor must equal num_channels"
         origin_shape = input.shape
         reshape_to_1d = flow.experimental.reshape(input, shape=[origin_shape[0], self.num_groups, -1])
-        (mean, variance) = flow.experimental.nn.moments(reshape_to_1d, [2], keepdims=True)
-        normalized = (reshape_to_1d - mean) / flow.math.sqrt(variance + self.eps)
+        mean = flow.experimental.mean(reshape_to_1d, dim=2, keepdim=True)
+        variance = flow.experimental.var(reshape_to_1d, dim=2, keepdim=True)
+        normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(variance + self.eps)
         normalized = flow.experimental.reshape(normalized, shape=[origin_shape[0],  self.num_channels, -1])
         normalized = self.weight * normalized + self.bias
-        res= flow.experimental.reshape_like(normalized, like=input)
+        res= flow.experimental.reshape(normalized, shape=tuple(input.shape))
 
         return res
 
