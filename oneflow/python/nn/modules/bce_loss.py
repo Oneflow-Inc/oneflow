@@ -78,6 +78,14 @@ class BCELoss(Module):
         >>> out
         tensor([[2.9266, 1.1963, 1.1087],
                 [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
+        >>> m_sum = flow.nn.BCELoss(reduction="sum")
+        >>> out = m_sum(sigmoid_input, target, weight)
+        >>> out
+        tensor([12.3668], dtype=oneflow.float32)
+        >>> m_mean = flow.nn.BCELoss(reduction="mean")
+        >>> out = m_mean(sigmoid_input, target, weight)
+        >>> out
+        tensor([2.0611], dtype=oneflow.float32)
         
     """
 
