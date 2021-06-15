@@ -108,3 +108,11 @@ jobs:
           cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j 2 generate_api
         shell: bash
+      - name: Build (ALL)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2
+        shell: bash
