@@ -68,7 +68,7 @@ template<>
                                                                   const TensorTuple& inputs,
                                                                   const AttrMap& attrs) {
   auto outputs = std::make_shared<TensorTuple>(op_expr.output_size());
-  JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs);
+  JUST(JUST(GetInterpreter())->Apply(op_expr, inputs, outputs.get(), attrs));
   return outputs;
 }
 
@@ -103,7 +103,7 @@ template<>
     const std::shared_ptr<compatible_py::OpArgBlobAttribute>& blob_attr,
     const std::shared_ptr<compatible_py::OpArgParallelAttribute>& parallel_attr,
     const bool is_lazy) {
-  const auto& dtype = JUST(DType::GetDTypeByDataType(DataType(blob_attr->get_dtype())));
+  const auto& dtype = DataType(blob_attr->get_dtype());
   if (parallel_attr->is_mirrored()) {
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));

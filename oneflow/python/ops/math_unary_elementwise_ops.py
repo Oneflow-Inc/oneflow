@@ -1357,7 +1357,7 @@ def tanh(
 
     .. math::
 
-        out = \frac{e^x-e^{-x}}{e^x+e^{-x}}
+        out = \frac{e^x-e^{-x}}{e^x+e^{-x}} 
 
     Args:
         x (oneflow._oneflow_internal.BlobDesc): A Blob

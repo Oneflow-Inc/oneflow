@@ -16,7 +16,9 @@ limitations under the License.
 #include "half.hpp"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/data_type_seq.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device_register_cpu.h"
 
@@ -33,22 +35,55 @@ std::size_t GetDataTypeBytes() {
 DEFINE_STATIC_SWITCH_FUNC(std::size_t, GetDataTypeBytes, MAKE_DATA_TYPE_BYTES_SWITCH_ENTRY,
                           MAKE_DATA_TYPE_CTRV_SEQ(POD_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ));
 
+class DTypeMeta final {
+ public:
+  DTypeMeta(const std::string& name, bool is_signed, bool is_floating_point, bool is_complex)
+      : name_(name),
+        is_signed_(is_signed),
+        is_floating_point_(is_floating_point),
+        is_complex_(is_complex) {}
+  DTypeMeta(const DTypeMeta&) = default;
+  DTypeMeta(DTypeMeta&) = default;
+  ~DTypeMeta() = default;
+
+  const std::string& name() const { return name_; }
+  bool is_signed() const { return is_signed_; }
+  bool is_floating_point() const { return is_floating_point_; }
+  bool is_complex() const { return is_complex_; }
+
+ private:
+  const std::string name_;
+  const bool is_signed_;
+  const bool is_floating_point_;
+  const bool is_complex_;
+};
+
+Maybe<const DTypeMeta&> DTypeMeta4DataType(DataType data_type) {
+  static HashMap<DataType, DTypeMeta> data_type2dtype_meta{
+      {DataType::kInvalidDataType, DTypeMeta("oneflow.invalid_data_type", false, false, false)},
+      {DataType::kChar, DTypeMeta("oneflow.char", false, false, false)},
+      {DataType::kFloat16, DTypeMeta("oneflow.float16", true, true, false)},
+      {DataType::kFloat, DTypeMeta("oneflow.float32", true, true, false)},
+      {DataType::kDouble, DTypeMeta("oneflow.float64", true, true, false)},
+      {DataType::kInt8, DTypeMeta("oneflow.int8", true, false, false)},
+      {DataType::kInt32, DTypeMeta("oneflow.int32", true, false, false)},
+      {DataType::kInt64, DTypeMeta("oneflow.int64", true, false, false)},
+      {DataType::kUInt8, DTypeMeta("oneflow.uint8", false, false, false)},
+      {DataType::kOFRecord, DTypeMeta("oneflow.of_record", false, false, false)},
+      {DataType::kTensorBuffer, DTypeMeta("oneflow.tensor_buffer", false, false, false)},
+  };
+  return MapAt(data_type2dtype_meta, data_type);
+};
+
 }  // namespace
 
-Maybe<DType> DType::GetDTypeByDataType(const DataType& data_type) {
-  switch (data_type) {
-#define MAKE_DATA_TYPE_OBJ(data_type)       \
-  case OF_PP_CAT(DataType::k, data_type): { \
-    return data_type();                     \
-  }
-    OF_PP_FOR_EACH_TUPLE(MAKE_DATA_TYPE_OBJ, DTYPE_SEQ)
-#undef MAKE_DATA_TYPE_OBJ
-    default: {
-      OF_UNIMPLEMENTED();
-    }
-  }
-  OF_UNIMPLEMENTED();
-  return std::shared_ptr<DType>();
+Maybe<const std::shared_ptr<const DType>&> DType::Get(DataType data_type) {
+  static HashMap<DataType, std::shared_ptr<const DType>> data_type2dtype{
+#define MAKE_ENTRY(data_type) {OF_PP_CAT(DataType::k, data_type), data_type()},
+      OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, DTYPE_SEQ)
+#undef MAKE_ENTRY
+  };
+  return MapAt(data_type2dtype, data_type);
 }
 
 Maybe<size_t> DType::bytes() const {
@@ -60,70 +95,22 @@ Maybe<size_t> DType::bytes() const {
   return SwitchGetDataTypeBytes(SwitchCase(data_type()));
 }
 
-Maybe<DType> DType::InvalidDataType() {
-  static std::shared_ptr<DType> invalid_dtype = std::make_shared<DType>(
-      DataType::kInvalidDataType, "oneflow.invalid_data_type", false, false, false);
-  return invalid_dtype;
+bool DType::is_signed() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_signed(); }
+
+bool DType::is_complex() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_complex(); }
+
+bool DType::is_floating_point() const {
+  return CHECK_JUST(DTypeMeta4DataType(data_type_)).is_floating_point();
 }
 
-Maybe<DType> DType::Char() {
-  static std::shared_ptr<DType> char_dtype =
-      std::make_shared<DType>(DataType::kChar, "oneflow.char", false, false, false);
-  return char_dtype;
-}
+const std::string& DType::name() const { return CHECK_JUST(DTypeMeta4DataType(data_type_)).name(); }
 
-Maybe<DType> DType::Float16() {
-  static std::shared_ptr<DType> float16_dtype =
-      std::make_shared<DType>(DataType::kFloat16, "oneflow.float16", true, true, false);
-  return float16_dtype;
-}
-
-Maybe<DType> DType::Float() {
-  static std::shared_ptr<DType> float_dtype =
-      std::make_shared<DType>(DataType::kFloat, "oneflow.float32", true, true, false);
-  return float_dtype;
-}
-
-Maybe<DType> DType::Double() {
-  static std::shared_ptr<DType> double_dtype =
-      std::make_shared<DType>(DataType::kDouble, "oneflow.float64", true, true, false);
-  return double_dtype;
-}
-
-Maybe<DType> DType::Int8() {
-  static std::shared_ptr<DType> int8_dtype =
-      std::make_shared<DType>(DataType::kInt8, "oneflow.int8", true, false, false);
-  return int8_dtype;
-}
-
-Maybe<DType> DType::Int32() {
-  static std::shared_ptr<DType> int32_dtype =
-      std::make_shared<DType>(DataType::kInt32, "oneflow.int32", true, false, false);
-  return int32_dtype;
-}
-
-Maybe<DType> DType::Int64() {
-  static std::shared_ptr<DType> int64_dtype =
-      std::make_shared<DType>(DataType::kInt64, "oneflow.int64", true, false, false);
-  return int64_dtype;
-}
-
-Maybe<DType> DType::UInt8() {
-  static std::shared_ptr<DType> uint8_dtype =
-      std::make_shared<DType>(DataType::kUInt8, "oneflow.uint8", false, false, false);
-  return uint8_dtype;
-}
-
-Maybe<DType> DType::OFRecord() {
-  static std::shared_ptr<DType> record_dtype =
-      std::make_shared<DType>(DataType::kOFRecord, "oneflow.of_record", false, false, false);
-  return record_dtype;
-}
-
-Maybe<DType> DType::TensorBuffer() {
-  static std::shared_ptr<DType> tensor_buffer_dtype = std::make_shared<DType>(
-      DataType::kTensorBuffer, "oneflow.tensor_buffer", false, false, false);
-  return tensor_buffer_dtype;
-}
+#define DEFINE_GET_DATA_TYPE_FUNCTION(data_type)                                                   \
+  const std::shared_ptr<const DType>& DType::data_type() {                                         \
+    static const std::shared_ptr<const DType> dtype(new DType(OF_PP_CAT(DataType::k, data_type))); \
+    return dtype;                                                                                  \
+  }
+OF_PP_FOR_EACH_TUPLE(DEFINE_GET_DATA_TYPE_FUNCTION, DTYPE_SEQ)
+#undef DEFINE_GET_DATA_TYPE_FUNCTION
 
 }  // namespace oneflow

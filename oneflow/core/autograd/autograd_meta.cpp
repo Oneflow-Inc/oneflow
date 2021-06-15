@@ -28,7 +28,7 @@ TensorInfo::TensorInfo(const Tensor& tensor) : shape_(tensor.shape()), dtype_(te
 
 Maybe<Tensor> TensorInfo::zeros() const {
   const auto& interpreter = JUST(OpInterpUtil::GetInterpreter());
-  const auto& zeros_op = JUST(op_expr_helper::ZerosOp(*shape_.get(), dtype_->data_type()));
+  const auto& zeros_op = JUST(op_expr_helper::ZerosOp(*shape_.get(), dtype_));
   TensorTuple outputs(1);
   JUST(interpreter->Apply(*zeros_op, {}, &outputs));
   return outputs.at(0);

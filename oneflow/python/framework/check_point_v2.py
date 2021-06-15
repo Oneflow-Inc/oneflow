@@ -163,14 +163,9 @@ def _LoadSingleVariable(path: str) -> Optional[FileBackendVariableBlob]:
     return None
 
 
-@oneflow_export("checkpoint.get", "load")
-@session_ctx.try_init_default_session
-def GetCheckpoint(
+def _GetCheckpoint(
     path: str,
 ) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
-    """
-    Load variable(s) from file system.
-    """
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     single_var = _LoadSingleVariable(path)
     if single_var is not None:
@@ -182,6 +177,24 @@ def GetCheckpoint(
         if var is not None:
             var_dict[f] = var
     return var_dict
+
+
+@oneflow_export("checkpoint.get")
+@session_ctx.try_init_default_session
+def GetCheckpoint(
+    path: str,
+) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
+    """
+    Load variable(s) from file system.
+    """
+    return _GetCheckpoint(path)
+
+
+@oneflow_export("load")
+def Load(
+    path: str,
+) -> Union[Dict[str, FileBackendVariableBlob], FileBackendVariableBlob]:
+    return _GetCheckpoint(path)
 
 
 def _GetOpNameFromLbn(lbn):
@@ -254,19 +267,12 @@ def _ReadSlice(
         raise RuntimeError("Unknown type: {}".format(type(container).__name__))
 
 
-@oneflow_export("checkpoint.save")
-@session_ctx.try_init_default_session
-def SaveVarDict(
+def _SaveVarDict(
     path: str,
     var_dict: Optional[
         Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]]
     ] = None,
 ) -> None:
-    """
-    Save `var_dict` to `path`
-    """
-    sync_default_session_if_normal()
-
     if var_dict is None:
         var_dict = GetAllVariables()
 
@@ -303,9 +309,25 @@ def SaveVarDict(
         pass
 
 
+@oneflow_export("checkpoint.save")
+@session_ctx.try_init_default_session
+def SaveVarDict(
+    path: str,
+    var_dict: Optional[
+        Dict[str, Union[FileBackendVariableBlob, EagerBlobTrait]]
+    ] = None,
+) -> None:
+    """
+    Save `var_dict` to `path`
+    """
+    sync_default_session_if_normal()
+
+    return _SaveVarDict(path, var_dict)
+
+
 @oneflow_export("save")
 def save(obj, save_dir):
-    return SaveVarDict(save_dir, obj)
+    return _SaveVarDict(save_dir, obj)
 
 
 def _LogicalSlice(
