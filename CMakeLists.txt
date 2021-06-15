@@ -28,6 +28,7 @@ option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
+set(PIP_INDEX_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
@@ -38,6 +39,12 @@ endif()
 project(oneflow C CXX)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
+get_filename_component(real_src_dir "${CMAKE_SOURCE_DIR}" REALPATH)
+get_filename_component(real_bin_dir "${CMAKE_BINARY_DIR}" REALPATH)
+if("${real_src_dir}" STREQUAL "${real_bin_dir}")
+  message(FATAL_ERROR "In-source build not allowed")
+endif()
 
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
