@@ -428,7 +428,7 @@ jobs:
             $extra_docker_args \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Doctest
-        if: matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
