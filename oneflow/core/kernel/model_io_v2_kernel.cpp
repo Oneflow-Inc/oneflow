@@ -36,7 +36,7 @@ struct InitializeWithConfUtil final {
 #undef MAKE_INITIALIZE_SWITCH_ENTRY
 };
 
-const cfg::ParallelDistribution& GetParallelDistribution(const KernelConf& kernel_conf,
+const cfg::ParallelDistribution GetParallelDistribution(const KernelConf& kernel_conf,
                                                          const std::string& bn_in_op) {
   const auto& parallel_distribution_map =
       kernel_conf.op_attribute().parallel_distribution_signature().bn_in_op2parallel_distribution();
