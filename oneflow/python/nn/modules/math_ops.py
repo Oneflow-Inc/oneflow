@@ -32,52 +32,6 @@ def _build_math_binary_elementwise_op(math_op):
     return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
 
 
-class Sum(Module):
-    def __init__(
-        self, axis: Optional[Union[int, Sequence[int]]] = None, keepdims: bool = False
-    ) -> None:
-        super().__init__()
-
-        self.axis = axis
-        self.keepdims = keepdims
-        self._op = (
-            flow.builtin_op("reduce_sum")
-            .Input("input_tensor")
-            .Output("output_tensor")
-            .Attr("keepdims", keepdims)
-            .Build()
-        )
-
-    def forward(self, input):
-        axis_checked = _check_axis(self.axis, input.shape)
-        if len(axis_checked) == 0:
-            return input
-        return self._op(input, axis=axis_checked)[0]
-
-
-@oneflow_export("sum")
-@register_tensor_op("sum")
-@experimental_api
-def _sum(input, dim=None, keepdims=False):
-    r"""Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
-    
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
-        >>> of_out = flow.sum(input, dim=(2, 1))
-        >>> of_out.shape
-        flow.Size([4])
-    """
-
-    return Sum(dim, keepdims)(input)
-
-
 class ScalarMul(Module):
     def __init__(self, operand) -> None:
         super().__init__()
@@ -196,86 +150,6 @@ def _mul(x, y):
         return ScalarMulByTensor()(x, y)
     else:
         return BroadcastMul()(x, y)
-
-
-class Mean(Module):
-    def __init__(
-        self,
-        axis: Optional[Union[collections.Sized, int]] = None,
-        keepdims: bool = False,
-    ) -> None:
-        super().__init__()
-        self.keepdims = keepdims
-        self.axis = axis
-        # TODO: add if input.is_dynamic branch like flow.math.reduce_mean
-        if axis is None:
-            self.axes = []
-        else:
-            self.axes = list(axis) if isinstance(axis, collections.Sized) else [axis]
-
-    def forward(self, input_tensor):
-        ndim = input_tensor.ndimension()
-        if isinstance(self.axis, int) and self.axis < 0:
-            assert -ndim <= self.axis <= -1, "axis should be in range:[-ndims,-1]"
-            self.axis = ndim + self.axis
-            self.axes = [self.axis]
-
-        if isinstance(self.axis, collections.Sized):
-            for i in range(len(self.axes)):
-                assert (
-                    -ndim <= self.axes[i] <= ndim - 1
-                ), "Dimension out of range (expected to be in range of [-{}, {}], but got {})".format(
-                    ndim, ndim - 1, self.axes[i]
-                )
-                if self.axes[i] < 0:
-                    self.axes[i] = self.axes[i] + ndim
-
-        reduce_sum = flow.experimental.sum(
-            input_tensor, dim=self.axis, keepdims=self.keepdims
-        )
-        reduce_count = 1
-        if len(self.axes) == 0:
-            for dim in input_tensor.shape:
-                reduce_count *= dim
-        else:
-            for i in self.axes:
-                reduce_count *= input_tensor.shape[i]
-        return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
-
-
-@oneflow_export("mean")
-@register_tensor_op("mean")
-@experimental_api
-def _mean(input_tensor, dim=None, keepdim=False):
-    r"""Computes the mean of row of elements in a tensor in the given axis,
-    if the axis is None, mean of all elements will be caculated.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow.experimental as flow
-        >>> flow.enable_eager_execution()
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input)
-        >>> out.numpy()
-        array([3.5], dtype=float32)
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input, dim=0)
-        >>> out.numpy()
-        array([2.5, 3.5, 4.5], dtype=float32)
-
-        >>> input = flow.Tensor([[1, 2, 3], [4, 5, 6]])
-        >>> out = flow.mean(input, dim=1)
-        >>> out.numpy()
-        array([2., 5.], dtype=float32)
-
-    """
-
-    return Mean(axis=dim, keepdims=keepdim)(input_tensor)
 
 
 class Variance(Module):
@@ -742,8 +616,7 @@ def asinh_op(input):
         >>> print(output.shape)
         flow.Size([3])
         >>> print(output.numpy())
-        [1.4436355 1.8184464 2.0947125]
-
+        [1.4436355 1.8184465 2.0947125]
         >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
         >>> print(output1.shape)
@@ -1144,8 +1017,13 @@ class Std(Module):
                 for i in self.axis:
                     self.reduce_count *= x.shape[i]
 
-            sum = Sum(self.axis, self.keepdim)(self.square_op(x)) / self.reduce_count
-            square = self.square_op(Sum(self.axis, self.keepdim)(x) / self.reduce_count)
+            sum = (
+                flow.experimental.sum(self.square_op(x), self.axis, self.keepdim)
+                / self.reduce_count
+            )
+            square = self.square_op(
+                flow.experimental.sum(x, self.axis, self.keepdim) / self.reduce_count
+            )
             subtract = self.subtract_op(sum, square)
             res = self.sqrt_op(subtract)
             return res

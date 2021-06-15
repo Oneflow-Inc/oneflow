@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #if defined(WITH_RDMA)
-#ifndef ONEFLOW_CORE_DL_INCLUDE_IBV_H_
-#define ONEFLOW_CORE_DL_INCLUDE_IBV_H_
-#include "oneflow/core/dl/include/wrapper.h"
+#ifndef ONEFLOW_CORE_PLATFORM_INCLUDE_IBV_H_
+#define ONEFLOW_CORE_PLATFORM_INCLUDE_IBV_H_
+#include "oneflow/core/platform/include/wrapper.h"
 #include <infiniband/verbs.h>
 
 namespace oneflow {
@@ -58,5 +58,5 @@ extern IBV wrapper;
 }  // namespace ibv
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_DL_INCLUDE_IBV_H_
+#endif  // ONEFLOW_CORE_PLATFORM_INCLUDE_IBV_H_
 #endif  // WITH_RDMA

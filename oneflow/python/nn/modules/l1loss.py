@@ -13,13 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional
 import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.nn.modules.math_ops import Sum, Mean, Subtract
-from oneflow.python.nn.modules.abs import Abs
 
 
 @oneflow_export("nn.L1Loss")
@@ -94,21 +90,17 @@ class L1Loss(Module):
         ], "only 'sum', 'mean' and 'none' supported by now"
 
         self.reduction = reduction
-        self.abs = Abs()
-        self.sub = Subtract()
-        self.mean = Mean()
-        self.sum = Sum()
 
     def forward(self, input, target):
         assert (
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        l1_value = self.abs(self.sub(target, input))
+        l1_value = flow.experimental.abs(flow.experimental.sub(target, input))
         if self.reduction == "mean":
-            return self.mean(l1_value)
+            return flow.experimental.mean(l1_value)
         elif self.reduction == "sum":
-            return self.sum(l1_value)
+            return flow.experimental.sum(l1_value)
         else:
             return l1_value
 

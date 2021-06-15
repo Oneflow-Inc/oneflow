@@ -36,13 +36,15 @@ class _ConstantBase(Module):
         assert isinstance(
             size, (int, tuple, flow.Size)
         ), "shape should be int or tuple int!"
+
+        self.device = device
+        self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
 
         if device is None:
             self.device = flow.device("cpu")
-        self.requires_grad = requires_grad
 
         if dtype in [
             flow.int,
@@ -83,6 +85,7 @@ class _ConstantBase(Module):
 
     def forward(self):
         res = self._op()[0]
+        res = res.to(device=self.device)
         res.requires_grad = self.requires_grad
         return res
 
@@ -97,7 +100,7 @@ class Ones(_ConstantBase):
 def ones_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
-    device: Optional[flow.device] = None,
+    device: Union[flow.device, str, None] = None,
     requires_grad: bool = False,
 ):
     r"""
@@ -136,7 +139,7 @@ class Zeros(_ConstantBase):
 def zeros_op(
     size: Union[_size_any_t, flow.Size],
     dtype: Optional[flow.dtype] = None,
-    device: Optional[flow.device] = None,
+    device: Union[flow.device, str, None] = None,
     requires_grad: bool = False,
 ):
     r"""
