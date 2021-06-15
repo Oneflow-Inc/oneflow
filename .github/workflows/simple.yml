@@ -83,24 +83,27 @@ jobs:
           cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
           make -j $(nproc)
         shell: bash
-      # - name: Build (of_ccobj)
-      #   run: |
-      #     mkdir -p build
-      #     cd build
-      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
-      #     make -j 2 of_ccobj
-      #   shell: bash
-      # - name: Build (oneflow_internal)
-      #   run: |
-      #     mkdir -p build
-      #     cd build
-      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
-      #     make -j 2 oneflow_internal
-      #   shell: bash
-      # - name: Build (generate_api)
-      #   run: |
-      #     mkdir -p build
-      #     cd build
-      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
-      #     make -j 2 generate_api
-      #   shell: bash
+      - name: Build (of_ccobj)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 of_ccobj
+        shell: bash
+      - name: Build (oneflow_internal)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 oneflow_internal
+        shell: bash
+      - name: Build (generate_api)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j 2 generate_api
+        shell: bash
