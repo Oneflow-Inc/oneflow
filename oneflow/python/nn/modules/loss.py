@@ -304,37 +304,38 @@ class BCEWithLogitsLoss(Module):
 
     The equation is:
 
-    if reduction = "none":
+    if :attr:`reduction` = ``"none"``:
 
     .. math::
 
         out = -weight*[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
-    if reduction = "mean":
+    if :attr:`reduction` = ``"mean"``:
 
     .. math::
 
         out = -\frac{weight}{n}\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
-    if reduction = "sum":
+    if :attr:`reduction` = ``"sum"``:
 
     .. math::
 
         out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
     Args:
-        input (oneflow._oneflow_internal.BlobDesc): The input Tensor.
-        target (oneflow._oneflow_internal.BlobDesc): The target Tensor.
-        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Defaults to None.
-        size_average (bool, optional) – Deprecated (see reduction). Default: True
-        reduce (bool, optional) – Deprecated (see reduction). Default: True
-        reduction (str, optional): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
-        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples. Defaults to None.
+        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default: ``None``
+        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
+            ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
+            by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
+        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples.
+            Default: ``None``
 
     Shape:
-        Input: (N,*) where * means, any number of additional dimensions
-        Target: (N,*), same shape as the input
-        Output: scalar. If `reduction` is `none`, then (N,*), same shape as input.
+        - Input: :math:`(N,*)` where `*` means, any number of additional dimensions
+        - Target: :math:`(N,*)`, same shape as the input
+        - Output: scalar. If :attr:`reduction` is ``"none"``, then :math:`(N,*)`, same shape as input.
 
     For example:
 
@@ -371,11 +372,11 @@ class BCEWithLogitsLoss(Module):
 
     def __init__(
         self,
-        weight=None,
+        weight = None,
         size_average: bool = True,
         reduce: bool = True,
         reduction: Optional[str] = "mean",
-        pos_weight=None,
+        pos_weight = None,
     ) -> None:
         super().__init__()
         assert reduction in [
@@ -399,8 +400,6 @@ class BCEWithLogitsLoss(Module):
         )
 
     def forward(self, input, target):
-        if len(input.shape) >= 5:
-            raise NotImplemented
         if not (target.shape == input.shape):
             raise ValueError("Target size ({}) must be the same as input size ({})".format(target.size(), input.size()))
 
