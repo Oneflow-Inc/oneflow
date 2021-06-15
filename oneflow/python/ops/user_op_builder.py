@@ -118,19 +118,6 @@ class UserOp(object):
         return blobs[0]
 
 
-class UserOpModule(object):
-    @property
-    def opkernel_object(self):
-        return self.opkernel_object_
-
-    def set_opkernel_object(self, opkernel_object):
-        assert not hasattr(self, "opkernel_object_")
-        self.opkernel_object_ = opkernel_object
-
-    def InitOpKernel(self):
-        raise NotImplementedError
-
-
 @oneflow_export("user_op_builder")
 def api_user_op_builder(op_name):
     r"""Build a wrapper of user op.
@@ -216,8 +203,8 @@ class ConsistentUserOp(UserOp):
 
 
 class UserOpConfBuilder(object):
-    def __init__(self, user_op_or_module_class, op_name, op_type_name):
-        self.user_op_ = user_op_or_module_class(op_name, op_type_name)
+    def __init__(self, user_op, op_name, op_type_name):
+        self.user_op_ = user_op(op_name, op_type_name)
 
     def CheckAndComplete(self):
         assert self.user_op_.op_conf_.user_conf.op_type_name != ""
@@ -418,151 +405,3 @@ class UserOpConfBuilder(object):
             text_format.Parse(str(attribute), attr_value_pb.AttrValue())
         )
         return self
-
-
-@oneflow_export("user_op_module_builder")
-def api_user_op_module_builder(op_type_name):
-    api = enable_if.unique(
-        [lazy_user_op_module_builder, eager_logical_user_op_module_builder]
-    )
-    return api(op_type_name)
-
-
-class UserOpModuleBuilder(UserOpConfBuilder):
-    def __init__(self, *args, **kwargs):
-        UserOpConfBuilder.__init__(self, *args, **kwargs)
-        self.user_op_module.op_conf.scope_symbol_id = flow.current_scope().symbol_id
-
-    @property
-    def user_op_module(self):
-        return self.user_op_
-
-    def Op(self, op_type_name):
-        raise ValueError(
-            "user op module builder of {} can't call '.Op(op_type_name)' method".format(
-                op_type_name
-            )
-        )
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_user_op_module_builder(op_type_name):
-    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
-    return UserOpModuleBuilder(LazyUserOpModule, op_name, op_type_name)
-
-
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_logical_user_op_module_builder(op_type_name):
-    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
-    return UserOpModuleBuilder(EagerLogicalUserOpModule, op_name, op_type_name)
-
-
-class LazyUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_name, op_type_name):
-        UserOp.__init__(self, op_name, op_type_name)
-
-    def InitOpKernel(self):
-        self.set_opkernel_object(None)
-
-    def InferAndTryRun(self):
-        assert hob.in_global_mode(None)
-        compile_context.CurJobAddOp(self.op_conf_)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.RemoteBlob(lbi)
-
-
-class EagerLogicalUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_name, op_type_name):
-        UserOp.__init__(self, op_name, op_type_name)
-
-    def InitOpKernel(self):
-        def BuildInstruction(builder):
-            if not isinstance(
-                self.op_conf,
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf,
-            ):
-                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(
-                    str(self.op_conf)
-                )
-            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
-
-        oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
-
-    def InferAndTryRun(self):
-        assert hob.in_global_mode(None)
-        interpret_util.OpKernelForward(self.op_conf, self.opkernel_object)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.EagerLogicalBlob(lbi)
-
-
-@oneflow_export("consistent_user_op_module_builder")
-def api_consistent_user_op_module_builder(op_type_name):
-    api = enable_if.unique(
-        [
-            lazy_consistent_user_op_module_builder,
-            eager_consistent_user_op_module_builder,
-        ]
-    )
-    return api(op_type_name)
-
-
-@enable_if.condition(hob.in_global_mode & ~hob.eager_execution_enabled)
-def lazy_consistent_user_op_module_builder(op_type_name):
-    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
-    return UserOpModuleBuilder(LazyConsistentUserOpModule, op_name, op_type_name)
-
-
-@enable_if.condition(hob.in_global_mode & hob.eager_execution_enabled)
-def eager_consistent_user_op_module_builder(op_type_name):
-    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
-    op_name = name_scope.GetJobNameScopePrefix(job_name) + op_type_name
-    return UserOpModuleBuilder(EagerConsistentUserOpModule, op_name, op_type_name)
-
-
-class LazyConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_name, op_type_name):
-        UserOp.__init__(self, op_name, op_type_name)
-
-    def InitOpKernel(self):
-        self.set_opkernel_object(None)
-
-    def InferAndTryRun(self):
-        assert hob.in_global_mode(None)
-        compile_context.CurJobAddConsistentOp(self.op_conf_)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.RemoteBlob(lbi)
-
-
-class EagerConsistentUserOpModule(UserOpModule, UserOp):
-    def __init__(self, op_name, op_type_name):
-        UserOp.__init__(self, op_name, op_type_name)
-
-    def InitOpKernel(self):
-        def BuildInstruction(builder):
-            if not isinstance(
-                self.op_conf,
-                oneflow._oneflow_internal.oneflow.core.operator.op_conf.OperatorConf,
-            ):
-                cfg_op_conf = oneflow._oneflow_internal.deprecated.MakeOpConfByString(
-                    str(self.op_conf)
-                )
-            self.set_opkernel_object(builder.NewOpKernelObject(cfg_op_conf))
-
-        oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
-
-    def InferAndTryRun(self):
-        assert hob.in_global_mode(None)
-        interpret_util.OpKernelConsistentForward(self.op_conf, self.opkernel_object)
-        return self
-
-    def MakeRemoteBlob(self, lbi):
-        return remote_blob_util.EagerLogicalBlob(lbi)
