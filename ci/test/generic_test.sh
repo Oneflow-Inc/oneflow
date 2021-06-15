@@ -23,13 +23,8 @@ python3 $src_dir/ci/test/parallel_run.py \
     --verbose \
     --chunk=1
 
-if [ -z "$ONEFLOW_TEST_ENABLE_EAGER" ]
-then
-    export ONEFLOW_TEST_DEVICE_NUM=2
-    python3 -m unittest discover ${PWD} --failfast --verbose
+export ONEFLOW_TEST_DEVICE_NUM=2
+python3 -m unittest discover ${PWD} --failfast --verbose
 
-    export ONEFLOW_TEST_DEVICE_NUM=4
-    python3 -m unittest discover ${PWD} --failfast --verbose
-else
-    echo "deadlock unsolved, skipping multi-card eager"
-fi
+export ONEFLOW_TEST_DEVICE_NUM=4
+python3 -m unittest discover ${PWD} --failfast --verbose
