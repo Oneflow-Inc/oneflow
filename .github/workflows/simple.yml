@@ -42,7 +42,7 @@ jobs:
         run: |
           brew install nasm
         shell: bash
-      - name: Install dependencies (ubuntu)
+      - name: Install dependencies (apt)
         if: matrix.test_suite == 'ubuntu'
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
