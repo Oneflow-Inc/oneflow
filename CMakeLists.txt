@@ -34,7 +34,6 @@ if (APPLE)
   set(RPC_BACKEND "LOCAL")
   set(BUILD_CUDA OFF)
   set(WITH_COCOAPI OFF)
-  set(BUILD_TESTING OFF)
 endif()
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
