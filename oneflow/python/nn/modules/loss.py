@@ -399,7 +399,9 @@ class KLDivLoss(Module):
         else:
             _kl_div_out_loss = target * (flow.experimental.log(target) - input)
             _zeros = flow.experimental.zeros(
-                size=_kl_div_out_loss.shape, dtype=_kl_div_out_loss.dtype
+                size=_kl_div_out_loss.shape,
+                dtype=_kl_div_out_loss.dtype,
+                device=_kl_div_out_loss.device,
             )
             # when target < 0, we set to `0`, when target > 0, we set to `1`.
             _condition = flow.experimental.gt(target, 0)
