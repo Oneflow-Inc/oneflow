@@ -752,6 +752,23 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_tensor_clone(test_case):
+        shape = (2, 3, 4, 5)
+        x = flow.Tensor(
+            np.random.randn(*shape), dtype=flow.float32, requires_grad=True,
+        )
+        y = x.clone()
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-4, 1e-4))
+        test_case.assertEqual(y.requires_grad, True)
+        test_case.assertEqual(y.is_leaf, False)
+        # Cannot print Copy grad function
+        # test_case.assertTrue(y.grad_fn != None)
+        
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_clamp_(test_case):
         input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
         of_out = input.clamp(0.1, 0.5)
