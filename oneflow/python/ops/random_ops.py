@@ -19,9 +19,10 @@ from oneflow.python.oneflow_export import oneflow_export
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow.python.framework.module as module_util
 import oneflow._oneflow_internal
+
+import sys
+import random
 
 
 @oneflow_export("random.bernoulli")
@@ -74,39 +75,18 @@ def Bernoulli(
         dtype = x.dtype
     if seed is not None:
         assert name is not None
-    module = flow.find_or_create_module(
-        name, lambda: BernoulliModule(dtype=dtype, random_seed=seed, name=name),
+    bernoulli_op = flow.user_op_builder(
+        name
+        if name is not None
+        else id_util.UniqueStr("Bernoulli_")
+        .Op("bernoulli")
+        .Input("x", [x])
+        .Attr("dtype", dtype)
+        .Output("out")
     )
-    return module(x)
+    if seed is not None:
+        bernoulli_op.Attr("seed", seed)
+    else:
+        bernoulli_op.Attr("seed", random.randint(-sys.maxsize, sys.maxsize))
 
-
-class BernoulliModule(module_util.Module):
-    def __init__(
-        self, dtype: flow.dtype, random_seed: Optional[int], name: str,
-    ):
-        module_util.Module.__init__(self, name)
-        seed, has_seed = flow.random.gen_seed(random_seed)
-        self.op_module_builder = (
-            flow.user_op_module_builder("bernoulli")
-            .InputSize("in", 1)
-            .Output("out")
-            .Attr("dtype", dtype)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self, x: oneflow._oneflow_internal.BlobDesc):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("Bernoulli_")
-
-        return (
-            self.op_module_builder.OpName(name)
-            .Input("in", [x])
-            .Build()
-            .InferAndTryRun()
-            .SoleOutputBlob()
-        )
+    return bernoulli_op.Build().InferAndTryRun().RemoteBlobList()[0]
