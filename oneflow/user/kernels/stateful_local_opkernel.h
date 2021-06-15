@@ -114,8 +114,8 @@ class ZeroCopyBaseContext {
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
   const std::shared_ptr<const ArgTuple>& input_arg_tuple() const { return input_arg_tuple_; }
   const std::shared_ptr<const ArgTuple>& output_arg_tuple() const { return output_arg_tuple_; }
-  const EagerBlobObjectListPtr input_tensors() const { return input_tensors_; }
-  const EagerBlobObjectListPtr output_tensors() const { return output_tensors_; }
+  const EagerBlobObjectListPtr& input_tensors() const { return input_tensors_; }
+  const EagerBlobObjectListPtr& output_tensors() const { return output_tensors_; }
   void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
  private:
