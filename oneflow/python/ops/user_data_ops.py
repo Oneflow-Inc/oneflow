@@ -158,6 +158,7 @@ def api_ofrecord_image_decoder_random_crop(
             "seed",
             seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
         )
+        .Attr("has_seed", True)
         .Attr("random_area", random_area)
         .Attr("random_aspect_ratio", random_aspect_ratio)
         .Build()
@@ -791,62 +792,30 @@ def api_image_random_crop(
 
     """
     assert isinstance(name, str)
-    if seed is not None:
-        assert name is not None
     if random_area is None:
         random_area = [0.08, 1.0]
     if random_aspect_ratio is None:
         random_aspect_ratio = [0.75, 1.333333]
-    module = flow.find_or_create_module(
-        name,
-        lambda: ImageRandomCropModule(
-            num_attempts=num_attempts,
-            random_seed=seed,
-            random_area=random_area,
-            random_aspect_ratio=random_aspect_ratio,
-            name=name,
-        ),
+
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("ImageRandomCrop_")
+        )
+        .Op("image_random_crop")
+        .Input("in", [input_blob])
+        .Output("out")
+        .Attr("num_attempts", num_attempts)
+        .Attr(
+            "seed",
+            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Attr("has_seed", True)
+        .Attr("random_area", random_area)
+        .Attr("random_aspect_ratio", random_aspect_ratio)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    return module(input_blob)
-
-
-class ImageRandomCropModule(module_util.Module):
-    def __init__(
-        self,
-        num_attempts: int,
-        random_seed: Optional[int],
-        random_area: Sequence[float],
-        random_aspect_ratio: Sequence[float],
-        name: str,
-    ):
-        module_util.Module.__init__(self, name)
-        seed, has_seed = flow.random.gen_seed(random_seed)
-        self.op_module_builder = (
-            flow.user_op_module_builder("image_random_crop")
-            .InputSize("in", 1)
-            .Output("out")
-            .Attr("num_attempts", num_attempts)
-            .Attr("random_area", random_area)
-            .Attr("random_aspect_ratio", random_aspect_ratio)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self, input: oneflow._oneflow_internal.BlobDesc):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("ImageRandomCrop_")
-
-        return (
-            self.op_module_builder.OpName(name)
-            .Input("in", [input])
-            .Build()
-            .InferAndTryRun()
-            .SoleOutputBlob()
-        )
 
 
 @oneflow_export("random.CoinFlip", "random.coin_flip")
@@ -921,51 +890,23 @@ def api_coin_flip(
             images, labels = coin_flip_job()
 
     """
-    assert isinstance(name, str)
-    if seed is not None:
-        assert name is not None
-    module = flow.find_or_create_module(
-        name,
-        lambda: CoinFlipModule(
-            batch_size=batch_size, probability=probability, random_seed=seed, name=name,
-        ),
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("CoinFlip_")
+        )
+        .Op("coin_flip")
+        .Output("out")
+        .Attr("batch_size", batch_size)
+        .Attr("probability", probability)
+        .Attr(
+            "seed",
+            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Attr("has_seed", True)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    return module()
-
-
-class CoinFlipModule(module_util.Module):
-    def __init__(
-        self,
-        batch_size: str,
-        probability: float,
-        random_seed: Optional[int],
-        name: str,
-    ):
-        module_util.Module.__init__(self, name)
-        seed, has_seed = flow.random.gen_seed(random_seed)
-        self.op_module_builder = (
-            flow.user_op_module_builder("coin_flip")
-            .Output("out")
-            .Attr("batch_size", batch_size)
-            .Attr("probability", probability)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("CoinFlip_")
-
-        return (
-            self.op_module_builder.OpName(name)
-            .Build()
-            .InferAndTryRun()
-            .SoleOutputBlob()
-        )
 
 
 @oneflow_export("image.decode", "image_decode")
@@ -2105,76 +2046,35 @@ def api_coco_reader(
     remove_images_without_annotations: bool = True,
     name: str = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    assert name is not None
-    module = flow.find_or_create_module(
-        name,
-        lambda: COCOReader(
-            annotation_file=annotation_file,
-            image_dir=image_dir,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            random_seed=random_seed,
-            group_by_aspect_ratio=group_by_aspect_ratio,
-            remove_images_without_annotations=remove_images_without_annotations,
-            stride_partition=stride_partition,
-            name=name,
-        ),
+    return (
+        flow.user_op_builder(
+            name if name is not None else id_util.UniqueStr("COCOReader_")
+        )
+        .Output("image")
+        .Output("image_id")
+        .Output("image_size")
+        .Output("gt_bbox")
+        .Output("gt_label")
+        .Output("gt_segm")
+        .Output("gt_segm_index")
+        .Attr("session_id", flow.current_scope().session_id)
+        .Attr("annotation_file", annotation_file)
+        .Attr("image_dir", image_dir)
+        .Attr("batch_size", batch_size)
+        .Attr("shuffle_after_epoch", shuffle)
+        .Attr(
+            "random_seed",
+            random_seed
+            if random_seed is not None
+            else random.randint(-sys.maxsize, sys.maxsize),
+        )
+        .Attr("group_by_ratio", group_by_aspect_ratio)
+        .Attr("remove_images_without_annotations", remove_images_without_annotations)
+        .Attr("stride_partition", stride_partition)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
     )
-    return module()
-
-
-class COCOReader(module_util.Module):
-    def __init__(
-        self,
-        annotation_file: str,
-        image_dir: str,
-        batch_size: int,
-        shuffle: bool = True,
-        random_seed: Optional[int] = None,
-        group_by_aspect_ratio: bool = True,
-        remove_images_without_annotations: bool = True,
-        stride_partition: bool = True,
-        name: str = None,
-    ):
-        assert name is not None
-        if random_seed is None:
-            random_seed = random.randrange(sys.maxsize)
-        module_util.Module.__init__(self, name)
-        self.op_module_builder = (
-            flow.consistent_user_op_module_builder("COCOReader")
-            .Output("image")
-            .Output("image_id")
-            .Output("image_size")
-            .Output("gt_bbox")
-            .Output("gt_label")
-            .Output("gt_segm")
-            .Output("gt_segm_index")
-            .Attr("session_id", flow.current_scope().session_id)
-            .Attr("annotation_file", annotation_file)
-            .Attr("image_dir", image_dir)
-            .Attr("batch_size", batch_size)
-            .Attr("shuffle_after_epoch", shuffle)
-            .Attr("random_seed", random_seed)
-            .Attr("group_by_ratio", group_by_aspect_ratio)
-            .Attr(
-                "remove_images_without_annotations", remove_images_without_annotations
-            )
-            .Attr("stride_partition", stride_partition)
-            .CheckAndComplete()
-        )
-        self.op_module_builder.user_op_module.InitOpKernel()
-
-    def forward(self):
-        if self.call_seq_no == 0:
-            name = self.module_name
-        else:
-            name = id_util.UniqueStr("COCOReader")
-        return (
-            self.op_module_builder.OpName(name)
-            .Build()
-            .InferAndTryRun()
-            .RemoteBlobList()
-        )
 
 
 @oneflow_export("data.ofrecord_image_classification_reader")
