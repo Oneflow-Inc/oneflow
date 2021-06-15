@@ -17,7 +17,6 @@ from __future__ import absolute_import
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
-import oneflow.python.framework.module as module_util
 import oneflow._oneflow_internal
 from oneflow.python.oneflow_export import oneflow_export
 from typing import Optional, Sequence, Union
