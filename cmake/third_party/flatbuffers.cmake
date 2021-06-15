@@ -9,7 +9,7 @@ set(FLATBUFFERS_INSTALL_BINDIR bin)
 
 if (THIRD_PARTY)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(FLATBUFFERS_BUILD_TESTS OFF)
+        set(FLATBUFFERS_BUILD_TESTS OFF) # TODO: prevent failure https://github.com/google/flatbuffers/issues/5649
     else()
         set(FLATBUFFERS_BUILD_TESTS ON)
     endif()
