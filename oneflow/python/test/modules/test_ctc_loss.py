@@ -257,27 +257,38 @@ def compare_with_np(
     )
 
     log_probs = flow.Tensor(
-        log_probs, dtype=flow.float32, requires_grad=False, device=flow.device(device_type)
+        log_probs,
+        dtype=flow.float32,
+        requires_grad=True,
+        device=flow.device(device_type),
     )
-    targets = flow.Tensor(targets, dtype=flow.int32, device=flow.device(device_type))
+    targets = flow.Tensor(
+        targets, dtype=flow.int32, requires_grad=True, device=flow.device(device_type)
+    )
     input_lengths = flow.Tensor(
-        input_lengths, dtype=flow.int32, device=flow.device(device_type)
+        input_lengths,
+        dtype=flow.int32,
+        requires_grad=False,
+        device=flow.device(device_type),
     )
     target_lengths = flow.Tensor(
-        target_lengths, dtype=flow.int32, device=flow.device(device_type)
+        target_lengths,
+        dtype=flow.int32,
+        requires_grad=False,
+        device=flow.device(device_type),
     )
 
-    #ctc_loss = ctc_loss.to(device_type)
+    ctc_loss = ctc_loss.to(device_type)
     of_out = ctc_loss(log_probs, targets, input_lengths, target_lengths,)
     assert np.allclose(of_out.numpy(), np_out, atol=1e-5)
-    print("*" * 30)
-    #of_out.backward()
-    #assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-5, equal_nan=True)
+    # print("*" * 30)
+    of_out.backward()
+    assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-5, equal_nan=True)
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cuda"]
+    arg_dict["device_type"] = ["cuda", "cpu"]
     arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32"]
     arg_dict["max_input_length"] = [20]

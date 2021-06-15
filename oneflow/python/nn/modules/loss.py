@@ -634,10 +634,19 @@ class CTCLoss(Module):
         if self.zero_infinity:
             cond = flow.experimental.eq(
                 loss,
-                self.constant(size=loss.shape, value=float("inf"), dtype=loss.dtype)(),
+                self.constant(
+                    size=loss.shape,
+                    value=float("inf"),
+                    dtype=loss.dtype,
+                    device=loss.device,
+                )(),
             )
             loss = flow.experimental.where(
-                cond, flow.experimental.zeros(size=loss.shape, dtype=loss.dtype), loss
+                cond,
+                flow.experimental.zeros(
+                    size=loss.shape, dtype=loss.dtype, device=loss.device
+                ),
+                loss,
             )
 
         if self.reduction == "mean":
