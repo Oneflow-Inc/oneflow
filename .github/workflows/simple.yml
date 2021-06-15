@@ -47,7 +47,20 @@ jobs:
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
         shell: bash
-      # TODO: cache pip dependencies
+      - name: Install dependencies (pip)
+        run: |
+          python3 -m pip install -r dev-requirements.txt
+        shell: bash
+      - uses: actions/cache@v2
+        if: startsWith(runner.os, 'Linux')
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - uses: actions/cache@v2
+        if: startsWith(runner.os, 'macOS')
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Cache third party dir
         uses: actions/cache@v2
         with:
@@ -55,10 +68,6 @@ jobs:
             build-third_party
             third_party
           key: ${{ runner.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ github.repository }}-build-
-            ${{ matrix.os }}-${{ github.repository }}-
-            ${{ matrix.os }}-
       - name: Set environment variables
         run: |
           set -x
