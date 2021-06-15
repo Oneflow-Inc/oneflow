@@ -72,11 +72,12 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
+        self._inplace = inplace
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        if self._inplace:
+            return flow.F.relu_(x)
+        return flow.F.relu(x)
 
 
 @oneflow_export("nn.ReLU6")

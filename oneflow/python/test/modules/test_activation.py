@@ -38,6 +38,18 @@ def _test_relu_impl(test_case, shape, device):
     of_out.backward()
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-5, 1e-5))
 
+    inplace_m = flow.nn.ReLU(inplace=True)
+    of_input_inplace = of_input + 5
+    inplace_m(of_input_inplace)
+    np_out = np.maximum(0, np_input + 5)
+    test_case.assertTrue(np.allclose(of_input_inplace.numpy(), np_out, 1e-5, 1e-5))
+
+    of_out_inplace = of_input_inplace.sum()
+    of_out_inplace.backward()
+    np_out = np.maximum(0, np_input)
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_out > 0, 1e-5, 1e-5))
+
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
