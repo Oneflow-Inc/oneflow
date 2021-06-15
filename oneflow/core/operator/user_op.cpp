@@ -161,7 +161,7 @@ class UserOpInferContext final : public user_op::InferContext {
     return *const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* OutputShape(const std::string& arg_name, int32_t index) override {
-    return const_cast<UserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+    return Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -169,7 +169,7 @@ class UserOpInferContext final : public user_op::InferContext {
     return it->second.mut_shape();
   }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
-    return const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+    return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
