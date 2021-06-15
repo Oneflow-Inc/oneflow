@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/session_util.h"
 
 namespace oneflow {
 namespace one {
@@ -110,6 +111,8 @@ Maybe<void> EagerInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& in
   APPLY_IF(VariableOp);
   APPLY_IF(CastToMirroredOp);
   APPLY_IF(CastFromMirroredOp);
+  APPLY_IF(CastToConsistentOp);
+  APPLY_IF(CastFromConsistentOp);
   APPLY_IF(DistributeSplitOp);
   APPLY_IF(DistributeCloneOp);
   APPLY_IF(DistributeConcatOp);
@@ -146,6 +149,7 @@ Maybe<void> DetermineRequiresGrad(TensorTuple* outputs, const bool& requires_gra
 Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                        TensorTuple* outputs, const AttrMap& attrs) const {
   bool requires_grad = false;
+  bool is_mirrored_strategy_enabled = internal_->is_mirrored();
   if (autograd::GradMode::is_enabled() && !JUST(op_expr.IsGradDisabled())) {
     requires_grad =
         std::any_of(inputs.begin(), inputs.end(),
@@ -165,8 +169,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
+              const auto& session = JUST(GetDefaultSession());
+              session->PushMirroredStrategyEnabled(is_mirrored_strategy_enabled);
               autograd::AutoGradMode mode(create_graph);
               JUST(grad_closure->Apply(out_grads, in_grads));
+              session->PopMirroredStrategyEnabled();
               return Maybe<void>::Ok();
             });
     GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",

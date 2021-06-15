@@ -185,6 +185,18 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromMirroredOpExpr& op
   return BuildAndRunMirroredCastInstruction(op_expr, inputs, outputs);
 }
 
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const AttrMap& attrs) const {
+  OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                                const TensorTuple& inputs, TensorTuple* outputs,
+                                                const AttrMap& attrs) const {
+  OF_UNIMPLEMENTED();
+}
+
 static Maybe<void> BuildAndRunDistributeSplitOrCloneInstruction(const BuiltinOpExpr& op_expr,
                                                                 const TensorTuple& inputs,
                                                                 TensorTuple* outputs) {

@@ -306,6 +306,9 @@ Maybe<void> DefaultOpExprGradFunction::Apply(const DefaultOpExprInterpState* ctx
                                              const TensorTuple& out_grads,
                                              TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(in_grads->size(), input_size_);
+  // LOG(ERROR) << int64_t(
+  //     JUST(JUST(out_grads.at(0)->cur_rank_phy_tensor())->eager_blob_object()).get());
+  // LOG(ERROR) << int64_t(out_grads.at(0).get());
   const auto& saved_tensors = ctx->SavedTensors();
   int offset = 0;
   for (int i = 0; i < backward_entries_.size(); ++i) {

@@ -18,10 +18,13 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 import itertools
+import copy
 
 import numpy as np
 
 import oneflow as flow
+import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.nn.consistent_cast_util as consistent_cast_util
 from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.framework.check_point_v2 import FeedValueToVariable
 from oneflow.python.framework.function_util import global_function_or_identity
@@ -66,6 +69,13 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
+    @consistent.setter
+    def consistent(self, value):
+        self._consistent = value
+
+    def to_consistent(self, parallel_distribution, placement_signature):
+        return flow.consistent(parallel_distribution, placement_signature)(self)
+
     def forward(self, *args):
         raise NotImplementedError()
 
@@ -76,15 +86,29 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args):
+        # make the class' __call_() method call call_func to customize __call__ by a specific instance
+        return self.call_func(*args)
+
+    def call_func(self, *args):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:
                 if not isinstance(result, tuple):
                     result = (result,)
                 args = result
-
-        res = self.forward(*args)
-
+        sess = session_ctx.GetDefaultSession()
+        if not self.consistent and (
+            sess.has_empty_is_mirrored_strategy_enabled_stack()
+            or sess.is_mirrored_strategy_enabled()
+        ):
+            res = self.forward(*args)
+        else:
+            with sess.consistent_scope():
+                res = self.consistent_forward(*args)
+        for hook in itertools.chain(self._forward_hooks.values()):
+            result = hook(self, res)
+            if result is not None:
+                res = result
         return res
 
     def add_module(self, name: str, module: Optional["Module"]) -> None:
@@ -488,6 +512,9 @@ class Module(object):
 
     def register_forward_pre_hook(self, hook: Callable[..., None]) -> None:
         self._forward_pre_hooks[len(self._forward_pre_hooks)] = hook
+
+    def register_forward_hook(self, hook: Callable[..., None]) -> None:
+        self._forward_hooks[len(self._forward_hooks)] = hook
 
     def _apply(self, fn):
         for module in self.children():

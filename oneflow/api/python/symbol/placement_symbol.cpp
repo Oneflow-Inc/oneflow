@@ -17,6 +17,7 @@ limitations under the License.
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/job/parallel_desc.h"

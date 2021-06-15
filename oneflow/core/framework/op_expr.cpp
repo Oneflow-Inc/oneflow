@@ -20,9 +20,11 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace oneflow {
 namespace one {
@@ -54,6 +56,16 @@ DEFINE_OPEXPR_OP_TYPE_NAME(DistributeAddOpConf, "distribute_add");
 template<>
 const std::string& BuiltinOpExprImpl<UserOpConf>::op_type_name() const {
   return op_proto_.op_type_name();
+}
+
+const std::string& CastToConsistentOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_to_consistent";
+  return kOpTypeName;
+}
+
+const std::string& CastFromConsistentOpExpr::op_type_name() const {
+  static const std::string kOpTypeName = "cast_from_consistent";
+  return kOpTypeName;
 }
 
 #define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
@@ -168,7 +180,7 @@ class UserOpExprInferContext : public user_op::InferContext {
     CHECK_GE(tuple_index, 0);
     return tensor_meta4input_index_(tuple_index)->shape();
   }
-  Shape* OutputShape(const std::string& name, int32_t index) const override {
+  Shape* OutputShape(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
@@ -177,6 +189,9 @@ class UserOpExprInferContext : public user_op::InferContext {
 
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
@@ -357,6 +372,70 @@ Maybe<const Device> UserOpExpr::InferDevices(const AttrMap& attrs, const TensorT
   return TRY(device_infer_fn_(&device_infer_ctx));
 }
 
+CastConsistentOpExpr::CastConsistentOpExpr(const std::string& op_name,
+                                           Symbol<cfg::ParallelDistribution> parallel_distribution,
+                                           Symbol<ParallelDesc> parallel_desc)
+    : parallel_distribution_(parallel_distribution), parallel_desc_(parallel_desc) {}
+
+Symbol<cfg::ParallelDistribution> CastConsistentOpExpr::parallel_distribution() const {
+  return parallel_distribution_;
+}
+
+Symbol<ParallelDesc> CastConsistentOpExpr::parallel_desc() const { return parallel_desc_; }
+
+CastToConsistentOpExpr::CastToConsistentOpExpr(
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc)
+    : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
+
+/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
+    const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+  cfg::ParallelDistribution parallel_distribution;
+  cfg::SbpParallel sbp_parallel;
+  for (const std::string& sbp_parallel_str : sbp_parallels) {
+    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
+        << "invalid sbp_parallel: " << sbp_parallel_str;
+    *(parallel_distribution.mutable_sbp_parallel()->Add()) = sbp_parallel;
+  }
+  return CastToConsistentOpExpr::New(op_name,
+                                     Symbol<cfg::ParallelDistribution>(parallel_distribution),
+                                     Symbol<ParallelDesc>(*parallel_desc));
+}
+
+/* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  return std::shared_ptr<CastToConsistentOpExpr>(
+      new CastToConsistentOpExpr(op_name, parallel_distribution, parallel_desc));
+}
+
+CastFromConsistentOpExpr::CastFromConsistentOpExpr(
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc)
+    : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
+
+/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
+    const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+  cfg::ParallelDistribution parallel_distribution;
+  cfg::SbpParallel sbp_parallel;
+  for (const std::string& sbp_parallel_str : sbp_parallels) {
+    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
+        << "invalid sbp_parallel: " << sbp_parallel_str;
+    *(parallel_distribution.mutable_sbp_parallel()->Add()) = sbp_parallel;
+  }
+  return CastFromConsistentOpExpr::New(op_name, parallel_distribution,
+                                       Symbol<ParallelDesc>(*parallel_desc));
+}
+
+/* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
+    const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  return std::shared_ptr<CastFromConsistentOpExpr>(new CastFromConsistentOpExpr(
+      op_name, Symbol<cfg::ParallelDistribution>(parallel_distribution), parallel_desc));
+}
+
 template<>
 Maybe<void> BuiltinOpExprImpl<VariableOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                            const AttrMap& attrs) const {
@@ -398,6 +477,24 @@ template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<CastFromMirroredOpConf>::GetOrCreateOpGradClosure()
     const {
   UNIMPLEMENTED_THEN_RETURN();
+}
+
+Maybe<OpExprGradClosure> CastToConsistentOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_to_consistent"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
+}
+
+Maybe<OpExprGradClosure> CastFromConsistentOpExpr::GetOrCreateOpGradClosure() const {
+  if (!op_grad_func_.get()) {
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("cast_from_consistent"));
+    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    JUST(op_grad_func_->Init(*this));
+  }
+  return std::make_shared<OpExprGradClosure>(op_grad_func_);
 }
 
 template<>

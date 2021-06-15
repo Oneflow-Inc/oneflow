@@ -186,6 +186,17 @@ Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyMsGradOp(const int64_t& depth,
 Maybe<one::UserOpExpr> PReLUGradOp();
 Maybe<one::UserOpExpr> PReLUGradOp(const std::string& name);
 
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_des);
+
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_des);
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_des);
 Maybe<one::UserOpExpr> UpsampleGradOp(const float& height_scale, const float& width_scale,
                                       const bool& align_corners, const std::string& data_format,
                                       const std::string& interpolation);

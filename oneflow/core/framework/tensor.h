@@ -52,7 +52,7 @@ class Tensor {
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
-  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
+  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const = 0;
 
   // Getters valid only for EagerMirroredTensor
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
@@ -205,6 +205,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
+  Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
+    OF_UNIMPLEMENTED();
+  }
+
   static Maybe<MirroredTensor> MakeEagerTensor(
       const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
       const std::shared_ptr<const Device>& device,
@@ -250,6 +254,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->compute_local_dep_object();
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
+
+  Maybe<ConsistentTensorImpl> consistent_tensor_impl() const { return impl_; }
 
   // Setters
   Maybe<void> set_consumer_parallel_distribution_constraint(
