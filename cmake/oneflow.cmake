@@ -215,7 +215,7 @@ add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
 
 # cfg obj lib
 include(cfg)
-GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj generate_cfg)
 if (BUILD_SHARED_LIBS)
@@ -227,6 +227,13 @@ else()
   target_link_libraries(of_protoobj ${oneflow_third_party_libs})
   target_link_libraries(of_cfgobj ${oneflow_third_party_libs})
 endif()
+
+include(functional)
+GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP(
+    FUNCTIONAL_GENERATED_SRCS FUNCTIONAL_GENERATED_HRCS FUNCTIONAL_PYBIND11_SRCS ${PROJECT_SOURCE_DIR})
+list(APPEND of_all_obj_cc ${FUNCTIONAL_GENERATED_SRCS})
+
+set(PYBIND11_SRCS ${CFG_PYBIND11_SRCS} ${FUNCTIONAL_PYBIND11_SRCS})
 
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
@@ -240,7 +247,7 @@ endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party)
+add_dependencies(of_ccobj prepare_oneflow_third_party generate_functional)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
@@ -300,6 +307,8 @@ add_custom_target(of_pyscript_copy ALL
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PROJECT_SOURCE_DIR}/oneflow/python" "${of_pyscript_dir}/oneflow/python"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${of_proto_python_dir}/oneflow/core" "${of_pyscript_dir}/oneflow/core"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/core/__init__.py"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/F"
+    COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/F/__init__.py"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${of_pyscript_dir}/oneflow/python_gen"
     COMMAND ${CMAKE_COMMAND} -E touch "${of_pyscript_dir}/oneflow/python_gen/__init__.py"
     COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_pip_version.py ${gen_pip_args} --src=${PROJECT_SOURCE_DIR}
@@ -334,27 +343,25 @@ endforeach()
 
 # build test
 if(BUILD_TESTING)
-  if(BUILD_CUDA)
-    if (of_all_test_cc)
-      oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
-      target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-      set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-      add_test(NAME oneflow_test COMMAND oneflow_testexe)
-      #  foreach(cc ${of_all_test_cc})
-      #    get_filename_component(test_name ${cc} NAME_WE)
-      #    string(CONCAT test_exe_name ${test_name} exe)
-      #    oneflow_add_executable(${test_exe_name} ${cc})
-      #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-      #  endforeach()
-    endif()
-    if (of_separate_test_cc)
-      foreach(cc ${of_separate_test_cc})
-        get_filename_component(test_name ${cc} NAME_WE)
-        string(CONCAT test_exe_name ${test_name} exe)
-        oneflow_add_executable(${test_exe_name} ${cc})
-        target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-      endforeach()
-    endif()
+  if (of_all_test_cc)
+    oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
+    target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+    add_test(NAME oneflow_test COMMAND oneflow_testexe)
+    #  foreach(cc ${of_all_test_cc})
+    #    get_filename_component(test_name ${cc} NAME_WE)
+    #    string(CONCAT test_exe_name ${test_name} exe)
+    #    oneflow_add_executable(${test_exe_name} ${cc})
+    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
+    #  endforeach()
+  endif()
+  if (of_separate_test_cc)
+    foreach(cc ${of_separate_test_cc})
+      get_filename_component(test_name ${cc} NAME_WE)
+      string(CONCAT test_exe_name ${test_name} exe)
+      oneflow_add_executable(${test_exe_name} ${cc})
+      target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
+    endforeach()
   endif()
 endif()
 

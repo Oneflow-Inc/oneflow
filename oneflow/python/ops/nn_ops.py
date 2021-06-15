@@ -3562,6 +3562,7 @@ def relu6(
 
 
 @oneflow_export("nn.L1Loss")
+@stable_api
 def l1_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4405,6 +4406,7 @@ def pixel_shufflev2(
 
 
 @oneflow_export("nn.KLDivLoss")
+@stable_api
 def kldivloss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,

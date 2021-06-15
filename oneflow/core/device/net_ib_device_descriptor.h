@@ -22,7 +22,7 @@ limitations under the License.
 
 #ifdef WITH_RDMA
 
-#include "oneflow/core/dl/include/ibv.h"
+#include "oneflow/core/platform/include/ibv.h"
 
 namespace oneflow {
 
