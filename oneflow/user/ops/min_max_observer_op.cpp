@@ -75,8 +75,8 @@ REGISTER_USER_OP("min_max_observer")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      *ctx->OutputDType("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("scale", 0) = ctx->InputDType("in", 0);
+      *ctx->OutputDType("zero_point", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
