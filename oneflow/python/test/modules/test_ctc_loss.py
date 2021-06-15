@@ -263,7 +263,7 @@ def compare_with_np(
         device=flow.device(device_type),
     )
     targets = flow.Tensor(
-        targets, dtype=flow.int32, requires_grad=True, device=flow.device(device_type)
+        targets, dtype=flow.int32, requires_grad=False, device=flow.device(device_type)
     )
     input_lengths = flow.Tensor(
         input_lengths,
