@@ -8,6 +8,7 @@ set(FLATBUFFERS_INSTALL_LIBDIR lib)
 set(FLATBUFFERS_INSTALL_BINDIR bin)
 
 if (THIRD_PARTY)
+
     ExternalProject_Add(flatbuffers
             PREFIX flatbuffers
             URL ${FLATBUFFERS_URL}
