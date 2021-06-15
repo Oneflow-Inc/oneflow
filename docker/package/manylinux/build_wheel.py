@@ -396,7 +396,9 @@ if __name__ == "__main__":
                 img_tag = args.custom_img_tag
                 skip_img = True
             elif skip_img:
-                assert is_img_existing(versioned_img_tag), versioned_img_tag
+                assert is_img_existing(
+                    versioned_img_tag
+                ), f"img not found: {versioned_img_tag}"
                 img_tag = versioned_img_tag
             else:
                 img_tag = user_img_tag
