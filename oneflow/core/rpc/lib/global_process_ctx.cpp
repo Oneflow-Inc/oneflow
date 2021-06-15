@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
@@ -27,6 +28,13 @@ void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64
 int64_t GlobalProcessCtx::Rank() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
+}
+
+int64_t GlobalProcessCtx::LocalRank() {
+  CHECK_NOTNULL(std::getenv("LOCAL_RANK"));
+  CHECK(IsStrInt(std::getenv("LOCAL_RANK")));
+  static int64_t local_rank = std::stol(std::getenv("LOCAL_RANK"));
+  return local_rank;
 }
 
 int64_t GlobalProcessCtx::NodeSize() {
