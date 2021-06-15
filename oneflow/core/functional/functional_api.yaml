@@ -240,14 +240,14 @@
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weght, *, Int32 filters, Int32List kernel_size,
+    "Tensor Conv2D(Tensor x, Tensor weight, *, Int32 filters, Int32List kernel_size,
                    Int32List strides, Int32List padding_before, Int32List dilation_rate,
                    Int32 groups=1, String data_format=\"channels_first\")"
   bind_python: True
 
 - name: "conv_data_grad"
   signature:
-    "Tensor ConvDataGrad(Tensor dy, Tensor weght, Tensor x, *, Int32 num_spatial_dims,
+    "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
                          Int32List kernel_size, Int32List strides, Int32List padding_before,
                          Int32List dilation_rate, Int32 groups=1,
                          String data_format=\"channels_first\")"
