@@ -407,7 +407,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
-
+    auto state_new = MaybeCreateOpKernelState(ctx, state);
+    if (state_new) { state = state_new.get(); }
     auto* conv_state = dynamic_cast<ConvOpKernelState<T>*>(state);
     conv_state->Update(in->shape(), out->shape());
     CHECK_NOTNULL(conv_state);
