@@ -152,11 +152,10 @@ class TestCos(flow.unittest.TestCase):
 
 
 def _test_log(test_case, shape, device):
-    input = flow.Tensor(
-        np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
-    )
+    np_arr = np.abs(np.random.randn(*shape))
+    input = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device(device))
     of_out = flow.log(input)
-    np_out = np.log(input.numpy())
+    np_out = np.log(np_arr)
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
@@ -207,7 +206,7 @@ def _test_std(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = flow.std(input, dim=2)
     np_out = np.std(np_arr, axis=2)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_std_dim1(test_case, shape, device):
@@ -215,7 +214,7 @@ def _test_std_dim1(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = flow.std(input, dim=1)
     np_out = np.std(np_arr, axis=1)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_std_negative_dim(test_case, shape, device):
@@ -223,7 +222,7 @@ def _test_std_negative_dim(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = input.std(dim=(-2, -1, -3), keepdim=False)
     np_out = np.std(np_arr, axis=(-2, -1, -3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -247,6 +246,7 @@ class TestStd(flow.unittest.TestCase):
 
 def _test_sqrt(test_case, shape, device):
     np_arr = np.random.randn(*shape)
+    np_arr = np.abs(np_arr)
     np_out = np.sqrt(np_arr)
     x = flow.Tensor(np_arr, device=flow.device(device))
     of_out = flow.sqrt(input=x)
@@ -257,7 +257,7 @@ def _test_sqrt(test_case, shape, device):
 
 def _test_sqrt_backward(test_case, shape, device):
     np_arr = np.random.randn(*shape)
-    np_out = np.sqrt(np_arr)
+    np_arr = np.abs(np_arr)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
     y = flow.sqrt(input=x)
     z = y.sum()
@@ -284,6 +284,7 @@ class TestSqrt(flow.unittest.TestCase):
 
 def _test_rsqrt(test_case, shape, device):
     np_arr = np.random.randn(*shape)
+    np_arr = np.abs(np_arr)
     np_out = 1 / np.sqrt(np_arr)
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = input.rsqrt()
@@ -294,6 +295,7 @@ def _test_rsqrt(test_case, shape, device):
 
 def _test_rsqrt_backward(test_case, shape, device):
     np_arr = np.random.randn(*shape)
+    np_arr = np.abs(np_arr)
     x = flow.Tensor(np_arr, device=flow.device(device), requires_grad=True)
     y = flow.rsqrt(input=x)
     z = y.sum()
