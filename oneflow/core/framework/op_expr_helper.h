@@ -188,8 +188,9 @@ Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
                                         const std::vector<int32_t>& dilation_rate,
                                         const int& groups, const std::string& data_format,
                                         const std::string& name);
-Maybe<one::UserOpExpr> CTCLossGradOp(const int64_t& blank, const bool& zero_infinity);
-Maybe<one::UserOpExpr> CTCLossGradOp(const int64_t& blank, const bool& zero_infinity,
+
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity);
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity,
                                      const std::string& name);
 
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth);

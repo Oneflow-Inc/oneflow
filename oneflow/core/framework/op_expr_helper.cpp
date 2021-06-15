@@ -563,10 +563,10 @@ Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
       .Build();
 }
 
-Maybe<one::UserOpExpr> CTCLossGradOp(const int64_t& blank, const bool& zero_infinity) {
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity) {
   return CTCLossGradOp(blank, zero_infinity, UniqueOpName("ctc_loss_grad"));
 }
-Maybe<one::UserOpExpr> CTCLossGradOp(const int64_t& blank, const bool& zero_infinity,
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity,
                                      const std::string& name) {
   return one::OpBuilder("ctc_loss_grad", name)
       .Input("grad_out")
@@ -577,7 +577,7 @@ Maybe<one::UserOpExpr> CTCLossGradOp(const int64_t& blank, const bool& zero_infi
       .Input("loss")
       .Input("alpha")
       .Output("grad")
-      .Attr<int64_t>("blank", blank)
+      .Attr<int32_t>("blank", blank)
       .Attr<bool>("zero_infinity", zero_infinity)
       .Build();
 }

@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct CTCLossInterpState : public OpExprInterpState {
-  int64_t blank;
+  int32_t blank;
   bool zero_infinity;
 };
 
