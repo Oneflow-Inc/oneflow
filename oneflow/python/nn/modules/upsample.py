@@ -134,7 +134,6 @@ class Upsample(Module):
         )
 
     def forward(self, x):
-        assert x.device.type == "cuda", f"Upsample not support cpu version now!"
         assert (
             self.size != None or self.scale_factor != None
         ), f"size and scale_factor can not be none at the same time!"
