@@ -36,7 +36,7 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
     .Attr<bool>("remove_images_without_annotations", true)
     .Attr<bool>("stride_partition", false)
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
       CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
