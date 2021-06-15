@@ -196,6 +196,7 @@ jobs:
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/whl
+        timeout-minutes: 45
         with:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
