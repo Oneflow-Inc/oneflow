@@ -100,7 +100,7 @@ class ReplicationPad2d(Module):
             .Input("x")
             .Output("y")
             .Attr("padding", self.padding)
-            .Attr("floating_value", float(1.))
+            .Attr("floating_value", float(1.0))
             .Attr("integral_value", int(0))
             .Build()
         )
