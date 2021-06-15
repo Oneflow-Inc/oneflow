@@ -47,7 +47,7 @@ class MeshGrid(Module):
                     view_shape.append(-1)
                 else:
                     view_shape.append(1)
-        # TODO(BBuf) change reshape to view
+            # TODO(BBuf) change reshape to view
             outputs.append(inputs[i].reshape(view_shape).expand(*shape))
         return outputs
 
@@ -93,6 +93,7 @@ def meshgrid_op(*inputs):
                 [4., 5., 6.]], dtype=oneflow.float32)
     """
     return MeshGrid()(inputs)
+
 
 if __name__ == "__main__":
     import doctest
