@@ -107,7 +107,10 @@ class GroupNorm(Module):
         variance = flow.experimental.var(reshape_to_1d, dim=2, keepdim=True)
         normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(variance + self.eps)
         normalized = flow.experimental.reshape(normalized, shape=[origin_shape[0],  self.num_channels, -1])
-        normalized = self.weight * normalized + self.bias
+        if self.weight:
+            normalized = normalized * self.weight
+        if self.bias:
+            normalized = normalized + self.bias
         res= flow.experimental.reshape(normalized, shape=tuple(input.shape))
 
         return res
