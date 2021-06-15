@@ -68,25 +68,18 @@ class Conv2DFunctor {
     JUST(attrs.SetAttr<int32_t>("groups", groups));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight}, attrs);
-
-    // const auto& op = JUST(one::OpBuilder("conv2d")
-    //                           .Input("in")
-    //                           .Input("weight")
-    //                           .Output("out")
-    //                           .Attr<int32_t>("filters", filters)
-    //                           .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-    //                           .Attr<std::vector<int32_t>>("strides", strides)
-    //                           .Attr<std::vector<int32_t>>("padding_before", padding_before)
-    //                           .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-    //                           .Attr<int32_t>("groups", groups)
-    //                           .Attr<std::string>("data_format", data_format)
-    //                           .Build());
-    // return OpInterpUtil::Dispatch<Tensor>(*op, {x, weight});
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
+
+class Conv2DataGradFunctor {
+  public:
+   Conv2DFunctor() {
+     op_ = CHECK_JUST(one::OpBui)
+   }
+}
 
 class MatMulBaseFunctor {
  public:
