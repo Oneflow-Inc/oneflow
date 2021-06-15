@@ -200,7 +200,7 @@ def compare_with_np(
     zero_infinity,
 ):
     assert data_type in ["float32", "double"]
-    assert device_type in ["gpu", "cpu"]
+    assert device_type in ["cuda", "cpu"]
     assert reduction in ["none", "mean", "sum"]
     assert zero_infinity in [False, True]
 
@@ -252,27 +252,32 @@ def compare_with_np(
         zero_infinity,
     )
 
-    def assert_loss_grad(blob: tp.Numpy):
-        assert np.allclose(blob, np_grad, atol=1e-5, equal_nan=True)
-
     ctc_loss = flow.nn.CTCLoss(
         blank=blank, reduction=reduction, zero_infinity=zero_infinity
     )
 
-    of_out = ctc_loss(
-        flow.Tensor(log_probs, dtype=flow.float32),
-        flow.Tensor(targets, dtype=flow.int32),
-        flow.Tensor(input_lengths, dtype=flow.int32),
-        flow.Tensor(target_lengths, dtype=flow.int32),
+    log_probs = flow.Tensor(
+        log_probs, dtype=flow.float32, requires_grad=False, device=flow.device(device_type)
     )
-    #of_out.backward()
+    targets = flow.Tensor(targets, dtype=flow.int32, device=flow.device(device_type))
+    input_lengths = flow.Tensor(
+        input_lengths, dtype=flow.int32, device=flow.device(device_type)
+    )
+    target_lengths = flow.Tensor(
+        target_lengths, dtype=flow.int32, device=flow.device(device_type)
+    )
 
+    #ctc_loss = ctc_loss.to(device_type)
+    of_out = ctc_loss(log_probs, targets, input_lengths, target_lengths,)
     assert np.allclose(of_out.numpy(), np_out, atol=1e-5)
+    print("*" * 30)
+    #of_out.backward()
+    #assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-5, equal_nan=True)
 
 
 def gen_arg_list():
     arg_dict = OrderedDict()
-    arg_dict["device_type"] = ["cpu", "gpu"]
+    arg_dict["device_type"] = ["cuda"]
     arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32"]
     arg_dict["max_input_length"] = [20]
