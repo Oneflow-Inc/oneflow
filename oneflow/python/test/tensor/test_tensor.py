@@ -761,6 +761,9 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+        of_out_magic = input ** 2.1
+        test_case.assertTrue(np.allclose(of_out_magic.numpy(), np_out, 1e-5, 1e-5))
+
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
