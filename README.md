@@ -66,7 +66,7 @@
 
   ```bash
   curl https://oneflow-public.oss-cn-beijing.aliyuncs.com/oneflow-src.zip -o oneflow-src.zip
-  unzip oneflow-src.zip
+  unzip oneflow-src.zip -d oneflow
   ```
 </details>
 
