@@ -45,7 +45,7 @@ class Slice(Module):
 def slice_op(x, slice_tup_list: Sequence[Tuple[int, int, int]]):
     r"""Extracts a slice from a tensor.
     The `slice_tup_list` assigns the slice indices in each dimension, the format is (start, stop, step).
-    The operator will slice the tensor according to the `slice_top_list`.
+    The operator will slice the tensor according to the `slice_tup_list`.
 
     Args:
         x: A `Tensor`.
@@ -113,7 +113,7 @@ def slice_update_op(x, update, slice_tup_list: Sequence[Tuple[int, int, int]]):
         >>> y.numpy()
         array([1., 2., 3., 4., 1.], dtype=float32)
     """
-    start, stop, step = check_slice_tup_list(slice_tup_list, x.shape)
+    start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return SliceUpdate(start, stop, step)(x, update)
 
 

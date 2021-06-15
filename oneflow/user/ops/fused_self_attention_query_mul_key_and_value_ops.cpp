@@ -25,8 +25,8 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value")
     .Attr<float>("alpha")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType dtype = *ctx->Dtype4ArgNameAndIndex("hidden_states", 0);
-      *ctx->Dtype4ArgNameAndIndex("query_mul_key", 0) = dtype;
-      *ctx->Dtype4ArgNameAndIndex("value", 0) = dtype;
+      *ctx->OutputDType("query_mul_key", 0) = dtype;
+      *ctx->OutputDType("value", 0) = dtype;
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -72,7 +72,7 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value_grad")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       DataType dtype = *ctx->Dtype4ArgNameAndIndex("query_mul_key_grad", 0);
       CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("value_grad", 0), dtype);
-      *ctx->Dtype4ArgNameAndIndex("hidden_states_grad", 0) = dtype;
+      *ctx->OutputDType("hidden_states_grad", 0) = dtype;
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

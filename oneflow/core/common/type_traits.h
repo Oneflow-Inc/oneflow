@@ -105,6 +105,10 @@ struct IsScalarType final {
 };
 
 namespace detail {
+
+template<typename T>
+using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+
 template<typename T, typename Enabled = void>
 struct ScalarOrConstRef;
 

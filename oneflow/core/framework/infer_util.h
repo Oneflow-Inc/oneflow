@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -44,6 +44,7 @@ class InferContext {
   virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
   virtual Shape* OutputShape(const std::string&, int32_t) = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual DataType* OutputDType(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
@@ -81,10 +82,11 @@ class InferContext {
     UNIMPLEMENTED();
     return nullptr;
   };
-  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
 
-  virtual const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                           int32_t) const = 0;
+  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                                int32_t) const = 0;
 
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 

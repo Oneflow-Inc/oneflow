@@ -34,7 +34,7 @@ REGISTER_USER_OP("argmax")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
+      *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 

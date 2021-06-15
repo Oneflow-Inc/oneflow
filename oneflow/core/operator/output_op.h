@@ -36,14 +36,14 @@ class OutputOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   Maybe<void> InferParallelDistributionSignature(
-      ParallelDistributionSignature* parallel_distribution_signature,
-      const ParallelDistributionSignature& parallel_distribution_constraints,
+      cfg::ParallelDistributionSignature* parallel_distribution_signature,
+      const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
       const ParallelDesc& parallel_desc,
       std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
           ParallelDistributionInferHint4Ibn) const override;

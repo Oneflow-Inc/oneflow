@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/dl/include/ibv.h"
+#include "oneflow/core/platform/include/ibv.h"
 
 #if defined(WITH_RDMA) && defined(OF_PLATFORM_POSIX)
 
