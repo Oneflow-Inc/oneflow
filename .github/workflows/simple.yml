@@ -79,6 +79,7 @@ jobs:
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
+        if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build-third_party
           cd build-third_party
@@ -86,6 +87,7 @@ jobs:
           make -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
+        if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build
           cd build
