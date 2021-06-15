@@ -86,15 +86,12 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
-      util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
+      xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
       for (auto& pair : sbp_signatures) {
-        cfg_sbp_signatures.insert(pair->first, pair->second);
+        cfg_sbp_signatures.insert({pair.first, pair.second});
       }
       xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
                       &parallel_desc, &sbp_signatures, &lbn2logical_blob_desc, &entry_blob_descs);
-      for (auto& pair : cfg_sbp_signatures) {
-        pair->second.ToProto(&sbp_signatures.at(pair->first));
-      }
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());

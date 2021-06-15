@@ -122,7 +122,6 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
         kernel_conf.op_attribute().parallel_distribution_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
       sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
-      /* sbp_signature_ = &kernel_conf.op_attribute().sbp_signature(); */
     }
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
