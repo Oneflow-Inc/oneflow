@@ -97,7 +97,7 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
     xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                  &op_parallel_desc, &cfg_sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
+                    &op_parallel_desc, &cfg_sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
   }
 
   // Fetch output blob descs
