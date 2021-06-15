@@ -75,8 +75,8 @@ def Bernoulli(
             name if name is not None else id_util.UniqueStr("Bernoulli_")
         )
         .Op("bernoulli")
-        .Input("x", [x])
-        .Attr("dtype", dtype)
+        .Input("in", [x])
+        .Attr("dtype", dtype if dtype is not None else x.dtype)
         .Attr(
             "seed",
             seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
