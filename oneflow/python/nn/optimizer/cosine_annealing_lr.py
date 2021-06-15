@@ -68,7 +68,6 @@ class CosineAnnealingLR(LrScheduler):
         https://arxiv.org/abs/1608.03983
     """
 
-
     def __init__(
         self, optimizer, steps: int, alpha: float = 0.0, last_step=-1, verbose=False
     ):
@@ -77,7 +76,6 @@ class CosineAnnealingLR(LrScheduler):
         self.steps = steps
         self.alpha = alpha
         super().__init__(optimizer, last_step, verbose)
-
 
     def get_lr(self):
         if self.last_step < self.steps:
