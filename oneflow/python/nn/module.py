@@ -69,30 +69,12 @@ class Module(object):
     def consistent(self):
         return self._consistent
 
+    @consistent.setter
+    def consistent(self, value):
+        self._consistent = value
+
     def to_consistent(self, parallel_distribution, placement_signature):
-        assert (
-            not self.consistent
-        ), "the module is already consistented module, don't cast again!"
-
-        def cast_input_to_consistent_hook(self, input_tensors):
-            return consistent_cast_util.cast_input_to_consistent(
-                input_tensors, parallel_distribution[0], placement_signature[0]
-            )
-
-        def cast_output_from_consistent_hook(self, output_tensors):
-            return consistent_cast_util.cast_output_from_consistent(
-                output_tensors, parallel_distribution[1], placement_signature[1]
-            )
-
-        consisitent_module = copy.deepcopy(self)
-        consisitent_module.register_forward_pre_hook(cast_input_to_consistent_hook)
-        consisitent_module.register_forward_hook(cast_output_from_consistent_hook)
-
-        def set_consistent(module):
-            module._consistent = True
-
-        consisitent_module.apply(set_consistent)
-        return consisitent_module
+        return flow.consistent(parallel_distribution, placement_signature)(self)
 
     def forward(self, *args):
         raise NotImplementedError()
@@ -104,6 +86,10 @@ class Module(object):
         raise NotImplementedError()
 
     def __call__(self, *args):
+        # make the class' __call_() method call call_func to customize __call__ by a specific instance
+        return self.call_func(*args)
+
+    def call_func(self, *args):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)
             if result is not None:

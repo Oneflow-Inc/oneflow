@@ -26,7 +26,7 @@ class TestConsistentCastModule(flow.unittest.TestCase):
     def test_consistent_cast_module(test_case):
         relu = flow.nn.ReLU()
 
-        consistent_relu = flow.consistent_cast(
+        consistent_relu = flow.consistent(
             (["S(0)"], ["S(0)"]),
             (
                 [flow.placement("cpu", ["0:0"], None)],
@@ -61,7 +61,7 @@ class TestConsistentCastModule(flow.unittest.TestCase):
         out_diff = np.random.randn(8, 16, 12, 5)
         in_diff = out_diff * relu_mask
 
-        consisitent_relu_func = flow.consistent_cast(
+        consisitent_relu_func = flow.consistent(
             (["S(0)"], ["S(0)"]),
             (
                 [flow.placement("cpu", ["0:0"], None)],

@@ -25,8 +25,8 @@ import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.nn.consistent_cast_util as consistent_cast_util
 
 
-@oneflow_export("consistent_cast")
-def api_consistent_cast(
+@oneflow_export("consistent")
+def api_consistent(
     parallel_distribution: Tuple[
         List[Union[Tuple[str], str]], List[Union[Tuple[str], str]]
     ],
@@ -81,8 +81,29 @@ def api_consistent_cast(
 
             return wrapped_func
         else:
-            return mirrored_entity.to_consistent(
-                parallel_distribution, placement_signature
-            )
+            assert (
+                not mirrored_entity.consistent
+            ), "the entity is already consistented entity, don't cast again!"
+
+            original_call_func = mirrored_entity.call_func
+
+            def new_call_func(*args):
+                args = list(args)
+                sess = session_ctx.GetDefaultSession()
+                with sess.consistent_scope():
+                    args = consistent_cast_util.cast_input_to_consistent(
+                        args, parallel_distribution[0], placement_signature[0]
+                    )
+                    consistent_output = original_call_func(*args)
+                    return consistent_cast_util.cast_output_from_consistent(
+                        consistent_output,
+                        parallel_distribution[1],
+                        placement_signature[1],
+                    )
+
+            mirrored_entity.call_func = new_call_func
+            mirrored_entity.consistent = True
+
+            return mirrored_entity
 
     return mirrored_entity_consistent_cast
