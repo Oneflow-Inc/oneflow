@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 from typing import Optional
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
@@ -25,6 +25,7 @@ import oneflow._oneflow_internal
 
 
 @oneflow_export("random.bernoulli")
+@stable_api
 def Bernoulli(
     x: oneflow._oneflow_internal.BlobDesc,
     seed: Optional[int] = None,
