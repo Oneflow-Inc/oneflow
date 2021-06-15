@@ -47,8 +47,8 @@ Maybe<void> InputOp::InferOutBlobDescs(
 }
 
 Maybe<void> InputOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
@@ -56,7 +56,7 @@ Maybe<void> InputOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                                    output_bns(),
                                                    sbp_sig_list->mutable_sbp_signature()->Add()));
@@ -64,20 +64,20 @@ Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
 }
 
 Maybe<void> InputOp::InferParallelDistributionSignature(
-    ParallelDistributionSignature* parallel_distribution_signature,
-    const ParallelDistributionSignature& parallel_distribution_constraints,
+    cfg::ParallelDistributionSignature* parallel_distribution_signature,
+    const cfg::ParallelDistributionSignature& parallel_distribution_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const ParallelDistributionInferHint*>(const std::string&)>
         ParallelDistributionInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const InterfaceBlobConf& blob_conf = op_conf().input_conf().blob_conf();
-  ParallelDistribution& tick_parallel_distribution =
+  cfg::ParallelDistribution& tick_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["tick"];
   tick_parallel_distribution.clear_sbp_parallel();
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy->NumAxes()) {
     tick_parallel_distribution.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
-  ParallelDistribution& out_parallel_distribution =
+  cfg::ParallelDistribution& out_parallel_distribution =
       (*parallel_distribution_signature->mutable_bn_in_op2parallel_distribution())["out"];
   JUST(InterfaceOpUtil::ParseParallelDistributionFromBlobConf(blob_conf, parallel_desc,
                                                               &out_parallel_distribution));
