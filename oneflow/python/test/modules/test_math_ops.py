@@ -207,7 +207,7 @@ def _test_std(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = flow.std(input, dim=2)
     np_out = np.std(np_arr, axis=2)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_std_dim1(test_case, shape, device):
@@ -215,7 +215,7 @@ def _test_std_dim1(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = flow.std(input, dim=1)
     np_out = np.std(np_arr, axis=1)
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 def _test_std_negative_dim(test_case, shape, device):
@@ -223,7 +223,7 @@ def _test_std_negative_dim(test_case, shape, device):
     input = flow.Tensor(np_arr, device=flow.device(device))
     of_out = input.std(dim=(-2, -1, -3), keepdim=False)
     np_out = np.std(np_arr, axis=(-2, -1, -3))
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
