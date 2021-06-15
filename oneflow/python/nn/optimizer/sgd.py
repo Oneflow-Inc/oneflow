@@ -72,16 +72,16 @@ class SGD(Optimizer):
 
         # Add parameters
         if isinstance(parameters, GeneratorType):
-            self._param_groups.append(ParamGroup(parameters, self._default_options))
+            self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:  # List[Dict]
             for param in parameters:
-                self._param_groups.append(ParamGroup(param, self._default_options))
+                self.param_groups.append(ParamGroup(param, self._default_options))
 
-        for param_group in self._param_groups:
+        for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
-                if param_group.options["momentum"] != 0.0:
+                if param_group["momentum"] != 0.0:
                     self._state[param]["momentum_buf"] = flow.experimental.zeros_like(
                         param
                     )
@@ -112,18 +112,18 @@ class SGD(Optimizer):
             if closure is not None:
                 loss = closure()
 
-            for param_group in self._param_groups:
-                lr = param_group.options["lr"]
+            for param_group in self.param_groups:
+                lr = param_group["lr"]
                 for param in param_group.parameters:
                     if param.grad is None:
                         continue
-                    if param_group.options["momentum"] == 0.0:
-                        scale = param_group.options["scale"]
+                    if param_group["momentum"] == 0.0:
+                        scale = param_group["scale"]
                         self._sgd(param, param.grad, learning_rate_val=lr, scale=scale)
                     else:
                         momentum_buf = self._state[param]["momentum_buf"]
-                        scale = param_group.options["scale"]
-                        beta = param_group.options["momentum"]
+                        scale = param_group["scale"]
+                        beta = param_group["momentum"]
                         self._momentum_sgd(
                             param,
                             param.grad,

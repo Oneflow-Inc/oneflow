@@ -42,6 +42,7 @@ test_conv2d_weight = np.array(
         ],
     ]
 )
+
 test_conv2d_data = np.array(
     [
         [
@@ -83,6 +84,76 @@ test_conv2d_data = np.array(
                 ],
             ]
         ]
+    ]
+)
+
+test_conv2d_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    0.4095913469791412,
+                    0.2847584038972855,
+                    2.803684800863266,
+                    2.3940934538841248,
+                    2.5189263969659805,
+                ],
+                [
+                    -1.9525419473648071,
+                    -4.606781497597694,
+                    -3.51521897315979,
+                    -1.562677025794983,
+                    1.0915625244379044,
+                ],
+                [
+                    -2.1141327619552612,
+                    -6.987950943410397,
+                    -5.84306687861681,
+                    -3.7289341166615486,
+                    1.1448840647935867,
+                ],
+                [
+                    -2.5237241089344025,
+                    -7.272709347307682,
+                    -8.646751679480076,
+                    -6.123027570545673,
+                    -1.3740423321723938,
+                ],
+                [
+                    -0.1615908145904541,
+                    -2.381169445812702,
+                    -2.32784790545702,
+                    -2.1662570908665657,
+                    0.0533215403556824,
+                ],
+            ]
+        ]
+    ]
+)
+
+test_conv2d_weight_grad = np.array(
+    [
+        [
+            [
+                [0.6277393400669098, -2.7888944894075394, -0.2910575419664383],
+                [-3.095237225294113, -4.835702538490295, -1.8706469237804413],
+                [-1.0139376372098923, -6.076017692685127, -5.780256435275078],
+            ]
+        ],
+        [
+            [
+                [0.6277393400669098, -2.7888944894075394, -0.2910575419664383],
+                [-3.095237225294113, -4.835702538490295, -1.8706469237804413],
+                [-1.0139376372098923, -6.076017692685127, -5.780256435275078],
+            ]
+        ],
+        [
+            [
+                [0.6277393400669098, -2.7888944894075394, -0.2910575419664383],
+                [-3.095237225294113, -4.835702538490295, -1.8706469237804413],
+                [-1.0139376372098923, -6.076017692685127, -5.780256435275078],
+            ]
+        ],
     ]
 )
 
@@ -133,9 +204,11 @@ test_conv2d_with_bias_weight = np.array(
         ],
     ]
 )
+
 test_conv2d_with_bias_bias = np.array(
     [0.6605162620544434, -0.18903568387031555, -0.27302607893943787]
 )
+
 test_conv2d_with_bias_data = np.array(
     [
         [
@@ -201,6 +274,7 @@ test_conv2d_with_bias_output = np.array(
         ]
     ]
 )
+
 test_conv2d_group_weight = np.array(
     [
         [
@@ -215,6 +289,106 @@ test_conv2d_group_weight = np.array(
                 [-0.8611332774162292, -1.881519079208374, -0.7205708026885986],
                 [-0.35601571202278137, -0.15963983535766602, 1.797447681427002],
                 [0.19594945013523102, -1.7376397848129272, 0.047347065061330795],
+            ]
+        ],
+    ]
+)
+
+test_conv2d_group_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    -0.7248556613922119,
+                    0.3871079683303833,
+                    -0.0911646485328674,
+                    0.6336910128593445,
+                    -0.4782726168632507,
+                ],
+                [
+                    -1.8988049030303955,
+                    -1.5790258049964905,
+                    -1.125194251537323,
+                    0.7736106514930725,
+                    0.4538315534591675,
+                ],
+                [
+                    -5.054579019546509,
+                    -2.5412703156471252,
+                    -2.6260308623313904,
+                    2.4285481572151184,
+                    -0.0847605466842651,
+                ],
+                [
+                    -4.329723358154297,
+                    -2.9283782839775085,
+                    -2.534866213798523,
+                    1.794857144355774,
+                    0.3935120701789856,
+                ],
+                [
+                    -3.1557741165161133,
+                    -0.9622445106506348,
+                    -1.5008366107940674,
+                    1.654937505722046,
+                    -0.5385921001434326,
+                ],
+            ],
+            [
+                [
+                    -0.8611332774162292,
+                    -2.7426523566246033,
+                    -3.463223159313202,
+                    -2.6020898818969727,
+                    -0.7205708026885986,
+                ],
+                [
+                    -1.2171489894390106,
+                    -3.2583079040050507,
+                    -2.1814310252666473,
+                    -0.9642820358276367,
+                    1.0768768787384033,
+                ],
+                [
+                    -1.0211995393037796,
+                    -4.799998238682747,
+                    -3.6757742948830128,
+                    -2.654574755579233,
+                    1.1242239437997341,
+                ],
+                [
+                    -0.1600662618875504,
+                    -2.0573458820581436,
+                    -0.2125511355698109,
+                    -0.0524848736822605,
+                    1.8447947464883327,
+                ],
+                [
+                    0.195949450135231,
+                    -1.5416903346776962,
+                    -1.4943432696163654,
+                    -1.6902927197515965,
+                    0.0473470650613308,
+                ],
+            ],
+        ]
+    ]
+)
+
+test_conv2d_group_weight_grad = np.array(
+    [
+        [
+            [
+                [0.6277393400669098, -2.7888944894075394, -0.2910575419664383],
+                [-3.095237225294113, -4.835702538490295, -1.8706469237804413],
+                [-1.0139376372098923, -6.076017692685127, -5.780256435275078],
+            ]
+        ],
+        [
+            [
+                [3.30740749835968, -0.7220746576786041, -3.660933956503868],
+                [0.5273916646838188, -2.631059892475605, -7.6207195818424225],
+                [-3.5466641262173653, -8.214546449482441, -11.031560003757477],
             ]
         ],
     ]
@@ -300,6 +474,7 @@ test_conv2d_group_data = np.array(
         ]
     ]
 )
+
 test_conv2d_group_output = np.array(
     [
         [
@@ -316,6 +491,7 @@ test_conv2d_group_output = np.array(
         ]
     ]
 )
+
 test_conv2d_padding_weight = np.array(
     [
         [
@@ -327,6 +503,7 @@ test_conv2d_padding_weight = np.array(
         ]
     ]
 )
+
 test_conv2d_padding_data = np.array(
     [
         [
@@ -370,6 +547,63 @@ test_conv2d_padding_data = np.array(
         ]
     ]
 )
+
+test_conv2d_padding_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    3.237529069185257,
+                    3.237529069185257,
+                    3.237529069185257,
+                    3.237529069185257,
+                    3.237529069185257,
+                ],
+                [
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                ],
+                [
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                ],
+                [
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                    3.428095132112503,
+                ],
+                [
+                    2.596117228269577,
+                    2.596117228269577,
+                    2.596117228269577,
+                    2.596117228269577,
+                    2.596117228269577,
+                ],
+            ]
+        ]
+    ]
+)
+
+test_conv2d_padding_weight_grad = np.array(
+    [
+        [
+            [
+                [1.7594299167394638, 1.7594299167394638, 1.7594299167394638],
+                [-0.6019042432308197, -0.6019042432308197, -0.6019042432308197],
+                [-1.532561555504799, -1.532561555504799, -1.532561555504799],
+            ]
+        ]
+    ]
+)
+
 test_conv2d_padding_output = np.array(
     [
         [
@@ -435,6 +669,7 @@ test_conv2d_stride_weight = np.array(
         ]
     ]
 )
+
 test_conv2d_stride_data = np.array(
     [
         [
@@ -478,6 +713,63 @@ test_conv2d_stride_data = np.array(
         ]
     ]
 )
+
+test_conv2d_stride_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    0.5360521078109741,
+                    1.5194443464279175,
+                    0.3500547111034393,
+                    0.5360521078109741,
+                    1.5194443464279175,
+                ],
+                [
+                    -1.8013850003480911,
+                    0.061236098408699,
+                    2.762692868709564,
+                    -1.8013850003480911,
+                    0.061236098408699,
+                ],
+                [
+                    0.5360521078109741,
+                    1.5194443464279175,
+                    0.3500547111034393,
+                    0.5360521078109741,
+                    1.5194443464279175,
+                ],
+                [
+                    -1.8013850003480911,
+                    0.061236098408699,
+                    2.762692868709564,
+                    -1.8013850003480911,
+                    0.061236098408699,
+                ],
+                [
+                    0.5360521078109741,
+                    1.5194443464279175,
+                    0.3500547111034393,
+                    0.5360521078109741,
+                    1.5194443464279175,
+                ],
+            ]
+        ]
+    ]
+)
+
+test_conv2d_stride_weight_grad = np.array(
+    [
+        [
+            [
+                [-5.1135923862457275, 3.5859558284282684, 2.089697480201721],
+                [-0.3276629596948624, 1.7587070614099503, -2.5950092673301697],
+                [-5.1135923862457275, 3.5859558284282684, 2.089697480201721],
+            ]
+        ]
+    ]
+)
+
 test_conv2d_stride_output = np.array(
     [
         [
@@ -489,6 +781,7 @@ test_conv2d_stride_output = np.array(
         ]
     ]
 )
+
 test_conv2d_kernel_weight = np.array(
     [
         [
@@ -590,6 +883,108 @@ test_conv2d_kernel_data = np.array(
     ]
 )
 
+test_conv2d_kernel_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    -0.9574840068817139,
+                    -1.6823396682739258,
+                    -0.5703760385513306,
+                    -0.0911646485328674,
+                    -0.5402582287788391,
+                    -1.6522218585014343,
+                    -1.1739492416381836,
+                ],
+                [
+                    -1.749668538570404,
+                    -1.5424200296401978,
+                    -3.586230516433716,
+                    -0.121304988861084,
+                    -2.0410948395729065,
+                    0.0027156472206116,
+                    -1.7125413417816162,
+                ],
+                [
+                    -2.6108018159866333,
+                    -4.285072386264801,
+                    -7.049453675746918,
+                    -3.079410582780838,
+                    -3.2773211896419525,
+                    -0.5129399001598358,
+                    -1.8721811771392822,
+                ],
+                [
+                    -2.6108018159866333,
+                    -4.285072386264801,
+                    -7.049453675746918,
+                    -3.079410582780838,
+                    -3.2773211896419525,
+                    -0.5129399001598358,
+                    -1.8721811771392822,
+                ],
+                [
+                    -2.6108018159866333,
+                    -4.285072386264801,
+                    -7.049453675746918,
+                    -3.079410582780838,
+                    -3.2773211896419525,
+                    -0.5129399001598358,
+                    -1.8721811771392822,
+                ],
+                [
+                    -1.6533178091049194,
+                    -2.6027327179908752,
+                    -6.479077637195587,
+                    -2.9882459342479706,
+                    -2.7370629608631134,
+                    1.1392819583415985,
+                    -0.6982319355010986,
+                ],
+                [
+                    -0.8611332774162292,
+                    -2.7426523566246033,
+                    -3.463223159313202,
+                    -2.958105593919754,
+                    -1.236226350069046,
+                    -0.5156555473804474,
+                    -0.159639835357666,
+                ],
+            ]
+        ]
+    ]
+)
+
+test_conv2d_kernel_weight_grad = np.array(
+    [
+        [
+            [
+                [
+                    2.974529668688774,
+                    4.548736393451691,
+                    1.1672898679971695,
+                    -1.499158263206482,
+                    0.1862268149852753,
+                ],
+                [
+                    1.6534235626459122,
+                    2.3762744814157486,
+                    -1.448018729686737,
+                    -5.2917241007089615,
+                    -2.278435029089451,
+                ],
+                [
+                    -2.083257421851158,
+                    -2.23808591067791,
+                    -5.749193429946899,
+                    -7.540486767888069,
+                    -6.306201495230198,
+                ],
+            ]
+        ]
+    ]
+)
+
 test_conv2d_kernel_output = np.array(
     [
         [
@@ -603,6 +998,7 @@ test_conv2d_kernel_output = np.array(
         ]
     ]
 )
+
 test_conv2d_dilation_weight = np.array(
     [
         [
@@ -614,6 +1010,7 @@ test_conv2d_dilation_weight = np.array(
         ]
     ]
 )
+
 test_conv2d_dilation_data = np.array(
     [
         [
@@ -685,100 +1082,324 @@ test_conv2d_dilation_data = np.array(
         ]
     ]
 )
+
+test_conv2d_dilation_data_grad = np.array(
+    [
+        [
+            [
+                [
+                    -0.9574840068817139,
+                    0.0,
+                    0.0,
+                    -0.7248556613922119,
+                    0.0,
+                    0.0,
+                    1.1119636297225952,
+                ],
+                [
+                    -0.9574840068817139,
+                    0.0,
+                    0.0,
+                    -0.7248556613922119,
+                    0.0,
+                    0.0,
+                    1.1119636297225952,
+                ],
+                [
+                    -1.4357566237449646,
+                    0.0,
+                    0.0,
+                    -1.8988049030303955,
+                    0.0,
+                    0.0,
+                    0.319779098033905,
+                ],
+                [
+                    -0.4782726168632507,
+                    0.0,
+                    0.0,
+                    -1.1739492416381836,
+                    0.0,
+                    0.0,
+                    -0.7921845316886902,
+                ],
+                [
+                    0.4538315534591675,
+                    0.0,
+                    0.0,
+                    -4.329723358154297,
+                    0.0,
+                    0.0,
+                    1.4013450741767883,
+                ],
+                [
+                    0.9321041703224182,
+                    0.0,
+                    0.0,
+                    -3.1557741165161133,
+                    0.0,
+                    0.0,
+                    2.1935296058654785,
+                ],
+                [
+                    0.9321041703224182,
+                    0.0,
+                    0.0,
+                    -3.1557741165161133,
+                    0.0,
+                    0.0,
+                    2.1935296058654785,
+                ],
+            ]
+        ]
+    ]
+)
+
+test_conv2d_dilation_weight_grad = np.array(
+    [
+        [
+            [
+                [-0.8153198063373566, -1.3503028601408005, 1.1495047211647034],
+                [-0.4195204377174377, -1.4455246925354004, 2.328780397772789],
+                [0.7426864206790924, 3.1678953766822815, -0.979511596262455],
+            ]
+        ]
+    ]
+)
+
 test_conv2d_dilation_output = np.array(
     [[[[-5.2563982009887695], [5.410353183746338], [-8.517012596130371]]]]
 )
 
 
-def _test_conv2d(test_case, conv, data, output, weight, bias=None):
-    x = flow.Tensor(data)
+def _test_conv2d(
+    test_case, conv, data, weight, output, bias=None, device="cuda",
+):
+    to_device = flow.device(device)
+    x = flow.Tensor(data, device=to_device)
     conv.weight = flow.nn.Parameter(flow.Tensor(weight))
     if bias is not None:
         conv.bias = flow.nn.Parameter(flow.Tensor(bias))
+    conv.to(to_device)
     of_out = conv(x)
     test_case.assertTrue(np.allclose(of_out.numpy(), output, rtol=1e-4, atol=1e-8))
 
 
-# TODO: skip this test, for layernorm doesn't have cpu implementation
-@unittest.skipIf(True, "CPU conv is not supported")
+def _test_conv2d_backward(
+    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
+):
+    to_device = flow.device(device)
+    x = flow.Tensor(data, device=to_device, requires_grad=True)
+    conv.weight = flow.nn.Parameter(flow.Tensor(weight), requires_grad=True)
+    if bias is not None:
+        conv.bias = flow.nn.Parameter(flow.Tensor(bias))
+    conv.to(to_device)
+    of_out = conv(x)
+    of_out.sum().backward()
+    test_case.assertTrue(np.allclose(x.grad.numpy(), data_grad, rtol=1e-4, atol=1e-8))
+    test_case.assertTrue(
+        np.allclose(conv.weight.grad.numpy(), weight_grad, rtol=1e-4, atol=1e-8)
+    )
+
+
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestConv2d(flow.unittest.TestCase):
     def test_conv2d_default_init(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True)
-        test_case.assertTrue(
-            not np.allclose(
-                conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), bias=True).to(flow.device(device))
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.weight.numpy(), np.zeros((1, 1, 3, 3)), rtol=1e-9, atol=1e-10
+                )
             )
-        )
-        test_case.assertTrue(
-            not np.allclose(conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10)
-        )
+            test_case.assertTrue(
+                not np.allclose(
+                    conv.bias.numpy(), np.zeros((1,)), rtol=1e-9, atol=1e-10
+                )
+            )
 
     def test_conv2d(test_case):
-        conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False)
-        _test_conv2d(
-            test_case, conv, test_conv2d_data, test_conv2d_output, test_conv2d_weight
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_data,
+                test_conv2d_weight,
+                test_conv2d_output,
+                device=device,
+            )
 
+    def test_conv2d_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 3, (3, 3), bias=False).to(flow.device(device))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_data,
+                test_conv2d_weight,
+                test_conv2d_data_grad,
+                test_conv2d_weight_grad,
+                device=device,
+            )
+
+    # bias grad not yet supported
     def test_conv2d_with_bias(test_case):
-        conv = flow.nn.Conv2d(1, 3, (3, 3), bias=True)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_with_bias_data,
-            test_conv2d_with_bias_output,
-            test_conv2d_with_bias_weight,
-            test_conv2d_with_bias_bias,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 3, (3, 3), bias=True).to(flow.device(device))
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_with_bias_data,
+                test_conv2d_with_bias_weight,
+                test_conv2d_with_bias_output,
+                bias=test_conv2d_with_bias_bias,
+                device=device,
+            )
 
     def test_conv2d_group(test_case):
-        conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_group_data,
-            test_conv2d_group_output,
-            test_conv2d_group_weight,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_group_data,
+                test_conv2d_group_weight,
+                test_conv2d_group_output,
+                device=device,
+            )
+
+    def test_conv2d_group_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(2, 2, (3, 3), groups=2, bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_group_data,
+                test_conv2d_group_weight,
+                test_conv2d_group_data_grad,
+                test_conv2d_group_weight_grad,
+                device=device,
+            )
 
     def test_conv2d_padding(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_padding_data,
-            test_conv2d_padding_output,
-            test_conv2d_padding_weight,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_padding_data,
+                test_conv2d_padding_weight,
+                test_conv2d_padding_output,
+                device=device,
+            )
+
+    def test_conv2d_padding_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 2), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_padding_data,
+                test_conv2d_padding_weight,
+                test_conv2d_padding_data_grad,
+                test_conv2d_padding_weight_grad,
+                device=device,
+            )
 
     def test_conv2d_stride(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_stride_data,
-            test_conv2d_stride_output,
-            test_conv2d_stride_weight,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False
+            ).to(flow.device(device))
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_stride_data,
+                test_conv2d_stride_weight,
+                test_conv2d_stride_output,
+                device=device,
+            )
+
+    def test_conv2d_stride_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(
+                1, 1, (3, 3), padding=(1, 1), stride=(2, 3), bias=False
+            ).to(flow.device(device))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_stride_data,
+                test_conv2d_stride_weight,
+                test_conv2d_stride_data_grad,
+                test_conv2d_stride_weight_grad,
+                device=device,
+            )
 
     def test_conv2d_kernel(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_kernel_data,
-            test_conv2d_kernel_output,
-            test_conv2d_kernel_weight,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False).to(flow.device(device))
+            conv.to(flow.device("cuda"))
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_kernel_data,
+                test_conv2d_kernel_weight,
+                test_conv2d_kernel_output,
+            )
+
+    def test_conv2d_kernel_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 5), bias=False).to(flow.device(device))
+            conv.to(flow.device("cuda"))
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_kernel_data,
+                test_conv2d_kernel_weight,
+                test_conv2d_kernel_data_grad,
+                test_conv2d_kernel_weight_grad,
+            )
 
     def test_conv2d_dilation(test_case):
-        conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False)
-        _test_conv2d(
-            test_case,
-            conv,
-            test_conv2d_dilation_data,
-            test_conv2d_dilation_output,
-            test_conv2d_dilation_weight,
-        )
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d(
+                test_case,
+                conv,
+                test_conv2d_dilation_data,
+                test_conv2d_dilation_weight,
+                test_conv2d_dilation_output,
+                device=device,
+            )
+
+    def test_conv2d_dilation_backward(test_case):
+        for device in ["cuda", "cpu"]:
+            conv = flow.nn.Conv2d(1, 1, (3, 3), dilation=(2, 3), bias=False).to(
+                flow.device(device)
+            )
+            _test_conv2d_backward(
+                test_case,
+                conv,
+                test_conv2d_dilation_data,
+                test_conv2d_dilation_weight,
+                test_conv2d_dilation_data_grad,
+                test_conv2d_dilation_weight_grad,
+                device=device,
+            )
 
 
 if __name__ == "__main__":
