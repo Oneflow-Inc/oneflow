@@ -47,10 +47,6 @@ jobs:
         run: |
           sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
         shell: bash
-      - name: Install dependencies (pip)
-        run: |
-          python3 -m pip install -r dev-requirements.txt
-        shell: bash
       - name: Cache pip (Linux)
         if: startsWith(runner.os, 'Linux')
         uses: actions/cache@v2
@@ -63,6 +59,10 @@ jobs:
         with:
           path: ~/Library/Caches/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+      - name: Install dependencies (pip)
+        run: |
+          python3 -m pip install -r dev-requirements.txt
+        shell: bash
       - name: Cache third party dir
         uses: actions/cache@v2
         with:
