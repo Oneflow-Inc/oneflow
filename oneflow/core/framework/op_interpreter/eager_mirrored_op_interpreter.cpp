@@ -57,15 +57,19 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
   bool need_check_mem_case = true;
   bool need_event_record = false;
+  bool is_inplace = true;
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-      const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-          op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
-          std::make_shared<vm::TensorBuffer>(), op_parallel_desc);
-      output_eager_blob_objects->at(i) = eager_blob_object;
-      out_devices->at(i) = default_device;
+      if (!output_eager_blob_objects->at(i)) {
+        const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+            op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
+            std::make_shared<vm::TensorBuffer>(), op_parallel_desc);
+        output_eager_blob_objects->at(i) = eager_blob_object;
+        out_devices->at(i) = default_device;
+        is_inplace = false;
+      }
     }
   } else {
     need_check_mem_case = false;
@@ -75,14 +79,17 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       need_event_record = need_event_record || !(*op_device == *input_device);
     }
     op_parallel_desc = op_device->parallel_desc_ptr();
-    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-      const auto& tensor_device = out_devices->at(i);
-      CHECK_OR_RETURN(static_cast<bool>(tensor_device));
-      const auto& tensor_parallel_desc = op_device->parallel_desc_ptr();
-      const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-          tensor_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
-          std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
-      output_eager_blob_objects->at(i) = eager_blob_object;
+    for (int i = 0; i < output_eager_blob_objects->size(); ++i) {
+      if (!output_eager_blob_objects->at(i)) {
+        const auto& tensor_device = out_devices->at(i);
+        CHECK_OR_RETURN(static_cast<bool>(tensor_device));
+        const auto& tensor_parallel_desc = op_device->parallel_desc_ptr();
+        const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
+            tensor_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
+            std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
+        output_eager_blob_objects->at(i) = eager_blob_object;
+        is_inplace = false;
+      }
     }
   }
 
@@ -112,7 +119,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      attrs, op_parallel_desc, instr_type_name);
+                                      attrs, op_parallel_desc, instr_type_name, is_inplace);
   }));
   return Maybe<void>::Ok();
 }

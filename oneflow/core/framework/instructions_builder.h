@@ -249,7 +249,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                                 const AttrMap& attrs,
                                 const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-                                const std::string& instr_type_name);
+                                const std::string& instr_type_name, bool is_inplace);
 
  private:
   Maybe<void> RankFrontSeqCallback(const std::string& instruction_name,

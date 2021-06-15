@@ -35,3 +35,11 @@
                                    Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
                                    Float momentum=0.9, Bool is_training=False)"
   bind_python: True
+
+- name: "relu"
+  signature: "Tensor relu(Tensor x)"
+  bind_python: True
+
+- name: "relu_"
+  signature: "Tensor relu_(Tensor x)"
+  bind_python: True
