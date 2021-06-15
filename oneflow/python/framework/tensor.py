@@ -255,6 +255,11 @@ class Tensor:
         else:
             return None
 
+    @grad.setter
+    @_auto_determine
+    def grad(self, grad_tensor):
+        self._local_or_consistent_tensor.grad = grad_tensor
+
     @property
     def grad_fn(self):
         if self._local_or_consistent_tensor is not None:

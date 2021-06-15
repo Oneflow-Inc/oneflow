@@ -74,11 +74,14 @@ env_util.init_with_env()
 del env_util
 
 
+def is_multi_client():
+    return True
+
+
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(get_rank, sync):
     def SyncOnMaster():
-        return
-        if get_rank() == 0:
+        if is_multi_client() or get_rank() == 0:
             sync()
 
     return SyncOnMaster
@@ -93,7 +96,9 @@ atexit.register(oneflow.python.framework.session_context.TryCloseDefaultSession)
 atexit.register(
     _SyncOnMasterFn(
         oneflow.python.framework.distribute.get_rank,
-        oneflow._oneflow_internal.eager.single_client.Sync,
+        oneflow._oneflow_internal.eager.multi_client.Sync
+        if is_multi_client()
+        else oneflow._oneflow_internal.eager.single_client.Sync,
     )
 )
 del atexit

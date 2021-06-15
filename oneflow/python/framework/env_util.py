@@ -250,19 +250,20 @@ def CompleteEnvProto(env_proto):
 
 
 def is_multi_devices():
-    return os.getenv('MASTER_ADDR') is not None
+    return os.getenv("MASTER_ADDR") is not None
 
 
 @oneflow_export("local_rank")
 def get_local_rank():
     if is_multi_devices():
-        return os.getenv('LOCAL_RANK')
+        return int(os.getenv("LOCAL_RANK"))
     return 0
 
 
+@oneflow_export("world_size")
 def get_world_size():
     if is_multi_devices():
-        return os.getenv('WORLD_SIZE')
+        return int(os.getenv("WORLD_SIZE"))
     return 1
 
 
@@ -317,6 +318,9 @@ def init_with_env():
     print(env_list)
     x_is_not_none = [x is not None for x in env_list]
     if all(x_is_not_none):
+        # flow.env.master_port(os.getenv(..))
+        flow.env.init()
+
         env_proto = GetEnvProto(
             master_addr, master_port, world_size, rank, local_rank, nproc
         )

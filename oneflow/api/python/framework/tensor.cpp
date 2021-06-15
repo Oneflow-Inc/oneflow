@@ -232,7 +232,9 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("shape", &T::shape)
       .def_property_readonly("dtype", &GetTensorDType<T>)
       .def_property_readonly("is_cuda", &T::is_cuda)
-      .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
+      .def_property(
+          "grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); },
+          [](T& t, const std::shared_ptr<T>& grad) { t.set_acc_grad(grad); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)
       .def_property_readonly("is_leaf", &T::is_leaf)
       .def_property(

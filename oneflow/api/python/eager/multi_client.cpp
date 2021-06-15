@@ -13,25 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_H_
-#define ONEFLOW_CORE_VM_H_
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/vm/vm_util.h"
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/object_msg/object_msg.h"
-#include "oneflow/core/vm/instruction.msg.h"
-
-namespace oneflow {
-namespace vm {
-
-class InstructionMsg;
-
-ObjectMsgPtr<InstructionMsg> NewInstruction(const std::string& instr_type_name);
-
-Maybe<void> Run(vm::InstructionMsgList* instr_msg_list);
-Maybe<void> SingleClientSync();
-Maybe<void> MultiClientSync();
-
-}  // namespace vm
-}  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_VM_H_
+ONEFLOW_API_PYBIND11_MODULE("eager.multi_client", m) {
+  using namespace oneflow;
+  namespace py = pybind11;
+  m.def(
+      "Sync", []() { vm::MultiClientSync().GetOrThrow(); },
+      py::call_guard<py::gil_scoped_release>());
+}

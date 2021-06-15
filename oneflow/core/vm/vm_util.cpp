@@ -53,5 +53,16 @@ Maybe<void> SingleClientSync() {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientSync() {
+  BlockingCounter bc(1);
+  PhysicalRun([&bc](InstructionsBuilder* builder) {
+    builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
+  });
+
+  bc.WaitUntilCntEqualZero();
+
+  return Maybe<void>::Ok();
+}
+
 }  // namespace vm
 }  // namespace oneflow

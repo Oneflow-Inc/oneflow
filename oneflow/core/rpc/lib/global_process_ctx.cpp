@@ -29,6 +29,11 @@ int64_t GlobalProcessCtx::Rank() {
   return Global<ProcessCtx>::Get()->rank();
 }
 
+int64_t GlobalProcessCtx::LocalRank() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return int64_t(Rank() % NumOfProcessPerNode());
+}
+
 int64_t GlobalProcessCtx::NodeSize() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->node_size();
