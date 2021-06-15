@@ -27,6 +27,13 @@ const static std::string kProducedLbi2ConsumedDiffLbi = "produced_lbi2consumed_d
 std::function<const ParallelConf*(const std::string&)> MakeGetterParallelConf4OpName(
     const Placement& placement);
 
+namespace cfg {
+class SbpParallel;
+class SbpSignature;
+class ParallelDistribution;
+class ParallelDistributionSignature;
+}  // namespace cfg
+
 class SbpParallel;
 class LogicalBlobId;
 class Operator;
@@ -60,22 +67,22 @@ class JobBuilder final {
   void DelOps(const std::vector<OperatorConf>& op_confs);
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  void SetSbpParallel4Oba(const OpBlobArg& oba, const SbpParallel& sbp_parallel);
+  void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
   void SetParallelDistribution4Oba(const OpBlobArg& oba,
-                                   const ParallelDistribution& parallel_distribution);
+                                   const cfg::ParallelDistribution& parallel_distribution);
   void ForEachOperator(const std::function<void(const Operator&)>& Handler) const;
 
   const ParallelConf& ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   const ParallelConf& ParallelConf4OpName(const std::string& op_name) const;
 
-  const SbpSignature SbpSignature4OpName(const std::string& op_name) const;
-  void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
+  const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
+  void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);
 
   const ParallelDistributionSignature& ParallelDistributionSignature4OpName(
       const std::string& op_name) const;
   void AddParallelDistributionSignature4OpName(
       const std::string& op_name,
-      const ParallelDistributionSignature& parallel_distribution_signature);
+      const cfg::ParallelDistributionSignature& parallel_distribution_signature);
 
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
