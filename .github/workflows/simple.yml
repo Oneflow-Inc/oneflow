@@ -25,12 +25,13 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["mac"]
+        test_suite: ["mac", "ubuntu-20.04"]
         include:
           - test_suite: mac
-            cuda_version: ""
-            extra_flags: ""
             os: "macos-latest"
+            allow_fail: true
+          - test_suite: ubuntu-20.04
+            os: "ubuntu-20.04"
             allow_fail: true
     steps:
       - uses: actions/checkout@v2
@@ -41,8 +42,12 @@ jobs:
         run: |
           brew install nasm
         shell: bash
-      - name: Cache third party dir (macOS)
+      - name: Install dependencies (homebrew)
         if: matrix.test_suite == 'mac'
+        run: |
+          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
+        shell: bash
+      - name: Cache third party dir
         uses: actions/cache@v2
         with:
           path: |
