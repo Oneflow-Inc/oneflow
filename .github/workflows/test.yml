@@ -389,7 +389,7 @@ jobs:
         run: |
           bash docker/ci/test/build.sh
       - name: Exe test
-        if: matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
