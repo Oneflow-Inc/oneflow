@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, Optional, Tuple, List, Callable
+
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.session_context as session_ctx
@@ -74,7 +75,7 @@ def _make_cast_consistent_ops(
     placement: List[flow.placement],
     op_expr: OpExpr,
     name: Optional[str] = None,
-) -> None:
+) -> OrderedDict:
     assert len(sbp_signature) == len(placement)
     cast_consistent_op = OrderedDict()
     for i in range(len(sbp_signature)):
