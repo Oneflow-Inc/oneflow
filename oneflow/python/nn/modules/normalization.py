@@ -44,6 +44,7 @@ class LayerNorm(Module):
         scalar scale and bias for each entire channel/plane with the
         :attr:`affine` option, Layer Normalization applies per-element scale and
         bias with :attr:`elementwise_affine`.
+
     This layer uses statistics computed from input data in both training and
     evaluation modes.
 
@@ -61,6 +62,7 @@ class LayerNorm(Module):
         elementwise_affine: a boolean value that when set to ``True``, this module
             has learnable per-element affine parameters initialized to ones (for weights)
             and zeros (for biases). Default: ``True``.
+
     Shape:
         - Input: :math:`(N, *)`
         - Output: :math:`(N, *)` (same shape as input)
@@ -89,19 +91,20 @@ class LayerNorm(Module):
 
         >>> x = flow.Tensor(input_arr)
         >>> m = flow.nn.LayerNorm(2)
-        >>> y = m(x)
-
-        # [[[[ 0.99997395 -0.99997395]
-        # [-0.999947    0.999947  ]]
-
-        # [[-0.99995947  0.9999595 ]
-        # [ 0.99998796 -0.99998796]]]
-
-        # [[[-0.9998348   0.99983454]
-        # [ 0.9999913  -0.9999913 ]]
-
-        # [[ 0.99997866 -0.99997854]
-        # [ 0.9999645  -0.9999645 ]]]]
+        >>> y = m(x).numpy()
+        >>> y
+        array([[[[ 0.99997395, -0.99997395],
+                 [-0.999947  ,  0.999947  ]],
+        <BLANKLINE>
+                [[-0.9999596 ,  0.9999594 ],
+                 [ 0.999988  , -0.999988  ]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[-0.9998343 ,  0.9998341 ],
+                 [ 0.9999914 , -0.9999914 ]],
+        <BLANKLINE>
+                [[ 0.99997866, -0.99997866],
+                 [ 0.9999646 , -0.9999646 ]]]], dtype=float32)
 
     """
     __constants__ = ["normalized_shape", "eps", "elementwise_affine"]

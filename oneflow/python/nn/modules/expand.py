@@ -27,6 +27,8 @@ class Expand(Module):
         self.expand_size = list(*sizes)
 
     def forward(self, x):
+        if x.dtype == flow.int8:
+            x = flow.experimental.cast(x, flow.int32)
         expand_size = self.expand_size
         assert len(expand_size) >= len(
             x.shape
@@ -62,6 +64,7 @@ class Expand(Module):
         )[0]
 
 
+@oneflow_export("expand")
 @register_tensor_op("expand")
 @experimental_api
 def expand_op(x, *sizes):
@@ -97,6 +100,7 @@ def expand_op(x, *sizes):
         >>> out = input.expand(1, 3, 2, 2)
         >>> print(out.shape)
         flow.Size([1, 3, 2, 2])
+
     """
     return Expand(sizes)(x)
 

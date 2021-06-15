@@ -13,31 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
-#define ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_
 
-#include "oneflow/core/common/util.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/instruction_replay.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-namespace dl {
+namespace debug {
 
-class DynamicLibrary {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DynamicLibrary);
-  ~DynamicLibrary();
+ONEFLOW_API_PYBIND11_MODULE("debug", m) {
+  m.def("start_recording_instructions", &StartRecordingInstructions);
+  m.def("end_recording_instructions", &EndRecordingInstructions);
+  m.def("clear_recorded_instructions", &ClearRecordedInstructions);
+  m.def("replay_instructions", &ReplayInstructions);
+}
 
-  static std::unique_ptr<DynamicLibrary> Load(const std::vector<std::string>& names);
-  void* LoadSym(const char* name);
-  std::string AbsolutePath();
-
- private:
-  DynamicLibrary(void* handle) : handle_(handle){};
-  void* handle_ = nullptr;
-};
-
-}  // namespace dl
+}  // namespace debug
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_DL_INCLUDE_WRAPPER_H_

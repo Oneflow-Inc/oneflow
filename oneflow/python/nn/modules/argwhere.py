@@ -36,7 +36,10 @@ class Argwhere(Module):
         )
 
     def forward(self, x):
-        return self._op(x)[0]
+        size = self._op(x)[1].numpy()
+        res = self._op(x)[0]
+        slice_tup_list = [[0, int(size), 1]]
+        return flow.experimental.slice(res, slice_tup_list=slice_tup_list)
 
 
 @oneflow_export("argwhere")
@@ -57,19 +60,19 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        x = np.array([[0, 1, 0],
-                    [2, 0, 2]]).astype(np.float32)
+        >>> x = np.array([[0, 1, 0],
+        ...            [2, 0, 2]]).astype(np.float32)
         
-        input = flow.Tensor(x)
-        output = flow.argwhere(input)
-
-        # output.numpy() [[0, 1],
-        #             [1, 0],
-        #             [1, 2]]
-
+        >>> input = flow.Tensor(x)
+        >>> output = flow.argwhere(input)
+        >>> output
+        tensor([[0, 1],
+                [1, 0],
+                [1, 2]], dtype=oneflow.int32)
 
     """
     return Argwhere(dtype=dtype)(x)
@@ -86,3 +89,9 @@ def argwhere_tebsor_op(x, dtype: Optional[flow.dtype] = None):
 
     """
     return Argwhere(dtype=dtype)(x)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
