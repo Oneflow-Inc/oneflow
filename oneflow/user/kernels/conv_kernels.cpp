@@ -327,9 +327,9 @@ struct ConvOpKernelState final : public user_op::OpKernelState {
 
 template<typename T>
 std::shared_ptr<ConvOpKernelState<T>> CreateConvOpKernelState(user_op::KernelComputeContext* ctx,
-                                                                const std::string& in_name,
-                                                                const std::string& out_name,
-                                                                const std::string& weight_name) {
+                                                              const std::string& in_name,
+                                                              const std::string& out_name,
+                                                              const std::string& weight_name) {
   const auto& data_format = ctx->Attr<std::string>("data_format");
 
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
@@ -406,7 +406,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     T* col_buf_dptr = tmp_buffer->mut_dptr<T>();
-    
+
     bool is_bias_mul_inited = false;
     for (int64_t i = 0; i < in->shape().At(0); ++i) {
       conv_state->im2col_func_(GetImgDptr<T>(in, i), ShapeView(conv_state->in_5d_shape_),
@@ -501,7 +501,7 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* col_buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    
+
     Memset<DeviceType::kCPU>(ctx->device_ctx(), dx->mut_dptr<T>(), 0,
                              dx->shape().elem_cnt() * sizeof(T));
 

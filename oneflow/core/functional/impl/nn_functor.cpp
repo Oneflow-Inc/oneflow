@@ -74,12 +74,66 @@ class Conv2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Conv2DataGradFunctor {
-  public:
-   Conv2DFunctor() {
-     op_ = CHECK_JUST(one::OpBui)
-   }
-}
+class ConvDataGradFunctor {
+ public:
+  ConvDataGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("conv_data_grad")
+                         .Input("dy")
+                         .Input("filter")
+                         .Input("x_like")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& num_spatial_dims,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& strides,
+                           const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& dilation_rate, const int32_t& groups,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ConvFilterGradFunctor {
+ public:
+  ConvFilterGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("conv_filter_grad").Input("dy").Input("x").Output("filter_diff").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const int32_t& num_spatial_dims,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& strides,
+                           const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& dilation_rate, const int32_t& groups,
+                           const std::string& data_format) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 
 class MatMulBaseFunctor {
  public:
@@ -242,6 +296,8 @@ class SparseSoftmaxCrossEntropyFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
+  m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
