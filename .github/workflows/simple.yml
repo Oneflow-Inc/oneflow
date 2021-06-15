@@ -83,6 +83,7 @@ jobs:
       - name: Build (third party)
         if: startsWith(runner.os, 'Linux')
         run: |
+          set -x
           mkdir -p build-third_party
           cd build-third_party
           cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
