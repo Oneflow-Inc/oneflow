@@ -1,0 +1,84 @@
+name: Simple CI
+on:
+  push:
+    branches:
+      - "*"
+  workflow_dispatch:
+    inputs:
+      placeholder:
+        description: "placeholder, no effect"
+        required: false
+jobs:
+  hosted:
+    name: CPU-only
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.allow_fail }}
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    needs: [cancel_previous]
+    strategy:
+      max-parallel: 5
+      matrix:
+        test_suite: ["mac"]
+        include:
+          - test_suite: mac
+            cuda_version: ""
+            extra_flags: ""
+            os: "macos-latest"
+            allow_fail: true
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Install dependencies (homebrew)
+        if: matrix.test_suite == 'mac'
+        run: |
+          brew install nasm
+        shell: bash
+      - name: Cache third party dir (macOS)
+        if: matrix.test_suite == 'mac'
+        uses: actions/cache@v2
+        with:
+          path: |
+            build-third_party
+            third_party
+          key: ${{ runner.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ github.repository }}-build-
+            ${{ runner.os }}-${{ github.repository }}-
+            ${{ runner.os }}-
+      - name: Set environment variables
+        run: |
+          set -x
+          cmake_flags=""
+          cmake_flags+=" -DRPC_BACKEND=LOCAL"
+          cmake_flags+=" -DBUILD_CUDA=OFF"
+          echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
+        shell: bash
+      - name: Build (third party)
+        run: |
+          mkdir -p build-third_party
+          cd build-third_party
+          cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          make -j $(nproc)
+        shell: bash
+      # - name: Build (of_ccobj)
+      #   run: |
+      #     mkdir -p build
+      #     cd build
+      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+      #     make -j 2 of_ccobj
+      #   shell: bash
+      # - name: Build (oneflow_internal)
+      #   run: |
+      #     mkdir -p build
+      #     cd build
+      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+      #     make -j 2 oneflow_internal
+      #   shell: bash
+      # - name: Build (generate_api)
+      #   run: |
+      #     mkdir -p build
+      #     cd build
+      #     cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+      #     make -j 2 generate_api
+      #   shell: bash
