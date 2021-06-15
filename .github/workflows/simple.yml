@@ -9,6 +9,14 @@ on:
         description: "placeholder, no effect"
         required: false
 jobs:
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs of outdated commit
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
   hosted:
     name: CPU-only
     runs-on: ${{ matrix.os }}
