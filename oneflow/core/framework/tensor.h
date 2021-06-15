@@ -91,6 +91,7 @@ class Tensor {
   virtual const std::shared_ptr<Tensor>& acc_grad() const = 0;
   virtual const std::shared_ptr<TensorArg>& now_grad_arg() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
+  virtual Maybe<Tensor> clone() const = 0;
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
@@ -110,7 +111,7 @@ class ConsistentTensor;
 class MirroredTensor;
 
 template<typename DerivedT>
-class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<DerivedT>> {
+class TensorIf : public Tensor {
  public:
   virtual ~TensorIf() = default;
 
@@ -143,6 +144,10 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   // Operators for tensor
   // used by pybind11 only
   virtual Maybe<DerivedT> api_detach() const = 0;
+  Maybe<DerivedT> api_clone() const {
+    const std::shared_ptr<Tensor>& tensor = JUST(clone());
+    return cast_for_api(tensor);
+  }
 
  protected:
   TensorIf() = default;
@@ -157,7 +162,8 @@ class TensorIf : public Tensor, public std::enable_shared_from_this<TensorIf<Der
   }
 };
 
-class MirroredTensor final : public TensorIf<MirroredTensor> {
+class MirroredTensor final : public TensorIf<MirroredTensor>,
+                             public std::enable_shared_from_this<MirroredTensor> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MirroredTensor);
   MirroredTensor() = default;
@@ -226,6 +232,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
 
   // Operators for tensor
   Maybe<MirroredTensor> api_detach() const override;
+  Maybe<Tensor> clone() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                           const std::shared_ptr<const Device>& device, bool is_lazy,
@@ -305,6 +312,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Operators for tensor
   virtual Maybe<ConsistentTensor> api_detach() const override;
+  Maybe<Tensor> clone() const override { return Error::Unimplemented(); }
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                             DataType dtype,

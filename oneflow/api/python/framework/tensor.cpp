@@ -250,6 +250,7 @@ void ExportTensor(py::module& m, const char* name) {
              if (!t.is_leaf()) { t.set_retain_grad(true); }
            })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
+      .def("clone", [](const T& t) { return t.api_clone().GetPtrOrThrow(); })
       // OneFlow tensor properties other than pytorch tensor
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent);

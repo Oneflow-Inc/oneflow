@@ -49,7 +49,8 @@ class ReLUInplaceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*relu_op_, {x}, outputs.get(), {}));
+    const std::shared_ptr<Tensor>& facade_input = JUST(x->clone());
+    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*relu_op_, {facade_input}, outputs.get(), {}));
     return outputs->at(0);
   }
 

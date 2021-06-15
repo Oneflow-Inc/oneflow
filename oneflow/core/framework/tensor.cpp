@@ -18,7 +18,11 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr.h"
 
 namespace oneflow {
 
@@ -76,6 +80,26 @@ Maybe<MirroredTensor> MirroredTensor::api_detach() const {
   std::shared_ptr<MirroredTensor> t =
       MirroredTensor::MakeEagerTensor(eager_blob_object, device, tensor_storage, false, true);
   return t;
+}
+
+Maybe<Tensor> MirroredTensor::clone() const {
+  const auto& device_type = JUST(this->device())->type();
+  int64_t device_id = JUST(this->device())->device_id();
+  std::shared_ptr<OpExpr> copy_op_ = JUST(one::OpBuilder("copy")
+                                              .Input("in", 1)
+                                              .Attr("device_type", device_type)
+                                              .Attr("device_id", device_id)
+                                              .Output("out", 1)
+                                              .Build());
+  std::shared_ptr<MirroredTensor> input =
+      std::const_pointer_cast<MirroredTensor>(shared_from_this());
+  {
+    autograd::NoGradGuard no_grad;
+    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
+    output->set_requires_grad(this->requires_grad());
+    output->set_is_leaf(false);
+    return output;
+  }
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(

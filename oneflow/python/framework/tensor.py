@@ -305,6 +305,13 @@ class Tensor:
         else:
             return None
 
+    @_auto_determine
+    def clone(self):
+        if self._local_or_consistent_tensor is not None:
+            return flow.Tensor(self._local_or_consistent_tensor.clone())
+        else:
+            return None
+
     def requires_grad_(self, requires_grad=True):
         self.requires_grad = requires_grad
 
