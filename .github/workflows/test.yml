@@ -173,7 +173,11 @@ jobs:
           if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
               echo "is_built=1" >> $GITHUB_ENV
           fi
-          echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          if [ "$test_suite" == "cuda" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          elif [ "$test_suite" == "cuda" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
+          fi
           extra_docker_args=""
           extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
