@@ -46,7 +46,7 @@ Maybe<void> InferScatterNdTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScatterNdDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -60,7 +60,7 @@ Maybe<void> InferScatterNdLikeTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScatterNdLikeDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("updates", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("updates", 0);
   return Maybe<void>::Ok();
 }
 
@@ -74,7 +74,7 @@ Maybe<void> InferTensorScatterNdOptTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferTensorScatterNdOptDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
   return Maybe<void>::Ok();
 }
 
@@ -163,7 +163,7 @@ REGISTER_USER_OP("gather_nd")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("params", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
       return Maybe<void>::Ok();
     });
 
