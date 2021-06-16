@@ -4407,6 +4407,7 @@ def pixel_shufflev2(
 
 
 @oneflow_export("nn.KLDivLoss")
+@stable_api
 def kldivloss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,

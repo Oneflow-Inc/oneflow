@@ -58,8 +58,8 @@ Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
   CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  *ctx->OutputDType("prob", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
-  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+  *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("prediction", 0);
   return Maybe<void>::Ok();
 }
 
