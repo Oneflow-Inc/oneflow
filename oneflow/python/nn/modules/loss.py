@@ -633,13 +633,13 @@ class BCEWithLogitsLoss(Module):
         out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
     Args:
-        weight (remote_blob_util, optional): The manual rescaling weight to the loss. Default: ``None``
+        weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
         size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
         reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
         reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
             ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
             by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
-        pos_weight (remote_blob_util, optional): The manual rescaling weight to the positive examples.
+        pos_weight (Tensor, optional): The manual rescaling weight to the positive examples.
             Default: ``None``
 
     Shape:
