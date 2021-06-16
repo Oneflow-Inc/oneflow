@@ -36,7 +36,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("output_tensor", 0) = *ctx->Dtype4ArgNameAndIndex("input_tensor", 0);
+  *ctx->OutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
   return Maybe<void>::Ok();
 }
 
