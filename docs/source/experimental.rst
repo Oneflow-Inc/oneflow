@@ -198,5 +198,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
 .. autofunction:: oneflow.experimental.Tensor.expm1
+.. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
