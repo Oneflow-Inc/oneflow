@@ -45,13 +45,13 @@ REGISTER_USER_OP("squeeze")
     .Output("out")
     .Attr<std::vector<int32_t>>("axes")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       AxisVector fixed_axes_vec;
-      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape->NumAxes(),
+      TransformNegativeAxesToPositive(ctx->Attr<std::vector<int32_t>>("axes"), in_shape.NumAxes(),
                                       &fixed_axes_vec);
 
-      DimVector dim_vec = in_shape->dim_vec();
+      DimVector dim_vec = in_shape.dim_vec();
       CheckAndLabelAxesToSqueezeMinusOne(fixed_axes_vec, &dim_vec);
       dim_vec.erase(std::remove(dim_vec.begin(), dim_vec.end(), -1), dim_vec.end());
       if (dim_vec.empty()) {
@@ -62,7 +62,7 @@ REGISTER_USER_OP("squeeze")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

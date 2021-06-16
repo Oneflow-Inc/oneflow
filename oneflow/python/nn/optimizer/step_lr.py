@@ -59,9 +59,6 @@ class StepLR(LrScheduler):
 
     def get_lr(self):
         if self.last_step == 0 or self.last_step % self.step_size != 0:
-            return [group.options["lr"] for group in self._optimizer._param_groups]
+            return [group["lr"] for group in self._optimizer.param_groups]
         else:
-            return [
-                group.options["lr"] * self.gamma
-                for group in self._optimizer._param_groups
-            ]
+            return [group["lr"] * self.gamma for group in self._optimizer.param_groups]

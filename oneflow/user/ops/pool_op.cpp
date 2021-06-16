@@ -26,7 +26,7 @@ typedef std::function<void(const user_op::UserOpWrapper& op, user_op::AddOpFn Ad
 
 TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
   return [dim](user_op::InferContext* ctx) -> Maybe<void> {
-    const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
+    const Shape& x_shape = ctx->InputShape("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
     const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
@@ -40,7 +40,7 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
     CHECK_EQ_OR_RETURN(strides.size(), dim);
     for (int32_t stride_dim : strides) { CHECK_GT_OR_RETURN(stride_dim, 0); }
 
-    const Params3D params_3d(dim, *x_shape, data_format, padding, padding_before, padding_after,
+    const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
     user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
@@ -50,18 +50,18 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = *ctx->Shape4ArgNameAndIndex("x", 0);
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
   *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
