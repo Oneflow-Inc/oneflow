@@ -260,7 +260,11 @@ void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 
 TEST(SendReceiveInstructionType, naive) {
   InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
+#else
+  vm::TestResourceDescScope scope(0, 1, 2);
+#endif
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
   {
