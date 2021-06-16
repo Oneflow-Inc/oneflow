@@ -173,7 +173,11 @@ jobs:
           if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
               echo "is_built=1" >> $GITHUB_ENV
           fi
-          echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          if [ "$test_suite" == "cuda" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          elif [ "$test_suite" == "cpu" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
+          fi
           extra_docker_args=""
           extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
@@ -244,7 +248,7 @@ jobs:
           dst_host: ${{ env.CI_STATIC_HOST }}
           dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
       - name: Upload bin via SSH
-        if: matrix.test_suite == 'cuda' && env.is_built != '1' && matrix.test_suite != 'mac'
+        if: (matrix.test_suite == 'cuda' || matrix.test_suite == 'cpu') && env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_ssh
         with:
           src_path: ${bin_dir}
@@ -270,7 +274,7 @@ jobs:
           echo "builder_host=${CI_STATIC_HOST}" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
           echo "remote_whl_dir=${CI_STATIC_HOST}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
       - name: Upload shared env
@@ -356,7 +360,7 @@ jobs:
 
           # dowload whl and bin
           scp -r $remote_whl_dir wheel_tmp
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             scp -r $remote_bin_dir bin_tmp
           fi
 
@@ -367,7 +371,7 @@ jobs:
 
           # set matrix environment variables
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ]; then
