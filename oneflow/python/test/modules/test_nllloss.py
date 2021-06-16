@@ -151,7 +151,9 @@ def _test_nllloss_mean(test_case, device):
     nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="mean", ignore_index=1)
+    np_out = nll_loss_1d(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -220,7 +222,9 @@ def _test_nllloss_segmentation_mean(test_case, device):
     nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="mean", ignore_index=1)
+    np_out = nll_loss_2d(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -283,7 +287,9 @@ def _test_nllloss_bert_mean(test_case, device):
     nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="mean", ignore_index=1)
+    np_out = nll_loss_bert(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -304,7 +310,9 @@ def _test_nllloss_bert_sum(test_case, device):
     nll_loss = flow.nn.NLLLoss(reduction="sum", ignore_index=1)
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="sum", ignore_index=1)
+    np_out = nll_loss_bert(
+        input.numpy(), target.numpy(), reduction="sum", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
