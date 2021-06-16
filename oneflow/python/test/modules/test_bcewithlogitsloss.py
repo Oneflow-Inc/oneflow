@@ -22,31 +22,28 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _np_bcewithlogitsloss(
-    np_input, np_target, np_weight=None, np_pos_weight=None, reduction="none"
-):
+def _np_bcewithlogitsloss(np_input, np_target, np_weight=None, np_pos_weight=None, reduction='none'):
     _neg_input = np.negative(np_input)
     _max_val = np.clip(_neg_input, 0, None)
     _neg_max_val = np.negative(_max_val)
 
     if np_pos_weight is not None:
-        assert np_pos_weight.shape[0] == np_input.shape[-1], (
-            "The length of `pos_weight` must be equal to the number of classes. "
-            "Found the length of pos_weight {} vs classes {}".format(
-                np_pos_weight.shape[0], np_input.shape[-1]
-            )
-        )
         _log_weight = ((np_pos_weight - 1) * np_target) + 1
         _loss = (1 - np_target) * np_input + _log_weight * (
-            np.log(np.exp(_neg_max_val) + np.exp(_neg_input - _max_val)) + _max_val
+                np.log(
+                    np.exp(_neg_max_val) + np.exp(_neg_input - _max_val)
+                )
+                + _max_val
         )
     else:
         _loss = (1 - np_target) * np_input + _max_val
-        _loss += np.log(np.exp(_neg_max_val) + np.exp(_neg_input - _max_val))
+        _loss += np.log(
+            np.exp(_neg_max_val) + np.exp(_neg_input - _max_val)
+        )
 
     if np_weight is not None:
         assert (
-            np_weight.shape == np_input.shape
+                np_weight.shape == np_input.shape
         ), "The weight shape must be the same as Input shape"
         _weighted_loss = np_weight * _loss
     else:
@@ -84,28 +81,20 @@ def _test_bcewithlogitsloss_impl(test_case, device, shape, reduction):
     w = np.random.randn(*shape).astype(np.float32)
     pw = np.random.randn([*shape][-1]).astype(np.float32)
 
-    input = flow.Tensor(
-        x, dtype=flow.float32, requires_grad=True, device=flow.device(device)
-    )
+    input = flow.Tensor(x, dtype=flow.float32, requires_grad=True, device=flow.device(device))
     target = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
     weight = flow.Tensor(w, dtype=flow.float32, device=flow.device(device))
     pos_weight = flow.Tensor(pw, dtype=flow.float32, device=flow.device(device))
 
-    bcewithlogits_loss = flow.nn.BCEWithLogitsLoss(
-        weight=weight, pos_weight=pos_weight, reduction=reduction
-    )
+    bcewithlogits_loss = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction=reduction)
     of_out = bcewithlogits_loss(input, target)
-    np_out = _np_bcewithlogitsloss(
-        x, y, np_weight=w, np_pos_weight=pw, reduction=reduction
-    )
+    np_out = _np_bcewithlogitsloss(x, y, np_weight=w, np_pos_weight=pw, reduction=reduction)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     # Backward test with np:
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = _np_bcewithlogitsloss_grad(x, y, np_weight=w, np_pos_weight=pw,)[
-        reduction
-    ]
+    np_grad = _np_bcewithlogitsloss_grad(x, y, np_weight=w, np_pos_weight=pw,)[reduction]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
