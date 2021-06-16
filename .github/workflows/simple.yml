@@ -123,3 +123,18 @@ jobs:
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }}
         shell: bash
+      - name: Exe test
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          ./bin/oneflow_testexe
+        shell: bash
+      - name: Op test
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          mkdir -p build
+          cd build
+          source source.sh
+          ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
+        shell: bash
