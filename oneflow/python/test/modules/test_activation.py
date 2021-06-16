@@ -312,7 +312,7 @@ def _test_softmax_dim_3(test_case, device):
     test_case.assertTrue(np.allclose(y2.numpy(), output2, 1e-5, 1e-5))
 
 
-def _test_softmax_backward_1(test_case, device):
+def _test_softmax_backward_normal(test_case, device):
     # Grad of softmax should equal to zero.
     # See:https://eli.thegreenplace.net/2016/the-softmax-function-and-its-derivative/
     # Note that only when sum of softmax is the backward value zero.
@@ -330,9 +330,13 @@ def _test_softmax_backward_1(test_case, device):
     test_case.assertTrue(np.allclose(x.grad.numpy(), x_grad, 1e-5, 1e-5))
 
 
-def _test_softmax_backward_2(test_case, device):
-    a = flow.tensor([1, 2],dtype=flow.float64, device=flow.device(device), requires_grad=True)
-    b = flow.tensor([3, 4],dtype=flow.float64, device=flow.device(device), requires_grad=True)
+def _test_softmax_backward_1_dim(test_case, device):
+    a = flow.tensor(
+        [1, 2], dtype=flow.float64, device=flow.device(device), requires_grad=True
+    )
+    b = flow.tensor(
+        [3, 4], dtype=flow.float64, device=flow.device(device), requires_grad=True
+    )
     c = a * b
     m = flow.nn.Softmax(dim=None)
     d = m(c)
@@ -353,8 +357,8 @@ class TestSoftmax(flow.unittest.TestCase):
             _test_softmax_dim_1,
             _test_softmax_dim_2,
             _test_softmax_dim_3,
-            _test_softmax_backward_1,
-            _test_softmax_backward_2,
+            _test_softmax_backward_normal,
+            _test_softmax_backward_1_dim,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):

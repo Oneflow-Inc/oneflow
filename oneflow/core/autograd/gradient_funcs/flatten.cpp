@@ -36,14 +36,12 @@ class Flatten : public OpExprGradFunction<FlattenInterpState> {
                     TensorTuple* in_grads) const override;
 
  private:
-  AttrMap base_attrs_;
   std::shared_ptr<OpExpr> grad_op_;
 };
 
 Maybe<void> Flatten::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-  base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   const std::string& op_name = fw_op_expr->op_name();
   grad_op_ = JUST(op_expr_helper::ReshapeLikeOp(GradientOpName(op_name)));
   return Maybe<void>::Ok();
@@ -51,7 +49,6 @@ Maybe<void> Flatten::Init(const OpExpr& op) {
 
 Maybe<void> Flatten::Capture(FlattenInterpState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
-  ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   ctx->SaveTensorForBackward(inputs.at(0));
@@ -63,9 +60,8 @@ Maybe<void> Flatten::Apply(const FlattenInterpState* ctx, const TensorTuple& out
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
   const std::shared_ptr<oneflow::one::Tensor>& like = ctx->SavedTensors().at(0);
-  MutableAttrMap attrs;
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}, attrs));
+  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {out_grads.at(0), like}));
   return Maybe<void>::Ok();
 }
 
