@@ -190,3 +190,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.expm1
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
+.. autofunction:: oneflow.experimental.nn.GroupNorm
