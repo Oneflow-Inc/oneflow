@@ -80,7 +80,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);                     \
+        *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);                                 \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetGetSbpFn(GetOpSbpSignature)                                                        \
@@ -91,7 +91,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         x_modifier->set_requires_grad(true);                                                 \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);                     \
+        *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);                                 \
         return Maybe<void>::Ok();                                                            \
       });                                                                                    \
                                                                                              \
@@ -124,12 +124,12 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);                   \
+        *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);                               \
         return Maybe<void>::Ok();                                                            \
       })                                                                                     \
       .SetGetSbpFn(GetOpGradSbpSignature)                                                    \
       .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {                    \
-        *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);                   \
+        *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);                               \
         return Maybe<void>::Ok();                                                            \
       });                                                                                    \
                                                                                              \
