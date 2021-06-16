@@ -682,11 +682,11 @@ class BCEWithLogitsLoss(Module):
 
     def __init__(
         self,
-        weight = None,
+        weight=None,
         size_average: bool = True,
         reduce: bool = True,
         reduction: Optional[str] = "mean",
-        pos_weight = None,
+        pos_weight=None,
     ) -> None:
         super().__init__()
         assert reduction in [
@@ -711,10 +711,14 @@ class BCEWithLogitsLoss(Module):
 
     def forward(self, input, target):
         if not (target.shape == input.shape):
-            raise ValueError("Target size ({}) must be the same as input size ({})".format(target.size(), input.size()))
+            raise ValueError(
+                "Target size ({}) must be the same as input size ({})".format(
+                    target.size(), input.size()
+                )
+            )
 
         _neg_input = flow.experimental.negative(input)
-        _max_val = flow.experimental.clip(_neg_input,0)
+        _max_val = flow.experimental.clip(_neg_input, 0)
         _neg_max_val = flow.experimental.negative(_max_val)
 
         if self.pos_weight:
@@ -726,20 +730,22 @@ class BCEWithLogitsLoss(Module):
             )
             _log_weight = ((self.pos_weight - 1) * target) + 1
             _loss = (1 - target) * input + _log_weight * (
-                    flow.experimental.log(
-                        flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
-                    )
-                    + _max_val
+                flow.experimental.log(
+                    flow.experimental.exp(_neg_max_val)
+                    + flow.experimental.exp(_neg_input - _max_val)
+                )
+                + _max_val
             )
         else:
             _loss = (1 - target) * input + _max_val
             _loss += flow.experimental.log(
-                flow.experimental.exp(_neg_max_val) + flow.experimental.exp(_neg_input - _max_val)
+                flow.experimental.exp(_neg_max_val)
+                + flow.experimental.exp(_neg_input - _max_val)
             )
 
         if self.weight is not None:
             assert (
-                    self.weight.shape == input.shape
+                self.weight.shape == input.shape
             ), "The weight shape must be the same as Input shape"
             _weighted_loss = self.weight * _loss
         else:
