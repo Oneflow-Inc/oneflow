@@ -226,6 +226,13 @@ def norm_op(input, ord = None, dim = None, keepdim = False):
     """
     return Norm(ord, dim, keepdim)(input)
 
+@register_tensor_op("norm")
+@experimental_api
+def norm_op(input, ord = None, dim = None, keepdim = False):
+    r"""
+    See :func:`oneflow.experimental.linalg.norm.`
+    """
+    return Norm(ord, dim, keepdim)(input)
 
 if __name__ == "__main__":
     import doctest
