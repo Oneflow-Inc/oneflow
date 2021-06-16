@@ -19,9 +19,6 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
-from oneflow.python.nn.modules.math_ops import Sum, Mean, Log
-from oneflow.python.nn.modules.negative import Negative
-
 
 @oneflow_export("nn.BCELoss")
 @experimental_api
@@ -73,40 +70,44 @@ class BCELoss(Module):
         >>> weight = flow.Tensor(np.array([[2, 2, 2], [2, 2, 2]]).astype(np.float32))
         >>> activation = flow.nn.Sigmoid()
         >>> sigmoid_input = activation(input)
-        >>> m = flow.nn.BCELoss(reduction="none")
-        >>> out = m(sigmoid_input, target, weight)
+        >>> m = flow.nn.BCELoss(weight, reduction="none")
+        >>> out = m(sigmoid_input, target)
         >>> out
         tensor([[2.9266, 1.1963, 1.1087],
                 [0.8064, 2.075 , 4.2539]], dtype=oneflow.float32)
-        >>> m_sum = flow.nn.BCELoss(reduction="sum")
-        >>> out = m_sum(sigmoid_input, target, weight)
+        >>> m_sum = flow.nn.BCELoss(weight, reduction="sum")
+        >>> out = m_sum(sigmoid_input, target)
         >>> out
         tensor([12.3668], dtype=oneflow.float32)
-        >>> m_mean = flow.nn.BCELoss(reduction="mean")
-        >>> out = m_mean(sigmoid_input, target, weight)
+        >>> m_mean = flow.nn.BCELoss(weight, reduction="mean")
+        >>> out = m_mean(sigmoid_input, target)
         >>> out
         tensor([2.0611], dtype=oneflow.float32)
         
     """
+   
 
-    def __init__(self, reduction: str = "mean", reduce=True) -> None:
+    def __init__(self, weight, size_average=None, reduce=True, reduction: str = None) -> None:
         super().__init__()
         if reduce is not None and not reduce:
             raise ValueError("Argument reduce is not supported yet")
+        if size_average is not None and not size_average:
+            raise ValueError("Argument size_average is not supported yet")
         assert reduction in [
             "none",
-            "mean",
             "sum",
+            "mean",
             None,
         ], "only 'sum', 'mean' and 'none' supported by now"
 
+        self.weight = weight
         self.reduction = reduction
-        self.mean = Mean()
-        self.sum = Sum()
-        self.negative = Negative()
-        self.log = Log()
+        self.mean = flow.experimental.mean
+        self.sum = flow.experimental.sum
+        self.negative = flow.experimental.negative
+        self.log = flow.experimental.log
 
-    def forward(self, input, target, weight):
+    def forward(self, input, target):
         assert (
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
@@ -115,11 +116,11 @@ class BCELoss(Module):
             target * self.log(input) + (1 - target) * self.log(1 - input)
             )
 
-        if weight is not None:
+        if self.weight is not None:
             assert (
-                weight.shape == input.shape
+                self.weight.shape == input.shape
             ), "The weight shape must be the same as Input shape"
-            _weighted_loss = weight * _cross_entropy_loss
+            _weighted_loss = self.weight * _cross_entropy_loss
         else:
             _weighted_loss = _cross_entropy_loss
 

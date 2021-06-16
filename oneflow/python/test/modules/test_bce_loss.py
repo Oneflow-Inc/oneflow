@@ -1,12 +1,9 @@
 """
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,8 +17,6 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
-
-import torch
 
 
 def _np_bceloss(np_input, np_target, np_weight):
@@ -37,16 +32,16 @@ def _np_bceloss(np_input, np_target, np_weight):
 
     return {
         "none": np_weighted_loss,
-        "mean": np.mean(np_weighted_loss),
         "sum": np.sum(np_weighted_loss),
+        "mean": np.mean(np_weighted_loss)
     }
 
 
 def _np_bce_grad(np_input, np_target, np_weight):
-    np_cross_entropy_grad = -(
-             (np_target - np_input)
-            / ((1 - np_input) * np_input)
-        )
+    eps = 1e-12
+    tmp = 1 / np.log(10)
+    np_cross_entropy_grad = (np_input - np_target) / ((np_input + eps) * (1 - np_target + eps))
+    np_cross_entropy_grad = np_cross_entropy_grad * tmp
     
     if np_weight is not None:
         np_weighted_grad = np_weight * np_cross_entropy_grad
@@ -74,17 +69,16 @@ def _test_bceloss_impl(test_case, device, shape, reduction):
     activation = flow.nn.Sigmoid()
     sigmoid_input = activation(input)
 
-    loss = flow.nn.BCELoss(reduction)
+    loss = flow.nn.BCELoss(weight, reduction=reduction)
     loss = loss.to(device)
-    of_out = loss(sigmoid_input, target, weight)
-
+    of_out = loss(sigmoid_input, target)
     np_out = _np_bceloss(sigmoid_input.numpy(), y, w)[reduction]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
     of_out = of_out.sum()
     of_out.backward()
     np_grad = _np_bce_grad(sigmoid_input.numpy(), y, w)[reduction]
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-3, 1e-3))
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
