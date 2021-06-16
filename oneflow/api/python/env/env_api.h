@@ -28,8 +28,8 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
 
-inline void InitEnv(const std::string& env_proto_str) {
-  return oneflow::InitEnv(env_proto_str).GetOrThrow();
+inline void InitEnv(const std::string& env_proto_str, bool is_multi_client) {
+  return oneflow::InitEnv(env_proto_str, is_multi_client).GetOrThrow();
 }
 
 inline void InitDefaultEnv(const std::string& env_proto_str) {
@@ -43,5 +43,9 @@ inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrTh
 inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
 
 inline size_t GetWorldSize() { return oneflow::GetWorldSize().GetOrThrow(); }
+
+inline size_t GetNodeSize() { return oneflow::GetNodeSize().GetOrThrow(); }
+
+inline size_t GetLocalRank() { return oneflow::GetLocalRank().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_
