@@ -103,7 +103,7 @@ def _test_groupnorm(test_case, device):
     test_case.assertTrue(np.allclose(y.numpy(), output, 1e-5, 1e-5))
 
 
-def _test_groupnorm_v2(test_case, device):
+def _test_groupnorm_3d(test_case, device):
     input_arr = np.array(
         [
             [
@@ -267,7 +267,7 @@ def _test_groupnorm_backward(test_case, device):
     )
 
 
-def _test_groupnorm_backward_v2(test_case, device):
+def _test_groupnorm_backward_3d(test_case, device):
     input_arr = np.array(
         [
             [
@@ -347,9 +347,9 @@ class TestGroupNorm(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_groupnorm,
-            _test_groupnorm_v2,
+            _test_groupnorm_3d,
             _test_groupnorm_backward,
-            _test_groupnorm_backward_v2,
+            _test_groupnorm_backward_3d,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
