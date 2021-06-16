@@ -171,6 +171,9 @@ class LocalUserOpInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
     return Dtype4ArgNameAndIndex(arg_name, index);
   }
@@ -189,12 +192,12 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
   const ParallelDesc& parallel_desc() const override { UNIMPLEMENTED(); }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     UNIMPLEMENTED();
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     UNIMPLEMENTED();
   }
 
