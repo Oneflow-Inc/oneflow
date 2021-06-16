@@ -291,6 +291,56 @@ class SparseSoftmaxCrossEntropyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NormalizationFunctor {
+ public:
+  NormalizationFunctor() {
+    norm_eval_op_ = CHECK_JUST(one::OpBuilder("normalization")
+                                   .Input("x")
+                                   .Input("moving_mean")
+                                   .Input("moving_variance")
+                                   .Input("gamma")
+                                   .Input("beta")
+                                   .Output("y")
+                                   .Attr("training", false)
+                                   .Build());
+    norm_training_op_ = CHECK_JUST(one::OpBuilder("normalization")
+                                       .Input("x")
+                                       .Input("moving_mean")
+                                       .Input("moving_variance")
+                                       .Input("gamma")
+                                       .Input("beta")
+                                       .Output("y")
+                                       .Output("mean")
+                                       .Output("inv_variance")
+                                       .Attr("training", true)
+                                       .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& moving_mean,
+                           const std::shared_ptr<one::Tensor>& moving_variance,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                           const float& epsilon, const float& momentum,
+                           const bool& is_training) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<float>("momentum", momentum));
+    std::shared_ptr<OpExpr> op;
+    if (is_training) {
+      op = norm_training_op_;
+    } else {
+      op = norm_eval_op_;
+    }
+    return OpInterpUtil::Dispatch<one::Tensor>(*op, {x, moving_mean, moving_variance, gamma, beta},
+                                               attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> norm_eval_op_;
+  std::shared_ptr<OpExpr> norm_training_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -306,6 +356,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::NormalizationFunctor>("Normalization");
 };
 
 }  // namespace functional
