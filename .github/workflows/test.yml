@@ -175,7 +175,7 @@ jobs:
           fi
           if [ "$test_suite" == "cuda" ]; then
             echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
-          elif [ "$test_suite" == "cuda" ]; then
+          elif [ "$test_suite" == "cpu" ]; then
             echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
           fi
           extra_docker_args=""
