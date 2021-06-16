@@ -1799,6 +1799,13 @@ def expm1_op_tensor(x):
     return Expm1()(x)
 
 
+@oneflow_export("abcd")
+@experimental_api
+def abcd(*args):
+    op = flow.builtin_op("abcd").Input("in", len(args)).Output("out").Build()
+    return op(*args)
+
+
 if __name__ == "__main__":
     import doctest
 

@@ -26,14 +26,15 @@ module2params = {}
 
 
 def allreducefn(param_list, param, name, num):
-    # print(f"original grad: {grad}")
     def allreduce(grad):
-        param_list[param] = True
+        param_list[param][0] = True
         ret = None
-        for cur_param, ready in param_list.items():
+        for cur_param, (ready, deleted, cur_name) in param_list.items():
+            if deleted:
+                continue
             if ready:
-                del param_list[cur_param]
-                print(f"allreduce: rank: {flow.local_rank()}, name={name}")
+                param_list[cur_param][1] = True
+                print(f"h! allreduce: rank: {flow.local_rank()}, name={cur_name}")
                 op = (
                     builtin_op("eager_nccl_all_reduce")
                     .Input("in")
@@ -44,7 +45,7 @@ def allreducefn(param_list, param, name, num):
                     )
                     .Build()
                 )
-                if cur_param.grad is None:
+                if cur_param == param:
                     ret = op(grad)[0]
                 else:
                     cur_param.grad = op(cur_param.grad)[0]
@@ -63,16 +64,21 @@ def identity(x):
 @oneflow_export("ddp")
 def DDP(module: Module):
     num = flow.world_size()
-    param_list = OrderedDict(reversed([(x, False) for x in module.parameters()]))
+    # param_list = OrderedDict(reversed([(x, [False, False]) for x in module.parameters()]))
+    param_list = OrderedDict(
+        [(x, [False, False, name]) for name, x in module.named_parameters()]
+    )
     module2params[module] = param_list
     for name, param in module.named_parameters():
         param.register_hook(allreducefn(param_list, param, name, num))
 
     def hook(module, input, output):
-        if flow.local_rank() != 0:
-            identity(module.fc2.weight)
-        # for param in module.parameters():
-        # identity(param)
+        param_list = module2params[module]
+        for item in param_list.values():
+            item[0], item[1] = False, False
+        for param in param_list.keys():
+            output += 0 * param
+        return output
 
-    # module.register_forward_hook(hook)
+    module.register_forward_hook(hook)
     return module
