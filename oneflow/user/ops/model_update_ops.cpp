@@ -603,7 +603,7 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("learning_rate", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("learning_rate", 0);
       return Maybe<void>::Ok();
     });
 
