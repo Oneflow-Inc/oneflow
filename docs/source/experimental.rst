@@ -46,6 +46,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
+.. autofunction:: oneflow.experimental.nn.ReplicationPad2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm1d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm3d
@@ -196,5 +197,6 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
 .. autofunction:: oneflow.experimental.Tensor.expm1
+.. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
