@@ -93,22 +93,21 @@ class Onehot(Module):
         name: Optional[str] = None,
     ) -> flow._oneflow_internal.BlobDesc:
         super().__init__()
-
-    self._op = (
-        flow.builtin_op("OneHot_")
-        .Op("one_hot")
-        .Input("indices", [indices])
-        .Attr("depth", int(depth))
-        .Attr("floating_on_value", float(on_value))
-        .Attr("integer_on_value", int(on_value))
-        .Attr("floating_off_value", float(off_value))
-        .Attr("integer_off_value", int(off_value))
-        .Attr("dtype", dtype)
-        .Output("out")
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+        self._op = (
+            flow.builtin_op("OneHot_")
+            .Op("one_hot")
+            .Input("indices", [indices])
+            .Attr("depth", int(depth))
+            .Attr("floating_on_value", float(on_value))
+            .Attr("integer_on_value", int(on_value))
+            .Attr("floating_off_value", float(off_value))
+            .Attr("integer_off_value", int(off_value))
+            .Attr("dtype", dtype)
+            .Output("out")
+            .Build()
+            .InferAndTryRun()
+            .RemoteBlobList()[0]
+        )
 
     def forward(self, x):
         res = self._op()
