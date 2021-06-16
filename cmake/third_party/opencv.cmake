@@ -16,7 +16,7 @@ else()
     set(OPENCV_BUILD_INCLUDE_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_INCLUDEDIR})
     set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR})
     set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
-    set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_highgui.a libopencv_imgcodecs.a libopencv_core.a)
+    set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
     set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
     if (NOT APPLE)
       set(OPENCV_3RDPARTY_LIBRARY_NAMES ${OPENCV_3RDPARTY_LIBRARY_NAMES} libittnotify.a)
@@ -109,6 +109,22 @@ ExternalProject_Add(opencv
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
         -DWITH_ITT:BOOL=ON
+        -DBUILD_opencv_flann:BOOL=OFF
+        -DBUILD_opencv_ml:BOOL=OFF
+        -DBUILD_opencv_objdetect:BOOL=OFF
+        -DBUILD_opencv_photo:BOOL=OFF
+        -DBUILD_opencv_video:BOOL=OFF
+        -DBUILD_opencv_dnn:BOOL=OFF
+        -DBUILD_opencv_shape:BOOL=OFF
+        -DBUILD_opencv_videoio:BOOL=OFF
+        -DBUILD_opencv_highgui:BOOL=OFF
+        -DBUILD_opencv_superres:BOOL=OFF
+        -DBUILD_opencv_features2d:BOOL=OFF
+        -DBUILD_opencv_calib3d:BOOL=OFF
+        -DBUILD_opencv_stitching:BOOL=OFF
+        -DBUILD_opencv_videostab:BOOL=OFF
+        -DBUILD_opencv_imgproc:BOOL=ON
+        -DBUILD_opencv_imgcodecs:BOOL=ON
         # -DLIB_SUFFIX:STRING=64
 )
 
