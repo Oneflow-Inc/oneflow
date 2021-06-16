@@ -66,7 +66,8 @@ def env_init():
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto, is_multi_client)
     if is_multi_client:
-        scope_util.InitScopeStack()
+        # scope_util.InitScopeStack()
+        pass
     else:
         if oneflow._oneflow_internal.CurrentMachineId() == 0:
             scope_util.InitScopeStack()
@@ -414,7 +415,7 @@ def IsMultiClient():
 
         bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
         master_addr = ctrl_bootstrap_pb.Address()
-        master_addr.host = str2int(os.getenv("MASTER_ADDR"))
+        master_addr.host = os.getenv("MASTER_ADDR")
         master_addr.port = str2int(os.getenv("MASTER_PORT"))
         bootstrap_conf.master_addr.CopyFrom(master_addr)
         bootstrap_conf.world_size = str2int(os.getenv("WORLD_SIZE"))
