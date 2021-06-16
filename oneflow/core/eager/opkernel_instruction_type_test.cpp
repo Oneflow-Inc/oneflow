@@ -238,7 +238,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     auto* user_conf = op_conf->mutable_user_conf();
     user_conf->set_op_type_name("TestSource");
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
-    test_source_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    test_source_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, "gpu");
   }
   int64_t x = 0;
   int64_t x_parallel_desc_id = 0;
@@ -265,7 +265,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     user_conf->set_op_type_name("ccrelu");
     (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
     (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
-    ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, "gpu");
   }
   int64_t y = 0;
   {
