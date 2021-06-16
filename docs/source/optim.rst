@@ -7,6 +7,6 @@ Optimizers
 .. autofunction:: oneflow.experimental.optim.AdamW
 .. autofunction:: oneflow.experimental.optim.RMSprop
 .. autofunction:: oneflow.experimental.optim.SGD
-.. autofunction:: oneflow.experimental.optim.lr_scheduler.CosineScheduler
+.. autofunction:: oneflow.experimental.optim.lr_scheduler.CosineAnnealingLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.StepLR
 .. autofunction:: oneflow.experimental.optim.lr_scheduler.LambdaLR

@@ -55,7 +55,7 @@ REGISTER_USER_OP("prelu")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -115,8 +115,8 @@ REGISTER_USER_OP("prelu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      *ctx->OutputDType("alpha_diff", 0) = *ctx->Dtype4ArgNameAndIndex("alpha", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+      *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
       return Maybe<void>::Ok();
     });
 
