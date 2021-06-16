@@ -27,8 +27,6 @@ import oneflow.experimental as flow
 )
 class TestOFRecordModule(flow.unittest.TestCase):
     def test_record(test_case):
-        flow.InitEagerGlobalSession()
-
         batch_size = 1
         color_space = "RGB"
         height = 224
