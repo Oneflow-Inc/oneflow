@@ -139,9 +139,7 @@ endif()
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
-  protobuf_copy_headers_to_destination
-  protobuf_copy_libs_to_destination
-  protobuf_copy_binary_to_destination
+  protobuf
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
   glog_copy_headers_to_destination
