@@ -26,6 +26,7 @@ namespace one {
 struct CTCLossInterpState : public OpExprInterpState {
   int32_t blank;
   bool zero_infinity;
+  bool requires_grad;
 };
 
 class CTCLoss : public OpExprGradFunction<CTCLossInterpState> {
@@ -52,6 +53,9 @@ Maybe<void> CTCLoss::Init(const OpExpr& op) {
 
 Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
                              const TensorTuple& outputs, const AttrMap& attrs) const {
+  ctx->requires_grad = inputs.at(0)->requires_grad();
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->blank = JUST(composed_attrs.GetAttr<int32_t>("blank"));
   ctx->zero_infinity = JUST(composed_attrs.GetAttr<bool>("zero_infinity"));
@@ -69,7 +73,9 @@ Maybe<void> CTCLoss::Capture(CTCLossInterpState* ctx, const TensorTuple& inputs,
 
 Maybe<void> CTCLoss::Apply(const CTCLossInterpState* ctx, const TensorTuple& out_grads,
                            TensorTuple* in_grads) const {
+  if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 2);
+
   const auto& grad_out = out_grads.at(0);
   const auto& loss = ctx->SavedTensors().at(0);
   const auto& alpha = ctx->SavedTensors().at(1);
