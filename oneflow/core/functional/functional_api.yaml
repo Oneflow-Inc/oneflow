@@ -35,10 +35,6 @@
   signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
   bind_python: True
 
-- name: "pow"
-  signature: "Tensor Pow(Tensor x, Tensor y)"
-  bind_python: True
-
 - name: "pow_scalar"
   signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
   bind_python: True
