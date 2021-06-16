@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from numpy import dtype
 import oneflow as flow
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
