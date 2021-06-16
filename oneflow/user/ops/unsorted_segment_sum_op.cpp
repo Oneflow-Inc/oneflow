@@ -41,8 +41,8 @@ REGISTER_USER_OP("unsorted_segment_sum")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("data", 0);
+      CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
+      *ctx->OutputDType("out", 0) = ctx->InputDType("data", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -126,8 +126,8 @@ REGISTER_USER_OP("unsorted_segment_sum_like")
       const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
       const user_op::TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(data->data_type(), like->data_type());
-      CHECK_OR_RETURN(IsIndexDataType(*ctx->Dtype4ArgNameAndIndex("segment_ids", 0)));
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+      CHECK_OR_RETURN(IsIndexDataType(ctx->InputDType("segment_ids", 0)));
+      *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

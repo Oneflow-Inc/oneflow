@@ -38,7 +38,7 @@ REGISTER_USER_OP("parallel_cast")
         (*bn2sbp)[ibn] = sbp_parallel;
         (*bn2sbp)[obn] = sbp_parallel;
       } else {
-        SbpParallel sbp_parallel;
+        cfg::SbpParallel sbp_parallel;
         CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
             << "invalid sbp_parallel: " << sbp_parallel_str;
         if (sbp_parallel.has_split_parallel()) {
@@ -54,7 +54,7 @@ REGISTER_USER_OP("parallel_cast")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
