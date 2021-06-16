@@ -27,7 +27,7 @@ class CrossEntropyLoss(Module):
     r"""This criterion combines :class:`~flow.nn.LogSoftmax` and :class:`~flow.nn.NLLLoss` in one single class.
 
     It is useful when training a classification problem with `C` classes.
-    
+
     The `input` is expected to contain raw, unnormalized scores for each class.
 
     `input` has to be a Tensor of size either :math:`(minibatch, C)` or
@@ -35,7 +35,7 @@ class CrossEntropyLoss(Module):
     with :math:`K \geq 1` for the `K`-dimensional case (described later).
 
     This criterion expects a class index in the range :math:`[0, C-1]` as the
-    `target` for each value of a 1D tensor of size `minibatch`; 
+    `target` for each value of a 1D tensor of size `minibatch`;
 
     The loss can be described as:
 
@@ -76,7 +76,7 @@ class CrossEntropyLoss(Module):
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
         >>> print(out_mean.numpy())
         [0.75896907]
-        
+
 
     """
 
@@ -160,7 +160,7 @@ class NLLLoss(Module):
     layer.
 
     The `target` that this loss expects should be a class index in the range :math:`[0, C-1]`
-    where `C = number of classes`; 
+    where `C = number of classes`;
 
     The unreduced (i.e. with :attr:`reduction` set to ``'none'``) loss can be described as:
 
@@ -194,8 +194,8 @@ class NLLLoss(Module):
 
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
@@ -214,16 +214,16 @@ class NLLLoss(Module):
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-1.1355073]
-        
+
         >>> m = flow.nn.NLLLoss(reduction="mean")
         >>> out = m(input, target).numpy()
         >>> print(out)
         [-0.37850246]
-    
+
     """
 
     def __init__(
-        self, weight=None, ignore_index: int = None, reduction: str = "none",
+        self, weight=None, ignore_index: int = None, reduction: str = "mean",
     ) -> None:
         super().__init__()
         if weight != None:
@@ -545,8 +545,8 @@ class MarginRankingLoss(Module):
 
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
@@ -565,7 +565,7 @@ class MarginRankingLoss(Module):
         >>> out = m(x1, x2, target)
         >>> out
         tensor([8.2], dtype=oneflow.float32)
-        
+
         >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
         >>> out = m(x1, x2, target)
         >>> out
@@ -605,7 +605,7 @@ class MarginRankingLoss(Module):
         else:
             return res.mean()
 
-          
+
 @oneflow_export("nn.BCEWithLogitsLoss")
 @experimental_api
 class BCEWithLogitsLoss(Module):
@@ -648,9 +648,9 @@ class BCEWithLogitsLoss(Module):
         - Output: scalar. If :attr:`reduction` is ``"none"``, then :math:`(N,*)`, same shape as input.
 
     For example:
-    
+
     .. code-block:: python
-    
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import oneflow.typing as tp
@@ -688,6 +688,12 @@ class BCEWithLogitsLoss(Module):
         reduction: Optional[str] = "mean",
         pos_weight = None,
     ) -> None:
+        super().__init__()
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
         ], "only 'sum', 'mean' and None supported by now"
 
         self.weight = weight
