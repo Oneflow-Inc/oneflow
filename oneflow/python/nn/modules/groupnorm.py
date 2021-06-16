@@ -77,9 +77,11 @@ class GroupNorm(Module):
     
 """
 
-    def __init__(self, num_groups:int, num_channels:int, eps:float = 1e-5, affine:bool = True) -> None:
+    def __init__(
+        self, num_groups: int, num_channels: int, eps: float = 1e-5, affine: bool = True
+    ) -> None:
         super().__init__()
-        assert num_groups> 0, "The num_groups must larger than zero"
+        assert num_groups > 0, "The num_groups must larger than zero"
         assert num_channels > 0, "The num_channels must larger than zero"
         self.num_groups = num_groups
         self.num_channels = num_channels
@@ -89,8 +91,8 @@ class GroupNorm(Module):
             self.weight = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
             self.bias = flow.nn.Parameter(flow.Tensor(1, num_channels, 1))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
 
         self.reset_parameters()
 
@@ -99,22 +101,31 @@ class GroupNorm(Module):
             flow.nn.init.ones_(self.weight)
             flow.nn.init.zeros_(self.bias)
 
-    def forward(self, input:Tensor) -> Tensor:
+    def forward(self, input: Tensor) -> Tensor:
         assert len(input.shape) >= 3
-        assert (input.shape[1] == self.num_channels), "The channels of input tensor must equal num_channels"
+        assert (
+            input.shape[1] == self.num_channels
+        ), "The channels of input tensor must equal num_channels"
         origin_shape = input.shape
-        reshape_to_1d = flow.experimental.reshape(input, shape=[origin_shape[0], self.num_groups, -1])
+        reshape_to_1d = flow.experimental.reshape(
+            input, shape=[origin_shape[0], self.num_groups, -1]
+        )
         mean = flow.experimental.mean(reshape_to_1d, dim=2, keepdim=True)
         variance = flow.experimental.var(reshape_to_1d, dim=2, keepdim=True)
-        normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(variance + self.eps)
-        normalized = flow.experimental.reshape(normalized, shape=[origin_shape[0],  self.num_channels, -1])
+        normalized = (reshape_to_1d - mean) / flow.experimental.sqrt(
+            variance + self.eps
+        )
+        normalized = flow.experimental.reshape(
+            normalized, shape=[origin_shape[0], self.num_channels, -1]
+        )
         if self.weight:
             normalized = normalized * self.weight
         if self.bias:
             normalized = normalized + self.bias
-        res= flow.experimental.reshape(normalized, shape=tuple(input.shape))
+        res = flow.experimental.reshape(normalized, shape=tuple(input.shape))
 
         return res
+
 
 if __name__ == "__main__":
     import doctest
