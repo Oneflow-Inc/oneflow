@@ -1042,7 +1042,9 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._elementwise_pow_op = flow.builtin_op("pow").Input("x").Input("y").Output("z").Build()
+        self._elementwise_pow_op = (
+            flow.builtin_op("pow").Input("x").Input("y").Output("z").Build()
+        )
 
     def forward(self, x, y):
         if isinstance(y, (int, float)):
