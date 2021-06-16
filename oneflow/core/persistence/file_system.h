@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/file_system_conf.pb.h"
 
 namespace oneflow {
 
@@ -169,11 +168,9 @@ class FileSystem {
 }  // namespace fs
 
 fs::FileSystem* LocalFS();
-
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
 fs::FileSystem* DataFS();
-fs::FileSystem* DataFS(int64_t session_id);
 fs::FileSystem* SnapshotFS();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
