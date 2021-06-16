@@ -26,7 +26,7 @@ REGISTER_USER_OP("zero_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -636,6 +636,18 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
+    def test_floor(test_case):
+        input = flow.Tensor(np.random.randn(4, 5, 6), dtype=flow.float32)
+        of_out = input.floor()
+        np_out = np.floor(input.numpy())
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_round(test_case):
         shape = (2, 3)
         np_input = np.random.randn(*shape)
@@ -864,6 +876,9 @@ class TestTensor(flow.unittest.TestCase):
         of_out = input.pow(2.1)
         np_out = np.power(input.numpy(), 2.1)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out_magic = input ** 2.1
+        test_case.assertTrue(np.allclose(of_out_magic.numpy(), np_out, 1e-5, 1e-5))
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
