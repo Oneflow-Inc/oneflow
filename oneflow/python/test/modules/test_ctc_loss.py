@@ -17,10 +17,9 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+
 import oneflow.experimental as flow
 from test_util import GenArgList
-import oneflow.typing as tp
-import os
 
 ninf = -float("inf")
 
@@ -281,7 +280,6 @@ def compare_with_np(
     ctc_loss = ctc_loss.to(device_type)
     of_out = ctc_loss(log_probs, targets, input_lengths, target_lengths,)
     assert np.allclose(of_out.numpy(), np_out, atol=1e-5)
-    # print("*" * 30)
     of_out = of_out.sum()
     of_out.backward()
     assert np.allclose(log_probs.grad.numpy(), np_grad, atol=1e-5, equal_nan=True)

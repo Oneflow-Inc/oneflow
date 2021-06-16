@@ -663,6 +663,11 @@ class CTCLoss(Module):
           If the targets are given as a 1d tensor that is the concatenation of individual
           targets, the target_lengths must add up to the total length of the tensor.
 
+    Reference:
+        A. Graves et al.: Connectionist Temporal Classification:
+        Labelling Unsegmented Sequence Data with Recurrent Neural Networks:
+        https://www.cs.toronto.edu/~graves/icml_2006.pdf
+
     For example:
 
     .. code-block:: python
