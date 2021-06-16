@@ -26,6 +26,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["mac", "ubuntu"]
+        build_shared_libs: ["ON", "OFF"]
         include:
           - test_suite: mac
             os: "macos-10.15"
@@ -71,13 +72,14 @@ jobs:
           path: |
             build-third_party
             third_party
-          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
+          key: ${{ matrix.os }}--${{ github.repository }}--third_party--shared-${{ matrix.build_shared_libs }}--${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
       - name: Set environment variables
         run: |
           set -x
           cmake_flags=""
           cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
@@ -86,7 +88,7 @@ jobs:
           set -x
           mkdir -p build-third_party
           cd build-third_party
-          cmake .. $cmake_flags -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF
           make -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
@@ -94,7 +96,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }} of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
@@ -102,7 +104,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }} oneflow_internal
         shell: bash
       - name: Build (generate_api)
@@ -110,7 +112,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }} generate_api
         shell: bash
       - name: Build (ALL)
@@ -118,6 +120,6 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. $cmake_flags -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }}
         shell: bash
