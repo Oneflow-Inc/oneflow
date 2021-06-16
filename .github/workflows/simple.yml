@@ -34,7 +34,7 @@ jobs:
           - test_suite: ubuntu
             os: "ubuntu-20.04"
             allow_fail: true
-            make_concurrency: 4
+            make_concurrency: 2
     steps:
       - uses: actions/checkout@v2
         with:
