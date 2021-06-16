@@ -137,14 +137,14 @@ class CrossEntropyLoss(Module):
                 size=out.shape, dtype=out.dtype, device=out.device
             )
             condition = flow.experimental.eq(target, self.ignore_index)
-            out = flow.experimental.where(condition, zeros, out)
+            ones = flow.experimental.ones(
+                size=condition.shape, dtype=condition.dtype, device=condition.device
+            )
+            condition = ones.sub(condition).reshape(tuple(out.shape))
+            out = flow.experimental.where(condition, out, zeros)
         if self.reduction == "mean":
             if self.ignore_index is not None:
                 reduce_sum = flow.experimental.sum(out)
-                ones = flow.experimental.ones(
-                    size=condition.shape, dtype=condition.dtype, device=condition.device
-                )
-                condition = ones.sub(condition)
                 reduce_count = condition.argwhere().shape[0]
                 return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
             else:
@@ -242,8 +242,6 @@ class NLLLoss(Module):
         super().__init__()
         if weight != None:
             raise ValueError("Argument weight is not supported yet")
-        if ignore_index != None:
-            raise ValueError("Argument ignore_index is not supported yet")
         assert reduction in [
             "sum",
             "none",
@@ -251,6 +249,7 @@ class NLLLoss(Module):
             None,
         ], "only 'sum', 'mean' and None supported by now"
 
+        self.ignore_index = ignore_index
         self.reduction = reduction
         self._dim_gather_op = (
             flow.builtin_op("dim_gather")
@@ -297,12 +296,27 @@ class NLLLoss(Module):
         else:
             raise NotImplemented
 
+        if self.ignore_index is not None:
+            zeros = flow.experimental.zeros(
+                size=res.shape, dtype=res.dtype, device=res.device
+            )
+            condition = flow.experimental.eq(target, self.ignore_index)
+            ones = flow.experimental.ones(
+                size=condition.shape, dtype=condition.dtype, device=condition.device
+            )
+            condition = ones.sub(condition).reshape(tuple(res.shape))
+            res = flow.experimental.where(condition, res, zeros)
         if self.reduction == "none":
             return res
         elif self.reduction == "sum":
             return res.sum()
         else:
-            return res.mean()
+            if self.ignore_index is not None:
+                reduce_sum = flow.experimental.sum(res)
+                reduce_count = condition.argwhere().shape[0]
+                return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+            else:
+                return res.mean()
 
 
 @oneflow_export("nn.KLDivLoss")
