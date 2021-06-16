@@ -34,6 +34,8 @@ class Eq(Module):
                 assert (
                     input.shape[i] >= other.shape[i]
                 ), "The second tensor's shape should broadcastable with the first argument."
+                if input.dtype != other.dtype:
+                    other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
             other = flow.Tensor([other], dtype=input.dtype, device=input.device)
         else:
