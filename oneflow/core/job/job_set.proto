@@ -3,13 +3,8 @@ package oneflow;
 
 import "oneflow/core/job/job.proto";
 import "oneflow/core/job/resource.proto";
-import "oneflow/core/job/file_system_conf.proto";
 
 message IOConf {
-  required FileSystemConf data_fs_conf = 1;
-  required FileSystemConf snapshot_fs_conf = 2;
-  optional bool save_downloaded_file_to_local_fs = 3 [default = false];
-  optional uint64 persistence_buf_byte = 4;
   optional bool enable_model_io_v2 = 5 [default = false];
   optional bool enable_legacy_model_io = 6 [default = false];
 }
