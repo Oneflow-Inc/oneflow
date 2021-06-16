@@ -23,7 +23,7 @@ from test_util import GenArgList
 
 
 def _test_acos_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), device=flow.device(device))
+    input = flow.Tensor(np.random.rand(2, 6, 5, 3)-0.5, device=flow.device(device))
     of_out = flow.acos(input)
     np_out = np.arccos(input.numpy())
     test_case.assertTrue(
@@ -32,7 +32,7 @@ def _test_acos_forward(test_case, device):
 
 
 def _test_acos_tensor_function_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(8, 11, 9, 7), device=flow.device(device))
+    input = flow.Tensor(np.random.rand(8, 11, 9, 7)-0.5, device=flow.device(device))
     of_out = input.acos()
     np_out = np.arccos(input.numpy())
     test_case.assertTrue(
@@ -42,7 +42,7 @@ def _test_acos_tensor_function_forward(test_case, device):
 
 def _test_acos_backward(test_case, device):
     input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
+        np.random.rand(8, 11, 9, 7)-0.5, requires_grad=True, device=flow.device(device)
     )
     of_out = flow.acos(input).sum()
     of_out.backward()
@@ -54,7 +54,7 @@ def _test_acos_backward(test_case, device):
 
 def _test_acos_tensor_function_backward(test_case, device):
     input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
+        np.random.rand(8, 11, 9, 7)-0.5, requires_grad=True, device=flow.device(device)
     )
     of_out = input.acos().sum()
     of_out.backward()
