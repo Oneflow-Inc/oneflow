@@ -26,7 +26,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["mac", "ubuntu"]
-        build_shared_libs: ["ON", "OFF"]
+        build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
         include:
           - test_suite: mac
             os: "macos-10.15"
@@ -72,14 +72,14 @@ jobs:
           path: |
             build-third_party
             third_party
-          key: ${{ matrix.os }}--${{ github.repository }}--third_party--shared-${{ matrix.build_shared_libs }}--${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
+          key: ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
       - name: Set environment variables
         run: |
           set -x
           cmake_flags=""
           cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
-          cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -D${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
