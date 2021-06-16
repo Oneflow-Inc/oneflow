@@ -241,7 +241,7 @@ REGISTER_USER_OP("conv1d")
     .SetTensorDescInferFn(InferTensorDesc4Conv<1>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -262,7 +262,7 @@ REGISTER_USER_OP("conv2d")
     .SetTensorDescInferFn(InferTensorDesc4Conv<2>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -283,7 +283,7 @@ REGISTER_USER_OP("conv3d")
     .SetTensorDescInferFn(InferTensorDesc4Conv<3>)
     .SetGetSbpFn(GetSbpSignatures4Conv)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -342,7 +342,7 @@ REGISTER_USER_OP("conv_data_grad")
             ctx->TensorDesc4ArgNameAndIndex("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output->data_type(), x_like->data_type());
       }
-      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x_like", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
       return Maybe<void>::Ok();
     });
 

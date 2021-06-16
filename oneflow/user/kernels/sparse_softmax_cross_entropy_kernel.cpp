@@ -147,7 +147,7 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const ParallelDistribution& parallel_distribution =
+      const cfg::ParallelDistribution& parallel_distribution =
           ctx->ParallelDistribution4ArgNameAndIndex("prob", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prob_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("prob", 0);

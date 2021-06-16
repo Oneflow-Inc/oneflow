@@ -177,7 +177,7 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
                                      T* normalized, T* y) {
   using LU = LayerNormUtil<T>;
-  extern __shared__ __align__(sizeof(ComputeType)) unsigned char fw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
   __shared__ ComputeType row_mean_shared;
   __shared__ ComputeType row_inv_var_shared;
@@ -315,7 +315,7 @@ template<typename T, typename I>
 __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T* dy,
                                        const T* normalized, const T* gamma, T* gamma_diff,
                                        T* beta_diff, T* normalized_diff) {
-  extern __shared__ __align__(sizeof(T)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<T*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
@@ -345,7 +345,7 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
                                            const half* normalized, const half* gamma,
                                            half* tmp_gamma_diff, half* tmp_beta_diff,
                                            half* normalized_diff) {
-  extern __shared__ __align__(sizeof(float)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<float*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
