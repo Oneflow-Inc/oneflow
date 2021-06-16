@@ -287,7 +287,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_upsample2d_backward,
             _test_upsample2d_bilinear_aligncorner_backward,
         ]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

@@ -367,7 +367,7 @@ template<typename FETCH, typename STORE, typename T, int pack_size, int block_si
 __global__ void SoftmaxBlockSMemImpl(FETCH fetch, STORE store, const int64_t rows,
                                      const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
-  extern __shared__ __align__(sizeof(ComputeType)) unsigned char shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char shared_buf[];
   auto* buf = reinterpret_cast<ComputeType*>(shared_buf);
   const int tid = threadIdx.x;
   assert(cols % pack_size == 0);
@@ -736,7 +736,7 @@ template<typename FETCH_Y, typename FETCH_DY, typename STORE, typename T, int pa
 __global__ void SoftmaxGradBlockSMemImpl(FETCH_Y fetch_y, FETCH_DY fetch_dy, STORE store,
                                          const int64_t rows, const int64_t cols) {
   using ComputeType = typename GetComputeType<T>::type;
-  extern __shared__ __align__(sizeof(ComputeType)) unsigned char grad_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char grad_shared_buf[];
   auto* y_buf = reinterpret_cast<ComputeType*>(grad_shared_buf);
   auto* dy_buf = y_buf + cols;
   const int tid = threadIdx.x;
