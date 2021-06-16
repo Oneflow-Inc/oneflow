@@ -547,6 +547,35 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
       .Build();
 }
 
+Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
+                                        const std::vector<int32_t>& strides,
+                                        const std::vector<int32_t>& padding_before,
+                                        const std::vector<int32_t>& dilation_rate,
+                                        const int& groups, const std::string& data_format) {
+  return ConvNdDataGradOp(kernel_size, strides, padding_before, dilation_rate, groups, data_format,
+                          UniqueOpName("conv_data_grad"));
+}
+Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
+                                        const std::vector<int32_t>& strides,
+                                        const std::vector<int32_t>& padding_before,
+                                        const std::vector<int32_t>& dilation_rate,
+                                        const int& groups, const std::string& data_format,
+                                        const std::string& name) {
+  return one::OpBuilder("conv_data_grad", name)
+      .Input("dy")
+      .Input("filter")
+      .Input("x_like")
+      .Output("dx")
+      .Attr<int32_t>("num_spatial_dims", kernel_size.size())
+      .Attr<std::vector<int32_t>>("padding_before", padding_before)
+      .Attr<std::string>("data_format", data_format)
+      .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
+      .Attr<std::vector<int32_t>>("strides", strides)
+      .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
+      .Attr<int32_t>("groups", groups)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth) {
   return SparseSoftmaxCrossEntropyGradOp(depth, UniqueOpName("sparse_softmax_cross_entropy"));
 }
@@ -816,6 +845,17 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
       .Build();
 }
 
+Maybe<one::UserOpExpr> AdaptivePoolGradOp() {
+  return AdaptivePoolGradOp(UniqueOpName("adaptive_pool_grad"));
+}
+Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name) {
+  return one::OpBuilder("adaptive_avg_pool2d_grad", name)
+      .Input("x")
+      .Input("dy")
+      .Output("dx")
+      .Build();
+}
+
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis) {
   return UnsortedSegmentSumLikeOp(axis, UniqueOpName("unsorted_segment_sum_like"));
 }
@@ -829,5 +869,10 @@ Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::
       .Build();
 }
 
+Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
+
+Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
+  return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
+}
 }  // namespace op_expr_helper
 }  // namespace oneflow

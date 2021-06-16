@@ -358,6 +358,20 @@ class Tensor:
         flow.autograd.backward(self, gradient, retain_graph, create_graph)
 
     @register_local_tensor_method()
+    def _transform_ellipsis_type(self, key):
+        d = self.ndim - len(key)  # exclude all Ellipsis type
+        new_key = list()
+        for k in key:
+            if isinstance(k, type(Ellipsis)):
+                new_key.append(slice(None, None, None))
+                while d > 0:
+                    new_key.append(slice(None, None, None))
+                    d -= 1
+            else:
+                new_key.append(k)
+        return tuple(new_key)
+
+    @register_local_tensor_method()
     def _get_slice_obj(self, key):
         def get_or_default(x, default):
             return x if x is not None else default
@@ -410,9 +424,13 @@ class Tensor:
         assert (
             isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
         ), "Unsupported key type!"
+
         squeeze_dims = None
         if isinstance(key, tuple):
-            squeeze_dims = list(filter(lambda idx: isinstance(key[idx], int), key))
+            key = self._transform_ellipsis_type(key)
+            squeeze_dims = list(
+                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
+            )
         elif isinstance(key, int):
             squeeze_dims = [0]
 
@@ -423,6 +441,8 @@ class Tensor:
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
+        if isinstance(key, tuple):
+            key = self._transform_ellipsis_type(key)
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
@@ -494,6 +514,10 @@ class Tensor:
     @register_local_tensor_method()
     def __neg__(self):
         return flow.experimental.neg(self)
+
+    @register_local_tensor_method()
+    def __pow__(self, b):
+        return flow.experimental.pow(self, b)
 
     def _determine_if_needed(self, determining_initializer=None):
         if not self.is_determined:

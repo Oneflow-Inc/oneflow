@@ -180,6 +180,18 @@ Maybe<one::UserOpExpr> ConvNdFilterGradOp(const std::vector<int32_t>& kernel_siz
                                           const int& groups, const std::string& data_format,
                                           const std::string& name);
 
+Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
+                                        const std::vector<int32_t>& strides,
+                                        const std::vector<int32_t>& padding_before,
+                                        const std::vector<int32_t>& dilation_rate,
+                                        const int& groups, const std::string& data_format);
+Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
+                                        const std::vector<int32_t>& strides,
+                                        const std::vector<int32_t>& padding_before,
+                                        const std::vector<int32_t>& dilation_rate,
+                                        const int& groups, const std::string& data_format,
+                                        const std::string& name);
+
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth);
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth,
                                                        const std::string& name);
@@ -263,8 +275,13 @@ Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& 
                                     const std::vector<int32_t>& strides, const bool& ceil_mode,
                                     const std::string& name);
 
+Maybe<one::UserOpExpr> AdaptivePoolGradOp();
+Maybe<one::UserOpExpr> AdaptivePoolGradOp(const std::string& name);
+
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis);
 Maybe<one::UserOpExpr> UnsortedSegmentSumLikeOp(const int64_t& axis, const std::string& name);
 
+Maybe<one::UserOpExpr> SoftmaxGradOp();
+Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name);
 }  // namespace op_expr_helper
 }  // namespace oneflow
