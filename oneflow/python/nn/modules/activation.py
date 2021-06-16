@@ -77,7 +77,9 @@ class ReLU(Module):
     def forward(self, x):
         if self._inplace:
             if x.requires_grad and x.is_leaf:
-                raise RuntimeError("a leaf Variable that requires grad is being used in an in-place operation.")
+                raise RuntimeError(
+                    "a leaf Variable that requires grad is being used in an in-place operation."
+                )
             return flow.F.relu_(x)
         return flow.F.relu(x)
 

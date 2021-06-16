@@ -762,8 +762,7 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(y.requires_grad, True)
         test_case.assertEqual(y.is_leaf, False)
         # Cannot print Copy grad function
-        # test_case.assertTrue(y.grad_fn != None)
-        
+        test_case.assertTrue(y.grad_fn != None)
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),

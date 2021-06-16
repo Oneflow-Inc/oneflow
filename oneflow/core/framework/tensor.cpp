@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
-#include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/op_interpreter/eager_mirrored_op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -93,13 +92,8 @@ Maybe<Tensor> MirroredTensor::clone() const {
                                               .Build());
   std::shared_ptr<MirroredTensor> input =
       std::const_pointer_cast<MirroredTensor>(shared_from_this());
-  {
-    autograd::NoGradGuard no_grad;
-    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
-    output->set_requires_grad(this->requires_grad());
-    output->set_is_leaf(false);
-    return output;
-  }
+  const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*copy_op_, {input}));
+  return output;
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(

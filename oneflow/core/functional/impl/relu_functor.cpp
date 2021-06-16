@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 
@@ -49,7 +50,7 @@ class ReLUInplaceFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    const std::shared_ptr<Tensor>& facade_input = JUST(x->clone());
+    const auto& facade_input = JUST(x->clone());
     JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*relu_op_, {facade_input}, outputs.get(), {}));
     return outputs->at(0);
   }
