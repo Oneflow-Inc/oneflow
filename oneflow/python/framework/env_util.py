@@ -304,62 +304,6 @@ def api_init_bootstrap_confs(*val: list, **kargs) -> None:
     return enable_if.unique([MakeBootstrapConfs, do_nothing])(*val, **kargs)
 
 
-def init_with_env():
-    master_addr = os.getenv("MASTER_ADDR")
-
-    def int_if_not_none(x):
-        if x is not None:
-            return int(x)
-        return x
-
-    master_port = int_if_not_none(os.getenv("MASTER_PORT"))
-    world_size = int_if_not_none(os.getenv("WORLD_SIZE"))
-    rank = int_if_not_none(os.getenv("RANK"))
-    local_rank = int_if_not_none(os.getenv("LOCAL_RANK"))
-    nproc = int_if_not_none(os.getenv("NPROC"))
-
-    env_list = [master_addr, master_port, world_size, rank, local_rank, nproc]
-    print(env_list)
-    x_is_not_none = [x is not None for x in env_list]
-    if all(x_is_not_none):
-        env_proto = GetEnvProto(
-            master_addr, master_port, world_size, rank, local_rank, nproc
-        )
-        oneflow._oneflow_internal.InitEnv(str(env_proto))
-    else:
-        assert not any(x_is_not_none)
-
-
-def GetEnvProto(
-    master_host: str,
-    master_port: int,
-    world_size: int,
-    rank: int,
-    local_rank: int,
-    num_process_per_node: int,
-):
-    bootstrap_conf = ctrl_bootstrap_pb.BootstrapConf()
-    master_addr = ctrl_bootstrap_pb.Address()
-    master_addr.host = master_host
-    master_addr.port = master_port
-    bootstrap_conf.master_addr.CopyFrom(master_addr)
-    bootstrap_conf.world_size = world_size
-    bootstrap_conf.rank = rank
-    bootstrap_conf.num_process_per_node.value = num_process_per_node
-
-    env_proto = _DefaultEnvProto()
-    env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
-    env_proto.ctrl_port = master_port
-    # if "host" in bootstrap_info:
-    #     bootstrap_conf.host = bootstrap_info["host"]
-    # global config_bootstrap_ctrl_port
-    # if config_bootstrap_ctrl_port != 0:
-    #     bootstrap_conf.ctrl_port = config_bootstrap_ctrl_port
-    # if config_node_size != 0:
-    #     bootstrap_conf.node_size = config_node_size
-    return env_proto
-
-
 def _MakeBootstrapConf(bootstrap_info: dict):
     global config_master_addr
     assert config_master_addr.HasField("host"), "must config master host first"
