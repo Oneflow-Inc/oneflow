@@ -26,9 +26,6 @@ from resnet50_model import resnet50
 )
 class TestResNet50(flow.unittest.TestCase):
     def test_resnet50_with_batchnorm(test_case):
-        # init ofrecord
-        flow.InitEagerGlobalSession()
-
         batch_size = 32
         color_space = "RGB"
         height = 224

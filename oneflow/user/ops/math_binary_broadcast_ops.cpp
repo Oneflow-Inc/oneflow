@@ -63,7 +63,7 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
-  *ctx->OutputDType("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("z", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
