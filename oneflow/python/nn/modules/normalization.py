@@ -138,27 +138,6 @@ class LayerNorm(Module):
         # An integer specifies which axis params at, defaults to 1 in 'NCHW' format
         self.begin_params_axis = 1
 
-        self._op = (
-            flow.builtin_op("layer_norm")
-            .Input("x")
-            .Input("gamma")
-            .Input("beta")
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
-            .Output("normalized")
-            .Build()
-        )
-
-        self._op2 = (
-            flow.builtin_op("layer_norm")
-            .Input("x")
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
-            .Build()
-        )
-
     def reset_parameters(self) -> None:
         if self.elementwise_affine:
             init.ones_(self.weight)
@@ -220,25 +199,21 @@ class LayerNorm(Module):
             return affined
         else:
             if self.elementwise_affine:
-                res = self._op(
+                flow.F.layer_norm_affine(
                     x,
                     self.weight,
                     self.bias,
-                    center=True,
-                    scale=True,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
                     epsilon=self.epsilon,
-                )[0]
+                )
             else:
-                res = self._op2(
+                flow.F.layer_norm(
                     x,
-                    center=False,
-                    scale=False,
                     begin_norm_axis=self.begin_norm_axis,
                     begin_params_axis=self.begin_params_axis,
                     epsilon=self.epsilon,
-                )[0]
+                )
             return res
 
     def extra_repr(self) -> str:
