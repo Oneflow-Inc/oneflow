@@ -159,7 +159,7 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
-      const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       if (parallel_ctx.parallel_num() > 1 && out_sbp.has_split_parallel()) {
         BalancedSplitter bs(batch_size, parallel_ctx.parallel_num());
         *out_tensor->mut_shape() = Shape({bs.At(parallel_ctx.parallel_id()).size()});

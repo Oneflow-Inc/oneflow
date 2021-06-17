@@ -44,7 +44,7 @@ Maybe<void> InferFWTensorDesc(user_op::InferContext* ctx) {
 
 Maybe<void> InferBWTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+  *ctx->OutputIsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
