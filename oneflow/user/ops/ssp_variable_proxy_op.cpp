@@ -42,8 +42,8 @@ REGISTER_USER_OP("ssp_variable_proxy")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("ref", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
-      *ctx->OutputDType("value", 0) = *ctx->Dtype4ArgNameAndIndex("var", 0);
+      *ctx->OutputDType("ref", 0) = ctx->InputDType("var", 0);
+      *ctx->OutputDType("value", 0) = ctx->InputDType("var", 0);
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,

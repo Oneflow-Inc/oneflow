@@ -139,6 +139,13 @@ bool TryGetPrefixAndIndex(const std::string& prefix_and_idx, std::string* prefix
   return *index >= 0;
 }
 
+std::string ToLower(const std::string& cap) {
+  std::string small;
+  std::transform(cap.begin(), cap.end(), small.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return small;
+}
+
 namespace internal {
 
 std::string JoinPathImpl(std::initializer_list<std::string> paths) {
