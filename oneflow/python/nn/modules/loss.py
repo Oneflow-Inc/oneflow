@@ -207,7 +207,6 @@ class BCELoss(Module):
         tensor([2.0611], dtype=oneflow.float32)
         
     """
-   
 
     def __init__(self, weight, reduction: str = None) -> None:
         super().__init__()
@@ -227,8 +226,9 @@ class BCELoss(Module):
         ), "The Input shape must be the same as Target shape"
 
         _cross_entropy_loss = flow.experimental.negative(
-            target * flow.experimental.log(input) + (1 - target) * flow.experimental.log(1 - input)
-            )
+            target * flow.experimental.log(input)
+            + (1 - target) * flow.experimental.log(1 - input)
+        )
 
         if self.weight is not None:
             assert (
