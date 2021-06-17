@@ -24,13 +24,13 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value")
     .Attr<int64_t>("head_size")
     .Attr<float>("alpha")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType dtype = *ctx->Dtype4ArgNameAndIndex("hidden_states", 0);
+      const DataType& dtype = ctx->InputDType("hidden_states", 0);
       *ctx->OutputDType("query_mul_key", 0) = dtype;
       *ctx->OutputDType("value", 0) = dtype;
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(!(*ctx->IsDynamic4ArgNameAndIndex("hidden_states", 0)));
+      CHECK_OR_RETURN(!(ctx->InputIsDynamic4ArgNameAndIndex("hidden_states", 0)));
       int64_t head_size = ctx->Attr<int64_t>("head_size");
       const Shape& hidden_states_shape = ctx->InputShape("hidden_states", 0);
       // hidden_states_shape (seq_len, batch_size, hidden_size)
@@ -70,14 +70,14 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value_grad")
     .Output("hidden_states_grad")
     .Attr<float>("alpha")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      DataType dtype = *ctx->Dtype4ArgNameAndIndex("query_mul_key_grad", 0);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("value_grad", 0), dtype);
+      const DataType& dtype = ctx->InputDType("query_mul_key_grad", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("value_grad", 0), dtype);
       *ctx->OutputDType("hidden_states_grad", 0) = dtype;
       return Maybe<void>::Ok();
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_OR_RETURN(!(*ctx->IsDynamic4ArgNameAndIndex("query_mul_key_grad", 0)));
-      CHECK_OR_RETURN(!(*ctx->IsDynamic4ArgNameAndIndex("value_grad", 0)));
+      CHECK_OR_RETURN(!(ctx->InputIsDynamic4ArgNameAndIndex("query_mul_key_grad", 0)));
+      CHECK_OR_RETURN(!(ctx->InputIsDynamic4ArgNameAndIndex("value_grad", 0)));
       const Shape& h_shape = ctx->InputShape("hidden_states", 0);
       const Shape& qmk_grad_shape = ctx->InputShape("query_mul_key_grad", 0);
       const Shape& v_grad_shape = ctx->InputShape("value_grad", 0);
