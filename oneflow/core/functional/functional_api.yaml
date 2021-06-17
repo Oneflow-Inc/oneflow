@@ -339,6 +339,13 @@
                       String data_format=\"channels_first\", Bool ceil_mode=False)"
   bind_python: True
 
+- name: "pool_grad"
+  signature:
+    "Tensor PoolNdGrad(Tensor x, Tensor y, Tensor dy, *, String mode, Int32 ndims, String data_format,
+                       String padding, Int32List padding_before, Int32List padding_after, Int32List pool_size,
+                       Int32List strides, Bool ceil_mode)"
+  bind_python: False
+
 - name: "prelu"
   signature: "Tensor PRelu(Tensor x, Tensor alpha)"
   bind_python: True

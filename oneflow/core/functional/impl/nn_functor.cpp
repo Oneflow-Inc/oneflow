@@ -74,67 +74,6 @@ class Conv2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ConvDataGradFunctor {
- public:
-  ConvDataGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("conv_data_grad")
-                         .Input("dy")
-                         .Input("filter")
-                         .Input("x_like")
-                         .Output("dx")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& x, const int32_t& num_spatial_dims,
-                           const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& strides,
-                           const std::vector<int32_t>& padding_before,
-                           const std::vector<int32_t>& dilation_rate, const int32_t& groups,
-                           const std::string& data_format) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    JUST(attrs.SetAttr<int32_t>("groups", groups));
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class ConvFilterGradFunctor {
- public:
-  ConvFilterGradFunctor() {
-    op_ = CHECK_JUST(
-        one::OpBuilder("conv_filter_grad").Input("dy").Input("x").Output("filter_diff").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& x, const int32_t& num_spatial_dims,
-                           const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& strides,
-                           const std::vector<int32_t>& padding_before,
-                           const std::vector<int32_t>& dilation_rate, const int32_t& groups,
-                           const std::string& data_format) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    JUST(attrs.SetAttr<int32_t>("groups", groups));
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class MatMulBaseFunctor {
  public:
   MatMulBaseFunctor() = default;
@@ -231,10 +170,10 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Pool2DFunctor {
+class PoolNDFunctor {
  public:
-  Pool2DFunctor() = default;
-  virtual ~Pool2DFunctor() = default;
+  PoolNDFunctor() = default;
+  virtual ~PoolNDFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::vector<int32_t>& kernel_size,
                            const std::vector<int32_t>& strides, const std::string& padding,
@@ -256,19 +195,21 @@ class Pool2DFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class AvgPool2DFunctor : public Pool2DFunctor {
+class AvgPool2DFunctor : public PoolNDFunctor {
  public:
   AvgPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
   }
 };
 
-class MaxPool2DFunctor : public Pool2DFunctor {
+class MaxPool2DFunctor : public PoolNDFunctor {
  public:
   MaxPool2DFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
   }
 };
+
+
 
 class SparseSoftmaxCrossEntropyFunctor {
  public:
@@ -296,8 +237,6 @@ class SparseSoftmaxCrossEntropyFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
-  m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
-  m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");

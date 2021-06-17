@@ -61,28 +61,15 @@ class ConvFilterGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    // MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    // JUST(attrs.SetAttr<int32_t>("groups", groups));
-    // JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    // return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
-    const auto& op = JUST(one::OpBuilder("conv_filter_grad")
-                              .Input("dy")
-                              .Input("x")
-                              .Output("filter_diff")
-                              .Attr<int32_t>("num_spatial_dims", num_spatial_dims)
-                              .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-                              .Attr<std::vector<int32_t>>("strides", strides)
-                              .Attr<std::vector<int32_t>>("padding_before", padding_before)
-                              .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-                              .Attr<int32_t>("groups", groups)
-                              .Attr<std::string>("data_format", data_format)
-                              .Build());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x});
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:
@@ -95,7 +82,7 @@ class ConvDataGradFunctor {
     op_ = CHECK_JUST(one::OpBuilder("conv_data_grad")
                          .Input("dy")
                          .Input("filter")
-                         .Input("x")
+                         .Input("x_like")
                          .Output("dx")
                          .Build());
   }
@@ -107,33 +94,81 @@ class ConvDataGradFunctor {
                            const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& dilation_rate, const int32_t& groups,
                            const std::string& data_format) const {
-    // MutableAttrMap attrs;
-    // JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    // JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    // JUST(attrs.SetAttr<int32_t>("groups", groups));
-    // JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    // return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
-    const auto& op = JUST(one::OpBuilder("conv_data_grad")
-                              .Input("dy")
-                              .Input("filter")
-                              .Input("x")
-                              .Output("dx")
-                              .Attr<int32_t>("num_spatial_dims", num_spatial_dims)
-                              .Attr<std::vector<int32_t>>("kernel_size", kernel_size)
-                              .Attr<std::vector<int32_t>>("strides", strides)
-                              .Attr<std::vector<int32_t>>("padding_before", padding_before)
-                              .Attr<std::vector<int32_t>>("dilation_rate", dilation_rate)
-                              .Attr<int32_t>("groups", groups)
-                              .Attr<std::string>("data_format", data_format)
-                              .Build());
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x});
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_spatial_dims", num_spatial_dims));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
+    JUST(attrs.SetAttr<int32_t>("groups", groups));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, weight, x}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class OpExprMap: public std::map<std::string, std::shared_ptr<OpExpr>> {
+ public:
+  Maybe<OpExpr> GetOpExpr(const std::string& op_type_name) const {
+    const auto& it = this->find(op_type_name);
+    CHECK_OR_RETURN(it != this->end()) << op_type_name << " not found";
+    const auto op = it->second;
+    CHECK_NOTNULL_OR_RETURN(op);
+    return op;
+  }
+
+  Maybe<void> SetOpExpr(const std::string& op_type_name, std::shared_ptr<OpExpr> op) {
+    (*this)[op_type_name] = std::move(op);
+    return Maybe<void>::Ok();
+  }
+};
+
+class PoolNdGradFunctor {
+ public:
+  PoolNdGradFunctor() {
+    mode_opts_ = {"max", "avg"};
+    ndims_opts_ = {1, 2, 3};
+    for (auto mode : mode_opts_) {
+      for (auto ndims : ndims_opts_) {
+        auto& op_type_name = GetOpTypeName(mode, ndims);
+        opExprMap_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Output("y").Input("dy").Output("dx").Build());
+      }
+    }
+  }
+  static const std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
+    return mode + "_pool_" + std::to_string(ndims) + "d_grad";
+  }
+  virtual ~PoolNdGradFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
+                           const std::shared_ptr<one::Tensor>& dy,
+                           const std::string& mode,
+                           const int32_t& ndims,
+                           const std::string& data_format,
+                           const std::string& padding,
+                           const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::vector<int32_t>& pool_size,
+                           const std::vector<int32_t>& strides,  const bool& ceil_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<std::string>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", pool_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    auto& op_type_name = GetOpTypeName(mode, ndims);
+    std::shared_ptr<OpExpr> op = JUST(opExprMap_.GetOpExpr(op_type_name));
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x, y}, attrs);
+  }
+
+ protected:
+  OpExprMap opExprMap_;
+  std::vector<std::string> mode_opts_;
+  std::vector<int32_t> ndims_opts_;
 };
 
 }  // namespace impl
@@ -142,6 +177,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvBiasGradFunctor>("ConvBiasGrad");
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
+  m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
+
 };
 
 }  // namespace functional
