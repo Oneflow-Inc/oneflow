@@ -31,7 +31,7 @@ REGISTER_USER_OP("fused_bias_add_gelu")
       CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
       *ctx->OutputShape("out", 0) = a_tensor_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -73,7 +73,7 @@ REGISTER_USER_OP("fused_bias_add_gelu_grad")
       CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
       *ctx->OutputShape("dx", 0) = a_tensor_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = a_tensor_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("dx", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -158,7 +158,7 @@ REGISTER_USER_OP("fused_bias_add_mask_scale")
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape(), mask_tensor_desc->shape());
       *ctx->OutputShape("out", 0) = a_tensor_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) = a_tensor_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
