@@ -66,6 +66,8 @@ class Device final : public std::enable_shared_from_this<Device> {
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
+std::ostream& operator<<(std::ostream& out, const Device& device);
+
 }  // namespace oneflow
 
 namespace std {

@@ -34,25 +34,18 @@ class ReLUFunctor {
   ReLUFunctor() {
     relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*relu_op_, {x});
-  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      const auto& facade_input = JUST(x->clone());
+      JUST(JUST(OpInterpUtil::GetInterpreter())
+               ->Apply(*relu_op_, {facade_input}, outputs.get(), {}));
+      return outputs->at(0);
 
- private:
-  std::shared_ptr<OpExpr> relu_op_;
-};
-
-class ReLUInplaceFunctor {
- public:
-  ReLUInplaceFunctor() {
-    relu_op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x) const {
-    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-    outputs->at(0) = x;
-    const auto& facade_input = JUST(x->clone());
-    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*relu_op_, {facade_input}, outputs.get(), {}));
-    return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*relu_op_, {x});
+    }
   }
 
  private:
@@ -61,10 +54,7 @@ class ReLUInplaceFunctor {
 
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) {
-  m.add_functor<impl::ReLUFunctor>("relu");
-  m.add_functor<impl::ReLUInplaceFunctor>("relu_");
-};
+ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::ReLUFunctor>("relu"); };
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

@@ -57,30 +57,37 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   CHECK_EQ(out_devices->size(), output_eager_blob_objects->size());
   bool need_check_mem_case = true;
   bool need_event_record = false;
-  bool is_inplace = true;
+  bool is_inplace =
+      std::all_of(output_eager_blob_objects->begin(), output_eager_blob_objects->end(),
+                  [](const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
+                    return eager_blob_object != nullptr;
+                  });
   if (!user_op_expr.has_device_infer_fn()) {
     op_device = default_device;
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-      if (!output_eager_blob_objects->at(i)) {
+      if (!is_inplace) {
         const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
             op_device->mem_case(), std::make_shared<Shape>(), DataType::kInvalidDataType,
             std::make_shared<vm::TensorBuffer>(), op_parallel_desc);
         output_eager_blob_objects->at(i) = eager_blob_object;
         out_devices->at(i) = default_device;
-        is_inplace = false;
+      } else {
+        CHECK_EQ_OR_RETURN(*out_devices->at(i), *JUST(inputs.at(i)->device()));
+        CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i)->blob_desc().shape(),
+                           input_eager_blob_objects->at(i)->blob_desc().shape());
       }
     }
   } else {
     need_check_mem_case = false;
-    op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices));
+    if (!is_inplace) { op_device = JUST(user_op_expr.InferDevices(attrs, inputs, out_devices)); }
     for (const auto& input_tensor : inputs) {
       const auto& input_device = JUST(input_tensor->device());
       need_event_record = need_event_record || !(*op_device == *input_device);
     }
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < output_eager_blob_objects->size(); ++i) {
-      if (!output_eager_blob_objects->at(i)) {
+      if (!is_inplace) {
         const auto& tensor_device = out_devices->at(i);
         CHECK_OR_RETURN(static_cast<bool>(tensor_device));
         const auto& tensor_parallel_desc = op_device->parallel_desc_ptr();
@@ -89,6 +96,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
             std::make_shared<vm::TensorBuffer>(), tensor_parallel_desc);
         output_eager_blob_objects->at(i) = eager_blob_object;
         is_inplace = false;
+      } else {
+        CHECK_EQ_OR_RETURN(*out_devices->at(i), *JUST(inputs.at(i)->device()));
+        CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i)->blob_desc().shape(),
+                           input_eager_blob_objects->at(i)->blob_desc().shape());
       }
     }
   }
@@ -154,12 +165,13 @@ static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTu
                                   TensorTuple* outputs, const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
+  std::vector<std::shared_ptr<const Device>> out_devices(outputs->size());
   for (int i = 0; i < outputs->size(); ++i) {
     if (outputs->at(i)) {
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
+      out_devices.at(i) = JUST(outputs->at(i)->device());
     }
   }
-  std::vector<std::shared_ptr<const Device>> out_devices(outputs->size());
   JUST(NaiveInterpret(user_op_expr, inputs, output_eager_blob_objects, attrs, &out_devices));
   for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {

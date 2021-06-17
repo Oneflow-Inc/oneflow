@@ -37,9 +37,6 @@
   bind_python: True
 
 - name: "relu"
-  signature: "Tensor relu(Tensor x)"
+  signature: "Tensor relu(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
-- name: "relu_"
-  signature: "Tensor relu_(Tensor x)"
-  bind_python: True
