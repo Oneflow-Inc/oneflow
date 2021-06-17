@@ -67,6 +67,8 @@ ExternalProject_Add(protobuf
         -DCMAKE_INSTALL_BINDIR:STRING=${PROTOBUF_INSTALL_BINDIR}
         ${PROTOBUF_ADDITIONAL_CMAKE_OPTIONS}
 )
+else()
+add_custom_target(protobuf)
 endif(THIRD_PARTY)
 add_library(protobuf_imported UNKNOWN IMPORTED)
 set_property(TARGET protobuf_imported PROPERTY IMPORTED_LOCATION "${PROTOBUF_STATIC_LIBRARIES}")
