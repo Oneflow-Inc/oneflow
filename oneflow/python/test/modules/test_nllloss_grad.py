@@ -45,7 +45,14 @@ def _test_nllloss_none_backward(test_case, device):
     of_out = nll_loss(input, target)
     of_out = of_out.sum()
     of_out.backward()
-    print(input.grad.numpy())
+    np_grad = [
+        [-0.20000000298023224, 0.0, 0.0],
+        [0.0, 0.0, -0.20000000298023224],
+        [0.0, -0.20000000298023224, 0.0],
+        [0.0, -0.20000000298023224, 0.0],
+        [-0.20000000298023224, 0.0, 0.0],
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_mean(test_case, device):
@@ -59,14 +66,26 @@ def _test_nllloss_mean(test_case, device):
         ]
     ).astype(np.float32)
     y = np.array([0, 2, 1, 1, 0]).astype(np.int)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
 
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="mean")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [-0.20000000298023224, 0.0, 0.0],
+        [0.0, 0.0, -0.20000000298023224],
+        [0.0, -0.20000000298023224, 0.0],
+        [0.0, -0.20000000298023224, 0.0],
+        [-0.20000000298023224, 0.0, 0.0],
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_sum(test_case, device):
@@ -80,98 +99,146 @@ def _test_nllloss_sum(test_case, device):
         ]
     ).astype(np.float32)
     y = np.array([0, 2, 1, 1, 0]).astype(np.int)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
 
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="sum")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [
+        [-1.0, 0.0, 0.0],
+        [0.0, 0.0, -1.0],
+        [0.0, -1.0, 0.0],
+        [0.0, -1.0, 0.0],
+        [-1.0, 0.0, 0.0],
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_segmentation_none(test_case, device):
     x = np.array(
         [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
     ).astype(np.float32)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss()
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_2d(input.numpy(), target.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[0.0, -0.25], [-0.25, 0.0]], [[-0.25, 0.0], [0.0, -0.25]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_segmentation_mean(test_case, device):
     x = np.array(
         [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
     ).astype(np.float32)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="mean")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[0.0, -0.25], [-0.25, 0.0]], [[-0.25, 0.0], [0.0, -0.25]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_segmentation_sum(test_case, device):
     x = np.array(
         [[[[0.12, 0.36], [0.22, 0.66]], [[0.13, 0.34], [0.52, -0.96]]]]
     ).astype(np.float32)
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="sum")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[[0.0, -1.0], [-1.0, 0.0]], [[-1.0, 0.0], [0.0, -1.0]]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_bert_none(test_case, device):
     x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
         np.float32
     )
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss()
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_bert(input.numpy(), target.numpy())
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[0.0, -0.25, -0.25, 0.0], [-0.25, 0.0, 0.0, -0.25]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_bert_mean(test_case, device):
     x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
         np.float32
     )
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="mean")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[0.0, -0.25, -0.25, 0.0], [-0.25, 0.0, 0.0, -0.25]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 def _test_nllloss_bert_sum(test_case, device):
     x = np.array([[[0.12, 0.36, 0.22, 0.66], [0.13, 0.34, 0.52, -0.96]]]).astype(
         np.float32
     )
-    input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    input = flow.Tensor(
+        x, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
-    target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=flow.int64, device=flow.device(device), requires_grad=True
+    )
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
-    np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="sum")
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = [[[0.0, -1.0, -1.0, 0.0], [-1.0, 0.0, 0.0, -1.0]]]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, atol=1e-5, rtol=1e-5))
 
 
 @unittest.skipIf(
@@ -183,6 +250,14 @@ class TestNLLLossModule(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_nllloss_none_backward,
+            _test_nllloss_mean,
+            _test_nllloss_sum,
+            _test_nllloss_segmentation_none,
+            _test_nllloss_segmentation_mean,
+            _test_nllloss_segmentation_sum,
+            _test_nllloss_bert_none,
+            _test_nllloss_bert_mean,
+            _test_nllloss_bert_sum,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
