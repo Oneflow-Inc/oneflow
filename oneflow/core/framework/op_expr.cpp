@@ -179,11 +179,17 @@ class UserOpExprInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
     return const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
@@ -236,14 +242,14 @@ class UserOpExprInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return *(const ParallelDesc*)nullptr;
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const SbpParallel*)nullptr;
+    return *(const cfg::SbpParallel*)nullptr;
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                   int32_t) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                        int32_t) const override {
     UNIMPLEMENTED();
-    return *(const ParallelDistribution*)nullptr;
+    return *(const cfg::ParallelDistribution*)nullptr;
   }
   int64_t parallel_num() const override {
     UNIMPLEMENTED();
