@@ -31,11 +31,11 @@ BlobDesc* FindValidBlobDescOfBnsInOp(
   BlobDesc* valid = nullptr;
   for (const std::string& bn_in_op : bn_in_ops) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { 
+    if (blob_desc) {
       const bool is_dynamic = blob_desc->is_dynamic();
-      if(valid == nullptr || is_dynamic) {
+      if (valid == nullptr || is_dynamic) {
         valid = blob_desc;
-        if(is_dynamic) { break; }
+        if (is_dynamic) { break; }
       }
     }
   }
