@@ -103,11 +103,12 @@ int64_t NewOpNodeSignature(InstructionMsgList* list, const std::vector<std::stri
 // return opkernel logical object id
 int64_t InitOpKernelObject(InstructionMsgList* list,
                            const std::shared_ptr<JobConfigProto>& job_conf,
-                           const std::shared_ptr<OperatorConf>& op_conf) {
+                           const std::shared_ptr<OperatorConf>& op_conf,
+                           const std::string& device_tag) {
   int64_t job_desc_id = NewJobDescSymbol(list, job_conf);
   int64_t op_conf_id = NewOpConfSymbol(list, op_conf);
   int64_t parallel_desc_id = 0;
-  int64_t opkernel_id = vm::TestUtil::NewObject(list, "gpu", "0:0", &parallel_desc_id);
+  int64_t opkernel_id = vm::TestUtil::NewObject(list, device_tag, "0:0", &parallel_desc_id);
   list->EmplaceBack(vm::NewInstruction("InitOpKernelObject")
                         ->add_parallel_desc(parallel_desc_id)
                         ->add_symbol_operand(job_desc_id)
@@ -120,14 +121,16 @@ TEST(OpkernelInstructionType, new_opkernel) {
   InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+  const std::string device_tag = "gpu";
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
+  const std::string device_tag = "cpu";
 #endif
   InstructionMsgList list;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->mutable_user_conf()->set_op_type_name("TestSource");
-    InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, device_tag);
   }
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
@@ -146,15 +149,17 @@ TEST(OpkernelInstructionType, delete_opkernel) {
   InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+  const std::string device_tag = "gpu";
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
-#endif
-  InstructionMsgList list;
+  const std::string device_tag = "cpu";
+#endif InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
     op_conf->mutable_user_conf()->set_op_type_name("TestSource");
-    opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    opkernel_id =
+        InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, device_tag);
   }
   list.EmplaceBack(vm::NewInstruction("DeleteOpKernelObject")->add_mut_operand(opkernel_id));
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
@@ -174,10 +179,11 @@ TEST(OpkernelInstructionType, call_opkernel) {
   InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+  const std::string device_tag = "gpu";
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
-#endif
-  InstructionMsgList list;
+  const std::string device_tag = "cpu";
+#endif InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -185,13 +191,14 @@ TEST(OpkernelInstructionType, call_opkernel) {
     auto* user_conf = op_conf->mutable_user_conf();
     user_conf->set_op_type_name("TestSource");
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
-    opkernel_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    opkernel_id =
+        InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, device_tag);
   }
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
   int64_t parallel_desc_id = 0;
-  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
+  int64_t output_blob_id = vm::TestUtil::NewObject(&list, device_tag, "0:0", &parallel_desc_id);
   int64_t op_node_signature_id = NewOpNodeSignature(&list, {}, {}, {"out_0"}, {parallel_desc_id});
-  list.EmplaceBack(vm::NewInstruction("gpu.CallOpKernel")
+  list.EmplaceBack(vm::NewInstruction(device_tag + ".CallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_mut_operand(opkernel_id)
                        ->add_symbol_operand(op_node_signature_id)
@@ -204,7 +211,7 @@ TEST(OpkernelInstructionType, call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "InitOpKernelObject", "gpu.CallOpKernel"});
+                          "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -214,13 +221,10 @@ TEST(OpkernelInstructionType, call_opkernel) {
   DestroyNumProcessPerNode();
 }
 
+#ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
   InitNumProcessPerNode();
-#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
-#else
-  vm::TestResourceDescScope resource_scope(0, 1);
-#endif
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
   int64_t out_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
@@ -232,7 +236,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     auto* user_conf = op_conf->mutable_user_conf();
     user_conf->set_op_type_name("TestSource");
     (*user_conf->mutable_output())["out"].add_s("test_source_op_name/out_0");
-    test_source_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    test_source_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, "gpu");
   }
   int64_t x = 0;
   int64_t x_parallel_desc_id = 0;
@@ -259,7 +263,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     user_conf->set_op_type_name("ccrelu");
     (*user_conf->mutable_input())["in"].add_s("ccrelu_op_name/in_0");
     (*user_conf->mutable_output())["out"].add_s("ccrelu_op_name/out_0");
-    ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf);
+    ccrelu_id = InitOpKernelObject(&list, std::make_shared<JobConfigProto>(), op_conf, "gpu");
   }
   int64_t y = 0;
   {
@@ -295,19 +299,21 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   DestroyNumProcessPerNode();
-}
+}  // namespace test
+#endif
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
   InitNumProcessPerNode();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+  const std::string device_tag = "gpu";
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
-#endif
-  InstructionMsgList list;
+  const std::string device_tag = "cpu";
+#endif InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
-  int64_t opkernel_id = vm::TestUtil::NewObject(&list, "gpu", "0:0", &parallel_desc_id);
+  int64_t opkernel_id = vm::TestUtil::NewObject(&list, device_tag, "0:0", &parallel_desc_id);
   int64_t op_conf_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -319,8 +325,8 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   }
   int64_t op_node_signature_id = NewOpNodeSignature(&list, {}, {}, {"out_0"}, {parallel_desc_id});
   int64_t obn_id = vm::TestUtil::NewStringSymbol(&list, "out_0");
-  int64_t output_blob_id = vm::TestUtil::NewObject(&list, "gpu", "0:0");
-  list.EmplaceBack(vm::NewInstruction("gpu.compute.UserStatelessCallOpKernel")
+  int64_t output_blob_id = vm::TestUtil::NewObject(&list, device_tag, "0:0");
+  list.EmplaceBack(vm::NewInstruction(device_tag + ".compute.UserStatelessCallOpKernel")
                        ->add_parallel_desc(parallel_desc_id)
                        ->add_symbol_operand(job_desc_id)
                        ->add_symbol_operand(op_conf_id)
@@ -335,7 +341,7 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   auto vm_desc = ObjectMsgPtr<vm::VmDesc>::New(vm::TestUtil::NewVmResourceDesc().Get());
   vm::TestUtil::AddStreamDescByInstrNames(
       vm_desc.Mutable(), {"NewObject", "InitJobDescSymbol", "InitOperatorConfSymbol",
-                          "InitOpKernelObject", "gpu.CallOpKernel"});
+                          "InitOpKernelObject", device_tag + ".CallOpKernel"});
   auto vm = ObjectMsgPtr<vm::VirtualMachine>::New(vm_desc.Get());
   vm->Receive(&list);
   while (!vm->Empty()) {
@@ -345,13 +351,10 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
   DestroyNumProcessPerNode();
 }
 
+#ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   InitNumProcessPerNode();
-#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
-#else
-  vm::TestResourceDescScope resource_scope(0, 1);
-#endif
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
@@ -426,6 +429,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
   }
   DestroyNumProcessPerNode();
 }
+#endif
 
 }  // namespace test
 }  // namespace vm
