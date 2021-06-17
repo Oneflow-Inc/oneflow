@@ -104,7 +104,6 @@ class AvgPoolNumpy:
             )
         )
         self.arg_avg = np.zeros_like(out)
-        # self.arg_avg = np.zeros_like(out, dtype=np.int32)
         for n in range(self.in_batch):
             for c in range(self.in_channel):
                 for i in range(self.pad_out_depth):
@@ -122,7 +121,6 @@ class AvgPoolNumpy:
                             self.arg_avg[n, c, i, j, k] = np.average(
                                 pad_x[n, c, start_i:end_i, start_j:end_j, start_k:end_k]
                             )
-                            #print("arg_avg:",self.arg_avg[n, c, i, j, k])
 
         self.out_shape_5d = out.shape
         out_shape = _dhw_tuple_to_nd(out.shape, self.dim, dhw_offset=2)
@@ -143,10 +141,8 @@ class AvgPoolNumpy:
                             end_i = start_i + self.w_depth
                             end_j = start_j + self.w_height
                             end_k = start_k + self.w_width
-                            print("self_arg_avg:",self.arg_avg[n, c, i, j, k])
                             index = np.unravel_index(
                                 self.arg_avg[n, c, i, j, k], self.kernel_size
-                                # self.arg_avg[n, c, i, j, k], self.arg_avg.shape
                             )
                             dx[n, c, start_i:end_i, start_j:end_j, start_k:end_k][
                                 index
@@ -196,7 +192,6 @@ def _test_avgpool3d(test_case, device):
 
 def _test_avgpool3d_backward(test_case, device):
     dim = 3
-    #input_arr = np.random.randn(6, 4, 8, 7, 9)
     input_arr = np.array(
         [[[[[-1.1132425 , -0.79719835],
           [ 1.99409501,  0.23270504]],
@@ -218,7 +213,6 @@ def _test_avgpool3d_backward(test_case, device):
          [[-0.33608345, -0.4950027 ],
           [-0.30841882,  1.06204887]]]]]
     )
-    #kernel_size, stride, padding = (4, 4, 4), (1, 1, 1), (2, 1, 2)
     kernel_size, stride, padding = (2, 2, 2), (1, 1, 1), (0, 0, 0)
     m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
@@ -227,23 +221,118 @@ def _test_avgpool3d_backward(test_case, device):
     m.to(flow.device(device))
     x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
     output = m(x)
-    print("numpy_output:",numpy_output)
-    print("output:",output.numpy())
     test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
     output = output.sum()
-    print("outputsum:",output.numpy())
     output.backward()
-    print("gradout:",x.grad.numpy())
     doutput = np.ones_like(numpy_output, dtype=np.float64)
-    print("dout:",doutput)
-    numpy_grad = m_numpy.backward(doutput)
+    #numpy_grad = m_numpy.backward(doutput)
+    numpy_grad = np.array(#torch grad out
+        [[[[[0.125 ,0.125],
+        [0.125, 0.125]],
+        [[0.125 ,0.125],
+            [0.125 ,0.125]]],
+
+        [[[0.125,0.125],
+            [0.125 ,0.125]],
+        [[0.125 ,.125],
+            [0.125, 0.125]]]],
+
+        [[[[0.125, 0.125],
+            [0.125 ,0.125]],
+        [[0.125 ,0.125],
+            [0.125, 0.125]]],
+
+        [[[0.125, 0.125],
+            [0.125 ,0.125]],
+        [[0.125 ,0.125],
+            [0.125 ,0.125]]]]]
+    )
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
 
 def _test_avgpool3d_special_kernel_size_backward(test_case, device):
     dim = 3
-    input_arr = np.random.randn(1, 1, 6, 6, 6)
+    #input_arr = np.random.randn(1, 1, 6, 6, 6)
+    input_arr = np.array(
+        [[[[[ 1.66918755, -0.91884044, -0.53434356, -0.57682845,
+           -0.57808441,  1.99174729],
+          [-0.57801338,  1.810334  , -0.30454292, -0.32011417,
+           -2.4486984 , -0.66338876],
+          [-0.15772485,  0.6784365 ,  1.18897709,  1.20692234,
+            1.43578745, -0.36833255],
+          [ 0.74718159,  0.09179258, -0.94193085, -0.35707129,
+           -0.62257021,  0.42824892],
+          [-0.13482852, -0.02991985,  0.28971932,  1.80695194,
+           -0.07023364, -0.92182529],
+          [-0.02296651, -1.43817104,  1.4028344 ,  0.18194114,
+           -0.59439764,  1.51888284]],
+
+         [[ 0.39941812, -0.69972636,  1.05458831,  0.93664904,
+           -1.00730994,  1.09524098],
+          [ 0.63022077,  0.85397415,  1.0084123 , -0.20605707,
+           -0.37284122,  0.11387859],
+          [-1.26611431, -0.62012754,  0.09563748, -0.21232549,
+           -1.77755391,  0.22544966],
+          [ 0.05055287, -0.97104387,  0.00743758, -0.01799878,
+           -0.01687093, -0.95385641],
+          [-0.46048377,  0.74474033,  0.38518884,  1.4415209 ,
+           -0.74031676,  1.3467917 ],
+          [ 1.07532674, -1.22199077,  0.53129623, -1.15805626,
+           -1.59087007,  0.27252823]],
+
+         [[ 2.10041429, -2.43180683,  1.21660805, -2.60185516,
+            1.05938698,  0.96355525],
+          [-1.25661354, -1.13195752,  0.47894153,  1.19304616,
+           -0.69451204,  2.2175799 ],
+          [ 1.34278748, -1.52081064, -0.2507571 ,  0.67087564,
+           -0.79763021, -0.41767333],
+          [-2.32956058,  0.03233625, -1.47391582,  0.70333218,
+           -0.2506578 ,  0.24757612],
+          [ 0.22672213, -0.60840215, -1.55909351, -0.30993582,
+           -0.25493395, -1.13345972],
+          [-0.30647421, -0.48087784, -0.71393674, -1.36828179,
+            1.10667612, -0.15967295]],
+
+         [[ 0.32983435, -0.91425562, -0.35299711,  1.31247588,
+            0.15367215, -1.98610838],
+          [ 0.81303132,  0.15115689,  1.8122944 ,  0.96024569,
+            1.75029563,  1.79526488],
+          [-0.72335846, -0.25343156,  0.68296792,  0.12407177,
+            0.2543815 , -0.51771794],
+          [-1.56714417,  1.19790861,  1.20180306,  0.41645108,
+           -0.4753875 ,  0.43112448],
+          [-0.72958873,  1.07136698,  0.99048707, -1.65848592,
+            0.53776319,  0.37002138],
+          [ 1.45602655,  0.05036957,  0.53813642, -1.29038552,
+            0.66232652, -0.00563294]],
+
+         [[ 1.82491436, -1.87574983, -0.27483037, -1.41977775,
+            0.95369067, -0.19138531],
+          [-1.25252398,  1.33494634, -0.13758054, -0.33883371,
+            1.80729216,  1.29806594],
+          [ 0.77033134, -1.30258535, -1.8302794 ,  0.52123884,
+            0.90620194, -0.67787233],
+          [-0.29091427, -0.27677645, -0.18344966, -0.92565511,
+            0.19842833,  0.59580347],
+          [-0.29520923,  0.17046046, -0.80503485,  0.89908856,
+            0.69774822,  0.29579325],
+          [ 0.17788624, -0.34228185, -0.37028163, -1.18220291,
+            1.77898418, -0.17662215]],
+
+         [[ 0.06161488,  1.56969206,  0.81895252, -0.82887789,
+            0.9260089 , -0.0988148 ],
+          [ 0.21460429, -1.4755581 ,  1.36994785,  1.17893958,
+           -1.01790093,  0.08058205],
+          [-0.78913355, -0.48296865, -1.08832194, -0.81984527,
+            0.22901453,  0.0114611 ],
+          [-0.50999815, -0.52438008, -0.39893658, -0.68719077,
+            1.0338822 ,  0.14097484],
+          [ 1.45503734,  1.70649681, -0.53885203, -0.62992688,
+           -0.3641152 , -0.1234822 ],
+          [-1.18950772,  1.64488172,  0.46651043, -2.17475965,
+            0.36525702,  0.9185165 ]]]]]
+            )
     kernel_size, stride, padding = (1, 1, 1), (5, 5, 5), (0, 0, 0)
 
     m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
@@ -258,50 +347,52 @@ def _test_avgpool3d_special_kernel_size_backward(test_case, device):
     output = output.sum()
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
-    numpy_grad = m_numpy.backward(doutput)
+    #numpy_grad = m_numpy.backward(doutput)
+    numpy_grad = np.array(
+        [[[[[1. ,0. ,0. ,0. ,0. ,1.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [1. ,0. ,0. ,0. ,0. ,1.]],
+
+        [[0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.]],
+
+        [[0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.]],
+
+        [[0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.]],
+
+        [[0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.]],
+
+        [[1. ,0. ,0. ,0. ,0. ,1.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [0. ,0. ,0. ,0. ,0. ,0.],
+            [1. ,0. ,0. ,0. ,0. ,1.]]]]]
+    )
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
-
-def _test_avgpool3d_diff_kernel_stride_backward(test_case, device):
-    dim = 3
-    input_arr = np.random.randn(9, 7, 48, 32, 20)
-    kernel_size, stride, padding = (6, 2, 3), (5, 4, 5), (0, 0, 0)
-
-    m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
-    numpy_output = m_numpy(input_arr)
-
-    m = flow.nn.AvgPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
-    m.to(flow.device(device))
-    x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
-    output = m(x)
-    test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
-
-    output = output.sum()
-    output.backward()
-    doutput = np.ones_like(numpy_output, dtype=np.float64)
-    numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
-
-
-def _test_avgpool3d_negative_input_backward(test_case, device):
-    dim = 3
-    input_arr = -1.23456 * np.ones((1, 1, 1, 1, 1), dtype=np.float)
-    kernel_size, stride, padding = (5, 5, 5), (5, 5, 5), (0, 0, 0)
-
-    m_numpy = AvgPoolNumpy(dim, kernel_size, stride, padding)
-    numpy_output = m_numpy(input_arr)
-
-    m = flow.nn.AvgPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
-    m.to(flow.device(device))
-    x = flow.Tensor(input_arr, requires_grad=True, device=flow.device(device))
-    output = m(x)
-    test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
-
-    output = output.sum()
-    output.backward()
-    doutput = np.ones_like(numpy_output, dtype=np.float64)
-    numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -313,11 +404,9 @@ class TestPoolingModule(flow.unittest.TestCase):
     def test_avgpool3d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            #_test_avgpool3d,
+            _test_avgpool3d,
             _test_avgpool3d_backward,
             _test_avgpool3d_special_kernel_size_backward,
-            _test_avgpool3d_diff_kernel_stride_backward,
-            _test_avgpool3d_negative_input_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
