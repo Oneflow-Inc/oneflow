@@ -1,3 +1,6 @@
-tensorflow==2.5.0
-tensorflow-addons==0.13.0
+pycocotools
+opencv-python==4.2.0.34
 scipy
+pillow
+tensorflow-addons==0.9.1
+tensorflow==2.5.0
