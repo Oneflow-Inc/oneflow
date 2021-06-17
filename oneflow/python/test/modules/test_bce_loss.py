@@ -92,7 +92,6 @@ def _test_bceloss_impl(test_case, device, reduction):
                 [-0.11060409, 0.21521877, -0.29359904],
             ]
         ).astype(np.float32)
-
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
