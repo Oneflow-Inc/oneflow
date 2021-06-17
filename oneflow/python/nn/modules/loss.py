@@ -143,15 +143,15 @@ class CrossEntropyLoss(Module):
             )
             condition = ones.sub(condition).reshape(tuple(out.shape))
             out = flow.experimental.where(condition, out, zeros)
-        if self.reduction == "mean":
-            if self.ignore_index is not None:
-                reduce_sum = flow.experimental.sum(out)
+            if self.reduction == "mean":
+                reduce_sum = out.sum()
                 reduce_count = condition.argwhere().shape[0]
-                return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
-            else:
-                return flow.experimental.mean(out)
+                out = flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+
+        if self.reduction == "mean":
+            return out.mean()
         elif self.reduction == "sum":
-            return flow.experimental.sum(out)
+            return out.sum()
         else:
             if input_shape_len == 4:
                 out = out.reshape((b, h, w))
@@ -307,17 +307,17 @@ class NLLLoss(Module):
             )
             condition = ones.sub(condition).reshape(tuple(res.shape))
             res = flow.experimental.where(condition, res, zeros)
+            if self.reduction == "mean":
+                res = res.sum()
+                reduce_count = condition.argwhere().shape[0]
+                res = flow.experimental.mul(res, 1.0 / reduce_count)
+
         if self.reduction == "none":
             return res
         elif self.reduction == "sum":
             return res.sum()
         else:
-            if self.ignore_index is not None:
-                reduce_sum = flow.experimental.sum(res)
-                reduce_count = condition.argwhere().shape[0]
-                return flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
-            else:
-                return res.mean()
+            return res.mean()
 
 
 @oneflow_export("nn.KLDivLoss")
