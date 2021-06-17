@@ -77,7 +77,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf)
 
 Maybe<ParallelDesc> ParallelDesc::New(int64_t symbol_id, const ParallelConf& parallel_conf) {
   std::shared_ptr<ParallelDesc> parallel_desc(new ParallelDesc(symbol_id));
-  parallel_desc->MaybeInit(parallel_conf);
+  JUST(parallel_desc->MaybeInit(parallel_conf));
   return parallel_desc;
 }
 
