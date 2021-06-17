@@ -64,8 +64,8 @@ jobs:
           key: ${{ matrix.os }}-pip-${{ hashFiles('**/requirements.txt') }}
       - name: Install dependencies (pip)
         run: |
-          python3 -m pip install -r dev-requirements.txt
           python3 -m pip install -r ci/requirements.txt
+          python3 -m pip install -r dev-requirements.txt
         shell: bash
       - name: Cache third party dir
         uses: actions/cache@v2
@@ -150,5 +150,5 @@ jobs:
         if: startsWith(runner.os, 'Linux')
         run: |
           source build/source.sh
-          ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
+          # ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
