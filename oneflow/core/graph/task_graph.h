@@ -52,7 +52,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void EnableInplaceMemSharing(const std::function<bool(const std::string&, const std::string&)>&
                                    IsOpNameDataOrCtrlReachable);
 
-  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi, int64_t dst_machine_id,
+  TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                          const MemZoneId& dst_mem_zone_id);
 
   TaskNode* GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
@@ -105,21 +105,19 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   struct ProxyKey {
     TaskNode* src_node;
     LogicalBlobId lbi;
-    int64_t dst_machine_id;
-    int64_t dst_mem_zone_id;
+    MemZoneId mem_zone_id;
 
-    ProxyKey(TaskNode* src, const LogicalBlobId& arg_lbi, int64_t arg_machine, int64_t arg_zone)
-        : src_node(src), lbi(arg_lbi), dst_machine_id(arg_machine), dst_mem_zone_id(arg_zone) {}
+    ProxyKey(TaskNode* src, const LogicalBlobId& arg_lbi, const MemZoneId& arg_mem_zone_id)
+        : src_node(src), lbi(arg_lbi), mem_zone_id(arg_mem_zone_id) {}
 
     bool operator==(const ProxyKey& other) const {
-      return src_node == other.src_node && lbi == other.lbi
-             && dst_machine_id == other.dst_machine_id && dst_mem_zone_id == other.dst_mem_zone_id;
+      return src_node == other.src_node && lbi == other.lbi && mem_zone_id == other.mem_zone_id;
     }
 
     struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
         return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
-               ^ key.dst_machine_id ^ key.dst_mem_zone_id;
+               ^ key.mem_zone_id.hash();
       }
     };
   };

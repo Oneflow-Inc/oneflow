@@ -234,12 +234,8 @@ void TaskNode::ToProto(TaskProto* task_proto) const {
 }
 
 MemZoneId TaskNode::MemZoneId121() const {
-  if (device_type() == DeviceType::kCPU) {
-    return kCPUMemZoneId;
-  } else {
-    StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
-    return MemZoneId{stream_id.device_id().device_type(), stream_id.device_id().device_index()};
-  }
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  return MemZoneId{stream_id.device_id()};
 }
 
 bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {

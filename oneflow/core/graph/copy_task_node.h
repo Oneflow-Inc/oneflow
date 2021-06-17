@@ -52,7 +52,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
     if (copy_type_ == CopyHdOpConf::H2D) {
       return TaskNode::MemZoneId121();
     } else if (copy_type_ == CopyHdOpConf::D2H) {
-      return kCPUMemZoneId;
+      return GetNodeCPUMemZoneId(this->machine_id());
     } else {
       UNIMPLEMENTED();
     }

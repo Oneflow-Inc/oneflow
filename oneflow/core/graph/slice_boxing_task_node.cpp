@@ -35,7 +35,7 @@ void SliceBoxingTaskNode::Init(const LogicalBlobId& lbi, const TensorSliceView& 
                                const SliceBoxingTaskMode mode, int64_t machine_id,
                                int64_t thrd_id) {
   StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id);
-  MemZoneId mem_zone_id{stream_id.device_id().device_type(), stream_id.device_id().device_index()};
+  MemZoneId mem_zone_id{stream_id.device_id()};
   Init(lbi, out_slice, mode, machine_id, thrd_id, EncodeMemZoneIdToInt64(mem_zone_id));
 }
 
