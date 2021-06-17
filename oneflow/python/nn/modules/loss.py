@@ -90,8 +90,6 @@ class CrossEntropyLoss(Module):
         super().__init__()
         if weight is not None:
             raise ValueError("Argument weight is not supported yet")
-        if ignore_index is not None:
-            raise ValueError("Argument ignore_index is not supported yet")
         assert reduction in [
             "sum",
             "none",
@@ -99,6 +97,7 @@ class CrossEntropyLoss(Module):
             None,
         ], "only 'sum', 'mean' and None supported by now"
 
+        self.ignore_index = ignore_index
         self.reduction = reduction
         self._op = (
             flow.builtin_op("sparse_softmax_cross_entropy")
@@ -134,10 +133,25 @@ class CrossEntropyLoss(Module):
             raise NotImplemented
 
         prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
+        if self.ignore_index is not None:
+            zeros = flow.experimental.zeros(
+                size=out.shape, dtype=out.dtype, device=out.device
+            )
+            condition = flow.experimental.eq(target, self.ignore_index)
+            ones = flow.experimental.ones(
+                size=condition.shape, dtype=condition.dtype, device=condition.device
+            )
+            condition = ones.sub(condition).reshape(tuple(out.shape))
+            out = flow.experimental.where(condition, out, zeros)
+            if self.reduction == "mean":
+                reduce_sum = out.sum()
+                reduce_count = condition.argwhere().shape[0]
+                out = flow.experimental.mul(reduce_sum, 1.0 / reduce_count)
+
         if self.reduction == "mean":
-            return flow.experimental.mean(out)
+            return out.mean()
         elif self.reduction == "sum":
-            return flow.experimental.sum(out)
+            return out.sum()
         else:
             if input_shape_len == 4:
                 out = out.reshape((b, h, w))
@@ -331,8 +345,6 @@ class NLLLoss(Module):
         super().__init__()
         if weight != None:
             raise ValueError("Argument weight is not supported yet")
-        if ignore_index != None:
-            raise ValueError("Argument ignore_index is not supported yet")
         assert reduction in [
             "sum",
             "none",
@@ -340,6 +352,7 @@ class NLLLoss(Module):
             None,
         ], "only 'sum', 'mean' and None supported by now"
 
+        self.ignore_index = ignore_index
         self.reduction = reduction
         self._dim_gather_op = (
             flow.builtin_op("dim_gather")
@@ -385,6 +398,21 @@ class NLLLoss(Module):
             res = res.reshape((b, h, w))
         else:
             raise NotImplemented
+
+        if self.ignore_index is not None:
+            zeros = flow.experimental.zeros(
+                size=res.shape, dtype=res.dtype, device=res.device
+            )
+            condition = flow.experimental.eq(target, self.ignore_index)
+            ones = flow.experimental.ones(
+                size=condition.shape, dtype=condition.dtype, device=condition.device
+            )
+            condition = ones.sub(condition).reshape(tuple(res.shape))
+            res = flow.experimental.where(condition, res, zeros)
+            if self.reduction == "mean":
+                res = res.sum()
+                reduce_count = condition.argwhere().shape[0]
+                res = flow.experimental.mul(res, 1.0 / reduce_count)
 
         if self.reduction == "none":
             return res
