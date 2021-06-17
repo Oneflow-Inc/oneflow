@@ -31,7 +31,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
       *ctx->OutputShape("y", 0) = x_desc.shape();
-      *ctx->OutputIsDynamic4ArgNameAndIndex("y", 0) = x_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("y", 0) = x_desc.is_dynamic();
       *ctx->OutputShape("softmax_y", 0) = x_desc.shape();
       *ctx->OutputIsDynamic4ArgNameAndIndex("softmax_y", 0) = x_desc.is_dynamic();
       return Maybe<void>::Ok();
