@@ -127,36 +127,6 @@ class AvgPoolNumpy:
         out = out.reshape(out_shape)
         return out
 
-    def backward(self, d_loss):
-        d_loss = d_loss.reshape(self.out_shape_5d)
-        dx = np.zeros_like(self.pad_x)
-        for n in range(self.in_batch):
-            for c in range(self.in_channel):
-                for i in range(self.pad_out_depth):
-                    for j in range(self.pad_out_height):
-                        for k in range(self.pad_out_width):
-                            start_i = i * self.stride[0]
-                            start_j = j * self.stride[1]
-                            start_k = k * self.stride[2]
-                            end_i = start_i + self.w_depth
-                            end_j = start_j + self.w_height
-                            end_k = start_k + self.w_width
-                            index = np.unravel_index(
-                                self.arg_avg[n, c, i, j, k], self.kernel_size
-                            )
-                            dx[n, c, start_i:end_i, start_j:end_j, start_k:end_k][
-                                index
-                            ] += d_loss[n, c, i, j, k]
-        dx = dx[
-            :,
-            :,
-            self.padding[0] : self.pad_shape[2] - self.padding[0],
-            self.padding[1] : self.pad_shape[3] - self.padding[1],
-            self.padding[2] : self.pad_shape[4] - self.padding[2],
-        ]
-        dx = dx.reshape(self.x_shape)
-        return dx
-
 def _test_avgpool3d(test_case, device):
     input_arr = np.array(
         [[[[[-1.1132425 , -0.79719835],
@@ -226,8 +196,7 @@ def _test_avgpool3d_backward(test_case, device):
     output = output.sum()
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
-    #numpy_grad = m_numpy.backward(doutput)
-    numpy_grad = np.array(#torch grad out
+    numpy_grad = np.array(
         [[[[[0.125 ,0.125],
         [0.125, 0.125]],
         [[0.125 ,0.125],
@@ -253,7 +222,6 @@ def _test_avgpool3d_backward(test_case, device):
 
 def _test_avgpool3d_special_kernel_size_backward(test_case, device):
     dim = 3
-    #input_arr = np.random.randn(1, 1, 6, 6, 6)
     input_arr = np.array(
         [[[[[ 1.66918755, -0.91884044, -0.53434356, -0.57682845,
            -0.57808441,  1.99174729],
@@ -347,7 +315,6 @@ def _test_avgpool3d_special_kernel_size_backward(test_case, device):
     output = output.sum()
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
-    #numpy_grad = m_numpy.backward(doutput)
     numpy_grad = np.array(
         [[[[[1. ,0. ,0. ,0. ,0. ,1.],
             [0. ,0. ,0. ,0. ,0. ,0.],
