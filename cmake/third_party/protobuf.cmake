@@ -68,3 +68,5 @@ ExternalProject_Add(protobuf
         ${PROTOBUF_ADDITIONAL_CMAKE_OPTIONS}
 )
 endif(THIRD_PARTY)
+add_library(protobuf_imported UNKNOWN IMPORTED)
+set_property(TARGET protobuf_imported PROPERTY IMPORTED_LOCATION "${PROTOBUF_STATIC_LIBRARIES}")
