@@ -29,35 +29,18 @@ def _np_bceloss(np_input, np_target, np_weight):
             np_weighted_loss = np_weight * np_cross_entropy
     else:
         np_weighted_loss = np_cross_entropy
-
-    return {
-        "none": np_weighted_loss,
-        "sum": np.sum(np_weighted_loss),
-        "mean": np.mean(np_weighted_loss)
-    }
-
-
-def _np_bce_grad(np_input, np_target, np_weight):
-    eps = 1e-12
-    tmp = 1 / np.log(10)
-    np_cross_entropy_grad = (np_input - np_target) / ((np_input + eps) * (1 - np_target + eps))
-    np_cross_entropy_grad = np_cross_entropy_grad * tmp
     
-    if np_weight is not None:
-        np_weighted_grad = np_weight * np_cross_entropy_grad
-    else:
-        np_weighted_grad = np_cross_entropy_grad
-
-    elem_cnt = np_input.size
-    np_bce_grad_mean = np_weighted_grad / elem_cnt
+    np_bce_loss = np_weighted_loss
+    np_bce_loss_sum = np.sum(np_weighted_loss)
+    np_bce_loss_mean = np.mean(np_weighted_loss)
 
     return {
-        "none": np_weighted_grad,
-        "mean": np_bce_grad_mean,
-        "sum": np_weighted_grad,
+        "none": np_bce_loss,
+        "sum": np_bce_loss_sum,
+        "mean": np_bce_loss_mean
     }
 
-def _test_bceloss_impl(test_case, device, shape, reduction):
+def _test_bceloss_impl(test_case, device, reduction):
     x = np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32)
     y = np.array([[0, 1, 0], [1, 0, 1]]).astype(np.float32)
     w = np.array([[2, 2, 2], [2, 2, 2]]).astype(np.float32)
@@ -77,7 +60,17 @@ def _test_bceloss_impl(test_case, device, shape, reduction):
 
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = _np_bce_grad(sigmoid_input.numpy(), y, w)[reduction]
+
+    if reduction == "none":
+        np_grad = np.array([[1.5370497, -0.90033215, 0.851115],
+         [-0.6636245, 1.2913125, -1.7615942]]).astype(np.float32)
+    elif reduction == "sum":
+        np_grad = np.array([[1.5370497, -0.90033215, 0.851115],
+         [-0.6636245, 1.2913125, -1.7615942]]).astype(np.float32)
+    else:
+        np_grad = np.array([[0.25617492, -0.15005533, 0.14185251],
+         [-0.11060409, 0.21521877, -0.29359904]]).astype(np.float32)
+       
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
@@ -92,13 +85,7 @@ class TestBCELossModule(flow.unittest.TestCase):
             _test_bceloss_impl,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [
-            (3, 5),
-            (10, 9, 21),
-            (14, 22, 9, 21),
-            (3, 2, 4, 16, 5),
-            (1,),
-        ]
+        
         arg_dict["reduction"] = [ "none", "sum", "mean"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

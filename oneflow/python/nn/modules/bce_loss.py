@@ -102,18 +102,14 @@ class BCELoss(Module):
 
         self.weight = weight
         self.reduction = reduction
-        self.mean = flow.experimental.mean
-        self.sum = flow.experimental.sum
-        self.negative = flow.experimental.negative
-        self.log = flow.experimental.log
 
     def forward(self, input, target):
         assert (
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        _cross_entropy_loss = self.negative(
-            target * self.log(input) + (1 - target) * self.log(1 - input)
+        _cross_entropy_loss = flow.experimental.negative(
+            target * flow.experimental.log(input) + (1 - target) * flow.experimental.log(1 - input)
             )
 
         if self.weight is not None:
@@ -125,9 +121,9 @@ class BCELoss(Module):
             _weighted_loss = _cross_entropy_loss
 
         if self.reduction == "mean":
-            return self.mean(_weighted_loss)
+            return flow.experimental.mean(_weighted_loss)
         elif self.reduction == "sum":
-            return self.sum(_weighted_loss)
+            return flow.experimental.sum(_weighted_loss)
         else:
             return _weighted_loss
 
