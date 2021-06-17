@@ -76,6 +76,7 @@ jobs:
           key: ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
           restore-keys: |
             ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
+            ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-
       - name: Set environment variables
         run: |
           set -x
@@ -105,6 +106,7 @@ jobs:
             ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-
             ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-
             ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
+            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-
       - name: Build (of_ccobj)
         if: startsWith(runner.os, 'Linux')
         run: |
