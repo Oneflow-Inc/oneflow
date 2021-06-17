@@ -340,6 +340,7 @@ def _TestAssignmentBetweenMemory(test_case, dtype):
     test_case.assertTrue(np.allclose(flow_res, np_res))
 
 
+# FIXME: remove this skip to see the error
 @unittest.skipIf(
     os.getenv("ONEFLOW_TEST_GITHUB_HOSTED"),
     "this always fails on GitHub hosted servers",
