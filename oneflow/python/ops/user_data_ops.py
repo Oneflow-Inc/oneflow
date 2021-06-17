@@ -796,6 +796,7 @@ def api_image_random_crop(
     if random_aspect_ratio is None:
         random_aspect_ratio = [0.75, 1.333333]
 
+    seed, has_seed = flow.random.gen_seed(random_seed)
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("ImageRandomCrop_")
@@ -804,11 +805,8 @@ def api_image_random_crop(
         .Input("in", [input_blob])
         .Output("out")
         .Attr("num_attempts", num_attempts)
-        .Attr(
-            "seed",
-            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
-        )
-        .Attr("has_seed", True)
+        .Attr("seed", seed)
+        .Attr("has_seed", has_seed)
         .Attr("random_area", random_area)
         .Attr("random_aspect_ratio", random_aspect_ratio)
         .Build()
@@ -889,6 +887,7 @@ def api_coin_flip(
             images, labels = coin_flip_job()
 
     """
+    seed, has_seed = flow.random.gen_seed(random_seed)
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("CoinFlip_")
@@ -897,11 +896,8 @@ def api_coin_flip(
         .Output("out")
         .Attr("batch_size", batch_size)
         .Attr("probability", probability)
-        .Attr(
-            "seed",
-            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
-        )
-        .Attr("has_seed", True)
+        .Attr("seed", seed)
+        .Attr("has_seed", has_seed)
         .Build()
         .InferAndTryRun()
         .RemoteBlobList()[0]
