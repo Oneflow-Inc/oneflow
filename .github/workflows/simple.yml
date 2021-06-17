@@ -97,7 +97,7 @@ jobs:
         with:
           path: |
             build
-          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt', '**/*.cpp', '**/*.h', '**/*.proto') }}
+          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt', '**/*.cpp', '**/*.h', '**/*.hpp', '**/*.proto') }}
       - name: Build (of_ccobj)
         if: startsWith(runner.os, 'Linux')
         run: |
