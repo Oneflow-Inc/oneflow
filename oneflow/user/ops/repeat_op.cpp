@@ -24,8 +24,8 @@ REGISTER_USER_OP("repeat")
     .Output("out")
     .Attr<int32_t>("repeat_num")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -50,7 +50,7 @@ REGISTER_USER_OP("repeat")
           return Maybe<void>::Ok();
         })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 

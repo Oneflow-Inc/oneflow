@@ -45,11 +45,11 @@ class Upsample(Module):
             Default: ``'nearest'``
         align_corners (bool, optional): if ``True``, the corner pixels of the input
             and output tensors are aligned, and thus preserving the values at
-            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``. 
+            those pixels. This only has effect when :attr:`mode` is ``'bilinear'``.
             Default: ``False``
 
     Shape:
-        - Input: : :math:`(N, C, H_{in}, W_{in})` 
+        - Input: : :math:`(N, C, H_{in}, W_{in})`
         - Output: :math:`(N, C, H_{out}, W_{out})` , where
 
     .. math::
@@ -63,24 +63,25 @@ class Upsample(Module):
 
     .. note::
         If you want downsampling/general resizing, you should use :func:`~nn.functional.interpolate`.
-    
+
     For example:
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        # output.numpy()
-        # [[[[1.0, 1.0, 2.0, 2.0],
-        # [1.0, 1.0, 2.0, 2.0],
-        # [3.0, 3.0, 4.0, 4.0],
-        # [3.0, 3.0, 4.0, 4.0],]]]
-    
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1. 1. 2. 2.]
+           [1. 1. 2. 2.]
+           [3. 3. 4. 4.]
+           [3. 3. 4. 4.]]]]
+
     """
 
     def __init__(
@@ -133,7 +134,6 @@ class Upsample(Module):
         )
 
     def forward(self, x):
-        assert x.device.type == "cuda", f"Upsample not support cpu version now!"
         assert (
             self.size != None or self.scale_factor != None
         ), f"size and scale_factor can not be none at the same time!"
@@ -188,18 +188,20 @@ class UpsamplingNearest2d(Upsample):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        # output.numpy()
-        # [[[[1.0, 1.0, 2.0, 2.0],
-        # [1.0, 1.0, 2.0, 2.0],
-        # [3.0, 3.0, 4.0, 4.0],
-        # [3.0, 3.0, 4.0, 4.0],]]]
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1. 1. 2. 2.]
+           [1. 1. 2. 2.]
+           [3. 3. 4. 4.]
+           [3. 3. 4. 4.]]]]
+
     """
 
     def __init__(
@@ -244,18 +246,20 @@ class UpsamplingBilinear2d(Upsample):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        
-        input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
-        input = input.to("cuda")
-        m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
-        output = m(input)
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        # output.numpy()
-        # [[[[1.0000,  1.3333,  1.6667,  2.0000],
-        # [1.6667,  2.0000,  2.3333,  2.6667],
-        # [2.3333,  2.6667,  3.0000,  3.3333],
-        # [3.0000,  3.3333,  3.6667,  4.0000],]]]
+        >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
+        >>> input = input.to("cuda")
+        >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
+        >>> output = m(input).numpy()
+        >>> print(output)
+        [[[[1.        1.3333334 1.6666667 2.       ]
+           [1.6666667 2.        2.3333335 2.6666667]
+           [2.3333335 2.6666667 3.        3.3333335]
+           [3.        3.3333333 3.6666667 4.       ]]]]
+
     """
 
     def __init__(
@@ -266,3 +270,9 @@ class UpsamplingBilinear2d(Upsample):
         super(UpsamplingBilinear2d, self).__init__(
             size, scale_factor, mode="bilinear", align_corners=True
         )
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

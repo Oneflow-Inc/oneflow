@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
@@ -27,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 
 namespace py = pybind11;
 
@@ -37,16 +39,22 @@ namespace one {
 namespace {
 
 template<typename T>
+const DType* GetTensorDType(const T& tensor) {
+  return DType::Get(tensor.dtype()).GetOrThrow().get();
+}
+
+template<typename T>
 struct TensorExportUtil final {};
 
 template<>
 struct TensorExportUtil<MirroredTensor> final {
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                    const std::shared_ptr<const DType>& dtype,
+                                                    const DType* dtype,
                                                     const std::shared_ptr<const Device>& device,
                                                     bool is_lazy, bool requires_grad,
                                                     bool is_leaf) {
-    return MirroredTensor::MakeTensor(shape, dtype, device, is_lazy, requires_grad, is_leaf)
+    return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
+                                      is_leaf)
         .GetPtrOrThrow();
   }
 };
@@ -54,11 +62,11 @@ struct TensorExportUtil<MirroredTensor> final {
 template<>
 struct TensorExportUtil<ConsistentTensor> final {
   static std::shared_ptr<ConsistentTensor> MakeTensor(
-      const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const DType>& dtype,
+      const std::shared_ptr<const Shape>& shape, const DType* dtype,
       const std::shared_ptr<const cfg::ParallelDistribution>& parallel_distribution,
       const std::shared_ptr<const ParallelDesc>& parallel_desc, bool is_lazy, bool requires_grad,
       bool is_leaf) {
-    return ConsistentTensor::MakeTensor(shape, dtype, SymbolOf(*parallel_distribution),
+    return ConsistentTensor::MakeTensor(shape, dtype->data_type(), SymbolOf(*parallel_distribution),
                                         SymbolOf(*parallel_desc), is_lazy, requires_grad, is_leaf)
         .GetPtrOrThrow();
   }
@@ -122,7 +130,7 @@ void ApiCopyMirroredTensorFromNumpy(const std::shared_ptr<MirroredTensor>& tenso
       .GetOrThrow();
 }
 
-Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
+Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -130,14 +138,14 @@ Maybe<std::string> GetCopyMirroredTensorToNumpyFuncName(const DType& dtype) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
 }
 
 const std::string& ApiGetCopyMirroredTensorToNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorToNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorToNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
-Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(const DType& dtype) {
+Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(DataType dtype) {
   using namespace oneflow;
   static const HashMap<int64_t, std::shared_ptr<std::string>> data_type2func_name{
 #define DATA_TYPE_FUNC_NAME_PAIR(type_cpp, type_proto) \
@@ -145,11 +153,11 @@ Maybe<std::string> GetCopyMirroredTensorFromNumpyFuncName(const DType& dtype) {
       OF_PP_FOR_EACH_TUPLE(DATA_TYPE_FUNC_NAME_PAIR, POD_DATA_TYPE_SEQ)
 #undef DATA_TYPE_FUNC_NAME_PAIR
   };
-  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype.data_type())));
+  return JUST(MapAt(data_type2func_name, static_cast<int64_t>(dtype)));
 }
 
 const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tensor) {
-  return *GetCopyMirroredTensorFromNumpyFuncName(*tensor.dtype()).GetPtrOrThrow();
+  return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
 std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
@@ -160,10 +168,10 @@ std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor
   return tensor.parallel_desc().GetOrThrow().shared_from_symbol();
 }
 
-std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDTypes(
+std::tuple<std::vector<Shape>, std::vector<const DType*>> GetTensorBufferShapesAndDTypes(
     const std::shared_ptr<MirroredTensor>& tensor) {
   std::vector<Shape> shapes;
-  std::vector<DType> dtypes;
+  std::vector<const DType*> dtypes;
   std::atomic<bool> synced(false);
 
   PhysicalRun([&](InstructionsBuilder* builder) {
@@ -181,7 +189,7 @@ std::tuple<std::vector<Shape>, std::vector<DType>> GetTensorBufferShapesAndDType
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;
     shapes.push_back(tensor_buffer->shape());
-    dtypes.push_back(DType::GetDTypeByDataType(tensor_buffer->data_type()).GetOrThrow());
+    dtypes.push_back(DType::Get(tensor_buffer->data_type()).GetOrThrow().get());
   }
 
   return std::make_tuple(shapes, dtypes);
@@ -205,6 +213,10 @@ void SpecializedDef(py::class_<MirroredTensor, Tensor, std::shared_ptr<MirroredT
   api->def("_get_copy_mirrored_tensor_from_numpy_func_name",
            &ApiGetCopyMirroredTensorFromNumpyFuncName);
   api->def("zeros_", &ApiEagerMirroredTensorZeros);
+  api->def("_register_hook",
+           [](const std::shared_ptr<MirroredTensor>& self, const AutogradMeta::Hook& hook) -> void {
+             self->mut_autograd_meta()->add_hook(hook);
+           });
 }
 
 void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<ConsistentTensor>>* api) {
@@ -218,7 +230,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
       // Properties of pytorch
       .def_property_readonly("shape", &T::shape)
-      .def_property_readonly("dtype", &T::dtype)
+      .def_property_readonly("dtype", &GetTensorDType<T>)
       .def_property_readonly("is_cuda", &T::is_cuda)
       .def_property_readonly("grad", [](const T& t) { return t.api_acc_grad().GetPtrOrThrow(); })
       .def_property_readonly("grad_fn", &T::grad_fn_node)

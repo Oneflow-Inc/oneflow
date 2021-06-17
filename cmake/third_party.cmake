@@ -61,7 +61,7 @@ if (BUILD_CUDA)
       break()
     endif()
   endforeach()
-  if (WITH_XLA)
+  if (WITH_XLA OR BUILD_SHARED_LIBS)
     if(EXISTS ${cublas_lib_dir}/libcublas.so AND EXISTS ${cublas_lib_dir}/libcublasLt.so)
       list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt.so)
       list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas.so)
@@ -201,11 +201,10 @@ if (BUILD_CUDA)
 
   list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl)
 
   list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
@@ -241,6 +240,6 @@ if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
-message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
+message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)

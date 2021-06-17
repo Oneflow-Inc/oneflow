@@ -31,22 +31,23 @@ std::string OpEdge::VisualStr() const {
   return str;
 }
 
-const SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
+const cfg::SbpParallel& OpNode::SbpParallel4BnInOp(const std::string& bn_in_op) const {
   return *CHECK_JUST(op().SbpParallel4BnInOp(bn_in_op));
 }
 
-const SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
+const cfg::SbpParallel& OpNode::SbpParallel4Lbi(const LogicalBlobId& lbi) const {
   auto it = lbi2parallel_distribution_.find(lbi);
   CHECK(it != lbi2parallel_distribution_.end());
   CHECK_EQ(it->second.sbp_parallel_size(), 1);
   return it->second.sbp_parallel(0);
 }
 
-const ParallelDistribution& OpNode::ParallelDistribution4BnInOp(const std::string& bn_in_op) const {
+const cfg::ParallelDistribution& OpNode::ParallelDistribution4BnInOp(
+    const std::string& bn_in_op) const {
   return *CHECK_JUST(op().ParallelDistribution4BnInOp(bn_in_op));
 }
 
-const ParallelDistribution& OpNode::ParallelDistribution4Lbi(const LogicalBlobId& lbi) const {
+const cfg::ParallelDistribution& OpNode::ParallelDistribution4Lbi(const LogicalBlobId& lbi) const {
   auto it = lbi2parallel_distribution_.find(lbi);
   CHECK(it != lbi2parallel_distribution_.end());
   return it->second;
@@ -140,7 +141,7 @@ void OpNode::InitLbi2ParallelDistribution() {
   const auto Update = [&](const PbRpf<std::string>& bns) {
     for (const auto& bn : bns) {
       const LogicalBlobId& lbi = op().BnInOp2Lbi(bn);
-      const ParallelDistribution& parallel_distribution = ParallelDistribution4BnInOp(bn);
+      const cfg::ParallelDistribution& parallel_distribution = ParallelDistribution4BnInOp(bn);
       auto it = lbi2parallel_distribution_.find(lbi);
       if (it == lbi2parallel_distribution_.end()) {
         lbi2parallel_distribution_[lbi] = parallel_distribution;
@@ -296,14 +297,16 @@ void OpGraph::InferTimeShape() const {
 }
 
 void OpGraph::InferOpNodeParallelDistributionSignature(
-    OpNode* op_node, const ParallelDistributionSignature& parallel_distribution_sig_conf) const {
+    OpNode* op_node,
+    const cfg::ParallelDistributionSignature& parallel_distribution_sig_conf) const {
   HashMap<std::string, ParallelDistributionInferHint> ibn2parallel_distribution_infer_hint;
   for (const std::string& ibn : op_node->op().input_bns()) {
     const LogicalBlobId& lbi = op_node->op().BnInOp2Lbi(ibn);
     OpNode* producer = op_node->MutSrcNode4Ibn(ibn);
     const ParallelDesc* parallel_desc = &producer->parallel_desc();
     const BlobDesc* logical_blob_desc = &producer->LogicalBlobDesc4Lbi(lbi);
-    const ParallelDistribution* parallel_distribution = &producer->ParallelDistribution4Lbi(lbi);
+    const cfg::ParallelDistribution* parallel_distribution =
+        &producer->ParallelDistribution4Lbi(lbi);
     ibn2parallel_distribution_infer_hint.emplace(
         ibn,
         ParallelDistributionInferHint(parallel_desc, logical_blob_desc, parallel_distribution));
@@ -368,7 +371,7 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
       if (iter != op_name2is_mirrored.end()) { is_mirrored_conf = iter->second; }
     }
     JUST(InferOpNodeMirroredSignature(op_node, is_mirrored_conf));
-    ParallelDistributionSignature parallel_distribution_sig_conf;
+    cfg::ParallelDistributionSignature parallel_distribution_sig_conf;
     {
       const auto& op_name2parallel_distribution_sig_conf =
           job_parallel_view_conf.op_name2parallel_distribution_signature_conf();
@@ -397,14 +400,14 @@ int64_t OpGraph::GetParallelNum(const std::string& op_name) const {
   return op_name2op_node_.at(op_name)->parallel_desc().parallel_num();
 }
 
-const SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
-                                           const LogicalBlobId& lbi) const {
+const cfg::SbpParallel& OpGraph::GetSbpParallel(const std::string& op_name,
+                                                const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
       ->SbpParallel4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
 
-const ParallelDistribution& OpGraph::GetParallelDistribution(const std::string& op_name,
-                                                             const LogicalBlobId& lbi) const {
+const cfg::ParallelDistribution& OpGraph::GetParallelDistribution(const std::string& op_name,
+                                                                  const LogicalBlobId& lbi) const {
   return op_name2op_node_.at(GetOpNameKey(op_name, lbi))
       ->ParallelDistribution4Lbi(GetLogicalBlobIdKey(op_name, lbi));
 }
@@ -500,12 +503,14 @@ void OpGraph::DumpLogicalBlobDesc(Job* job) const {
 
 void OpGraph::DumpParallelDistributionSignature(Job* job) const {
   ForEachNode([&](const OpNode* node) -> void {
-    (*job->mutable_job_parallel_view_conf()
-          ->mutable_op_name2parallel_distribution_signature_conf())[node->op().op_name()] =
-        *CHECK_JUST(node->op().parallel_distribution_signature());
+    CHECK_JUST(node->op().parallel_distribution_signature())
+        ->ToProto(
+            &(*job->mutable_job_parallel_view_conf()
+                   ->mutable_op_name2parallel_distribution_signature_conf())[node->op().op_name()]);
     if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
-      (*job->mutable_job_parallel_view_conf()
-            ->mutable_op_name2sbp_signature_conf())[node->op().op_name()] = node->sbp_signature();
+      node->sbp_signature().ToProto(
+          &(*job->mutable_job_parallel_view_conf()
+                 ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]);
     }
   });
 }

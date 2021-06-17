@@ -101,36 +101,6 @@ class _BatchNorm(_NormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
-        self._training_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Output("mean")
-            .Output("inv_variance")
-            .Attr("training", True)
-            .Build()
-        )
-        self._testing_op = (
-            flow.builtin_op("normalization")
-            .Input("x")
-            .Input("moving_mean")
-            .Input("moving_variance")
-            .Input("gamma")
-            .Input("beta")
-            .Attr("axis", 1)
-            .Attr("epsilon", eps)
-            .Attr("momentum", momentum)
-            .Output("y")
-            .Attr("training", False)
-            .Build()
-        )
 
     def forward(self, x):
         self._check_input_dim(x)
@@ -191,15 +161,17 @@ class _BatchNorm(_NormBase):
             return affined
 
         else:
-            if self.training:
-                res = self._training_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
-            else:
-                res = self._testing_op(
-                    x, self.running_mean, self.running_var, self.weight, self.bias
-                )[0]
-            return res
+            return flow.F.normalization(
+                x,
+                self.running_mean,
+                self.running_var,
+                self.weight,
+                self.bias,
+                axis=1,
+                epsilon=self.eps,
+                momentum=self.momentum,
+                is_training=self.training,
+            )
 
 
 @oneflow_export("nn.BatchNorm1d")
@@ -265,12 +237,13 @@ class BatchNorm1d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.random.randn(20, 100))
-        m = flow.nn.BatchNorm1d(100)
-        y = m(x)
+        >>> x = flow.Tensor(np.random.randn(20, 100))
+        >>> m = flow.nn.BatchNorm1d(100)
+        >>> y = m(x)
 
     """
 
@@ -344,15 +317,22 @@ class BatchNorm2d(_BatchNorm):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
 
-        x = flow.Tensor(np.random.randn(4, 2, 8, 3))
-        m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
-        y = m(x)
+        >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3))
+        >>> m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
+        >>> y = m(x)
 
     """
 
     def _check_input_dim(self, input):
         if input.ndim != 4:
             raise ValueError("expected 4D input (got {}D input)".format(input.ndim()))
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
