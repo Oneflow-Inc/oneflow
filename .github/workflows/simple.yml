@@ -67,16 +67,6 @@ jobs:
           python3 -m pip install -r ci/requirements.txt
           python3 -m pip install -r dev-requirements.txt
         shell: bash
-      - name: Cache third party dir
-        uses: actions/cache@v2
-        with:
-          path: |
-            build-third_party
-            third_party
-          key: ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
-            ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-
       - name: Set environment variables
         run: |
           set -x
@@ -95,18 +85,6 @@ jobs:
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF
           make -j $(nproc)
         shell: bash
-      - name: Cache build dir
-        uses: actions/cache@v2
-        with:
-          path: |
-            build
-          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-${{ hashFiles('**/*.h', '**/*.hpp') }}-${{ hashFiles('**/*.cpp') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-${{ hashFiles('**/*.h', '**/*.hpp') }}-
-            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-
-            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-
-            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
-            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-
       - name: Build (of_ccobj)
         if: startsWith(runner.os, 'Linux')
         run: |
