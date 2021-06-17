@@ -696,7 +696,7 @@ class CTCLoss(Module):
         >>> out = loss_sum(log_probs, targets, input_lengths, target_lengths)
         >>> out
         tensor([6.8257], dtype=oneflow.float32)
-        >>>
+        >>> 
 
     """
 
