@@ -103,14 +103,14 @@ message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
 # libraries only a top level .so or exe should be linked to
 set(oneflow_exe_third_party_libs
-    ${GLOG_STATIC_LIBRARIES}
+    glog_imported
     ${GFLAGS_STATIC_LIBRARIES}
 )
 
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
-    ${PROTOBUF_STATIC_LIBRARIES}
+    protobuf_imported
     ${GRPC_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
@@ -139,9 +139,7 @@ endif()
 set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
-  protobuf_copy_headers_to_destination
-  protobuf_copy_libs_to_destination
-  protobuf_copy_binary_to_destination
+  protobuf
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
   glog_copy_headers_to_destination
