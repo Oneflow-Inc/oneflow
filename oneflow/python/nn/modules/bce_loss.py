@@ -87,12 +87,8 @@ class BCELoss(Module):
     """
    
 
-    def __init__(self, weight, size_average=None, reduce=True, reduction: str = None) -> None:
+    def __init__(self, weight, reduction: str = None) -> None:
         super().__init__()
-        if reduce is not None and not reduce:
-            raise ValueError("Argument reduce is not supported yet")
-        if size_average is not None and not size_average:
-            raise ValueError("Argument size_average is not supported yet")
         assert reduction in [
             "none",
             "sum",
