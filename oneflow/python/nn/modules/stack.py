@@ -36,6 +36,7 @@ class Stack(Module):
             self.dim = self.dim + max_dim + 1
         assert (self.dim >= 0) and (self.dim <= max_dim)
         input_list_length = len(inputs)
+        unsqueezed = list()
         for i in range(input_list_length):
             current_shape = inputs[i].shape
             assert (
@@ -43,8 +44,8 @@ class Stack(Module):
             ), "Each tensor should have the same shape ! Found a tensor instance shape is: {}".format(
                 current_shape
             )
-            inputs[i] = flow.experimental.unsqueeze(inputs[i], dim=self.dim)
-        return flow.experimental.cat(inputs, dim=self.dim)
+            unsqueezed.append(inputs[i].unsqueeze(dim=self.dim))
+        return flow.experimental.cat(unsqueezed, dim=self.dim)
 
 
 @oneflow_export("stack")
