@@ -28,11 +28,18 @@ namespace {
 BlobDesc* FindValidBlobDescOfBnsInOp(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const PbRpf<std::string>& bn_in_ops) {
+  BlobDesc* valid = nullptr;
   for (const std::string& bn_in_op : bn_in_ops) {
     BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { return blob_desc; }
+    if (blob_desc) {
+      const bool is_dynamic = blob_desc->is_dynamic();
+      if (valid == nullptr || is_dynamic) {
+        valid = blob_desc;
+        if (is_dynamic) { break; }
+      }
+    }
   }
-  return nullptr;
+  return valid;
 }
 
 user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
@@ -181,6 +188,9 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -573,7 +583,8 @@ Maybe<void> UserOp::InferOutBlobDescs(
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
       out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
-      out_blob_desc->set_is_dynamic(*infer_ctx.IsDynamic4ArgNameAndIndex(pair.first, pair.second));
+      out_blob_desc->set_is_dynamic(
+          *infer_ctx.OutputIsDynamic4ArgNameAndIndex(pair.first, pair.second));
     }
     return Maybe<void>::Ok();
   }
