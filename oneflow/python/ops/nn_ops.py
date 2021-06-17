@@ -4136,6 +4136,7 @@ def margin_ranking_loss(
 
 
 @oneflow_export("nn.TripletMarginLoss")
+@stable_api
 def triplet_margin_loss(
     anchor: oneflow._oneflow_internal.BlobDesc,
     positive: oneflow._oneflow_internal.BlobDesc,
