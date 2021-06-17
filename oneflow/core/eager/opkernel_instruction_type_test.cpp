@@ -153,7 +153,8 @@ TEST(OpkernelInstructionType, delete_opkernel) {
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
   const std::string device_tag = "cpu";
-#endif InstructionMsgList list;
+#endif
+  InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -183,7 +184,8 @@ TEST(OpkernelInstructionType, call_opkernel) {
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
   const std::string device_tag = "cpu";
-#endif InstructionMsgList list;
+#endif
+  InstructionMsgList list;
   int64_t opkernel_id = 0;
   {
     auto op_conf = std::make_shared<OperatorConf>();
@@ -299,7 +301,7 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
   DestroyNumProcessPerNode();
-}  // namespace test
+}
 #endif
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
@@ -310,7 +312,8 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
   const std::string device_tag = "cpu";
-#endif InstructionMsgList list;
+#endif
+  InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
   int64_t parallel_desc_id = 0;
   int64_t opkernel_id = vm::TestUtil::NewObject(&list, device_tag, "0:0", &parallel_desc_id);
