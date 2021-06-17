@@ -100,11 +100,16 @@
   - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
 - #### Option 3: Build on bare metal
-  - Install dependencies. For instance, on Ubuntu 20.04, run:
-    ```
-    sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
-    ```
-    If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
+  - Install dependencies
+    - on Ubuntu 20.04, run:
+      ```
+      sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
+      ```
+      If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
+    - on macOS, run:
+      ```
+      brew install nasm
+      ```
   - In the root directory of OneFlow source code, run:
 
     ```
