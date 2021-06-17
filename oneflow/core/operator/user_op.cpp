@@ -182,6 +182,9 @@ class UserOpInferContext final : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_data_type();
   }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };

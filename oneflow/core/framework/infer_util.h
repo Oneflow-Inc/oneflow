@@ -90,6 +90,7 @@ class InferContext {
   virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
                                                                                 int32_t) const = 0;
 
+  virtual bool InputIsDynamic4ArgNameAndIndex(const std::string&, int32_t) const = 0;
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
   virtual int64_t parallel_num() const = 0;
