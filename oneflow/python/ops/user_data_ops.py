@@ -141,6 +141,7 @@ def api_ofrecord_image_decoder_random_crop(
             # images.shape (16, 224, 224, 3)
 
     """
+    seed, has_seed = flow.random.gen_seed(seed)
     return (
         flow.user_op_builder(
             name
@@ -153,11 +154,8 @@ def api_ofrecord_image_decoder_random_crop(
         .Attr("name", blob_name)
         .Attr("color_space", color_space)
         .Attr("num_attempts", num_attempts)
-        .Attr(
-            "seed",
-            seed if seed is not None else random.randint(-sys.maxsize, sys.maxsize),
-        )
-        .Attr("has_seed", True)
+        .Attr("seed", seed)
+        .Attr("has_seed", has_seed)
         .Attr("random_area", random_area)
         .Attr("random_aspect_ratio", random_aspect_ratio)
         .Build()
