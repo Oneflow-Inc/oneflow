@@ -23,21 +23,10 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-using Im2ColFunc = void (*)(const T* in_dptr, const ShapeView& in_shape,
-                            const ShapeView& weight_shape, const ShapeView& out_shape,
-                            const int32_t* strides, const int32_t* dilation_rate,
-                            const int32_t* padding_before, T* col_buf);
-
-template<typename T>
 using Col2ImFunc = void (*)(const T* col_buf, const ShapeView& in_shape,
                             const ShapeView& weight_shape, const ShapeView& out_shape,
                             const int32_t* strides, const int32_t* dilation_rate,
                             const int32_t* padding_before, T* in_diff_ptr);
-
-template<typename T>
-using GemmFunc = void (*)(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
-                          const int n, const int k, const T alpha, const T* a, const T* b,
-                          const T beta, T* c);
 
 template<typename T>
 void Gemm4ChannelFirst(enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b, const int m,
@@ -106,33 +95,6 @@ class ColBufWriter {
   int64_t od_size_;
   int64_t oh_size_;
   int64_t ow_size_;
-};
-
-template<typename T>
-class Im2ColWriter final : public ColBufWriter<T> {
- public:
-  Im2ColWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size, int64_t ih_size,
-               int64_t iw_size, int64_t od_size, int64_t oh_size, int64_t ow_size)
-      : ColBufWriter<T>::ColBufWriter(src_ptr, dst_ptr, c_size, id_size, ih_size, iw_size, od_size,
-                                      oh_size, ow_size) {}
-  ~Im2ColWriter() = default;
-  void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override {
-    *(this->dst_ptr_++) =
-        this->src_ptr_[id * this->id_size_ + ih * this->ih_size_ + iw * this->iw_size_ + c];
-  }
-  void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override {
-    *(this->dst_ptr_++) = this->src_ptr_[id * this->id_size_ + ih * this->ih_size_ + iw];
-  }
-  void InvalidDFunc() override {
-    FOR_RANGE(int64_t, i, 0, this->od_size_) { *(this->dst_ptr_++) = 0; }
-  }
-  void InvalidHFunc() override {
-    FOR_RANGE(int64_t, i, 0, this->oh_size_) { *(this->dst_ptr_++) = 0; }
-  }
-  void InvalidWFunc() override {
-    FOR_RANGE(int64_t, i, 0, this->ow_size_) { *(this->dst_ptr_++) = 0; }
-  }
-  void NextImCSize() override { this->src_ptr_ += this->c_size_; }
 };
 
 template<typename T>
@@ -221,27 +183,6 @@ class ColBufUtil final {
 template<typename T>
 struct ConvKernelUtil final {
  public:
-  static void NCDHWIm2Col(const T* in_dptr, const ShapeView& in_shape,
-                          const ShapeView& weight_shape, const ShapeView& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
-    Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(3),
-                                   in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
-    DoNCDWHFunc(weight_shape, col_buf_util, &col_buf_writer);
-  }
-
-  static void NDHWCIm2Col(const T* in_dptr, const ShapeView& in_shape,
-                          const ShapeView& weight_shape, const ShapeView& out_shape,
-                          const int32_t* strides, const int32_t* dilation_rate,
-                          const int32_t* padding_before, T* col_buf_ptr) {
-    ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
-    Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(2),
-                                   in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
-                                   out_shape.Count(3, 4), 1);
-    DoNDWHCFunc(weight_shape, col_buf_util, &col_buf_writer);
-  }
-
   static void NCDHWCol2Im(const T* col_buf_ptr, const ShapeView& in_shape,
                           const ShapeView& weight_shape, const ShapeView& out_shape,
                           const int32_t* strides, const int32_t* dilation_rate,
@@ -293,9 +234,7 @@ struct ConvKernelUtil final {
 
 template<typename T>
 struct ConvOpKernelState final : public user_op::OpKernelState {
-  Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
-  GemmFunc<T> forward_func_;
 
   Shape in_5d_shape_;
   Shape out_5d_shape_;
@@ -334,15 +273,11 @@ std::shared_ptr<user_op::OpKernelState> CreateConvOpKernelState(user_op::KernelI
 
   std::shared_ptr<ConvOpKernelState<T>> state(new ConvOpKernelState<T>());
   if (data_format == "channels_first") {
-    state->im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-    state->forward_func_ = Gemm4ChannelFirst;
     state->is_out_diff_need_trans_ = CblasNoTrans;
     state->idx_offset_ = 2;
   } else {
-    state->im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
     state->col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
-    state->forward_func_ = Gemm4ChannelLast;
     state->is_out_diff_need_trans_ = CblasTrans;
     state->idx_offset_ = 1;
   }
@@ -411,8 +346,8 @@ class DeconvCpuKernel final : public user_op::OpKernel {
     int32_t idx_offset = conv_state->idx_offset_;
 
     FOR_RANGE(int64_t, i, 0, in->shape().At(0)) {
-      // channels first:  col_buf' = weight(T) * out[i]'
-      // channels last :  col_buf' = weight(T) * out[i]'(T)
+      // channels first:  col_buf' = weight(T) * in[i]'
+      // channels last :  col_buf' = weight(T) * in[i]'(T)
       // m, n, k
       NewKernelUtil<DeviceType::kCPU>::OFGemm(
           nullptr, CblasTrans, conv_state->is_out_diff_need_trans_,
@@ -420,7 +355,7 @@ class DeconvCpuKernel final : public user_op::OpKernel {
           conv_state->weight_5d_shape_.At(0), static_cast<T>(1), weight->dptr<T>(),
           GetImgDptr<T>(in, i), static_cast<T>(0), col_buf->mut_dptr<T>());
 
-      // in' = col2im(col_buf')
+      // out = col2im(col_buf')
       conv_state->col2im_func_(col_buf->dptr<T>(), ShapeView(conv_state->in_5d_shape_),
                                ShapeView(conv_state->weight_5d_shape_),
                                ShapeView(conv_state->out_5d_shape_), conv_state->strides_3d_.data(),
