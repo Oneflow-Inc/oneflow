@@ -101,13 +101,13 @@ class AvgPool3d(Module):
         - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
 
           .. math::
-              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - kernel_size[0]}{\text{stride}[0]} + 1\right\rfloor
+              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \{kernel_size}[0]}{\text{stride}[0]} + 1\right\rfloor
 
           .. math::
-              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - kernel_size[1]}{\text{stride}[1]} + 1\right\rfloor
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \{kernel_size}[1]}{\text{stride}[1]} + 1\right\rfloor
 
           .. math::
-              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - kernel_size[2]}{\text{stride}[2]} + 1\right\rfloor
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \{kernel_size}[2]}{\text{stride}[2]} + 1\right\rfloor
 
     For example:
 
