@@ -216,7 +216,7 @@ oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj generate_cfg)
 if (BUILD_SHARED_LIBS)
   target_link_libraries(of_protoobj protobuf_imported)
-  target_link_libraries(of_cfgobj protobuf_imported})
+  target_link_libraries(of_cfgobj protobuf_imported)
   target_link_libraries(of_cfgobj of_protoobj)
 else()
   # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
