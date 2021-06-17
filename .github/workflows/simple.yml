@@ -133,8 +133,6 @@ jobs:
       - name: Op test
         if: startsWith(runner.os, 'Linux')
         run: |
-          mkdir -p build
-          cd build
-          source source.sh
+          source build/source.sh
           ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
