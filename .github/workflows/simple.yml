@@ -30,11 +30,11 @@ jobs:
         include:
           - test_suite: mac
             os: "macos-10.15"
-            allow_fail: true
+            allow_fail: false
             make_concurrency: 2
           - test_suite: ubuntu
             os: "ubuntu-20.04"
-            allow_fail: true
+            allow_fail: false
             make_concurrency: 2
     steps:
       - uses: actions/checkout@v2
