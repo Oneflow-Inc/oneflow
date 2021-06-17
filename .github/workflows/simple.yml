@@ -65,7 +65,7 @@ jobs:
       - name: Install dependencies (pip)
         run: |
           python3 -m pip install -r dev-requirements.txt
-          python3 -m pip install tensorflow
+          python3 -m pip install -r ci/requirements.txt
         shell: bash
       - name: Cache third party dir
         uses: actions/cache@v2
