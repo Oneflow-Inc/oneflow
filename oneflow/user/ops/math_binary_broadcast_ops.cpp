@@ -28,7 +28,7 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
+  user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
 
   size_t output_num_axes = std::max(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes());
   if (IsScalarTensor(tensor_x)) {

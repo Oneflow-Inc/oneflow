@@ -61,7 +61,7 @@ REGISTER_USER_OP("cast_like")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dtype_like_tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
-      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
       *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     });
