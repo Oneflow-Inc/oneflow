@@ -107,6 +107,13 @@ jobs:
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           make -j ${{ matrix.make_concurrency }} generate_api
         shell: bash
+      - name: Build (oneflow_testexe)
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          make -j ${{ matrix.make_concurrency }} oneflow_testexe
+        shell: bash
       - name: Build (ALL)
         if: startsWith(runner.os, 'Linux')
         run: |
@@ -116,7 +123,6 @@ jobs:
           make -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
-        if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build
           cd build
