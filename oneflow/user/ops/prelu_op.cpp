@@ -80,7 +80,7 @@ REGISTER_USER_OP("prelu_grad")
       *dx_desc->mut_shape() = x_desc->shape();
       *dx_desc->mut_is_dynamic() = x_desc->is_dynamic();
       *ctx->OutputShape("alpha_diff", 0) = alpha_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
