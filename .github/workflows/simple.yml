@@ -128,5 +128,5 @@ jobs:
         if: startsWith(runner.os, 'Linux')
         run: |
           source build/source.sh
-          ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
+          ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
