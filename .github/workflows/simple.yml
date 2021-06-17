@@ -92,6 +92,12 @@ jobs:
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF
           make -j $(nproc)
         shell: bash
+      - name: Cache build dir
+        uses: actions/cache@v2
+        with:
+          path: |
+            build
+          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt', '**/*.cpp', '**/*.h', '**/*.proto') }}
       - name: Build (of_ccobj)
         if: startsWith(runner.os, 'Linux')
         run: |
