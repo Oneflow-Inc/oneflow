@@ -73,7 +73,9 @@ jobs:
           path: |
             build-third_party
             third_party
-          key: ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt') }}
+          key: ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ github.repository }}-third_party-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
       - name: Set environment variables
         run: |
           set -x
@@ -97,7 +99,12 @@ jobs:
         with:
           path: |
             build
-          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/*.cmake', '**/CMakeLists.txt', '**/*.cpp', '**/*.h', '**/*.hpp', '**/*.proto') }}
+          key: ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-${{ hashFiles('**/*.h', '**/*.hpp') }}-${{ hashFiles('**/*.cpp') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-${{ hashFiles('**/*.h', '**/*.hpp') }}-
+            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-${{ hashFiles('**/*.proto') }}-
+            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-${{ hashFiles('**/*.cmake') }}-
+            ${{ matrix.os }}-${{ github.repository }}-build-${{ matrix.build_shared_libs }}-${{ hashFiles('**/CMakeLists.txt') }}-
       - name: Build (of_ccobj)
         if: startsWith(runner.os, 'Linux')
         run: |
