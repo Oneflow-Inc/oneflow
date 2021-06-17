@@ -14,7 +14,7 @@ if args.xla:
     assert args.cuda
 
 local_label = ""
-version = f"0.3.5"
+version = f"0.5.0"
 
 # set version if release of nightly
 assert (

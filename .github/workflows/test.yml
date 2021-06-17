@@ -10,6 +10,16 @@ on:
         description: "placeholder, no effect"
         required: false
 jobs:
+  cancel_previous:
+    name: Cancel previous runs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel previous runs of outdated commit
+        uses: styfle/cancel-workflow-action@0.9.0
+        with:
+          access_token: ${{ github.token }}
+          all_but_latest: true
+
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
@@ -107,7 +117,7 @@ jobs:
 
   build:
     name: Build
-    needs: [check_license_and_format, mirror_third_party]
+    needs: [check_license_and_format, mirror_third_party, cancel_previous]
     continue-on-error: ${{ matrix.allow_fail }}
     runs-on: ${{ matrix.os }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'fmt-only') == false
@@ -118,18 +128,18 @@ jobs:
         include:
           - test_suite: cuda
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL
-            os: [self-hosted, linux, release]
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
             allow_fail: false
           - test_suite: cpu
             cuda_version: 10.2
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
-            os: [self-hosted, linux, release]
+            extra_flags: --extra_oneflow_cmake_args=-DBUILD_SHARED_LIBS=OFF --extra_oneflow_cmake_args=-DRPC_BACKEND=LOCAL --cpu --gcc7
+            os: [self-hosted, linux, build]
             allow_fail: false
           - test_suite: xla
             cuda_version: 10.1
-            extra_flags: --extra_oneflow_cmake_args=-DFOR_CI=ON --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla
-            os: [self-hosted, linux, release]
+            extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
             allow_fail: true
           - test_suite: mac
             cuda_version: ""
@@ -158,6 +168,7 @@ jobs:
         env:
           test_suite: ${{ matrix.test_suite }}
         run: |
+          set -x
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
           export ci_tmp_dir=$HOME/ci-cache/test_suite/${test_suite}
           mkdir -p $ci_tmp_dir
@@ -168,7 +179,11 @@ jobs:
           if ssh -o StrictHostKeyChecking=no ${CI_STATIC_HOST} "test -d $sha_dir"; then
               echo "is_built=1" >> $GITHUB_ENV
           fi
-          echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          if [ "$test_suite" == "cuda" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2/build-oneflow/bin" >> $GITHUB_ENV
+          elif [ "$test_suite" == "cpu" ]; then
+            echo "bin_dir=${ci_tmp_dir}/manylinux2014-build-cache/10.2-gcc7-cpu/build-oneflow/bin" >> $GITHUB_ENV
+          fi
           extra_docker_args=""
           extra_docker_args+=" --cap-add=SYS_PTRACE --security-opt seccomp=unconfined"
 
@@ -192,6 +207,7 @@ jobs:
       - name: Build OneFlow
         if: env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/whl
+        timeout-minutes: 45
         with:
           tmp_dir: ${ci_tmp_dir}
           extra_flags: ${{ matrix.extra_flags }}
@@ -215,6 +231,7 @@ jobs:
       - name: Custom Op test (run by oneflow build docker)
         if: matrix.test_suite == 'cpu' && env.is_built != '1' && matrix.test_suite != 'mac'
         run: |
+          set -x
           docker run --shm-size=8g --rm -w $PWD -v $PWD:$PWD -v /dataset:/dataset -v /model_zoo:/model_zoo \
             $extra_docker_args \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
@@ -237,7 +254,7 @@ jobs:
           dst_host: ${{ env.CI_STATIC_HOST }}
           dst_path: ${{ env.CI_STATIC_PATH }}/${{ github.repository }}/pr/${{ github.event.pull_request.number }}/${{ github.sha }}/${{ matrix.test_suite }}/whl
       - name: Upload bin via SSH
-        if: matrix.test_suite == 'cuda' && env.is_built != '1' && matrix.test_suite != 'mac'
+        if: (matrix.test_suite == 'cuda' || matrix.test_suite == 'cpu') && env.is_built != '1' && matrix.test_suite != 'mac'
         uses: ./.github/actions/upload_ssh
         with:
           src_path: ${bin_dir}
@@ -254,6 +271,7 @@ jobs:
       - name: Remove container
         if: always() && matrix.test_suite != 'mac'
         run: |
+          set -x
           docker rm -f ${container_name} || true
       - name: Save shared env
         if: matrix.test_suite != 'mac'
@@ -262,7 +280,7 @@ jobs:
           echo "builder_host=${CI_STATIC_HOST}" >> build.${{ matrix.test_suite }}.env
           echo "sha_dir=${sha_dir}" >> build.${{ matrix.test_suite }}.env
           echo "remote_whl_dir=${CI_STATIC_HOST}:$sha_dir/whl" >> build.${{ matrix.test_suite }}.env
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "remote_bin_dir=${CI_STATIC_HOST}:$sha_dir/bin" >> build.${{ matrix.test_suite }}.env
           fi
       - name: Upload shared env
@@ -352,7 +370,7 @@ jobs:
 
           # dowload whl and bin
           scp -r $remote_whl_dir wheel_tmp
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             scp -r $remote_bin_dir bin_tmp
           fi
 
@@ -363,7 +381,7 @@ jobs:
 
           # set matrix environment variables
           echo "test_suite=${test_suite}" >> $GITHUB_ENV
-          if [ "$test_suite" == "cuda" ]; then
+          if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
           if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ]; then
@@ -386,7 +404,7 @@ jobs:
         run: |
           bash docker/ci/test/build.sh
       - name: Exe test
-        if: matrix.test_suite == 'cuda'
+        if: contains(fromJson('["cuda", "cpu"]'), matrix.test_suite)
         run: |
           set -x
           docker run \
@@ -396,12 +414,14 @@ jobs:
       - name: Build documentation
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
       - name: Op test (distributed)
         if: contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
+          set -x
           python3 ci/test/distributed_run.py \
             --bash_script=ci/test/2node_op_test.sh \
             --custom_img_tag=${image_name} \
@@ -418,12 +438,14 @@ jobs:
       - name: Print backtrace (distributed test)
         if: always() && contains(fromJson('["cuda", "mlir"]'), matrix.test_suite)
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 distributed-tmp
       - name: Doctest
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             ${image_name} \
@@ -431,29 +453,33 @@ jobs:
       - name: Dry run test (run without runtime)
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
       - name: Module API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/1node_test.sh"
+            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
         if: contains(fromJson('["cuda_op", "mlir", "cpu", "cpu_op_eager", "cuda_op_eager"]'), matrix.test_suite)
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             ${image_name} \
@@ -461,6 +487,7 @@ jobs:
       - name: Model test
         if: contains(fromJson('["cuda", "mlir", "cpu"]'), matrix.test_suite)
         run: |
+          set -x
           docker run \
             $extra_docker_args \
             ${image_name} \
@@ -468,6 +495,7 @@ jobs:
       - name: Model serve test
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             --env ONEFLOW_TEST_TMP_DIR=$PWD/serving-tmp \
             ${image_name} \
@@ -475,29 +503,34 @@ jobs:
       - name: Print backtrace (serving test)
         if: always() && matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} bash ci/test/print_stack_from_core.sh python3 serving-tmp
       - name: Benchmark (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test.sh"
       - name: Benchmark FP16 (mainly for backward compatibility)
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
         if: matrix.test_suite == 'xla'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
       - name: ONNX export test
         if: matrix.test_suite == 'cuda'
         run: |
+          set -x
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"

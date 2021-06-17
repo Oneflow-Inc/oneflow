@@ -3,15 +3,9 @@ import argparse
 import os
 import re
 from urllib.parse import urlparse
-import requests
 import hashlib
 import base64
 import tempfile
-
-try:
-    import oss2
-except:
-    pass
 
 
 parser = argparse.ArgumentParser()
@@ -89,6 +83,8 @@ def calculate_data_md5(data):
 def upload_one_to_aliyun(url: str):
     ki = os.getenv("OSS_ACCESS_KEY_ID")
     ks = os.getenv("OSS_ACCESS_KEY_SECRET")
+    import oss2
+
     auth = oss2.Auth(ki, ks)
     endpoint = "oss-cn-beijing.aliyuncs.com"
     bucket = oss2.Bucket(auth, endpoint, "oneflow-static")
@@ -97,7 +93,8 @@ def upload_one_to_aliyun(url: str):
     if bucket.object_exists(key):
         print("exists: ", key)
     else:
-        content = requests.get(url).content
+        import requests
+
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
             with tempfile.NamedTemporaryFile() as f:

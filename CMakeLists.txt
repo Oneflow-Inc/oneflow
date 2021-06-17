@@ -23,12 +23,12 @@ option(BUILD_TESTING "" ON)
 option(WITH_XLA "Option to build with XLA" OFF)
 option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(WITH_MLIR "" OFF)
-option(FOR_CI "" OFF)
 option(BUILD_GIT_VERSION "" ON)
 option(BUILD_PROFILER "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 set(RPC_BACKEND "GRPC,LOCAL" CACHE STRING "")
 set(THIRD_PARTY_MIRROR "" CACHE STRING "")
+set(PIP_INDEX_MIRROR "" CACHE STRING "")
 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
   set(CUDNN_STATIC OFF CACHE BOOL "")
@@ -39,6 +39,12 @@ endif()
 project(oneflow C CXX)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
+
+get_filename_component(real_src_dir "${CMAKE_SOURCE_DIR}" REALPATH)
+get_filename_component(real_bin_dir "${CMAKE_BINARY_DIR}" REALPATH)
+if("${real_src_dir}" STREQUAL "${real_bin_dir}")
+  message(FATAL_ERROR "In-source build not allowed")
+endif()
 
 # Modules
 list(APPEND CMAKE_MODULE_PATH ${oneflow_cmake_dir}/third_party)
@@ -128,44 +134,38 @@ endif()
 include(third_party)
 
 if (BUILD_CUDA)
+  message(STATUS "CUDA_VERSION: ${CUDA_VERSION}")
+  message(STATUS "CUDA_TOOLKIT_ROOT_DIR: ${CUDA_TOOLKIT_ROOT_DIR}")
   set(CUDA_SEPARABLE_COMPILATION OFF)
   list(APPEND CUDA_NVCC_FLAGS -w -Wno-deprecated-gpu-targets)
-  if((CMAKE_BUILD_TYPE MATCHES Debug) OR (FOR_CI))
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      set(DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61" "arch=compute_75,code=sm_75" "arch=compute_75,code=compute_75")
-    else()
-      set(DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61" "arch=compute_61,code=compute_61")
-    endif()
+  #  half is not fully supported when __CUDA_ARCH__ < 530
+  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
+  #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
+  # cubin
+  # Tesla P100
+  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_60,code=sm_60")
+  # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
+  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61")
+  # V100, TITAN V
+  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=sm_70")
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+    # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75")
+  endif()
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+    # A100
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=sm_80")
+  endif()
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
+    # GeForce RTX 30xx
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_86,code=sm_86")
+  endif()
+  if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=compute_80")
+  elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=compute_75")
   else()
-    #  half is not fully supported when __CUDA_ARCH__ < 530
-    #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_30,code=sm_30")
-    #  list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_52,code=sm_52")
-    # cubin
-    # Tesla P100
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_60,code=sm_60")
-    # Tesla P40/P4, Quadro Pxxx/Pxxxx, GeForce GTX 10xx, TITAN X/Xp
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_61,code=sm_61")
-    # V100, TITAN V
-    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=sm_70")
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      # T4, Quadro RTX xxxx, Txxxx, Geforce RTX 20xx, TITAN RTX
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=sm_75")
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      # A100
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=sm_80")
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.1")
-      # GeForce RTX 30xx
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_86,code=sm_86")
-    endif()
-    if(CUDA_VERSION VERSION_GREATER_EQUAL "11.0")
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_80,code=compute_80")
-    elseif(CUDA_VERSION VERSION_GREATER_EQUAL "10.0")
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_75,code=compute_75")
-    else()
-      list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=compute_70")
-    endif()
+    list(APPEND DEFAULT_CUDA_NVCC_GENCODES "arch=compute_70,code=compute_70")
   endif()
   if(NOT DEFINED CUDA_NVCC_GENCODES)
     set(CUDA_NVCC_GENCODES ${DEFAULT_CUDA_NVCC_GENCODES})
