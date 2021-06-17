@@ -563,6 +563,25 @@ Maybe<one::UserOpExpr> ConvNdDataGradOp(const std::vector<int32_t>& kernel_size,
       .Build();
 }
 
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity) {
+  return CTCLossGradOp(blank, zero_infinity, UniqueOpName("ctc_loss_grad"));
+}
+Maybe<one::UserOpExpr> CTCLossGradOp(const int32_t& blank, const bool& zero_infinity,
+                                     const std::string& name) {
+  return one::OpBuilder("ctc_loss_grad", name)
+      .Input("grad_out")
+      .Input("log_probs")
+      .Input("targets")
+      .Input("input_lengths")
+      .Input("target_lengths")
+      .Input("loss")
+      .Input("alpha")
+      .Output("grad")
+      .Attr<int32_t>("blank", blank)
+      .Attr<bool>("zero_infinity", zero_infinity)
+      .Build();
+}
+
 Maybe<one::UserOpExpr> SparseSoftmaxCrossEntropyGradOp(const int64_t& depth) {
   return SparseSoftmaxCrossEntropyGradOp(depth, UniqueOpName("sparse_softmax_cross_entropy"));
 }

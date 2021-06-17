@@ -88,8 +88,11 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       auto options = xrt::CreateDefaultXrtPassOptions();
       xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
       for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, pair.second}); }
+      const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
+          &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
-                      &parallel_desc, &sbp_signatures, &lbn2logical_blob_desc, &entry_blob_descs);
+                      &parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
+                      &entry_blob_descs);
       // Update argument meta data
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
