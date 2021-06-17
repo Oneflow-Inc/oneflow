@@ -133,7 +133,7 @@ class PoolNdGradFunctor {
     for (auto mode : mode_opts_) {
       for (auto ndims : ndims_opts_) {
         auto& op_type_name = GetOpTypeName(mode, ndims);
-        opExprMap_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Output("y").Input("dy").Output("dx").Build());
+        opExprMap_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
       }
     }
   }
@@ -162,7 +162,7 @@ class PoolNdGradFunctor {
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     auto& op_type_name = GetOpTypeName(mode, ndims);
     std::shared_ptr<OpExpr> op = JUST(opExprMap_.GetOpExpr(op_type_name));
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x, y}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y, dy}, attrs);
   }
 
  protected:

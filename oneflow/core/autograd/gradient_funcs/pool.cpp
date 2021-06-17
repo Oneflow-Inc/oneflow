@@ -62,29 +62,6 @@ Maybe<void> PoolNdGrad::Init(const OpExpr& op) {
   return Maybe<void>::Ok();
 }
 
-// Maybe<void> PoolNdGrad::Init(const OpExpr& op) {
-//   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-//   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
-//   const std::string& op_name = fw_op_expr->op_name();
-//   op_trait_ = std::make_shared<user_op::UserOpConfTrait>(op_name, fw_op_expr->proto());
-
-//   data_format_ = JUST(op_trait_->GetAttr<std::string>("data_format"));
-//   padding_ = JUST(op_trait_->GetAttr<std::string>("padding"));
-//   padding_before_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("padding_before"));
-//   padding_after_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("padding_after"));
-//   pool_size_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("pool_size"));
-//   strides_ = JUST(op_trait_->GetAttr<std::vector<int32_t>>("strides"));
-//   ceil_mode_ = JUST(op_trait_->GetAttr<bool>("ceil_mode"));
-//   int32_t ndims = pool_size_->size();
-//   CHECK_EQ_OR_RETURN(ndims, strides_->size());
-//   CHECK_EQ_OR_RETURN(ndims, padding_before_->size());
-//   CHECK_EQ_OR_RETURN(ndims, padding_after_->size());
-//   grad_op_ =
-//       JUST(op_expr_helper::PoolNdGradOp(*mode_, *data_format_, *padding_, *padding_before_,
-//                                         *padding_after_, *pool_size_, *strides_, ceil_mode_));
-//   return Maybe<void>::Ok();
-// }
-
 Maybe<void> PoolNdGrad::Capture(PoolInterpState* ctx, const TensorTuple& inputs,
                                 const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
@@ -114,7 +91,7 @@ Maybe<void> PoolNdGrad::Apply(const PoolInterpState* ctx, const TensorTuple& out
   const auto& output = ctx->SavedTensors().at(ctx->output_index);
 
   in_grads->resize(1);
-  in_grads->at(1) = JUST(functional::PoolNdGrad(input, output, out_grads.at(0), *mode_, ndims, ctx->data_format,
+  in_grads->at(0) = JUST(functional::PoolNdGrad(input, output, out_grads.at(0), *mode_, ndims, ctx->data_format,
         ctx->padding, ctx->padding_before, ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
