@@ -546,8 +546,8 @@ class MarginRankingLoss(Module):
 
     For example:
 
-    .. code-block:: python 
-        
+    .. code-block:: python
+
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
         >>> import numpy as np
@@ -566,7 +566,7 @@ class MarginRankingLoss(Module):
         >>> out = m(x1, x2, target)
         >>> out
         tensor([8.2], dtype=oneflow.float32)
-        
+
         >>> m = flow.nn.MarginRankingLoss(margin = 10, reduction="mean")
         >>> out = m(x1, x2, target)
         >>> out
@@ -772,6 +772,147 @@ class CTCLoss(Module):
             return flow.experimental.sum(loss)
         else:
             return loss
+
+
+@oneflow_export("nn.BCEWithLogitsLoss")
+@experimental_api
+class BCEWithLogitsLoss(Module):
+    r"""This operator combines the `Sigmoid` and `BCELoss` together. For numerical stability,
+    we apply some math tricks instead of using `Sigmoid` layer with `BCELoss`.
+
+    The equation is:
+
+    if :attr:`reduction` = ``"none"``:
+
+    .. math::
+
+        out = -weight*[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    if :attr:`reduction` = ``"mean"``:
+
+    .. math::
+
+        out = -\frac{weight}{n}\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    if :attr:`reduction` = ``"sum"``:
+
+    .. math::
+
+        out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+
+    Args:
+        weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
+        size_average (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        reduce (bool, optional) – Deprecated (see :attr:`reduction`). Default: ``True``
+        reduction (str, optional): The reduce type, it can be one of ``"none"``, ``"mean"``, ``"sum"``.
+            ``'none'``: no reduction will be applied, ``'mean'``: the sum of the output will be divided
+            by the number of elements in the output, ``'sum'``: the output will be summed. Default: ``"mean"``
+        pos_weight (Tensor, optional): The manual rescaling weight to the positive examples.
+            Default: ``None``
+
+    Shape:
+        - Input: :math:`(N,*)` where `*` means, any number of additional dimensions
+        - Target: :math:`(N,*)`, same shape as the input
+        - Output: scalar. If :attr:`reduction` is ``"none"``, then :math:`(N,*)`, same shape as input.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+        >>> import oneflow.typing as tp
+
+        >>> input = flow.Tensor([[1.2, 0.2, -0.3], [0.7, 0.6, -2], [0.7, 0.6, -2]], dtype=flow.float32)
+        >>> target = flow.Tensor([[0, 1, 0], [1, 0, 1], [1, 0, 1]], dtype=flow.float32)
+        >>> weight = flow.Tensor([[2, 2, 2], [2, 2, 2], [2, 2, 2]], dtype=flow.float32)
+        >>> pos_weight = flow.Tensor([1.2, 1.3, 1.4], dtype=flow.float32)
+
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="none")
+        >>> out = m(input, target)
+        >>> out
+        tensor([[2.9266, 1.5552, 1.1087],
+                [0.9676, 2.075 , 5.9554],
+                [0.9676, 2.075 , 5.9554]], dtype=oneflow.float32)
+
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="mean")
+        >>> out = m(input, target)
+        >>> out
+        tensor([2.6207], dtype=oneflow.float32)
+
+        >>> m = flow.nn.BCEWithLogitsLoss(weight=weight, pos_weight=pos_weight, reduction="sum")
+        >>> out = m(input, target)
+        >>> out
+        tensor([23.5865], dtype=oneflow.float32)
+
+
+    """
+
+    def __init__(
+        self,
+        weight=None,
+        size_average: bool = True,
+        reduce: bool = True,
+        reduction: Optional[str] = "mean",
+        pos_weight=None,
+    ) -> None:
+        super().__init__()
+        assert reduction in [
+            "sum",
+            "none",
+            "mean",
+            None,
+        ], "only 'sum', 'mean' and None supported by now"
+
+        self.weight = weight
+        self.size_average = size_average
+        self.reduce = reduce
+        self.reduction = reduction
+        self.pos_weight = pos_weight
+
+    def forward(self, input, target):
+        if not (target.shape == input.shape):
+            raise ValueError(
+                "Target size ({}) must be the same as input size ({})".format(
+                    target.size(), input.size()
+                )
+            )
+
+        _neg_input = flow.experimental.negative(input)
+        _max_val = flow.experimental.clip(_neg_input, 0)
+        _neg_max_val = flow.experimental.negative(_max_val)
+
+        if self.pos_weight:
+            _log_weight = ((self.pos_weight - 1) * target) + 1
+            _loss = (1 - target) * input + _log_weight * (
+                flow.experimental.log(
+                    flow.experimental.exp(_neg_max_val)
+                    + flow.experimental.exp(_neg_input - _max_val)
+                )
+                + _max_val
+            )
+        else:
+            _loss = (1 - target) * input + _max_val
+            _loss += flow.experimental.log(
+                flow.experimental.exp(_neg_max_val)
+                + flow.experimental.exp(_neg_input - _max_val)
+            )
+
+        if self.weight is not None:
+            assert (
+                self.weight.shape == input.shape
+            ), "The weight shape must be the same as Input shape"
+            _weighted_loss = self.weight * _loss
+        else:
+            _weighted_loss = _loss
+
+        if self.reduction == "mean":
+            return flow.experimental.mean(_weighted_loss)
+        elif self.reduction == "sum":
+            return flow.experimental.sum(_weighted_loss)
+        else:
+            # Do no reduction
+            return _weighted_loss
 
 
 if __name__ == "__main__":
