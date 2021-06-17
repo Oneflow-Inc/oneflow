@@ -3788,6 +3788,7 @@ def bce_loss(
 
 
 @oneflow_export("nn.BCEWithLogitsLoss")
+@stable_api
 def bce_with_logits_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
