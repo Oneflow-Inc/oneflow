@@ -34,16 +34,16 @@ REGISTER_USER_OP("transpose")
     .Output("output")
     .Attr<std::vector<int32_t>>("perm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("input", 0);
       user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
-      const Shape& in_shape = in_tensor_desc->shape();
+      const Shape& in_shape = in_tensor_desc.shape();
       Shape* out_shape = out_tensor_desc->mut_shape();
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
       CheckIsPerm(perm);
       // if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
-      *out_tensor_desc->mut_shape() = in_tensor_desc->shape();
-      *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
+      *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
+      *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
     })

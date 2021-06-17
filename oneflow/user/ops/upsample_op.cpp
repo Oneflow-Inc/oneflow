@@ -26,17 +26,17 @@ REGISTER_USER_OP("upsample")
     .Attr<std::string>("data_format")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+      const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
       user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
       if (ctx->Attr<std::string>("data_format") != "channels_first"
-          || x_desc->shape().NumAxes() != 4) {
+          || x_desc.shape().NumAxes() != 4) {
         LOG(FATAL) << "upsample only supports NCHW";
       }
-      *y_desc->mut_shape() = Shape({x_desc->shape().At(0), x_desc->shape().At(1),
-                                    static_cast<int32_t>(height_scale * x_desc->shape().At(2)),
-                                    static_cast<int32_t>(width_scale * x_desc->shape().At(3))});
+      *y_desc->mut_shape() = Shape({x_desc.shape().At(0), x_desc.shape().At(1),
+                                    static_cast<int32_t>(height_scale * x_desc.shape().At(2)),
+                                    static_cast<int32_t>(width_scale * x_desc.shape().At(3))});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

@@ -22,8 +22,8 @@ namespace {
 
 template<size_t NDims>
 Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  CHECK_EQ(NDims + 2, in->shape().NumAxes());
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  CHECK_EQ(NDims + 2, in.shape().NumAxes());
 
   const std::string& data_format = ctx->Attr<std::string>("data_format");
   const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -42,34 +42,34 @@ Maybe<void> InferTensorDesc4DeConv(user_op::InferContext* ctx) {
 
     user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
     DimVector out_shape(NDims + 2);
-    out_shape.at(0) = in->shape().At(0);
+    out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
     out_shape.at(c_dim) = filters;
     for (int32_t i = 0; i < NDims; ++i) {
       int32_t effective_filter_size = (kernel_size.at(i) - 1) * dilation_rate.at(i) + 1;
-      out_shape.at(idx_offset + i) = (in->shape().At(idx_offset + i) - 1) * strides.at(i)
+      out_shape.at(idx_offset + i) = (in.shape().At(idx_offset + i) - 1) * strides.at(i)
                                      - 2 * padding_before.at(i) + output_padding.at(i)
                                      + effective_filter_size;
     }
-    *out->mut_is_dynamic() = in->is_dynamic();
+    *out->mut_is_dynamic() = in.is_dynamic();
     *out->mut_shape() = Shape(out_shape);
   }
 
   {
-    DimVector weight_shape(in->shape().dim_vec());
+    DimVector weight_shape(in.shape().dim_vec());
     if (data_format == "channels_first") {
-      weight_shape.at(0) = in->shape().At(1);
+      weight_shape.at(0) = in.shape().At(1);
       weight_shape.at(1) = filters;
     } else if (data_format == "channels_last") {
-      weight_shape.at(0) = in->shape().At(NDims + 1);
+      weight_shape.at(0) = in.shape().At(NDims + 1);
       weight_shape.at(NDims + 1) = filters;
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
-    const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+    CHECK_EQ(weight.shape(), Shape(weight_shape));
   }
 
   return Maybe<void>::Ok();

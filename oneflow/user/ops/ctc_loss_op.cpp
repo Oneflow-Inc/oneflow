@@ -27,20 +27,20 @@ REGISTER_USER_OP("ctc_loss")
     .Attr<int>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const user_op::TensorDesc* target_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+      const user_op::TensorDesc& input_lengths =
+          ctx->InputTensorDesc("input_lengths", 0);
+      const user_op::TensorDesc& target_lengths =
+          ctx->InputTensorDesc("target_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths.shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
       *ctx->OutputShape("loss", 0) = Shape({batch_size});
       *ctx->OutputShape("alpha", 0) =
-          Shape({batch_size, log_probs->shape().At(0), 2 * targets->shape().At(1) + 1});
+          Shape({batch_size, log_probs.shape().At(0), 2 * targets.shape().At(1) + 1});
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -72,18 +72,18 @@ REGISTER_USER_OP("ctc_loss_grad")
     .Attr<int>("blank")
     .Attr<bool>("zero_infinity")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* log_probs = ctx->TensorDesc4ArgNameAndIndex("log_probs", 0);
-      const user_op::TensorDesc* targets = ctx->TensorDesc4ArgNameAndIndex("targets", 0);
-      const user_op::TensorDesc* input_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("input_lengths", 0);
-      const user_op::TensorDesc* target_lengths =
-          ctx->TensorDesc4ArgNameAndIndex("target_lengths", 0);
-      const int64_t batch_size = log_probs->shape().At(1);
-      CHECK_EQ_OR_RETURN(batch_size, targets->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
-      CHECK_EQ_OR_RETURN(batch_size, target_lengths->shape().At(0));
+      const user_op::TensorDesc& log_probs = ctx->InputTensorDesc("log_probs", 0);
+      const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
+      const user_op::TensorDesc& input_lengths =
+          ctx->InputTensorDesc("input_lengths", 0);
+      const user_op::TensorDesc& target_lengths =
+          ctx->InputTensorDesc("target_lengths", 0);
+      const int64_t batch_size = log_probs.shape().At(1);
+      CHECK_EQ_OR_RETURN(batch_size, targets.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, input_lengths.shape().At(0));
+      CHECK_EQ_OR_RETURN(batch_size, target_lengths.shape().At(0));
       CHECK_GE_OR_RETURN(ctx->Attr<int>("blank"), 0);
-      *ctx->OutputShape("grad", 0) = log_probs->shape();
+      *ctx->OutputShape("grad", 0) = log_probs.shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

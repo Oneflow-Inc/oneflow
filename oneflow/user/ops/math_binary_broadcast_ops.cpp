@@ -26,20 +26,20 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
 }
 
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
   user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
 
-  size_t output_num_axes = std::max(tensor_x->shape().NumAxes(), tensor_y->shape().NumAxes());
-  if (IsScalarTensor(tensor_x)) {
+  size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
+  if (IsScalarTensor(&tensor_x)) {
     *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
-  } else if (IsScalarTensor(tensor_y)) {
+  } else if (IsScalarTensor(&tensor_y)) {
     *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
   } else {
-    const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x->shape()), output_num_axes);
-    const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y->shape()), output_num_axes);
+    const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x.shape()), output_num_axes);
+    const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y.shape()), output_num_axes);
     *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
     *ctx->IsDynamic4ArgNameAndIndex("z", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
     Shape out_shape(x_shape);
@@ -51,7 +51,7 @@ Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
     }
     *tensor_z->mut_shape() = out_shape;
   }
-  tensor_z->set_is_dynamic(tensor_x->is_dynamic() || tensor_y->is_dynamic());
+  tensor_z->set_is_dynamic(tensor_x.is_dynamic() || tensor_y.is_dynamic());
   return Maybe<void>::Ok();
 }
 
@@ -60,17 +60,17 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
   *ctx->OutputDType("z", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* tensor_x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-  const user_op::TensorDesc* tensor_y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x->data_type(), tensor_y->data_type());
+  const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
   *ctx->OutputDType("z", 0) = DataType::kInt8;
   return Maybe<void>::Ok();
 }

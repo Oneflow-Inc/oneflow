@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 
+
 namespace oneflow {
 
 class AttrMap;
@@ -160,6 +161,14 @@ class LocalUserOpInferContext : public user_op::InferContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
+
+  const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name, 
+                                            int32_t index) const override {
+    auto out = const_cast<LocalUserOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name, index);
+    CHECK_NOTNULL(out);
+    return * out;
+  }
+
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {

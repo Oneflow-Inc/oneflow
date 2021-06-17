@@ -27,19 +27,19 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
     .Attr<int64_t>("seed", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
-      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
       user_op::TensorDesc* mapped_label = ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      *mapped_label->mut_shape() = label->shape();
-      *mapped_label->mut_is_dynamic() = label->is_dynamic();
-      *sampled_weight->mut_shape() = weight->shape();
+      *mapped_label->mut_shape() = label.shape();
+      *mapped_label->mut_is_dynamic() = label.is_dynamic();
+      *sampled_weight->mut_shape() = weight.shape();
       sampled_weight->mut_shape()->Set(0, num_sample);
-      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
-      *sampled_label->mut_shape() = label->shape();
+      *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
+      *sampled_label->mut_shape() = label.shape();
       sampled_label->mut_shape()->Set(0, num_sample);
-      *sampled_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_label->mut_is_dynamic() = label.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -47,19 +47,19 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       CHECK_EQ_OR_RETURN(num_sample % parallel_num, 0);
       const int64_t num_sample_per_rank = num_sample / parallel_num;
-      const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-      const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
+      const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
       user_op::TensorDesc* mapped_label = ctx->TensorDesc4ArgNameAndIndex("mapped_label", 0);
       user_op::TensorDesc* sampled_weight = ctx->TensorDesc4ArgNameAndIndex("sampled_weight", 0);
       user_op::TensorDesc* sampled_label = ctx->TensorDesc4ArgNameAndIndex("sampled_label", 0);
-      *mapped_label->mut_shape() = label->shape();
-      *mapped_label->mut_is_dynamic() = label->is_dynamic();
-      *sampled_weight->mut_shape() = weight->shape();
+      *mapped_label->mut_shape() = label.shape();
+      *mapped_label->mut_is_dynamic() = label.is_dynamic();
+      *sampled_weight->mut_shape() = weight.shape();
       sampled_weight->mut_shape()->Set(0, num_sample_per_rank);
-      *sampled_weight->mut_is_dynamic() = weight->is_dynamic();
-      *sampled_label->mut_shape() = label->shape();
+      *sampled_weight->mut_is_dynamic() = weight.is_dynamic();
+      *sampled_label->mut_shape() = label.shape();
       sampled_label->mut_shape()->Set(0, num_sample_per_rank);
-      *sampled_label->mut_is_dynamic() = label->is_dynamic();
+      *sampled_label->mut_is_dynamic() = label.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

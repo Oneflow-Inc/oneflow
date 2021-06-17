@@ -27,12 +27,12 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
       cond_arg_modifier->set_requires_grad(false);
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
+      const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+      const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+      CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
       user_op::TensorDesc* loss_desc = ctx->TensorDesc4ArgNameAndIndex("loss", 0);
-      *loss_desc->mut_shape() = prediction_desc->shape();
-      *loss_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
+      *loss_desc->mut_shape() = prediction_desc.shape();
+      *loss_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -63,14 +63,14 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
       cond_arg_modifier->set_requires_grad(false);
     })
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-      const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      const user_op::TensorDesc* loss_diff_desc = ctx->TensorDesc4ArgNameAndIndex("loss_diff", 0);
-      CHECK_EQ_OR_RETURN(label_desc->shape(), prediction_desc->shape());
-      CHECK_EQ_OR_RETURN(loss_diff_desc->shape(), prediction_desc->shape());
+      const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+      const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+      const user_op::TensorDesc& loss_diff_desc = ctx->InputTensorDesc("loss_diff", 0);
+      CHECK_EQ_OR_RETURN(label_desc.shape(), prediction_desc.shape());
+      CHECK_EQ_OR_RETURN(loss_diff_desc.shape(), prediction_desc.shape());
       user_op::TensorDesc* prediction_diff = ctx->TensorDesc4ArgNameAndIndex("prediction_diff", 0);
-      *prediction_diff->mut_shape() = prediction_desc->shape();
-      *prediction_diff->mut_is_dynamic() = prediction_desc->is_dynamic();
+      *prediction_diff->mut_shape() = prediction_desc.shape();
+      *prediction_diff->mut_is_dynamic() = prediction_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

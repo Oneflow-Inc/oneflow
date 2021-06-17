@@ -24,13 +24,13 @@ REGISTER_USER_OP("reduce_sum_like")
     .Output("y")
     .Attr<std::vector<int32_t>>("axis")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
+      const user_op::TensorDesc& x_tensor = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& like_tensor = ctx->InputTensorDesc("like", 0);
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-      if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
+      if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor.shape(), like_tensor.shape()); }
       user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y_tensor->mut_shape() = like_tensor->shape();
-      *y_tensor->mut_is_dynamic() = like_tensor->is_dynamic();
+      *y_tensor->mut_shape() = like_tensor.shape();
+      *y_tensor->mut_is_dynamic() = like_tensor.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -78,10 +78,10 @@ REGISTER_USER_OP("reduce_sum_like")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
-      CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
-      *ctx->OutputDType("y", 0) = like_tensor->data_type();
+      const user_op::TensorDesc& x_tensor = ctx->InputTensorDesc("x", 0);
+      const user_op::TensorDesc& like_tensor = ctx->InputTensorDesc("like", 0);
+      CHECK_EQ_OR_RETURN(x_tensor.data_type(), like_tensor.data_type());
+      *ctx->OutputDType("y", 0) = like_tensor.data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

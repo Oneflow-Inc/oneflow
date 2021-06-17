@@ -20,26 +20,26 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   const int64_t axis = ctx->Attr<int64_t>("axis");
   CHECK_GE_OR_RETURN(axis, 0);
-  CHECK_LT_OR_RETURN(axis, first_in_desc->shape().NumAxes());
-  DimVector out_dim_vec = first_in_desc->shape().dim_vec();
+  CHECK_LT_OR_RETURN(axis, first_in_desc.shape().NumAxes());
+  DimVector out_dim_vec = first_in_desc.shape().dim_vec();
   out_dim_vec.at(axis) = 0;
   int64_t dynamic_dim_size = 0;
   for (const auto& in_arg_pair : ctx->inputs()) {
-    const user_op::TensorDesc* in_desc =
-        ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), first_in_desc->shape().NumAxes());
-    FOR_RANGE(int64_t, i, 0, in_desc->shape().NumAxes()) {
+    const user_op::TensorDesc& in_desc =
+        ctx->InputTensorDesc(in_arg_pair.first, in_arg_pair.second);
+    CHECK_EQ_OR_RETURN(in_desc.shape().NumAxes(), first_in_desc.shape().NumAxes());
+    FOR_RANGE(int64_t, i, 0, in_desc.shape().NumAxes()) {
       if (i == axis) {
-        if (in_desc->is_dynamic()) {
-          dynamic_dim_size += in_desc->shape().At(i);
+        if (in_desc.is_dynamic()) {
+          dynamic_dim_size += in_desc.shape().At(i);
         } else {
-          out_dim_vec.at(axis) += in_desc->shape().At(i);
+          out_dim_vec.at(axis) += in_desc.shape().At(i);
         }
       } else {
-        CHECK_EQ_OR_RETURN(in_desc->shape().At(i), out_dim_vec.at(i));
+        CHECK_EQ_OR_RETURN(in_desc.shape().At(i), out_dim_vec.at(i));
       }
     }
   }
@@ -93,14 +93,14 @@ void GenGrapOp(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* first_in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const user_op::TensorDesc& first_in_desc = ctx->InputTensorDesc("in", 0);
   for (const auto& in_arg_pair : ctx->inputs()) {
     const user_op::TensorDesc* in_desc =
         ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
-    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc->data_type());
+    CHECK_EQ_OR_RETURN(in_desc->data_type(), first_in_desc.data_type());
   }
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc->mut_data_type() = first_in_desc->data_type();
+  *out_desc->mut_data_type() = first_in_desc.data_type();
   return Maybe<void>::Ok();
 }
 

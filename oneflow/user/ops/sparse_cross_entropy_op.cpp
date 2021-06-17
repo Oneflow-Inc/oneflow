@@ -32,42 +32,42 @@ Maybe<void> CheckPredictionLabelDesc(const user_op::TensorDesc* prediction_desc,
 }
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-  const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-  JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
+  const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+  const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+  JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
-  *out_desc->mut_shape() = label_desc->shape();
+  *out_desc->mut_is_dynamic() = prediction_desc.is_dynamic();
+  *out_desc->mut_shape() = label_desc.shape();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferGradTensorDescFn(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-  const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-  const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-  JUST(CheckPredictionLabelDesc(prediction_desc, label_desc));
-  CHECK_EQ_OR_RETURN(dy_desc->shape(), label_desc->shape());
-  *ctx->OutputShape("prediction_diff", 0) = prediction_desc->shape();
-  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prediction_desc->is_dynamic();
+  const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+  const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  JUST(CheckPredictionLabelDesc(&prediction_desc, &label_desc));
+  CHECK_EQ_OR_RETURN(dy_desc.shape(), label_desc.shape());
+  *ctx->OutputShape("prediction_diff", 0) = prediction_desc.shape();
+  *ctx->IsDynamic4ArgNameAndIndex("prediction_diff", 0) = prediction_desc.is_dynamic();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-  const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-  CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
+  const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+  const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()));
   user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-  *out_desc->mut_data_type() = prediction_desc->data_type();
+  *out_desc->mut_data_type() = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataTypeGrad(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* prediction_desc = ctx->TensorDesc4ArgNameAndIndex("prediction", 0);
-  const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-  const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-  CHECK_OR_RETURN(IsIndexDataType(label_desc->data_type()));
-  CHECK_EQ_OR_RETURN(dy_desc->data_type(), prediction_desc->data_type());
-  *ctx->OutputDType("prediction_diff", 0) = prediction_desc->data_type();
+  const user_op::TensorDesc& prediction_desc = ctx->InputTensorDesc("prediction", 0);
+  const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& label_desc = ctx->InputTensorDesc("label", 0);
+  CHECK_OR_RETURN(IsIndexDataType(label_desc.data_type()));
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), prediction_desc.data_type());
+  *ctx->OutputDType("prediction_diff", 0) = prediction_desc.data_type();
   return Maybe<void>::Ok();
 }
 

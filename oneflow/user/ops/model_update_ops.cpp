@@ -41,15 +41,15 @@ Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const Da
 
 Maybe<void> CheckLearningRateShape(user_op::InferContext* ctx) {
   if (ctx->has_input("learning_rate", 0)) {
-    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-    JUST(CheckScalarShape(learning_rate));
+    const user_op::TensorDesc& learning_rate = ctx->InputTensorDesc("learning_rate", 0);
+    JUST(CheckScalarShape(&learning_rate));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckLearningRateDataType(user_op::InferContext* ctx) {
   if (ctx->has_input("learning_rate", 0)) {
-    const user_op::TensorDesc* learning_rate = ctx->TensorDesc4ArgNameAndIndex("learning_rate", 0);
-    JUST(CheckScalarDataType(learning_rate, DataType::kFloat));
+    const user_op::TensorDesc& learning_rate = ctx->InputTensorDesc("learning_rate", 0);
+    JUST(CheckScalarDataType(&learning_rate, DataType::kFloat));
   }
   return Maybe<void>::Ok();
 }
@@ -80,145 +80,145 @@ Maybe<void> CheckIndexedSlicesModelDiffDataType(const user_op::TensorDesc* model
 }
 
 Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const Shape& shape = model->shape();
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> InferSGDUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferIndexedSlicesSGDUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateShape(ctx));
   return Maybe<void>::Ok();
 }
 Maybe<void> InferIndexedSlicesSGDUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDataType(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), model->shape());
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckShapeLike(momentum, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), model.shape());
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckShapeLike(&momentum, &model));
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> InferMomentumUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckDataTypeLike(momentum, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckDataTypeLike(&momentum, &model));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckShapeLike(momentum, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckShapeLike(&momentum, &model));
   JUST(CheckLearningRateShape(ctx));
   return Maybe<void>::Ok();
 }
 Maybe<void> InferIndexedSlicesMomentumUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDataType(model, model_diff_indices, model_diff_values));
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckDataTypeLike(momentum, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckDataTypeLike(&momentum, &model));
   JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferAdamUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const Shape& shape = model->shape();
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
-  const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
-  JUST(CheckShapeLike(m, model));
-  const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
-  JUST(CheckShapeLike(v, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckShapeLike(&m, &model));
+  const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
+  JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
-  JUST(CheckDataTypeLike(m, model));
-  const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
-  JUST(CheckDataTypeLike(v, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckDataTypeLike(&m, &model));
+  const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
+  JUST(CheckDataTypeLike(&v, &model));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDesc(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateShape(ctx));
   return Maybe<void>::Ok();
 }
 Maybe<void> InferIndexedSlicesAdamUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* model_diff_indices =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_indices", 0);
-  const user_op::TensorDesc* model_diff_values =
-      ctx->TensorDesc4ArgNameAndIndex("model_diff_values", 0);
-  JUST(CheckIndexedSlicesModelDiffDataType(model, model_diff_indices, model_diff_values));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff_indices =
+      ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values =
+      ctx->InputTensorDesc("model_diff_values", 0);
+  JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
 }
@@ -230,42 +230,42 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(beta1, 1);
   CHECK_GE_OR_RETURN(beta2, 0);
   CHECK_LT_OR_RETURN(beta2, 1);
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
 
-  const Shape& shape = model->shape();
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
-  const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
-  JUST(CheckShapeLike(m, model));
-  const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
-  JUST(CheckShapeLike(v, model));
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckShapeLike(&m, &model));
+  const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
+  JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-  const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-  JUST(CheckScalarShape(beta1_t));
-  JUST(CheckScalarShape(beta2_t));
+  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
+  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
+  JUST(CheckScalarShape(&beta1_t));
+  JUST(CheckScalarShape(&beta2_t));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* m = ctx->TensorDesc4ArgNameAndIndex("m", 0);
-  JUST(CheckDataTypeLike(m, model));
-  const user_op::TensorDesc* v = ctx->TensorDesc4ArgNameAndIndex("v", 0);
-  JUST(CheckDataTypeLike(v, model));
-  const DataType data_type = model->data_type();
-  const user_op::TensorDesc* beta1_t = ctx->TensorDesc4ArgNameAndIndex("beta1_t", 0);
-  const user_op::TensorDesc* beta2_t = ctx->TensorDesc4ArgNameAndIndex("beta2_t", 0);
-  JUST(CheckScalarDataType(beta1_t, data_type));
-  JUST(CheckScalarDataType(beta2_t, data_type));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& m = ctx->InputTensorDesc("m", 0);
+  JUST(CheckDataTypeLike(&m, &model));
+  const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
+  JUST(CheckDataTypeLike(&v, &model));
+  const DataType data_type = model.data_type();
+  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
+  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
+  JUST(CheckScalarDataType(&beta1_t, data_type));
+  JUST(CheckScalarDataType(&beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, model->data_type()));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, model.data_type()));
   }
   return Maybe<void>::Ok();
 }
@@ -293,22 +293,22 @@ void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifie
 }
 
 Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
 
-  const Shape& shape = model->shape();
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
-  const user_op::TensorDesc* mean_square = ctx->TensorDesc4ArgNameAndIndex("mean_square", 0);
-  JUST(CheckShapeLike(mean_square, model));
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  const user_op::TensorDesc& mean_square = ctx->InputTensorDesc("mean_square", 0);
+  JUST(CheckShapeLike(&mean_square, &model));
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   if (ctx->Attr<bool>("centered")) {
     CHECK_OR_RETURN(ctx->has_input("mean_gradient", 0));
-    const user_op::TensorDesc* mean_gradient = ctx->TensorDesc4ArgNameAndIndex("mean_gradient", 0);
-    JUST(CheckShapeLike(mean_gradient, model));
+    const user_op::TensorDesc& mean_gradient = ctx->InputTensorDesc("mean_gradient", 0);
+    JUST(CheckShapeLike(&mean_gradient, &model));
   } else {
     CHECK_OR_RETURN(!ctx->has_input("mean_gradient", 0));
   }
@@ -316,46 +316,46 @@ Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferRmsPropUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* mean_square = ctx->TensorDesc4ArgNameAndIndex("mean_square", 0);
-  JUST(CheckDataTypeLike(mean_square, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& mean_square = ctx->InputTensorDesc("mean_square", 0);
+  JUST(CheckDataTypeLike(&mean_square, &model));
   JUST(CheckLearningRateDataType(ctx));
-  const DataType data_type = model->data_type();
+  const DataType data_type = model.data_type();
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, data_type));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, data_type));
   }
   if (ctx->Attr<bool>("centered")) {
     CHECK_OR_RETURN(ctx->has_input("mean_gradient", 0));
-    const user_op::TensorDesc* mean_gradient = ctx->TensorDesc4ArgNameAndIndex("mean_gradient", 0);
-    JUST(CheckDataTypeLike(mean_gradient, model));
+    const user_op::TensorDesc& mean_gradient = ctx->InputTensorDesc("mean_gradient", 0);
+    JUST(CheckDataTypeLike(&mean_gradient, &model));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> InferLarsUpdateTensorDesc(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
 
-  const Shape& shape = model->shape();
-  const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff->shape(), shape);
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckShapeLike(momentum, model));
+  const Shape& shape = model.shape();
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckShapeLike(&momentum, &model));
   JUST(CheckLearningRateShape(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarShape(scale_by_tensor));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarShape(&scale_by_tensor));
   }
   return Maybe<void>::Ok();
 }
 Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
-  const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
-  const user_op::TensorDesc* momentum = ctx->TensorDesc4ArgNameAndIndex("momentum", 0);
-  JUST(CheckDataTypeLike(momentum, model));
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
+  JUST(CheckDataTypeLike(&momentum, &model));
   JUST(CheckLearningRateDataType(ctx));
-  const DataType data_type = model->data_type();
+  const DataType data_type = model.data_type();
   if (ctx->has_input("scale_by_tensor", 0)) {
-    const auto* scale_by_tensor = ctx->TensorDesc4ArgNameAndIndex("scale_by_tensor", 0);
-    JUST(CheckScalarDataType(scale_by_tensor, data_type));
+    const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
+    JUST(CheckScalarDataType(&scale_by_tensor, data_type));
   }
   return Maybe<void>::Ok();
 }

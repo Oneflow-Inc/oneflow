@@ -22,9 +22,9 @@ REGISTER_USER_OP("diag")
     .Output("out")
     .Attr<int32_t>("diagonal", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       const int32_t diagonal = ctx->Attr<int32_t>("diagonal");
-      const ShapeView& in_shape = in->shape();
+      const ShapeView& in_shape = in.shape();
       const int32_t in_dim = in_shape.NumAxes();
       CHECK_GE_OR_RETURN(in_dim, 1);
       CHECK_LE_OR_RETURN(in_dim, 2);
@@ -63,8 +63,8 @@ REGISTER_USER_OP("diag_grad")
     .Attr<int32_t>("diagonal", 0)
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      const Shape& in_shape = in->shape();
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+      const Shape& in_shape = in.shape();
       user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
       *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
       return Maybe<void>::Ok();

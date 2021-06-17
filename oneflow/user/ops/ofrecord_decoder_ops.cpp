@@ -27,12 +27,12 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
     .Attr<bool>("dim1_varying_length", false)
     .Attr<bool>("auto_zero_padding", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
+      CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
       Shape conf_shape = ctx->Attr<Shape>("shape");
       DimVector dim_vec(1 + conf_shape.NumAxes());
-      dim_vec[0] = in_tensor->shape().At(0);
+      dim_vec[0] = in_tensor.shape().At(0);
       for (int i = 1; i < dim_vec.size(); ++i) { dim_vec[i] = conf_shape.At(i - 1); }
       *out_tensor->mut_shape() = Shape(dim_vec);
       return Maybe<void>::Ok();
@@ -51,9 +51,9 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
       *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
       return Maybe<void>::Ok();
     });
@@ -63,10 +63,10 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
     .Output("out")
     .Attr<std::string>("name")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out->mut_is_dynamic() = in->is_dynamic();
-      *out->mut_shape() = in->shape();
+      *out->mut_is_dynamic() = in.is_dynamic();
+      *out->mut_shape() = in.shape();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -77,9 +77,9 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in.data_type() == DataType::kOFRecord);
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
@@ -90,10 +90,10 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
     .Attr<std::string>("name")
     .Attr<std::string>("color_space", "BGR")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
-      *out_tensor->mut_shape() = in_tensor->shape();
+      CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
+      *out_tensor->mut_shape() = in_tensor.shape();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -110,9 +110,9 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
@@ -128,10 +128,10 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
     .Attr<std::vector<float>>("random_area", {0.08, 1.0})
     .Attr<std::vector<float>>("random_aspect_ratio", {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
-      *out_tensor->mut_shape() = in_tensor->shape();
+      CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
+      *out_tensor->mut_shape() = in_tensor.shape();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -148,9 +148,9 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
       in_modifier->set_requires_grad(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kOFRecord);
+      CHECK_OR_RETURN(in_tensor.data_type() == DataType::kOFRecord);
       *out_tensor->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });

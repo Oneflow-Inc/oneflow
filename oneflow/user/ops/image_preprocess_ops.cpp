@@ -33,21 +33,21 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Attr<float>("crop_pos_y", 0.5)
     .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) {
-        CHECK_OR_RETURN(mirror_tensor->shape().NumAxes() == 1
-                        && in_tensor->shape().At(0) == mirror_tensor->shape().At(0));
-      }
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
+
+      CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
+                        && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
+      
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      int64_t N = in_tensor->shape().At(0);
+      int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
       int64_t W = ctx->Attr<int64_t>("crop_w");
       std::string color_space = ctx->Attr<std::string>("color_space");
       int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
 
       CHECK_OR_RETURN(H != 0 && W != 0);
-      CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1);
+      CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1);
       std::string output_layout = ctx->Attr<std::string>("output_layout");
       if (output_layout == "NCHW") {
         *out_tensor->mut_shape() = Shape({N, C, H, W});
@@ -64,11 +64,11 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kTensorBuffer);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer);
 
-      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) { CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8); }
+      const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
+      CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8); 
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
@@ -93,26 +93,24 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
     .Attr<float>("crop_pos_y", 0.5)
     .Attr<DataType>("output_dtype", DataType::kFloat)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) {
-        CHECK_OR_RETURN(mirror_tensor->shape().NumAxes() == 1
-                        && in_tensor->shape().At(0) == mirror_tensor->shape().At(0));
-      }
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
+        CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
+                        && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      int64_t N = in_tensor->shape().At(0);
+      int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
       int64_t W = ctx->Attr<int64_t>("crop_w");
       std::string color_space = ctx->Attr<std::string>("color_space");
       int64_t C = ImageUtil::IsColor(color_space) ? 3 : 1;
-      CHECK_EQ_OR_RETURN(in_tensor->shape().NumAxes(), 4);  // {N, H, W, C}
-      CHECK_EQ_OR_RETURN(in_tensor->shape().At(3), C);
+      CHECK_EQ_OR_RETURN(in_tensor.shape().NumAxes(), 4);  // {N, H, W, C}
+      CHECK_EQ_OR_RETURN(in_tensor.shape().At(3), C);
       if (H == 0 || W == 0) {
-        H = in_tensor->shape().At(1);
-        W = in_tensor->shape().At(2);
+        H = in_tensor.shape().At(1);
+        W = in_tensor.shape().At(2);
       } else {
-        H = std::min(H, in_tensor->shape().At(1));
-        W = std::min(W, in_tensor->shape().At(2));
+        H = std::min(H, in_tensor.shape().At(1));
+        W = std::min(W, in_tensor.shape().At(2));
       }
       std::string output_layout = ctx->Attr<std::string>("output_layout");
       if (output_layout == "NCHW") {
@@ -131,11 +129,11 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_EQ_OR_RETURN(in_tensor->data_type(), DataType::kUInt8);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kUInt8);
 
-      user_op::TensorDesc* mirror_tensor = ctx->TensorDesc4ArgNameAndIndex("mirror", 0);
-      if (mirror_tensor) { CHECK_EQ_OR_RETURN(mirror_tensor->data_type(), DataType::kInt8); }
+      const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
+      CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
@@ -189,10 +187,10 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .Attr<std::vector<float>>("random_area", {0.08, 1.0})
     .Attr<std::vector<float>>("random_aspect_ratio", {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_tensor->mut_shape() = in_tensor->shape();
-      *out_tensor->mut_is_dynamic() = in_tensor->is_dynamic();
+      *out_tensor->mut_shape() = in_tensor.shape();
+      *out_tensor->mut_is_dynamic() = in_tensor.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
@@ -203,9 +201,9 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
       in_modifier->set_requires_grad(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
-      *ctx->OutputDType("out", 0) = in_tensor->data_type();
+      const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
+      CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
+      *ctx->OutputDType("out", 0) = in_tensor.data_type();
       return Maybe<void>::Ok();
     });
 

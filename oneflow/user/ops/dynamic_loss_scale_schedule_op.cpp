@@ -28,19 +28,19 @@ bool IsTensorWithType(const user_op::TensorDesc* desc, DataType data_type) {
 }
 
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0)));
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0)));
-  CHECK_OR_RETURN(IsScalarTensor(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0)));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("count_not_finite", 0))));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("loss_scale", 0))));
+  CHECK_OR_RETURN(IsScalarTensor(&(ctx->InputTensorDesc("good_step_counter", 0))));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("count_not_finite", 0), DataType::kInt64));
+      IsTensorWithType(&(ctx->InputTensorDesc("count_not_finite", 0)), DataType::kInt64));
   CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("loss_scale", 0), DataType::kFloat));
+      IsTensorWithType(&(ctx->InputTensorDesc("loss_scale", 0)), DataType::kFloat));
   CHECK_OR_RETURN(
-      IsTensorWithType(ctx->TensorDesc4ArgNameAndIndex("good_step_counter", 0), DataType::kInt64));
+      IsTensorWithType(&(ctx->InputTensorDesc("good_step_counter", 0)), DataType::kInt64));
   return Maybe<void>::Ok();
 }
 

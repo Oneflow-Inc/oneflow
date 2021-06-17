@@ -23,30 +23,30 @@ REGISTER_USER_OP("unsorted_batch_segment_sum")
     .Output("out")
     .Attr<int64_t>("num_segments")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
-      const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
-      CHECK_GE_OR_RETURN(segment_ids->shape().NumAxes(), 1);
-      CHECK_GE_OR_RETURN(data->shape().NumAxes(), segment_ids->shape().NumAxes());
-      CHECK_EQ_OR_RETURN(segment_ids->is_dynamic(), data->is_dynamic());
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
+      CHECK_GE_OR_RETURN(segment_ids.shape().NumAxes(), 1);
+      CHECK_GE_OR_RETURN(data.shape().NumAxes(), segment_ids.shape().NumAxes());
+      CHECK_EQ_OR_RETURN(segment_ids.is_dynamic(), data.is_dynamic());
       const int64_t num_segments = ctx->Attr<int64_t>("num_segments");
       CHECK_GE_OR_RETURN(num_segments, 1);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
-      FOR_RANGE(int64_t, i, 0, segment_ids->shape().NumAxes() - 1) {
-        CHECK_EQ_OR_RETURN(segment_ids->shape().At(i), data->shape().At(i));
+      FOR_RANGE(int64_t, i, 0, segment_ids.shape().NumAxes() - 1) {
+        CHECK_EQ_OR_RETURN(segment_ids.shape().At(i), data.shape().At(i));
       }
 
-      DimVector dim_vec(data->shape().dim_vec());
-      dim_vec.at(segment_ids->shape().NumAxes() - 1) = num_segments;
+      DimVector dim_vec(data.shape().dim_vec());
+      dim_vec.at(segment_ids.shape().NumAxes() - 1) = num_segments;
       *out->mut_shape() = Shape(dim_vec);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc* data = ctx->TensorDesc4ArgNameAndIndex("data", 0);
+      const user_op::TensorDesc& data = ctx->InputTensorDesc("data", 0);
+      const user_op::TensorDesc& segment_ids = ctx->InputTensorDesc("segment_ids", 0);
       user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      const user_op::TensorDesc* segment_ids = ctx->TensorDesc4ArgNameAndIndex("segment_ids", 0);
-      CHECK_OR_RETURN(IsIndexDataType(segment_ids->data_type()));
-      *out->mut_data_type() = data->data_type();
+      CHECK_OR_RETURN(IsIndexDataType(segment_ids.data_type()));
+      *out->mut_data_type() = data.data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

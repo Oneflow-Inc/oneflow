@@ -322,10 +322,10 @@ REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const auto* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      const auto& in_desc = ctx->InputTensorDesc("in", 0);
       auto* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      *out_desc->mut_shape() = in_desc->shape();
-      *out_desc->mut_is_dynamic() = in_desc->is_dynamic();
+      *out_desc->mut_shape() = in_desc.shape();
+      *out_desc->mut_is_dynamic() = in_desc.is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
