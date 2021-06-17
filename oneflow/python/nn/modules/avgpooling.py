@@ -68,6 +68,7 @@ class AvgPool1d(Module):
         # TODO: fix cuDNN bugs in pooling_1d
         raise NotImplementedError
 
+
 @oneflow_export("nn.AvgPool3d")
 @experimental_api
 class AvgPool3d(Module):
@@ -141,9 +142,7 @@ class AvgPool3d(Module):
         kernel_size = _pair(kernel_size)
         stride = _pair(stride) if (stride is not None) else kernel_size
 
-
-
-        assert padding==(0, 0, 0),"padding>0 not supported yet"
+        assert padding == (0, 0, 0), "padding>0 not supported yet"
         assert isinstance(padding, int) or isinstance(
             padding, tuple
         ), "padding can only int int or tuple of 3 ints."
@@ -152,7 +151,6 @@ class AvgPool3d(Module):
 
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
-        
 
         _channel_pos = "channels_first"
         # TODO(yaochi): align with pytorch when padding is asymmetric
@@ -179,6 +177,7 @@ class AvgPool3d(Module):
     def forward(self, x):
         res = self._op(x)[0]
         return res
+
 
 if __name__ == "__main__":
     import doctest
