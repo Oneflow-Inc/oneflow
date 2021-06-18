@@ -34,7 +34,7 @@ class OpExprGradClosure;
 class OpExpr {
  public:
   virtual ~OpExpr() = default;
-  virtual const std::string op_type_name() const = 0;
+  virtual const std::string& op_type_name() const = 0;
 
   virtual int input_size() const = 0;
   virtual int output_size() const = 0;
@@ -79,6 +79,8 @@ class BuiltinOpExpr : public OpExpr {
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
 };
 
+class TensorMeta;
+
 template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
@@ -94,7 +96,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
   const ProtoType& proto() const { return op_proto_; }
   ProtoType* mutable_proto() { return &op_proto_; }
 
-  const std::string op_type_name() const override;
+  const std::string& op_type_name() const override;
 
   Maybe<bool> IsGradDisabled() const override;
 
@@ -128,15 +130,21 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   Maybe<StatefulLocalOpKernel> MutKernel4Device(const Device& device) const;
 
   bool has_device_infer_fn() const { return static_cast<bool>(device_infer_fn_); }
-  Maybe<const Device> InferDevices(
-      const AttrMap& attrs, const TensorTuple& inputs,
-      std::vector<std::shared_ptr<const Device>>* outputs_devices) const;
+  Maybe<void> InferLogicalShapeAndDType(
+      const AttrMap& attrs, const std::string& device_tag,
+      const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
+      const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
+  Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
+                                   TensorTuple* outputs) const;
 
  private:
   UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
              const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
+  Maybe<void> Init();
   AttrMap base_attrs_;
+  user_op::TensorDescInferFn shape_infer_fn_;
+  user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
 };
@@ -161,7 +169,10 @@ class FunctionOpExpr : public OpExpr {
       : OpExpr(), forward_(forward), backward_(backward) {}
   virtual ~FunctionOpExpr() = default;
 
-  const std::string op_type_name() const override { return "function"; }
+  const std::string& op_type_name() const override {
+    static const std::string& name("function");
+    return name;
+  }
 
   int input_size() const override { UNIMPLEMENTED(); }
   int output_size() const override { UNIMPLEMENTED(); }

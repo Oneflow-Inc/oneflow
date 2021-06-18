@@ -25,18 +25,21 @@ namespace functional {
 
 class FunctionLibrary {
  public:
+  using FunctorCreator = std::function<Maybe<Functor>()>;
+
   virtual ~FunctionLibrary() = default;
 
   template<typename Func>
   void add_functor(const std::string& func_name) {
-    Func func;
-    add_functor(func_name, std::move(func));
-  }
-
-  template<typename Func>
-  void add_functor(const std::string& func_name, const Func& func) {
-    auto packed_func = PackedFunctor::Make(func_name, func);
-    functors_.emplace(func_name, packed_func);
+    CHECK_EQ(functors_.count(func_name), 0)
+        << "The functor with name " << func_name << " has been registered more than once.";
+    functors_.emplace(func_name, []() -> Maybe<Functor> {
+      using func_type = typename function_traits<Func>::func_type;
+      Func func;
+      auto body = std::make_shared<FunctionBodyImpl<func_type>>(func);
+      FunctionSignature signatute = detail::PackFunctionSignature<func_type>::pack();
+      return std::make_shared<Functor>(body, signatute);
+    });
   }
 
   Maybe<PackedFunctor> find(const std::string& func_name) {
@@ -44,7 +47,7 @@ class FunctionLibrary {
     CHECK_OR_RETURN(it != functors_.end())
         << "Functor was not found for op " << func_name
         << ", please check whether the functor has been registered correctly or not.";
-    return std::make_shared<PackedFunctor>(it->second);
+    return std::make_shared<PackedFunctor>(func_name, *(JUST(it->second())));
   }
 
   static FunctionLibrary* Global() {
@@ -55,9 +58,7 @@ class FunctionLibrary {
  private:
   FunctionLibrary() = default;
 
-  // The reason for not using `std::shared_ptr<PackedFunctor>` is that
-  // the functor maybe stateful.
-  HashMap<std::string, PackedFunctor> functors_;
+  HashMap<std::string, FunctorCreator> functors_;
 };
 
 #define ONEFLOW_FUNCTION_LIBRARY(m) ONEFLOW_FUNCTION_LIBRARY_IMPL(m, __COUNTER__)
