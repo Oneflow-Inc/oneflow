@@ -21,10 +21,9 @@ jobs:
   hosted:
     name: CPU-only
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.allow_fail }}
     needs: [cancel_previous]
     strategy:
-      max-parallel: 5
+      fail-fast: false
       matrix:
         test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
@@ -32,11 +31,9 @@ jobs:
         include:
           - test_suite: mac
             os: "macos-10.15"
-            allow_fail: false
             make_concurrency: 2
           - test_suite: ubuntu
             os: "ubuntu-20.04"
-            allow_fail: false
             make_concurrency: 2
     steps:
       - uses: actions/checkout@v2
