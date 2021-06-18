@@ -973,7 +973,7 @@ class TestTensor(flow.unittest.TestCase):
         not flow.unittest.env.eager_execution_enabled(),
         "numpy doesn't work in lazy mode",
     )
-    def test__tensor_acos(test_case):
+    def test_tensor_acos(test_case):
         input = flow.Tensor(np.random.rand(8, 11, 9, 7) - 0.5, requires_grad=True,)
         of_out = input.acos()
         np_out = np.arccos(input.numpy())
