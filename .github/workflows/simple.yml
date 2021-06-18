@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Cancel previous runs of outdated commit
+        if: github.ref != 'refs/heads/master'
         uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
