@@ -41,7 +41,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
       *ctx->OutputIsDynamic4ArgNameAndIndex("prob", 0) =
           ctx->InputIsDynamic4ArgNameAndIndex("prediction", 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
       *out_desc->mut_shape() = Shape(out_dim_vector);
       return Maybe<void>::Ok();
@@ -65,7 +65,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
       const user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("label", 0);
       CHECK_EQ_OR_RETURN(label_desc->data_type(), prediction_desc->data_type());
       *ctx->OutputDType("prob", 0) = ctx->InputDType("prediction", 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_data_type() = prediction_desc->data_type();
       return Maybe<void>::Ok();
     });

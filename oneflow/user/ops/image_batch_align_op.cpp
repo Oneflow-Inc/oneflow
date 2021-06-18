@@ -67,7 +67,7 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
       DimVector dim_vec(shape_attr.NumAxes() + 1);
       dim_vec.at(0) = in_desc->shape().elem_cnt();
       FOR_RANGE(int64_t, i, 0, shape_attr.NumAxes()) { dim_vec.at(i + 1) = shape_attr.At(i); }
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_shape() = Shape(dim_vec);
       out_desc->set_is_dynamic(true);
       return Maybe<void>::Ok();
@@ -85,7 +85,7 @@ REGISTER_CPU_ONLY_USER_OP("image_batch_align")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_OR_RETURN(in_desc->data_type() == DataType::kTensorBuffer);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_data_type() = ctx->Attr<DataType>("data_type");
       return Maybe<void>::Ok();
     });

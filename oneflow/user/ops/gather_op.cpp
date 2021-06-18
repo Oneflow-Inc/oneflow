@@ -28,7 +28,7 @@ REGISTER_USER_OP("gather")
       const int64_t axis = ctx->Attr<int64_t>("axis");
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
       DimVector dim_vec;
       dim_vec.insert(dim_vec.end(), in->shape().dim_vec().cbegin(),
@@ -82,7 +82,7 @@ REGISTER_USER_OP("gather")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
