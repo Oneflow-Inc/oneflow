@@ -43,10 +43,9 @@ inline Maybe<void> JobBuildAndInferCtx_Close() {
 
 inline Maybe<void> CurJobBuildAndInferCtx_CheckJob() { return JUST(GetCurInferCtx())->CheckJob(); }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serialized_job_conf) {
-  // parse
+inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const cfg::JobConfigProto& cfg_job_conf) {
   JobConfigProto job_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(serialized_job_conf, &job_conf)) << "job conf parse failed";
+  cfg_job_conf.ToProto(&job_conf);
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
