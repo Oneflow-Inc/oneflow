@@ -31,7 +31,7 @@ REGISTER_USER_OP("bias_add")
       CHECK_LT_OR_RETURN(bias_add_axis, a_tensor_desc->shape().NumAxes());
       CHECK_EQ_OR_RETURN(a_tensor_desc->shape().At(bias_add_axis), b_tensor_desc->shape().At(0));
       *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("a", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic4ArgNameAndIndex("a", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -53,7 +53,7 @@ REGISTER_USER_OP("bias_add")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("a", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("a", 0);
       return Maybe<void>::Ok();
     });
 

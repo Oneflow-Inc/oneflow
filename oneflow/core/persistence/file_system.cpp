@@ -108,35 +108,74 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
 }  // namespace fs
 
-fs::FileSystem* LocalFS() {
+void CreateLocalFS(std::unique_ptr<fs::FileSystem>& fs) {
 #ifdef OF_PLATFORM_POSIX
-  static fs::FileSystem* fs = new fs::PosixFileSystem;
+  fs.reset(new fs::PosixFileSystem);
+#else
+  OF_UNIMPLEMENTED();
 #endif
-  return fs;
 }
 
-fs::FileSystem* NetworkFS() { return LocalFS(); }
-
-fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
-  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
-  return fs;
+void CreateHadoopFS(std::unique_ptr<fs::FileSystem>& fs, const std::string& namenode) {
+  fs.reset(new fs::HadoopFileSystem(namenode));
 }
 
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
-  if (file_system_conf.has_localfs_conf()) {
-    return LocalFS();
-  } else if (file_system_conf.has_networkfs_conf()) {
-    return NetworkFS();
-  } else if (file_system_conf.has_hdfs_conf()) {
-    return HadoopFS(file_system_conf.hdfs_conf());
+void CreateFileSystemFromEnv(std::unique_ptr<fs::FileSystem>& fs, const std::string& env_prefix) {
+  CHECK(!fs);
+
+  auto fs_type_env = env_prefix + "_TYPE";
+  const char* fs_type = std::getenv(fs_type_env.c_str());
+  std::string fs_type_str;
+  if (fs_type) {
+    fs_type_str = ToLower(fs_type);
   } else {
-    UNIMPLEMENTED();
+    // local file system by default
+    fs_type_str = "local";
+  }
+
+  if (fs_type_str == "local") {
+    CreateLocalFS(fs);
+  } else if (fs_type_str == "hdfs") {
+    auto hdfs_nn_env = env_prefix + "_HDFS_NAMENODE";
+    const char* hdfs_namenode = std::getenv(hdfs_nn_env.c_str());
+    if (hdfs_namenode == nullptr) {
+      LOG(FATAL) << "env " << hdfs_nn_env << " must be set when " << fs_type_env
+                 << " be set to hdfs";
+    }
+    CreateHadoopFS(fs, hdfs_namenode);
+  } else {
+    LOG(FATAL) << "invalid value " << fs_type << " of env " << fs_type_env;
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<const IOConf>::Get()->data_fs_conf()); }
-fs::FileSystem* DataFS(int64_t session_id) {
-  return GetFS(Global<const IOConf>::Get(session_id)->data_fs_conf());
+fs::FileSystem* DataFS() {
+  static std::unique_ptr<fs::FileSystem> data_fs;
+  static std::mutex data_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(data_fs_mutex);
+    if (!data_fs) { CreateFileSystemFromEnv(data_fs, "ONEFLOW_DATA_FILE_SYSTEM"); }
+  }
+  return data_fs.get();
 }
-fs::FileSystem* SnapshotFS() { return GetFS(Global<const IOConf>::Get()->snapshot_fs_conf()); }
+
+fs::FileSystem* SnapshotFS() {
+  static std::unique_ptr<fs::FileSystem> snapshot_fs;
+  static std::mutex snapshot_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(snapshot_fs_mutex);
+    if (!snapshot_fs) { CreateFileSystemFromEnv(snapshot_fs, "ONEFLOW_SNAPSHOT_FILE_SYSTEM"); }
+  }
+  return snapshot_fs.get();
+}
+
+fs::FileSystem* LocalFS() {
+  static std::unique_ptr<fs::FileSystem> local_fs;
+  static std::mutex local_fs_mutex;
+  {
+    std::lock_guard<std::mutex> lock(local_fs_mutex);
+    if (!local_fs) { CreateLocalFS(local_fs); }
+  }
+  return local_fs.get();
+}
+
 }  // namespace oneflow
