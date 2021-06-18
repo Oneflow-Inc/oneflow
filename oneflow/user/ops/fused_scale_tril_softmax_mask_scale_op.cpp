@@ -30,16 +30,16 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     .Attr<float>("mask_scale_value", 1.0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      *ctx->Shape4ArgNameAndIndex("y", 0) = x_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = x_desc->is_dynamic();
-      *ctx->Shape4ArgNameAndIndex("softmax_y", 0) = x_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("softmax_y", 0) = x_desc->is_dynamic();
+      *ctx->OutputShape("y", 0) = x_desc->shape();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("y", 0) = x_desc->is_dynamic();
+      *ctx->OutputShape("softmax_y", 0) = x_desc->shape();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("softmax_y", 0) = x_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = x_desc->data_type();
-      *ctx->Dtype4ArgNameAndIndex("softmax_y", 0) = x_desc->data_type();
+      *ctx->OutputDType("y", 0) = x_desc->data_type();
+      *ctx->OutputDType("softmax_y", 0) = x_desc->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

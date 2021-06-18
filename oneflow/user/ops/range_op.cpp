@@ -23,7 +23,7 @@ REGISTER_USER_OP("range")
     .Attr<int64_t>("limit")
     .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t start = ctx->Attr<int64_t>("start");
       int64_t delta = ctx->Attr<int64_t>("delta");
       int64_t limit = ctx->Attr<int64_t>("limit");
@@ -37,7 +37,7 @@ REGISTER_USER_OP("range")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     });
 

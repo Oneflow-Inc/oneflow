@@ -28,15 +28,23 @@ class _ConstantBase(Module):
         size: Union[_size_any_t, flow.Size],
         value: Union[float, int],
         dtype: Optional[flow.dtype],
+        device: Union[flow.device, str] = None,
+        requires_grad: bool = False,
     ) -> None:
         super().__init__()
         assert size is not None, "shape must not be None!"
         assert isinstance(
             size, (int, tuple, flow.Size)
         ), "shape should be int or tuple int!"
+
+        self.device = device
+        self.requires_grad = requires_grad
         size = _single(size)
         if dtype is None:
             dtype = flow.float32
+
+        if device is None:
+            self.device = flow.device("cpu")
 
         if dtype in [
             flow.int,
@@ -76,24 +84,35 @@ class _ConstantBase(Module):
         )
 
     def forward(self):
-        return self._op()[0]
+        res = self._op()[0]
+        res = res.to(device=self.device)
+        res.requires_grad = self.requires_grad
+        return res
 
 
 class Ones(_ConstantBase):
-    def __init__(self, size, dtype=None):
-        super().__init__(size, 1, dtype)
+    def __init__(self, size, dtype=None, device=None, requires_grad=False):
+        super().__init__(size, 1, dtype, device, requires_grad)
 
 
 @oneflow_export("ones")
 @experimental_api
-def ones_op(size, dtype=None):
+def ones_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
     r"""
     Returns a tensor filled with the scalar value 1,
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor. Can be \
+        size (an integer or tuple of integer values) – defining the shape of the output tensor. Can be \
          a variable number of arguments or a collection like a list or tuple.
+        dtype (flow.dtype, optional) – the desired data type of returned tensor.
+        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
@@ -107,24 +126,32 @@ def ones_op(size, dtype=None):
         tensor([1., 1., 1., 1., 1.], dtype=oneflow.float32)
 
     """
-    return Ones(size, dtype)()
+    return Ones(size, dtype, device, requires_grad)()
 
 
 class Zeros(_ConstantBase):
-    def __init__(self, size, dtype=None):
-        super().__init__(size, 0, dtype)
+    def __init__(self, size, dtype=None, device=None, requires_grad=False):
+        super().__init__(size, 0, dtype, device, requires_grad)
 
 
 @oneflow_export("zeros")
 @experimental_api
-def zeros_op(size, dtype=None):
+def zeros_op(
+    size: Union[_size_any_t, flow.Size],
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False,
+):
     r"""
     Returns a tensor filled with the scalar value 0,
     with the shape defined by the variable argument `size`.
 
     Args:
-        size(an integer or tuple of integer values): defining the shape of the output tensor. Can be \
+        size(an integer or tuple of integer values) - defining the shape of the output tensor. Can be \
          a variable number of arguments or a collection like a list or tuple.
+        dtype (flow.dtype, optional) – the desired data type of returned tensor.
+        device (torch.device, optional) – the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
+        requires_grad (bool, optional) – If autograd should record operations on the returned tensor. Default: False.
 
     For example:
 
@@ -138,7 +165,7 @@ def zeros_op(size, dtype=None):
         tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32)
 
     """
-    return Zeros(size, dtype)()
+    return Zeros(size, dtype, device, requires_grad)()
 
 
 class ZerosLike(Module):
@@ -212,4 +239,4 @@ def ones_like_op(other):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

@@ -117,11 +117,11 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
-        parallel_distribution_signature_(
-            &(kernel_conf.op_attribute().parallel_distribution_signature())) {
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
+        kernel_conf.op_attribute().parallel_distribution_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = &kernel_conf.op_attribute().sbp_signature();
+      sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
@@ -148,8 +148,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       return &(it->second);
     }
   }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -158,8 +158,8 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
     return it->second;
   }
 
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_->bn_in_op2parallel_distribution();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -183,10 +183,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
-  const SbpSignature* sbp_signature_;
+  const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -235,11 +235,29 @@ class UserKernelOpInferContext : public user_op::InferContext {
     if (it == arg2tensor_desc_.end()) { return nullptr; }
     return it->second.get();
   }
+  const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+  }
+  Shape* OutputShape(const std::string& arg_name, int32_t index) override {
+    return Shape4ArgNameAndIndex(arg_name, index);
+  }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();
@@ -253,8 +271,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
-  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                 int32_t index) const override {
+  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                      int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -262,8 +280,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string& arg_name,
-                                                                   int32_t index) const override {
+  const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(
+      const std::string& arg_name, int32_t index) const override {
     const auto& bn2parallel_distribution =
         parallel_distribution_signature_.bn_in_op2parallel_distribution();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -300,8 +318,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
-  SbpSignature sbp_signature_;
-  ParallelDistributionSignature parallel_distribution_signature_;
+  cfg::SbpSignature sbp_signature_;
+  cfg::ParallelDistributionSignature parallel_distribution_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;

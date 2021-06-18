@@ -27,15 +27,17 @@ class Eq(Module):
         )
 
     def forward(self, input, other):
-        if isinstance(other, flow.Tensor):
+        if isinstance(other, flow.Tensor) or isinstance(
+            other, flow._oneflow_internal.LocalTensor
+        ):
             for i in range(len(input.size())):
                 assert (
                     input.shape[i] >= other.shape[i]
                 ), "The second tensor's shape should broadcastable with the first argument."
+                if input.dtype != other.dtype:
+                    other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
-            raise NotImplementedError(
-                "Unsupport data type, int or float data type are not support yet!"
-            )
+            other = flow.Tensor([other], dtype=input.dtype, device=input.device)
         else:
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
@@ -54,10 +56,10 @@ def eq_op(input, other):
 
     Args:
         input (oneflow.Tensor): the tensor to compare
-        other (oneflow.Tensor): the tensor to compare
+        other (oneflow.Tensor, float or int): the target to compare
 
     Returns:
-        
+
         - A boolean tensor that is True where :attr:`input` is equal to :attr:`other` and False elsewhere
 
     For example:
@@ -82,4 +84,4 @@ def eq_op(input, other):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

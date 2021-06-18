@@ -30,7 +30,7 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-      const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+      const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
       CHECK_OR_RETURN(sbp.has_split_parallel());
       CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
@@ -49,7 +49,7 @@ REGISTER_CPU_ONLY_USER_OP("OneRecReader")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kTensorBuffer;
+      *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 

@@ -24,6 +24,7 @@ from typing import Optional, Sequence
 class Squeeze(Module):
     def __init__(self, dim: Optional[Sequence[int]] = None) -> None:
         super().__init__()
+        self.dim = dim
 
         self._op = (
             flow.builtin_op("squeeze")
@@ -34,6 +35,8 @@ class Squeeze(Module):
         )
 
     def forward(self, x):
+        if self.dim is None:
+            return x
         return self._op(x)[0]
 
 
@@ -67,12 +70,16 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         (1, 3)
 
     """
-    if type(dim) == int:
+    if isinstance(dim, int):
         dim = [dim]
+    elif dim is None:
+        dim = range(input.ndim)
+
+    dim = list(filter(lambda i: input.size(i) == 1, dim))
     return Squeeze(dim=dim)(input)
 
 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
