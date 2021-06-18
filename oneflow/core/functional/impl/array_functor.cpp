@@ -137,19 +137,26 @@ class ConcatFunctor {
  public:
   ConcatFunctor() {
     ops_.resize(kMaxInputCount);
-    for (int n = 2; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n).Output("out").Build());
+    for (int n = 1; n < ops_.size(); ++n) {
+      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n + 1).Output("out").Build());
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& axis,
                            const int64_t& max_dim_size) const {
     CHECK_GE_OR_RETURN(inputs.size(), 2);
-    CHECK_LT_OR_RETURN(inputs.size(), ops_.size())
-        << "The maximum number supported of inputs is " << ops_.size();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
-    return OpInterpUtil::Dispatch<Tensor>(*ops_.at(inputs.size()), inputs, attrs);
+    TensorTuple outputs;
+    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
+      TensorTuple partial_inputs(size);
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      outputs.push_back(
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+    }
+    if (outputs.size() == 1) { return outputs.at(0); }
+    return this->operator()(outputs, axis, max_dim_size);
   }
 
  private:
