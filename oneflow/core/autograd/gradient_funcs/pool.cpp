@@ -70,7 +70,7 @@ Maybe<void> PoolNdGrad::Capture(PoolInterpState* ctx, const TensorTuple& inputs,
 
   ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));
   ctx->output_index = ctx->SaveTensorForBackward(outputs.at(0));
-  
+
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
   ctx->padding = JUST(composed_attrs.GetAttr<std::string>("padding"));

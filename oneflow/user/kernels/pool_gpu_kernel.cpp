@@ -121,7 +121,8 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
 
 template<typename T>
 struct PoolGpuKernelUtil {
-  static void FWCompute(user_op::KernelComputeContext* ctx, GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
+  static void FWCompute(user_op::KernelComputeContext* ctx,
+                        GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     CHECK(gpu_pool_op_kernel_state != nullptr);
@@ -131,7 +132,8 @@ struct PoolGpuKernelUtil {
         CudnnSPZeroPtr<T>(), gpu_pool_op_kernel_state->cudnn_y_tensor_desc(), y->mut_dptr()));
   }
 
-  static void BWCompute(user_op::KernelComputeContext* ctx, GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
+  static void BWCompute(user_op::KernelComputeContext* ctx,
+                        GPUPoolOpKernelState* gpu_pool_op_kernel_state) {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);

@@ -125,15 +125,12 @@ class PoolNdGradFunctor {
   virtual ~PoolNdGradFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const std::string& mode,
-                           const int32_t& ndims,
-                           const std::string& data_format,
-                           const std::string& padding,
-                           const std::vector<int32_t>& padding_before,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
-                           const std::vector<int32_t>& strides,  const bool& ceil_mode) const {
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::string>("padding", padding));
@@ -161,7 +158,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
-
 };
 
 }  // namespace functional
