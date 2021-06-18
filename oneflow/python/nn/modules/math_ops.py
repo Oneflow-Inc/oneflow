@@ -31,7 +31,7 @@ from oneflow.python.ops.transpose_util import (
 class ScalarMul(Module):
     def __init__(self, alpha) -> None:
         super().__init__()
-        if not isinstance(alpha, int) and not isinstance(alpha, float):
+        if not isinstance(alpha, (int, float)):
             raise ValueError("alpha type can only be int or float")
         self.alpha = alpha
 
@@ -688,10 +688,9 @@ def cos_op(tensor):
 class Atan(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("atan").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.atan(x)
 
 
 @oneflow_export("atan")
@@ -1291,10 +1290,9 @@ def cosh_op(tensor):
 class Erf(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
 
     def forward(self, input):
-        return self.erf_op(input)[0]
+        return flow.F.erf(input)
 
 
 @oneflow_export("erf")
@@ -1430,10 +1428,9 @@ def erfc_op_tensor(input):
 class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("ceil").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.ceil(x)
 
 
 @oneflow_export("ceil")
@@ -1510,10 +1507,9 @@ def ceil_op_tensor(x):
 class Expm1(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("expm1").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.expm1(x)
 
 
 @oneflow_export("expm1")
@@ -1599,14 +1595,6 @@ class Topk(Module):
             .Attr("sorted", sorted)
             .Build()
         )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
-
         self.dim = dim
         self.largest = largest
 
@@ -1626,13 +1614,13 @@ class Topk(Module):
             return (flow.experimental.gather(input, indices, dim=axis), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = self._transpose_op(input, perm=perm)[0]
+            x = flow.F.transpose(input, perm=perm)
             if self.largest:
                 indices = self._op_topk_last_dim(x)[0]
             else:
                 neg_input = flow.experimental.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            indices = self._transpose_op(indices, perm=get_inversed_perm(perm))[0]
+            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.experimental.gather(input, indices, dim=axis), indices)
 
 

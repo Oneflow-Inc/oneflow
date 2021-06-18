@@ -16,7 +16,7 @@
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
 #   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
-#   "BoolList", DataType, Shape
+#   "BoolList", "DataType", "Shape"
 # }
 
 - name: "add_n"
