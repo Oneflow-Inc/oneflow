@@ -92,7 +92,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$(realpath ../third_party_install)
-          cmake --build . -j ${{ matrix.make_concurrency }} of_ccobj
+          cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
         if: startsWith(runner.os, 'Linux')
@@ -100,7 +100,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} oneflow_internal
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
       - name: Build (generate_api)
         if: startsWith(runner.os, 'Linux')
@@ -108,7 +108,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} generate_api
+          cmake --build . -j ${{ matrix.make_concurrency }} --target generate_api
         shell: bash
       - name: Build (ALL)
         if: startsWith(runner.os, 'Linux')
