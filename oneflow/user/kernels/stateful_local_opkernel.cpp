@@ -272,14 +272,6 @@ void LocalUserKernelComputeContext::Update(const EagerBlobObjectListPtr& inputs,
   base_ctx_.Update(inputs, outputs);
 }
 
-std::shared_ptr<user_op::KernelInitContext> LocalUserKernelComputeContext::CreateInitContext()
-    const {
-  std::shared_ptr<LocalUserKernelInitContext> init_ctx(new LocalUserKernelInitContext(
-      device_ctx_, base_ctx_.device_tag(), user_op_conf_, base_ctx_.input_arg_tuple(),
-      base_ctx_.output_arg_tuple(), base_ctx_.input_tensors(), base_ctx_.output_tensors(),
-      composed_attrs_));
-  return std::move(init_ctx);
-}
 
 Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
                                        const ArgVec& indexed_input_pairs,

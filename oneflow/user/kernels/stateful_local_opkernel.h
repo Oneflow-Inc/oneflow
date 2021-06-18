@@ -112,10 +112,6 @@ class ZeroCopyBaseContext {
 
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
-  const std::shared_ptr<const ArgTuple>& input_arg_tuple() const { return input_arg_tuple_; }
-  const std::shared_ptr<const ArgTuple>& output_arg_tuple() const { return output_arg_tuple_; }
-  const EagerBlobObjectListPtr& input_tensors() const { return input_tensors_; }
-  const EagerBlobObjectListPtr& output_tensors() const { return output_tensors_; }
   void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
  private:
@@ -242,8 +238,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
     return base_ctx_.Tensor4ArgNameAndIndex(arg_name, index);
   }
   DeviceCtx* device_ctx() override { return device_ctx_; }
-
-  std::shared_ptr<user_op::KernelInitContext> CreateInitContext() const override;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
   const ParallelContext& parallel_ctx() const override { UNIMPLEMENTED(); };
