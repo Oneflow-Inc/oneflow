@@ -19,10 +19,6 @@ from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 
-def _build_math_binary_elementwise_op(math_op):
-    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
-
-
 class Acos(Module):
     def __init__(self) -> None:
         super().__init__()
