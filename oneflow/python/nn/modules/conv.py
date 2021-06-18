@@ -130,7 +130,7 @@ class Conv2d(Module):
         In other words, for an input of size :math:`(N, C_{in}, L_{in})`,
         a depthwise convolution with a depthwise multiplier `K` can be performed with the arguments
         :math:`(C_\text{in}=C_\text{in}, C_\text{out}=C_\text{in} \times \text{K}, ..., \text{groups}=C_\text{in})`.
-    
+
 
     Args:
         in_channels (int): Number of channels in the input image
@@ -175,7 +175,7 @@ class Conv2d(Module):
 
     For example: 
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow.experimental as flow
@@ -215,6 +215,8 @@ class Conv2d(Module):
         padding = _pair(padding)
         dilation = _pair(dilation)
         self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *kernel_size)

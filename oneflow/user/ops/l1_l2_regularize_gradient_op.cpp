@@ -24,7 +24,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
   CHECK_EQ_OR_RETURN(model_diff->shape(), model->shape());
   *ctx->OutputShape("out", 0) = ctx->InputShape("model", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("model", 0);
+  *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic4ArgNameAndIndex("model", 0);
   return Maybe<void>::Ok();
 }
 
@@ -50,7 +50,7 @@ REGISTER_USER_OP("l1_l2_regularize_gradient")
       const user_op::TensorDesc* model = ctx->TensorDesc4ArgNameAndIndex("model", 0);
       const user_op::TensorDesc* model_diff = ctx->TensorDesc4ArgNameAndIndex("model_diff", 0);
       CHECK_EQ_OR_RETURN(model_diff->data_type(), model->data_type());
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("model", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("model", 0);
       return Maybe<void>::Ok();
     });
 
