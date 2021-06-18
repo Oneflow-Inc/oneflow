@@ -24,7 +24,7 @@ REGISTER_USER_OP("broadcast_div_grad")
     .Output("dy")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("dy", 0) = ctx->InputShape("y", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("dy", 0) = *ctx->IsDynamic4ArgNameAndIndex("y", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("dy", 0) = ctx->InputIsDynamic4ArgNameAndIndex("y", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -58,7 +58,7 @@ REGISTER_USER_OP("broadcast_div_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dy", 0) = *ctx->Dtype4ArgNameAndIndex("y", 0);
+      *ctx->OutputDType("dy", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
 
