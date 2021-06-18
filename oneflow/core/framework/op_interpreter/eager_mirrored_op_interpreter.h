@@ -18,9 +18,9 @@ limitations under the License.
 namespace oneflow {
 
 class Device;
+class TensorTuple;
 
 namespace one {
-Maybe<vm::EagerBlobObject> GenerateAllocatedEagerBlobObject(
-    DataType data_type, const Shape& shape, const std::shared_ptr<const Device>& device);
+Maybe<void> RunEmptyOp(TensorTuple* outputs);
 }
 }  // namespace oneflow

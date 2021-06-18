@@ -39,7 +39,8 @@ REGISTER_CPU_ONLY_USER_OP("image_flip")
       CHECK_EQ_OR_RETURN(flip_code_desc->shape().elem_cnt(), N);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -48,7 +49,7 @@ REGISTER_CPU_ONLY_USER_OP("image_flip")
       CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* flip_code_desc = ctx->TensorDesc4ArgNameAndIndex("flip_code", 0);
       CHECK_EQ_OR_RETURN(flip_code_desc->data_type(), DataType::kInt8);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -69,7 +70,8 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
       CHECK_EQ_OR_RETURN(flip_code_desc->shape().elem_cnt(), N);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("bbox", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("bbox", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("bbox", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -80,7 +82,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
       CHECK_EQ_OR_RETURN(image_size_desc->data_type(), DataType::kInt32);
       const user_op::TensorDesc* flip_code_desc = ctx->TensorDesc4ArgNameAndIndex("flip_code", 0);
       CHECK_EQ_OR_RETURN(flip_code_desc->data_type(), DataType::kInt8);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("bbox", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("bbox", 0);
       return Maybe<void>::Ok();
     });
 
@@ -97,7 +99,8 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
       CHECK_EQ_OR_RETURN(scale_desc->shape().elem_cnt(), N * 2);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("bbox", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("bbox", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("bbox", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -106,7 +109,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
       CHECK_EQ_OR_RETURN(bbox_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       CHECK_EQ_OR_RETURN(scale_desc->data_type(), DataType::kFloat);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("bbox", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("bbox", 0);
       return Maybe<void>::Ok();
     });
 
@@ -127,7 +130,8 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
       CHECK_EQ_OR_RETURN(flip_code_desc->shape().elem_cnt(), N);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("ploy", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("ploy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -138,7 +142,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
       CHECK_EQ_OR_RETURN(image_size_desc->data_type(), DataType::kInt32);
       const user_op::TensorDesc* flip_code_desc = ctx->TensorDesc4ArgNameAndIndex("flip_code", 0);
       CHECK_EQ_OR_RETURN(flip_code_desc->data_type(), DataType::kInt8);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("ploy", 0);
       return Maybe<void>::Ok();
     });
 
@@ -155,7 +159,8 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
       CHECK_EQ_OR_RETURN(scale_desc->shape().elem_cnt(), N * 2);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("ploy", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("ploy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -164,7 +169,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
       CHECK_EQ_OR_RETURN(poly_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* scale_desc = ctx->TensorDesc4ArgNameAndIndex("scale", 0);
       CHECK_EQ_OR_RETURN(scale_desc->data_type(), DataType::kFloat);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("ploy", 0);
       return Maybe<void>::Ok();
     });
 
@@ -177,14 +182,15 @@ REGISTER_CPU_ONLY_USER_OP("image_normalize")
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_desc->shape().NumAxes(), 1);
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_EQ_OR_RETURN(in_desc->data_type(), DataType::kTensorBuffer);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -206,7 +212,8 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
       CHECK_EQ_OR_RETURN(image_size_desc->shape().elem_cnt(), N * 2);
 
       *ctx->OutputShape("out", 0) = ctx->InputShape("ploy", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("ploy", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(GetSbp)
@@ -217,7 +224,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
       CHECK_EQ_OR_RETURN(poly_index_desc->data_type(), DataType::kTensorBuffer);
       const user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
       CHECK_EQ_OR_RETURN(image_size_desc->data_type(), DataType::kInt32);
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("ploy", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("ploy", 0);
       return Maybe<void>::Ok();
     });
 
