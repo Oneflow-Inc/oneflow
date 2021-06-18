@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
@@ -77,37 +77,39 @@ class ReflectionPad2d(Module):
 
     """
 
-    def __init__(self, padding: Union[int, Tuple[int, int, int, int]]) -> None:
+    def __init__(
+        self, padding: Union[int, Tuple[int, int, int, int], List[int]]
+    ) -> None:
         super().__init__()
 
-        self.boundry = padding
-        if isinstance(padding, int):
-            self.boundry = [padding, padding, padding, padding]
+        if isinstance(padding, (tuple, list)):
+            assert len(padding) == 4, ValueError("Length of padding must be 4")
+            boundary = [padding[0], padding[1], padding[2], padding[3]]
+        elif isinstance(padding, int):
+            boundary = [padding, padding, padding, padding]
+        else:
+            raise ValueError("padding must be int or list or tuple!")
 
+        self.padding = boundary
         self._op = (
             flow.builtin_op("reflection_pad2d")
             .Input("x")
             .Output("y")
-            .Attr("padding", list(self.boundry))
+            .Attr("padding", self.padding)
             .Build()
         )
 
     def forward(self, input: Tensor) -> Tensor:
-        H, W = input.shape[2], input.shape[3]
-        if isinstance(self.boundry, (tuple, list)):
-            assert len(self.boundry) == len(input.shape), ValueError(
-                "padding boundry must be the same size of input dims"
-            )
-            assert (
-                self.boundry[2] < H
-                and self.boundry[3] < H
-                and self.boundry[0] < W
-                and self.boundry[1] < W
-            ), ValueError(
-                "Padding size should be less than the corresponding input dimension!"
-            )
-        else:
-            raise NotImplementedError("padding must be in or list or tuple!")
+        assert len(self.padding) == len(
+            input.shape
+        ), "padding boundry must be the same size of input dims"
+        _, _, H, W = input.shape
+        assert (
+            self.padding[2] < H
+            and self.padding[3] < H
+            and self.padding[0] < W
+            and self.padding[1] < W
+        ), "Padding size should be less than the corresponding input dimension!"
 
         return self._op(input)[0]
 

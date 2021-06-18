@@ -100,15 +100,15 @@ def _compare_op_function_with_samples(test_case, device_type, sample):
         input = flow.Tensor(
             sample["input"],
             dtype=flow.float32,
-            requires_grad=True,
             device=flow.device(device_type),
+            requires_grad=False,
         )
     else:
         input = flow.Tensor(
             sample["input"],
             dtype=flow.int32,
-            requires_grad=True,
             device=flow.device(device_type),
+            requires_grad=False,
         )
 
     of_out = layer(input)
