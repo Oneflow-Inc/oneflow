@@ -47,7 +47,7 @@ jobs:
       - name: Install dependencies (apt)
         if: matrix.test_suite == 'ubuntu'
         run: |
-          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
+          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
         shell: bash
       - name: Cache pip (Linux)
         if: startsWith(runner.os, 'Linux')
