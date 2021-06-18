@@ -108,7 +108,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} generate_api
+          cmake --build . -j ${{ matrix.make_concurrency }} --target generate_api
         shell: bash
       - name: Build (oneflow_testexe)
         if: always()
@@ -116,7 +116,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} --target generate_api
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
         shell: bash
       - name: Build (ALL)
         if: always()
