@@ -868,6 +868,7 @@ def moments(
 
 
 @oneflow_export("nn.GroupNorm")
+@stable_api
 def group_normalization(
     x: oneflow._oneflow_internal.BlobDesc,
     num_groups: int = 32,
