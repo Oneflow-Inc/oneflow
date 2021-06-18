@@ -236,7 +236,7 @@ def _test_deconv_bias_true(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
-def _test_deconv_group(test_case, device):
+def _test_deconv_group_bias_false(test_case, device):
     np_arr = np.array(
         [
             [
@@ -350,6 +350,120 @@ def _test_deconv_group(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
+def _test_deconv_group_bias_true(test_case, device):
+    np_arr = np.array(
+        [
+            [
+                [
+                    [-2.0125174206754517, 1.9917882689443576],
+                    [0.13146748727936577, -0.5356457374181375],
+                ],
+                [
+                    [1.020683505853394, 1.2900643048299678],
+                    [-0.549010560600543, 0.8088391626901512],
+                ],
+            ]
+        ]
+    )
+    input = flow.Tensor(
+        np_arr, dtype=flow.float32, device=flow.device("cuda"), requires_grad=True
+    )
+    m = nn.ConvTranspose2d(2, 2, 3, stride=1, groups=2)
+    weight = np.array(
+        [
+            [
+                [
+                    [0.06456436216831207, -0.10852358490228653, -0.21638715267181396],
+                    [-0.2279110550880432, 0.1476770043373108, 0.19457484781742096],
+                    [0.05026858672499657, 0.10818571597337723, 0.02056501805782318],
+                ],
+                [
+                    [0.205095112323761, 0.1488947868347168, -0.2344113141298294],
+                    [0.1684819906949997, -0.21986986696720123, 0.1082606166601181],
+                    [-0.1528974026441574, 0.17120417952537537, 0.01954500749707222],
+                ],
+            ]
+        ]
+    )
+    m.weight = flow.nn.Parameter(flow.Tensor(weight))
+    bias = np.array([0.06456436216831207, -0.10852358490228653])
+    m.bias = flow.nn.Parameter(flow.Tensor(bias))
+    m = m.to("cuda")
+    output = m(input)
+    np_out = [
+        [
+            [
+                [
+                    -0.0653725415468216,
+                    0.4115685224533081,
+                    0.2838912606239319,
+                    -0.3664330244064331,
+                ],
+                [
+                    0.5317274332046509,
+                    -0.735439658164978,
+                    -0.00319729745388031,
+                    0.5680230855941772,
+                ],
+                [
+                    -0.06656493246555328,
+                    0.08845742046833038,
+                    0.18513765931129456,
+                    0.0013023391366004944,
+                ],
+                [
+                    0.0711730495095253,
+                    0.05186111479997635,
+                    0.009318776428699493,
+                    0.053548797965049744,
+                ],
+            ],
+            [
+                [
+                    0.1008136197924614,
+                    0.30803677439689636,
+                    -0.1556994915008545,
+                    -0.41092926263809204,
+                ],
+                [
+                    -0.04915618151426315,
+                    -0.03144439309835434,
+                    -0.032543815672397614,
+                    -0.15846148133277893,
+                ],
+                [
+                    -0.3570818305015564,
+                    0.12595993280410767,
+                    -0.10498549044132233,
+                    0.004256151616573334,
+                ],
+                [
+                    -0.024581290781497955,
+                    -0.3261858820915222,
+                    0.019222639501094818,
+                    -0.0927148163318634,
+                ],
+            ],
+        ]
+    ]
+    test_case.assertTrue(np.allclose(output.numpy(), np_out, 1e-6, 1e-6))
+    output = output.sum()
+    output.backward()
+    np_grad = [
+        [
+            [
+                [0.03301373869180679, 0.03301373869180679],
+                [0.03301373869180679, 0.03301373869180679],
+            ],
+            [
+                [0.21430310606956482, 0.21430310606956482],
+                [0.21430310606956482, 0.21430310606956482],
+            ],
+        ]
+    ]
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -360,7 +474,8 @@ class TestLess(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_deconv_bias_false,
             _test_deconv_bias_true,
-            _test_deconv_group,
+            _test_deconv_group_bias_false,
+            _test_deconv_group_bias_true,
         ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
