@@ -19,9 +19,9 @@ limitations under the License.
 namespace oneflow {
 
 template<typename SRC, typename DST>
-struct TrilScaleFetch {
-  TrilScaleFetch(const SRC* src, int64_t tril_num_rows, int64_t row_size, int64_t diagonal,
-                 SRC fill, SRC scale)
+struct TrilScaleLoad {
+  TrilScaleLoad(const SRC* src, int64_t tril_num_rows, int64_t row_size, int64_t diagonal, SRC fill,
+                SRC scale)
       : src(src),
         tril_num_rows(tril_num_rows),
         row_size(row_size),
@@ -29,12 +29,12 @@ struct TrilScaleFetch {
         fill(fill),
         scale(scale) {}
   template<int N>
-  __device__ void fetch(DST* dst, int64_t row, int64_t col) {
+  __device__ void load(DST* dst, int64_t row, int64_t col) {
     int64_t tril_row = row % tril_num_rows;
     int64_t diagonal_col_id = tril_row + diagonal;
-    bool need_fetch = (col <= diagonal_col_id);
+    bool need_load = (col <= diagonal_col_id);
     cuda::softmax::Pack<SRC, N> pack;
-    if (need_fetch) {
+    if (need_load) {
       const int64_t offset = row * row_size + col;
       pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
     }
@@ -84,11 +84,11 @@ struct MaskAndScaleStore {
 };
 
 template<typename SRC, typename DST>
-struct MaskAndScaleFetch {
-  MaskAndScaleFetch(const SRC* src, const int8_t* mask, int64_t row_size, SRC scale)
+struct MaskAndScaleLoad {
+  MaskAndScaleLoad(const SRC* src, const int8_t* mask, int64_t row_size, SRC scale)
       : src(src), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
-  __device__ void fetch(DST* dst, int64_t row, int64_t col) const {
+  __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
     const int64_t offset = row * row_size + col;
     pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
@@ -157,14 +157,14 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
     const int64_t tril_num_rows = x_shape.At(x_shape.NumAxes() - 2);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    TrilScaleFetch<T, ComputeType> fetch(
+    TrilScaleLoad<T, ComputeType> load(
         x->dptr<T>(), tril_num_rows, cols, ctx->Attr<int64_t>("diagonal"),
         ctx->Attr<float>("tril_fill_value"), ctx->Attr<float>("tril_scale_value"));
     MaskAndScaleStore<ComputeType, T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(),
                                             mask->dptr<int8_t>(), cols,
                                             ctx->Attr<float>("mask_scale_value"));
-    cuda::softmax::DispatchSoftmax<decltype(fetch), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), fetch, store, rows, cols);
+    cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
+        ctx->device_ctx()->cuda_stream(), load, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -198,15 +198,15 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
     const int64_t tril_num_rows = dy_shape.At(dy_shape.NumAxes() - 2);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    cuda::softmax::DirectFetch<T, ComputeType> fetch_softmax_y(softmax_y->dptr<T>(), cols);
-    MaskAndScaleFetch<T, ComputeType> fetch_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
-                                               ctx->Attr<float>("mask_scale_value"));
+    cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y->dptr<T>(), cols);
+    MaskAndScaleLoad<T, ComputeType> load_dy(dy->dptr<T>(), mask->dptr<int8_t>(), cols,
+                                             ctx->Attr<float>("mask_scale_value"));
     TrilScaleStore<ComputeType, T> store(dx->mut_dptr<T>(), tril_num_rows, cols,
                                          ctx->Attr<int64_t>("diagonal"), static_cast<T>(0.0),
                                          ctx->Attr<float>("tril_scale_value"));
-    cuda::softmax::DispatchSoftmaxGrad<decltype(fetch_softmax_y), decltype(fetch_dy),
-                                       decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), fetch_softmax_y, fetch_dy, store, rows, cols);
+    cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy), decltype(store),
+                                       ComputeType>(ctx->device_ctx()->cuda_stream(),
+                                                    load_softmax_y, load_dy, store, rows, cols);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
