@@ -969,6 +969,24 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(of_input.grad.numpy(), np_out_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test__tensor_acos(test_case):
+        input = flow.Tensor(np.random.rand(8, 11, 9, 7) - 0.5, requires_grad=True,)
+        of_out = input.acos()
+        np_out = np.arccos(input.numpy())
+        test_case.assertTrue(
+            np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
+        )
+        of_out = of_out.sum()
+        of_out.backward()
+        np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
+        test_case.assertTrue(
+            np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
+        )
+
     def test_tensor_ceil(test_case):
         x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.ceil()
