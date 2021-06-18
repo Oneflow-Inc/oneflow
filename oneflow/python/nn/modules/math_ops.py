@@ -31,7 +31,7 @@ from oneflow.python.ops.transpose_util import (
 class ScalarMul(Module):
     def __init__(self, alpha) -> None:
         super().__init__()
-        if not isinstance(alpha, int) and not isinstance(alpha, float):
+        if not isinstance(alpha, (int, float)):
             raise ValueError("alpha type can only be int or float")
         self.alpha = alpha
 

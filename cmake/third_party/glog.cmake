@@ -88,3 +88,5 @@ add_custom_target(glog_copy_libs_to_destination
   DEPENDS glog_create_library_dir)
 
 endif(THIRD_PARTY)
+add_library(glog_imported UNKNOWN IMPORTED)
+set_property(TARGET glog_imported PROPERTY IMPORTED_LOCATION "${GLOG_STATIC_LIBRARIES}")

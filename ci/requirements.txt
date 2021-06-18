@@ -1,0 +1,7 @@
+pycocotools
+opencv-python==4.3.0.38; sys_platform == 'darwin'
+opencv-python==4.2.0.34; sys_platform != 'darwin'
+scipy
+pillow
+tensorflow-addons==0.13.0
+tensorflow==2.5.0
