@@ -209,8 +209,6 @@ class MaxPool2DFunctor : public PoolNDFunctor {
   }
 };
 
-
-
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {

@@ -109,7 +109,7 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class OpExprMap: public std::map<std::string, std::shared_ptr<OpExpr>> {
+class OpExprMap : public std::map<std::string, std::shared_ptr<OpExpr>> {
  public:
   Maybe<OpExpr> GetOpExpr(const std::string& op_type_name) const {
     const auto& it = this->find(op_type_name);
@@ -133,7 +133,8 @@ class PoolNdGradFunctor {
     for (auto mode : mode_opts_) {
       for (auto ndims : ndims_opts_) {
         auto& op_type_name = GetOpTypeName(mode, ndims);
-        opExprMap_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
+        opExprMap_[op_type_name] = CHECK_JUST(
+            one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
       }
     }
   }
@@ -143,15 +144,12 @@ class PoolNdGradFunctor {
   virtual ~PoolNdGradFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
-                           const std::shared_ptr<one::Tensor>& dy,
-                           const std::string& mode,
-                           const int32_t& ndims,
-                           const std::string& data_format,
-                           const std::string& padding,
-                           const std::vector<int32_t>& padding_before,
+                           const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
+                           const int32_t& ndims, const std::string& data_format,
+                           const std::string& padding, const std::vector<int32_t>& padding_before,
                            const std::vector<int32_t>& padding_after,
                            const std::vector<int32_t>& pool_size,
-                           const std::vector<int32_t>& strides,  const bool& ceil_mode) const {
+                           const std::vector<int32_t>& strides, const bool& ceil_mode) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<std::string>("padding", padding));
@@ -178,7 +176,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConvFilterGradFunctor>("ConvFilterGrad");
   m.add_functor<impl::ConvDataGradFunctor>("ConvDataGrad");
   m.add_functor<impl::PoolNdGradFunctor>("PoolNdGrad");
-
 };
 
 }  // namespace functional
