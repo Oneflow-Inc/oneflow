@@ -73,6 +73,7 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
           builder->ReleaseTensor(blob_object, parallel_desc);
         });
       });
+  return Maybe<void>::Ok();
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
