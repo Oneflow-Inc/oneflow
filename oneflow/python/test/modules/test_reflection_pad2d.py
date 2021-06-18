@@ -88,8 +88,9 @@ def gen_numpy_test_sample(input, padding):
 def _test_reflection_pad2d(test_case, shape, padding, device):
     np_input = np.random.randn(*shape).astype(np.float32)
 
-    of_input = flow.Tensor(np_input, dtype=flow.float32,
-                           device=flow.device(device), requires_grad=True)
+    of_input = flow.Tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
 
     if isinstance(padding, int):
         boundary = [padding, padding, padding, padding]
@@ -105,8 +106,7 @@ def _test_reflection_pad2d(test_case, shape, padding, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
     of_out = of_out.sum()
     of_out.backward()
-    test_case.assertTrue(np.allclose(
-        of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
+    test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(

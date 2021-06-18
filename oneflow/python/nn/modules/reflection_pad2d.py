@@ -78,25 +78,33 @@ class ReflectionPad2d(Module):
         else:
             raise ValueError("padding must be in or list or tuple!")
         self.padding = boundary
-        self._op = (flow.builtin_op("reflection_pad2d")
-                    .Input("x")
-                    .Output("y")
-                    .Attr("padding", boundary)
-                    .Attr("floating_value", float(1.))
-                    .Attr("integral_value", int(0))
-                    .Build()
-                    )
+        self._op = (
+            flow.builtin_op("reflection_pad2d")
+            .Input("x")
+            .Output("y")
+            .Attr("padding", boundary)
+            .Attr("floating_value", float(1.0))
+            .Attr("integral_value", int(0))
+            .Build()
+        )
 
     def forward(self, x):
         H, W = x.shape[2], x.shape[3]
-        if self.padding[2] < H and self.padding[3] < H and self.padding[0] < W and self.padding[1] < W:
+        if (
+            self.padding[2] < H
+            and self.padding[3] < H
+            and self.padding[0] < W
+            and self.padding[1] < W
+        ):
             res = self._op(x)[0]
             return res
         else:
             raise ValueError(
-                "padding size should be less than the corresponding input dimension!")
+                "padding size should be less than the corresponding input dimension!"
+            )
 
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod(raise_on_error=True)
