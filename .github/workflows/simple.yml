@@ -22,7 +22,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
     strategy:
-      max-parallel: 10
       fail-fast: false
       matrix:
         test_suite: ["mac", "ubuntu"]

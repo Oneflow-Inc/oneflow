@@ -260,6 +260,7 @@ void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
 
 }  // namespace
 
+#ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {
   InitNumProcessPerNode();
 #ifdef WITH_CUDA
@@ -308,6 +309,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
   DestroyNumProcessPerNode();
 }
+#endif  // __linux__
 
 }  // namespace test
 }  // namespace vm
