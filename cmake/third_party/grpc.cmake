@@ -44,7 +44,7 @@ ExternalProject_Add(grpc
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j${PROC_NUM} grpc grpc_unsecure grpc++_unsecure
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} -t grpc grpc_unsecure grpc++_unsecure
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
