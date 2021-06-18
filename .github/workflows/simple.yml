@@ -43,7 +43,7 @@ jobs:
       - name: Install dependencies (homebrew)
         if: matrix.test_suite == 'mac'
         run: |
-          brew install nasm
+          brew install nasm ninja
         shell: bash
       - name: Install dependencies (apt)
         if: matrix.test_suite == 'ubuntu'
