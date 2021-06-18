@@ -85,7 +85,7 @@ jobs:
           mkdir -p build-third_party
           mkdir -p third_party_install
           cd build-third_party
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$(realpath ../third_party_install)
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
@@ -93,7 +93,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$(realpath ../third_party_install)
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$PWD/../third_party_install
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
