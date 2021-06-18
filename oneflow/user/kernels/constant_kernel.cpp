@@ -36,14 +36,9 @@ class ConstantKernel final : public OpKernel {
   ConstantKernel() = default;
   ~ConstantKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<ConstState>(false);
-  }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* const_state = dynamic_cast<ConstState*>(state);
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    auto const_state = std::make_shared<ConstState>(false);
     if (const_state->is_inited()) { return; }
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
