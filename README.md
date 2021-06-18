@@ -107,7 +107,7 @@
   - Install dependencies
     - on Ubuntu 20.04, run:
       ```
-      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
+      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake
       ```
       If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
     - on macOS, run:
