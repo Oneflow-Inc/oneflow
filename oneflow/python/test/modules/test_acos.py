@@ -46,7 +46,7 @@ def _test_acos_impl(test_case, shape, device):
 class TestAcos(flow.unittest.TestCase):
     def test_acos(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_acos_impl(test_case, *arg)
