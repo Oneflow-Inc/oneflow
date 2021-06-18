@@ -102,7 +102,8 @@ class GroupNorm(Module):
             flow.nn.init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
-        assert (len(input.shape) >= 3
+        assert (
+            len(input.shape) >= 3
         ), "The dimensions of input tensor must larger than 2"
         assert (
             input.shape[1] == self.num_channels
