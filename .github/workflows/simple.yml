@@ -106,6 +106,7 @@ jobs:
           make -j ${{ matrix.make_concurrency }} generate_api
         shell: bash
       - name: Build (oneflow_testexe)
+        continue-on-error: true
         run: |
           mkdir -p build
           cd build
@@ -121,12 +122,14 @@ jobs:
           make -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
+        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
         shell: bash
       - name: Op test
+        continue-on-error: true
         run: |
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
