@@ -225,6 +225,8 @@ class GpuDecodeHandle final : public DecodeHandle {
   NppStreamContext npp_stream_ctx_{};
   nvjpegDevAllocator_t dev_allocator_{};
   nvjpegPinnedAllocator_t pinned_allocator_{};
+  CpuDecodeHandle fallback_handle_;
+  unsigned char* fallback_buffer_;
   bool warmup_done_;
   bool use_hardware_acceleration_;
 };
@@ -270,6 +272,7 @@ GpuDecodeHandle::~GpuDecodeHandle() {
   }
   OF_NVJPEG_CHECK(nvjpegDestroy(jpeg_handle_));
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
+  OF_CUDA_CHECK(cudaFreeHost(fallback_buffer_));
 }
 
 void GpuDecodeHandle::DecodeRandomCrop(const unsigned char* data, size_t length,
@@ -360,6 +363,17 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              int target_height) {
   int width;
   int height;
+  nvjpegChromaSubsampling_t subsampling;
+  int nComponents;
+  nvjpegStatus_t status =
+      nvjpegGetImageInfo(jpeg_handle_, data, length, &nComponents, &subsampling, &width, &height);
+  if (status != NVJPEG_STATUS_SUCCESS) {
+    fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size,
+                                            fallback_buffer_, target_width, target_height);
+    OF_CUDA_CHECK(cudaMemcpy(dst, fallback_buffer_, target_width * target_height * kNumChannels,
+                             cudaMemcpyDefault));
+    return;
+  }
   NoChangeROIGenerator no_change_roi_generator;
   RandomCropROIGenerator random_crop_roi_generator(crop_generator);
   if (use_hardware_acceleration_) {
@@ -377,6 +391,7 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
 
 void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) {
   if (warmup_done_) { return; }
+  OF_CUDA_CHECK(cudaHostAlloc(&fallback_buffer_, workspace_size, 0));
   warmup_size = std::min(static_cast<int>(std::sqrt(workspace_size / kNumChannels)), warmup_size);
   cv::Mat image = cv::Mat::zeros(cv::Size(warmup_size, warmup_size), CV_8UC3);
   cv::randu(image, cv::Scalar(0, 0, 0), cv::Scalar(255, 255, 255));
