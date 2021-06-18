@@ -195,7 +195,7 @@ class Session(object):
         if not oneflow._oneflow_internal.EagerExecutionEnabled():
             c_api_util.InitLazyGlobalSession(self.config_proto)
             for job_name, func_desc in self.job_name2function_desc_.items():
-                compiler.Compile(self, func_desc, self.config_proto)
+                compiler.Compile(self, func_desc)
                 self.existed_module_names_ = set()
             self.job_name2var_name2var_blob_ = dict()
             assert len(self.job_name2function_desc_.items()) > 0
@@ -289,7 +289,7 @@ class Session(object):
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
             remote_blobs = compiler.EagerRun(
-                self, function_desc, self.config_proto, arg
+                self, function_desc, arg
             )
             if remote_blobs is None:
                 return

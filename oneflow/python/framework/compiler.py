@@ -40,8 +40,8 @@ import oneflow._oneflow_internal
 import inspect
 
 
-def Compile(session, function_desc, config_proto):
-    with InterpretScope(session, function_desc, config_proto):
+def Compile(session, function_desc):
+    with InterpretScope(session, function_desc):
         _CompileJob(session, function_desc)
         session.StashJob(function_desc.job_func.__name__)
         oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
@@ -52,7 +52,7 @@ def Compile(session, function_desc, config_proto):
 
 
 def EagerRun(session, function_desc, config_proto, args):
-    with InterpretScope(session, function_desc, config_proto):
+    with InterpretScope(session, function_desc):
         ret = _InterpretGlobalFunction(function_desc, args)
         oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
         session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
@@ -60,7 +60,7 @@ def EagerRun(session, function_desc, config_proto, args):
 
 
 @contextmanager
-def InterpretScope(session, function_desc, config_proto):
+def InterpretScope(session, function_desc):
     job_conf = function_desc.job_config_proto
     job_conf.set_job_name(function_desc.job_func.__name__)
     placement_scope = function_desc.function_attribute.default_placement_scope
