@@ -108,7 +108,7 @@ ExternalProject_Add(opencv
         -DBUILD_OPENEXR:BOOL=ON
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
-        -DWITH_ITT:BOOL=ON
+        -DWITH_ITT:BOOL=OFF
         -DBUILD_opencv_flann:BOOL=OFF
         -DBUILD_opencv_ml:BOOL=OFF
         -DBUILD_opencv_objdetect:BOOL=OFF
