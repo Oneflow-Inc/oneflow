@@ -13,17 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, List, Tuple
 
 import oneflow as flow
-from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
-
-
-def _build_math_binary_elementwise_op(math_op):
-    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
 
 
 class Atan2(Module):

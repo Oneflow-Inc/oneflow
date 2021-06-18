@@ -32,6 +32,7 @@ jobs:
             "CMAKE_BUILD_TYPE=Release",
             "CMAKE_BUILD_TYPE=RelWithDebInfo",
           ]
+        cmake_generator: ["Ninja", "Unix Makefiles"]
         build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
         include:
           - test_suite: mac
@@ -52,7 +53,7 @@ jobs:
       - name: Install dependencies (apt)
         if: matrix.test_suite == 'ubuntu'
         run: |
-          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip
+          sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip ninja-build
         shell: bash
       - name: Cache pip (Linux)
         if: startsWith(runner.os, 'Linux')
@@ -78,6 +79,7 @@ jobs:
           cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
           cmake_flags+=" -D${{ matrix.cmake_build_type }}"
+          cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -D${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
@@ -85,16 +87,17 @@ jobs:
         run: |
           set -x
           mkdir -p build-third_party
+          mkdir -p third_party_install
           cd build-third_party
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF -DTHIRD_PARTY_DIR=$(realpath ../third_party_install)
           cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
         run: |
           mkdir -p build
           cd build
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} of_ccobj
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON -DTHIRD_PARTY_DIR=$(realpath ../third_party_install)
+          cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
         if: always()
@@ -102,7 +105,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} oneflow_internal
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
       - name: Build (generate_api)
         if: always()
@@ -118,7 +121,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} oneflow_testexe
+          cmake --build . -j ${{ matrix.make_concurrency }} --target generate_api
         shell: bash
       - name: Build (ALL)
         if: always()
