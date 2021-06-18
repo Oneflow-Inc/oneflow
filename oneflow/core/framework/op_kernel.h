@@ -29,7 +29,6 @@ limitations under the License.
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -197,6 +196,7 @@ class KernelComputeContext {
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
+
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                        int32_t index) const = 0;
   virtual DeviceType device_type() const = 0;

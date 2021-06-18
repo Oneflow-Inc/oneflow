@@ -43,23 +43,22 @@ struct PoolInterpState : public OpExprInterpState {
 class PoolNdGrad : public OpExprGradFunction<PoolInterpState> {
  public:
   virtual ~PoolNdGrad() = default;
-  Maybe<void> Init(const OpExpr& op) override;
+  Maybe<void> Init(const OpExpr& op, const std::string& mode);
   Maybe<void> Capture(PoolInterpState* ctx, const TensorTuple& inputs, const TensorTuple& outputs,
                       const AttrMap& attrs) const override;
   Maybe<void> Apply(const PoolInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
- protected:
-  std::string mode_;
-
  private:
+  std::string mode_;
   AttrMap base_attrs_;
 };
 
-Maybe<void> PoolNdGrad::Init(const OpExpr& op) {
+Maybe<void> PoolNdGrad::Init(const OpExpr& op, const std::string& mode) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+  mode_ = mode;
   return Maybe<void>::Ok();
 }
 
@@ -103,10 +102,7 @@ Maybe<void> PoolNdGrad::Apply(const PoolInterpState* ctx, const TensorTuple& out
 
 class MaxPoolNdGrad final : public PoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    mode_ = "max";
-    return PoolNdGrad::Init(op);
-  }
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_1d", MaxPoolNdGrad);
@@ -115,10 +111,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("max_pool_3d", MaxPoolNdGrad);
 
 class AvgPoolNdGrad final : public PoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override {
-    mode_ = "avg";
-    return PoolNdGrad::Init(op);
-  }
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("avg_pool_1d", AvgPoolNdGrad);
