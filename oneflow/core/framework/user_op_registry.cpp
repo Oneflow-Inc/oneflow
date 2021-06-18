@@ -225,7 +225,7 @@ OpRegistry& OpRegistry::Finish() {
                           == in_physical->shape());
         }
         for (const auto& pair : ctx->outputs()) {
-          TensorDesc* desc = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
           *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
           const auto& parallel_distribution =
               ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
