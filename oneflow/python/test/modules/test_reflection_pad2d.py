@@ -101,22 +101,22 @@ def _compare_op_function_with_samples(test_case, device_type, sample):
             sample["input"],
             dtype=flow.float32,
             device=flow.device(device_type),
-            requires_grad=False,
+            requires_grad=True,
         )
     else:
         input = flow.Tensor(
             sample["input"],
             dtype=flow.int32,
             device=flow.device(device_type),
-            requires_grad=False,
+            requires_grad=True,
         )
 
     of_out = layer(input)
     test_case.assertTrue(np.allclose(of_out.numpy(), sample["output"], 1e-3, 1e-3))
 
-    # of_out = of_out.sum()
-    # of_out.backward()
-    # assert np.allclose(input.grad.numpy(), sample["grad"], 1e-3, 1e-3)
+    of_out = of_out.sum()
+    of_out.backward()
+    assert np.allclose(input.grad.numpy(), sample["grad"], 1e-3, 1e-3)
 
 
 def _gen_arg_dict(device_type="cpu"):

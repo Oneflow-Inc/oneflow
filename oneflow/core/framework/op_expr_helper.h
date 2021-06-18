@@ -262,6 +262,14 @@ Maybe<one::UserOpExpr> SliceGradOp(const std::vector<int64_t>& start,
                                    const std::vector<int64_t>& stop,
                                    const std::vector<int64_t>& step, const std::string& name);
 
+Maybe<one::UserOpExpr> ReflectionPad2dGradOp(const std::vector<int64_t>& padding,
+                                             const double& floating_value,
+                                             const int64_t& integral_value);
+Maybe<one::UserOpExpr> ReflectionPad2dGradOp(const std::vector<int64_t>& padding,
+                                             const double& floating_value,
+                                             const int64_t& integral_value,
+                                             const std::string& name);
+
 Maybe<one::UserOpExpr> PoolNdGradOp(const std::string& mode, const std::string& data_format,
                                     const std::string& padding,
                                     const std::vector<int32_t>& padding_before,
