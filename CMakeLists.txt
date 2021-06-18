@@ -81,17 +81,17 @@ if (OF_SOFTMAX_USE_FAST_MATH)
 endif()
 if (RPC_BACKEND MATCHES "GRPC")
   add_definitions(-DRPC_BACKEND_GRPC)
-  message("-- RPC backend enabled: gRPC")
+  message(STATUS "RPC backend enabled: gRPC")
   set(SUPPORTED_RPC_BACKEND_FOUND 1)
 endif()
 add_definitions(-DRPC_BACKEND_LOCAL)
-message("-- RPC backend enabled: local")
+message(STATUS "RPC backend enabled: local")
 enable_testing()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"
-  CACHE PATH "Where the third party headers and libs are put")
+set(THIRD_PARTY_DIR "${PROJECT_BINARY_DIR}/third_party_install"
+  CACHE PATH "Where to install third party headers and libs")
 
 set(THIRD_PARTY_SUBMODULE_DIR "${PROJECT_SOURCE_DIR}/build/third_party"
   CACHE PATH "Where the third party submodules are")
@@ -168,10 +168,10 @@ if (BUILD_CUDA)
   foreach(CUDA_NVCC_GENCODE ${CUDA_NVCC_GENCODES})
     list(APPEND CUDA_NVCC_FLAGS -gencode ${CUDA_NVCC_GENCODE})
   endforeach()
-  message("-- CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
+  message(STATUS "CUDA_NVCC_FLAGS: " ${CUDA_NVCC_FLAGS})
 endif()
 
-message("-- CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
+message(STATUS "CMAKE_CXX_COMPILER_VERSION: " ${CMAKE_CXX_COMPILER_VERSION})
 
 if (THIRD_PARTY)
   add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
