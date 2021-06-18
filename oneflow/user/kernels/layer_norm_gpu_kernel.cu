@@ -453,7 +453,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
-        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);       \
+        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                 \
         const DataType& data_type = mean->data_type();                                \
         const int64_t elem_cnt = mean->shape().elem_cnt();                            \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
