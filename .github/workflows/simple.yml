@@ -26,7 +26,12 @@ jobs:
       fail-fast: false
       matrix:
         test_suite: ["mac", "ubuntu"]
-        cmake_build_type: ["CMAKE_BUILD_TYPE=Debug", "CMAKE_BUILD_TYPE=Release"]
+        cmake_build_type:
+          [
+            "CMAKE_BUILD_TYPE=Debug",
+            "CMAKE_BUILD_TYPE=Release",
+            "CMAKE_BUILD_TYPE=RelWithDebInfo",
+          ]
         build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
         include:
           - test_suite: mac
