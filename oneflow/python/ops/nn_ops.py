@@ -1776,6 +1776,7 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 
 
 @oneflow_export("nn.MaxPool1d")
+@stable_api
 def MaxPool1d(
     input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],
@@ -1918,6 +1919,7 @@ def MaxPool1d(
 
 
 @oneflow_export("nn.MaxPool2d")
+@stable_api
 def MaxPool2d(
     input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],
@@ -2051,6 +2053,7 @@ def MaxPool2d(
 
 
 @oneflow_export("nn.MaxPool3d")
+@stable_api
 def MaxPool3d(
     input: oneflow_api.BlobDesc,
     kernel_size: Union[int, IntPair],

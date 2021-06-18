@@ -62,11 +62,6 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   };
 }
 
-Maybe<void> ForwardBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("y", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  *ctx->BatchAxis4ArgNameAndIndex("indice", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
@@ -85,10 +80,6 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> BackwardBatchAxisInferFn(user_op::BatchAxisContext* ctx) {
-  *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
@@ -146,9 +137,7 @@ REGISTER_USER_OP("maxpool_2d")
     .Attr<std::vector<int32_t>>("dilation")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(2))
-    .SetBatchAxisInferFn(ForwardBatchAxisInferFn)
-    .SetGetSbpFn(ForwardGetSbpFn);
+    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(2))    .SetGetSbpFn(ForwardGetSbpFn);
 
 REGISTER_USER_OP("maxpool_2d_grad")
     .Input("x")
@@ -166,7 +155,6 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetBatchAxisInferFn(BackwardBatchAxisInferFn)
     .SetGetSbpFn(BackwardGetSbpFn);
 
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
@@ -185,7 +173,6 @@ REGISTER_USER_OP("maxpool_3d")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeForwardTensorDescInferFn(3))
-    .SetBatchAxisInferFn(ForwardBatchAxisInferFn)
     .SetGetSbpFn(ForwardGetSbpFn);
 
 REGISTER_USER_OP("maxpool_3d_grad")
@@ -204,7 +191,6 @@ REGISTER_USER_OP("maxpool_3d_grad")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetBatchAxisInferFn(BackwardBatchAxisInferFn)
     .SetGetSbpFn(BackwardGetSbpFn);
 
 REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 3));
