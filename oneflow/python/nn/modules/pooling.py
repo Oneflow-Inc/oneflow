@@ -278,36 +278,36 @@ class MaxPool2d(Module):
         padding_before = [pad[0] for pad in pads_list]
         padding_after = [pad[1] for pad in pads_list]
 
-        self._op = (
-            flow.builtin_op("maxpool_2d")
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Attr("data_format", channel_pos)
-            .Attr("kernel_size", kernel_size)
-            .Attr("stride", strides)
-            .Attr("dilation", dilation)
-            .Attr("return_indices", False)
-            .Attr("ceil_mode", ceil_mode)
-            .Input("x")
-            .Output("y")
-            .Output("indice")
-            .Build()
-        )
-
         # self._op = (
-        #     flow.builtin_op("max_pool_2d")
-        #     .Attr("data_format", channel_pos)
-        #     .Attr("pool_size", kernel_size)
-        #     .Attr("strides", strides)
-        #     .Attr("ceil_mode", ceil_mode)
+        #     flow.builtin_op("maxpool_2d")
         #     .Attr("padding", padding_type)
         #     .Attr("padding_before", padding_before)
         #     .Attr("padding_after", padding_after)
+        #     .Attr("data_format", channel_pos)
+        #     .Attr("kernel_size", kernel_size)
+        #     .Attr("stride", strides)
+        #     .Attr("dilation", dilation)
+        #     .Attr("return_indices", False)
+        #     .Attr("ceil_mode", ceil_mode)
         #     .Input("x")
         #     .Output("y")
+        #     .Output("indice")
         #     .Build()
         # )
+
+        self._op = (
+            flow.builtin_op("max_pool_2d")
+            .Attr("data_format", channel_pos)
+            .Attr("pool_size", kernel_size)
+            .Attr("strides", strides)
+            .Attr("ceil_mode", ceil_mode)
+            .Attr("padding", padding_type)
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
+            .Input("x")
+            .Output("y")
+            .Build()
+        )
 
     def forward(self, x):
         return self._op(x)[0]

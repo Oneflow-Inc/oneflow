@@ -95,6 +95,16 @@ Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
 GenBackwardOpConfFn MakeBackwardOpConfFn(const std::string& mode, const int32_t dim) {
   return [mode, dim](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
     if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -137,7 +147,9 @@ REGISTER_USER_OP("maxpool_2d")
     .Attr<std::vector<int32_t>>("dilation")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
-    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(2))    .SetGetSbpFn(ForwardGetSbpFn);
+    .SetTensorDescInferFn(MakeForwardTensorDescInferFn(2))
+    .SetGetSbpFn(ForwardGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("maxpool_2d_grad")
     .Input("x")
@@ -155,7 +167,8 @@ REGISTER_USER_OP("maxpool_2d_grad")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetGetSbpFn(BackwardGetSbpFn);
+    .SetGetSbpFn(BackwardGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("maxpool_2d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 2));
 
@@ -173,7 +186,8 @@ REGISTER_USER_OP("maxpool_3d")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(MakeForwardTensorDescInferFn(3))
-    .SetGetSbpFn(ForwardGetSbpFn);
+    .SetGetSbpFn(ForwardGetSbpFn)
+    .SetDataTypeInferFn(FwInferDataType);
 
 REGISTER_USER_OP("maxpool_3d_grad")
     .Input("x")
@@ -191,7 +205,8 @@ REGISTER_USER_OP("maxpool_3d_grad")
     .Attr<bool>("return_indices")
     .Attr<bool>("ceil_mode")
     .SetTensorDescInferFn(BackwardTensorDescInferFn)
-    .SetGetSbpFn(BackwardGetSbpFn);
+    .SetGetSbpFn(BackwardGetSbpFn)
+    .SetDataTypeInferFn(BwInferDataType);
 
 REGISTER_USER_OP_GRAD("maxpool_3d").SetGenBackwardOpConfFn(MakeBackwardOpConfFn("max", 3));
 

@@ -1779,7 +1779,7 @@ def calc_pool_padding(padding, dhw_offset, ndims):
 @oneflow_export("nn.MaxPool1d")
 @stable_api
 def MaxPool1d(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
     padding: Union[str, IntPair],
@@ -1788,7 +1788,7 @@ def MaxPool1d(
     ceil_mode: bool = False,
     data_format: str = "NCHW",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r""" Performs the 1d-max pooling on the input `Blob`.
          Different from nn.max_pool1d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
 
@@ -1922,7 +1922,7 @@ def MaxPool1d(
 @oneflow_export("nn.MaxPool2d")
 @stable_api
 def MaxPool2d(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
     padding: Union[str, int, Tuple[int, int]],
@@ -1931,7 +1931,7 @@ def MaxPool2d(
     ceil_mode: bool = False,
     data_format: str = "NCHW",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r""" Performs the 2d-max pooling on the input `Blob`.
          Different from nn.max_pool2d, nn.MaxPool2d supports more params e.g. dilation,return_indices.
 
@@ -2056,7 +2056,7 @@ def MaxPool2d(
 @oneflow_export("nn.MaxPool3d")
 @stable_api
 def MaxPool3d(
-    input: oneflow_api.BlobDesc,
+    input: oneflow._oneflow_internal.BlobDesc,
     kernel_size: Union[int, IntPair],
     stride: Union[int, IntPair],
     padding: Union[str, int, Tuple[int, int, int]],
@@ -2065,7 +2065,7 @@ def MaxPool3d(
     ceil_mode: bool = False,
     data_format: str = "NCDHW",
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     r""" Performs the 3d-max pooling on the input `Blob`.
          Different from nn.max_pool3d, nn.MaxPool3d supports more params e.g. dilation,return_indices.
 
