@@ -27,6 +27,7 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["mac", "ubuntu"]
+        cmake_generator: ["Ninja", "Unix Makefiles"]
         build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
         include:
           - test_suite: mac
@@ -74,6 +75,7 @@ jobs:
           cmake_flags=""
           cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -D${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
