@@ -102,13 +102,13 @@ class AvgPool3d(Module):
         - Output: :math:`(N, C, D_{out}, H_{out}, W_{out})`, where
 
           .. math::
-              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \{kernel_size}[0]}{\text{stride}[0]} + 1\right\rfloor
+              D_{out} = \left\lfloor\frac{D_{in} + 2 \times \text{padding}[0] - \text{kernel_size}[0]}{\text{stride}[0]} + 1\right\rfloor
 
           .. math::
-              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \{kernel_size}[1]}{\text{stride}[1]} + 1\right\rfloor
+              H_{out} = \left\lfloor\frac{H_{in} + 2 \times \text{padding}[1] - \text{kernel_size}[1]}{\text{stride}[1]} + 1\right\rfloor
 
           .. math::
-              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \{kernel_size}[2]}{\text{stride}[2]} + 1\right\rfloor
+              W_{out} = \left\lfloor\frac{W_{in} + 2 \times \text{padding}[2] - \text{kernel_size}[2]}{\text{stride}[2]} + 1\right\rfloor
 
     For example:
 
@@ -117,15 +117,11 @@ class AvgPool3d(Module):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
 
-        >>> inputarr = np.array([[[[[-0.74832135,  0.03151652],[ 1.08632752,  0.53338843]],[[ 0.70026413, -0.62565466], [-0.59692776, -1.00883888]]],[[[-0.26829566, -0.31759021],[ 1.46828945, -2.61885422]],[[-0.67331338,  1.31144767],[-0.85747376, -0.38252167]]]],[[[[-1.54668075, -0.935113  ],[ 0.19119924, -0.83618886]],[[ 0.17532863,  0.6574685 ],[-1.10141786,  1.1819236 ]]],[[[-1.1367412 ,  0.68027652],[ 0.98564578,  0.04861313]],[[-0.69807858,  0.75021497],[ 0.62720175, -0.76607257]]]]])
+        >>> flow.enable_eager_execution()
+        >>> inputarr = np.random.randn(9, 7, 11, 32, 20)
         >>> of_avgpool3d = flow.nn.AvgPool3d(kernel_size=(2,2,2),padding=(0,0,0),stride=(1,1,1),)
         >>> x = flow.Tensor(inputarr)
-        >>> flow.enable_eager_execution()
-        >>> of_y = of_avgpool3d(x)
-        >>> print(of_y.dtype)
-        oneflow.float32
-        >>> print(of_y.numpy().sum())
-        -0.58612233
+        >>> y = of_avgpool3d(x)
 
     """
 

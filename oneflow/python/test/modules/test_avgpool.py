@@ -204,18 +204,8 @@ def _test_avgpool3d_backward(test_case, device):
     output = output.sum()
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
-    numpy_grad = np.array(
-        [
-            [
-                [[[0.125, 0.125], [0.125, 0.125]], [[0.125, 0.125], [0.125, 0.125]]],
-                [[[0.125, 0.125], [0.125, 0.125]], [[0.125, 0.125], [0.125, 0.125]]],
-            ],
-            [
-                [[[0.125, 0.125], [0.125, 0.125]], [[0.125, 0.125], [0.125, 0.125]]],
-                [[[0.125, 0.125], [0.125, 0.125]], [[0.125, 0.125], [0.125, 0.125]]],
-            ],
-        ]
-    )
+    numpy_grad = np.zeros(shape=input_arr.shape)
+    numpy_grad[...] = 0.125
     test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
 
 
