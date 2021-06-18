@@ -96,6 +96,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
 .. autofunction:: oneflow.experimental.nn.CTCLoss
 .. autofunction:: oneflow.experimental.nn.L1Loss
+.. autofunction:: oneflow.experimental.nn.BCELoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
 .. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
@@ -179,6 +180,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.linalg.norm
+.. autofunction:: oneflow.experimental.Tensor.norm
 .. autofunction:: oneflow.experimental.floor
 .. autofunction:: oneflow.experimental.Tensor.floor
 .. autofunction:: oneflow.experimental.addmm
