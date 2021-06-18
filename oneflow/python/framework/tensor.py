@@ -32,6 +32,7 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 
+import time
 
 def register_local_tensor_method(name=None):
     def decorator(method):
@@ -416,6 +417,7 @@ class Tensor:
     @register_local_tensor_method()
     def __getitem__(self, key):
         # TODO: support inplace __getitem__
+        t1 = time.time()
         assert (
             isinstance(key, int) or isinstance(key, tuple) or isinstance(key, slice)
         ), "Unsupported key type!"
@@ -431,7 +433,9 @@ class Tensor:
 
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res.squeeze(dim=squeeze_dims)
+        res = res.squeeze(dim=squeeze_dims)
+        # print("single slice cost >>>>>>>>>>>>>>>>>", time.time()-t1)
+        return res
 
     @_auto_determine
     @register_local_tensor_method()

@@ -136,20 +136,24 @@ class BroadcastLikeFunctor {
 class ConcatFunctor {
  public:
   ConcatFunctor() {
-    ops_.resize(kMaxInputCount);
-    for (int n = 2; n < ops_.size(); ++n) {
-      ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n).Output("out").Build());
-    }
+    ops_.resize(1);
+    ops_[0]= CHECK_JUST(one::OpBuilder("concat").Input("in").Output("out").Build());
+    // ops_.resize(512);
+    // for (int n = 2; n < ops_.size(); ++n) {
+    //   ops_[n] = CHECK_JUST(one::OpBuilder("concat").Input("in", n).Output("out").Build());
+    // }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs, const int64_t& axis,
                            const int64_t& max_dim_size) const {
     CHECK_GE_OR_RETURN(inputs.size(), 2);
-    CHECK_LT_OR_RETURN(inputs.size(), ops_.size())
+    CHECK_LT_OR_RETURN(inputs.size(), 512)
         << "The maximum number supported of inputs is " << ops_.size();
+    // CHECK_LT_OR_RETURN(inputs.size(), ops_.size())
+    //     << "The maximum number supported of inputs is " << ops_.size();
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
     JUST(attrs.SetAttr<int64_t>("max_dim_size", max_dim_size));
-    return OpInterpUtil::Dispatch<Tensor>(*ops_.at(inputs.size()), inputs, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*ops_.at(0), {inputs}, attrs);
   }
 
  private:
@@ -390,7 +394,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::WhereFunctor>("Where");
   m.add_functor<impl::ArgWhereFunctor>("ArgWhere");
   m.add_functor<impl::BroadcastLikeFunctor>("BroadcastLike");
-  m.add_functor<impl::ConcatFunctor>("Concat");
+  //m.add_functor<impl::ConcatFunctor>("Concat");
   m.add_functor<impl::ExpandFunctor>("Expand");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::GatherFunctor>("Gather");
