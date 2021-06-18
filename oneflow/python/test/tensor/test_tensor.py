@@ -932,7 +932,7 @@ class TestTensor(flow.unittest.TestCase):
         "numpy doesn't work in lazy mode",
     )
     def test_tensor_arctanh(test_case):
-        np_input = np.random.random((2, 3))
+        np_input = np.random.random((2, 3)) - 0.5
         of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
 
         of_out = of_input.arctanh()
