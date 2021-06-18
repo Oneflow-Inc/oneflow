@@ -197,10 +197,6 @@ class KernelComputeContext {
 
   virtual Tensor* Tensor4ArgNameAndIndex(const std::string& arg_name, int32_t index) = 0;
   virtual DeviceCtx* device_ctx() = 0;
-  virtual std::shared_ptr<KernelInitContext> CreateInitContext() const {
-    LOG(INFO) << "UNIMPLEMENTED";
-    return std::shared_ptr<KernelInitContext>();
-  }
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                        int32_t index) const = 0;
   virtual DeviceType device_type() const = 0;
@@ -281,15 +277,6 @@ class OpKernel {
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*) const { Compute(ctx); }
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
-  virtual std::shared_ptr<OpKernelState> MaybeCreateOpKernelState(KernelComputeContext* ctx,
-                                                                  OpKernelState* state) const {
-    if (EagerExecutionEnabled()) {
-      std::shared_ptr<KernelInitContext> init_ctx = ctx->CreateInitContext();
-      auto state_new = CreateOpKernelState(init_ctx.get());
-      return std::move(state_new);
-    }
-    return std::move(std::shared_ptr<OpKernelState>());
-  }
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 
  protected:

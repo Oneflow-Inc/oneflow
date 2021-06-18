@@ -109,36 +109,17 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class OpExprMap : public std::map<std::string, std::shared_ptr<OpExpr>> {
- public:
-  Maybe<OpExpr> GetOpExpr(const std::string& op_type_name) const {
-    const auto& it = this->find(op_type_name);
-    CHECK_OR_RETURN(it != this->end()) << op_type_name << " not found";
-    const auto op = it->second;
-    CHECK_NOTNULL_OR_RETURN(op);
-    return op;
-  }
-
-  Maybe<void> SetOpExpr(const std::string& op_type_name, std::shared_ptr<OpExpr> op) {
-    (*this)[op_type_name] = std::move(op);
-    return Maybe<void>::Ok();
-  }
-};
-
 class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
-    mode_opts_ = {"max", "avg"};
-    ndims_opts_ = {1, 2, 3};
-    for (auto mode : mode_opts_) {
-      for (auto ndims : ndims_opts_) {
-        auto& op_type_name = GetOpTypeName(mode, ndims);
-        opExprMap_[op_type_name] = CHECK_JUST(
-            one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
+    for (const auto& mode : {"max", "avg"}) {
+      for (const auto& ndims : {1, 2, 3}) {
+        const auto& op_type_name = GetOpTypeName(mode, ndims);
+        op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
       }
     }
   }
-  static const std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
+  static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
     return mode + "_pool_" + std::to_string(ndims) + "d_grad";
   }
   virtual ~PoolNdGradFunctor() = default;
@@ -158,15 +139,16 @@ class PoolNdGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", pool_size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
-    auto& op_type_name = GetOpTypeName(mode, ndims);
-    std::shared_ptr<OpExpr> op = JUST(opExprMap_.GetOpExpr(op_type_name));
+    const auto& op_type_name = GetOpTypeName(mode, ndims);
+    const auto& it = op_expr_map_.find(op_type_name);
+    CHECK_OR_RETURN(it != op_expr_map_.end()) << op_type_name << " not found";
+    const auto op = it->second;
+    CHECK_NOTNULL_OR_RETURN(op);
     return OpInterpUtil::Dispatch<Tensor>(*op, {x, y, dy}, attrs);
   }
 
  protected:
-  OpExprMap opExprMap_;
-  std::vector<std::string> mode_opts_;
-  std::vector<int32_t> ndims_opts_;
+  std::unordered_map<std::string, std::shared_ptr<OpExpr>> op_expr_map_;
 };
 
 }  // namespace impl
