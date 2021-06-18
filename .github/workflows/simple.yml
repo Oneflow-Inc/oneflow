@@ -36,9 +36,6 @@ jobs:
           - test_suite: ubuntu
             os: "ubuntu-20.04"
             make_concurrency: 2
-        exclude:
-          - cmake_generator: "Ninja"
-            cmake_build_type: "CMAKE_BUILD_TYPE=Release"
     steps:
       - uses: actions/checkout@v2
         with:
