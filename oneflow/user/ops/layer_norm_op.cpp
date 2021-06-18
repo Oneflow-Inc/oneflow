@@ -117,7 +117,9 @@ REGISTER_USER_OP("layer_norm")
         CHECK_EQ_OR_RETURN(gamma->data_type(), x->data_type());
       }
       user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);
+      user_op::TensorDesc* inv_variance = ctx->OutputTensorDesc("inv_variance", 0);
       *mean->mut_data_type() = InferBnParamDataType(x->data_type());
+      *inv_variance->mut_data_type() = mean->data_type();
       return Maybe<void>::Ok();
     });
 
