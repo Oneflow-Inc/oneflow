@@ -272,7 +272,6 @@ void LocalUserKernelComputeContext::Update(const EagerBlobObjectListPtr& inputs,
   base_ctx_.Update(inputs, outputs);
 }
 
-
 Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
                                        const ArgVec& indexed_input_pairs,
                                        const ArgVec& indexed_output_pairs,

@@ -115,7 +115,8 @@ class PoolNdGradFunctor {
     for (const auto& mode : {"max", "avg"}) {
       for (const auto& ndims : {1, 2, 3}) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] = CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
+        op_expr_map_[op_type_name] = CHECK_JUST(
+            one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
       }
     }
   }

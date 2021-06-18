@@ -92,8 +92,9 @@ Maybe<void> PoolNdGrad::Apply(const PoolInterpState* ctx, const TensorTuple& out
   const auto& output = ctx->SavedTensors().at(ctx->output_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::PoolNdGrad(input, output, out_grads.at(0), mode_, ndims, ctx->data_format,
-        ctx->padding, ctx->padding_before, ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
+  in_grads->at(0) = JUST(functional::PoolNdGrad(
+      input, output, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
+      ctx->padding_before, ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
 }
