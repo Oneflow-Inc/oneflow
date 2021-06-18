@@ -32,7 +32,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   *ctx->OutputIsDynamic4ArgNameAndIndex("prob", 0) = prediction_desc->is_dynamic();
   // 'prob' is just for compute prediction's grad, prob's grad will be ignored
   *ctx->OutputShape("prob", 0) = prediction_desc->shape();
-  user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
   *out_desc->mut_shape() = label_desc->shape();
   return Maybe<void>::Ok();
