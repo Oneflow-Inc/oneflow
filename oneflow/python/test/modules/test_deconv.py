@@ -236,6 +236,19 @@ def _test_deconv_bias_true(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-6, 1e-6))
 
 
+def _test_deconv_group(test_case, device):
+    np_arr = np.random.randn(1, 2, 2, 2)
+    input = flow.Tensor(np_arr, dtype=flow.float32, device=flow.device("cuda"), requires_grad=True)
+    m = nn.ConvTranspose2d(2, 2, 3, stride=1, groups=2, bias=False)
+    m = m.to("cuda")
+    output = m(input)
+    print(np_arr.tolist())
+    print(m.weight.numpy().tolist())
+    print(output.numpy().tolist())
+    
+
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -246,6 +259,7 @@ class TestLess(flow.unittest.TestCase):
         arg_dict["test_fun"] = [
             _test_deconv_bias_false,
             _test_deconv_bias_true,
+            _test_deconv_group,
         ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
