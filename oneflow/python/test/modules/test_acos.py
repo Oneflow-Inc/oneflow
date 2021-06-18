@@ -23,7 +23,9 @@ from test_util import GenArgList
 
 
 def _test_acos_impl(test_case, shape, device):
-    input = flow.Tensor(np.random.rand(*shape) - 0.5, device=flow.device(device), requires_grad=True)
+    input = flow.Tensor(
+        np.random.rand(*shape) - 0.5, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.acos(input)
     np_out = np.arccos(input.numpy())
     test_case.assertTrue(
@@ -35,6 +37,7 @@ def _test_acos_impl(test_case, shape, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
     )
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
