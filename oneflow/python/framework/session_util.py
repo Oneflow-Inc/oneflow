@@ -288,9 +288,7 @@ class Session(object):
 
     def EagerRun(self, function_desc, *arg):
         with self._EagerGlobalFunctionDescScope(function_desc):
-            remote_blobs = compiler.EagerRun(
-                self, function_desc, arg
-            )
+            remote_blobs = compiler.EagerRun(self, function_desc, arg)
             if remote_blobs is None:
                 return
             future_blob = EagerFutureRemoteBlobs().SetResult(remote_blobs).Inited()
