@@ -247,7 +247,7 @@ class TestLess(flow.unittest.TestCase):
             _test_deconv_bias_false,
             _test_deconv_bias_true,
         ]
-        arg_dict["device"] = ["cuda"]
+        arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

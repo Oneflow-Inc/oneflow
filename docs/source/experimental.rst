@@ -46,6 +46,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.argmax
 .. autofunction:: oneflow.experimental.nn.BatchNorm1d
 .. autofunction:: oneflow.experimental.nn.BatchNorm2d
+.. autofunction:: oneflow.experimental.nn.ReplicationPad2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm1d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm2d
 .. autofunction:: oneflow.experimental.nn.InstanceNorm3d
@@ -93,10 +94,14 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.PixelShuffle
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
+.. autofunction:: oneflow.experimental.nn.CTCLoss
 .. autofunction:: oneflow.experimental.nn.L1Loss
+.. autofunction:: oneflow.experimental.nn.BCELoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
+.. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
+.. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.sum
@@ -175,6 +180,10 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.linalg.norm
+.. autofunction:: oneflow.experimental.Tensor.norm
+.. autofunction:: oneflow.experimental.floor
+.. autofunction:: oneflow.experimental.Tensor.floor
 .. autofunction:: oneflow.experimental.addmm
 .. autofunction:: oneflow.experimental.Tensor.addmm
 .. autofunction:: oneflow.experimental.clamp
@@ -193,5 +202,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
 .. autofunction:: oneflow.experimental.Tensor.expm1
+.. autofunction:: oneflow.experimental.nn.ReflectionPad2d
+.. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk

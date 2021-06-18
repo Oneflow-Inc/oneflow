@@ -203,7 +203,7 @@ jobs:
         run: |
           git reset --hard
           git clean -f
-          git archive --format zip HEAD > oneflow-src.zip
+          git archive --prefix oneflow/ --format zip HEAD > oneflow-src.zip
           curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
           chmod 755 $HOME/ossutil64
           $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET}  -L EN -c $HOME/.ossutilconfig

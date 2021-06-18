@@ -81,12 +81,13 @@ class KernelInitContext {
   virtual DeviceType device_type() const = 0;
   virtual const ParallelContext& parallel_ctx() const = 0;
   virtual const TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) const = 0;
-  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
   virtual const ParallelDesc& parallel_desc() const = 0;
-  virtual const ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
-                                                                           int32_t) const = 0;
+  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                                int32_t) const = 0;
 
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
