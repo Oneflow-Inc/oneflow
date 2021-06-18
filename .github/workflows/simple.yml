@@ -87,14 +87,14 @@ jobs:
           mkdir -p build-third_party
           cd build-third_party
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=ON -DONEFLOW=OFF
-          make -j $(nproc)
+          cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          make -j ${{ matrix.make_concurrency }} of_ccobj
+          cmake --build . -j ${{ matrix.make_concurrency }} of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
         if: always()
@@ -102,7 +102,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          make -j ${{ matrix.make_concurrency }} oneflow_internal
+          cmake --build . -j ${{ matrix.make_concurrency }} oneflow_internal
         shell: bash
       - name: Build (generate_api)
         if: always()
@@ -110,7 +110,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          make -j ${{ matrix.make_concurrency }} generate_api
+          cmake --build . -j ${{ matrix.make_concurrency }} generate_api
         shell: bash
       - name: Build (oneflow_testexe)
         if: always()
@@ -118,7 +118,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          make -j ${{ matrix.make_concurrency }} oneflow_testexe
+          cmake --build . -j ${{ matrix.make_concurrency }} oneflow_testexe
         shell: bash
       - name: Build (ALL)
         if: always()
@@ -126,7 +126,7 @@ jobs:
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          make -j ${{ matrix.make_concurrency }}
+          cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
         if: always()
