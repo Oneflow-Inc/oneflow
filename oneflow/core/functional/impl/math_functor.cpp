@@ -45,7 +45,7 @@ class AddNFunctor {
     for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
       TensorTuple partial_inputs(size);
-      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
       outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
     }
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -74,7 +74,7 @@ class ScalarAddFunctor {
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
   }
 
@@ -100,7 +100,7 @@ class ScalarMulFunctor {
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
     }
   }
 
