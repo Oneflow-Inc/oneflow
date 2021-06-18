@@ -22,21 +22,6 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-input_arr = np.array(
-    [
-        [
-            [[-0.16046895, -1.03667831], [-0.34974465, 0.26505867]],
-            [[-1.24111986, -0.53806001], [1.72426331, 0.43572459]],
-        ],
-        [
-            [[-0.77390957, -0.42610624], [0.16398858, -1.35760343]],
-            [[1.07541728, 0.11008703], [0.26361224, -0.48663723]],
-        ],
-    ],
-    dtype=np.float32,
-)
-
-
 def _test_groupnorm(test_case, device):
     input_arr = np.array(
         [
