@@ -39,7 +39,7 @@ class ArgTuple final {
   }
 
   // return -1 if not found
-  std::size_t TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const;
+  int32_t TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const;
 
  private:
   std::vector<std::string> indexed_bns_;
