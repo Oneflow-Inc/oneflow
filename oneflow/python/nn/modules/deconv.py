@@ -21,6 +21,7 @@ from oneflow.python.nn.modules.utils import _pair
 from oneflow.python.nn.common_types import _size_2_t
 from oneflow.python.nn import init
 
+
 def slice(x, begin, size):
     ndim = len(x.shape)
     if not isinstance(begin, (list, tuple)) or len(begin) != ndim:
@@ -172,7 +173,7 @@ class ConvTranspose2d(Module):
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels // groups, out_channels, *kernel_size)
+            flow.Tensor(out_channels // groups, in_channels, *kernel_size)
         )
         self.bias = None
         self._bias_add_op = None
