@@ -26,6 +26,12 @@ jobs:
       max-parallel: 5
       matrix:
         test_suite: ["mac", "ubuntu"]
+        cmake_build_type:
+          [
+            "CMAKE_BUILD_TYPE=Debug",
+            "CMAKE_BUILD_TYPE=Release",
+            "CMAKE_BUILD_TYPE=RelWithDebInfo",
+          ]
         build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
         include:
           - test_suite: mac
@@ -73,6 +79,7 @@ jobs:
           cmake_flags=""
           cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -D${{ matrix.cmake_build_type }}"
           cmake_flags+=" -D${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
