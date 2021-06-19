@@ -21,7 +21,7 @@ REGISTER_USER_OP("count_not_finite")
     .Input("x")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
@@ -36,7 +36,7 @@ REGISTER_USER_OP("count_not_finite")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
@@ -45,7 +45,7 @@ REGISTER_USER_OP("multi_count_not_finite")
     .InputWithMinimum("x", 1)
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
@@ -67,7 +67,7 @@ REGISTER_USER_OP("multi_count_not_finite")
             ctx->TensorDesc4ArgNameAndIndex(in_arg_pair.first, in_arg_pair.second);
         CHECK_EQ_OR_RETURN(x_desc->data_type(), first_x_desc->data_type());
       }
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       *y_desc->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
     });
