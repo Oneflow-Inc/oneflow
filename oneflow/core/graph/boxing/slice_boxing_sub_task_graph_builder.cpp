@@ -160,7 +160,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
       UNIMPLEMENTED();
     }
     dst_node->Init(lbi, dst_slice, kSliceBoxingTaskModeCopy, src_node->machine_id(), thrd_id,
-                   EncodeMemZoneIdToInt64(GetNodeCPUMemZoneId(src_node->machine_id())));
+                   GetNodeCPUMemZoneId(src_node->machine_id()));
     dst_node->ConnectToSrcNodeWithSlice(src_node, NewEdge(), src_slice);
     return dst_node;
   };
@@ -283,8 +283,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 #endif
           }
           local_concat_node->Init(lbi, concat_slice, kSliceBoxingTaskModeCopy, in_machine_id,
-                                  local_concat_thrd_id,
-                                  EncodeMemZoneIdToInt64(GetNodeCPUMemZoneId(in_machine_id)));
+                                  local_concat_thrd_id, GetNodeCPUMemZoneId(in_machine_id));
           for (const int64_t in_id : in_parallel_ids) {
             if (!in_id2intersection.at(in_id).IsEmpty()) {
               local_concat_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(),
@@ -346,8 +345,7 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
 #endif
               }
               local_add_node->Init(lbi, out_slice, kSliceBoxingTaskModeAdd, in_machine_id,
-                                   local_add_thrd_id,
-                                   EncodeMemZoneIdToInt64(GetNodeCPUMemZoneId(in_machine_id)));
+                                   local_add_thrd_id, GetNodeCPUMemZoneId(in_machine_id));
               for (const int64_t in_id : in_parallel_ids) {
                 local_add_node->ConnectToSrcNodeWithSlice(in_nodes.at(in_id), NewEdge(), in_slice);
               }
@@ -410,10 +408,9 @@ Maybe<SubTskGphBuilderStatus> SliceBoxingSubTskGphBuilder::Build(
             out_box_nodes.front(), lbi, GetNodeCPUMemZoneId(machine_id7out_parallel_ids.first));
       } else {
         auto* add_node = ctx->task_graph()->NewNode<SliceBoxingTaskNode>();
-        add_node->Init(
-            lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
-            Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
-            EncodeMemZoneIdToInt64(GetNodeCPUMemZoneId(machine_id7out_parallel_ids.first)));
+        add_node->Init(lbi, slice, kSliceBoxingTaskModeAdd, machine_id7out_parallel_ids.first,
+                       Global<IDMgr>::Get()->PickCpuThrdIdEvenly(machine_id7out_parallel_ids.first),
+                       GetNodeCPUMemZoneId(machine_id7out_parallel_ids.first));
         for (TaskNode* out_box_node : out_box_nodes) {
           TaskNode* out_boxing_node_proxy = ctx->task_graph()->GetProxyNode(
               out_box_node, lbi, GetNodeCPUMemZoneId(out_machine_id));

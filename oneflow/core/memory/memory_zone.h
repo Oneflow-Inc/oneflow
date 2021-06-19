@@ -35,6 +35,7 @@ class MemZoneId {
   constexpr static device_index_t kMaxDeviceIndex = DeviceId::kMaxDeviceIndex;
   constexpr static device_index_t kCPUDeviceIndex = DeviceId::kCPUDeviceIndex;
 
+  MemZoneId() : device_id_(0, DeviceType::kInvalidDevice, 0) {}
   MemZoneId(const DeviceId& device_id) : device_id_(device_id) {}
   MemZoneId(DeviceId&& device_id) : device_id_(std::move(device_id)) {}
 

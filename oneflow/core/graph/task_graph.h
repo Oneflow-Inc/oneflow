@@ -105,19 +105,20 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   struct ProxyKey {
     TaskNode* src_node;
     LogicalBlobId lbi;
-    MemZoneId mem_zone_id;
+    MemZoneId dst_mem_zone_id;
 
     ProxyKey(TaskNode* src, const LogicalBlobId& arg_lbi, const MemZoneId& arg_mem_zone_id)
-        : src_node(src), lbi(arg_lbi), mem_zone_id(arg_mem_zone_id) {}
+        : src_node(src), lbi(arg_lbi), dst_mem_zone_id(arg_mem_zone_id) {}
 
     bool operator==(const ProxyKey& other) const {
-      return src_node == other.src_node && lbi == other.lbi && mem_zone_id == other.mem_zone_id;
+      return src_node == other.src_node && lbi == other.lbi
+             && dst_mem_zone_id == other.dst_mem_zone_id;
     }
 
     struct Hasher {
       inline size_t operator()(const ProxyKey& key) const {
         return std::hash<TaskNode*>{}(key.src_node) ^ std::hash<LogicalBlobId>{}(key.lbi)
-               ^ key.mem_zone_id.hash();
+               ^ key.dst_mem_zone_id.hash();
       }
     };
   };
