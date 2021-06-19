@@ -2,8 +2,8 @@ import sys
 import os
 import argparse
 import inspect
-import oneflow
 
+import oneflow
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-root", "--root_path", type=str, required=True)
@@ -11,7 +11,6 @@ parser.add_argument(
     "-v", "--verbose", default=False, action="store_true", required=False
 )
 args = parser.parse_args()
-
 
 # TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
 #                     will be removed in the future
@@ -139,7 +138,6 @@ def collect_exports():
         )
         exports[api_name] = symbol
         api_name2module[api_name] = module
-    
 
     root_virmod = VirtualModule()
     for api_name, symbol in exports.items():
