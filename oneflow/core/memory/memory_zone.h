@@ -39,7 +39,7 @@ class MemZoneId {
   MemZoneId(DeviceId&& device_id) : device_id_(std::move(device_id)) {}
 
   MemZoneId(node_index_t node_index, DeviceType device_type, device_index_t device_index)
-      : MemZoneId(DeviceId{node_index, device_type, device_index}) {
+      : device_id_(node_index, device_type, device_index) {
     CHECK_LE(static_cast<size_t>(device_type), kMaxDeviceTypeVal);
     CHECK_LE(device_index, kMaxDeviceIndex);
   }
