@@ -35,8 +35,8 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Attr<int32_t>("decode_buffer_size_per_thread", 8)
     .Attr<int32_t>("num_decode_threads_per_machine", 0)
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
       const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
@@ -49,8 +49,8 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_tensor = ctx->TensorDesc4ArgNameAndIndex("image", 0);
-      user_op::TensorDesc* label_tensor = ctx->TensorDesc4ArgNameAndIndex("label", 0);
+      user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
+      user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *image_tensor->mut_shape() = Shape({batch_size});
       *label_tensor->mut_shape() = Shape({batch_size});
