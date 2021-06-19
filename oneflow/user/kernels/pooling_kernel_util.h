@@ -162,7 +162,7 @@ OF_DEVICE_FUNC void Maxpool2dFarwardCompute(
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
 
-    /* compute local max: */
+    /* compute max value(src[src_idx]) in kernel box region, and save the value to dest[num] */
     int64_t maxindex = hstart * x_width + wstart;
     int64_t src_idx = 0;
     T max_value = -std::numeric_limits<T>::infinity();
@@ -200,7 +200,6 @@ OF_DEVICE_FUNC void Maxpool2dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
 
     const int64_t src_start = (n * n_channel + c) * src_height * src_width;
     const int64_t dst_start = (n * n_channel + c) * dst_height * dst_width;
-    // retrieve position of max
     const int64_t index = src_start + h * src_width + w;
     const int64_t maxindex = dst_start + indice_ptr[index];
     if (maxindex != -1) {
@@ -229,7 +228,7 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     const int64_t w = coords[4];
 
     int64_t xstart = n * n_channel * x_time * x_width * x_height;
-    int64_t ip = xstart + c * x_time * x_width * x_height;
+    int64_t start_idx = xstart + c * x_time * x_width * x_height;
     int64_t tstart = t * stride_t - padding_t;
     int64_t hstart = h * stride_h - padding_h;
     int64_t wstart = w * stride_w - padding_w;
@@ -245,7 +244,6 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
     while (hstart < 0) { hstart += dilation_h; }
     while (wstart < 0) { wstart += dilation_w; }
 
-    /* compute local max: */
     int64_t maxindex = tstart * x_height * x_width + hstart * x_width + wstart;
     int64_t src_idx = 0;
     T max_value = -std::numeric_limits<T>::infinity();
@@ -253,7 +251,7 @@ OF_DEVICE_FUNC void Maxpool3dFarwardCompute(
       for (int64_t i = hstart; i < hend; i += dilation_h) {
         for (int64_t j = wstart; j < wend; j += dilation_w) {
           const int64_t tcntr = zi * x_height * x_width + i * x_width + j;
-          const int64_t search_idx = ip + tcntr;
+          const int64_t search_idx = start_idx + tcntr;
           T val = src[search_idx];
           if ((val > max_value) || std::isnan(val)) {
             max_value = val;
@@ -292,10 +290,7 @@ OF_DEVICE_FUNC void Maxpool3dBackwardCompute(const NdIndexOffsetHelper<int64_t, 
     const int64_t index = src_start + t * src_height * src_width + h * src_width + w;
     const int64_t maxindex = dst_start + indice_ptr[index];
 
-    if (maxindex != -1) {
-      /* update gradient, equals to dest[maxindex] += src[index]; */
-      DeviceAdd<T>::Invoke(src + index, dest + maxindex);
-    }
+    if (maxindex != -1) { DeviceAdd<T>::Invoke(src + index, dest + maxindex); }
   }
 }
 
