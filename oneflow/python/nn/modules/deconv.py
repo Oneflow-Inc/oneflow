@@ -175,6 +175,7 @@ class ConvTranspose2d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *kernel_size)
         )
+        self.in_channel_groups = in_channels // groups
         self.bias = None
         self._bias_add_op = None
         if bias:
@@ -221,7 +222,17 @@ class ConvTranspose2d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    self._op(in_split_list[i], self.weight[i : (i + 1), :, :, :])[0]
+                    self._op(
+                        in_split_list[i],
+                        self.weight[
+                            i
+                            * self.in_channel_groups : (i + 1)
+                            * self.in_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                    )[0]
                 )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
