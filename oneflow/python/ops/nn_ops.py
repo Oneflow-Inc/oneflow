@@ -192,66 +192,6 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         return_pads_list = [[0, 0]] * ndims
         return inputs, return_pads_list
 
-    ndims = len(inputs.shape) - 2
-    assert len(kernel_sizes) == ndims
-    assert len(dilations) == ndims
-    assert len(strides) == ndims
-    assert len(padding) == ndims
-    is_dynamic = inputs.is_dynamic
-    channel_pos = "channels_first" if data_format.startswith("NC") else "channels_last"
-    dhw_offset = get_dhw_offset(channel_pos)
-    ndim_pads_list = []
-    if isinstance(padding, str):
-        padding = "SAME_LOWER" if padding.upper() == "SAME" else padding
-        assert padding.upper() in ["VALID", "SAME_LOWER", "SAME_UPPER"]
-
-        if padding.upper() == "VALID":
-            return_pads_list = [[0, 0]] * ndims
-            return inputs, return_pads_list
-        else:
-            if is_dynamic:
-                return_pads_list = [[0, 0]] * ndims
-                inputs = flow.same_padding(
-                    inputs,
-                    padding.lower(),
-                    data_format=data_format,
-                    kernel_size=kernel_sizes,
-                    strides=strides,
-                    dilation_rate=dilations,
-                )
-                return inputs, return_pads_list
-            else:
-                ndim_pads_list = calc_ndim_same_padding(
-                    inputs.shape, padding, kernel_sizes, dilations, strides, dhw_offset
-                )
-                assert len(ndim_pads_list) == ndims
-    elif isinstance(padding, (list, tuple)):
-        assert len(padding) == ndims + 2
-        ndim_pads_list = get_ndim_pads_list(padding, dhw_offset, ndims)
-        assert len(ndim_pads_list) == ndims
-    else:
-        raise ValueError("padding must be str or a list.")
-
-    cudnn_padding_support = check_ndim_conv_cudnn_padding_support(
-        inputs.shape,
-        ndim_pads_list,
-        kernel_sizes,
-        dilations,
-        strides,
-        dhw_offset,
-        is_dynamic,
-    )
-
-    if cudnn_padding_support:
-        return inputs, ndim_pads_list
-    else:
-        pad_op_list = [[0, 0]] * (ndims + 2)
-        for i in range(ndims):
-            pad_op_list[dhw_offset + i] = ndim_pads_list[i]
-        inputs = flow.pad(inputs, paddings=pad_op_list)
-        return_pads_list = [[0, 0]] * ndims
-        return inputs, return_pads_list
-
 
 @oneflow_export("nn.conv1d")
 def conv1d(
