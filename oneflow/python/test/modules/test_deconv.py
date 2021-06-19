@@ -725,8 +725,7 @@ class TestDeconv2d(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):
-            for i in range(200):
-                arg[0](test_case, *arg[1:])
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
