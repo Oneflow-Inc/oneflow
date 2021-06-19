@@ -62,7 +62,6 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
   };
 }
 
-
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
@@ -79,7 +78,6 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
-
 
 Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);

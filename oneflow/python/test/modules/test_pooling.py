@@ -160,14 +160,16 @@ class MaxPoolNumpy:
 
 def _test_maxpool2d(test_case, device):
     dim = 2
-    
+
     input_arr = np.random.randn(2, 3, 4, 5)
     kernel_size, stride, padding = (3, 3), (1, 1), (1, 1)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
-    m = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding, return_indices=True)
+    m = flow.nn.MaxPool2d(
+        kernel_size=kernel_size, stride=stride, padding=padding, return_indices=True
+    )
     m.to(flow.device(device))
     x = flow.Tensor(input_arr, device=flow.device(device))
     output, indice = m(x)
@@ -178,71 +180,99 @@ def _test_maxpool2d(test_case, device):
 def _test_maxpool2d_ceil_mode(test_case, device):
     dim = 2
     input_arr = np.array(
-        [[[[-0.89042996,  2.33971243, -0.86660827,  0.80398747],
-         [-1.46769364, -0.78125064,  1.50086563, -0.76278226],
-         [ 1.31984534,  0.20741192, -0.86507054, -0.40776015],
-         [-0.89910823,  0.44932938,  1.49148118, -0.22036761]],
-
-        [[-0.5452334 , -0.10255169, -1.42035108,  0.73922913],
-         [-0.03192764,  0.69341935,  0.96263152, -1.52070843],
-         [ 0.02058239,  1.504032  ,  1.84423001, -0.0130596 ],
-         [ 2.20517719,  0.38449598,  0.85677771,  0.60425179]],
-
-        [[-1.64366213,  0.51370298, -0.21754866, -0.05085382],
-         [ 1.17065374,  1.13857674, -1.13070507,  0.44353707],
-         [-1.30783846, -0.48031445,  0.41807536, -2.13778887],
-         [ 0.08259005,  0.5798125 ,  0.03024696,  1.96100924]]],
-
-
-       [[[ 0.45173843, -0.34680027, -0.99754943,  0.18539502],
-         [-0.68451047, -0.03217399,  0.44705642, -0.39016231],
-         [-0.18062337,  1.82099303, -0.19113869,  0.85298683],
-         [ 0.14080452,  0.15306701, -1.02466827, -0.34480665]],
-
-        [[-0.21048489,  0.20933038, -0.09206508, -1.80402519],
-         [-0.52028985,  0.01140166, -1.13452858,  0.96648332],
-         [ 0.26454393,  0.48343972, -1.84055509, -0.01256443],
-         [ 0.31024029,  0.11983007,  0.98806488,  0.93557438]],
-
-        [[ 0.39152445,  0.672159  ,  0.71289289, -0.68072016],
-         [ 0.33711062, -1.78106242,  0.34545201, -1.62029359],
-         [ 0.47343899, -2.3433269 , -0.44517497,  0.09004267],
-         [ 0.26310742, -1.53121271,  0.65028836,  1.3669488 ]]]]
+        [
+            [
+                [
+                    [-0.89042996, 2.33971243, -0.86660827, 0.80398747],
+                    [-1.46769364, -0.78125064, 1.50086563, -0.76278226],
+                    [1.31984534, 0.20741192, -0.86507054, -0.40776015],
+                    [-0.89910823, 0.44932938, 1.49148118, -0.22036761],
+                ],
+                [
+                    [-0.5452334, -0.10255169, -1.42035108, 0.73922913],
+                    [-0.03192764, 0.69341935, 0.96263152, -1.52070843],
+                    [0.02058239, 1.504032, 1.84423001, -0.0130596],
+                    [2.20517719, 0.38449598, 0.85677771, 0.60425179],
+                ],
+                [
+                    [-1.64366213, 0.51370298, -0.21754866, -0.05085382],
+                    [1.17065374, 1.13857674, -1.13070507, 0.44353707],
+                    [-1.30783846, -0.48031445, 0.41807536, -2.13778887],
+                    [0.08259005, 0.5798125, 0.03024696, 1.96100924],
+                ],
+            ],
+            [
+                [
+                    [0.45173843, -0.34680027, -0.99754943, 0.18539502],
+                    [-0.68451047, -0.03217399, 0.44705642, -0.39016231],
+                    [-0.18062337, 1.82099303, -0.19113869, 0.85298683],
+                    [0.14080452, 0.15306701, -1.02466827, -0.34480665],
+                ],
+                [
+                    [-0.21048489, 0.20933038, -0.09206508, -1.80402519],
+                    [-0.52028985, 0.01140166, -1.13452858, 0.96648332],
+                    [0.26454393, 0.48343972, -1.84055509, -0.01256443],
+                    [0.31024029, 0.11983007, 0.98806488, 0.93557438],
+                ],
+                [
+                    [0.39152445, 0.672159, 0.71289289, -0.68072016],
+                    [0.33711062, -1.78106242, 0.34545201, -1.62029359],
+                    [0.47343899, -2.3433269, -0.44517497, 0.09004267],
+                    [0.26310742, -1.53121271, 0.65028836, 1.3669488],
+                ],
+            ],
+        ]
     )
 
     ceil_mode_out = np.array(
-        [[[[ 2.33971243,  2.33971243,  0.80398747],
-         [ 1.31984534,  1.50086563, -0.22036761],
-         [ 0.44932938,  1.49148118, -0.22036761]],
-
-        [[ 0.69341935,  0.96263152,  0.73922913],
-         [ 2.20517719,  1.84423001,  0.60425179],
-         [ 2.20517719,  0.85677771,  0.60425179]],
-
-        [[ 1.17065374,  1.13857674,  0.44353707],
-         [ 1.17065374,  1.96100924,  1.96100924],
-         [ 0.5798125 ,  1.96100924,  1.96100924]]],
-
-
-       [[[ 0.45173843,  0.44705642,  0.18539502],
-         [ 1.82099303,  1.82099303,  0.85298683],
-         [ 0.15306701,  0.15306701, -0.34480665]],
-
-        [[ 0.20933038,  0.96648332,  0.96648332],
-         [ 0.48343972,  0.98806488,  0.96648332],
-         [ 0.31024029,  0.98806488,  0.93557438]],
-
-        [[ 0.672159  ,  0.71289289, -0.68072016],
-         [ 0.47343899,  1.3669488 ,  1.3669488 ],
-         [ 0.26310742,  1.3669488 ,  1.3669488 ]]]]
+        [
+            [
+                [
+                    [2.33971243, 2.33971243, 0.80398747],
+                    [1.31984534, 1.50086563, -0.22036761],
+                    [0.44932938, 1.49148118, -0.22036761],
+                ],
+                [
+                    [0.69341935, 0.96263152, 0.73922913],
+                    [2.20517719, 1.84423001, 0.60425179],
+                    [2.20517719, 0.85677771, 0.60425179],
+                ],
+                [
+                    [1.17065374, 1.13857674, 0.44353707],
+                    [1.17065374, 1.96100924, 1.96100924],
+                    [0.5798125, 1.96100924, 1.96100924],
+                ],
+            ],
+            [
+                [
+                    [0.45173843, 0.44705642, 0.18539502],
+                    [1.82099303, 1.82099303, 0.85298683],
+                    [0.15306701, 0.15306701, -0.34480665],
+                ],
+                [
+                    [0.20933038, 0.96648332, 0.96648332],
+                    [0.48343972, 0.98806488, 0.96648332],
+                    [0.31024029, 0.98806488, 0.93557438],
+                ],
+                [
+                    [0.672159, 0.71289289, -0.68072016],
+                    [0.47343899, 1.3669488, 1.3669488],
+                    [0.26310742, 1.3669488, 1.3669488],
+                ],
+            ],
+        ]
     )
     kernel_size, stride, padding = (3, 3), (2, 2), (1, 1)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
 
-    m1 = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=False)
-    m2 = flow.nn.MaxPool2d(kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=True)
+    m1 = flow.nn.MaxPool2d(
+        kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=False
+    )
+    m2 = flow.nn.MaxPool2d(
+        kernel_size=kernel_size, stride=stride, padding=padding, ceil_mode=True
+    )
     m1.to(flow.device(device))
     m2.to(flow.device(device))
     x = flow.Tensor(input_arr, device=flow.device(device))
@@ -284,7 +314,7 @@ def _test_maxpool2d_diff_kernel_stride(test_case, device):
 
 def _test_maxpool2d_negative_input(test_case, device):
     dim = 2
-    input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float)
+    input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float32)
     kernel_size, stride, padding = (5, 5), (5, 5), (2, 2)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
@@ -314,7 +344,7 @@ def _test_maxpool2d_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-1, 1e-1))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool2d_special_kernel_size_backward(test_case, device):
@@ -334,7 +364,7 @@ def _test_maxpool2d_special_kernel_size_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool2d_diff_kernel_stride_backward(test_case, device):
@@ -354,12 +384,12 @@ def _test_maxpool2d_diff_kernel_stride_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool2d_negative_input_backward(test_case, device):
     dim = 2
-    input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float)
+    input_arr = -1.23456 * np.ones((1, 1, 1, 1), dtype=np.float32)
     kernel_size, stride, padding = (5, 5), (5, 5), (2, 2)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
@@ -374,7 +404,22 @@ def _test_maxpool2d_negative_input_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
+
+
+def _test_maxpool3d(test_case, device):
+    dim = 3
+    input_arr = np.random.randn(2, 3, 7, 9, 13)
+    kernel_size, stride, padding = (2, 3, 4), (2, 3, 4), (1, 1, 2)
+
+    m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
+    numpy_output = m_numpy(input_arr)
+
+    m = flow.nn.MaxPool3d(kernel_size=kernel_size, stride=stride, padding=padding)
+    m.to(flow.device(device))
+    x = flow.Tensor(input_arr, device=flow.device(device))
+    output = m(x)
+    test_case.assertTrue(np.allclose(numpy_output, output.numpy(), 1e-4, 1e-4))
 
 
 def _test_maxpool3d_backward(test_case, device):
@@ -395,7 +440,7 @@ def _test_maxpool3d_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool3d_special_kernel_size_backward(test_case, device):
@@ -416,13 +461,13 @@ def _test_maxpool3d_special_kernel_size_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool3d_diff_kernel_stride_backward(test_case, device):
     dim = 3
     input_arr = np.random.randn(9, 7, 48, 32, 20)
-    kernel_size, stride, padding = (6, 2, 3), (5, 4, 5), (4, 1, 2)
+    kernel_size, stride, padding = (6, 2, 4), (5, 4, 5), (3, 1, 2)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
     numpy_output = m_numpy(input_arr)
@@ -437,12 +482,12 @@ def _test_maxpool3d_diff_kernel_stride_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 def _test_maxpool3d_negative_input_backward(test_case, device):
     dim = 3
-    input_arr = -1.23456 * np.ones((1, 1, 1, 1, 1), dtype=np.float)
+    input_arr = -1.23456 * np.ones((1, 1, 1, 1, 1), dtype=np.float32)
     kernel_size, stride, padding = (5, 5, 5), (5, 5, 5), (2, 2, 2)
 
     m_numpy = MaxPoolNumpy(dim, kernel_size, stride, padding)
@@ -458,7 +503,7 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     output.backward()
     doutput = np.ones_like(numpy_output, dtype=np.float64)
     numpy_grad = m_numpy.backward(doutput)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x.grad.numpy(), numpy_grad, 1e-4, 1e-4))
 
 
 @unittest.skipIf(
@@ -479,22 +524,23 @@ class TestPoolingModule(flow.unittest.TestCase):
             _test_maxpool2d_diff_kernel_stride_backward,
             _test_maxpool2d_negative_input_backward,
         ]
-        
+
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    # def test_maxpool3d(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["test_fun"] = [
-    #         _test_maxpool3d_backward,
-    #         _test_maxpool3d_special_kernel_size_backward,
-    #         _test_maxpool3d_diff_kernel_stride_backward,
-    #         _test_maxpool3d_negative_input_backward,
-    #     ]
-    #     arg_dict["device"] = ["cpu", "cuda"]
-    #     for arg in GenArgList(arg_dict):
-    #         arg[0](test_case, *arg[1:])
+    def test_maxpool3d(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_maxpool3d,
+            _test_maxpool3d_backward,
+            _test_maxpool3d_special_kernel_size_backward,
+            _test_maxpool3d_diff_kernel_stride_backward,
+            _test_maxpool3d_negative_input_backward,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

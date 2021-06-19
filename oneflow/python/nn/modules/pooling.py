@@ -257,7 +257,7 @@ class MaxPool2d(Module):
         super().__init__()
         kernel_size = _pair(kernel_size)
         strides = _pair(stride) if (stride is not None) else kernel_size
-        data_format = "NCHW" # Only suport "NCHW" for now!
+        data_format = "NCHW"  # Only suport "NCHW" for now!
         channel_pos = "channels_first" if data_format == "NCHW" else "channels_last"
         dilation = _GetSequence(dilation, 2, "dilation")
         padding = _pair(padding)
@@ -400,15 +400,10 @@ class MaxPool3d(Module):
         strides = _triple(stride) if (stride is not None) else kernel_size
         data_format = "NCDHW"
         channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
-
-        assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1 or dilation == (
-            1,
-            1,
-            1,
-        ), "Only support dilation==1 for now!"
-
+        dilation = _GetSequence(dilation, 3, "dilation")
         padding = _triple(padding)
+        self.return_indices = return_indices
+
         if len(padding) == 3:
             if data_format == "NCDHW":
                 padding = (0, 0, padding[0], padding[1], padding[2])
@@ -424,20 +419,26 @@ class MaxPool3d(Module):
         padding_after = [pad[1] for pad in pads_list]
 
         self._op = (
-            flow.builtin_op("max_pool_3d")
-            .Attr("data_format", channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", strides)
-            .Attr("ceil_mode", ceil_mode)
+            flow.builtin_op("maxpool_3d")
+            .Input("x")
+            .Output("y")
+            .Output("indice")
             .Attr("padding", padding_type)
             .Attr("padding_before", padding_before)
             .Attr("padding_after", padding_after)
-            .Input("x")
-            .Output("y")
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("stride", strides)
+            .Attr("dilation", dilation)
+            .Attr("return_indices", return_indices)
+            .Attr("ceil_mode", ceil_mode)
             .Build()
         )
 
     def forward(self, x):
+        if self.return_indices:
+            res = self._op(x)
+            return res[0], res[1]
         return self._op(x)[0]
 
 
