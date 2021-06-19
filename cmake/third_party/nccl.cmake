@@ -1,6 +1,9 @@
 include (ExternalProject)
 
 option(NCCL_STATIC "" ON)
+if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
+   set(NCCL_STATIC OFF)
+endif()
 
 set(NCCL_INSTALL_DIR ${THIRD_PARTY_DIR}/nccl)
 set(NCCL_INCLUDE_DIR ${NCCL_INSTALL_DIR}/include)

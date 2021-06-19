@@ -52,37 +52,37 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
         device_batch_size /= parallel_num;
       }
 
-      user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
+      user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
       *image_desc->mut_shape() = Shape({device_batch_size});
-      user_op::TensorDesc* image_id_desc = ctx->TensorDesc4ArgNameAndIndex("image_id", 0);
+      user_op::TensorDesc* image_id_desc = ctx->OutputTensorDesc("image_id", 0);
       *image_id_desc->mut_shape() = Shape({device_batch_size});
-      user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
+      user_op::TensorDesc* image_size_desc = ctx->OutputTensorDesc("image_size", 0);
       *image_size_desc->mut_shape() = Shape({device_batch_size, 2});
-      user_op::TensorDesc* bbox_desc = ctx->TensorDesc4ArgNameAndIndex("gt_bbox", 0);
+      user_op::TensorDesc* bbox_desc = ctx->OutputTensorDesc("gt_bbox", 0);
       *bbox_desc->mut_shape() = Shape({device_batch_size});
-      user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("gt_label", 0);
+      user_op::TensorDesc* label_desc = ctx->OutputTensorDesc("gt_label", 0);
       *label_desc->mut_shape() = Shape({device_batch_size});
-      user_op::TensorDesc* segm_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm", 0);
+      user_op::TensorDesc* segm_desc = ctx->OutputTensorDesc("gt_segm", 0);
       *segm_desc->mut_shape() = Shape({device_batch_size});
-      user_op::TensorDesc* segm_index_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm_index", 0);
+      user_op::TensorDesc* segm_index_desc = ctx->OutputTensorDesc("gt_segm_index", 0);
       *segm_index_desc->mut_shape() = Shape({device_batch_size});
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
-      user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
+      user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
       *image_desc->mut_shape() = Shape({batch_size});
-      user_op::TensorDesc* image_id_desc = ctx->TensorDesc4ArgNameAndIndex("image_id", 0);
+      user_op::TensorDesc* image_id_desc = ctx->OutputTensorDesc("image_id", 0);
       *image_id_desc->mut_shape() = Shape({batch_size});
-      user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
+      user_op::TensorDesc* image_size_desc = ctx->OutputTensorDesc("image_size", 0);
       *image_size_desc->mut_shape() = Shape({batch_size, 2});
-      user_op::TensorDesc* bbox_desc = ctx->TensorDesc4ArgNameAndIndex("gt_bbox", 0);
+      user_op::TensorDesc* bbox_desc = ctx->OutputTensorDesc("gt_bbox", 0);
       *bbox_desc->mut_shape() = Shape({batch_size});
-      user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("gt_label", 0);
+      user_op::TensorDesc* label_desc = ctx->OutputTensorDesc("gt_label", 0);
       *label_desc->mut_shape() = Shape({batch_size});
-      user_op::TensorDesc* segm_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm", 0);
+      user_op::TensorDesc* segm_desc = ctx->OutputTensorDesc("gt_segm", 0);
       *segm_desc->mut_shape() = Shape({batch_size});
-      user_op::TensorDesc* segm_index_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm_index", 0);
+      user_op::TensorDesc* segm_index_desc = ctx->OutputTensorDesc("gt_segm_index", 0);
       *segm_index_desc->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
     })
@@ -122,19 +122,19 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
       gt_segm_index_modifier->set_header_infered_before_compute(false);
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* image_desc = ctx->TensorDesc4ArgNameAndIndex("image", 0);
+      user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
       *image_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* image_id_desc = ctx->TensorDesc4ArgNameAndIndex("image_id", 0);
+      user_op::TensorDesc* image_id_desc = ctx->OutputTensorDesc("image_id", 0);
       *image_id_desc->mut_data_type() = DataType::kInt64;
-      user_op::TensorDesc* image_size_desc = ctx->TensorDesc4ArgNameAndIndex("image_size", 0);
+      user_op::TensorDesc* image_size_desc = ctx->OutputTensorDesc("image_size", 0);
       *image_size_desc->mut_data_type() = DataType::kInt32;
-      user_op::TensorDesc* bbox_desc = ctx->TensorDesc4ArgNameAndIndex("gt_bbox", 0);
+      user_op::TensorDesc* bbox_desc = ctx->OutputTensorDesc("gt_bbox", 0);
       *bbox_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* label_desc = ctx->TensorDesc4ArgNameAndIndex("gt_label", 0);
+      user_op::TensorDesc* label_desc = ctx->OutputTensorDesc("gt_label", 0);
       *label_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* segm_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm", 0);
+      user_op::TensorDesc* segm_desc = ctx->OutputTensorDesc("gt_segm", 0);
       *segm_desc->mut_data_type() = DataType::kTensorBuffer;
-      user_op::TensorDesc* segm_index_desc = ctx->TensorDesc4ArgNameAndIndex("gt_segm_index", 0);
+      user_op::TensorDesc* segm_index_desc = ctx->OutputTensorDesc("gt_segm_index", 0);
       *segm_index_desc->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
