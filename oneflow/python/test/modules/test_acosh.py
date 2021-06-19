@@ -23,7 +23,7 @@ from test_util import GenArgList
 
 
 def _test_acosh_impl(test_case, shape, device):
-    np_input = np.random.randn(*shape) + 2
+    np_input = np.random.rand(*shape) + 2.0
     of_input = flow.Tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
@@ -48,7 +48,7 @@ def _test_acosh_impl(test_case, shape, device):
 class TestAcosh(flow.unittest.TestCase):
     def test_acosh(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_acosh_impl(test_case, *arg)

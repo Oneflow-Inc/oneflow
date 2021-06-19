@@ -79,6 +79,9 @@ class Functor {
 
 class PackedFunctor {
  public:
+  PackedFunctor(const std::string& func_name, const Functor& functor)
+      : func_name_(func_name), functor_(functor) {}
+
   virtual ~PackedFunctor() = default;
 
   template<typename Func>
@@ -90,9 +93,6 @@ class PackedFunctor {
   }
 
  private:
-  PackedFunctor(const std::string& func_name, const Functor& functor)
-      : func_name_(func_name), functor_(functor) {}
-
   std::string func_name_;
   Functor functor_;
 };

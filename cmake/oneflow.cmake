@@ -141,11 +141,7 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*\\.cpp$")
-    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/transport/transport_test_main\\.cpp$")
-      if(RPC_BACKEND MATCHES "GRPC")
-        list(APPEND of_transport_test_cc ${oneflow_single_file})
-      endif()
-    elseif("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
+    if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/(core|user|xrt)/.*_test\\.cpp$")
       # test file
       list(APPEND of_all_test_cc ${oneflow_single_file})
     elseif(APPLE AND "${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/comm_network/(epoll|ibverbs)/.*")
@@ -211,7 +207,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
+add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 # cfg obj lib
 include(cfg)
@@ -219,8 +215,8 @@ GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOUR
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj generate_cfg)
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj ${PROTOBUF_STATIC_LIBRARIES})
-  target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
+  target_link_libraries(of_protoobj protobuf_imported)
+  target_link_libraries(of_cfgobj protobuf_imported)
   target_link_libraries(of_cfgobj of_protoobj)
 else()
   # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
@@ -261,7 +257,7 @@ endif()
 if (BUILD_SHARED_LIBS)
   get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
   get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} "${GLOG_STATIC_LIBRARIES}")
+  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
   set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 endif()
 
@@ -348,12 +344,6 @@ if(BUILD_TESTING)
     target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
     set_target_properties(oneflow_testexe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
     add_test(NAME oneflow_test COMMAND oneflow_testexe)
-    #  foreach(cc ${of_all_test_cc})
-    #    get_filename_component(test_name ${cc} NAME_WE)
-    #    string(CONCAT test_exe_name ${test_name} exe)
-    #    oneflow_add_executable(${test_exe_name} ${cc})
-    #    target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
-    #  endforeach()
   endif()
   if (of_separate_test_cc)
     foreach(cc ${of_separate_test_cc})
@@ -364,16 +354,6 @@ if(BUILD_TESTING)
     endforeach()
   endif()
 endif()
-
-# build transport_test
-foreach(cc ${of_transport_test_cc})
-  get_filename_component(transport_test_name ${cc} NAME_WE)
-  string(CONCAT transport_test_exe_name ${transport_test_name} _exe)
-  oneflow_add_executable(${transport_test_exe_name} ${cc})
-  target_link_libraries(${transport_test_exe_name} ${of_libs} ${oneflow_third_party_libs} ${oneflow_exe_third_party_libs})
-  set_target_properties(${transport_test_exe_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
-endforeach()
-
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
