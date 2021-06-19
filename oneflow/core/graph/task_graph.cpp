@@ -467,9 +467,10 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                                   const MemZoneId& dst_mem_zone_id) {
   const auto& src_mem_zone_id = src_node->MemZoneId121();
   const ProxyKey key(src_node, lbi, dst_mem_zone_id);
-  if (proxy2node.find(key) != proxy2node.cend()) {
+  auto it = proxy2node.find(key);
+  if (it != proxy2node.cend()) {
     // hit cache
-    return proxy2node.at(key);
+    return it->second;
   } else {
     if (src_mem_zone_id == dst_mem_zone_id) {
       // in the same memory zone
@@ -477,6 +478,7 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
       return src_node;
     } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
       if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
+        CHECK_EQ(src_mem_zone_id.device_type(), DeviceType::kGPU);
         // on the same node, not on the same device
         // src must be not on the cpu mem zone, copy d2h first
         CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
