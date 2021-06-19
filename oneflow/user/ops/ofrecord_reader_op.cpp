@@ -29,7 +29,7 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
     .Attr<int32_t>("shuffle_buffer_size", 1024)
     .Attr<bool>("shuffle_after_epoch", false)
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
       const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
       int64_t parallel_num = ctx->parallel_ctx().parallel_num();
@@ -41,7 +41,7 @@ REGISTER_CPU_ONLY_USER_OP("OFRecordReader")
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int32_t batch_size = ctx->Attr<int32_t>("batch_size");
       *out_tensor->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
