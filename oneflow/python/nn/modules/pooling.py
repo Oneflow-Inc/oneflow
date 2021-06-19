@@ -20,7 +20,7 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.utils import _single, _pair, _triple
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t
-from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset
+from oneflow.python.ops.nn_ops import calc_pool_padding, get_dhw_offset, _GetSequence
 
 
 @oneflow_export("nn.AvgPool2d")
@@ -257,13 +257,12 @@ class MaxPool2d(Module):
         super().__init__()
         kernel_size = _pair(kernel_size)
         strides = _pair(stride) if (stride is not None) else kernel_size
-        data_format = "NCHW"
-        channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
-
-        assert return_indices is False, "Only support return_indices==False for now!"
-        assert dilation == 1 or dilation == (1, 1), "Only support dilation==1 for now!"
-
+        data_format = "NCHW" # Only suport "NCHW" for now!
+        channel_pos = "channels_first" if data_format == "NCHW" else "channels_last"
+        dilation = _GetSequence(dilation, 2, "dilation")
         padding = _pair(padding)
+        self.return_indices = return_indices
+
         if len(padding) == 2:
             if data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
@@ -278,38 +277,27 @@ class MaxPool2d(Module):
         padding_before = [pad[0] for pad in pads_list]
         padding_after = [pad[1] for pad in pads_list]
 
-        # self._op = (
-        #     flow.builtin_op("maxpool_2d")
-        #     .Attr("padding", padding_type)
-        #     .Attr("padding_before", padding_before)
-        #     .Attr("padding_after", padding_after)
-        #     .Attr("data_format", channel_pos)
-        #     .Attr("kernel_size", kernel_size)
-        #     .Attr("stride", strides)
-        #     .Attr("dilation", dilation)
-        #     .Attr("return_indices", False)
-        #     .Attr("ceil_mode", ceil_mode)
-        #     .Input("x")
-        #     .Output("y")
-        #     .Output("indice")
-        #     .Build()
-        # )
-
         self._op = (
-            flow.builtin_op("max_pool_2d")
-            .Attr("data_format", channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", strides)
-            .Attr("ceil_mode", ceil_mode)
+            flow.builtin_op("maxpool_2d")
+            .Input("x")
+            .Output("y")
+            .Output("indice")
             .Attr("padding", padding_type)
             .Attr("padding_before", padding_before)
             .Attr("padding_after", padding_after)
-            .Input("x")
-            .Output("y")
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("stride", strides)
+            .Attr("dilation", dilation)
+            .Attr("return_indices", return_indices)
+            .Attr("ceil_mode", ceil_mode)
             .Build()
         )
 
     def forward(self, x):
+        if self.return_indices:
+            res = self._op(x)
+            return res[0], res[1]
         return self._op(x)[0]
 
 
