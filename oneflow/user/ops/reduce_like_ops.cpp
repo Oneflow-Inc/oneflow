@@ -28,7 +28,7 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
       if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
-      user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_tensor = ctx->OutputTensorDesc("y", 0);
       *y_tensor->mut_shape() = like_tensor->shape();
       *y_tensor->mut_is_dynamic() = like_tensor->is_dynamic();
       return Maybe<void>::Ok();
