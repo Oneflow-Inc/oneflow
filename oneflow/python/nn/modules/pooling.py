@@ -163,8 +163,55 @@ class MaxPool1d(Module):
         return_indices: bool = False,
         ceil_mode: bool = False,
     ):
-        # TODO: fix cuDNN bugs in pooling_1d
-        raise NotImplementedError
+        super().__init__()
+        kernel_size = _pair(tuple(kernel_size)[0])
+        strides = _pair(tuple(stride)[0]) if (stride is not None) else kernel_size
+        data_format = "NCL"  # Only suport "NCL" for now!
+        channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
+        dilation = _GetSequence(dilation, 2, "dilation")
+        padding = _pair(tuple(padding)[0])
+        self.return_indices = return_indices
+
+        if len(padding) == 2:
+            if channel_pos == "channels_first":
+                padding = (0, 0, padding[0], padding[1])
+            else:
+                raise ValueError("error padding param!")
+        else:
+            raise ValueError("error padding param!")
+
+        padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(channel_pos), 2
+        )
+        padding_before = [pad[0] for pad in pads_list]
+        padding_after = [pad[1] for pad in pads_list]
+
+        self._op = (
+            flow.builtin_op("maxpool_2d")
+            .Input("x")
+            .Output("y")
+            .Output("indice")
+            .Attr("padding", padding_type)
+            .Attr("padding_before", padding_before)
+            .Attr("padding_after", padding_after)
+            .Attr("data_format", channel_pos)
+            .Attr("kernel_size", kernel_size)
+            .Attr("stride", strides)
+            .Attr("dilation", dilation)
+            .Attr("return_indices", return_indices)
+            .Attr("ceil_mode", ceil_mode)
+            .Build()
+        )
+
+    def forward(self, x):
+        expand_x = x.unsqueeze(dim=2)
+        expand_y, expand_indice = self._op(expand_x)
+        y = expand_y.squeeze(dim=2)
+        indice = expand_indice.squeeze(dim=2)
+        if self.return_indices:
+            return y, indice
+        else:
+            return y
 
 
 @oneflow_export("nn.MaxPool2d")
