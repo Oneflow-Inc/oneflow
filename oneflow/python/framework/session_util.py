@@ -40,8 +40,8 @@ from oneflow.python.framework.pull_util import (
 from oneflow.python.framework.session_context import SessionStatus
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 from oneflow.python.framework.function_desc import FunctionDesc
-from oneflow.python.framework.check_point import SnapshotManager
 import oneflow.python.framework.check_point_v2 as check_point_v2
+from oneflow.python.framework.check_point import SnapshotManager
 from contextlib import contextmanager
 from typing import Callable
 import inspect
