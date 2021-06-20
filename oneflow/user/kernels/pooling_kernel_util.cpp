@@ -52,8 +52,8 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
                                  const std::vector<int32_t>& dilation, const bool return_indices,
                                  const bool ceil_mode)
     : dim_(dim),
-      pool_size_3d_(Get3DVec(kernel_size, dim)),
-      strides_3d_(Get3DVec(stride, dim)),
+      pooling_size_3d_(Get3DVec(kernel_size, dim)),
+      stride_3d_(Get3DVec(stride, dim)),
       dilation_3d_(Get3DVec(dilation, dim)),
       padding_before_3d_(Get3DPadVec(padding_before, dim)),
       padding_after_3d_(Get3DPadVec(padding_after, dim)),
@@ -63,7 +63,7 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
       ceil_mode_(ceil_mode) {
   x_3d_ = {GetInDim(x_shape, data_format, 0, dim), GetInDim(x_shape, data_format, 1, dim),
            GetInDim(x_shape, data_format, 2, dim)};
-  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
+  Get3DOutputSize(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
                   &padding_before_3d_, &padding_after_3d_);
   if (data_format == "channels_first") {
     channel_num_ = x_shape.At(1);
@@ -73,12 +73,22 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
     channel_num_ = x_shape.At(x_shape.NumAxes() - 1);
   }
   batch_num_ = x_shape.At(0);
+
+  // printf("\nPoolingParams3D Initialize Finished >>>>>>>>>>>>>>>>>>>> \ndata_format:%s,
+  // padding_before:(%d, %d), padding_after:(%d, %d), kernel_size:(%d, %d), stride:(%d, %d),
+  // dilation:(%d, %d)",
+  //     data_format.c_str(), padding_before_3d_[0],padding_before_3d_[1],
+  //     padding_after_3d_[0],padding_after_3d_[1],
+  //     kernel_size[0],kernel_size[1],
+  //     stride[0],stride[1],
+  //     dilation[0],dilation[1]
+  // );
 }
 
 void PoolingParams3D::Reset(const ShapeView& x_shape) {
   x_3d_ = {GetInDim(x_shape, data_format_, 0, dim_), GetInDim(x_shape, data_format_, 1, dim_),
            GetInDim(x_shape, data_format_, 2, dim_)};
-  Get3DOutputSize(x_3d_, pool_size_3d_, strides_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
+  Get3DOutputSize(x_3d_, pooling_size_3d_, stride_3d_, padding_, ceil_mode_, &dilation_3d_, &y_3d_,
                   &padding_before_3d_, &padding_after_3d_);
 }
 

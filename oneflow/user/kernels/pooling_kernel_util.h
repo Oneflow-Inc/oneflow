@@ -33,7 +33,6 @@ namespace oneflow {
 #define POOLING_DATA_TYPE_GPU_SEQ POOLING_DATA_TYPE_CPU_SEQ
 
 typedef fixed_vector<int64_t, SHAPE_MAX_AXIS_SIZE> FixedDimVector;
-typedef fixed_vector<int32_t, SHAPE_MAX_AXIS_SIZE> FixedVector;
 
 template<typename T>
 struct DeviceAdd {
@@ -61,18 +60,21 @@ class PoolingParams3D {
   Shape GetXShape5D() const;
   Shape GetYShape5D() const;
 
-  const std::vector<int32_t>& pool_size_3d() const { return pool_size_3d_; }
-  const std::vector<int32_t>& strides_3d() const { return strides_3d_; }
+  const std::vector<int32_t>& pooling_size_3d() const { return pooling_size_3d_; }
+  const std::vector<int32_t>& stride_3d() const { return stride_3d_; }
   const std::vector<int32_t>& padding_before_3d() const { return padding_before_3d_; }
   const std::vector<int32_t>& padding_after_3d() const { return padding_after_3d_; }
   const std::vector<int32_t>& dilation_3d() const { return dilation_3d_; }
+  const std::string& data_format() const { return data_format_; }
+  const int64_t& num_batch() const { return batch_num_; }
+  const int64_t& num_channel() const { return channel_num_; }
 
  private:
   int32_t dim_;
   FixedDimVector x_3d_;
   FixedDimVector y_3d_;
-  std::vector<int32_t> pool_size_3d_;
-  std::vector<int32_t> strides_3d_;
+  std::vector<int32_t> pooling_size_3d_;
+  std::vector<int32_t> stride_3d_;
   std::vector<int32_t> padding_before_3d_;
   std::vector<int32_t> padding_after_3d_;
   std::vector<int32_t> dilation_3d_;
@@ -84,52 +86,23 @@ class PoolingParams3D {
   int64_t channel_num_;
 };
 
-struct PoolKernelState final : public user_op::OpKernelState {
-  PoolingParams3D params_3d;
-  bool is_dynamic;
-  PoolKernelState(PoolingParams3D params_3d, bool is_dynamic)
-      : params_3d(params_3d), is_dynamic(is_dynamic) {}
-  const PoolingParams3D& GetParams3D() { return params_3d; }
-  void Update(const ShapeView& x_shape) {
-    if (is_dynamic) { params_3d.Reset(x_shape); }
-  }
-};
-
 template<DeviceType device_type, typename T>
 struct PoolingKernelUtil {
-  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
-                               const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const std::vector<int32_t> padding_before, const int64_t n_batch,
-                               const int64_t n_channel, const int64_t x_height,
-                               const int64_t x_width, const int64_t y_height, const int64_t y_width,
-                               const std::vector<int32_t> kernel_size,
-                               const std::vector<int32_t> stride,
-                               const std::vector<int32_t> dilation);
+  static void Maxpool2dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
+                               const int64_t& elem_num, const T* src, T* dest, int64_t* indice_ptr,
+                               const PoolingParams3D& params_3d);
 
   static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const int64_t n_batch,
-                                const int64_t n_channel, const int64_t src_height,
-                                const int64_t src_width, const int64_t dst_height,
-                                const int64_t dst_width);
+                                const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 
   static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
-                               const std::vector<int32_t> padding_before, const int64_t n_batch,
-                               const int64_t n_channel, const int64_t x_time,
-                               const int64_t x_height, const int64_t x_width, const int64_t y_time,
-                               const int64_t y_height, const int64_t y_width,
-                               const std::vector<int32_t> kernel_size,
-                               const std::vector<int32_t> stride,
-                               const std::vector<int32_t> dilation);
+                               const PoolingParams3D& params_3d);
 
   static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5> index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
-                                const int64_t* indice_ptr, const int64_t n_batch,
-                                const int64_t n_channel, const int64_t src_time,
-                                const int64_t src_height, const int64_t src_width,
-                                const int64_t dst_time, const int64_t dst_height,
-                                const int64_t dst_width);
+                                const int64_t* indice_ptr, const PoolingParams3D& params_3d);
 };
 
 template<typename T>

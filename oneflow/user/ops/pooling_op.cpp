@@ -29,11 +29,11 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
     const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
     const std::string& data_format = ctx->Attr<std::string>("data_format");
     const std::string& padding = ctx->Attr<std::string>("padding");
-    const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
-    const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const std::vector<int32_t> stride = ctx->Attr<std::vector<int32_t>>("stride");
-    const std::vector<int32_t> dilation = ctx->Attr<std::vector<int32_t>>("dilation");
+    const std::vector<int32_t>& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+    const std::vector<int32_t>& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
+    const std::vector<int32_t>& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+    const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
+    const std::vector<int32_t>& dilation = ctx->Attr<std::vector<int32_t>>("dilation");
     const bool return_indices = ctx->Attr<bool>("return_indices");
     const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
