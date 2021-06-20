@@ -46,49 +46,12 @@ class _ConstantBase(Module):
         if device is None:
             self.device = flow.device("cpu")
 
-        if dtype in [
-            flow.int,
-            flow.int64,
-            flow.int32,
-            flow.char,
-            flow.int8,
-            flow.long,
-            flow.uint8,
-        ]:
-            floating_value = float(0)
-            integer_value = int(value)
-            is_floating_value = False
-        elif dtype in [
-            flow.float32,
-            flow.float,
-            flow.double,
-            flow.float64,
-            flow.float16,
-            flow.half,
-        ]:
-            floating_value = float(value)
-            integer_value = int(0)
-            is_floating_value = True
-        else:
-            raise NotImplementedError("Unsupport data type")
-
-        self._op = (
-            flow.builtin_op("constant")
-            .Output("out")
-            .Attr("is_floating_value", is_floating_value)
-            .Attr("floating_value", floating_value)
-            .Attr("integer_value", integer_value)
-            .Attr("dtype", dtype)
-            .Attr("shape", size)
-            .Build()
-        )
-        # TODO(): Transfer to functional constant once constant kernel changed to be stateless.
-        # self.shape = size
-        # self.value = value
-        # self.dtype = dtype
+        self.shape = size
+        self.value = value
+        self.dtype = dtype
 
     def forward(self):
-        res = self._op()[0]
+        res = flow.F.constant(self.shape, self.value, self.dtype)
         res = res.to(device=self.device)
         res.requires_grad = self.requires_grad
         return res
