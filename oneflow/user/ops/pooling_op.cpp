@@ -64,12 +64,16 @@ TensorDescInferFn MakeForwardTensorDescInferFn(const int32_t dim) {
 
 Maybe<void> ForwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
-        .Split(user_op::OpArg("indice", 0), i)
-        .Build();
+    if (padding_before[i] == 0 && padding_after[i] == 0) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("y", 0), i)
+          .Split(user_op::OpArg("indice", 0), i)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }
@@ -81,14 +85,18 @@ Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
 
 Maybe<void> BackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  const auto& padding_before = ctx->Attr<std::vector<int32_t>>("padding_before");
+  const auto& padding_after = ctx->Attr<std::vector<int32_t>>("padding_after");
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
-        .Split(user_op::OpArg("indice", 0), i)
-        .Split(user_op::OpArg("dy", 0), i)
-        .Split(user_op::OpArg("dx", 0), i)
-        .Build();
+    if (padding_before[i] == 0 && padding_after[i] == 0) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("x", 0), i)
+          .Split(user_op::OpArg("y", 0), i)
+          .Split(user_op::OpArg("indice", 0), i)
+          .Split(user_op::OpArg("dy", 0), i)
+          .Split(user_op::OpArg("dx", 0), i)
+          .Build();
+    }
   }
   return Maybe<void>::Ok();
 }
