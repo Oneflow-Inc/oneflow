@@ -23,7 +23,7 @@ REGISTER_USER_OP("prelu")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const Shape& alpha_shape = ctx->InputShape("alpha", 0);
       CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_shape.NumAxes() + 1);
       FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
@@ -68,7 +68,7 @@ REGISTER_USER_OP("prelu_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       const user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
       CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_desc->shape().NumAxes() + 1);
       FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
