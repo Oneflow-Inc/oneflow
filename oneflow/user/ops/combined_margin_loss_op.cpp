@@ -29,7 +29,7 @@ REGISTER_USER_OP("combined_margin_loss")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* label = ctx->TensorDesc4ArgNameAndIndex("label", 0);
-      user_op::TensorDesc* theta = ctx->TensorDesc4ArgNameAndIndex("theta", 0);
+      user_op::TensorDesc* theta = ctx->OutputTensorDesc("theta", 0);
       CHECK_EQ_OR_RETURN(label->shape().At(0), x->shape().At(0));
       CHECK_GE_OR_RETURN(x->shape().NumAxes(), 2);
       *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);

@@ -146,6 +146,10 @@ class UserOpExprInferContext : public user_op::InferContext {
     return user_op_expr_->indexed_output_pairs();
   }
 
+  user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(name, index);
+  }
+
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) override {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
