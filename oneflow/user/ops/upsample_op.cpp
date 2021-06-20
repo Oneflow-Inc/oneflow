@@ -27,7 +27,7 @@ REGISTER_USER_OP("upsample")
     .Attr<std::string>("interpolation")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const float height_scale = ctx->Attr<float>("height_scale");
       const float width_scale = ctx->Attr<float>("width_scale");
       if (ctx->Attr<std::string>("data_format") != "channels_first"
