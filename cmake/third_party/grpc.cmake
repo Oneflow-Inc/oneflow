@@ -67,5 +67,6 @@ ExternalProject_Add(grpc
         -DCMAKE_INSTALL_INCLUDEDIR:STRING=${GRPC_INSTALL_INCLUDE_DIR}
         -DCMAKE_INSTALL_LIBDIR:STRING=${GRPC_INSTALL_LIBRARY_DIR}
 )
-
+else()
+  add_custom_target(grpc)
 endif(THIRD_PARTY)
