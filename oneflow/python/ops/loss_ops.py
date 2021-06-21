@@ -168,7 +168,7 @@ def ctc_loss(
         .Attr("zero_infinity", zero_infinity)
         .Build()
         .InferAndTryRun()
-        .RemoteBlobList()[0]
+        .RemoteBlobList()
     )
 
     if zero_infinity:
