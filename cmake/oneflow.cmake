@@ -358,16 +358,12 @@ endif()
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
 add_custom_target(of_include_copy ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+  COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
 add_dependencies(of_include_copy of_ccobj)
-file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
-  #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
-  #list(APPEND oneflow_all_include_file ${h_files})
-  #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
-  #list(APPEND oneflow_all_include_file ${hpp_files})
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
+  message(STATUS "oneflow_all_include_file: ${oneflow_all_include_file}")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
