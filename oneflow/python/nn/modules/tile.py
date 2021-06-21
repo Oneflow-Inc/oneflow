@@ -42,6 +42,41 @@ class Tile(Module):
 @register_tensor_op("tile")
 @experimental_api
 def tile_op(x, sizes):
+    r"""The interface is consistent with PyTorch.
+
+    This operator repeat the input tensor to a larger size along the specified dimensions.
+
+    Args:
+        x (oneflow.Tensor): The input Tensor.
+        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+
+    .. note::
+        This function is similar to NumPy’s tile function.
+
+    Returns:
+        oneflow.Tensor: The result Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2]).astype(np.int32)
+        >>> input = flow.Tensor(x, dtype=flow.int32)
+        >>> out = input.tile(sizes=(2,))
+        >>> out
+        tensor([1, 2, 1, 2], dtype=oneflow.int32)
+
+        >>> x = np.random.randn(5, 2, 1)
+        >>> input = flow.Tensor(x)
+        >>> out = input.tile(sizes=(3, 4))
+        >>> out.size()
+        flow.Size([5, 6, 4])
+
+    """
     return Tile(sizes=sizes)(x)
 
 
