@@ -1,8 +1,7 @@
 name: Simple CI
 on:
-  push:
-    branches:
-      - "*"
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       placeholder:
