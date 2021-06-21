@@ -42,38 +42,25 @@ class ScalarMul(Module):
 class ScalarMulByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_mul_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.mul_scalar_by_tensor(x, y)
 
 
 class ElementwiseMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("multiply").Input("x").Input("y").Output("out").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.mul(x, y)
 
 
 class BroadcastMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_mul").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_mul(x, y)
 
 
 @oneflow_export("mul")
@@ -190,27 +177,17 @@ def variance_op(input, dim=None, keepdim=False):
 class ScalarSubByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_sub_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.sub_scalar_by_tensor(x, y)
 
 
 class BroadcastSub(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_sub").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_sub(x, y)
 
 
 class ScalarAdd(Module):
@@ -281,27 +258,17 @@ def _sub(x, y):
 class BroadcastDiv(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_div").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_div(x, y)
 
 
 class ScalarDivByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_div_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, scalar):
-        return self._op(x, scalar)[0]
+        return flow.F.div_scalar_by_tensor(x, scalar)
 
 
 @oneflow_export("div")
@@ -401,16 +368,9 @@ def _reciprocal(x):
 class ScalarAddByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_add_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.add_scalar_by_tensor(x, y)
 
 
 class ElementwiseAdd(Module):
@@ -424,12 +384,9 @@ class ElementwiseAdd(Module):
 class BroadcastAdd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_add").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_add(x, y)
 
 
 @oneflow_export("add")
@@ -1042,15 +999,12 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._elementwise_pow_op = (
-            flow.builtin_op("pow").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
         if isinstance(y, (int, float)):
             return flow.F.pow_scalar(x, alpha=y)
         else:
-            return self._elementwise_pow_op(x, y)[0]
+            return flow.F.pow(x, y)
 
 
 @oneflow_export("pow")
