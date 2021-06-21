@@ -35,15 +35,21 @@ class AddNFunctor {
  public:
   AddNFunctor() {
     op_.resize(kMaxInputCount /*the maximum number of inputs*/);
-    for (int n = 2; n < op_.size(); ++n) {
-      op_[n] = CHECK_JUST(one::OpBuilder("add_n").Input("in", n).Output("out").Build());
+    for (int n = 1; n < op_.size(); ++n) {
+      op_[n] = CHECK_JUST(one::OpBuilder("add_n").Input("in", n + 1).Output("out").Build());
     }
   }
   Maybe<Tensor> operator()(const TensorTuple& inputs) const {
     CHECK_GE_OR_RETURN(inputs.size(), 2);
-    CHECK_LT_OR_RETURN(inputs.size(), op_.size())
-        << "The maximum number supported of inputs is " << op_.size();
-    return OpInterpUtil::Dispatch<Tensor>(*op_.at(inputs.size()), inputs);
+    TensorTuple outputs;
+    for (int i = 0; i < inputs.size(); i += kMaxInputCount) {
+      size_t size = (i + kMaxInputCount) < inputs.size() ? kMaxInputCount : inputs.size() - i;
+      TensorTuple partial_inputs(size);
+      std::copy(inputs.begin() + i, inputs.begin() + i + size, partial_inputs.begin());
+      outputs.push_back(JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));
+    }
+    if (outputs.size() == 1) { return outputs.at(0); }
+    return this->operator()(outputs);
   }
 
  private:
@@ -68,7 +74,7 @@ class ScalarAddFunctor {
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarAdd shoule be float or int.";
     }
   }
 
@@ -94,7 +100,7 @@ class ScalarMulFunctor {
       JUST(attrs.SetAttr<bool>("has_int_operand", true));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarMul shoule be float or int.";
     }
   }
 

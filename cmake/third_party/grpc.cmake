@@ -29,7 +29,7 @@ foreach(LIBRARY_NAME ${GRPC_LIBRARY_NAMES})
     list(APPEND GRPC_BUILD_STATIC_LIBRARIES ${GRPC_BUILD_LIBRARY_DIR}/${LIBRARY_NAME})
 endforeach()
 
-set(PROTOBUF_CONFIG_DIR ${PROTOBUF_BUILD_LIBRARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/protobuf)
+set(PROTOBUF_CONFIG_DIR ${PROTOBUF_LIBRARY_DIR}/cmake/protobuf)
 set(ABSL_CONFIG_DIR ${ABSL_INSTALL}/${CMAKE_INSTALL_LIBDIR}/cmake/absl)
 set(CARES_CONFIG_DIR ${CARES_INSTALL}/lib/cmake/c-ares)
 
@@ -44,7 +44,7 @@ ExternalProject_Add(grpc
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j${PROC_NUM} grpc grpc_unsecure grpc++_unsecure
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc_unsecure && ${CMAKE_COMMAND} --build . -j ${PROC_NUM} --target grpc++_unsecure
     INSTALL_COMMAND ""
     CMAKE_CACHE_ARGS
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
