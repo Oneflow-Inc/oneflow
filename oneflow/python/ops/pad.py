@@ -20,7 +20,7 @@ from typing import Optional, Sequence, Union
 import oneflow
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
 import oneflow._oneflow_internal
 
 
@@ -238,6 +238,7 @@ def same_padding(
 
 
 @oneflow_export("reflection_pad2d")
+@stable_api
 def reflection_pad2d(
     x: oneflow._oneflow_internal.BlobDesc,
     padding: Union[int, tuple, list],

@@ -38,6 +38,7 @@ class InferContext {
  public:
   virtual ~InferContext() = default;
 
+  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
                                                               int32_t) const = 0;
@@ -49,27 +50,15 @@ class InferContext {
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
-  const std::string& input(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().input(arg_name, index);
-  }
-  const std::string& output(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().output(arg_name, index);
-  }
-  bool has_input(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().has_input(arg_name, index);
-  }
-  bool has_output(const std::string& arg_name, int32_t index) const {
-    return user_op_conf().has_output(arg_name, index);
-  }
-  int32_t input_size(const std::string& arg_name) const {
-    return user_op_conf().input_size(arg_name);
-  }
-  int32_t output_size(const std::string& arg_name) const {
-    return user_op_conf().output_size(arg_name);
-  }
-  const std::string& op_name() const { return user_op_conf().op_name(); }
-  const std::string& op_type_name() const { return user_op_conf().op_type_name(); }
-  const std::string& device_tag() const { return user_op_conf().op_conf().device_tag(); }
+  virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
+  virtual const std::string& output(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_input(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_output(const std::string& arg_name, int32_t index) const = 0;
+  virtual int32_t input_size(const std::string& arg_name) const = 0;
+  virtual int32_t output_size(const std::string& arg_name) const = 0;
+  virtual const std::string& op_name() const = 0;
+  virtual const std::string& op_type_name() const = 0;
+  virtual const std::string& device_tag() const = 0;
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
@@ -98,7 +87,6 @@ class InferContext {
  protected:
   InferContext() = default;
   InferContext(const InferContext&) = delete;
-  virtual const UserOpConfWrapper& user_op_conf() const = 0;
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
