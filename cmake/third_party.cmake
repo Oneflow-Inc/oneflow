@@ -148,7 +148,6 @@ set(oneflow_third_party_dependencies
   zlib_copy_headers_to_destination
   zlib_copy_libs_to_destination
   protobuf
-  grpc
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
   glog_copy_headers_to_destination
@@ -170,6 +169,10 @@ set(oneflow_third_party_dependencies
   lz4_copy_libs_to_destination
   lz4_copy_headers_to_destination
 )
+
+if (RPC_BACKEND MATCHES "GRPC")
+  list(APPEND oneflow_third_party_dependencies grpc)
+endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
