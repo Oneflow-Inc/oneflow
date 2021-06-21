@@ -125,31 +125,8 @@ struct DefaultComputeType<half> {
 };
 
 template<typename T, int N>
-struct GetPackType;
-
-template<typename T>
-struct GetPackType<T, 1> {
-  using type = T;
-};
-
-template<>
-struct GetPackType<half, 2> {
-  using type = half2;
-};
-
-template<>
-struct GetPackType<float, 2> {
-  using type = float2;
-};
-
-template<>
-struct GetPackType<double, 2> {
-  using type = ulonglong2;
-};
-
-template<>
-struct GetPackType<int8_t, 2> {
-  using type = char2;
+struct GetPackType {
+  using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
 };
 
 template<typename T, int N>
