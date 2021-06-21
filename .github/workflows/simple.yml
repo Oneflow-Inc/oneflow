@@ -71,6 +71,7 @@ jobs:
         run: |
           set -x
           cmake_flags=""
+          cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -D${{ matrix.cmake_build_type }}"
