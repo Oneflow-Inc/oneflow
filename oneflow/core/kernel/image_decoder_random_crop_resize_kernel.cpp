@@ -58,12 +58,14 @@ struct ROI {
 
 class ROIGenerator {
  public:
+  virtual ~ROIGenerator() = default;
   virtual void Generate(int width, int height, ROI* roi) {}
 };
 
 class RandomCropROIGenerator : public ROIGenerator {
  public:
   RandomCropROIGenerator(RandomCropGenerator* crop_generator) : crop_generator_(crop_generator) {}
+  ~RandomCropROIGenerator() override = default;
 
   void Generate(int width, int height, ROI* roi) override {
     CropWindow window;
@@ -80,6 +82,8 @@ class RandomCropROIGenerator : public ROIGenerator {
 
 class NoChangeROIGenerator : public ROIGenerator {
  public:
+  ~NoChangeROIGenerator() override = default;
+
   void Generate(int width, int height, ROI* roi) override {
     roi->x = 0;
     roi->y = 0;
@@ -113,7 +117,7 @@ class DecodeHandle {
 
 using DecodeHandleFactory = std::function<std::shared_ptr<DecodeHandle>()>;
 template<DeviceType device_type>
-DecodeHandleFactory CreateDecodeHandleFactory();
+DecodeHandleFactory CreateDecodeHandleFactory(int target_width, int target_height);
 
 class CpuDecodeHandle final : public DecodeHandle {
  public:
@@ -156,7 +160,8 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
 }
 
 template<>
-DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCPU>() {
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kCPU>(int target_width,
+                                                                int target_height) {
   return []() -> std::shared_ptr<DecodeHandle> { return std::make_shared<CpuDecodeHandle>(); };
 }
 
@@ -194,7 +199,7 @@ void InitNppStreamContext(NppStreamContext* ctx, int dev, cudaStream_t stream) {
 class GpuDecodeHandle final : public DecodeHandle {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GpuDecodeHandle);
-  explicit GpuDecodeHandle(int dev);
+  explicit GpuDecodeHandle(int dev, int target_width, int target_height);
   ~GpuDecodeHandle() override;
 
   void DecodeRandomCropResize(const unsigned char* data, size_t length,
@@ -231,7 +236,8 @@ class GpuDecodeHandle final : public DecodeHandle {
   bool use_hardware_acceleration_;
 };
 
-GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false), use_hardware_acceleration_(false) {
+GpuDecodeHandle::GpuDecodeHandle(int dev, int target_width, int target_height)
+    : warmup_done_(false), use_hardware_acceleration_(false) {
   OF_CUDA_CHECK(cudaStreamCreateWithFlags(&cuda_stream_, cudaStreamNonBlocking));
   dev_allocator_.dev_malloc = &GpuDeviceMalloc;
   dev_allocator_.dev_free = &GpuDeviceFree;
@@ -256,6 +262,7 @@ GpuDecodeHandle::GpuDecodeHandle(int dev) : warmup_done_(false), use_hardware_ac
   OF_NVJPEG_CHECK(nvjpegDecodeParamsCreate(jpeg_handle_, &jpeg_decode_params_));
   OF_NVJPEG_CHECK(nvjpegJpegStreamCreate(jpeg_handle_, &jpeg_stream_));
   InitNppStreamContext(&npp_stream_ctx_, dev, cuda_stream_);
+  OF_CUDA_CHECK(cudaMallocHost(&fallback_buffer_, target_width * target_height * kNumChannels));
 }
 
 GpuDecodeHandle::~GpuDecodeHandle() {
@@ -391,7 +398,6 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
 
 void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size_t workspace_size) {
   if (warmup_done_) { return; }
-  OF_CUDA_CHECK(cudaHostAlloc(&fallback_buffer_, workspace_size, 0));
   warmup_size = std::min(static_cast<int>(std::sqrt(workspace_size / kNumChannels)), warmup_size);
   cv::Mat image = cv::Mat::zeros(cv::Size(warmup_size, warmup_size), CV_8UC3);
   cv::randu(image, cv::Scalar(0, 0, 0), cv::Scalar(255, 255, 255));
@@ -407,13 +413,14 @@ void GpuDecodeHandle::WarmupOnce(int warmup_size, unsigned char* workspace, size
 void GpuDecodeHandle::Synchronize() { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_)); }
 
 template<>
-DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>() {
+DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>(int target_width,
+                                                                int target_height) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
-  return [dev]() -> std::shared_ptr<DecodeHandle> {
+  return [dev, target_width, target_height]() -> std::shared_ptr<DecodeHandle> {
     OF_CUDA_CHECK(cudaSetDevice(dev));
     CudaDeviceSetCpuAffinity(dev);
-    return std::make_shared<GpuDecodeHandle>(dev);
+    return std::make_shared<GpuDecodeHandle>(dev, target_width, target_height);
   };
 }
 
@@ -502,8 +509,9 @@ void ImageDecoderRandomCropResizeKernel<device_type>::VirtualKernelInit() {
   }
   workers_.resize(conf.num_workers());
   for (int64_t i = 0; i < conf.num_workers(); ++i) {
-    workers_.at(i).reset(new Worker(CreateDecodeHandleFactory<device_type>(), conf.target_width(),
-                                    conf.target_height(), conf.warmup_size()));
+    workers_.at(i).reset(new Worker(
+        CreateDecodeHandleFactory<device_type>(conf.target_width(), conf.target_height()),
+        conf.target_width(), conf.target_height(), conf.warmup_size()));
   }
 }
 
