@@ -40,7 +40,7 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
     const std::pair<std::string, int32_t>& output_arg = ctx->outputs().at(i);
-    *ctx->IsDynamic4ArgNameAndIndex(output_arg.first, output_arg.second) =
+    *ctx->OutputIsDynamic4ArgNameAndIndex(output_arg.first, output_arg.second) =
         first_tensor_desc->is_dynamic();
     *ctx->OutputShape(output_arg.first, output_arg.second) = first_tensor_desc->shape();
   }
@@ -71,7 +71,7 @@ Maybe<void> TensorDescInferFnUtil::InOutCorrespond(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
-    *ctx->TensorDesc4ArgNameAndIndex(output_arg.first, output_arg.second) =
+    *ctx->OutputTensorDesc(output_arg.first, output_arg.second) =
         *ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();

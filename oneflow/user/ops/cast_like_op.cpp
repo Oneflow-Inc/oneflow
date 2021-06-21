@@ -23,7 +23,8 @@ REGISTER_USER_OP("cast_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -61,7 +62,7 @@ REGISTER_USER_OP("cast_like")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* dtype_like_tensor_desc =
           ctx->TensorDesc4ArgNameAndIndex("dtype_like", 0);
-      user_op::TensorDesc* output_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* output_tensor_desc = ctx->OutputTensorDesc("out", 0);
       *output_tensor_desc->mut_data_type() = dtype_like_tensor_desc->data_type();
       return Maybe<void>::Ok();
     });

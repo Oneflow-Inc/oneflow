@@ -94,11 +94,14 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.PixelShuffle
 .. autofunction:: oneflow.experimental.nn.Linear
 .. autofunction:: oneflow.experimental.nn.CrossEntropyLoss
+.. autofunction:: oneflow.experimental.nn.CTCLoss
 .. autofunction:: oneflow.experimental.nn.L1Loss
+.. autofunction:: oneflow.experimental.nn.BCELoss
 .. autofunction:: oneflow.experimental.nn.NLLLoss
 .. autofunction:: oneflow.experimental.nn.KLDivLoss
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
+.. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.sum
@@ -150,7 +153,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.negative
 .. autofunction:: oneflow.experimental.neg
 .. autofunction:: oneflow.experimental.Tensor.negative
+.. autofunction:: oneflow.experimental.nn.AvgPool1d
 .. autofunction:: oneflow.experimental.nn.AvgPool2d
+.. autofunction:: oneflow.experimental.nn.AvgPool3d
 .. autofunction:: oneflow.experimental.nn.AdaptiveAvgPool2d
 .. autofunction:: oneflow.experimental.nn.MaxPool1d
 .. autofunction:: oneflow.experimental.nn.MaxPool2d
@@ -177,6 +182,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.Upsample
 .. autofunction:: oneflow.experimental.nn.UpsamplingNearest2d
 .. autofunction:: oneflow.experimental.nn.UpsamplingBilinear2d
+.. autofunction:: oneflow.experimental.linalg.norm
+.. autofunction:: oneflow.experimental.Tensor.norm
 .. autofunction:: oneflow.experimental.floor
 .. autofunction:: oneflow.experimental.Tensor.floor
 .. autofunction:: oneflow.experimental.addmm
@@ -197,6 +204,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.ceil
 .. autofunction:: oneflow.experimental.expm1
 .. autofunction:: oneflow.experimental.Tensor.expm1
+.. autofunction:: oneflow.experimental.nn.ReflectionPad2d
 .. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
+.. autofunction:: oneflow.experimental.nn.GroupNorm

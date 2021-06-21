@@ -70,8 +70,8 @@ def _test_meshgrid_forawd_3tensor(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestGreater(flow.unittest.TestCase):
-    def test_greter(test_case):
+class TestMeshGrid(flow.unittest.TestCase):
+    def test_meshgrid(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_meshgrid_forawd,
