@@ -66,12 +66,9 @@ def argwhere_op(x, dtype: Optional[flow.dtype] = None):
         
         >>> input = flow.Tensor(x)
         >>> output = flow.argwhere(input)
-        >>> output
+        >>> output #doctest: +ELLIPSIS
         tensor([[0, 1],
-                [1, 0],
-                [1, 2],
-                [0, 0],
-                [0, 0],
+                ...
                 [0, 0]], dtype=oneflow.int32)
 
     """
