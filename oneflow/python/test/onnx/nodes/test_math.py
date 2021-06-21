@@ -236,3 +236,11 @@ def test_scalar_add_int(test_cast):
 
 def test_scalar_add_float(test_cast):
     generate_unary_op_test(flow.math.add, 5.1)
+
+
+def test_leaky_relu(test_cast):
+    generate_unary_op_test(flow.nn.leaky_relu, 0.6)
+
+
+def test_prelu(test_cast):
+    generate_unary_op_test(flow.layers.prelu)
