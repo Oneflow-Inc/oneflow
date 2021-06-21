@@ -145,6 +145,9 @@ class UserOpInferContext final : public user_op::InferContext {
   }
   ~UserOpInferContext() override = default;
 
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -233,8 +236,30 @@ class UserOpInferContext final : public user_op::InferContext {
     return CHECK_JUST(op_->GetOpParallelDesc())->parallel_num();
   }
 
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+
  private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return op_->user_op_conf(); }
+  const user_op::UserOpConfWrapper& user_op_conf() const { return op_->user_op_conf(); }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
     return user_op_conf().Attr4Name(attr_name);
@@ -548,8 +573,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
   JUST(val_->logical_tensor_desc_infer_fn(&infer_ctx));
   for (const auto& pair : infer_ctx.outputs()) {
     BlobDesc* out_blob_desc = BlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
-    user_op::TensorDesc* tensor_desc =
-        infer_ctx.TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+    user_op::TensorDesc* tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc->data_type());
     out_blob_desc->mut_shape() = tensor_desc->shape();
     out_blob_desc->set_is_dynamic(tensor_desc->is_dynamic());
