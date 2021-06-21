@@ -12,26 +12,184 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The following data types are allowed:
+# The following data types are allowed,
 # {
 #   "Tensor", "TensorTuple", "Scalar", "Int", "Int32", "Int64", "Float", "Double", "String", "Bool",
-#   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList", "BoolList"
+#   "ScalarList", "IntList", "Int32List", "Int64List", "FloatList", "DoubleList", "StringList",
+#   "BoolList", "DataType", "Shape"
 # }
-
-- name: "add"
-  signature: "Tensor Add(Tensor x, Tensor y)"
-  bind_python: True
 
 - name: "add_n"
   signature: "Tensor AddN(TensorTuple inputs)"
   bind_python: True
 
+- name: "add"
+  signature: "Tensor Add(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "add_scalar"
-  signature: "Tensor AddScalar(Tensor x, *, Scalar alpha)"
+  signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "mul_scalar"
+  signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "pow_scalar"
+  signature: "Tensor ScalarPow(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "reduce_sum"
+  signature: "Tensor ReduceSum(Tensor x, *, Int32List axis, Bool keepdims=False)"
+  bind_python: True
+
+- name: "transpose"
+  signature: "Tensor Transpose(Tensor x, *, Int32List perm)"
+  bind_python: True
+
+- name: "reciprocal"
+  signature: "Tensor Reciprocal(Tensor x)"
+  bind_python: True
+
+- name: "reciprocal_no_nan"
+  signature: "Tensor ReciprocalNoNan(Tensor x)"
+  bind_python: True
+
+- name: "sin"
+  signature: "Tensor Sin(Tensor x)"
+  bind_python: True
+
+- name: "cos"
+  signature: "Tensor Cos(Tensor x)"
+  bind_python: True
+
+- name: "cosh"
+  signature: "Tensor Cosh(Tensor x)"
+  bind_python: True
+
+- name: "log"
+  signature: "Tensor Log(Tensor x)"
+  bind_python: True
+
+- name: "sqrt"
+  signature: "Tensor Sqrt(Tensor x)"
+  bind_python: True
+
+- name: "rsqrt"
+  signature: "Tensor Rsqrt(Tensor x)"
+  bind_python: True
+
+- name: "square"
+  signature: "Tensor Square(Tensor x)"
+  bind_python: True
+
+- name: "tanh"
+  signature: "Tensor Tanh(Tensor x)"
+  bind_python: True
+
+- name: "sigmoid"
+  signature: "Tensor Sigmoid(Tensor x)"
   bind_python: True
 
 - name: "normalization"
-  signature: "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
-                                   Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
-                                   Float momentum=0.9, Bool is_training=False)"
+  signature:
+    "Tensor Normalization(Tensor x, Tensor moving_mean, Tensor moving_variance,
+                          Tensor gamma, Tensor beta, *, Int32 axis=1, Float epsilon=1e-5,
+                          Float momentum=0.9, Bool is_training=False)"
+  bind_python: True
+
+- name: "range"
+  signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
+  bind_python: True
+
+- name: "argmax"
+  signature: "Tensor ArgMax(Tensor x)"
+  bind_python: True
+
+- name: "cast"
+  signature: "Tensor Cast(Tensor x, *, DataType dtype)"
+  bind_python: True
+
+- name: "exp"
+  signature: "Tensor Exp(Tensor x)"
+  bind_python: True
+
+- name: "negative"
+  signature: "Tensor Negative(Tensor x)"
+  bind_python: True
+
+- name: "abs"
+  signature: "Tensor Abs(Tensor x)"
+  bind_python: True
+
+- name: "acos"
+  signature: "Tensor Acos(Tensor x)"
+  bind_python: True
+
+- name: "acosh"
+  signature: "Tensor Acosh(Tensor x)"
+  bind_python: True
+
+- name: "asin"
+  signature: "Tensor Asin(Tensor x)"
+  bind_python: True
+
+- name: "asinh"
+  signature: "Tensor Asinh(Tensor x)"
+  bind_python: True
+
+- name: "atan"
+  signature: "Tensor Atan(Tensor x)"
+  bind_python: True
+
+- name: "atanh"
+  signature: "Tensor Atanh(Tensor x)"
+  bind_python: True
+
+- name: "ceil"
+  signature: "Tensor Ceil(Tensor x)"
+  bind_python: True
+
+- name: "erf"
+  signature: "Tensor Erf(Tensor x)"
+  bind_python: True
+
+- name: "expm1"
+  signature: "Tensor Expm1(Tensor x)"
+  bind_python: True
+
+- name: "floor"
+  signature: "Tensor Floor(Tensor x)"
+  bind_python: True
+
+- name: "lgamma"
+  signature: "Tensor Lgamma(Tensor x)"
+  bind_python: True
+
+- name: "log1p"
+  signature: "Tensor Log1p(Tensor x)"
+  bind_python: True
+
+- name: "log_sigmoid"
+  signature: "Tensor LogSigmoid(Tensor x)"
+  bind_python: True
+
+- name: "rint"
+  signature: "Tensor Rint(Tensor x)"
+  bind_python: True
+
+- name: "round"
+  signature: "Tensor Round(Tensor x)"
+  bind_python: True
+
+- name: "sign"
+  signature: "Tensor Sign(Tensor x)"
+  bind_python: True
+
+- name: "sinh"
+  signature: "Tensor Sinh(Tensor x)"
+  bind_python: True
+
+- name: "softplus"
+  signature: "Tensor Softplus(Tensor x)"
   bind_python: True

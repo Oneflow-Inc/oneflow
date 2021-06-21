@@ -23,10 +23,9 @@ from oneflow.python.nn.module import Module
 class Acosh(Module):
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("acosh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.acosh(x)
 
 
 @oneflow_export("acosh")
