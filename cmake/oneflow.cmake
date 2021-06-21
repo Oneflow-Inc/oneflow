@@ -357,9 +357,9 @@ endif()
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
-add_custom_target(of_include_copy ALL
+add_custom_target(of_include_copy
   COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
-add_dependencies(of_include_copy of_ccobj)
+add_dependencies(of_include_copy generate_api)
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
@@ -401,3 +401,5 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_b
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+add_custom_target(oneflow_py ALL)
+add_dependencies(oneflow_py of_include_copy)
