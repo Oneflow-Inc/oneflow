@@ -378,7 +378,7 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
       nvjpegGetImageInfo(jpeg_handle_, data, length, &nComponents, &subsampling, &width, &height);
   if (status != NVJPEG_STATUS_SUCCESS) {
     CHECK_LE(target_width * target_height * kNumChannels, fallback_buffer_size_);
-    fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size,
+    fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, nullptr, 0,
                                             fallback_buffer_, target_width, target_height);
     OF_CUDA_CHECK(cudaMemcpyAsync(dst, fallback_buffer_,
                                   target_width * target_height * kNumChannels, cudaMemcpyDefault,
