@@ -5,7 +5,7 @@ execute_process(COMMAND git describe --tags --always --dirty=-snapshot
         OUTPUT_VARIABLE GIT_REV
         ERROR_QUIET)
 
-if ("${GIT_REV}" STREQUAL "")
+if ("${GIT_REV}" STREQUAL "" or (NOT BUILD_GIT_VERSION))
     set(GIT_REV "N/A")
 else()
     string(STRIP "${GIT_REV}" GIT_REV)
