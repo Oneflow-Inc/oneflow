@@ -14,7 +14,7 @@ SET(GRPC_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/grpc)
 
 if(WIN32)
     set(GRPC_LIBRARY_NAMES grpc++_unsecure.lib
-      grpc_unsecure.lib gpr.lib upb.lib address_sorting.lib)
+      grpc_unsecure.lib gpr.lib upb.lib address_sorting.lib cares.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
     set(GRPC_LIBRARY_NAMES libgrpc++_unsecure.a
       libgrpc_unsecure.a libgpr.a libupb.a libaddress_sorting.a libcares.a)
