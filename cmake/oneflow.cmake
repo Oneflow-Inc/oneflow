@@ -236,7 +236,7 @@ include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 endif()
