@@ -212,6 +212,7 @@ class AvgPool3d(Module):
         >>> y = of_avgpool3d(x)
 
     """
+
     def __init__(
         self,
         kernel_size: _size_3_t,
