@@ -170,11 +170,6 @@ set(oneflow_third_party_dependencies
   lz4_copy_headers_to_destination
 )
 
-if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
-endif()
-
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${ZLIB_INCLUDE_DIR}
     ${GFLAGS_INCLUDE_DIR}
