@@ -234,6 +234,10 @@
   signature: "Tensor Concat(TensorTuple inputs, *, Int64 axis, Int64 max_dim_size)"
   bind_python: True
 
+- name: "bias_add"
+  signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
+  bind_python: True
+
 - name: "expand"
   signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
   bind_python: True
@@ -254,12 +258,45 @@
   signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
   bind_python: True
 
+- name: "matmul"
+  signature:
+    "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                   Double alpha=1.0)"
+  bind_python: True
+
+- name: "broadcast_matmul"
+  signature:
+    "Tensor BroadcastMatMul(Tensor a, Tensor b, *, Bool transpose_a=False,
+                            Bool transpose_b=False, Double alpha=1.0)"
+  bind_python: True
+
+- name: "sparse_softmax_cross_entropy"
+  signature: "Tensor SparseSoftmaxCrossEntropy(Tensor logits, Tensor label, *, Int64 depth)"
+  bind_python: True
+
 - name: "where"
   signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
   bind_python: True
 
+- name: "batch_matmul"
+  signature:
+    "Tensor BatchMatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                        Double alpha=1.0)"
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
+  bind_python: True
+
+- name: "layer_norm_affine"
+  signature:
+    "Tensor LayerNormAffine(Tensor x, Tensor beta, Tensor gamma, *, Int64 begin_norm_axis,
+                            Int64 begin_params_axis, Double epsilon)"
+  bind_python: True
+
+- name: "layer_norm"
+  signature:
+    "Tensor LayerNorm(Tensor x, *, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon)"
   bind_python: True
 
 - name: "prelu"
