@@ -102,6 +102,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.MSELoss
 .. autofunction:: oneflow.experimental.nn.MarginRankingLoss
 .. autofunction:: oneflow.experimental.nn.BCEWithLogitsLoss
+.. autofunction:: oneflow.experimental.nn.SmoothL1Loss
 .. autofunction:: oneflow.experimental.masked_fill
 .. autofunction:: oneflow.experimental.Tensor.masked_fill
 .. autofunction:: oneflow.experimental.sum
