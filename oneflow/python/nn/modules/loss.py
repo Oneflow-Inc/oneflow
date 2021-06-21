@@ -107,13 +107,6 @@ class CrossEntropyLoss(Module):
             .Output("out")
             .Build()
         )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
@@ -121,12 +114,12 @@ class CrossEntropyLoss(Module):
         input_shape_len = len(input.shape)
         if input_shape_len == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
         elif input_shape_len == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
         elif input_shape_len >= 5:
@@ -362,13 +355,6 @@ class NLLLoss(Module):
             .Attr("dim", 1)
             .Build()
         )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def nllloss_1d(self, input, target):
         target = flow.experimental.reshape(target, (target.shape[0], 1))
@@ -384,14 +370,14 @@ class NLLLoss(Module):
             res = self.nllloss_1d(input, target)
         elif len(input.shape) == 3:
             b, c, h = input.shape[0], input.shape[1], input.shape[2]
-            input = self._transpose_op(input, perm=(0, 2, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 1))
             input = input.reshape(shape=[-1, input.shape[2]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
             res = res.reshape((b, h))
         elif len(input.shape) == 4:
             b, c, h, w = input.shape[0], input.shape[1], input.shape[2], input.shape[3]
-            input = self._transpose_op(input, perm=(0, 2, 3, 1))[0]
+            input = flow.F.transpose(input, perm=(0, 2, 3, 1))
             input = input.reshape(shape=[-1, input.shape[3]])
             target = target.flatten()
             res = self.nllloss_1d(input, target)
@@ -928,7 +914,7 @@ class BCEWithLogitsLoss(Module):
 
     .. math::
 
-        out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+        out = -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
