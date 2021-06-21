@@ -72,11 +72,9 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.relu(x)
 
 
 @oneflow_export("nn.ReLU6")
@@ -120,18 +118,9 @@ class ReLU6(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", 0.0)
-            .Attr("max_val", 6.0)
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
 
 
 @oneflow_export("nn.Tanh")
@@ -254,17 +243,10 @@ class ELU(Module):
 
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("elu")
-            .Input("in")
-            .Attr("alpha", alpha)
-            .Output("out")
-            .Build()
-        )
+        self.alpha = alpha
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.elu(x, alpha=self.alpha)
 
 
 @oneflow_export("nn.GELU")
@@ -303,11 +285,9 @@ class GELU(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("gelu").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.gelu(x)
 
 
 @oneflow_export("gelu")
@@ -454,11 +434,9 @@ class Hardsigmoid(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardsigmoid(x)
 
 
 @oneflow_export("nn.Softmax")
@@ -467,14 +445,13 @@ class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
         self.axis = -1 if dim is None else dim
-        self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
             x = flow.F.transpose(x, perm=permute)
 
-        res = self._op(x)[0]
+        res = flow.F.softmax(x)
         if need_transpose:
             res = flow.F.transpose(res, perm=permute)
         return res
@@ -736,11 +713,9 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardswish(x)
 
 
 @oneflow_export("nn.Hardtanh")
@@ -811,18 +786,12 @@ class Hardtanh(Module):
                 "keyword argument max_value is deprecated and rename to max_val"
             )
             max_val = max_value
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", min_val)
-            .Attr("max_val", max_val)
-            .Output("out")
-            .Build()
-        )
+
+        self.min_val = min_val
+        self.max_val = max_val
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
 
 @oneflow_export("nn.LeakyReLU")
@@ -863,17 +832,10 @@ class LeakyReLU(Module):
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("leaky_relu")
-            .Input("x")
-            .Attr("alpha", negative_slope)
-            .Output("y")
-            .Build()
-        )
+        self.negative_slope = negative_slope
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
 
 if __name__ == "__main__":
