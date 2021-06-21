@@ -493,13 +493,6 @@ jobs:
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/test_xla.sh"
-      - name: ONNX export test
-        if: matrix.test_suite == 'cuda'
-        run: |
-          set -x
-          docker run $extra_docker_args \
-            ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/onnx_export_model_test.sh"
       - name: Query system status
         if: ${{ failure() }}
         run: |
