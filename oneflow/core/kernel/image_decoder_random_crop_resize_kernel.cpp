@@ -59,7 +59,7 @@ struct ROI {
 class ROIGenerator {
  public:
   virtual ~ROIGenerator() = default;
-  virtual void Generate(int width, int height, ROI* roi) {}
+  virtual void Generate(int width, int height, ROI* roi) const = 0;
 };
 
 class RandomCropROIGenerator : public ROIGenerator {
@@ -67,7 +67,7 @@ class RandomCropROIGenerator : public ROIGenerator {
   RandomCropROIGenerator(RandomCropGenerator* crop_generator) : crop_generator_(crop_generator) {}
   ~RandomCropROIGenerator() override = default;
 
-  void Generate(int width, int height, ROI* roi) override {
+  void Generate(int width, int height, ROI* roi) const override {
     CropWindow window;
     crop_generator_->GenerateCropWindow({height, width}, &window);
     roi->x = window.anchor.At(1);
@@ -84,7 +84,7 @@ class NoChangeROIGenerator : public ROIGenerator {
  public:
   ~NoChangeROIGenerator() override = default;
 
-  void Generate(int width, int height, ROI* roi) override {
+  void Generate(int width, int height, ROI* roi) const override {
     roi->x = 0;
     roi->y = 0;
     roi->w = width;
@@ -232,6 +232,7 @@ class GpuDecodeHandle final : public DecodeHandle {
   nvjpegPinnedAllocator_t pinned_allocator_{};
   CpuDecodeHandle fallback_handle_;
   unsigned char* fallback_buffer_;
+  size_t fallback_buffer_size_;
   bool warmup_done_;
   bool use_hardware_acceleration_;
 };
@@ -262,7 +263,8 @@ GpuDecodeHandle::GpuDecodeHandle(int dev, int target_width, int target_height)
   OF_NVJPEG_CHECK(nvjpegDecodeParamsCreate(jpeg_handle_, &jpeg_decode_params_));
   OF_NVJPEG_CHECK(nvjpegJpegStreamCreate(jpeg_handle_, &jpeg_stream_));
   InitNppStreamContext(&npp_stream_ctx_, dev, cuda_stream_);
-  OF_CUDA_CHECK(cudaMallocHost(&fallback_buffer_, target_width * target_height * kNumChannels));
+  fallback_buffer_size_ = target_width * target_height * kNumChannels;
+  OF_CUDA_CHECK(cudaMallocHost(&fallback_buffer_, fallback_buffer_size_));
 }
 
 GpuDecodeHandle::~GpuDecodeHandle() {
@@ -375,10 +377,12 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
   nvjpegStatus_t status =
       nvjpegGetImageInfo(jpeg_handle_, data, length, &nComponents, &subsampling, &width, &height);
   if (status != NVJPEG_STATUS_SUCCESS) {
+    CHECK_LE(target_width * target_height * kNumChannels, fallback_buffer_size_);
     fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size,
                                             fallback_buffer_, target_width, target_height);
-    OF_CUDA_CHECK(cudaMemcpy(dst, fallback_buffer_, target_width * target_height * kNumChannels,
-                             cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaMemcpyAsync(dst, fallback_buffer_,
+                                  target_width * target_height * kNumChannels, cudaMemcpyDefault,
+                                  cuda_stream_));
     return;
   }
   NoChangeROIGenerator no_change_roi_generator;
