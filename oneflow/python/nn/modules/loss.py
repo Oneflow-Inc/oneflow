@@ -914,7 +914,7 @@ class BCEWithLogitsLoss(Module):
 
     .. math::
 
-        out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+        out = -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
