@@ -14,14 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/attr_map.h"
-#include "oneflow/core/framework/op_builder.h"
+#ifndef ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_
+#define ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_
+
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
 namespace one {
@@ -29,24 +27,23 @@ namespace functional {
 
 namespace impl {
 
-class AddFunctor {
+class UnaryFunctor {
  public:
-  AddFunctor() {
-    add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, y});
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
- private:
-  std::shared_ptr<OpExpr> add_op_;
+ protected:
+  UnaryFunctor() = default;
+  virtual ~UnaryFunctor() = default;
+
+  std::shared_ptr<OpExpr> op_;
 };
 
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::AddFunctor>("Add"); }
-
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FUNCTIONAL_IMPL_UNARY_FUNCTOR_H_

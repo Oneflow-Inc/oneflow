@@ -170,11 +170,9 @@ class Tanh(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.tanh(x)
 
 
 @oneflow_export("tanh")
@@ -379,10 +377,9 @@ class Sigmoid(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sigmoid(x)
 
 
 @oneflow_export("sigmoid")
@@ -471,22 +468,15 @@ class Softmax(Module):
         super().__init__()
         self.axis = -1 if dim is None else dim
         self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = self._transpose_op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
         res = self._op(x)[0]
         if need_transpose:
-            res = self._transpose_op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
         return res
 
 
@@ -586,13 +576,6 @@ class LogSoftmax(Module):
     ):
         super().__init__()
         self.dim = dim
-        self._op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -602,13 +585,13 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = self._op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
         x = x.softmax()
         res = x.log()
 
         if need_transpose:
-            res = self._op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
 
         return res
 
