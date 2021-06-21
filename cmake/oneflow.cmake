@@ -363,7 +363,6 @@ add_dependencies(of_include_copy generate_api)
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
-  message(STATUS "oneflow_all_include_file: ${oneflow_all_include_file}")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
 
