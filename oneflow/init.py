@@ -69,7 +69,7 @@ import oneflow.python.framework.env_util as env_util
 
 env_util.init_default_physical_env()
 
-env_util.init_with_env()
+env_util.api_env_init()
 
 del env_util
 

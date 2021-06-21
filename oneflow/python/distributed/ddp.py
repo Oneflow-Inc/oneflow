@@ -34,7 +34,6 @@ def allreducefn(param_list, param, name, num):
                 continue
             if ready:
                 param_list[cur_param][1] = True
-                print(f"h! allreduce: rank: {flow.local_rank()}, name={cur_name}")
                 op = (
                     builtin_op("eager_nccl_all_reduce")
                     .Input("in")
@@ -66,7 +65,7 @@ def DDP(module: Module):
     num = flow.world_size()
     # param_list = OrderedDict(reversed([(x, [False, False]) for x in module.parameters()]))
     param_list = OrderedDict(
-        [(x, [False, False, name]) for name, x in module.named_parameters()]
+        reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
     )
     module2params[module] = param_list
     for name, param in module.named_parameters():
@@ -76,8 +75,7 @@ def DDP(module: Module):
         param_list = module2params[module]
         for item in param_list.values():
             item[0], item[1] = False, False
-        for param in param_list.keys():
-            output += 0 * param
+        output = flow.experimental.abcd(output, *param_list.keys())
         return output
 
     module.register_forward_hook(hook)

@@ -1768,7 +1768,7 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
 @experimental_api
 def abcd(*args):
     op = flow.builtin_op("abcd").Input("in", len(args)).Output("out").Build()
-    return op(*args)
+    return op(*args)[0]
 
 
 if __name__ == "__main__":

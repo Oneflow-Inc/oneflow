@@ -24,28 +24,30 @@ namespace oneflow {
 namespace one {
 
 struct AbcdExprInterpState : public OpExprInterpState {
+  TensorTuple inputs;
   bool requires_grad;
 };
 
 class Abcd : public OpExprGradFunction<AbcdExprInterpState> {
  public:
-  Maybe<void> Init(const OpExpr& op) override { 
-    return Maybe<void>::Ok(); }
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
 
   Maybe<void> Capture(AbcdExprInterpState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
+    ctx->inputs = inputs;
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const AbcdExprInterpState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    grad_op_ = JUST(op_expr_helper::ZerosOp());
     in_grads->at(0) = out_grads.at(0);
+    for (int i = 1; i < ctx->inputs.size(); i++) {
+      const auto& tensor = ctx->inputs.at(i);
+      std::shared_ptr<OpExpr> grad_op = JUST(op_expr_helper::ZeroLikeOp());
+      in_grads->at(i) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op, {tensor}, {}));
+    }
     return Maybe<void>::Ok();
   }
-
- private:
-  std::shared_ptr<OpExpr> grad_op_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("abcd", Abcd);
