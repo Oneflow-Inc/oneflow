@@ -32,14 +32,6 @@ class Transpose(Module):
         if batch_axis_non_change:
             raise NotImplementedError
 
-        self._op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
-
         self.dim0 = dim0
         self.dim1 = dim1
 
@@ -63,7 +55,7 @@ class Transpose(Module):
             perm.append(i)
         perm[dim0], perm[dim1] = perm[dim1], perm[dim0]
 
-        return self._op(x, perm=perm)[0]
+        return flow.F.transpose(x, perm=perm)
 
 
 @oneflow_export("transpose")
