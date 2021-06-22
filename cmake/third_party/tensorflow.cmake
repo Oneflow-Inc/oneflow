@@ -26,6 +26,7 @@ if (TF_WITH_CUDA)
   list(APPEND TENSORFLOW_BUILD_CMD --action_env TF_NEED_CUDA=1)
   list(APPEND TENSORFLOW_BUILD_CMD --action_env TF_CUDA_COMPUTE_CAPABILITIES=${CUDA_COMPUTE_CAPABILITIES})
 else()
+  # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
   set(BAZEL_LINKLIBS_ENV_ARG "BAZEL_LINKLIBS=-l%:libstdc++.a")
 endif()
 
