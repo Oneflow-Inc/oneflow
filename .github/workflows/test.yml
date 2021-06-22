@@ -283,6 +283,7 @@ jobs:
             "xla",
             "cuda_op_eager",
             "cpu_op_eager",
+            "xla_cpu"
           ]
         include:
           - test_suite: "cuda"
