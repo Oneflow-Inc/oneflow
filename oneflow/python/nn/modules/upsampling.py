@@ -121,18 +121,6 @@ class Upsample(Module):
         if self.mode == "nearest" and self.align_corners:
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
-        self._op = (
-            flow.builtin_op("upsample")
-            .Input("x")
-            .Output("y")
-            .Attr("height_scale", float(1.0))
-            .Attr("width_scale", float(1.0))
-            .Attr("align_corners", self.align_corners)
-            .Attr("data_format", "channels_first")
-            .Attr("interpolation", self.mode)
-            .Build()
-        )
-
     def forward(self, x):
         assert (
             self.size != None or self.scale_factor != None
@@ -149,9 +137,14 @@ class Upsample(Module):
             else:
                 self.width_scale = 1.0 * self.size[1] / w
 
-        res = self._op(x, height_scale=self.height_scale, width_scale=self.width_scale)[
-            0
-        ]
+        res = flow.F.upsample(
+            x,
+            height_scale=self.height_scale,
+            width_scale=self.width_scale,
+            align_corners=self.align_corners,
+            interpolation=self.mode,
+            data_format="channels_first",
+        )
         return res
 
 
