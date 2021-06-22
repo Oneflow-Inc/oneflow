@@ -26,18 +26,10 @@ class Squeeze(Module):
         super().__init__()
         self.dim = dim
 
-        self._op = (
-            flow.builtin_op("squeeze")
-            .Input("in")
-            .Output("out")
-            .Attr("axes", dim)
-            .Build()
-        )
-
     def forward(self, x):
         if self.dim is None:
             return x
-        return self._op(x)[0]
+        return flow.F.squeeze(x, dim=self.dim)
 
 
 @oneflow_export("squeeze")

@@ -23,7 +23,6 @@ from typing import Optional
 class Expand(Module):
     def __init__(self, *sizes) -> None:
         super().__init__()
-        self._op = flow.builtin_op("expand").Input("in").Output("out").Build()
         self.expand_size = list(*sizes)
 
     def forward(self, x):
@@ -59,9 +58,9 @@ class Expand(Module):
                 else:
                     new_stride.insert(0, 0)
 
-        return self._op(
+        return flow.F.expand(
             x, in_shape=list(x.shape), out_shape=new_size, stride=new_stride
-        )[0]
+        )
 
 
 @oneflow_export("expand")
