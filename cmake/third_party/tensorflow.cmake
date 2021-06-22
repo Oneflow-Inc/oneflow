@@ -72,7 +72,7 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
-use_mirror(VARIABLE DEFAULT_XRT_TF_URL URL "https://github.com/Oneflow-Inc/tensorflow/archive/b5e87ed74a2a1f870e11b3656e00f321c7c81224.zip")
+use_mirror(VARIABLE DEFAULT_XRT_TF_URL URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip")
 set(XRT_TF_URL ${DEFAULT_XRT_TF_URL} CACHE STRING "")
 message(STATUS "XRT_TF_URL: ${XRT_TF_URL}")
 if(IS_DIRECTORY ${XRT_TF_URL})
