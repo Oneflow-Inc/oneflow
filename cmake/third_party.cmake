@@ -127,7 +127,6 @@ set(oneflow_third_party_libs
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
-    ${CARES_STATIC_LIBRARIES}
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -172,8 +171,7 @@ set(oneflow_third_party_dependencies
 )
 
 if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc)
 endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
@@ -192,7 +190,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
-    ${CARES_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
