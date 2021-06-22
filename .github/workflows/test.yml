@@ -314,7 +314,7 @@ jobs:
             allow_fail: true
             build_env: build.xla.env
           - test_suite: "xla_cpu"
-            os: [self-hosted, linux, gpu]
+            os: [self-hosted, linux, cpu]
             allow_fail: true
             build_env: build.xla_cpu.env
     steps:
