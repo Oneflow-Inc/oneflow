@@ -99,7 +99,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       boxing_disabled_sampled_weight_diff->mut_shape()->Set(
           0, boxing_disabled_sampled_weight_diff->shape().At(0) / ctx->parallel_num());
       *boxing_disabled_sampled_weight_diff->mut_is_dynamic() =
-          ctx->InputIsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
+          ctx->InputIsDynamic("sampled_weight_diff", 0);
       user_op::TensorDesc* boxing_disabled_sampled_label =
           ctx->OutputTensorDesc("boxing_disabled_sampled_label", 0);
       *boxing_disabled_sampled_label->mut_shape() = ctx->InputShape("sampled_label", 0);
@@ -107,17 +107,17 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       boxing_disabled_sampled_label->mut_shape()->Set(
           0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());
       *boxing_disabled_sampled_label->mut_is_dynamic() =
-          ctx->InputIsDynamic4ArgNameAndIndex("sampled_label", 0);
+          ctx->InputIsDynamic("sampled_label", 0);
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("boxing_disabled_sampled_weight_diff", 0) =
           ctx->InputShape("sampled_weight_diff", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("sampled_weight_diff", 0);
+      *ctx->OutputIsDynamic("boxing_disabled_sampled_weight_diff", 0) =
+          ctx->InputIsDynamic("sampled_weight_diff", 0);
       *ctx->OutputShape("boxing_disabled_sampled_label", 0) = ctx->InputShape("sampled_label", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("boxing_disabled_sampled_label", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("sampled_label", 0);
+      *ctx->OutputIsDynamic("boxing_disabled_sampled_label", 0) =
+          ctx->InputIsDynamic("sampled_label", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
