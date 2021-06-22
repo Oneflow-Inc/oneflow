@@ -424,9 +424,7 @@ if (BUILD_JNI)
   add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/api/java)
 
   target_link_libraries(oneflow 
-    of_ccobj
-    of_cfgobj
-    of_protoobj 
+    ${of_libs}
     "${oneflow_exe_third_party_libs}"
     "${oneflow_third_party_libs}"
     "${CUDA_CUBLAS_LIBRARIES}"

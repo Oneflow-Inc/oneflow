@@ -9,7 +9,7 @@ endif()
 
 aux_source_directory(env ENV_SRC)
 aux_source_directory(job_build JOB_BUILD_SRC)
-add_library(oneflow SHARED ${ENV_SRC} ${JOB_BUILD_SRC})
+add_library(oneflow SHARED ${ENV_SRC} ${JOB_BUILD_SRC} library.h library.cpp)
 
 target_include_directories(
     oneflow
