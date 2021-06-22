@@ -384,6 +384,10 @@ if __name__ == "__main__":
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args
                 ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
                 enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
+            if args.xla:
+                enforced_oneflow_cmake_args += (
+                    ' -DBAZEL_LINKLIBS_ENV_ARG="BAZEL_LINKLIBS=-l%:libstdc++.a"'
+                )
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:
