@@ -230,7 +230,7 @@ void SpecializedDef(py::class_<ConsistentTensor, Tensor, std::shared_ptr<Consist
 }
 
 template<typename T>
-void ExportTensor(py::module& m, const char* name) {
+py::class_<T, Tensor, std::shared_ptr<T>> ExportTensor(py::module& m, const char* name) {
   py::class_<T, Tensor, std::shared_ptr<T>> tensor_api(m, name);
   tensor_api
       .def(py::init(&TensorExportUtil<T>::MakeTensor))
@@ -260,6 +260,7 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent);
   SpecializedDef(&tensor_api);
+  return tensor_api;
 }
 
 // used in mirrored_tensor.to(sbp, placement)
@@ -329,8 +330,14 @@ Maybe<ConsistentTensor> CastParallelDistribution(
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
+  // only export consistent_tensor.to_local() as now, api tensor.to(...) need to be discussed
   ExportTensor<MirroredTensor>(m, "LocalTensor");
-  ExportTensor<ConsistentTensor>(m, "ConsistentTensor");
+  ExportTensor<ConsistentTensor>(m, "ConsistentTensor")
+      .def("to_local",
+           [](const std::shared_ptr<ConsistentTensor>& consistent_tensor)
+               -> std::shared_ptr<MirroredTensor> {
+             return CastConsistentToMirrored(consistent_tensor).GetPtrOrThrow();
+           });
 }
 
 }  // namespace one
