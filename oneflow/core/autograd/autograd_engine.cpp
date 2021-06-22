@@ -161,7 +161,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
       JUST(func_node->AccGrad4LeafTensor(create_graph));
       JUST(func_node->AccGrad4RetainGradTensor());
       func_node->ReleaseOutTensorArgs();
-      func_node->ReleaseData();
+      if (!retain_graph) { func_node->ReleaseData(); }
     }
   }
   if (!retain_graph) { ClearEngine(); }
@@ -188,7 +188,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->AccGrad4RetainGradTensor());
       func_node->ReleaseOutTensorArgs();
-      func_node->ReleaseData();
+      if (!retain_graph) { func_node->ReleaseData(); }
     }
   }
   for (int i = 0; i < inputs.size(); ++i) {
