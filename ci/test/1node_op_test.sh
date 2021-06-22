@@ -37,5 +37,5 @@ then
 else
     echo "deadlock unsolved, skipping multi-card eager"
 fi
-
+export ONEFLOW_TEST_DEVICE_NUM=2
 ONEFLOW_TEST_MULTI_PROCESS=1 python3 test/ops/test_multi_process.py --failfast --verbose
