@@ -35,13 +35,6 @@ int64_t GlobalProcessCtx::Rank() {
   return Global<ProcessCtx>::Get()->rank();
 }
 
-int64_t GlobalProcessCtx::LocalRank() {
-  CHECK_NOTNULL(std::getenv("LOCAL_RANK"));
-  CHECK(IsStrInt(std::getenv("LOCAL_RANK")));
-  static int64_t local_rank = std::stol(std::getenv("LOCAL_RANK"));
-  return local_rank;
-}
-
 int64_t GlobalProcessCtx::NodeSize() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->node_size();
