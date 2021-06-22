@@ -23,8 +23,7 @@ REGISTER_USER_OP("cast_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic("out", 0) =
-          ctx->InputIsDynamic("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

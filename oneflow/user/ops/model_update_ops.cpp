@@ -598,8 +598,7 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Attr<float>("beta2", 0.999)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("learning_rate", 0);
-      *ctx->OutputIsDynamic("out", 0) =
-          ctx->InputIsDynamic("learning_rate", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("learning_rate", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

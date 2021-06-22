@@ -319,8 +319,7 @@ REGISTER_USER_OP("conv_data_grad")
         CHECK_EQ_OR_RETURN(add_to_output->shape(), x_like->shape());
       }
       *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-      *ctx->OutputIsDynamic("dx", 0) =
-          ctx->InputIsDynamic("x_like", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

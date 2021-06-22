@@ -607,8 +607,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
       out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
-      out_blob_desc->set_is_dynamic(
-          *infer_ctx.OutputIsDynamic(pair.first, pair.second));
+      out_blob_desc->set_is_dynamic(*infer_ctx.OutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();
   }

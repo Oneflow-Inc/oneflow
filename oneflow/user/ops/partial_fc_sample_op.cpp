@@ -106,8 +106,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
       CHECK_EQ_OR_RETURN(boxing_disabled_sampled_label->shape().At(0) % ctx->parallel_num(), 0);
       boxing_disabled_sampled_label->mut_shape()->Set(
           0, boxing_disabled_sampled_label->shape().At(0) / ctx->parallel_num());
-      *boxing_disabled_sampled_label->mut_is_dynamic() =
-          ctx->InputIsDynamic("sampled_label", 0);
+      *boxing_disabled_sampled_label->mut_is_dynamic() = ctx->InputIsDynamic("sampled_label", 0);
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

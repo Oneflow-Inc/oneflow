@@ -39,8 +39,7 @@ REGISTER_USER_OP("softmax_cross_entropy")
         out_dim_vector.push_back(prediction_desc->shape().At(i));
       }
       *ctx->OutputShape("prob", 0) = ctx->InputShape("prediction", 0);
-      *ctx->OutputIsDynamic("prob", 0) =
-          ctx->InputIsDynamic("prediction", 0);
+      *ctx->OutputIsDynamic("prob", 0) = ctx->InputIsDynamic("prediction", 0);
       user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_is_dynamic() = prediction_desc->is_dynamic();
       *out_desc->mut_shape() = Shape(out_dim_vector);
@@ -87,8 +86,7 @@ REGISTER_USER_OP("softmax_cross_entropy_grad")
       }
       CHECK_EQ_OR_RETURN(label_desc->shape(), prob_desc->shape());
       *ctx->OutputShape("prediction_diff", 0) = ctx->InputShape("prob", 0);
-      *ctx->OutputIsDynamic("prediction_diff", 0) =
-          ctx->InputIsDynamic("prob", 0);
+      *ctx->OutputIsDynamic("prediction_diff", 0) = ctx->InputIsDynamic("prob", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
