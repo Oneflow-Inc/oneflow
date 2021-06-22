@@ -32,6 +32,20 @@ def _test_slice(test_case, device):
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
 
 
+def _test_slice_1_dim(test_case, device):
+    np_arr = np.random.randn(100).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    test_case.assertTrue(np.allclose(x[1].numpy(), np_arr[1], 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x[99].numpy(), np_arr[99], 1e-5, 1e-5))
+    test_case.assertTrue(np.allclose(x[0:2].numpy(), np_arr[0:2], 1e-5, 1e-5))
+
+
+def _test_slice_3_dim(test_case, device):
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    test_case.assertTrue(np.allclose(x[:, 0].numpy(), np_arr[:, 0], 1e-5, 1e-5))
+
+
 def _test_slice_4_dim(test_case, device):
     np_arr = np.random.randn(5, 3, 6, 9).astype(np.float32)
     x = flow.Tensor(np_arr, device=flow.device(device))
@@ -40,6 +54,53 @@ def _test_slice_4_dim(test_case, device):
     tmp = np_arr[0:5, 0:3, 0:5, 0:6]
     np_out = tmp[::2, ::1, ::2, ::3]
     test_case.assertTrue(np.array_equal(y.numpy(), np_out))
+
+
+def _test_slice_with_int_index(test_case, device):
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, 1:2]
+    np_out = np_arr[0, 1:2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.random.randn(2, 3, 4).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :]
+    np_out = np_arr[0, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.array([[[1, 2], [3, 4]], [[5, 6], [7, 8]]]).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :, :]
+    np_out = np_arr[0, :, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+    of_out = x[0, :, :, :]
+    np_out = np_arr[0, :, :, :]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+
+def _test_slice_ellipsis_type(test_case, device):
+    np_arr = np.random.randn(2, 3, 4, 5, 6, 7).astype(np.float32)
+    x = flow.Tensor(np_arr, device=flow.device(device))
+
+    of_out = x[..., ::2, ::2, 3:4]
+    np_out = np_arr[..., ::2, ::2, 3:4]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    of_out = x[..., 1:2, ::2, 1, ::3]
+    np_out = np_arr[..., 1:2, ::2, 1, ::3]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    of_out = x[0, 2, ..., 1, 1:2]
+    np_out = np_arr[0, 2, ..., 1, 1:2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
+
+    of_out = x[::2, ..., 1:2]
+    np_out = np_arr[::2, ..., 1:2]
+    test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
 def _test_slice_backward(test_case, device):
@@ -62,7 +123,15 @@ def _test_slice_backward(test_case, device):
 class TestSlice(flow.unittest.TestCase):
     def test_slice(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_slice, _test_slice_4_dim, _test_slice_backward]
+        arg_dict["test_fun"] = [
+            _test_slice,
+            _test_slice_1_dim,
+            _test_slice_3_dim,
+            _test_slice_4_dim,
+            _test_slice_with_int_index,
+            _test_slice_ellipsis_type,
+            _test_slice_backward,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
@@ -95,6 +164,13 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
         flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
+
+    def test_logical_slice_assign_ellipsis_type(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
+        input = flow.Tensor(np_arr)
+        np_arr[0, ::1, ..., 2:3] = 1
+        input[0, ::1, ..., 2:3] = 1
+        test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
 
 if __name__ == "__main__":
