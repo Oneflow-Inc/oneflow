@@ -30,17 +30,17 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
+void InitNumProcessDistribution() {
+  Global<NumProcessDistribution>::New();
+  Global<NumProcessDistribution>::Get()->add_num_process(1);
 }
 
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
 
 class TestVirtualMachineScope {
  public:
   TestVirtualMachineScope(int64_t gpu_device_num, int64_t cpu_device_num) {
-    InitNumProcessPerNode();
+    InitNumProcessDistribution();
     Global<ProcessCtx>::New();
     Global<ProcessCtx>::Get()->set_rank(0);
     test_resource_desc_scope_.reset(new vm::TestResourceDescScope(gpu_device_num, cpu_device_num));
@@ -52,7 +52,7 @@ class TestVirtualMachineScope {
     virtual_machine_scope_.reset();
     test_resource_desc_scope_.reset();
     Global<ProcessCtx>::Delete();
-    DestroyNumProcessPerNode();
+    DestroyNumProcessDistribution();
   }
 
  private:

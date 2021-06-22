@@ -41,9 +41,9 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() { Global<NumProcessPerNode>::New()->set_value(1); }
+void InitNumProcessDistribution() { Global<NumProcessDistribution>::New()->add_num_process(1); }
 
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
 
 }  // namespace
 
@@ -72,25 +72,25 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(InitSymbolInstructionType, job_desc) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 }  // namespace test

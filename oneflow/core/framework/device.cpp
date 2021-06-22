@@ -79,7 +79,10 @@ Maybe<void> Device::Init() {
 }
 
 /*static*/ Maybe<const Device> Device::New(const std::string& type) {
-  return New(type, GlobalProcessCtx::Rank() % GlobalProcessCtx::NumOfProcessOnNode());
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  return New(type, device_id);
 }
 
 const std::shared_ptr<const ParallelDesc>& Device::parallel_desc_ptr() const {

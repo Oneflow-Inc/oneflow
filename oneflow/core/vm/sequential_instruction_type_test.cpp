@@ -46,11 +46,11 @@ struct GlobalProcessCtxScope {
     auto* ctx = Global<ProcessCtx>::New();
     ctx->set_rank(0);
     ctx->set_node_size(1);
-    Global<NumProcessPerNode>::New();
-    Global<NumProcessPerNode>::Get()->set_value(1);
+    Global<NumProcessDistribution>::New();
+    Global<NumProcessDistribution>::Get()->add_num_process(1);
   }
   ~GlobalProcessCtxScope() {
-    Global<NumProcessPerNode>::Delete();
+    Global<NumProcessDistribution>::Delete();
     Global<ProcessCtx>::Delete();
   }
 };

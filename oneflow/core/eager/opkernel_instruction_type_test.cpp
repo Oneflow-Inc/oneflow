@@ -42,12 +42,12 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
+void InitNumProcessDistribution() {
+  Global<NumProcessDistribution>::New();
+  Global<NumProcessDistribution>::Get()->add_num_process(1);
 }
 
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
 
 }  // namespace
 
@@ -118,7 +118,7 @@ int64_t InitOpKernelObject(InstructionMsgList* list,
 }
 
 TEST(OpkernelInstructionType, new_opkernel) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -142,11 +142,11 @@ TEST(OpkernelInstructionType, new_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 TEST(OpkernelInstructionType, delete_opkernel) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -173,11 +173,11 @@ TEST(OpkernelInstructionType, delete_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 TEST(OpkernelInstructionType, call_opkernel) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -220,12 +220,12 @@ TEST(OpkernelInstructionType, call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t in_id = vm::TestUtil::NewStringSymbol(&list, "in_0");
@@ -300,12 +300,12 @@ TEST(OpkernelInstructionType, consecutive_opkernel_calls) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 #endif
 
 TEST(OpkernelInstructionType, stateless_call_opkernel) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
   const std::string device_tag = "gpu";
@@ -351,12 +351,12 @@ TEST(OpkernelInstructionType, stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 #ifdef WITH_CUDA
 TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
   vm::TestResourceDescScope resource_scope(1, 1);
   InstructionMsgList list;
   int64_t job_desc_id = NewJobDescSymbol(&list, std::make_shared<JobConfigProto>());
@@ -430,7 +430,7 @@ TEST(OpkernelInstructionType, consecutive_stateless_call_opkernel) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 #endif
 

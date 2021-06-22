@@ -249,17 +249,17 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
+void InitNumProcessDistribution() {
+  Global<NumProcessDistribution>::New();
+  Global<NumProcessDistribution>::Get()->add_num_process(1);
 }
 
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
 
 }  // namespace
 
 TEST(SendReceiveInstructionType, naive) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
 #else
@@ -304,7 +304,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 }  // namespace test

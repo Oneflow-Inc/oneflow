@@ -117,7 +117,7 @@ Maybe<void> HostListCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
 
 Maybe<void> HostListCtrlBootstrap::InitProcessDistributionInCluster(ProcessCtx* process_ctx) const {
   for (int64_t rank = 0; rank < world_size(); ++rank) {
-    process_ctx->add_num_process_distribution_in_cluster(1);
+    process_ctx->mutable_num_process_distribution_in_cluster()->add_num_process(1);
   }
   return Maybe<void>::Ok();
 }
@@ -202,7 +202,7 @@ Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
 Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInCluster(ProcessCtx* process_ctx) const {
   for (int64_t rank = 0; rank < world_size();) {
     int64_t num_process = num_process4rank(rank);
-    process_ctx->add_num_process_distribution_in_cluster(num_process);
+    process_ctx->mutable_num_process_distribution_in_cluster()->add_num_process(num_process);
     rank += num_process;
   }
   return Maybe<void>::Ok();

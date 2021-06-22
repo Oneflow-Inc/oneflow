@@ -36,15 +36,15 @@ namespace test {
 
 namespace {
 
-void InitNumProcessPerNode() {
-  Global<NumProcessPerNode>::New();
-  Global<NumProcessPerNode>::Get()->set_value(1);
+void InitNumProcessDistribution() {
+  Global<NumProcessDistribution>::New();
+  Global<NumProcessDistribution>::Get()->add_num_process(1);
 }
 
-void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
 
 TEST(ControlStreamType, new_object) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -57,11 +57,11 @@ TEST(ControlStreamType, new_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 TEST(ControlStreamType, delete_object) {
-  InitNumProcessPerNode();
+  InitNumProcessDistribution();
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -75,7 +75,7 @@ TEST(ControlStreamType, delete_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessPerNode();
+  DestroyNumProcessDistribution();
 }
 
 }  // namespace

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -25,7 +24,8 @@ void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64
   int64_t node_id = ThisNodeId();
   int64_t acc_rank_index = 0;
   for (int64_t i = 0; i < node_id; ++i) {
-    acc_rank_index += Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(i);
+    acc_rank_index +=
+        Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(i);
   }
   *device_id = *machine_id - acc_rank_index;
 }
@@ -44,20 +44,30 @@ int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   int64_t acc_rank_index = 0;
   for (int64_t node_id = 0;
-       node_id < Global<ProcessCtx>::Get()->num_process_distribution_in_cluster_size();) {
-    acc_rank_index += Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(node_id);
+       node_id
+       < Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process_size();) {
+    acc_rank_index +=
+        Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(node_id);
     if (Rank() < acc_rank_index) { return node_id; }
   }
   UNIMPLEMENTED();
 }
 
 int64_t GlobalProcessCtx::NumOfProcessOnNode() {
-  if (Global<NumProcessPerNode>::Get() != nullptr) {
-    return int64_t(Global<NumProcessPerNode>::Get()->value());
+  if (Global<NumProcessDistribution>::Get() != nullptr) {
+    return int64_t(Global<NumProcessDistribution>::Get()->num_process(0));
   }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   int64_t node_id = ThisNodeId();
-  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(node_id);
+  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(node_id);
+}
+
+const NumProcessDistribution& GlobalProcessCtx::NumProcessDistributionInCluster() {
+  if (Global<NumProcessDistribution>::Get() != nullptr) {
+    return *Global<NumProcessDistribution>::Get();
+  }
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster();
 }
 
 bool GlobalProcessCtx::IsThisProcessMaster() {
