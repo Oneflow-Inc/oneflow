@@ -796,9 +796,12 @@ class UndeterminedTensor:
             raise ValueError("Neither placement nor device found.")
         return device_type == "gpu" or device_type == "cuda"
 
+    def to(self, sbp, placement):
+        return _convert_tensor_to_consistent(self, sbp, placement)
+
 
 # used in Tensor.to func
-def convert_tensor_to_consistent(tensor, sbp, placement):
+def _convert_tensor_to_consistent(tensor, sbp, placement):
     assert sbp is not None
     if isinstance(sbp, (tuple, list)):
         assert len(sbp) == len(placement.hierarchy)

@@ -338,9 +338,22 @@ Maybe<ConsistentTensor> CastParallelDistribution(
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Tensor, std::shared_ptr<Tensor>>(m, "Tensor");
-  // only export consistent_tensor.to_local() as now, api tensor.to(...) need to be discussed
-  ExportTensor<MirroredTensor>(m, "LocalTensor");
+  // args of tensor.to(...) need to be discussed
+  ExportTensor<MirroredTensor>(m, "LocalTensor")
+      .def("to",
+           [](const std::shared_ptr<MirroredTensor>& mirrored_tensor,
+              const std::vector<std::string>& sbp_parallels,
+              const std::shared_ptr<ParallelDesc>& parallel_desc)
+               -> std::shared_ptr<ConsistentTensor> {
+             return CastMirroredToConsistent(mirrored_tensor, sbp_parallels, parallel_desc)
+                 .GetPtrOrThrow();
+           });
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor")
+      .def("to",
+           [](const std::shared_ptr<ConsistentTensor>& mirrored_tensor,
+              const std::vector<std::string>& sbp_parallels) -> std::shared_ptr<ConsistentTensor> {
+             return CastParallelDistribution(mirrored_tensor, sbp_parallels).GetPtrOrThrow();
+           })
       .def("to_local",
            [](const std::shared_ptr<ConsistentTensor>& consistent_tensor)
                -> std::shared_ptr<MirroredTensor> {
