@@ -43,64 +43,65 @@ def mirrored_gen_random_seed(seed=None):
 @experimental_api
 class OfrecordReader(Module):
     def __init__(
-        self,
-        ofrecord_dir: str,
-        batch_size: int = 1,
-        data_part_num: int = 1,
-        part_name_prefix: str = "part-",
-        part_name_suffix_length: int = -1,
-        random_shuffle: bool = False,
-        shuffle_buffer_size: int = 1024,
-        shuffle_after_epoch: bool = False,
-        random_seed: int = -1,
-        name: Optional[str] = None,
+            self,
+            ofrecord_dir: str,
+            batch_size: int = 1,
+            data_part_num: int = 1,
+            part_name_prefix: str = "part-",
+            part_name_suffix_length: int = -1,
+            random_shuffle: bool = False,
+            shuffle_buffer_size: int = 1024,
+            shuffle_after_epoch: bool = False,
+            random_seed: int = -1,
+            name: Optional[str] = None,
     ):
         super().__init__()
         seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("OFRecordReader", name)
-            .Output("out")
-            .Attr("data_dir", ofrecord_dir)
-            .Attr("data_part_num", data_part_num)
-            .Attr("batch_size", batch_size)
-            .Attr("part_name_prefix", part_name_prefix)
-            .Attr("random_shuffle", random_shuffle)
-            .Attr("shuffle_buffer_size", shuffle_buffer_size)
-            .Attr("shuffle_after_epoch", shuffle_after_epoch)
-            .Attr("part_name_suffix_length", part_name_suffix_length)
-            .Attr("seed", seed)
-            .Build()
+                .Output("out")
+                .Attr("data_dir", ofrecord_dir)
+                .Attr("data_part_num", data_part_num)
+                .Attr("batch_size", batch_size)
+                .Attr("part_name_prefix", part_name_prefix)
+                .Attr("random_shuffle", random_shuffle)
+                .Attr("shuffle_buffer_size", shuffle_buffer_size)
+                .Attr("shuffle_after_epoch", shuffle_after_epoch)
+                .Attr("part_name_suffix_length", part_name_suffix_length)
+                .Attr("seed", seed)
+                .Build()
         )
 
     def forward(self):
-        res = self._op()
+        res = self._op()[0]
         return res
+
 
 
 @oneflow_export("nn.OfrecordRawDecoder")
 @experimental_api
 class OfrecordRawDecoder(Module):
     def __init__(
-        self,
-        blob_name: str,
-        shape: Sequence[int],
-        dtype: flow.dtype,
-        dim1_varying_length: bool = False,
-        auto_zero_padding: bool = False,
-        name: Optional[str] = None,
+            self,
+            blob_name: str,
+            shape: Sequence[int],
+            dtype: flow.dtype,
+            dim1_varying_length: bool = False,
+            auto_zero_padding: bool = False,
+            name: Optional[str] = None,
     ):
         super().__init__()
 
         self._op = (
             flow.builtin_op("ofrecord_raw_decoder", name)
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("shape", shape)
-            .Attr("data_type", dtype)
-            .Attr("dim1_varying_length", dim1_varying_length)
-            .Attr("auto_zero_padding", auto_zero_padding)
-            .Build()
+                .Input("in")
+                .Output("out")
+                .Attr("name", blob_name)
+                .Attr("shape", shape)
+                .Attr("data_type", dtype)
+                .Attr("dim1_varying_length", dim1_varying_length)
+                .Attr("auto_zero_padding", auto_zero_padding)
+                .Build()
         )
 
     def forward(self, input):
@@ -108,24 +109,26 @@ class OfrecordRawDecoder(Module):
         return res
 
 
+
+
 @oneflow_export("nn.COCOImageDecoder")
 @experimental_api
 class COCOImageDecoder(Module):
     def __init__(
-        self,
-        dtype: flow.dtype = flow.uint8,
-        color_space: str = "BGR",
-        name: Optional[str] = None,
+            self,
+            dtype: flow.dtype = flow.uint8,
+            color_space: str = "BGR",
+            name: Optional[str] = None,
     ):
         super().__init__()
 
         self._op = (
             flow.builtin_op("image_decode", name)
-            .Input("in")
-            .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("data_type", dtype)
-            .Build()
+                .Input("in")
+                .Output("out")
+                .Attr("color_space", color_space)
+                .Attr("data_type", dtype)
+                .Build()
         )
 
     def forward(self, input):
@@ -136,43 +139,32 @@ class COCOImageDecoder(Module):
 @oneflow_export("nn.COCOReader")
 @experimental_api
 class Cocoreader(Module):
-    def __init__(
-        self,
-        annotation_file: str,
-        image_dir: str,
-        batch_size: int,
-        shuffle: bool = True,
-        random_seed: int = -1,
-        group_by_aspect_ratio: bool = True,
-        remove_images_without_annotations: bool = True,
-        stride_partition: bool = True,
-        name: Optional[str] = None,
-    ):
+    def __init__(self, annotation_file: str, image_dir: str, batch_size: int, shuffle: bool = True, random_seed: int = -1,
+                 group_by_aspect_ratio: bool = True, remove_images_without_annotations: bool = True,
+                 stride_partition: bool = True, name: Optional[str] = None):
         super().__init__()
         self._op = (
             flow.builtin_op("COCOReader", name)
-            .Output("image")
-            .Output("image_id")
-            .Output("image_size")
-            .Output("gt_bbox")
-            .Output("gt_label")
-            .Output("gt_segm")
-            .Output("gt_segm_index")
-            .Attr("annotation_file", annotation_file)
-            .Attr("image_dir", image_dir)
-            .Attr("batch_size", batch_size)
-            .Attr("shuffle_after_epoch", shuffle)
-            .Attr("random_seed", random_seed)
-            .Attr("group_by_ratio", group_by_aspect_ratio)
-            .Attr(
-                "remove_images_without_annotations", remove_images_without_annotations
-            )
-            .Attr("stride_partition", stride_partition)
-            .Build()
+                .Output("image")
+                .Output("image_id")
+                .Output("image_size")
+                .Output("gt_bbox")
+                .Output("gt_label")
+                .Output("gt_segm")
+                .Output("gt_segm_index")
+                .Attr("annotation_file", annotation_file)
+                .Attr("image_dir", image_dir)
+                .Attr("batch_size", batch_size)
+                .Attr("shuffle_after_epoch", shuffle)
+                .Attr("random_seed", random_seed)
+                .Attr("group_by_ratio", group_by_aspect_ratio)
+                .Attr("remove_images_without_annotations", remove_images_without_annotations)
+                .Attr("stride_partition", stride_partition)
+                .Build()
         )
 
     def forward(self):
-        res = self._op()
+        res  = self._op()
         return res
 
 
@@ -180,21 +172,21 @@ class Cocoreader(Module):
 @experimental_api
 class CoinFlip(Module):
     def __init__(
-        self,
-        batch_size: int = 1,
-        random_seed: Optional[int] = None,
-        probability: float = 0.5,
+            self,
+            batch_size: int = 1,
+            random_seed: Optional[int] = None,
+            probability: float = 0.5,
     ):
         super().__init__()
         seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("coin_flip")
-            .Output("out")
-            .Attr("batch_size", batch_size)
-            .Attr("probability", probability)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .Build()
+                .Output("out")
+                .Attr("batch_size", batch_size)
+                .Attr("probability", probability)
+                .Attr("has_seed", has_seed)
+                .Attr("seed", seed)
+                .Build()
         )
 
     def forward(self):
@@ -206,49 +198,49 @@ class CoinFlip(Module):
 @experimental_api
 class CropMirrorNormalize(Module):
     def __init__(
-        self,
-        color_space: str = "BGR",
-        output_layout: str = "NCHW",
-        crop_h: int = 0,
-        crop_w: int = 0,
-        crop_pos_y: float = 0.5,
-        crop_pos_x: float = 0.5,
-        mean: Sequence[float] = [0.0],
-        std: Sequence[float] = [1.0],
-        output_dtype: flow.dtype = flow.float,
+            self,
+            color_space: str = "BGR",
+            output_layout: str = "NCHW",
+            crop_h: int = 0,
+            crop_w: int = 0,
+            crop_pos_y: float = 0.5,
+            crop_pos_x: float = 0.5,
+            mean: Sequence[float] = [0.0],
+            std: Sequence[float] = [1.0],
+            output_dtype: flow.dtype = flow.float,
     ):
         super().__init__()
         self._op = (
             flow.builtin_op("crop_mirror_normalize_from_uint8")
-            .Input("in")
-            .Input("mirror")
-            .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
-            .Build()
+                .Input("in")
+                .Input("mirror")
+                .Output("out")
+                .Attr("color_space", color_space)
+                .Attr("output_layout", output_layout)
+                .Attr("mean", mean)
+                .Attr("std", std)
+                .Attr("crop_h", crop_h)
+                .Attr("crop_w", crop_w)
+                .Attr("crop_pos_y", crop_pos_y)
+                .Attr("crop_pos_x", crop_pos_x)
+                .Attr("output_dtype", output_dtype)
+                .Build()
         )
 
         self._val_op = (
             flow.builtin_op("crop_mirror_normalize_from_tensorbuffer")
-            .Input("in")
-            .Output("out")
-            .Attr("color_space", color_space)
-            .Attr("output_layout", output_layout)
-            .Attr("mean", mean)
-            .Attr("std", std)
-            .Attr("crop_h", crop_h)
-            .Attr("crop_w", crop_w)
-            .Attr("crop_pos_y", crop_pos_y)
-            .Attr("crop_pos_x", crop_pos_x)
-            .Attr("output_dtype", output_dtype)
-            .Build()
+                .Input("in")
+                .Output("out")
+                .Attr("color_space", color_space)
+                .Attr("output_layout", output_layout)
+                .Attr("mean", mean)
+                .Attr("std", std)
+                .Attr("crop_h", crop_h)
+                .Attr("crop_w", crop_w)
+                .Attr("crop_pos_y", crop_pos_y)
+                .Attr("crop_pos_x", crop_pos_x)
+                .Attr("output_dtype", output_dtype)
+                .Build()
         )
 
     def forward(self, input, mirror=None):
@@ -263,28 +255,28 @@ class CropMirrorNormalize(Module):
 @experimental_api
 class OFRecordImageDecoderRandomCrop(Module):
     def __init__(
-        self,
-        blob_name: str,
-        color_space: str = "BGR",
-        num_attempts: int = 10,
-        random_seed: Optional[int] = None,
-        random_area: Sequence[float] = [0.08, 1.0],
-        random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
+            self,
+            blob_name: str,
+            color_space: str = "BGR",
+            num_attempts: int = 10,
+            random_seed: Optional[int] = None,
+            random_area: Sequence[float] = [0.08, 1.0],
+            random_aspect_ratio: Sequence[float] = [0.75, 1.333333],
     ):
         super().__init__()
         seed, has_seed = mirrored_gen_random_seed(random_seed)
         self._op = (
             flow.builtin_op("ofrecord_image_decoder_random_crop")
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("color_space", color_space)
-            .Attr("num_attempts", num_attempts)
-            .Attr("random_area", random_area)
-            .Attr("random_aspect_ratio", random_aspect_ratio)
-            .Attr("has_seed", has_seed)
-            .Attr("seed", seed)
-            .Build()
+                .Input("in")
+                .Output("out")
+                .Attr("name", blob_name)
+                .Attr("color_space", color_space)
+                .Attr("num_attempts", num_attempts)
+                .Attr("random_area", random_area)
+                .Attr("random_aspect_ratio", random_aspect_ratio)
+                .Attr("has_seed", has_seed)
+                .Attr("seed", seed)
+                .Build()
         )
 
     def forward(self, input):
@@ -296,16 +288,16 @@ class OFRecordImageDecoderRandomCrop(Module):
 @experimental_api
 class OFRecordImageDecoder(Module):
     def __init__(
-        self, blob_name: str, color_space: str = "BGR",
+            self, blob_name: str, color_space: str = "BGR",
     ):
         super().__init__()
         self._op = (
             flow.builtin_op("ofrecord_image_decoder")
-            .Input("in")
-            .Output("out")
-            .Attr("name", blob_name)
-            .Attr("color_space", color_space)
-            .Build()
+                .Input("in")
+                .Output("out")
+                .Attr("name", blob_name)
+                .Attr("color_space", color_space)
+                .Build()
         )
 
     def forward(self, input):
@@ -315,17 +307,17 @@ class OFRecordImageDecoder(Module):
 
 class TensorBufferToListOfTensors(Module):
     def __init__(
-        self, out_shapes, out_dtypes, out_num: int = 1, dynamic_out: bool = False
+            self, out_shapes, out_dtypes, out_num: int = 1, dynamic_out: bool = False
     ):
         super().__init__()
         self._op = (
             flow.builtin_op("tensor_buffer_to_list_of_tensors_v2")
-            .Input("in")
-            .Output("out", out_num)
-            .Attr("out_shapes", out_shapes)
-            .Attr("out_dtypes", out_dtypes)
-            .Attr("dynamic_out", dynamic_out)
-            .Build()
+                .Input("in")
+                .Output("out", out_num)
+                .Attr("out_shapes", out_shapes)
+                .Attr("out_dtypes", out_dtypes)
+                .Attr("dynamic_out", dynamic_out)
+                .Build()
         )
 
     def forward(self, input):
@@ -333,32 +325,25 @@ class TensorBufferToListOfTensors(Module):
 
 
 class GetTensorBuffer(Module):
-    def __init__(
-        self, shape, shape_list, value_list, data_type=flow.float32, dynamic_out=False
-    ):
+    def __init__(self, shape, shape_list,  value_list, data_type = flow.float32, dynamic_out= False):
         super().__init__()
         self._op = (
             flow.builtin_op("gen_tensor_buffer")
-            .Output("out")
-            .Attr("shape", shape)
-            .Attr("shape_list", shape_list)
-            .Attr("value_list", value_list)
-            .Attr("data_type", data_type)
-            .Attr("dynamic_out", dynamic_out)
-            .Build()
+                .Output("out")
+                .Attr("shape", shape)
+                .Attr("shape_list", shape_list)
+                .Attr("value_list", value_list)
+                .Attr("data_type", data_type)
+                .Attr("dynamic_out", dynamic_out)
+                .Build()
         )
-
     def forward(self):
         return self._op()
 
-
 @oneflow_export("gen_tensor_buffer")
 @experimental_api
-def gen_tensor_buffer(
-    shape, shape_list, value_list, data_type=flow.float32, dynamic_out=False
-):
+def gen_tensor_buffer(shape, shape_list,  value_list, data_type= flow.float32, dynamic_out = False):
     return GetTensorBuffer(shape, shape_list, value_list, data_type, dynamic_out)()
-
 
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 @experimental_api
@@ -370,26 +355,27 @@ def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
     )(tensor)
 
 
+
 @oneflow_export("nn.image.Resize")
 @experimental_api
 class ImageResize(Module):
     def __init__(
-        self,
-        target_size: Union[int, Sequence[int]] = None,
-        min_size: Optional[int] = None,
-        max_size: Optional[int] = None,
-        keep_aspect_ratio: bool = False,
-        resize_side: str = "shorter",
-        channels: int = 3,
-        dtype: Optional[flow.dtype] = None,
-        interpolation_type: str = "auto",
-        name: Optional[str] = None,
-        # deprecated params, reserve for backward compatible
-        color_space: Optional[str] = None,
-        interp_type: Optional[str] = None,
-        resize_shorter: int = 0,
-        resize_x: int = 0,
-        resize_y: int = 0,
+            self,
+            target_size: Union[int, Sequence[int]] = None,
+            min_size: Optional[int] = None,
+            max_size: Optional[int] = None,
+            keep_aspect_ratio: bool = False,
+            resize_side: str = "shorter",
+            channels: int = 3,
+            dtype: Optional[flow.dtype] = None,
+            interpolation_type: str = "auto",
+            name: Optional[str] = None,
+            # deprecated params, reserve for backward compatible
+            color_space: Optional[str] = None,
+            interp_type: Optional[str] = None,
+            resize_shorter: int = 0,
+            resize_x: int = 0,
+            resize_y: int = 0,
     ):
         super().__init__()
         # process deprecated params
@@ -463,16 +449,16 @@ class ImageResize(Module):
 
             self._op = (
                 flow.builtin_op("image_resize_keep_aspect_ratio")
-                .Input("in")
-                .Output("out")
-                .Output("size")
-                .Output("scale")
-                .Attr("target_size", target_size)
-                .Attr("min_size", min_size)
-                .Attr("max_size", max_size)
-                .Attr("resize_longer", resize_longer)
-                .Attr("interpolation_type", interpolation_type)
-                .Build()
+                    .Input("in")
+                    .Output("out")
+                    .Output("size")
+                    .Output("scale")
+                    .Attr("target_size", target_size)
+                    .Attr("min_size", min_size)
+                    .Attr("max_size", max_size)
+                    .Attr("resize_longer", resize_longer)
+                    .Attr("interpolation_type", interpolation_type)
+                    .Build()
             )
             # TODO(Liang Depeng)
             # scale = flow.tensor_buffer_to_tensor(
@@ -483,9 +469,9 @@ class ImageResize(Module):
             # )
         else:
             if (
-                not isinstance(target_size, (list, tuple))
-                or len(target_size) != 2
-                or not all(isinstance(size, int) for size in target_size)
+                    not isinstance(target_size, (list, tuple))
+                    or len(target_size) != 2
+                    or not all(isinstance(size, int) for size in target_size)
             ):
                 raise ValueError(
                     "target_size must be a form like (width, height) when keep_aspect_ratio is False"
@@ -497,15 +483,15 @@ class ImageResize(Module):
             target_w, target_h = target_size
             self._op = (
                 flow.builtin_op("image_resize_to_fixed")
-                .Input("in")
-                .Output("out")
-                .Output("scale")
-                .Attr("target_width", target_w)
-                .Attr("target_height", target_h)
-                .Attr("channels", channels)
-                .Attr("data_type", dtype)
-                .Attr("interpolation_type", interpolation_type)
-                .Build()
+                    .Input("in")
+                    .Output("out")
+                    .Output("scale")
+                    .Attr("target_width", target_w)
+                    .Attr("target_height", target_h)
+                    .Attr("channels", channels)
+                    .Attr("data_type", dtype)
+                    .Attr("interpolation_type", interpolation_type)
+                    .Build()
             )
 
     def forward(self, input):
@@ -516,13 +502,13 @@ class ImageResize(Module):
 @oneflow_export("tmp.RawDecoder")
 @experimental_api
 def raw_decoder(
-    input_record,
-    blob_name: str,
-    shape: Sequence[int],
-    dtype: flow.dtype,
-    dim1_varying_length: bool = False,
-    auto_zero_padding: bool = False,
-    name: Optional[str] = None,
+        input_record,
+        blob_name: str,
+        shape: Sequence[int],
+        dtype: flow.dtype,
+        dim1_varying_length: bool = False,
+        auto_zero_padding: bool = False,
+        name: Optional[str] = None,
 ):
     return OfrecordRawDecoder(
         blob_name, shape, dtype, dim1_varying_length, auto_zero_padding, name
@@ -532,15 +518,15 @@ def raw_decoder(
 @oneflow_export("tmp.OfrecordReader")
 @experimental_api
 def get_ofrecord_handle(
-    ofrecord_dir: str,
-    batch_size: int = 1,
-    data_part_num: int = 1,
-    part_name_prefix: str = "part-",
-    part_name_suffix_length: int = -1,
-    random_shuffle: bool = False,
-    shuffle_buffer_size: int = 1024,
-    shuffle_after_epoch: bool = False,
-    name: Optional[str] = None,
+        ofrecord_dir: str,
+        batch_size: int = 1,
+        data_part_num: int = 1,
+        part_name_prefix: str = "part-",
+        part_name_suffix_length: int = -1,
+        random_shuffle: bool = False,
+        shuffle_buffer_size: int = 1024,
+        shuffle_after_epoch: bool = False,
+        name: Optional[str] = None,
 ):
     return OfrecordReader(
         ofrecord_dir,
