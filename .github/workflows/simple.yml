@@ -134,3 +134,11 @@ jobs:
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: home_oneflow_temp.zip
+          path: |
+            ${{ env.HOME }}/oneflow_temp
+            test_tmp_dir
