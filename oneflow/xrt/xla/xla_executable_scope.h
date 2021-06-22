@@ -53,9 +53,11 @@ XlaExecutableRunScope::XlaExecutableRunScope(xla::LocalExecutable* executable,
   // launch kernel on the specified cuda stream of the context. Note that it
   // should do nothing for single stream device such as CPU.
   launch_stream_ = run_context_.run_options().stream;
+#ifdef WITH_CUDA
   if (SupportMultiStream(run_context_.device())) {
     xla::SwapGpuStreamHandle(run_context_.stream(), &launch_stream_);
   }
+#endif  // WITH_CUDA
 
   size_t workspace_size = xla::CalcWorkspaceByteSize(executable);
   run_context_.ReserveWorkspace(workspace_size);
@@ -63,9 +65,11 @@ XlaExecutableRunScope::XlaExecutableRunScope(xla::LocalExecutable* executable,
 }
 
 XlaExecutableRunScope::~XlaExecutableRunScope() {
+#ifdef WITH_CUDA
   if (SupportMultiStream(run_context_.device())) {
     xla::SwapGpuStreamHandle(run_context_.stream(), &launch_stream_);
   }
+#endif  // WITH_CUDA
   run_context_.UnlockWorkspace();
 }
 
