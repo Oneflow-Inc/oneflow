@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/api/python/ofblob/ofblob.e.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/tensor_buffer.h"
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/device.h"
@@ -285,11 +286,18 @@ Maybe<ConsistentTensor> CastMirroredToConsistent(
 // used consistent_tensor.to_local()
 Maybe<MirroredTensor> CastConsistentToMirrored(
     const std::shared_ptr<ConsistentTensor>& consistent_tensor) {
+  int64_t machine_id = 0;
+  int64_t device_id = 0;
+  const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
+  GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
+  if (!parallel_desc->Containing(machine_id, device_id)) {
+    // should return UndefinesdLocalTensor here, the impl of which need to be discussed
+    return std::shared_ptr<MirroredTensor>();
+  }
   TensorTuple input_list;
   input_list.emplace_back(consistent_tensor);
   auto outputs = std::make_shared<one::TensorTuple>(1);
   const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
-  const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
   const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
                                                            *parallel_distribution, *parallel_desc));
   const auto& session = JUST(GetDefaultSession());
