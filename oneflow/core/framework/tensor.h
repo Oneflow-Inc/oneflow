@@ -102,6 +102,7 @@ class Tensor {
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
+  virtual bool has_autograd_meta() const = 0;
 
  protected:
   Tensor() = default;
@@ -127,8 +128,12 @@ class TensorIf : public Tensor {
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_; }
   // used by pybind11 only
   Maybe<DerivedT> api_acc_grad() const {
-    const std::shared_ptr<Tensor>& tensor = JUST(acc_grad());
-    return cast_for_api(tensor);
+    if (has_autograd_meta()) {
+      const std::shared_ptr<Tensor>& tensor = JUST(acc_grad());
+      return cast_for_api(tensor);
+    } else {
+      return std::shared_ptr<DerivedT>();
+    }
   }
 
   // Setters for autograd
@@ -221,6 +226,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -305,6 +311,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
