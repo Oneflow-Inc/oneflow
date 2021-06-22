@@ -95,10 +95,10 @@ class Tensor {
 
   // Setters for autograd
   virtual void set_requires_grad(bool requires_grad) = 0;
-  virtual void set_retain_grad(bool retain_grad) = 0;
+  virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
   virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
-  virtual void set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
+  virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
@@ -223,9 +223,13 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   bool retain_grad() const override { return impl_->retain_grad(); }
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    return impl_->set_acc_grad(grad);
+  }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    return impl_->set_retain_grad(retain_grad);
+  }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
@@ -303,10 +307,14 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool retain_grad() const override { return impl_->retain_grad(); }
 
   // Setters for autograd
-  void set_acc_grad(const std::shared_ptr<Tensor>& grad) override { impl_->set_acc_grad(grad); }
+  Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
+    return impl_->set_acc_grad(grad);
+  }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_requires_grad(bool requires_grad) override { impl_->set_requires_grad(requires_grad); }
-  void set_retain_grad(bool retain_grad) override { impl_->set_retain_grad(retain_grad); }
+  Maybe<void> set_retain_grad(bool retain_grad) override {
+    return impl_->set_retain_grad(retain_grad);
+  }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
 
