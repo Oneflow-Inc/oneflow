@@ -72,14 +72,19 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
-if(NOT XRT_TF_URL)
-  set(XRT_TF_URL https://github.com/Oneflow-Inc/tensorflow/archive/fc42cf2a17e4af9f494278ddee66b6d17e1e9eaf.zip)
-  use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
+use_mirror(VARIABLE DEFAULT_XRT_TF_URL URL "https://github.com/Oneflow-Inc/tensorflow/archive/b5e87ed74a2a1f870e11b3656e00f321c7c81224.zip")
+set(XRT_TF_URL ${DEFAULT_XRT_TF_URL} CACHE STRING "")
+message(STATUS "XRT_TF_URL: ${XRT_TF_URL}")
+if(IS_DIRECTORY ${XRT_TF_URL})
+  set(XRT_TF_DOWNLOAD_NO_EXTRACT ON)
+else()
+  set(XRT_TF_DOWNLOAD_NO_EXTRACT OFF)
 endif()
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
     URL ${XRT_TF_URL}
+    DOWNLOAD_NO_EXTRACT ${XRT_TF_DOWNLOAD_NO_EXTRACT}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
                   ${BAZEL_LINKLIBS_ENV_ARG} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
