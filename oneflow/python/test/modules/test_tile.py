@@ -37,7 +37,7 @@ def _test_tile_less_dim_a(test_case, device):
     )
     sizes = (2,)
     np_out = np_tile(input.numpy(), sizes)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
@@ -47,7 +47,7 @@ def _test_tile_less_dim_b(test_case, device):
     )
     sizes = (3, 4)
     np_out = np_tile(input.numpy(), sizes)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
@@ -57,7 +57,7 @@ def _test_tile_less_dim_c(test_case, device):
     )
     sizes = (2, 3, 4, 4)
     np_out = np_tile(input.numpy(), sizes)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
 
@@ -66,7 +66,7 @@ def _test_tile_same_dim(test_case, device):
         np.random.randn(1, 2, 5, 3), dtype=flow.float32, device=flow.device(device)
     )
     sizes = (4, 2, 3, 19)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     np_out = np_tile(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out))
 
@@ -77,7 +77,7 @@ def _test_tile_same_dim_int(test_case, device):
     )
     size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
     sizes = size_tensor.size()
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     np_out = np_tile(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
@@ -88,7 +88,7 @@ def _test_tile_same_dim_int8(test_case, device):
     )
     size_tensor = flow.Tensor(np.random.randn(4, 2, 3, 19))
     sizes = size_tensor.size()
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     np_out = np_tile(input.numpy(), sizes)
     test_case.assertTrue(np.array_equal(of_out.numpy(), np_out.astype(np.int32)))
 
@@ -101,7 +101,7 @@ def _test_tile_less_dim_a_backward(test_case, device):
         requires_grad=True,
     )
     sizes = (2,)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = np_tile_grad(input.numpy(), sizes)
@@ -116,7 +116,7 @@ def _test_tile_less_dim_b_backward(test_case, device):
         requires_grad=True,
     )
     sizes = (3, 4)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = np_tile_grad(input.numpy(), sizes)
@@ -131,7 +131,7 @@ def _test_tile_less_dim_c_backward(test_case, device):
         requires_grad=True,
     )
     sizes = (2, 3, 4, 4)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = np_tile_grad(input.numpy(), sizes)
@@ -146,7 +146,7 @@ def _test_tile_same_dim_backward(test_case, device):
         requires_grad=True,
     )
     sizes = (1, 2, 3, 1)
-    of_out = input.tile(sizes=sizes)
+    of_out = input.tile(reps=sizes)
     of_out = of_out.sum()
     of_out.backward()
     np_grad = np_tile_grad(input.numpy(), sizes)

@@ -21,40 +21,49 @@ from oneflow.python.framework.tensor import Tensor, register_tensor_op
 
 
 class Tile(Module):
-    def __init__(self, sizes: Union[tuple, flow.Size]) -> None:
+    def __init__(self, reps: tuple) -> None:
         super().__init__()
-        self.sizes = sizes
+        self.reps = reps
 
     def forward(self, input: Tensor) -> Tensor:
-        sizes = self.sizes
-        for s in self.sizes:
+        reps = self.reps
+        for s in self.reps:
             assert s > 0
         input_shape = input.shape
-        diff = len(input_shape) - len(sizes)
+        diff = len(input_shape) - len(reps)
         if diff > 0:
             shape = [1 for _ in range(diff)]
-            shape.extend([i for i in sizes])
-            sizes = tuple(shape)
-        return input.repeat(sizes)
+            shape.extend([i for i in reps])
+            reps = tuple(shape)
+        return input.repeat(reps)
 
 
 @oneflow_export("tile")
 @register_tensor_op("tile")
 @experimental_api
-def tile_op(x, sizes):
+def tile_op(x, reps):
     r"""The interface is consistent with PyTorch.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.tile.html
 
-    This operator repeat the input tensor to a larger size along the specified dimensions.
+    Constructs a tensor by repeating the elements of ``input``.  The ``reps`` argument specifies the number
+    of repetitions in each dimension.
 
-    Args:
-        x (oneflow.Tensor): The input Tensor.
-        size (Sequence[int]): The number of times to repeat this tensor along each dimension
+    If ``reps`` specifies fewer dimensions than ``input`` has, then ones are prepended to ``reps`` until
+    all dimensions are specified.  For example, if ``input`` has shape (8, 6, 4, 2) and ``reps`` is (2, 2),
+    then ``reps`` is treated as (1, 1, 2, 2).
+
+    Analogously, if ``input`` has fewer dimensions than ``reps`` specifies, then ``input`` is treated as
+    if it were unsqueezed at dimension zero until it has as many dimensions as ``reps`` specifies.
+    For example, if ``input`` has shape (4, 2) and ``reps`` is (3, 3, 2, 2), then ``input`` is treated as
+    if it had the shape (1, 1, 4, 2).
 
     .. note::
         This function is similar to NumPy’s tile function.
 
-    Returns:
-        oneflow.Tensor: The result Tensor.
+    Args:
+        input (oneflow.Tensor): the tensor whose elements to repeat.
+        reps (tuple): the number of repetitions per dimension.
 
     For example:
 
@@ -66,18 +75,18 @@ def tile_op(x, sizes):
 
         >>> x = np.array([1, 2]).astype(np.int32)
         >>> input = flow.Tensor(x, dtype=flow.int32)
-        >>> out = input.tile(sizes=(2,))
+        >>> out = input.tile(reps=(2,))
         >>> out
         tensor([1, 2, 1, 2], dtype=oneflow.int32)
 
         >>> x = np.random.randn(5, 2, 1)
         >>> input = flow.Tensor(x)
-        >>> out = input.tile(sizes=(3, 4))
+        >>> out = input.tile(reps=(3, 4))
         >>> out.size()
         flow.Size([5, 6, 4])
 
     """
-    return Tile(sizes=sizes)(x)
+    return Tile(reps=reps)(x)
 
 
 if __name__ == "__main__":
