@@ -72,7 +72,7 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
 set(XRT_TF_DOWNLOAD_NO_EXTRACT OFF)
-set(XRT_TF_URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip")
+set(XRT_TF_URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip" CACHE STRING "")
 message(STATUS "XRT_TF_URL: ${XRT_TF_URL}")
 
 if(IS_DIRECTORY ${XRT_TF_URL})
