@@ -106,14 +106,6 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
         return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
             .GetPtrOrThrow();
       }));
-
-  py::class_<one::CastFromConsistentOpExpr, one::CastConsistentOpExpr,
-             std::shared_ptr<one::CastFromConsistentOpExpr>>(m, "CastFromConsistentOpExpr")
-      .def(py::init([](const std::string& op_name, const std::vector<std::string>& sbp_parallels,
-                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
-        return one::CastFromConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
-            .GetPtrOrThrow();
-      }));
 }
 
 }  // namespace oneflow

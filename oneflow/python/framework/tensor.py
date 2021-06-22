@@ -827,7 +827,7 @@ def _convert_tensor_to_consistent(tensor, sbp, placement):
     parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
     cast_to_consistent_op_expr = CastFromConsistentOpExpr(
-        id_util.UniqueStr("cast_consistent"), parallel_distribution, placement,
+        id_util.UniqueStr("cast_to_consistent"), parallel_distribution, placement,
     )
     with sess.consistent_scope():
         consistent_tensor = cast_to_consistent_op_expr(tensor)[0]
