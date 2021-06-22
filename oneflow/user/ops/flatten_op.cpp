@@ -50,7 +50,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   const int32_t start_dim = ctx->Attr<int32_t>("start_dim");
   const int32_t end_dim = ctx->Attr<int32_t>("end_dim");
   const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc->shape();
 
   CHECK_GE_OR_RETURN(start_dim, 0);
@@ -78,7 +78,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> DataTypeInferFn(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
 

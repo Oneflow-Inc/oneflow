@@ -808,6 +808,7 @@ def moments(
 
 
 @oneflow_export("nn.GroupNorm")
+@stable_api
 def group_normalization(
     x: oneflow._oneflow_internal.BlobDesc,
     num_groups: int = 32,
@@ -3562,6 +3563,7 @@ def relu6(
 
 
 @oneflow_export("nn.L1Loss")
+@stable_api
 def l1_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -3679,6 +3681,7 @@ def l1_loss(
 
 
 @oneflow_export("nn.BCELoss")
+@stable_api
 def bce_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -3786,6 +3789,7 @@ def bce_loss(
 
 
 @oneflow_export("nn.BCEWithLogitsLoss")
+@stable_api
 def bce_with_logits_loss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,
@@ -4134,6 +4138,7 @@ def margin_ranking_loss(
 
 
 @oneflow_export("nn.TripletMarginLoss")
+@stable_api
 def triplet_margin_loss(
     anchor: oneflow._oneflow_internal.BlobDesc,
     positive: oneflow._oneflow_internal.BlobDesc,
@@ -4405,6 +4410,7 @@ def pixel_shufflev2(
 
 
 @oneflow_export("nn.KLDivLoss")
+@stable_api
 def kldivloss(
     input: oneflow._oneflow_internal.BlobDesc,
     target: oneflow._oneflow_internal.BlobDesc,

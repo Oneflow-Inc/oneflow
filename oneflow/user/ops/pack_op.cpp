@@ -27,7 +27,7 @@ REGISTER_USER_OP("pack")
       const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       const Shape& in_shape = in_desc->shape();
       CHECK_GT(in_shape.NumAxes(), 0);
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_is_dynamic() = in_desc->is_dynamic();
       *out_desc->mut_shape() = in_desc->shape();
       out_desc->mut_shape()->Set(0, in_shape.At(0) * ctx->Attr<int32_t>("pack_num"));
@@ -59,7 +59,7 @@ REGISTER_USER_OP("pack")
           return Maybe<void>::Ok();
         })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 

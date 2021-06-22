@@ -56,6 +56,12 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
 
 EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
+EagerMirroredTensorImpl::EagerMirroredTensorImpl(
+    const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+    std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
+    : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)),
+      tensor_storage_(tensor_storage) {}
+
 void EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
@@ -69,7 +75,7 @@ void EagerMirroredTensorImpl::UpdateTensorStorage() {
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
-  return eager_blob_object_->compute_local_dep_object();
+  return JUST(eager_blob_object())->compute_local_dep_object();
 }
 
 Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
@@ -104,6 +110,7 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
 }
 
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
+  if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
   std::atomic<bool> synced(false);

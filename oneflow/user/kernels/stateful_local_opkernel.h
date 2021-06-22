@@ -160,22 +160,34 @@ class LocalUserOpInferContext : public user_op::InferContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* OutputShape(const std::string& arg_name, int32_t index) override {
-    return const_cast<LocalUserOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+    return Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
-    return const_cast<LocalUserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+    return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<LocalUserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();

@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/xrt/api.h"
 #include "oneflow/xrt/launch_op.h"
+#include "oneflow/xrt/utility/stl.h"
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
@@ -87,12 +88,19 @@ Maybe<void> XrtLaunchOp::InferOutBlobDescs(
   {
     // Run InferShape pass
     const auto& sbp_signatures = launch_conf.sbp_signatures();
+    xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
+    for (const auto& pair : sbp_signatures) {
+      cfg_sbp_signatures.insert({pair.first, pair.second});
+    }
     auto options = xrt::CreateDefaultXrtPassOptions();
     DeviceType device_type = JUST(DeviceType4DeviceTag(op_conf().device_tag()));
     auto graph = xrt::BuildXrtGraph(launch_conf.function(), device_type, GlobalJobDesc());
     const ParallelDesc& op_parallel_desc = *JUST(GetOpParallelDesc());
+    const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
+        &cfg_sbp_signatures;
     xrt::RunXrtPass("InferShape", graph.get(), options, &GlobalJobDesc(), parallel_ctx,
-                    &op_parallel_desc, &sbp_signatures, &lbn2logical_blob_desc, &blob_descs);
+                    &op_parallel_desc, const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc,
+                    &blob_descs);
   }
 
   // Fetch output blob descs

@@ -137,7 +137,6 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
       const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const;
   Maybe<const Device> InferDevices(const AttrMap& attrs, const TensorTuple& inputs,
                                    TensorTuple* outputs) const;
-
   ConsistentTensorInferCache* mut_consistent_tensor_infer_cache() const {
     return consistent_tensor_infer_cache_.get();
   }

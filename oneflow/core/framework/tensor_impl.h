@@ -86,7 +86,6 @@ class TensorImpl {
 };
 
 class EagerMirroredTensorImpl;
-
 class MirroredTensorImpl : public TensorImpl {
  public:
   virtual ~MirroredTensorImpl() = default;
@@ -102,6 +101,8 @@ class MirroredTensorImpl : public TensorImpl {
   }
   Maybe<std::shared_ptr<const Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
+
+  virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }
 
  protected:
   MirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
@@ -180,6 +181,9 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
                           const std::shared_ptr<AutogradMeta>& autograd_meta);
   EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
                           bool requires_grad, bool is_leaf);
+  EagerMirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                          const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad,
+                          bool is_leaf);
   ~EagerMirroredTensorImpl() override;
 
   // Getters
@@ -187,9 +191,15 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
-  Maybe<vm::EagerBlobObject> eager_blob_object() const override { return eager_blob_object_; }
+  Maybe<vm::EagerBlobObject> eager_blob_object() const override {
+    CHECK_OR_RETURN(eager_blob_object_);
+    return eager_blob_object_;
+  }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override;
-  Maybe<TensorStorage> tensor_storage() const override { return tensor_storage_; }
+  Maybe<TensorStorage> tensor_storage() const override {
+    CHECK_OR_RETURN(eager_blob_object_);
+    return tensor_storage_;
+  }
 
   // Setters
   TensorStorage* mut_tensor_storage() { return tensor_storage_.get(); }
@@ -202,6 +212,12 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
  private:
   void UpdateTensorStorage();
+  Maybe<MirroredTensorImpl> detach() const override {
+    auto* detached_impl = new EagerMirroredTensorImpl(tensor_meta_, tensor_storage_, false, true);
+    detached_impl->eager_blob_object_ = eager_blob_object_;
+    return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+  }
+
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;

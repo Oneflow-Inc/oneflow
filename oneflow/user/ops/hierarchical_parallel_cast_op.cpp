@@ -26,7 +26,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
     .Attr<std::vector<std::string>>("grad_parallel_distribution")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn(
@@ -48,7 +49,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
           return Maybe<void>::Ok();
         })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 
@@ -58,7 +59,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
+          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
       return Maybe<void>::Ok();
     })
     .SetParallelDistributionInferFn(
@@ -77,7 +79,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
           return Maybe<void>::Ok();
         })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
 

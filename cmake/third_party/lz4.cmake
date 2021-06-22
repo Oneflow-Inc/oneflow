@@ -28,6 +28,8 @@ set(LZ4_CFLAGS "-O3 -fPIC")
 
 if(THIRD_PARTY)
 
+include(ProcessorCount)
+ProcessorCount(PROC_NUM)
 ExternalProject_Add(lz4
     PREFIX lz4
     URL ${LZ4_URL}
@@ -35,7 +37,7 @@ ExternalProject_Add(lz4
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND make -j lib CFLAGS=${LZ4_CFLAGS}
+    BUILD_COMMAND make -j ${PROC_NUM} lib CFLAGS=${LZ4_CFLAGS}
     INSTALL_COMMAND ""
 )
 

@@ -26,7 +26,7 @@ REGISTER_USER_OP("batch_gather")
       CHECK_GT_OR_RETURN(in->shape().NumAxes(), 0);
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_GT_OR_RETURN(indices->shape().NumAxes(), 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_LE_OR_RETURN(indices->shape().dim_vec().size(), in->shape().dim_vec().size());
       FOR_RANGE(int64_t, i, 0, indices->shape().dim_vec().size() - 1) {
         if (in->is_dynamic() && indices->is_dynamic() == false) {
@@ -78,7 +78,7 @@ REGISTER_USER_OP("batch_gather")
       const user_op::TensorDesc* indices = ctx->TensorDesc4ArgNameAndIndex("indices", 0);
       CHECK_OR_RETURN(IsIndexDataType(indices->data_type()));
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     });

@@ -147,6 +147,10 @@ class UserOpExprInferContext : public user_op::InferContext {
     return user_op_expr_->indexed_output_pairs();
   }
 
+  user_op::TensorDesc* OutputTensorDesc(const std::string& name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(name, index);
+  }
+
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& name, int32_t index) override {
     {
       const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
@@ -162,13 +166,15 @@ class UserOpExprInferContext : public user_op::InferContext {
     }
     return nullptr;
   }
+
   const Shape& InputShape(const std::string& name, int32_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return tensor_meta4input_index_(tuple_index)->shape();
   }
-  Shape* OutputShape(const std::string& name, int32_t index) const override {
+
+  Shape* OutputShape(const std::string& name, int32_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
@@ -178,8 +184,20 @@ class UserOpExprInferContext : public user_op::InferContext {
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
+  DataType* OutputDType(const std::string& arg_name, int32_t index) override {
+    return const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpExprInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();

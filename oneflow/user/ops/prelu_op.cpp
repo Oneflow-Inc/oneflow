@@ -23,7 +23,7 @@ REGISTER_USER_OP("prelu")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
       const Shape& alpha_shape = ctx->InputShape("alpha", 0);
       CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_shape.NumAxes() + 1);
       FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
@@ -55,7 +55,7 @@ REGISTER_USER_OP("prelu")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -68,7 +68,7 @@ REGISTER_USER_OP("prelu_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      user_op::TensorDesc* dx_desc = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
       const user_op::TensorDesc* alpha_desc = ctx->TensorDesc4ArgNameAndIndex("alpha", 0);
       CHECK_EQ_OR_RETURN(x_desc->shape().NumAxes(), alpha_desc->shape().NumAxes() + 1);
       FOR_RANGE(int64_t, i, 1, x_desc->shape().NumAxes()) {
@@ -80,7 +80,7 @@ REGISTER_USER_OP("prelu_grad")
       *dx_desc->mut_shape() = x_desc->shape();
       *dx_desc->mut_is_dynamic() = x_desc->is_dynamic();
       *ctx->OutputShape("alpha_diff", 0) = alpha_desc->shape();
-      *ctx->IsDynamic4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->is_dynamic();
+      *ctx->OutputIsDynamic4ArgNameAndIndex("alpha_diff", 0) = alpha_desc->is_dynamic();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -115,8 +115,8 @@ REGISTER_USER_OP("prelu_grad")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
-      *ctx->OutputDType("alpha_diff", 0) = *ctx->Dtype4ArgNameAndIndex("alpha", 0);
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+      *ctx->OutputDType("alpha_diff", 0) = ctx->InputDType("alpha", 0);
       return Maybe<void>::Ok();
     });
 

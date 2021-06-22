@@ -42,26 +42,26 @@ TensorDescInferFn MakeFwTensorDescInferFn(const int32_t dim) {
 
     const Params3D params_3d(dim, x_shape, data_format, padding, padding_before, padding_after,
                              pool_size, strides, ceil_mode);
-    user_op::TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+    user_op::TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
     *y_desc->mut_shape() = params_3d.GetYShape();
-    *y_desc->mut_is_dynamic() = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+    *y_desc->mut_is_dynamic() = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
     return Maybe<void>::Ok();
   };
 }
 
 Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("x", 0);
+  *ctx->OutputIsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> FwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

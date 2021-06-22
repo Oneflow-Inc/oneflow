@@ -130,7 +130,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GenerateAllocatedEagerBlobObject(TensorTuple* outputs) {
+Maybe<void> RunEmptyOp(TensorTuple* outputs) {
   CHECK_EQ_OR_RETURN(outputs->size(), 1);
   auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
   const auto& shape = tensor_impl->tensor_meta()->shape_ptr();

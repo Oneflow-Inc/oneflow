@@ -25,10 +25,9 @@ namespace oneflow {
 
 namespace one {
 
-Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                                 DataType dtype,
-                                                 const std::shared_ptr<const Device>& device,
-                                                 bool is_lazy, bool requires_grad, bool is_leaf) {
+/*static*/ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
+    const std::shared_ptr<const Shape>& shape, DataType dtype,
+    const std::shared_ptr<const Device>& device, bool is_lazy, bool requires_grad, bool is_leaf) {
   const auto& tensor_meta =
       std::make_shared<MirroredTensorMeta>(std::make_shared<Shape>(*shape), dtype, device);
   if (is_lazy) {
@@ -41,7 +40,7 @@ Maybe<MirroredTensor> MirroredTensor::MakeTensor(const std::shared_ptr<const Sha
     const auto& tensor = std::make_shared<MirroredTensor>(impl);
     const auto& outputs = std::make_shared<TensorTuple>();
     outputs->push_back(tensor);
-    JUST(GenerateAllocatedEagerBlobObject(outputs.get()));
+    JUST(RunEmptyOp(outputs.get()));
     return tensor;
   }
 }
@@ -73,12 +72,7 @@ std::shared_ptr<MirroredTensor> MirroredTensor::data() const {
 }
 
 Maybe<MirroredTensor> MirroredTensor::api_detach() const {
-  const auto& eager_blob_object = JUST(impl_->eager_blob_object());
-  const auto& device = impl_->device();
-  const auto& tensor_storage = JUST(this->tensor_storage());
-  std::shared_ptr<MirroredTensor> t =
-      JUST(MirroredTensor::MakeEagerTensor(eager_blob_object, device, tensor_storage, false, true));
-  return t;
+  return std::make_shared<MirroredTensor>(JUST(impl_->detach()));
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(

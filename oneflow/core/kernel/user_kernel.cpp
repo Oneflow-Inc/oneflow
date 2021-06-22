@@ -117,11 +117,11 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
       : user_op_conf_(kernel_conf.op_attribute().op_conf()),
         device_ctx_(device_ctx),
         base_ctx_(UserKernelBaseContext(kernel_conf, job_desc)),
-        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()),
-        parallel_distribution_signature_(
-            &(kernel_conf.op_attribute().parallel_distribution_signature())) {
+        parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
+    parallel_distribution_signature_ = new cfg::ParallelDistributionSignature(
+        kernel_conf.op_attribute().parallel_distribution_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = &kernel_conf.op_attribute().sbp_signature();
+      sbp_signature_ = new cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     for (const auto& pair :
          kernel_conf.op_attribute().logical_blob_desc_signature().bn_in_op2blob_desc()) {
@@ -183,10 +183,10 @@ class UserKernelInitContext final : public user_op::KernelInitContext {
   user_op::UserOpConfWrapper user_op_conf_;
   DeviceCtx* device_ctx_;
   UserKernelBaseContext base_ctx_;
-  const SbpSignature* sbp_signature_;
+  const cfg::SbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  const ParallelDistributionSignature* parallel_distribution_signature_;
+  const cfg::ParallelDistributionSignature* parallel_distribution_signature_;
 };
 
 class UserKernelOpInferContext : public user_op::InferContext {
@@ -229,6 +229,9 @@ class UserKernelOpInferContext : public user_op::InferContext {
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
   }
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -239,16 +242,25 @@ class UserKernelOpInferContext : public user_op::InferContext {
     return *const_cast<UserKernelOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* OutputShape(const std::string& arg_name, int32_t index) override {
-    return const_cast<UserKernelOpInferContext*>(this)->Shape4ArgNameAndIndex(arg_name, index);
+    return Shape4ArgNameAndIndex(arg_name, index);
   }
   Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_shape();
   }
+  const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+  }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
-    return const_cast<UserKernelOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+    return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
+  }
+  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserKernelOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
+  }
+  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_is_dynamic();

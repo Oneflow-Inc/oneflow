@@ -21,6 +21,6 @@ class Device;
 class TensorTuple;
 
 namespace one {
-Maybe<void> GenerateAllocatedEagerBlobObject(TensorTuple* outputs);
+Maybe<void> RunEmptyOp(TensorTuple* outputs);
 }
 }  // namespace oneflow
