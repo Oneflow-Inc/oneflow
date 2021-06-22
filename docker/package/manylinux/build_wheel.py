@@ -387,7 +387,7 @@ if __name__ == "__main__":
             if args.xla and args.cpu:
                 # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
                 enforced_oneflow_cmake_args += (
-                    ' -DBAZEL_LINKLIBS_ENV_ARG="BAZEL_LINKLIBS=-l%:libstdc++.a"'
+                    ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
                 )
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args

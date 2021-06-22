@@ -86,7 +86,7 @@ if (THIRD_PARTY)
     DOWNLOAD_NO_EXTRACT ${XRT_TF_DOWNLOAD_NO_EXTRACT}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  ${BAZEL_LINKLIBS_ENV_ARG} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  ${BAZEL_ENV_ARGS} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
