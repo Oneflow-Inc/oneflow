@@ -199,9 +199,9 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     }
   }
   for (int i = 0; i < inputs.size(); ++i) {
-    input_now_grads->at(i) = inputs.at(i)->acc_grad();
+    input_now_grads->at(i) = JUST(inputs.at(i)->acc_grad());
     if (!ori_retain_grad.at(i)) {
-      inputs.at(i)->mut_acc_grad().reset();
+      JUST(inputs.at(i)->mut_acc_grad()).reset();
       inputs.at(i)->set_retain_grad(false);
     }
   }

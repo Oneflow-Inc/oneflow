@@ -32,6 +32,23 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
+Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
+  autograd_meta_->set_acc_grad(grad);
+  return Maybe<void>::Ok();
+}
+
+Maybe<Tensor> TensorImpl::mut_acc_grad() {
+  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
+  return autograd_meta_->mut_acc_grad();
+}
+
+Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
+  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
+  autograd_meta_->set_retain_grad(retain_grad);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
   device_ = device;
   return Maybe<void>::Ok();
@@ -41,16 +58,8 @@ EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-    const std::shared_ptr<const Device>& device, const std::shared_ptr<AutogradMeta>& autograd_meta)
-    : MirroredTensorImpl(device, autograd_meta), eager_blob_object_(eager_blob_object) {
-  Init();
-}
-
-EagerMirroredTensorImpl::EagerMirroredTensorImpl(
-    const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
-    : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
-      eager_blob_object_(eager_blob_object) {
+    : MirroredTensorImpl(device, requires_grad, is_leaf), eager_blob_object_(eager_blob_object) {
   Init();
 }
 
@@ -58,7 +67,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
     const std::shared_ptr<const Device>& device, std::shared_ptr<TensorStorage> tensor_storage,
     bool requires_grad, bool is_leaf)
-    : MirroredTensorImpl(device, NewAutogradMeta(requires_grad, is_leaf)),
+    : MirroredTensorImpl(device, requires_grad, is_leaf),
       tensor_storage_(tensor_storage),
       eager_blob_object_(eager_blob_object) {
   dtype_ = eager_blob_object->blob_desc().data_type();
@@ -115,7 +124,8 @@ size_t ConsistentTensorMeta::CalcHashValue() const {
 EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     Symbol<ConsistentTensorMeta> consistent_tensor_meta,
     const std::shared_ptr<MirroredTensor>& cur_rank_phy_tensor)
-    : ConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->mut_autograd_meta()),
+    : ConsistentTensorImpl(consistent_tensor_meta, cur_rank_phy_tensor->requires_grad(),
+                           cur_rank_phy_tensor->is_leaf()),
       cur_rank_phy_tensor_(cur_rank_phy_tensor) {}
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::New(
@@ -158,9 +168,8 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
         device->mem_case(), cur_rank_phy_shape, dtype, std::make_shared<vm::TensorBuffer>(),
         device->parallel_desc_ptr());
-    const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
-    const auto& cur_rank_phy_tensor_impl =
-        std::make_shared<EagerMirroredTensorImpl>(eager_blob_object, device, autograd_meta);
+    const auto& cur_rank_phy_tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
+        eager_blob_object, device, requires_grad, is_leaf);
     cur_rank_phy_tensor_impl->set_shape(cur_rank_phy_shape);
     cur_rank_phy_tensor_impl->set_dtype(dtype);
     cur_rank_phy_tensor.reset(new MirroredTensor(cur_rank_phy_tensor_impl));
