@@ -62,10 +62,6 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
         const int64_t c_idx = 1;                                                             \
         const int64_t h_idx = 2;                                                             \
         const int64_t w_idx = 3;                                                             \
-        CHECK_LT_OR_RETURN(padding[0], x_shape.At(w_idx));                                   \
-        CHECK_LT_OR_RETURN(padding[1], x_shape.At(w_idx));                                   \
-        CHECK_LT_OR_RETURN(padding[2], x_shape.At(h_idx));                                   \
-        CHECK_LT_OR_RETURN(padding[3], x_shape.At(h_idx));                                   \
                                                                                              \
         DimVector y_dim_vec(x_shape.NumAxes());                                              \
         const int64_t h_x = x_shape.At(h_idx);                                               \
