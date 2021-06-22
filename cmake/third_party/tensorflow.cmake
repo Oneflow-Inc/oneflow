@@ -71,14 +71,16 @@ list(APPEND TENSORFLOW_XLA_LIBRARIES libtensorflow_framework.so.1)
 list(APPEND TENSORFLOW_XLA_LIBRARIES libxla_core.so)
 link_directories(${TENSORFLOW_INSTALL_DIR}/lib)
 
-use_mirror(VARIABLE DEFAULT_XRT_TF_URL URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip")
-set(XRT_TF_URL ${DEFAULT_XRT_TF_URL} CACHE STRING "")
+set(XRT_TF_DOWNLOAD_NO_EXTRACT OFF)
+set(XRT_TF_URL "https://github.com/Oneflow-Inc/tensorflow/archive/7016a22292a607edc4175d07dae263faad31cd04.zip")
 message(STATUS "XRT_TF_URL: ${XRT_TF_URL}")
+
 if(IS_DIRECTORY ${XRT_TF_URL})
   set(XRT_TF_DOWNLOAD_NO_EXTRACT ON)
 else()
-  set(XRT_TF_DOWNLOAD_NO_EXTRACT OFF)
+  use_mirror(VARIABLE XRT_TF_URL URL ${XRT_TF_URL})
 endif()
+
 if (THIRD_PARTY)
   ExternalProject_Add(${TENSORFLOW_PROJECT}
     PREFIX ${TENSORFLOW_SOURCES_DIR}
