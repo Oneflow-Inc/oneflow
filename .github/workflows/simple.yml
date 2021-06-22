@@ -137,8 +137,15 @@ jobs:
       - name: "Tar logs"
         if: always()
         run: |
-          tar -cvf home_oneflow_temp.tar ${{ env.HOME }}/oneflow_temp
-          tar -cvf cwd_test_tmp_dir.tar ${{ env.PWD }}/test_tmp_dir
+          set -ex
+          if [[ -d "${HOME}/oneflow_temp" ]]
+          then
+              tar -cvf home_oneflow_temp.tar ${HOME}/oneflow_temp
+          fi
+          if [[ -d "${PWD}/test_tmp_dir" ]]
+          then
+              tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
+          fi
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v2
