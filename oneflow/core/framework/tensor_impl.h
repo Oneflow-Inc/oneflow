@@ -62,8 +62,8 @@ class TensorImpl {
   virtual Maybe<TensorStorage> tensor_storage() const = 0;
 
   // Getters for autograd
-  const std::shared_ptr<Tensor>& acc_grad() const { return autograd_meta_->acc_grad(); }
-  const std::shared_ptr<TensorArg>& now_grad_arg() const { return autograd_meta_->now_grad_arg(); }
+  Maybe<Tensor> acc_grad() const;
+  Maybe<TensorArg> now_grad_arg() const;
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return autograd_meta_->retain_grad(); }

@@ -158,7 +158,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
                                                                     bool create_graph) {
   ClearReleasedFunctionNodes();
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
@@ -186,7 +186,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     inputs.at(i)->set_retain_grad(true);
   }
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
