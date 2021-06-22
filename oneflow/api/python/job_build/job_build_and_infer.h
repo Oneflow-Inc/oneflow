@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job.pb.h"
+#include "oneflow/core/job/job_conf.cfg.h"
 
 namespace oneflow {
 
@@ -50,9 +51,9 @@ inline Maybe<void> CurJobBuildAndInferCtx_SetJobConf(const std::string& serializ
   return JUST(GetCurInferCtx())->SetJobConf(job_conf);
 }
 
-inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const std::string& train_conf_str) {
+inline Maybe<void> CurJobBuildAndInferCtx_SetTrainConf(const cfg::TrainConf& cfg_train_conf) {
   TrainConf train_conf;
-  CHECK_OR_RETURN(TxtString2PbMessage(train_conf_str, &train_conf)) << "train conf parse failed";
+  cfg_train_conf.ToProto(&train_conf);
   return JUST(GetCurInferCtx())->SetTrainConf(train_conf);
 }
 
