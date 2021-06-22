@@ -313,6 +313,10 @@ jobs:
             os: [self-hosted, linux, gpu]
             allow_fail: true
             build_env: build.xla.env
+          - test_suite: "xla_cpu"
+            os: [self-hosted, linux, gpu]
+            allow_fail: true
+            build_env: build.xla_cpu.env
     steps:
       - name: Fix permissions
         run: |
@@ -355,7 +359,7 @@ jobs:
           if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ]; then
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "xla_cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
           fi
@@ -492,7 +496,7 @@ jobs:
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
-        if: matrix.test_suite == 'xla'
+        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
         run: |
           set -x
           docker run $extra_docker_args \
