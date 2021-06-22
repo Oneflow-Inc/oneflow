@@ -22,6 +22,93 @@ from oneflow.python.nn.module import Module
 from oneflow.python.nn.modules.constant import _ConstantBase
 
 
+@oneflow_export("nn.L1Loss")
+@experimental_api
+class L1Loss(Module):
+    r"""This operator computes the L1 Loss between each element in `input` and `target`.
+
+    The equation is:
+
+    if reduction = "none":
+
+    .. math::
+
+        output = |Target - Input|
+
+    if reduction = "mean":
+
+    .. math::
+
+        output = \frac{1}{n}\sum_{i=1}^n|Target_i - Input_i|
+
+    if reduction = "sum":
+
+    .. math::
+
+        output = \sum_{i=1}^n|Target_i - Input_i|
+
+    Args:
+        input (oneflow.experimental.Tensor): The input Tensor.
+        target (oneflow.experimental.Tensor): The target Tensor.
+        reduction (str): The reduce type, it can be one of "none", "mean", "sum". Defaults to "mean".
+
+    Returns:
+        oneflow.experimental.Tensor: The result Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor([[1, 1, 1], [2, 2, 2], [7, 7, 7]], dtype = flow.float32)
+        >>> target = flow.Tensor([[4, 4, 4], [4, 4, 4], [4, 4, 4]], dtype = flow.float32)
+        >>> m = flow.nn.L1Loss(reduction="none")
+        >>> out = m(input, target)
+        >>> out
+        tensor([[3., 3., 3.],
+                [2., 2., 2.],
+                [3., 3., 3.]], dtype=oneflow.float32)
+        >>> m_mean = flow.nn.L1Loss(reduction="mean")
+        >>> out = m_mean(input, target)
+        >>> out
+        tensor([2.6667], dtype=oneflow.float32)
+        >>> m_mean = flow.nn.L1Loss(reduction="sum")
+        >>> out = m_mean(input, target)
+        >>> out
+        tensor([24.], dtype=oneflow.float32)
+        
+    """
+
+    def __init__(self, reduction: str = "mean", reduce=True) -> None:
+        super().__init__()
+        if reduce is not None and not reduce:
+            raise ValueError("Argument reduce is not supported yet")
+        assert reduction in [
+            "none",
+            "mean",
+            "sum",
+            None,
+        ], "only 'sum', 'mean' and 'none' supported by now"
+
+        self.reduction = reduction
+
+    def forward(self, input, target):
+        assert (
+            input.shape == target.shape
+        ), "The Input shape must be the same as Target shape"
+
+        l1_value = flow.experimental.abs(flow.experimental.sub(target, input))
+        if self.reduction == "mean":
+            return flow.experimental.mean(l1_value)
+        elif self.reduction == "sum":
+            return flow.experimental.sum(l1_value)
+        else:
+            return l1_value
+
+
 @oneflow_export("nn.CrossEntropyLoss")
 @experimental_api
 class CrossEntropyLoss(Module):
@@ -914,7 +1001,7 @@ class BCEWithLogitsLoss(Module):
 
     .. math::
 
-        out =k -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
+        out = -weight*\sum_{i=1}^n[Pos\_weight*y*log\sigma({x}) + (1-y)*log(1-\sigma(x))]
 
     Args:
         weight (Tensor, optional): The manual rescaling weight to the loss. Default: ``None``
