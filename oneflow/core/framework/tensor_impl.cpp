@@ -129,8 +129,8 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 }
 
 Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
-  auto detached_impl = 
-    std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
+  auto detached_impl =
+      std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
   detached_impl->eager_blob_object_ = eager_blob_object_;
   return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
