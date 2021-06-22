@@ -22,16 +22,10 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Cast(Module):
     def __init__(self, dtype: flow.dtype) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("cast")
-            .Input("in")
-            .Output("out")
-            .Attr("dtype", dtype)
-            .Build()
-        )
+        self.dtype = dtype
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.cast(x, dtype=self.dtype)
 
 
 @oneflow_export("cast")
