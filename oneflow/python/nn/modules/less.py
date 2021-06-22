@@ -22,9 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Less(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_less").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
         if x.dtype != flow.float32:
@@ -35,7 +32,7 @@ class Less(Module):
             )
         if y.dtype != flow.float32:
             y = flow.experimental.cast(y, flow.float32)
-        return self._op(x, y)[0]
+        return flow.F.broadcast_less(x, y)
 
 
 @oneflow_export("lt")
