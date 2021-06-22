@@ -384,7 +384,8 @@ if __name__ == "__main__":
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args
                 ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
                 enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
-            if args.xla:
+            if args.xla and args.cpu:
+                # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
                 enforced_oneflow_cmake_args += (
                     ' -DBAZEL_LINKLIBS_ENV_ARG="BAZEL_LINKLIBS=-l%:libstdc++.a"'
                 )
