@@ -23,6 +23,7 @@ from oneflow.python.nn.modules.utils import (
     _triple,
     _reverse_repeat_tuple,
 )
+
 from oneflow.python.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from typing import Optional, List, Tuple, Sequence, Union
 import traceback
@@ -72,7 +73,7 @@ class OfrecordReader(Module):
         )
 
     def forward(self):
-        res = self._op()[0]
+        res = self._op()
         return res
 
 
@@ -104,6 +105,74 @@ class OfrecordRawDecoder(Module):
 
     def forward(self, input):
         res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.COCOImageDecoder")
+@experimental_api
+class COCOImageDecoder(Module):
+    def __init__(
+        self,
+        dtype: flow.dtype = flow.uint8,
+        color_space: str = "BGR",
+        name: Optional[str] = None,
+    ):
+        super().__init__()
+
+        self._op = (
+            flow.builtin_op("image_decode", name)
+            .Input("in")
+            .Output("out")
+            .Attr("color_space", color_space)
+            .Attr("data_type", dtype)
+            .Build()
+        )
+
+    def forward(self, input):
+        res = self._op(input)[0]
+        return res
+
+
+@oneflow_export("nn.COCOReader")
+@experimental_api
+class Cocoreader(Module):
+    def __init__(
+        self,
+        annotation_file: str,
+        image_dir: str,
+        batch_size: int,
+        shuffle: bool = True,
+        random_seed: int = -1,
+        group_by_aspect_ratio: bool = True,
+        remove_images_without_annotations: bool = True,
+        stride_partition: bool = True,
+        name: Optional[str] = None,
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("COCOReader", name)
+            .Output("image")
+            .Output("image_id")
+            .Output("image_size")
+            .Output("gt_bbox")
+            .Output("gt_label")
+            .Output("gt_segm")
+            .Output("gt_segm_index")
+            .Attr("annotation_file", annotation_file)
+            .Attr("image_dir", image_dir)
+            .Attr("batch_size", batch_size)
+            .Attr("shuffle_after_epoch", shuffle)
+            .Attr("random_seed", random_seed)
+            .Attr("group_by_ratio", group_by_aspect_ratio)
+            .Attr(
+                "remove_images_without_annotations", remove_images_without_annotations
+            )
+            .Attr("stride_partition", stride_partition)
+            .Build()
+        )
+
+    def forward(self):
+        res = self._op()
         return res
 
 
@@ -263,9 +332,39 @@ class TensorBufferToListOfTensors(Module):
         return self._op(input)
 
 
+class GetTensorBuffer(Module):
+    def __init__(
+        self, shape, shape_list, value_list, data_type=flow.float32, dynamic_out=False
+    ):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("gen_tensor_buffer")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("shape_list", shape_list)
+            .Attr("value_list", value_list)
+            .Attr("data_type", data_type)
+            .Attr("dynamic_out", dynamic_out)
+            .Build()
+        )
+
+    def forward(self):
+        return self._op()
+
+
+@oneflow_export("gen_tensor_buffer")
+@experimental_api
+def gen_tensor_buffer(
+    shape, shape_list, value_list, data_type=flow.float32, dynamic_out=False
+):
+    return GetTensorBuffer(shape, shape_list, value_list, data_type, dynamic_out)()
+
+
 @oneflow_export("tensor_buffer_to_list_of_tensors")
 @experimental_api
 def tensor_buffer_to_list_of_tensors(tensor, out_shapes, out_dtypes):
+    for out_shape in out_shapes:
+        print(out_shape)
     return TensorBufferToListOfTensors(
         [list(out_shape) for out_shape in out_shapes], out_dtypes, len(out_shapes)
     )(tensor)
