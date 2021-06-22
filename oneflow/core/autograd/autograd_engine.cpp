@@ -85,14 +85,14 @@ StackFunctionNode::StackFunctionNode(
   is_in_stack_ = false;
 }
 
-Maybe<void> StackFunctionNode::AccGrad4RetainGradTensor() {
+Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_datas_) {
     if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false)); }
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
+Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_datas_) {
     if (out->is_leaf() && out->requires_grad()) {
       JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
@@ -101,20 +101,19 @@ Maybe<void> StackFunctionNode::AccGrad4LeafTensor(bool create_graph) {
   return Maybe<void>::Ok();
 }
 
-void StackFunctionNode::ReleaseOutTensorArgs() {
+void FunctionNode::ReleaseOutTensorArgs() {
   for (const std::shared_ptr<AutogradMeta>& meta_data : output_meta_datas_) {
     meta_data->now_grad_arg()->Release();
   }
 }
 
 void StackFunctionNode::ReleaseData() {
-  // Releases backward function and makes useless tensors release as early as possible
   if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
   next_functions_->clear();
   is_in_stack_ = false;
 }
 
-Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
+Maybe<bool> FunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
       << "This FunctionNode with name `" << GetOpTypeName() << "` has been released.";
   if (!IsReadyToRun(output_meta_datas_)) { return false; }
@@ -237,8 +236,60 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   return func_node;
 }
 
+void GraphFunctionNode::ReleaseData() {
+  if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
+}
+
+Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
+                                                                    const TensorTuple& out_grads,
+                                                                    bool retain_graph,
+                                                                    bool create_graph) {
+  for (int i = 0; i < outputs.size(); ++i) {
+    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+  }
+  // TODO
+  return Maybe<void>::Ok();
+}
+
+Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
+    const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
+    bool retain_graph, bool create_graph) {
+  std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
+  std::vector<bool> ori_retain_grad(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
+    inputs.at(i)->set_retain_grad(true);
+  }
+  for (int i = 0; i < outputs.size(); ++i) {
+    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+  }
+  // TODO
+  return input_now_grads;
+}
+
+std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
+    const std::string& op_type_name,
+    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
+        backward_fn,
+    const TensorTuple& inputs, TensorTuple* outputs) {
+  // Firstly push function_node of tensor in stack which is leaf and requires_grad
+  for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
+    if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
+      if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
+    }
+  }
+
+  std::shared_ptr<GraphFunctionNode> func_node =
+      std::make_shared<GraphFunctionNode>(op_type_name, backward_fn, inputs, *outputs);
+  for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
+    out_tensor->set_grad_fn_node(func_node);
+  }
+  return func_node;
+}
+
 AutogradEngine* GetThreadLocalAutogradEngine() {
-  thread_local static StackAutogradEngine autograd_engine;
+  // thread_local static StackAutogradEngine autograd_engine;
+  thread_local static GraphAutogradEngine autograd_engine;
   return &autograd_engine;
 }
 
