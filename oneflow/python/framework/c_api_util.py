@@ -76,8 +76,7 @@ def JobBuildAndInferCtx_Open(job_name):
 
 
 def CurJobBuildAndInferCtx_SetJobConf(job_config_proto):
-    serialized_job_conf = str(job_config_proto)
-    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(serialized_job_conf)
+    oneflow._oneflow_internal.CurJobBuildAndInferCtx_SetJobConf(job_config_proto)
 
 
 def CurJobBuildAndInferCtx_SetTrainConf(train_config_proto):
