@@ -148,7 +148,7 @@ def _compare_kldivloss_with_np(
     assert np.allclose(
         of_out_kldivloss_dict["of_kldivloss_sum"],
         np_out_kldivloss_dict["np_kldivloss_sum"],
-        atol=1e-5,
+        atol=1e-4,
     )
 
 
