@@ -23,9 +23,10 @@ namespace oneflow {
 struct GlobalProcessCtx {
   static void GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id);
   static int64_t Rank();
+  static int64_t LocalRank();
   static int64_t NodeSize();
   static int64_t ThisNodeId();
-  static int64_t NumOfProcessPerNode();
+  static int64_t NumOfProcessOnNode();
   static bool IsThisProcessMaster();
   static size_t WorldSize();
   static std::string LogDirEntry();

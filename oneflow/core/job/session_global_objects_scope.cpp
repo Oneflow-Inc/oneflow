@@ -98,7 +98,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::Delete();
   DumpVersionInfo();
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                        GlobalProcessCtx::NumOfProcessOnNode());
   Global<const IOConf>::New(config_proto.io_conf());
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
@@ -157,7 +157,7 @@ SessionGlobalObjectsScope::~SessionGlobalObjectsScope() {
   Global<const IOConf>::SessionDelete(session_id_);
   Global<ResourceDesc, ForSession>::Delete();
   Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
-                                        GlobalProcessCtx::NumOfProcessPerNode());
+                                        GlobalProcessCtx::NumOfProcessOnNode());
 }
 
 }  // namespace oneflow

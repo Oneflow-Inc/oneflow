@@ -107,7 +107,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
       JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(device_name.substr(1), 1));
     } else {
       JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(device_name,
-                                                       GlobalProcessCtx::NumOfProcessPerNode()));
+                                                       GlobalProcessCtx::NumOfProcessOnNode()));
     }
   }
   ClearUp();

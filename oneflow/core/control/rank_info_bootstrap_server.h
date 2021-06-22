@@ -31,7 +31,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
   RankInfoBootstrapServer(const BootstrapConf& bootstrap_conf);
 
   int64_t port() const { return port_; }
-  Maybe<const std::vector<std::string>&> rank2host() const;
+  Maybe<const HashMap<std::string, std::vector<int64_t>>&> host2ranks() const;
 
  private:
   void OnLoadServer(CtrlCall<CtrlMethod::kLoadServer>* call) override;
@@ -39,7 +39,7 @@ class RankInfoBootstrapServer final : public BootstrapServer {
   int port_;
   const int64_t world_size_;
   // use std::shared_ptr as std::optional
-  std::shared_ptr<std::vector<std::string>> rank2host_;
+  std::shared_ptr<HashMap<std::string, std::vector<int64_t>>> host2ranks_;
 };
 
 }  // namespace oneflow

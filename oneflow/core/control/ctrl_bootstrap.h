@@ -36,10 +36,12 @@ class CtrlBootstrap {
  protected:
   virtual int64_t rank() const = 0;
   virtual int64_t world_size() const = 0;
+  virtual int64_t num_process4rank(int64_t world_rank) const = 0;
   virtual Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const = 0;
   virtual Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const = 0;
   virtual Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const = 0;
   virtual Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const = 0;
+  virtual Maybe<void> InitProcessDistributionInCluster(ProcessCtx* process_ctx) const = 0;
 
   virtual BootstrapServer* mut_bootstrap_server() = 0;
   virtual BootstrapClient* mut_bootstrap_client() = 0;
@@ -58,6 +60,7 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
  private:
   int64_t rank() const override { return rank_; }
   int64_t world_size() const override { return world_size_; }
+  int64_t num_process4rank(int64_t world_rank) const override;
 
   std::string host() const { return host_; }
 
@@ -65,6 +68,7 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
   Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const override;
   Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
   Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const override;
+  Maybe<void> InitProcessDistributionInCluster(ProcessCtx* process_ctx) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
@@ -89,19 +93,24 @@ class RankInfoCtrlBootstrap final : public CtrlBootstrap {
  private:
   int64_t rank() const override { return rank_; }
   int64_t world_size() const override { return world_size_; }
+  int64_t num_process4rank(int64_t world_rank) const override;
 
   Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const override;
   Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const override;
   Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
   Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const override;
+  Maybe<void> InitProcessDistributionInCluster(ProcessCtx* process_ctx) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
+
+  Maybe<void> InitRank2HosAndNumProcess() const;
 
   // Uses shared_ptr and forward declaration to avoid `#include ...`
   std::shared_ptr<RankInfoBootstrapServer> bootstrap_server_;
   std::shared_ptr<RankInfoBootstrapClient> bootstrap_client_;
 
+  mutable std::shared_ptr<std::vector<std::pair<std::string, int64_t>>> rank2host_and_num_process_;
   std::string master_host_;
   BootstrapConf bootstrap_conf_;
   int64_t rank_;

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
@@ -21,12 +22,24 @@ namespace oneflow {
 
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
-  *device_id = *machine_id % NumOfProcessPerNode();
+  int64_t node_id = ThisNodeId();
+  int64_t acc_rank_index = 0;
+  for (int64_t i = 0; i < node_id; ++i) {
+    acc_rank_index += Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(i);
+  }
+  *device_id = *machine_id - acc_rank_index;
 }
 
 int64_t GlobalProcessCtx::Rank() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->rank();
+}
+
+int64_t GlobalProcessCtx::LocalRank() {
+  CHECK_NOTNULL(std::getenv("LOCAL_RANK"));
+  CHECK(IsStrInt(std::getenv("LOCAL_RANK")));
+  static int64_t local_rank = std::stol(std::getenv("LOCAL_RANK"));
+  return local_rank;
 }
 
 int64_t GlobalProcessCtx::NodeSize() {
@@ -36,16 +49,22 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return int64_t(Rank() / NumOfProcessPerNode());
+  int64_t acc_rank_index = 0;
+  for (int64_t node_id = 0;
+       node_id < Global<ProcessCtx>::Get()->num_process_distribution_in_cluster_size();) {
+    acc_rank_index += Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(node_id);
+    if (Rank() < acc_rank_index) { return node_id; }
+  }
+  UNIMPLEMENTED();
 }
 
-int64_t GlobalProcessCtx::NumOfProcessPerNode() {
+int64_t GlobalProcessCtx::NumOfProcessOnNode() {
   if (Global<NumProcessPerNode>::Get() != nullptr) {
     return int64_t(Global<NumProcessPerNode>::Get()->value());
   }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  CHECK_EQ(WorldSize() % NodeSize(), 0);
-  return int64_t(WorldSize() / NodeSize());
+  int64_t node_id = ThisNodeId();
+  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster(node_id);
 }
 
 bool GlobalProcessCtx::IsThisProcessMaster() {

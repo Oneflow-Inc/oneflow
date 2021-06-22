@@ -227,6 +227,7 @@ void SetLocalProcessCtx(oneflow::ProcessCtx* ctx) {
   addr->set_host("localhost");
   ctx->set_rank(0);
   ctx->set_node_size(1);
+  ctx->add_num_process_distribution_in_cluster(1);
 }
 
 Maybe<void> LocalRpcManager::Bootstrap() {

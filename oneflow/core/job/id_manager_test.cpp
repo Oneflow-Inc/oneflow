@@ -48,7 +48,7 @@ Resource GetResource() {
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
   Global<NumProcessPerNode>::New()->set_value(1);
-  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessOnNode());
   Global<IDMgr>::New();
 }
 
