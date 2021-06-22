@@ -106,7 +106,7 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
       *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+          GenerateCorrespondingPageLockedHostMemoryCase(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -115,8 +115,9 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
   };
 
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    int64_t mzuid = EncodeGlobalMemCaseIdToInt64(
+        GlobalMemCaseId{static_cast<GlobalMemCaseId::node_index_t>(mem_block->machine_id()),
+                        mem_block->mem_case()});
     if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
@@ -209,7 +210,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
         CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostPinnedMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+              == GenerateCorrespondingPageLockedHostMemoryCase(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());

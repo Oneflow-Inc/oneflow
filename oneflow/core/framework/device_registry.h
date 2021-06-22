@@ -17,8 +17,18 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_DEVICE_REGISTRY_H_
 
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/device_type.pb.h"
+
+namespace std {
+
+template<>
+struct hash<::oneflow::DeviceType> {
+  std::size_t operator()(const ::oneflow::DeviceType& device_type) const {
+    return std::hash<size_t>{}(static_cast<size_t>(device_type));
+  }
+};
+
+}  // namespace std
 
 namespace oneflow {
 
