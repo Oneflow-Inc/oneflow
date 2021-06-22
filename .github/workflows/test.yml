@@ -361,7 +361,7 @@ jobs:
           fi
           if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "xla_cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
-            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
           fi
           if [ "$test_suite" == "cuda_op_eager" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "cuda_new_interface" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_ENABLE_EAGER=1"
