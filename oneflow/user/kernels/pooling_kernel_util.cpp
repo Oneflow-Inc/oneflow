@@ -73,16 +73,6 @@ PoolingParams3D::PoolingParams3D(const int32_t dim, const ShapeView& x_shape,
     channel_num_ = x_shape.At(x_shape.NumAxes() - 1);
   }
   batch_num_ = x_shape.At(0);
-
-  // printf("\nPoolingParams3D Initialize Finished >>>>>>>>>>>>>>>>>>>> \ndata_format:%s,
-  // padding_before:(%d, %d), padding_after:(%d, %d), kernel_size:(%d, %d), stride:(%d, %d),
-  // dilation:(%d, %d)",
-  //     data_format.c_str(), padding_before_3d_[0],padding_before_3d_[1],
-  //     padding_after_3d_[0],padding_after_3d_[1],
-  //     kernel_size[0],kernel_size[1],
-  //     stride[0],stride[1],
-  //     dilation[0],dilation[1]
-  // );
 }
 
 void PoolingParams3D::Reset(const ShapeView& x_shape) {
