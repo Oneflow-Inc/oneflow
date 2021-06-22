@@ -143,10 +143,12 @@ def _compare_kldivloss_with_np(
     assert np.allclose(
         of_out_kldivloss_dict["of_kldivloss_mean"],
         np_out_kldivloss_dict["np_kldivloss_mean"],
+        atol=1e-5,
     )
     assert np.allclose(
         of_out_kldivloss_dict["of_kldivloss_sum"],
         np_out_kldivloss_dict["np_kldivloss_sum"],
+        atol=1e-5,
     )
 
 
