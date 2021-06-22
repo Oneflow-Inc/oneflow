@@ -11,6 +11,11 @@ else()
   set(TENSORFLOW_GENFILE_DIR k8-opt)
 endif()
 
+list(APPEND TENSORFLOW_BUILD_CMD --config=noaws)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nogcp)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nohdfs)
+list(APPEND TENSORFLOW_BUILD_CMD --config=nonccl)
+
 set(TF_WITH_CUDA ${BUILD_CUDA})
 if (TF_WITH_CUDA)
   set(CUDA_COMPUTE_CAPABILITIES "6.0,6.1")
@@ -20,6 +25,8 @@ if (TF_WITH_CUDA)
   list(APPEND TENSORFLOW_BUILD_CMD --config=cuda)
   list(APPEND TENSORFLOW_BUILD_CMD --action_env TF_NEED_CUDA=1)
   list(APPEND TENSORFLOW_BUILD_CMD --action_env TF_CUDA_COMPUTE_CAPABILITIES=${CUDA_COMPUTE_CAPABILITIES})
+else()
+  set(BAZEL_LINKLIBS_ENV_ARG "BAZEL_LINKLIBS=-l%:libstdc++.a")
 endif()
 
 message(STATUS "TENSORFLOW_BUILD_CMD: ${TENSORFLOW_BUILD_CMD}")
@@ -75,7 +82,7 @@ if (THIRD_PARTY)
     URL ${XRT_TF_URL}
     CONFIGURE_COMMAND ""
     BUILD_COMMAND cd ${TENSORFLOW_SRCS_DIR} &&
-                  bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
+                  ${BAZEL_LINKLIBS_ENV_ARG} bazel build ${TENSORFLOW_BUILD_CMD} -j HOST_CPUS //tensorflow/compiler/jit/xla_lib:libxla_core.so
     INSTALL_COMMAND ""
   )
 
