@@ -231,11 +231,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 
-  static std::shared_ptr<MirroredTensor> MakeEagerTensor(
-      const std::shared_ptr<vm::EagerBlobObject> eager_blob_object,
-      const std::shared_ptr<const Device>& device,
-      const std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf);
-
  private:
   std::shared_ptr<MirroredTensorImpl> impl_;
 };
@@ -308,6 +303,8 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
                                             bool requires_grad, bool is_leaf);
 
   ConsistentTensorImpl* mut_impl() { return impl_.get(); }
+
+  Maybe<ConsistentTensorImpl> consistent_tensor_impl() { return impl_; }
 
   user_op::TensorDesc* mut_tensor_meta() override { return impl_->mut_tensor_meta(); }
 

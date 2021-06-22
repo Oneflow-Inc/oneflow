@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -39,6 +40,49 @@ Maybe<void> EagerConsistentInterpreter::ApplyImpl(const VariableOpExpr& op_expr,
                                                   const TensorTuple& inputs, TensorTuple* outputs,
                                                   const AttrMap& attrs) const {
   OF_UNIMPLEMENTED();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_OR_RETURN(!inputs.at(0)->is_consistent());
+  const auto& input_tensor = JUST(inputs.at(0)->detach());
+  const auto& input_mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(input_tensor);
+  CHECK_OR_RETURN(input_mirrored_tensor) << Error::ValueError("Tensor Cast Error");
+  bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
+  input_mirrored_tensor->set_requires_grad(requires_grad);
+  input_mirrored_tensor->set_is_leaf(!requires_grad);
+  const auto& parallel_distribution = op_expr.parallel_distribution();
+  const auto& parallel_desc = op_expr.parallel_desc();
+  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl = JUST(
+      EagerConsistentTensorImpl::New(input_mirrored_tensor, parallel_distribution, parallel_desc));
+  std::shared_ptr<ConsistentTensor> consistent_tensor =
+      std::make_shared<ConsistentTensor>(eager_consistent_tensor_impl);
+  const auto& out_tensor = std::dynamic_pointer_cast<Tensor>(consistent_tensor);
+  CHECK_OR_RETURN(out_tensor) << Error::ValueError("Tensor Cast Error");
+  outputs->at(0) = out_tensor;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastFromConsistentOpExpr& op_expr,
+                                                  const TensorTuple& inputs, TensorTuple* outputs,
+                                                  const AttrMap& attrs) const {
+  CHECK_EQ_OR_RETURN(inputs.size(), 1);
+  CHECK_OR_RETURN(inputs.at(0)->is_consistent());
+  const auto& input_consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(inputs.at(0));
+  CHECK_OR_RETURN(input_consistent_tensor) << Error::ValueError("Tensor Cast Error");
+  std::shared_ptr<EagerConsistentTensorImpl> eager_consistent_tensor_impl =
+      std::dynamic_pointer_cast<EagerConsistentTensorImpl>(
+          JUST(input_consistent_tensor->consistent_tensor_impl()));
+  CHECK_OR_RETURN(eager_consistent_tensor_impl) << Error::ValueError("TensorImpl Cast Error");
+  const std::shared_ptr<Tensor>& mirrored_tensor =
+      JUST(eager_consistent_tensor_impl->cur_rank_phy_tensor()->detach());
+  bool requires_grad = autograd::GradMode::is_enabled() && inputs.at(0)->requires_grad();
+  mirrored_tensor->set_requires_grad(requires_grad);
+  mirrored_tensor->set_is_leaf(!requires_grad);
+  outputs->at(0) = mirrored_tensor;
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> EagerConsistentInterpreter::ApplyImpl(const CastToMirroredOpExpr& op_expr,

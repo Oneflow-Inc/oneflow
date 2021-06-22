@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
@@ -26,6 +27,11 @@ limitations under the License.
 #include "oneflow/core/framework/arg_tuple.h"
 
 namespace oneflow {
+namespace cfg {
+
+class ParallelDistribution;
+
+}
 namespace one {
 
 class OpExprGradFunctionIf;
@@ -147,6 +153,76 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   user_op::DataTypeInferFn dtype_infer_fn_;
   user_op::DeviceInferFn device_infer_fn_;
   mutable HashMap<Device, std::shared_ptr<StatefulLocalOpKernel>> device2kernel_;
+};
+
+class CastConsistentOpExpr : public OpExpr {
+ public:
+  CastConsistentOpExpr() = default;
+  virtual ~CastConsistentOpExpr() = default;
+
+  const std::string& op_name() const { return op_name_; }
+  int input_size() const override { return 1; }
+  int output_size() const override { return 1; }
+
+  // Getters
+  Symbol<cfg::ParallelDistribution> parallel_distribution() const;
+  Symbol<ParallelDesc> parallel_desc() const;
+
+  Maybe<bool> IsGradDisabled() const override { return false; }
+
+ protected:
+  CastConsistentOpExpr(const std::string& op_name,
+                       Symbol<cfg::ParallelDistribution> parallel_distribution,
+                       Symbol<ParallelDesc> parallel_desc);
+
+  std::string op_name_;
+  Symbol<cfg::ParallelDistribution> parallel_distribution_;
+  Symbol<ParallelDesc> parallel_desc_;
+  mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
+};
+
+class CastToConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  CastToConsistentOpExpr() = default;
+  ~CastToConsistentOpExpr() = default;
+
+  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
+                                           const std::vector<std::string>& sbp_parallels,
+                                           const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
+                                           Symbol<cfg::ParallelDistribution> parallel_distribution,
+                                           Symbol<ParallelDesc> parallel_des);
+
+  const std::string& op_type_name() const override;
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ private:
+  CastToConsistentOpExpr(const std::string& op_name,
+                         Symbol<cfg::ParallelDistribution> parallel_distribution,
+                         Symbol<ParallelDesc> parallel_des);
+};
+
+class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
+ public:
+  CastFromConsistentOpExpr() = default;
+  ~CastFromConsistentOpExpr() = default;
+
+  static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
+                                             const std::vector<std::string>& sbp_parallels,
+                                             const std::shared_ptr<ParallelDesc>& parallel_desc);
+
+  static Maybe<CastFromConsistentOpExpr> New(
+      const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+      Symbol<ParallelDesc> parallel_des);
+
+  const std::string& op_type_name() const override;
+  Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
+
+ private:
+  CastFromConsistentOpExpr(const std::string& op_name,
+                           Symbol<cfg::ParallelDistribution> parallel_distribution,
+                           Symbol<ParallelDesc> parallel_des);
 };
 
 using VariableOpExpr = BuiltinOpExprImpl<VariableOpConf>;

@@ -66,8 +66,17 @@ class SplitDistribute : public Distribute {
   int64_t axis() const override { return sbp_parallel_->split_parallel().axis(); }
 };
 
+class ParticalSumDistribute : public Distribute {
+ public:
+  ParticalSumDistribute() : Distribute() { sbp_parallel_->mutable_partial_sum_parallel(); }
+  ParticalSumDistribute(const ParticalSumDistribute&) = delete;
+  ParticalSumDistribute(ParticalSumDistribute&&) = delete;
+  ~ParticalSumDistribute() override = default;
+};
+
 std::shared_ptr<AutoDistribute> GlobalAutoDistribute();
 std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute();
+std::shared_ptr<ParticalSumDistribute> GlobalParticalSumDistribute();
 Maybe<SplitDistribute> GlobalSplitDistribute(int axis);
 
 Maybe<Distribute> MakeDistribute(const cfg::SbpParallel& sbp_parallel);

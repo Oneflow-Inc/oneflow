@@ -95,6 +95,25 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
+
+  py::class_<one::CastConsistentOpExpr, one::OpExpr, std::shared_ptr<one::CastConsistentOpExpr>>(
+      m, "CastConsistentOpExpr");
+
+  py::class_<one::CastToConsistentOpExpr, one::CastConsistentOpExpr,
+             std::shared_ptr<one::CastToConsistentOpExpr>>(m, "CastToConsistentOpExpr")
+      .def(py::init([](const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
+        return one::CastToConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
+            .GetPtrOrThrow();
+      }));
+
+  py::class_<one::CastFromConsistentOpExpr, one::CastConsistentOpExpr,
+             std::shared_ptr<one::CastFromConsistentOpExpr>>(m, "CastFromConsistentOpExpr")
+      .def(py::init([](const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+                       const std::shared_ptr<ParallelDesc>& parallel_desc) {
+        return one::CastFromConsistentOpExpr::New(op_name, sbp_parallels, parallel_desc)
+            .GetPtrOrThrow();
+      }));
 }
 
 }  // namespace oneflow

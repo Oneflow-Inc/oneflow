@@ -880,5 +880,31 @@ Maybe<one::UserOpExpr> SoftmaxGradOp() { return SoftmaxGradOp("softmax_grad"); }
 Maybe<one::UserOpExpr> SoftmaxGradOp(const std::string& name) {
   return one::OpBuilder("softmax_grad", name).Input("y").Input("dy").Output("dx").Build();
 }
+
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
+  return CastToConsistentOp(UniqueOpName("cast_to_consistent"), parallel_distribution,
+                            parallel_desc);
+}
+Maybe<one::CastToConsistentOpExpr> CastToConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  std::shared_ptr<one::CastToConsistentOpExpr> cast_to_consistent_op_expr =
+      JUST(one::CastToConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+  return cast_to_consistent_op_expr;
+}
+
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    Symbol<cfg::ParallelDistribution> parallel_distribution, Symbol<ParallelDesc> parallel_desc) {
+  return CastFromConsistentOp(UniqueOpName("cast_from_consistent"), parallel_distribution,
+                              parallel_desc);
+}
+Maybe<one::CastFromConsistentOpExpr> CastFromConsistentOp(
+    const std::string& name, Symbol<cfg::ParallelDistribution> parallel_distribution,
+    Symbol<ParallelDesc> parallel_desc) {
+  std::shared_ptr<one::CastFromConsistentOpExpr> cast_from_consistent_op_expr =
+      JUST(one::CastFromConsistentOpExpr::New(name, parallel_distribution, parallel_desc));
+  return cast_from_consistent_op_expr;
+}
 }  // namespace op_expr_helper
 }  // namespace oneflow

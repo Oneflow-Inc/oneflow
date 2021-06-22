@@ -31,6 +31,7 @@ import oneflow.python.ops.initializer_util as initializer_util
 import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
+from oneflow._oneflow_internal.one import CastToConsistentOpExpr
 
 
 def register_local_tensor_method(name=None):
@@ -794,6 +795,40 @@ class UndeterminedTensor:
         else:
             raise ValueError("Neither placement nor device found.")
         return device_type == "gpu" or device_type == "cuda"
+
+
+# used in Tensor.to func
+def convert_tensor_to_consistent(tensor, sbp, placement):
+    assert sbp is not None
+    if isinstance(sbp, (tuple, list)):
+        assert len(sbp) == len(placement.hierarchy)
+        parallel_distribution = [sbp]
+    else:
+        assert len(placement.hierarchy) == 1
+        parallel_distribution = list(sbp)
+
+    def distribute_to_str(dist):
+        if dist is None:
+            return ""
+        elif type(dist) is str:
+            return dist
+        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
+            return "S({})".format(dist.axis)
+        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
+            return "B"
+        elif type(dist) is oneflow._oneflow_internal.distribute.ParticalSumDistribute:
+            return "P"
+        else:
+            raise ValueError("unsupported distribute")
+
+    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
+
+    cast_to_consistent_op_expr = CastFromConsistentOpExpr(
+        id_util.UniqueStr("cast_consistent"), parallel_distribution, placement,
+    )
+    with sess.consistent_scope():
+        consistent_tensor = cast_to_consistent_op_expr(tensor)[0]
+    return consistent_tensor
 
 
 def _default_initializer_for_determining(tensor):

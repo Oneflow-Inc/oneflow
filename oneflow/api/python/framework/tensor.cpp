@@ -29,6 +29,12 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
+#include "oneflow/core/framework/id_util.h"
+#include "oneflow/core/framework/op_builder.h"
+#include "oneflow/core/framework/op_expr.h"
+#include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
+#include "oneflow/core/framework/session_util.h"
 
 namespace py = pybind11;
 
@@ -254,6 +260,69 @@ void ExportTensor(py::module& m, const char* name) {
       .def_property_readonly("is_lazy", &T::is_lazy)
       .def_property_readonly("is_consistent", &T::is_consistent);
   SpecializedDef(&tensor_api);
+}
+
+// used in mirrored_tensor.to(sbp, placement)
+Maybe<ConsistentTensor> CastMirroredToConsistent(
+    const std::shared_ptr<MirroredTensor>& mirrored_tensor,
+    const std::vector<std::string>& sbp_parallels,
+    const std::shared_ptr<ParallelDesc>& parallel_desc) {
+  TensorTuple input_list;
+  input_list.emplace_back(mirrored_tensor);
+  std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+  const auto& op_expr = JUST(CastToConsistentOpExpr::New(*JUST(UniqueStr("cast_to_consistent")),
+                                                         sbp_parallels, parallel_desc));
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  const auto& out_tensor = std::dynamic_pointer_cast<ConsistentTensor>(outputs->at(0));
+  return out_tensor;
+}
+
+// used consistent_tensor.to_local()
+Maybe<MirroredTensor> CastConsistentToMirrored(
+    const std::shared_ptr<ConsistentTensor>& consistent_tensor) {
+  TensorTuple input_list;
+  input_list.emplace_back(consistent_tensor);
+  auto outputs = std::make_shared<one::TensorTuple>(1);
+  const auto& parallel_distribution = JUST(consistent_tensor->parallel_distribution());
+  const auto& parallel_desc = JUST(consistent_tensor->parallel_desc());
+  const auto& op_expr = JUST(CastFromConsistentOpExpr::New(*JUST(UniqueStr("cast_from_consistent")),
+                                                           *parallel_distribution, *parallel_desc));
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*op_expr, input_list, outputs.get(), AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  const auto& out_tensor = std::dynamic_pointer_cast<MirroredTensor>(outputs->at(0));
+  return out_tensor;
+}
+
+// used in consistent_tensor.to(sbp)
+Maybe<ConsistentTensor> CastParallelDistribution(
+    const std::shared_ptr<ConsistentTensor>& consistent_tensor,
+    const std::vector<std::string>& sbp_parallels) {
+  TensorTuple input_list;
+  input_list.emplace_back(consistent_tensor);
+  auto outputs = std::make_shared<one::TensorTuple>(1);
+  const auto& parallel_distribution_cast_op_expr =
+      JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
+               .Input("in")
+               .Output("out")
+               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallels)
+               .Attr<std::string>("grad_mode", "restore")
+               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallels)
+               .Build());
+  const auto& session = JUST(GetDefaultSession());
+  session->PushMirroredStrategyEnabled(false);
+  auto interperter = JUST(one::OpInterpUtil::GetInterpreter());
+  JUST(interperter->Apply(*parallel_distribution_cast_op_expr, input_list, outputs.get(),
+                          AttrMap{}));
+  session->PopMirroredStrategyEnabled();
+  const auto& out_tensor = std::dynamic_pointer_cast<ConsistentTensor>(outputs->at(0));
+  return out_tensor;
 }
 
 }  // namespace
