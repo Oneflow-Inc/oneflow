@@ -23,6 +23,7 @@ namespace oneflow {
 
 namespace {
 
+// 若输出与某个输入共享内存，检查该输入对应的RegstDescId是否合法
 void CheckInplaceRegstDescId(const TaskProto& task_proto) {
   HashSet<int64_t> consumed_regst_desc_ids;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
@@ -46,6 +47,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
+  // 构造Kernel
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel = ConstructKernel(job_desc_, node.kernel_conf(), device_ctx_.get());
@@ -61,6 +63,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
 
+  // 创建输出Regst
   for (const auto& pair : task_proto.produced_regst_desc()) {
     Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
@@ -90,6 +93,7 @@ void Actor::Init(const JobDesc* job_desc, const TaskProto& task_proto,
 
   total_reading_cnt_ = 0;
   is_inplace_consumed_eord_ = false;
+  // 处理消费的RegstDescId以及Regst之间的Inplace
   CheckInplaceRegstDescId(task_proto);
   TakeOverInplaceConsumedAndProduced(task_proto.produced_regst_desc());
   is_naive_consumed_eord_ = false;
@@ -129,6 +133,7 @@ void Actor::TakeOverInplaceConsumedAndProduced(
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   auto res = GetNaiveOrCustomizedConsumedRegstDescName();
   bool is_naive_names = res.first == RegstNameType::kNaive;
+  // 已有GetNaiveOrCustomizedConsumedRegstDescName()返回的names均为空
   const HashSet<std::string>& names = res.second;
 
   for (const auto& pair : consumed_ids) {
@@ -262,6 +267,7 @@ int64_t Actor::GetPieceId4NaiveOrInplaceCurReadableDataRegst() const {
   return pid;
 }
 
+// 根据ThreadCtx创建DeviceCtx
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   DeviceCtx* dev_ctx = NewObj<int, DeviceCtx, const ThreadCtx&>(GetDeviceType(), thread_ctx);
   device_ctx_.reset(dev_ctx);

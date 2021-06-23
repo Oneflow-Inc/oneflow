@@ -21,6 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 负责消息通信，每台机器上有一个Global<ActorMsgBus>
 class ActorMsgBus final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);

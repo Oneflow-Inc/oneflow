@@ -228,6 +228,9 @@ class Actor {
   HashSet<int64_t> eord_regst_desc_ids_;
   int64_t remaining_eord_cnt_;
 
+  // 此Actor的生产Regst即输出Regst，消费Regst即输入Regst
+  // 用于存储生产结果的Regst
+  // 生产Regst，管理Resgst实例内存
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<int64_t, int64_t> produced_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;

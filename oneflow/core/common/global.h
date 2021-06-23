@@ -32,6 +32,7 @@ class Global final {
  public:
   static T* Get() { return *GetPPtr(); }
   static void SetAllocated(T* val) { *GetPPtr() = val; }
+  // 可传入构造参数，无需二段初始化，但是非线程安全
   template<typename... Args>
   static T* New(Args&&... args) {
     CHECK(Get() == nullptr);
@@ -67,7 +68,6 @@ class Global final {
   }
 
  private:
-  // C++11后线程安全
   static T** GetPPtr() {
     CheckKind();
     static T* ptr = nullptr;

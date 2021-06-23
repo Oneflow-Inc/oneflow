@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-// 工厂模式+单例模式
+// 带模板参数的简单工厂+单例模式
 // 注册工厂类模板
 // 模板参数Key为派生类关键字，Base为基类
 template<typename Key, typename Base, typename... Args>
@@ -61,6 +61,7 @@ struct AutoRegistrationFactory {
     return creators().find(k) != creators().end();
   }
 
+  // @PROB(shiyongtao): AutoRegistrationFactory构造函数需要改为private，以确保单例
   static AutoRegistrationFactory<Key, Base, Args...>& Get() {
     static AutoRegistrationFactory<Key, Base, Args...> obj;
     return obj;

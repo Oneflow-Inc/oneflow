@@ -31,6 +31,7 @@ int RegstSlot::TryPushBackRegst(Regst* regst) {
   return TryPushBackRegst(regst, regst->regst_desc_id());
 }
 
+// 把Regst压入regst_desc_id对应队列
 int RegstSlot::TryPushBackRegst(Regst* regst, int64_t regst_desc_id) {
   CHECK(is_inited_);
   auto it = regst_desc_id2regsts_.find(regst_desc_id);
@@ -40,6 +41,7 @@ int RegstSlot::TryPushBackRegst(Regst* regst, int64_t regst_desc_id) {
   return 0;
 }
 
+// 弹出regst_desc_id对应队列的首元素
 int RegstSlot::TryPopFrontRegst(int64_t regst_desc_id) {
   CHECK(is_inited_);
   auto it = regst_desc_id2regsts_.find(regst_desc_id);
@@ -60,6 +62,7 @@ void RegstSlot::InsertRegstDescId(int64_t regst_desc_id) {
   CHECK(regst_desc_id2regsts_.emplace(regst_desc_id, std::deque<Regst*>()).second);
 }
 
+// 获取regst_desc_id对应队列的首元素
 Regst* RegstSlot::Front(int64_t regst_desc_id) const {
   CHECK(is_inited_);
   auto it = regst_desc_id2regsts_.find(regst_desc_id);
@@ -68,6 +71,7 @@ Regst* RegstSlot::Front(int64_t regst_desc_id) const {
   return it->second.front();
 }
 
+// 获取唯一regst_desc_id对应队列的首元素
 Regst* RegstSlot::SoleFront() const {
   CHECK(is_inited_);
   CHECK_EQ(1, total_regst_desc_cnt());
@@ -76,6 +80,7 @@ Regst* RegstSlot::SoleFront() const {
   return it->second.front();
 }
 
+// 获取regst_desc_id2regsts_中第一个regst_desc_id对应队列的首元素
 Regst* RegstSlot::FirstFront() const {
   CHECK(is_inited_);
   CHECK_GE(total_regst_desc_cnt(), 1);
@@ -89,6 +94,7 @@ void RegstSlot::InitedDone() {
   is_inited_ = true;
 }
 
+// 调用IsChosenRegstDescId选择regst_desc_id，然后输入对应队列的首元素来执行Handler
 void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDescId,
                                     std::function<void(Regst*)> Handler) const {
   for (const auto& kv : regst_desc_id2regsts_) {
@@ -99,6 +105,7 @@ void RegstSlot::ForChosenFrontRegst(std::function<bool(int64_t)> IsChosenRegstDe
   }
 }
 
+// 调用IsChosenRegstDescId选择regst_desc_id，然后输入regst_desc_id和对应队列的首元素来执行Handler
 void RegstSlot::ForChosenFrontRegst(
     std::function<bool(int64_t)> IsChosenRegstDescId,
     std::function<void(int64_t regst_desc_id, Regst*)> Handler) const {

@@ -20,6 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
+// 管理多组regst_desc_id及其对应的多个Regst
 class RegstSlot final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstSlot);

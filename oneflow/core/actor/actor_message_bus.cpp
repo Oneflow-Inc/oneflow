@@ -21,8 +21,10 @@ limitations under the License.
 
 namespace oneflow {
 
+// 消息路由，将输入消息发送到目标Thread或其他机器
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
+  // 判断消息目的地是否位于本机
   if (dst_machine_id == GlobalProcessCtx::Rank()) {
     SendMsgWithoutCommNet(msg);
   } else {
@@ -30,6 +32,7 @@ void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   }
 }
 
+// 将输入消息发送到位于本机的目标Thread
 void ActorMsgBus::SendMsgWithoutCommNet(const ActorMsg& msg) {
   CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id()), GlobalProcessCtx::Rank());
   int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
