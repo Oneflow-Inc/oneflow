@@ -22,7 +22,7 @@ import os
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(
     os.getenv("ONEFLOW_TEST_GITHUB_HOSTED"),
-    "/dataset not available on GitHub hosted servers",
+    "this will fail because github hosted VM has only two CPU cores",
 )
 class TestMultiProcess(flow.unittest.TestCase):
     def test_multi_process(test_case):
