@@ -247,7 +247,7 @@ void ExportTensor(py::module& m, const char* name) {
       // Methods of pytorch
       .def("retain_grad",
            [](T& t) {
-             if (!t.is_leaf()) { t.set_retain_grad(true); }
+             if (!t.is_leaf()) { t.set_retain_grad(true).GetOrThrow(); }
            })
       .def("detach", [](const T& t) { return t.api_detach().GetPtrOrThrow(); })
       .def("clone", [](const T& t) { return t.api_clone().GetPtrOrThrow(); })

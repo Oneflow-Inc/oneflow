@@ -158,7 +158,7 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
                                                                     bool create_graph) {
   ClearReleasedFunctionNodes();
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
@@ -186,7 +186,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     inputs.at(i)->set_retain_grad(true);
   }
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
@@ -199,9 +199,9 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     }
   }
   for (int i = 0; i < inputs.size(); ++i) {
-    input_now_grads->at(i) = inputs.at(i)->acc_grad();
+    input_now_grads->at(i) = JUST(inputs.at(i)->acc_grad());
     if (!ori_retain_grad.at(i)) {
-      inputs.at(i)->mut_acc_grad().reset();
+      JUST(inputs.at(i)->mut_acc_grad()).reset();
       inputs.at(i)->set_retain_grad(false);
     }
   }
