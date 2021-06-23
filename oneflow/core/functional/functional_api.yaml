@@ -238,6 +238,12 @@
   signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
   bind_python: True
 
+- name: "conv1d"
+  signature:
+    "Tensor Conv1D(Tensor x, Tensor weight, *, Int32List strides, Int32List padding_before, 
+                   Int32List dilation_rate, Int32 groups=1, String data_format=\"channels_first\")"
+  bind_python: True
+
 - name: "conv2d"
   signature:
     "Tensor Conv2D(Tensor x, Tensor weight, *, Int32 filters, Int32List kernel_size,

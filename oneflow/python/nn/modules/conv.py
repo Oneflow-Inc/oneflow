@@ -273,6 +273,88 @@ class Conv2d(Module):
         return res
 
 
+@oneflow_export("nn.Conv2d")
+@experimental_api
+class Conv2d(Module):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: _size_2_t,
+        stride: _size_2_t = 1,
+        padding: _size_2_t = 0,
+        dilation: _size_2_t = 1,
+        groups: int = 1,
+        bias: bool = True,
+        padding_mode: str = "zeros",  # TODO: refine this type
+    ):
+        super().__init__()
+
+        assert padding_mode == "zeros"
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.dilation = _pair(dilation)
+        self.groups = groups
+        assert in_channels % groups == 0
+        assert out_channels % groups == 0
+        self.out_channels = out_channels
+        self.weight = flow.nn.Parameter(
+            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+        )
+        self.out_channel_groups = out_channels // groups
+        self.bias = None
+        if bias:
+            self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        init.kaiming_uniform_(self.weight, a=math.sqrt(5))
+        if self.bias is not None:
+            fan_in, _ = init._calculate_fan_in_and_fan_out(self.weight)
+            bound = 1 / math.sqrt(fan_in)
+            init.uniform_(self.bias, -bound, bound)
+
+    def forward(self, x):
+        if x.device.type == "cpu" and self.groups > 1:
+            in_channel_axis = 1
+            in_split_list = ConvUtil.split(
+                x, axis=in_channel_axis, split_num=self.groups
+            )
+            out_list = []
+            for i in range(len(in_split_list)):
+                out_list.append(
+                    flow.F.conv2d(
+                        in_split_list[i],
+                        self.weight[i : i + 1, :, :, :],
+                        filters=self.out_channels // self.groups,
+                        kernel_size=self.kernel_size,
+                        strides=self.stride,
+                        padding_before=self.padding,
+                        dilation_rate=self.dilation,
+                        groups=1,
+                        data_format="channels_first",
+                    )
+                )
+            res = flow.experimental.cat(out_list, dim=in_channel_axis)
+        else:
+            res = flow.F.conv2d(
+                x,
+                self.weight,
+                filters=self.out_channels,
+                kernel_size=self.kernel_size,
+                strides=self.stride,
+                padding_before=self.padding,
+                dilation_rate=self.dilation,
+                groups=self.groups,
+                data_format="channels_first",
+            )
+
+        if self.bias is not None:
+            res = flow.F.bias_add(res, self.bias, axis=1)
+        return res
+
+
 if __name__ == "__main__":
     import doctest
 
