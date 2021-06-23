@@ -11,6 +11,8 @@ message ProcessCtx {
   required int64 rank = 2;
   required int64 node_size = 3;
   required NumProcessDistribution num_process_distribution_in_cluster = 4;
+  map<int64, int64> rank2node_id = 5;
+  map<int64, int64> node_id2rankoffset = 6;
 }
 
 message BootstrapConf {

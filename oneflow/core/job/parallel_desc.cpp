@@ -123,10 +123,9 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
       JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(device_name.substr(1), 1,
                                                        node_id2rankoffset));
     } else {
-      static HashMap<int64_t, int64_t> node_id2rankoffset =
-          GetNodeId2RankOffset(GlobalProcessCtx::NumProcessDistributionInCluster());
-      JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(
-          device_name, GlobalProcessCtx::NumOfProcessOnNode(), node_id2rankoffset));
+      JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(device_name,
+                                                       GlobalProcessCtx::NumOfProcessOnNode(),
+                                                       GlobalProcessCtx::NodeId2RankOffset()));
     }
   }
   ClearUp();

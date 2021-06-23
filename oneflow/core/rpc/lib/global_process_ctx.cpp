@@ -14,43 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
 
-namespace {
-
-HashMap<int64_t, int64_t> GetRank2NodeId(const NumProcessDistribution& num_process_distribution) {
-  HashMap<int64_t, int64_t> rank2node_id;
-  int64_t rank_offset = 0;
-  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
-    for (int16_t rank = 0; rank < num_process_distribution.num_process(node_id); ++rank) {
-      CHECK(rank2node_id.emplace(rank + rank_offset, node_id).second);
-    }
-    rank_offset += num_process_distribution.num_process(node_id);
-  }
-  return rank2node_id;
-}
-
-HashMap<int64_t, int64_t> GetNodeId2RankOffset(
-    const NumProcessDistribution& num_process_distribution) {
-  HashMap<int64_t, int64_t> node_id2rankoffset;
-  int64_t rank_offset = 0;
-  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
-    CHECK(node_id2rankoffset.emplace(node_id, rank_offset).second);
-    rank_offset += num_process_distribution.num_process(node_id);
-  }
-  return node_id2rankoffset;
-}
-
-}  // namespace
-
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
   int64_t node_id = ThisNodeId();
-  static HashMap<int64_t, int64_t> node_id2rankoffset =
-      GetNodeId2RankOffset(NumProcessDistributionInCluster());
+  const auto& node_id2rankoffset = NodeId2RankOffset();
   int64_t rank_offset = node_id2rankoffset.at(node_id);
   *device_id = *machine_id - rank_offset;
 }
@@ -72,9 +45,14 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 
 int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  static HashMap<int64_t, int64_t> rank2node_id = GetRank2NodeId(NumProcessDistributionInCluster());
+  const auto& rank2node_id = Global<ProcessCtx>::Get()->rank2node_id();
   CHECK(rank2node_id.find(rank) != rank2node_id.end());
   return rank2node_id.at(rank);
+}
+
+HashMap<int64_t, int64_t> GlobalProcessCtx::NodeId2RankOffset() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return PbMap2HashMap(Global<ProcessCtx>::Get()->node_id2rankoffset());
 }
 
 int64_t GlobalProcessCtx::NumOfProcessOnNode() {
