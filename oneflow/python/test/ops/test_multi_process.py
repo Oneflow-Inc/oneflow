@@ -14,11 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import numpy as np
 import oneflow as flow
-import oneflow.typing as oft
-from typing import Tuple
-import time
+import os
 
 
 @unittest.skipIf(flow.sysconfig.has_rpc_backend_grpc() == False, "lacks grpc")
