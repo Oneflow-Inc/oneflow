@@ -183,6 +183,7 @@ endif()
 if (ONEFLOW)
   ExternalProject_Add (oneflow
     PREFIX oneflow
+    DEPENDS prepare_oneflow_third_party
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/oneflow # Source dir for configuration
     INSTALL_DIR ${PROJECT_BINARY_DIR}/oneflow_install
@@ -194,5 +195,6 @@ if (ONEFLOW)
       -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
       -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
       -DCUDA_NVCC_FLAGS:STRING=${CUDA_NVCC_FLAGS}
+      -DProtobuf_ROOT:STRING=${PROTOBUF_INSTALL_DIR}
   )
 endif()

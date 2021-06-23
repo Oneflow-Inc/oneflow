@@ -1,4 +1,5 @@
 function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
+  get_filename_component(ROOT_DIR ${ROOT_DIR}/.. REALPATH)
   if(NOT ARGN)
     message(SEND_ERROR "Error: RELATIVE_PROTOBUF_GENERATE_CPP() called without any proto files")
     return()
@@ -8,11 +9,10 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
   set(${HDRS})
 
   foreach(FIL ${ARGN})
-    set(ABS_FIL ${ROOT_DIR}/${FIL})
+    set(ABS_FIL ${ROOT_DIR}/oneflow/${FIL})
     get_filename_component(FIL_WE ${FIL} NAME_WE)
     get_filename_component(FIL_DIR ${ABS_FIL} PATH)
     file(RELATIVE_PATH REL_DIR ${ROOT_DIR} ${FIL_DIR})
-
     list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.cc")
     list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${REL_DIR}/${FIL_WE}.pb.h")
 
@@ -29,7 +29,7 @@ function(RELATIVE_PROTOBUF_GENERATE_CPP SRCS HDRS ROOT_DIR)
       COMMAND ${CMAKE_COMMAND}
       ARGS -E touch ${of_proto_python_dir}/${REL_DIR}/__init__.py
 
-      DEPENDS ${ABS_FIL} protobuf
+      DEPENDS ${ABS_FIL} ${PROTOBUF_PROTOC_EXECUTABLE}
       COMMENT "Running Protocol Buffer Compiler on ${FIL}"
       VERBATIM )
   endforeach()
