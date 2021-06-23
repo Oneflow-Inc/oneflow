@@ -1,8 +1,10 @@
 name: Simple CI
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
   push:
     branches:
-      - "*"
+      - master
   workflow_dispatch:
     inputs:
       placeholder:
@@ -71,7 +73,6 @@ jobs:
         run: |
           set -x
           cmake_flags=""
-          cmake_flags+=" -DRPC_BACKEND=LOCAL"
           cmake_flags+=" -DBUILD_CUDA=OFF"
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -D${{ matrix.cmake_build_type }}"
@@ -104,13 +105,13 @@ jobs:
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
-      - name: Build (generate_api)
+      - name: Build (oneflow_py)
         if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
-          cmake --build . -j ${{ matrix.make_concurrency }} --target generate_api
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
         shell: bash
       - name: Build (ALL)
         if: startsWith(runner.os, 'Linux')
