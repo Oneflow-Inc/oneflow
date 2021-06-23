@@ -127,9 +127,8 @@ class LayerNormAffineFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& gamma,
-                           const std::shared_ptr<one::Tensor>& beta,
-                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
-                           const double& epsilon) const {
+                           const std::shared_ptr<one::Tensor>& beta, const int64_t& begin_norm_axis,
+                           const int64_t& begin_params_axis, const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
