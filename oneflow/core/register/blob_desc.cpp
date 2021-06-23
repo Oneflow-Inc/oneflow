@@ -70,6 +70,10 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
 
+size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
+  return RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kAlignSize);
+}
+
 size_t BlobDesc::ByteSizeOfBlobBody() const {
   return shape().elem_cnt() * GetSizeOfDataType(data_type());
 }
@@ -79,7 +83,7 @@ size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::AlignedTotalByteSize() const {
-  return ByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody();
+  return AlignedByteSizeOfBlobHeader() + AlignedByteSizeOfBlobBody();
 }
 
 }  // namespace oneflow

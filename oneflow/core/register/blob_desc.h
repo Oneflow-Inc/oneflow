@@ -66,6 +66,7 @@ class BlobDesc final {
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
+  size_t AlignedByteSizeOfBlobHeader() const;
   size_t AlignedByteSizeOfBlobBody() const;
   size_t AlignedTotalByteSize() const;
 
