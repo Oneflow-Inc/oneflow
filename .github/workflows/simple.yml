@@ -128,7 +128,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
-        if: always()
+        if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build
           cd build
