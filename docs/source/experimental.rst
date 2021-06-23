@@ -211,3 +211,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
 .. autofunction:: oneflow.experimental.nn.GroupNorm
+.. autofunction:: oneflow.experimental.nn.ZeroPad2d

@@ -27,7 +27,7 @@ from oneflow.python.nn.module import Module
 class ZeroPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ZeroPad2d.html?highlight=zeropad2d#torch.nn.ZeroPad2d
+    https://pytorch.org/docs/stable/generated/torch.nn.ZeroPad2d.html
 
     Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
 
@@ -67,7 +67,7 @@ class ZeroPad2d(Module):
                  [[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  9., 10., 11.,  0.,  0.],
-                  [ 0.,  0.,  12., 13., 14.,  0.,  0.],
+                  [ 0.,  0., 12., 13., 14.,  0.,  0.],
                   [ 0.,  0., 15., 16., 17.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
@@ -79,7 +79,7 @@ class ZeroPad2d(Module):
                   [ 0.,  3.,  4.,  5.,  0.,  0.],
                   [ 0.,  6.,  7.,  8.,  0.,  0.]],
         <BLANKLINE>
-                  [[ 0.,  0.,  0.,  0.,  0.,  0.],
+                 [[ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  9., 10., 11.,  0.,  0.],
                   [ 0., 12., 13., 14.,  0.,  0.],
@@ -101,7 +101,6 @@ class ZeroPad2d(Module):
 
     def forward(self, x):
         _, _, h, w = x.shape
-
 
         if x.dtype in [flow.float32, flow.float16, flow.float64]:
             floating_value = float(self.value)
