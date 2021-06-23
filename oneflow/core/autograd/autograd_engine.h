@@ -158,6 +158,7 @@ class GraphTask final {
   GraphTask() = delete;
   GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph);
 
+  Maybe<void> ComputeDependencies();
   Maybe<void> PruneFunctionNode(const std::set<FunctionNode*>& target_nodes);
   Maybe<void> Apply();
 
@@ -167,8 +168,6 @@ class GraphTask final {
   std::vector<FunctionNode*> roots_;
   HashMap<FunctionNode*, int> dependencies_;
   std::unordered_set<FunctionNode*> need_excute_;
-
-  Maybe<void> ComputeDependencies();
 };
 
 class GraphAutogradEngine final : public AutogradEngine {

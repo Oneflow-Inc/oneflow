@@ -318,7 +318,9 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   for (int i = 0; i < outputs.size(); ++i) {
     JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
   }
-  // TODO
+  GraphTask graph_task(outputs, retain_graph, create_graph);
+  JUST(graph_task.ComputeDependencies());
+  JUST(graph_task.Apply());
   return Maybe<void>::Ok();
 }
 
