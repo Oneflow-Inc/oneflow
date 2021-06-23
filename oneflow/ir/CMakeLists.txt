@@ -20,8 +20,6 @@ project(oneflow-dialect LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
 
-set(LLVM_MONO_REPO_URL "https://github.com/llvm/llvm-project/archive/acd9cc74957ba63967015946fc3349988ab200b1.zip" CACHE STRING "")
-set(LLVM_MONO_REPO_MD5 "eacd061e33280247c9791abd2b974782" CACHE STRING "")
 message("-- LLVM_MONO_REPO_URL: " ${LLVM_MONO_REPO_URL})
 message("-- LLVM_MONO_REPO_MD5: " ${LLVM_MONO_REPO_MD5})
 FetchContent_Declare(
@@ -54,6 +52,7 @@ if(NOT llvm_monorepo_POPULATED)
     -DLLVM_ENABLE_ZLIB=OFF
     -DLLVM_INSTALL_UTILS=ON
     -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
+    -G ${CMAKE_GENERATOR}
     WORKING_DIRECTORY ${llvm_monorepo_BINARY_DIR}
     RESULT_VARIABLE ret)
   if(ret EQUAL "1")

@@ -120,4 +120,4 @@ if __name__ == "__main__":
         upload_to_aliyun(args.src_path)
     if args.url != None:
         oss_url = convert_url_to_oss_https_url(args.url)
-        print(oss_url)
+        print(oss_url, end="")
