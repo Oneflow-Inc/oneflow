@@ -17,7 +17,7 @@ set(Python_EXECUTABLE ${Python3_EXECUTABLE})
 message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 
 message(STATUS "Installing necessary Python packages...")
-set(requirements_txt ${PROJECT_SOURCE_DIR}/../dev-requirements.txt)
+set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
 message(STATUS "PIP_INDEX_MIRROR: ${PIP_INDEX_MIRROR}")
 if(PIP_INDEX_MIRROR)
@@ -75,3 +75,4 @@ message(STATUS "Found numpy include directory ${Python_NumPy_INCLUDE_DIRS}")
 
 # PYTHON_EXECUTABLE will be used by pybind11
 set(PYTHON_EXECUTABLE ${Python_EXECUTABLE})
+include(pybind11)

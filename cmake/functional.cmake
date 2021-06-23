@@ -1,5 +1,5 @@
 function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
-  set(YAML_FILE ${PROJECT_SOURCE_DIR}/../oneflow/core/functional/functional_api.yaml)
+  set(YAML_FILE ${PROJECT_SOURCE_DIR}/oneflow/core/functional/functional_api.yaml)
   set(GENERATED_API_DIR oneflow/core/functional)
   set(GENERATED_PYBIND_DIR oneflow/api/python/functional)
 
@@ -16,10 +16,10 @@ function(GENERATE_FUNCTIONAL_API_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR
 
   add_custom_target(
       generate_functional
-      COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/../tools/generate_functional_api.py
+      COMMAND ${Python_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py
               --yaml_file_path ${YAML_FILE} --generate_pybind
       DEPENDS ${Python_EXECUTABLE} create_functional_api_dir create_functional_pybind_dir
-              ${PROJECT_SOURCE_DIR}/../tools/generate_functional_api.py ${YAML_FILE}
+              ${PROJECT_SOURCE_DIR}/tools/generate_functional_api.py ${YAML_FILE}
       BYPRODUCTS "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.cpp"
                  "${PROJECT_BINARY_DIR}/${GENERATED_API_DIR}/functional_api.yaml.h"
                  "${PROJECT_BINARY_DIR}/${GENERATED_PYBIND_DIR}/functional_api.yaml.pybind.cpp"
