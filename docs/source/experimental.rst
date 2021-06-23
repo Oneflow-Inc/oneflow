@@ -163,6 +163,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.MaxPool3d
 .. autofunction:: oneflow.experimental.repeat
 .. autofunction:: oneflow.experimental.Tensor.repeat
+.. autofunction:: oneflow.experimental.tile
+.. autofunction:: oneflow.experimental.Tensor.tile
 .. autofunction:: oneflow.experimental.reshape
 .. autofunction:: oneflow.experimental.Tensor.reshape
 .. autofunction:: oneflow.experimental.squeeze
