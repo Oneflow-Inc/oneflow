@@ -464,3 +464,8 @@
   signature:
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
+
+- name: "dropout"
+  signature:
+    "Tensor Dropout(Tensor x, *, Float p, Generator gen)"
+  bind_python: True

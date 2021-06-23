@@ -24,12 +24,13 @@ limitations under the License.
 // #endif
 
 namespace oneflow {
-namespace one{
+namespace one {
 
 class GeneratorImplBase {
  public:
   GeneratorImplBase() = default;
   virtual ~GeneratorImplBase() = default;
+
  protected:
   int64_t seed_;
 };
@@ -38,11 +39,11 @@ template<DeviceType device_type>
 class GeneratorImpl;
 
 template<>
-class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase{
+class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
  public:
-  GeneratorImpl(int64_t seed) : mt19937_generator_(seed) { 
-    seed_ = seed; 
-    device_type_ = DeviceType::kCPU; 
+  GeneratorImpl(int64_t seed) : mt19937_generator_(seed) {
+    seed_ = seed;
+    device_type_ = DeviceType::kCPU;
   }
   virtual ~GeneratorImpl() = default;
 
@@ -71,25 +72,23 @@ class Generator final {
   explicit Generator() : seed_(0) {}
 
   void set_current_seed(const int64_t seed) { seed_ = seed; }
-  
-  template <DeviceType device_type>
+
+  template<DeviceType device_type>
   Maybe<std::shared_ptr<GeneratorImpl<device_type>>> GetDeviceGenerator() {
     CHECK_OR_RETURN(device_type == DeviceType::kInvalidDevice);
     const auto& it = gen_map_.find(device_type);
     if (it == gen_map_.end()) {
-        gen_map_[device_type] = std::make_shared<GeneratorImpl<device_type>>(seed_);
+      gen_map_[device_type] = std::make_shared<GeneratorImpl<device_type>>(seed_);
     }
     return dynamic_cast<std::shared_ptr<GeneratorImpl<device_type>>>(gen_map_[device_type]);
   }
 
  private:
   int64_t seed_;
-  std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> gen_map_; 
+  std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> gen_map_;
 };
 
-} // namespace one
-} // namespace oneflow
+}  // namespace one
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_
-
-
+#endif  // ONEFLOW_CORE_FRAMEWORK_RANDOM_GENERATOR_H_

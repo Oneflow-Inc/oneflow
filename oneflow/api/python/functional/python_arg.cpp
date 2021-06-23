@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/user_op_attr.cfg.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/framework/random_generator.h"
 
 namespace py = pybind11;
 
@@ -148,6 +149,12 @@ Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
     UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to Shape from "
                                 << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
+}
+
+template<>
+Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()
+    const {
+  return detail::cast<std::shared_ptr<one::Generator>>(Borrow());
 }
 
 }  // namespace functional

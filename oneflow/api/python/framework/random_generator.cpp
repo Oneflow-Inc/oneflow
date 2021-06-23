@@ -25,7 +25,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 void Generator_ManualSeed(const std::shared_ptr<one::Generator>& gen, const int64_t seed) {
-    gen->set_current_seed(seed);
+  gen->set_current_seed(seed);
 }
 
 ONEFLOW_API_PYBIND11_MODULE("one", m) {

@@ -63,6 +63,7 @@ header_fmt = (
 
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {{
@@ -145,6 +146,7 @@ types_allowed = {
     "BoolList",
     "DataType",
     "Shape",
+    "Generator",
 }
 
 generic_type_aliases = {
@@ -171,6 +173,7 @@ argument_type_aliases = {
     "BoolList": "const std::vector<bool>&",
     "DataType": "const DataType&",
     "Shape": "const Shape&",
+    "Generator": "const std::shared_ptr<one::Generator>&",
     **generic_type_aliases,
 }
 
