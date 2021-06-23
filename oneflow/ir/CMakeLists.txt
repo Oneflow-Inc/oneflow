@@ -36,7 +36,7 @@ if(NOT llvm_monorepo_POPULATED)
   set(LLVM_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
   set(LLVM_RUNTIME_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/bin)
   set(LLVM_LIBRARY_OUTPUT_INTDIR ${LLVM_BINARY_DIR}/lib)
-  set(LLVM_INSTALL_DIR ${LLVM_BINARY_DIR}/install)
+  set(LLVM_INSTALL_DIR ${THIRD_PARTY_DIR}/llvm)
   set(LLVM_EXTERNAL_LIT=${LLVM_BINARY_DIR}/bin/llvm-lit)
 
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
