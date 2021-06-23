@@ -157,7 +157,6 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
 
 class CastConsistentOpExpr : public OpExpr {
  public:
-  CastConsistentOpExpr() = default;
   virtual ~CastConsistentOpExpr() = default;
 
   const std::string& op_name() const { return op_name_; }
@@ -183,7 +182,6 @@ class CastConsistentOpExpr : public OpExpr {
 
 class CastToConsistentOpExpr final : public CastConsistentOpExpr {
  public:
-  CastToConsistentOpExpr() = default;
   ~CastToConsistentOpExpr() = default;
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
@@ -205,7 +203,6 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
 
 class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  public:
-  CastFromConsistentOpExpr() = default;
   ~CastFromConsistentOpExpr() = default;
 
   static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,

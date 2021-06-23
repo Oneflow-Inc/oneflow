@@ -265,7 +265,7 @@ py::class_<T, Tensor, std::shared_ptr<T>> ExportTensor(py::module& m, const char
 }
 
 // used in mirrored_tensor.to(sbp, placement)
-Maybe<ConsistentTensor> CastMirroredToConsistent(
+Maybe<ConsistentTensor> CastLocalToConsistent(
     const std::shared_ptr<MirroredTensor>& mirrored_tensor,
     const std::vector<std::string>& sbp_parallels,
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
@@ -284,7 +284,7 @@ Maybe<ConsistentTensor> CastMirroredToConsistent(
 }
 
 // used consistent_tensor.to_local()
-Maybe<MirroredTensor> CastConsistentToMirrored(
+Maybe<MirroredTensor> CastConsistentToLocal(
     const std::shared_ptr<ConsistentTensor>& consistent_tensor) {
   int64_t machine_id = 0;
   int64_t device_id = 0;
@@ -345,7 +345,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
               const std::vector<std::string>& sbp_parallels,
               const std::shared_ptr<ParallelDesc>& parallel_desc)
                -> std::shared_ptr<ConsistentTensor> {
-             return CastMirroredToConsistent(mirrored_tensor, sbp_parallels, parallel_desc)
+             return CastLocalToConsistent(mirrored_tensor, sbp_parallels, parallel_desc)
                  .GetPtrOrThrow();
            });
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor")
@@ -357,7 +357,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("to_local",
            [](const std::shared_ptr<ConsistentTensor>& consistent_tensor)
                -> std::shared_ptr<MirroredTensor> {
-             return CastConsistentToMirrored(consistent_tensor).GetPtrOrThrow();
+             return CastConsistentToLocal(consistent_tensor).GetPtrOrThrow();
            });
 }
 
