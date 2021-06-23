@@ -54,8 +54,12 @@ class TestGraph(flow.unittest.TestCase):
         print(g.m.name)
         print(g.m.layer.name)
         print(g.m.layer.conv1.name)
+        print(g.m.layer.conv1)
         print(g.m.layer.conv1.kernel_size)
-        # z = g.build(x)
+        print(g.m.layer.conv1.weight)
+        z = g.build(x)
+        print(z.numpy())
+        test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
     
     # TODO(): test_graph_config
     # TODO(): test_add_optimizer
