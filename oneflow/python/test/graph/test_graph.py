@@ -3,24 +3,59 @@ import unittest
 import numpy as np
 
 import oneflow.experimental as flow
+import oneflow
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+@unittest.skipIf(
+    not flow.unittest.env.eager_execution_enabled(),
+    ".numpy() doesn't work in lazy mode",
+)
 class TestGraph(flow.unittest.TestCase):
-    def test_nested_module(test_case):
-        class CustomModule(flow.nn.Module):
+    def test_add_nested_module(test_case):
+        class SubModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
+                self.conv1 = flow.nn.Conv2d(1, 1, 5)
                 self.relu = flow.nn.ReLU()
 
             def forward(self, x):
-                return self.relu(x)
+                x = self.conv1(x)
+                x = self.relu(x)
+                return x
+        
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.layer = SubModule()
+                self.fc1 = flow.nn.Linear(36, 2) 
+            
+            def forward(self, x):
+                x = self.layer(x)
+                x = oneflow.F.flatten(x, 1)
+                x = self.fc1(x)
+                return x
 
-        def np_relu(np_arr):
-            return np.where(np_arr > 0, np_arr, 0)
+        x = flow.Tensor(1, 1, 10, 10)
+        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
         m = CustomModule()
-        x = flow.Tensor(2, 3)
-        flow.nn.init.uniform_(x, a=-1.0, b=1.0)
         y = m(x)
+        print(y.numpy())
 
-        test_case.assertTrue(np.array_equal(np_relu(x.numpy()), y.numpy()))
+        class CustomGraph(flow.experimental.nn.Graph):
+            def __init__(self):
+                self.m = m
+
+            def build(self, x):
+                return self.m(x)
+        
+        # g = CustomGraph()
+        # print(g.m)
+        # z = g.build(x)
+    
+    # TODO(): test_graph_config
+    # TODO(): test_add_optimizer
+
+
+if __name__ == "__main__":
+    unittest.main()

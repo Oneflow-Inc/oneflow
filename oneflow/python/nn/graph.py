@@ -7,7 +7,7 @@ from oneflow.python.oneflow_export import oneflow_export
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
-from oneflow.python.nn.optimizer import Optimizer
+from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
 
 @oneflow_export("experimental.nn.Graph")
@@ -63,7 +63,7 @@ class Graph(object):
     def train(self, mode: bool = True):
         self.training = mode
 
-    def __setattr__(self, name: str, value: = None):
+    def __setattr__(self, name: str, value = None):
         if isinstance(value, Module):
             print("add module attr: ", name)
             self.add_module(name, value)
@@ -105,9 +105,9 @@ class Node(object):
                 self.__setattr__(n, Node(p))
             for n, b in list(value.named_buffers()):
                 self.__setattr__(n, Node(b))
-        elif isinstance(value, Parameter)
+        elif isinstance(value, Parameter):
             self._type = "parameter"
-        elif isinstance(value, Tensor)
+        elif isinstance(value, Tensor):
             self._type = "buffer"
         else:
             raise NotImplementedError()
@@ -120,6 +120,10 @@ class Node(object):
     @property
     def type(self):
         return self._type
+    
+    @property
+    def origin(self):
+        return self._origin
     
     def __setattr__(self, name: str, node: "Node") -> None:
         dicts_or_sets = (self.__dict__, self.modules, self._parameters, self._buffers)
@@ -151,11 +155,11 @@ class Node(object):
             if "_parameters" in self.__dict__:
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
-                    return _parameters[name]
+                    return _parameters[name].origin
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
-                    return _buffers[name]
+                    return _buffers[name].origin
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
 
