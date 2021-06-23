@@ -23,6 +23,7 @@ import time
 
 @unittest.skipIf(flow.sysconfig.has_rpc_backend_grpc() == False, "lacks grpc")
 @flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestMultiProcess(flow.unittest.TestCase):
     def test_multi_process(test_case):
         flow.config.gpu_device_num(4)
