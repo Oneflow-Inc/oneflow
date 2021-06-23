@@ -73,7 +73,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
     const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight->shape(), Shape(weight_shape));
   }
 
   const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
