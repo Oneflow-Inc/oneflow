@@ -33,4 +33,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   m.def("GetRank", &GetRank);
   m.def("GetWorldSize", &GetWorldSize);
+  m.def("GetNodeSize", &GetNodeSize);
 }

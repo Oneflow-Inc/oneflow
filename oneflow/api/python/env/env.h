@@ -93,6 +93,7 @@ inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
 inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
+inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 
 }  // namespace oneflow
 
