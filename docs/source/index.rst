@@ -27,8 +27,7 @@ OneFlow API Reference
     deprecated  
     experimental 
     scope 
-    sysconfig 
-    onnx   
+    sysconfig    
     random 
     system 
     regularizers  
