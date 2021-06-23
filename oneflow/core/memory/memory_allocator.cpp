@@ -38,7 +38,7 @@ void* MemoryAllocatorImpl::Allocate(MemoryCase mem_case, size_t size) {
       UNIMPLEMENTED();
 #endif
     } else {
-      ptr = aligned_alloc(kAlignSize, size);
+      ptr = aligned_alloc(kHostAlignSize, size);
       CHECK_NOTNULL(ptr);
     }
   } else if (mem_case.has_device_cuda_mem()) {
@@ -78,7 +78,7 @@ void MemoryAllocatorImpl::Deallocate(void* ptr, MemoryCase mem_case) {
 }
 
 void* MemoryAllocatorImpl::AllocateUnPinnedHostMem(size_t size) {
-  void* ptr = aligned_alloc(kAlignSize, size);
+  void* ptr = aligned_alloc(kHostAlignSize, size);
   CHECK_NOTNULL(ptr);
   return ptr;
 }

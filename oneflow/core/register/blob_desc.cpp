@@ -79,7 +79,7 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
-  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kAlignSize);
+  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kBodyAlignSize);
 }
 
 size_t BlobDesc::AlignedTotalByteSize() const {
