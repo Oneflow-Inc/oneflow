@@ -55,7 +55,7 @@ def default_collate(batch):
             # numel = sum([x.numel() for x in batch])
             # storage = elem.storage()._new_shared(numel)
             # out = elem.new(storage)
-        res = flow.experimental.stack(list(batch), dim = 0)
+        res = flow.experimental.stack(batch, dim = 0)
         return res
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
             and elem_type.__name__ != 'string_':
