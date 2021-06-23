@@ -110,7 +110,6 @@ void StackFunctionNode::ReleaseOutTensorArgs() {
 void StackFunctionNode::ReleaseData() {
   // Releases backward function and makes useless tensors release as early as possible
   if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
-  next_functions_->clear();
   is_in_stack_ = false;
 }
 
@@ -136,13 +135,7 @@ Maybe<bool> StackFunctionNode::Apply(bool create_graph) {
   return true;
 }
 
-void StackAutogradEngine::ClearEngine() {
-  for (const auto& weak_func_node : node_list_) {
-    const auto& func_node = weak_func_node.lock();
-    if (func_node) { func_node->ReleaseData(); }
-  }
-  node_list_.clear();
-}
+void StackAutogradEngine::ClearEngine() { node_list_.clear(); }
 
 void StackAutogradEngine::ClearReleasedFunctionNodes() {
   node_list_.erase(std::remove_if(node_list_.begin(), node_list_.end(),
@@ -163,12 +156,12 @@ Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    if (!func_node) { continue; }
-    // CHECK_NOTNULL_OR_RETURN(func_node);
+    CHECK_NOTNULL_OR_RETURN(func_node);
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->AccGrad4LeafTensor(create_graph));
       JUST(func_node->AccGrad4RetainGradTensor());
       func_node->ReleaseOutTensorArgs();
+      if (!retain_graph) { func_node->ReleaseData(); }
     }
   }
   if (!retain_graph) { ClearEngine(); }
@@ -191,11 +184,11 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   // Runs each FunctionNode
   for (const auto& weak_func_node : node_list_) {
     const auto& func_node = weak_func_node.lock();
-    if (!func_node) { continue; }
-    // CHECK_NOTNULL_OR_RETURN(func_node);
+    CHECK_NOTNULL_OR_RETURN(func_node);
     if (JUST(func_node->Apply(create_graph))) {
       JUST(func_node->AccGrad4RetainGradTensor());
       func_node->ReleaseOutTensorArgs();
+      if (!retain_graph) { func_node->ReleaseData(); }
     }
   }
   for (int i = 0; i < inputs.size(); ++i) {

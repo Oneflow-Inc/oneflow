@@ -63,7 +63,7 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferSliceOpDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -104,7 +104,7 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferSliceGradDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 
@@ -178,7 +178,7 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
         << "sliced dim size " << sliced_dim_size << " at axis " << i
         << " not equal to the update shape " << update_desc->shape().ToString();
   }
-  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc->shape();
   *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
   return Maybe<void>::Ok();
@@ -188,7 +188,7 @@ Maybe<void> InferSliceUpdateOpDataType(user_op::InferContext* ctx) {
   const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
   CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
-  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = x_desc->data_type();
   return Maybe<void>::Ok();
 }
@@ -302,7 +302,7 @@ Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferLogicalSliceDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

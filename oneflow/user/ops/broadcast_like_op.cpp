@@ -78,7 +78,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("y", 0) = *ctx->Dtype4ArgNameAndIndex("like", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("like", 0);
   return Maybe<void>::Ok();
 }
 

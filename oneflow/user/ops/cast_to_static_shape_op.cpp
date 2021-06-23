@@ -22,7 +22,7 @@ REGISTER_USER_OP("cast_to_static_shape")
     .Output("output")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* input_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      user_op::TensorDesc* output_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      user_op::TensorDesc* output_desc = ctx->OutputTensorDesc("output", 0);
       *output_desc->mut_shape() = input_desc->shape();
       output_desc->set_is_dynamic(false);
       return Maybe<void>::Ok();
@@ -43,7 +43,7 @@ REGISTER_USER_OP("cast_to_static_shape")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("output", 0) = *ctx->Dtype4ArgNameAndIndex("input", 0);
+      *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
       return Maybe<void>::Ok();
     });
 

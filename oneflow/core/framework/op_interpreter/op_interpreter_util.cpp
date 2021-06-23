@@ -121,13 +121,5 @@ template<>
   }
 }
 
-/*static*/ Maybe<Tensor> OpInterpUtil::BuildEagerMirroredTensorFromEagerBlobObject(
-    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-    const std::shared_ptr<const Device>& device) {
-  auto tensor = MirroredTensor::MakeEagerTensor(eager_blob_object, device,
-                                                /* requires_grad */ false, /* is_leaf */ false);
-  return std::static_pointer_cast<Tensor>(tensor);
-}
-
 }  // namespace one
 }  // namespace oneflow
