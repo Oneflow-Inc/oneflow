@@ -37,7 +37,7 @@ include(ProcessorCount)
 ProcessorCount(PROC_NUM)
 ExternalProject_Add(grpc
     PREFIX ${GRPC_SOURCE_DIR}
-    DEPENDS protobuf absl cares openssl zlib zlib_copy_headers_to_destination
+    DEPENDS protobuf absl cares openssl zlib
     URL ${GRPC_TAR_URL}
     URL_HASH MD5=${GRPC_URL_HASH}
     UPDATE_COMMAND ""

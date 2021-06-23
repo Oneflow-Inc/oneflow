@@ -121,13 +121,13 @@ set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     protobuf_imported
+    zlib_imported
     ${GRPC_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    ${ZLIB_STATIC_LIBRARIES}
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -146,8 +146,6 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib_copy_headers_to_destination
-  zlib_copy_libs_to_destination
   protobuf
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
