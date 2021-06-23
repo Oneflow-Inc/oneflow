@@ -146,6 +146,7 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
+  zlib
   protobuf
   gflags_copy_headers_to_destination
   gflags_copy_libs_to_destination
