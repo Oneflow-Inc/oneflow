@@ -5,7 +5,7 @@ import numpy as np
 import oneflow.experimental as flow
 import oneflow
 
-# @flow.unittest.skip_unless_1n1d()
+@flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -27,7 +27,7 @@ class TestGraph(flow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.layer = SubModule()
-                self.fc1 = flow.nn.Linear(36, 2) 
+                self.fc1 = flow.nn.Linear(36, 4) 
             
             def forward(self, x):
                 x = self.layer(x)
@@ -44,13 +44,17 @@ class TestGraph(flow.unittest.TestCase):
 
         class CustomGraph(flow.experimental.nn.Graph):
             def __init__(self):
+                super().__init__()
                 self.m = m
 
             def build(self, x):
                 return self.m(x)
         
-        # g = CustomGraph()
-        # print(g.m)
+        g = CustomGraph()
+        print(g.m.name)
+        print(g.m.layer.name)
+        print(g.m.layer.conv1.name)
+        print(g.m.layer.conv1.kernel_size)
         # z = g.build(x)
     
     # TODO(): test_graph_config
