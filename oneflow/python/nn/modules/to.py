@@ -23,20 +23,16 @@ from typing import Optional, Union
 class To(Module):
     def __init__(self, copy):
         super().__init__()
-        self._copy_op = flow.builtin_op("copy").Input("in").Output("out").Build()
-        self._cast_op = flow.builtin_op("cast").Input("in").Output("out").Build()
         self.copy = copy
 
     def forward(self, x, device, dtype):
         result = x
         if device is not None:
             if x.device != device or self.copy:
-                result = self._copy_op(
-                    x, device_type=device.type, device_id=device.index
-                )[0]
+                result = flow.F.copy(x, device_type=device.type, device_id=device.index)
         if dtype is not None:
             if x.dtype != dtype or self.copy:
-                result = self._cast_op(result, dtype=dtype)[0]
+                result = flow.F.cast(result, dtype=dtype)
         return result
 
 
@@ -47,9 +43,9 @@ def to_op(input, *args, **kwargs):
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
     
     .. note::
-    If the ``input`` Tensor already
-    has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
-    Otherwise, the returned tensor is a copy of ``input`` with the desired.
+        If the ``input`` Tensor already
+        has the correct :class:`flow.dtype` and :class:`flow.device`, then ``input`` is returned.
+        Otherwise, the returned tensor is a copy of ``input`` with the desired.
 
     Args:
         input (oneflow.Tensor): An input tensor.
@@ -63,14 +59,15 @@ def to_op(input, *args, **kwargs):
 
     .. code-block:: python
 
-        import oneflow.experimental as flow
-        import numpy as np
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
 
-        arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
-        input = flow.Tensor(arr)
-        output = input.to(dtype=flow.float32)
-        print(np.array_equal(arr.astype(np.float32), output.numpy()))
-        # True
+        >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
+        >>> input = flow.Tensor(arr)
+        >>> output = input.to(dtype=flow.float32)
+        >>> print(np.array_equal(arr.astype(np.float32), output.numpy()))
+        True
 
     """
     copy = kwargs.get("copy", False)
@@ -97,3 +94,9 @@ def to_op(input, *args, **kwargs):
     if isinstance(device, flow.device) or isinstance(dtype, flow.dtype):
         return To(copy)(input, device, dtype)
     raise TypeError("to() received an invalid combination of arguments")
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

@@ -51,8 +51,8 @@ class ReduceKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
                        & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape* in_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);                    \
-        return in_shape->elem_cnt() * sizeof(dtype);                                              \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
+        return in_shape.elem_cnt() * sizeof(dtype);                                               \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
@@ -169,7 +169,7 @@ REGISTER_USER_KERNEL("reduce_sum")
                      & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->TensorDesc4ArgNameAndIndex("input_tensor", 0)->shape();
-      const Shape& out_shape = ctx->TensorDesc4ArgNameAndIndex("output_tensor", 0)->shape();
+      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;

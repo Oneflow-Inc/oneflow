@@ -45,17 +45,11 @@ class Flatten(Module):
 
     def __init__(self, start_dim: int = 1, end_dim: int = -1) -> None:
         super().__init__()
-        self.op_ = (
-            flow.builtin_op("flatten")
-            .Input("in")
-            .Output("out")
-            .Attr("start_dim", start_dim)
-            .Attr("end_dim", end_dim)
-            .Build()
-        )
+        self.start_dim = start_dim
+        self.end_dim = end_dim
 
     def forward(self, input):
-        return self.op_(input)[0]
+        return flow.F.flatten(input, start_dim=self.start_dim, end_dim=self.end_dim)
 
 
 @oneflow_export("flatten")
@@ -72,12 +66,20 @@ def _flow_flatten(input, start_dim: int = 0, end_dim: int = -1):
 
     .. code-block:: python 
 
-        import oneflow as flow
-        input = flow.Tensor(32, 1, 5, 5)
-        output = input.flatten(start_dim=1)
-        # output = flow.flatten(input, start_dim=1)
-        output.size()
-        # out flow.Size([32, 25])
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(32, 1, 5, 5)
+        >>> output = input.flatten(start_dim=1)
+        >>> output.size()
+        flow.Size([32, 25])
 
     """
     return Flatten(start_dim=start_dim, end_dim=end_dim)(input)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)

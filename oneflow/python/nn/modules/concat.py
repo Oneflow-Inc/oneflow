@@ -22,9 +22,8 @@ from typing import Optional, Sequence
 
 
 class Cat(Module):
-    def __init__(self, dim=0, n=0) -> None:
+    def __init__(self, dim=0) -> None:
         super().__init__()
-        self._op = flow.builtin_op("concat").Input("in", n).Output("out").Build()
         self.axis = dim
 
     def forward(self, inputs):
@@ -49,7 +48,7 @@ class Cat(Module):
                 else:
                     assert input.shape[i] == first_input_shape[i]
 
-        return self._op(*inputs, axis=axis, max_dim_size=dynamic_dim_size)[0]
+        return flow.F.concat(inputs, axis=axis, max_dim_size=dynamic_dim_size)
 
 
 @oneflow_export("cat")
@@ -61,7 +60,7 @@ def concat_op(inputs, dim=0):
 
     Args:
         inputs: a `list` of `Tensor`
-        dim: a `int`. 
+        dim: a `int`.
 
     Returns:
         A `Tensor`
@@ -83,11 +82,10 @@ def concat_op(inputs, dim=0):
         flow.Size([2, 18, 5, 3])
 
     """
-    n = len(inputs)
-    return Cat(dim=dim, n=n)(inputs)
+    return Cat(dim=dim)(inputs)
 
 
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

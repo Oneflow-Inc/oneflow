@@ -25,23 +25,23 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
     .Attr<bool>("hash_precomputed")
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       CHECK_EQ_OR_RETURN(ctx->parallel_ctx().parallel_num(), 1);
-      const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
-      CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
-      const Shape* size_shape = ctx->Shape4ArgNameAndIndex("size", 0);
-      CHECK_EQ_OR_RETURN(size_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(size_shape->elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& table_shape = ctx->InputShape("table", 0);
+      CHECK_EQ_OR_RETURN(table_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(table_shape.elem_cnt() % 2, 0);
+      const Shape& size_shape = ctx->InputShape("size", 0);
+      CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* table_shape = ctx->Shape4ArgNameAndIndex("table", 0);
-      CHECK_EQ_OR_RETURN(table_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(table_shape->elem_cnt() % 2, 0);
-      const Shape* size_shape = ctx->Shape4ArgNameAndIndex("size", 0);
-      CHECK_EQ_OR_RETURN(size_shape->NumAxes(), 1);
-      CHECK_EQ_OR_RETURN(size_shape->elem_cnt(), 1);
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
+      const Shape& table_shape = ctx->InputShape("table", 0);
+      CHECK_EQ_OR_RETURN(table_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(table_shape.elem_cnt() % 2, 0);
+      const Shape& size_shape = ctx->InputShape("size", 0);
+      CHECK_EQ_OR_RETURN(size_shape.NumAxes(), 1);
+      CHECK_EQ_OR_RETURN(size_shape.elem_cnt(), 1);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -65,11 +65,11 @@ REGISTER_USER_OP("CategoricalOrdinalEncode")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType data_type = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      const DataType& data_type = ctx->InputDType("in", 0);
       CHECK_OR_RETURN(IsIndexDataType(data_type));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("table", 0), data_type);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("size", 0), data_type);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = data_type;
+      CHECK_EQ_OR_RETURN(ctx->InputDType("table", 0), data_type);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("size", 0), data_type);
+      *ctx->OutputDType("out", 0) = data_type;
       return Maybe<void>::Ok();
     });
 

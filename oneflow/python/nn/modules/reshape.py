@@ -42,19 +42,11 @@ class Reshape(Module):
         shape = list(shape)
         assert all(dim == -1 or dim > 0 for dim in shape)
         assert shape.count(-1) <= 1
-
-        self._op = (
-            flow.builtin_op("reshape")
-            .Input("in")
-            .Output("out")
-            .Attr("shape", shape)
-            .Build()
-        )
         self.shape = shape
 
     def forward(self, x):
         new_shape = infer_shape(x, self.shape)
-        return self._op(x, shape=new_shape)[0]
+        return flow.F.reshape(x, shape=new_shape)
 
 
 @oneflow_export("reshape")
@@ -95,4 +87,4 @@ def reshape_op(x, shape: Sequence[int] = None):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

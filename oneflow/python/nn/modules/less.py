@@ -22,16 +22,17 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Less(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_less").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
+        if x.dtype != flow.float32:
+            x = flow.experimental.cast(x, flow.float32)
         if isinstance(y, int) or isinstance(y, float):
             y = flow.Tensor(
                 [float(y)], dtype=flow.float32, device=flow.device(x.device.type)
             )
-        return self._op(x, y)[0]
+        if y.dtype != flow.float32:
+            y = flow.experimental.cast(y, flow.float32)
+        return flow.F.broadcast_less(x, y)
 
 
 @oneflow_export("lt")
@@ -54,10 +55,10 @@ def less_op(x, y):
         >>> import numpy as np
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
-        
+
         >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
-        
+
         >>> out = flow.lt(input1, input2).numpy()
         >>> print(out)
         [0 0 1]
@@ -69,4 +70,4 @@ def less_op(x, y):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

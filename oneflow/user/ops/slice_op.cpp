@@ -28,8 +28,8 @@ bool IsFullSlice(int64_t start, int64_t stop, int64_t step, int64_t size) {
 }
 
 Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
-  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const int64_t ndim = x_shape->NumAxes();
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -39,7 +39,7 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
 
   DimVector dim_vec(ndim);
   FOR_RANGE(size_t, i, 0, dim_vec.size()) {
-    const int64_t dim_size = x_shape->At(i);
+    const int64_t dim_size = x_shape.At(i);
     if (dim_size == 0) {
       dim_vec[i] = 0;
       continue;
@@ -58,12 +58,12 @@ Maybe<void> InferSliceOpTensorDesc(user_op::InferContext* ctx) {
     const int64_t diff = (step > 0) ? (stop - start - 1) : (stop - start + 1);
     dim_vec[i] = diff / step + 1;
   }
-  *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  *ctx->OutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferSliceOpDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 
@@ -87,10 +87,10 @@ Maybe<void> GetSliceOpSbpSignature(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
-  const Shape* like_shape = ctx->Shape4ArgNameAndIndex("like", 0);
-  const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-  const int64_t ndim = dy_shape->NumAxes();
-  CHECK_EQ_OR_RETURN(like_shape->NumAxes(), ndim);
+  const Shape& like_shape = ctx->InputShape("like", 0);
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const int64_t ndim = dy_shape.NumAxes();
+  CHECK_EQ_OR_RETURN(like_shape.NumAxes(), ndim);
 
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
@@ -99,12 +99,12 @@ Maybe<void> InferSliceGradOpTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(stop_vec.size(), ndim);
   CHECK_EQ_OR_RETURN(step_vec.size(), ndim);
 
-  *ctx->Shape4ArgNameAndIndex("dx", 0) = *like_shape;
+  *ctx->OutputShape("dx", 0) = like_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferSliceGradDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("dx", 0) = *ctx->Dtype4ArgNameAndIndex("dy", 0);
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
   return Maybe<void>::Ok();
 }
 
@@ -178,7 +178,7 @@ Maybe<void> InferSliceUpdateOpTensorDesc(user_op::InferContext* ctx) {
         << "sliced dim size " << sliced_dim_size << " at axis " << i
         << " not equal to the update shape " << update_desc->shape().ToString();
   }
-  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_shape() = x_desc->shape();
   *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
   return Maybe<void>::Ok();
@@ -188,7 +188,7 @@ Maybe<void> InferSliceUpdateOpDataType(user_op::InferContext* ctx) {
   const auto* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const auto* update_desc = ctx->TensorDesc4ArgNameAndIndex("update", 0);
   CHECK_EQ_OR_RETURN(update_desc->data_type(), x_desc->data_type());
-  auto* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+  auto* y_desc = ctx->OutputTensorDesc("y", 0);
   *y_desc->mut_data_type() = x_desc->data_type();
   return Maybe<void>::Ok();
 }
@@ -280,8 +280,8 @@ void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInp
 }
 
 Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
-  const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-  const int64_t ndim = x_shape->NumAxes();
+  const Shape& x_shape = ctx->InputShape("x", 0);
+  const int64_t ndim = x_shape.NumAxes();
   const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
   const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
   const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
@@ -297,12 +297,12 @@ Maybe<void> InferLogicalSliceTensorDesc(user_op::InferContext* ctx) {
     const int64_t diff = stop - start - 1;
     dim_vec[i] = diff / step + 1;
   }
-  *ctx->Shape4ArgNameAndIndex("y", 0) = Shape(dim_vec);
+  *ctx->OutputShape("y", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLogicalSliceDataType(user_op::InferContext* ctx) {
-  *ctx->Dtype4ArgNameAndIndex("y", 0) = *ctx->Dtype4ArgNameAndIndex("x", 0);
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
 

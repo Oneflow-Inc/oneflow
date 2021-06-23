@@ -184,16 +184,8 @@ jobs:
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
           python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html
-      - name: Upload bin
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
-        uses: ./.github/actions/upload_oss
-        with:
-          src_path: ${bin_dir}
-          oss_dst_path: oss://oneflow-staging/${oss_dir}/bin/${{ matrix.compute_platform }}
-          oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cu102' && contains(env.compute_platforms, matrix.compute_platform)
+        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
@@ -211,7 +203,7 @@ jobs:
         run: |
           git reset --hard
           git clean -f
-          git archive --format zip HEAD > oneflow-src.zip
+          git archive --prefix oneflow/ --format zip HEAD > oneflow-src.zip
           curl http://gosspublic.alicdn.com/ossutil/1.6.19/ossutil64 -o $HOME/ossutil64
           chmod 755 $HOME/ossutil64
           $HOME/ossutil64 config -e oss-cn-beijing.aliyuncs.com -i ${OSS_ACCESS_KEY_ID} -k ${OSS_ACCESS_KEY_SECRET}  -L EN -c $HOME/.ossutilconfig

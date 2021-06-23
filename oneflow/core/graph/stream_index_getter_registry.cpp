@@ -14,7 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/stream_index_getter_registry.h"
+#include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/stream_index_getter_registry_manager.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 

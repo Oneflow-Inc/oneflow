@@ -28,12 +28,12 @@ from oneflow.python.nn.parameter import Parameter
 class TestLrScheduler(flow.unittest.TestCase):
     base_lr = 1.0
 
-    def test_cosine_scheduler(test_case):
+    def test_cosine_annealing_lr(test_case):
         optimizer = flow.optim.SGD(
             [{"params": [Parameter(flow.Tensor([1.0]))]}], lr=TestLrScheduler.base_lr
         )
 
-        def cosine_scheduler_step(base_lr, current_step, steps, alpha):
+        def cosine_annealing_lr_step(base_lr, current_step, steps, alpha):
             if current_step < steps:
                 cos_decay = 0.5 * (1 + math.cos(math.pi * current_step / steps))
                 decay_factor = (1 - alpha) * cos_decay + alpha
@@ -43,15 +43,15 @@ class TestLrScheduler(flow.unittest.TestCase):
 
         alpha = 0.5
         steps = 10
-        cosine_scheduler = flow.optim.lr_scheduler.CosineScheduler(
+        cosine_annealing_lr = flow.optim.lr_scheduler.CosineAnnealingLR(
             optimizer, steps=steps, alpha=alpha
         )
 
         for i in range(1, 21):
-            cosine_scheduler.step()
-            new_lr = cosine_scheduler_step(TestLrScheduler.base_lr, i, steps, alpha)
+            cosine_annealing_lr.step()
+            new_lr = cosine_annealing_lr_step(TestLrScheduler.base_lr, i, steps, alpha)
             test_case.assertAlmostEqual(
-                cosine_scheduler.get_last_lr()[0], new_lr, places=4
+                cosine_annealing_lr.get_last_lr()[0], new_lr, places=4
             )
 
     def test_step_lr(test_case):

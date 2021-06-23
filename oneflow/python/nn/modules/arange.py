@@ -42,12 +42,10 @@ class Arange(Module):
         self.device = device
         self.requires_grad = requires_grad
 
-        self._op_arange = (
-            flow.builtin_op("range").Output("out").Attr("dtype", flow.int64).Build()
-        )
-
     def forward(self):
-        tmp = self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
+        tmp = flow.F.range(
+            start=self.start, limit=self.end, delta=self.step, dtype=flow.int64
+        )
         tmp.requires_grad = self.requires_grad
 
         if isinstance(self.device, str):
@@ -87,9 +85,9 @@ def arange_op(
         device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
@@ -108,4 +106,4 @@ def arange_op(
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)

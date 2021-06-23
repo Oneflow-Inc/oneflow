@@ -32,7 +32,7 @@ limitations under the License.
 #include "oneflow/core/job/collective_boxing_executor.h"
 #include "oneflow/core/job/collective_boxing_device_ctx_poller.h"
 #ifdef WITH_RDMA
-#include "oneflow/core/dl/include/ibv.h"
+#include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
 
 namespace oneflow {

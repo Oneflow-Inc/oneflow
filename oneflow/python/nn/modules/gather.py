@@ -31,15 +31,6 @@ class Gather(Module):
         assert sparse_grad is False, "Only support bool = False for now!"
         self.dim = dim
 
-        self._gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", int(dim))
-            .Build()
-        )
-
     def forward(self, input, index):
         assert self.dim < len(
             index.shape
@@ -56,8 +47,7 @@ class Gather(Module):
                     input.shape[i] == index.shape[i]
                 ), "Dimensions of input and index should be same except at dim"
 
-        res = self._gather_op(input, index)[0]
-        return res
+        return flow.F.dim_gather(input, index, dim=self.dim)
 
 
 @oneflow_export("gather")
@@ -66,13 +56,11 @@ class Gather(Module):
 def gather_op(input, index, dim=0, sparse_grad=False):
     r"""Gathers values along an axis specified by `dim`.
 
-    For a 3-D tensor the output is specified by::
+    For a 3-D tensor the output is specified by:
 
-    out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
-
-    out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
-    
-    out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
+        out[i][j][k] = input[index[i][j][k]][j][k]  # if dim == 0
+        out[i][j][k] = input[i][index[i][j][k]][k]  # if dim == 1
+        out[i][j][k] = input[i][j][index[i][j][k]]  # if dim == 2
 
     :attr:`input` and :attr:`index` must have the same number of dimensions.
     It is also required that ``index.size(d) <= input.size(d)`` for all
@@ -83,11 +71,11 @@ def gather_op(input, index, dim=0, sparse_grad=False):
         input (Tensor): the source tensor
         dim (int): the axis along which to index
         index (LongTensor): the indices of elements to gather
-    
+
     For example:
 
     .. code-block:: python
-        
+
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
@@ -105,4 +93,4 @@ def gather_op(input, index, dim=0, sparse_grad=False):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod()
+    doctest.testmod(raise_on_error=True)
