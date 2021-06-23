@@ -52,7 +52,7 @@ class ZeroPad2d(Module):
         >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)
         >>> zeropad_layer_tuple = flow.nn.ZeroPad2d((1,2,2,0))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> output_int = constantpad_layer_int(input)
+        >>> output_int = zeropad_layer_int(input)
         >>> output_int.shape
         flow.Size([1, 2, 7, 7])
         >>> output_int
@@ -71,7 +71,7 @@ class ZeroPad2d(Module):
                   [ 0.,  0., 15., 16., 17.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
-        >>> output_tuple = constantpad_layer_tuple(input)
+        >>> output_tuple = zeropad_layer_tuple(input)
         >>> output_tuple
         tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.],
                   [ 0.,  0.,  0.,  0.,  0.,  0.],
