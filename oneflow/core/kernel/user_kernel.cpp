@@ -229,6 +229,9 @@ class UserKernelOpInferContext : public user_op::InferContext {
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
   }
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
@@ -253,10 +256,10 @@ class UserKernelOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
-  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {

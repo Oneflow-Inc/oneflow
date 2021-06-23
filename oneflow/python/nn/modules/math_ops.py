@@ -28,72 +28,39 @@ from oneflow.python.ops.transpose_util import (
 )
 
 
-def _build_math_binary_elementwise_op(math_op):
-    return flow.builtin_op(math_op).Input("x").Input("y").Output("z").Build()
-
-
 class ScalarMul(Module):
-    def __init__(self, operand) -> None:
+    def __init__(self, alpha) -> None:
         super().__init__()
-        self._op = flow.builtin_op("scalar_mul").Input("in").Output("out")
-        if isinstance(operand, int):
-            self._op = (
-                self._op.Attr("has_int_operand", True)
-                .Attr("has_float_operand", False)
-                .Attr("int_operand", operand)
-                .Attr("float_operand", 0.0)
-                .Build()
-            )
-        elif isinstance(operand, float):
-            self._op = (
-                self._op.Attr("has_int_operand", False)
-                .Attr("has_float_operand", True)
-                .Attr("int_operand", 0)
-                .Attr("float_operand", operand)
-                .Build()
-            )
-        else:
-            raise ValueError("operand type can only be int or float")
+        if not isinstance(alpha, (int, float)):
+            raise ValueError("alpha type can only be int or float")
+        self.alpha = alpha
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.mul_scalar(x, self.alpha)
 
 
 class ScalarMulByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_mul_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.mul_scalar_by_tensor(x, y)
 
 
 class ElementwiseMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("multiply").Input("x").Input("y").Output("out").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.mul(x, y)
 
 
 class BroadcastMul(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_mul").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_mul(x, y)
 
 
 @oneflow_export("mul")
@@ -210,27 +177,17 @@ def variance_op(input, dim=None, keepdim=False):
 class ScalarSubByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_sub_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.sub_scalar_by_tensor(x, y)
 
 
 class BroadcastSub(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_sub").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_sub(x, y)
 
 
 class ScalarAdd(Module):
@@ -301,27 +258,17 @@ def _sub(x, y):
 class BroadcastDiv(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_div").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_div(x, y)
 
 
 class ScalarDivByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_div_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, scalar):
-        return self._op(x, scalar)[0]
+        return flow.F.div_scalar_by_tensor(x, scalar)
 
 
 @oneflow_export("div")
@@ -388,10 +335,9 @@ def _div(x, y):
 class Reciprocal(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("reciprocal_no_nan").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.reciprocal_no_nan(x)
 
 
 @oneflow_export("reciprocal")
@@ -422,16 +368,9 @@ def _reciprocal(x):
 class ScalarAddByTensor(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("scalar_add_by_tensor")
-            .Input("x")
-            .Input("scalar")
-            .Output("y")
-            .Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.add_scalar_by_tensor(x, y)
 
 
 class ElementwiseAdd(Module):
@@ -445,12 +384,9 @@ class ElementwiseAdd(Module):
 class BroadcastAdd(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_add").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, x, y):
-        return self._op(x, y)[0]
+        return flow.F.broadcast_add(x, y)
 
 
 @oneflow_export("add")
@@ -511,10 +447,9 @@ def _add(x, y):
 class Asin(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("asin").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.asin(x)
 
 
 @oneflow_export("asin")
@@ -586,10 +521,9 @@ def arcsin_op_tensor(input):
 class Asinh(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("asinh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.asinh(x)
 
 
 @oneflow_export("asinh")
@@ -662,10 +596,9 @@ def arcsinh_op_tensor(input):
 class Sin(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("sin").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sin(x)
 
 
 @oneflow_export("sin")
@@ -719,10 +652,9 @@ def sin_op_tensor(tensor):
 class Cos(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("cos").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.cos(x)
 
 
 @oneflow_export("cos")
@@ -756,10 +688,9 @@ def cos_op(tensor):
 class Atan(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("atan").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.atan(x)
 
 
 @oneflow_export("atan")
@@ -825,10 +756,9 @@ def arctan_op_tensor(tensor):
 class Log(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("log").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.log(x)
 
 
 @oneflow_export("log")
@@ -883,10 +813,9 @@ class Subtract(Module):
 class Sqrt(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.sqrt_op = flow.builtin_op("sqrt").Input("x").Output("y").Build()
 
     def forward(self, input):
-        return self.sqrt_op(input)[0]
+        return flow.F.sqrt(input)
 
 
 @oneflow_export("rsqrt")
@@ -921,10 +850,9 @@ def rsqrt_op(input):
 class Rsqrt(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.rsqrt_op = flow.builtin_op("rsqrt").Input("x").Output("y").Build()
 
     def forward(self, input):
-        return self.rsqrt_op(input)[0]
+        return flow.F.rsqrt(input)
 
 
 @oneflow_export("sqrt")
@@ -959,10 +887,9 @@ def sqrt_op(input):
 class Square(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.square_op = flow.builtin_op("square").Input("x").Output("y").Build()
 
     def forward(self, input):
-        return self.square_op(input)[0]
+        return flow.F.square(input)
 
 
 @oneflow_export("square")
@@ -1072,16 +999,12 @@ def std_op(tensor, dim, unbiased=True, keepdim=False):
 class Pow(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._scalar_pow_op = (
-            flow.builtin_op("scalar_pow").Input("in").Output("out").Build()
-        )
-        self._elementwise_pow_op = _build_math_binary_elementwise_op("pow")
 
     def forward(self, x, y):
         if isinstance(y, (int, float)):
-            return self._scalar_pow_op(x, exponent=float(y))[0]
+            return flow.F.pow_scalar(x, alpha=y)
         else:
-            return self._elementwise_pow_op(x, y)[0]
+            return flow.F.pow(x, y)
 
 
 @oneflow_export("pow")
@@ -1328,10 +1251,9 @@ def clip_op_tensor(tensor, min=None, max=None):
 class Cosh(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("cosh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.cosh(x)
 
 
 @oneflow_export("cosh")
@@ -1368,10 +1290,9 @@ def cosh_op(tensor):
 class Erf(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.erf_op = flow.builtin_op("erf").Input("x").Output("y").Build()
 
     def forward(self, input):
-        return self.erf_op(input)[0]
+        return flow.F.erf(input)
 
 
 @oneflow_export("erf")
@@ -1507,10 +1428,9 @@ def erfc_op_tensor(input):
 class Ceil(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("ceil").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.ceil(x)
 
 
 @oneflow_export("ceil")
@@ -1587,10 +1507,9 @@ def ceil_op_tensor(x):
 class Expm1(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._op = flow.builtin_op("expm1").Input("x").Output("y").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.expm1(x)
 
 
 @oneflow_export("expm1")
@@ -1676,14 +1595,6 @@ class Topk(Module):
             .Attr("sorted", sorted)
             .Build()
         )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
-
         self.dim = dim
         self.largest = largest
 
@@ -1703,13 +1614,13 @@ class Topk(Module):
             return (flow.experimental.gather(input, indices, dim=axis), indices)
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = self._transpose_op(input, perm=perm)[0]
+            x = flow.F.transpose(input, perm=perm)
             if self.largest:
                 indices = self._op_topk_last_dim(x)[0]
             else:
                 neg_input = flow.experimental.mul(x, -1)
                 indices = self._op_topk_last_dim(neg_input)[0]
-            indices = self._transpose_op(indices, perm=get_inversed_perm(perm))[0]
+            indices = flow.F.transpose(indices, perm=get_inversed_perm(perm))
             return (flow.experimental.gather(input, indices, dim=axis), indices)
 
 
