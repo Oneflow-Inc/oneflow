@@ -364,9 +364,7 @@ Maybe<void> BwTensorDescInferFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(y->shape(), x_shape);
   }
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = x;
-  if (ctx->has_output("addend_diff", 0)) {
-    *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = x;
-  }
+  if (ctx->has_output("addend_diff", 0)) { *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = x; }
   const Shape param_shape({x_shape.At(ctx->Attr<int32_t>("axis"))});
   const auto CheckParamTensorDesc = MakeCheckParamTensorDescFn(ctx, param_shape);
   const auto SetParamTensorDesc = MakeSetParamTensorDescFn(ctx, param_shape);
@@ -389,9 +387,7 @@ Maybe<void> BwDataTypeInferFn(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(y->data_type(), x_type);
   }
   *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = x;
-  if (ctx->has_output("addend_diff", 0)) {
-    *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = x;
-  }
+  if (ctx->has_output("addend_diff", 0)) { *ctx->TensorDesc4ArgNameAndIndex("addend_diff", 0) = x; }
   const DataType param_data_type = x_type == DataType::kFloat16 ? DataType::kFloat : x_type;
   const auto CheckParamDataType = MakeCheckParamDataTypeFn(ctx, param_data_type);
   const auto SetParamDataType = MakeSetParamDataTypeFn(ctx, param_data_type);

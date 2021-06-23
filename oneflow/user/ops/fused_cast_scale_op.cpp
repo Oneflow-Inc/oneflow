@@ -20,8 +20,7 @@ namespace {
 
 Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-  const user_op::TensorDesc& scale_by_tensor =
-      ctx->InputTensorDesc("scale_by_tensor", 0);
+  const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   CHECK_EQ_OR_RETURN(scale_by_tensor.shape().NumAxes(), 1);
   CHECK_EQ_OR_RETURN(scale_by_tensor.shape().At(0), 1);
   user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
@@ -31,8 +30,7 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
 }
 
 Maybe<void> DataTypeInfer(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& scale_by_tensor =
-      ctx->InputTensorDesc("scale_by_tensor", 0);
+  const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
   *y->mut_data_type() = scale_by_tensor.data_type();
   return Maybe<void>::Ok();

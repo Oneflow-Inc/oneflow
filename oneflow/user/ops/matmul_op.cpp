@@ -30,9 +30,7 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
   size_t num_axes = a.shape().NumAxes();
 
   if (num_axes > 2) {
-    for (int i = 0; i < num_axes - 2; ++i) {
-      CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i));
-    }
+    for (int i = 0; i < num_axes - 2; ++i) { CHECK_EQ_OR_RETURN(a.shape().At(i), b.shape().At(i)); }
   }
 
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
@@ -278,8 +276,7 @@ REGISTER_USER_OP("broadcast_matmul")
       *out->mut_shape() = Shape(out_dim_vec);
 
       if (ctx->has_input("_add_to_output", 0)) {
-        const user_op::TensorDesc& add_to_output =
-            ctx->InputTensorDesc("_add_to_output", 0);
+        const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
       }
 
@@ -366,8 +363,7 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
           Shape({a.shape().At(a.shape().NumAxes() - 1), b.shape().At(b.shape().NumAxes() - 1)});
 
       if (ctx->has_input("_add_to_output", 0)) {
-        const user_op::TensorDesc& add_to_output =
-            ctx->InputTensorDesc("_add_to_output", 0);
+        const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output.shape(), out->shape());
       }
 

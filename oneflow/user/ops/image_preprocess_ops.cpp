@@ -37,8 +37,8 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
 
       CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
-                        && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
-      
+                      && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
+
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
@@ -68,7 +68,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       CHECK_EQ_OR_RETURN(in_tensor.data_type(), DataType::kTensorBuffer);
 
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-      CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8); 
+      CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
 
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
@@ -95,8 +95,8 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
-        CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
-                        && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
+      CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
+                      && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
       user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
       int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");

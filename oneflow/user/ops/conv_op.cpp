@@ -76,11 +76,12 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ(weight.shape(), Shape(weight_shape));
   }
 
-  const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
-  // bug !!! If TensorDesc4ArgNameAndIndex returns a null pointer, \
-  // change it to *null after InputTensorDesc
-  // if (bias != nullptr) { CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters})); }
-  CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters}));
+  bool has_bias = ctx->has_input("bias", 0);
+  if (has_bias) {
+    const user_op::TensorDesc& bias = ctx->InputTensorDesc("bias", 0);
+    CHECK_EQ_OR_RETURN(bias.shape(), Shape({filters}));
+  }
+
   return Maybe<void>::Ok();
 }
 
@@ -317,8 +318,7 @@ REGISTER_USER_OP("conv_data_grad")
       CHECK_EQ_OR_RETURN(dy.shape().NumAxes(), num_spatial_dims + 2);
       CHECK_EQ_OR_RETURN(x_like.shape().NumAxes(), num_spatial_dims + 2);
       if (ctx->has_input("_add_to_output", 0)) {
-        const user_op::TensorDesc& add_to_output =
-            ctx->InputTensorDesc("_add_to_output", 0);
+        const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
       }
       *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
@@ -342,8 +342,7 @@ REGISTER_USER_OP("conv_data_grad")
       const user_op::TensorDesc& x_like = ctx->InputTensorDesc("x_like", 0);
       CHECK_EQ_OR_RETURN(x_like.data_type(), dy.data_type());
       if (ctx->has_input("_add_to_output", 0)) {
-        const user_op::TensorDesc& add_to_output =
-            ctx->InputTensorDesc("_add_to_output", 0);
+        const user_op::TensorDesc& add_to_output = ctx->InputTensorDesc("_add_to_output", 0);
         CHECK_EQ_OR_RETURN(add_to_output.data_type(), x_like.data_type());
       }
       *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);

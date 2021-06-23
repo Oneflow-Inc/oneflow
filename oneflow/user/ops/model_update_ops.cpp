@@ -103,20 +103,16 @@ Maybe<void> InferSGDUpdateDataType(user_op::InferContext* ctx) {
 
 Maybe<void> InferIndexedSlicesSGDUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateShape(ctx));
   return Maybe<void>::Ok();
 }
 Maybe<void> InferIndexedSlicesSGDUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
@@ -149,10 +145,8 @@ Maybe<void> InferMomentumUpdateDataType(user_op::InferContext* ctx) {
 
 Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
   const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
   JUST(CheckShapeLike(&momentum, &model));
@@ -161,10 +155,8 @@ Maybe<void> InferIndexedSlicesMomentumUpdateTensorDesc(user_op::InferContext* ct
 }
 Maybe<void> InferIndexedSlicesMomentumUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
   const user_op::TensorDesc& momentum = ctx->InputTensorDesc("momentum", 0);
   JUST(CheckDataTypeLike(&momentum, &model));
@@ -204,20 +196,16 @@ Maybe<void> InferAdamUpdateDataType(user_op::InferContext* ctx) {
 
 Maybe<void> InferIndexedSlicesAdamUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDesc(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateShape(ctx));
   return Maybe<void>::Ok();
 }
 Maybe<void> InferIndexedSlicesAdamUpdateDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-  const user_op::TensorDesc& model_diff_indices =
-      ctx->InputTensorDesc("model_diff_indices", 0);
-  const user_op::TensorDesc& model_diff_values =
-      ctx->InputTensorDesc("model_diff_values", 0);
+  const user_op::TensorDesc& model_diff_indices = ctx->InputTensorDesc("model_diff_indices", 0);
+  const user_op::TensorDesc& model_diff_values = ctx->InputTensorDesc("model_diff_values", 0);
   JUST(CheckIndexedSlicesModelDiffDataType(&model, &model_diff_indices, &model_diff_values));
   JUST(CheckLearningRateDataType(ctx));
   return Maybe<void>::Ok();
