@@ -43,14 +43,15 @@ bool GlobalDeviceIdsContaining(const MachineId2DeviceIdList& bigger,
   return true;
 }
 
-int64_t GlobalRankIdOffset4NodeId(int64_t node_id,
-                                  const NumProcessDistribution& num_process_distribution) {
-  CHECK_LT(node_id, num_process_distribution.num_process_size());
-  int64_t rank_id_offset = 0;
-  for (int64_t i = 0; i < node_id; ++i) {
-    rank_id_offset += num_process_distribution.num_process(i);
+HashMap<int64_t, int64_t> GetNodeId2RankOffset(
+    const NumProcessDistribution& num_process_distribution) {
+  HashMap<int64_t, int64_t> node_id2rankoffset;
+  int64_t rank_offset = 0;
+  for (int64_t node_id = 0; node_id < num_process_distribution.num_process_size(); ++node_id) {
+    CHECK(node_id2rankoffset.emplace(node_id, rank_offset).second);
+    rank_offset += num_process_distribution.num_process(node_id);
   }
-  return rank_id_offset;
+  return node_id2rankoffset;
 }
 
 }  // namespace
@@ -114,15 +115,18 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
   for (const std::string& device_name : parallel_conf_.device_name()) {
     if (device_name[0] == '@') {
       std::vector<int64_t> process_distribution_list(GlobalProcessCtx::WorldSize(), 1);
-      NumProcessDistribution num_process_distribution;
+      static NumProcessDistribution num_process_distribution;
       *(num_process_distribution.mutable_num_process()) =
           StdVec2PbRf<int64_t>(process_distribution_list);
+      static HashMap<int64_t, int64_t> node_id2rankoffset =
+          GetNodeId2RankOffset(num_process_distribution);
       JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(device_name.substr(1), 1,
-                                                       num_process_distribution));
+                                                       node_id2rankoffset));
     } else {
+      static HashMap<int64_t, int64_t> node_id2rankoffset =
+          GetNodeId2RankOffset(GlobalProcessCtx::NumProcessDistributionInCluster());
       JUST(SetMachineIdAndDeviceIdsByParsingDeviceName(
-          device_name, GlobalProcessCtx::NumOfProcessOnNode(),
-          GlobalProcessCtx::NumProcessDistributionInCluster()));
+          device_name, GlobalProcessCtx::NumOfProcessOnNode(), node_id2rankoffset));
     }
   }
   ClearUp();
@@ -132,7 +136,7 @@ Maybe<void> ParallelDesc::MaybeInit(const ParallelConf& user_conf) {
 
 Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
     const std::string& device_name, size_t cols,
-    const NumProcessDistribution& num_process_distribution) {
+    const HashMap<int64_t, int64_t>& node_id2rankoffset) {
   int64_t node_id = -1;
   std::string device_id_str;
   JUST(ParseDeviceNameConf(device_name, &node_id, &device_id_str));
@@ -145,8 +149,7 @@ Maybe<void> ParallelDesc::SetMachineIdAndDeviceIdsByParsingDeviceName(
   int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
   CHECK_LE_OR_RETURN(min_id, max_id);
   for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
-    int64_t mchn_id =
-        dev_phy_id % cols + GlobalRankIdOffset4NodeId(node_id, num_process_distribution);
+    int64_t mchn_id = dev_phy_id % cols + node_id2rankoffset.at(node_id);
     if (!(*machine_id2sorted_dev_phy_ids_)[mchn_id]) {
       (*machine_id2sorted_dev_phy_ids_)[mchn_id] = std::make_shared<std::vector<int64_t>>();
     }

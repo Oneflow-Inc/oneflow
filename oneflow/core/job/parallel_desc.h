@@ -106,7 +106,7 @@ class ParallelDesc final {
   void ClearUp();
   Maybe<void> SetMachineIdAndDeviceIdsByParsingDeviceName(
       const std::string& device_name, size_t cols,
-      const NumProcessDistribution& num_process_distribution);
+      const HashMap<int64_t, int64_t>& node_id2rankoffset);
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;

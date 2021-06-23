@@ -92,8 +92,6 @@ HostListCtrlBootstrap::~HostListCtrlBootstrap() {
   bootstrap_server_.reset();
 }
 
-int64_t HostListCtrlBootstrap::num_process4rank(int64_t world_rank) const { return 1; }
-
 Maybe<void> HostListCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_rank) const {
   return Maybe<void>::Ok();
 }
@@ -140,20 +138,16 @@ RankInfoCtrlBootstrap::~RankInfoCtrlBootstrap() {
   bootstrap_server_.reset();
 }
 
-int64_t RankInfoCtrlBootstrap::num_process4rank(int64_t world_rank) const {
-  if (!rank2host_and_num_process_) { InitRank2HosAndNumProcess(); }
-  return rank2host_and_num_process_->at(world_rank).second;
-}
-
 Maybe<void> RankInfoCtrlBootstrap::InitRank2HosAndNumProcess() const {
-  CHECK_ISNULL(rank2host_and_num_process_.get());
-  rank2host_and_num_process_ =
+  CHECK_ISNULL(rank2host_and_num_process_on_corresponding_node_.get());
+  rank2host_and_num_process_on_corresponding_node_ =
       std::make_shared<std::vector<std::pair<std::string, int64_t>>>(world_size_);
   const auto& host2ranks = CHECK_JUST(bootstrap_server_->host2ranks());
   int64_t total_proecss_num = 0;
   for (const auto& pair : host2ranks) {
     for (const int64_t& rank : pair.second) {
-      rank2host_and_num_process_->at(rank) = std::make_pair(pair.first, pair.second.size());
+      rank2host_and_num_process_on_corresponding_node_->at(rank) =
+          std::make_pair(pair.first, pair.second.size());
       total_proecss_num += pair.second.size();
     }
   }
@@ -163,10 +157,10 @@ Maybe<void> RankInfoCtrlBootstrap::InitRank2HosAndNumProcess() const {
 
 Maybe<void> RankInfoCtrlBootstrap::SetHostByMaster(Address* addr, int64_t world_rank) const {
   if (addr->has_host()) { return Maybe<void>::Ok(); }
-  if (!rank2host_and_num_process_) { InitRank2HosAndNumProcess(); }
+  if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
   CHECK_GE_OR_RETURN(world_rank, 0);
-  CHECK_LT_OR_RETURN(world_rank, rank2host_and_num_process_->size());
-  addr->set_host(rank2host_and_num_process_->at(world_rank).first);
+  CHECK_LT_OR_RETURN(world_rank, rank2host_and_num_process_on_corresponding_node_->size());
+  addr->set_host(rank2host_and_num_process_on_corresponding_node_->at(world_rank).first);
   return Maybe<void>::Ok();
 }
 
@@ -200,8 +194,9 @@ Maybe<void> RankInfoCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
 }
 
 Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInCluster(ProcessCtx* process_ctx) const {
+  if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
   for (int64_t rank = 0; rank < world_size();) {
-    int64_t num_process = num_process4rank(rank);
+    int64_t num_process = rank2host_and_num_process_on_corresponding_node_->at(rank).second;
     process_ctx->mutable_num_process_distribution_in_cluster()->add_num_process(num_process);
     rank += num_process;
   }
