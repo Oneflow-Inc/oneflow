@@ -62,7 +62,7 @@ class CpuMemoryPool : public DeviceMemoryPool {
 
  private:
   void ReserveImpl(size_t size) override {
-    mem_buffer_ = (uint8_t*)aligned_alloc(kAlignSize, size);
+    mem_buffer_ = reinterpret_cast<uint8_t*>(aligned_alloc(kAlignSize, size));
     CHECK(mem_buffer_);
     capacity_ = size;
   }
