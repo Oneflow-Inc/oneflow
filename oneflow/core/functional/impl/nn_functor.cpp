@@ -117,8 +117,8 @@ class LayerNormAffineFunctor {
   LayerNormAffineFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("layer_norm")
                          .Input("x")
-                         .Input("beta")
                          .Input("gamma")
+                         .Input("beta")
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
@@ -126,8 +126,8 @@ class LayerNormAffineFunctor {
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& beta,
                            const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta,
                            const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
                            const double& epsilon) const {
     MutableAttrMap attrs;
@@ -136,7 +136,7 @@ class LayerNormAffineFunctor {
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("center", true));
     JUST(attrs.SetAttr<bool>("scale", true));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, beta, gamma}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
   }
 
  private:
