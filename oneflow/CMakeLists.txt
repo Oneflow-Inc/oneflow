@@ -11,7 +11,10 @@ include(cfg)
 include(functional)
 
 
-find_package(Protobuf REQUIRED)
+find_package(Protobuf REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_package(gflags    REQUIRED NO_CMAKE_SYSTEM_PATH)
+set(PROTOBUF_INCLUDE_DIR ${Protobuf_ROOT}/include) # refine me
+set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
