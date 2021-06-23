@@ -42,12 +42,12 @@ Maybe<void> SinkTickOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> SinkTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SinkTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

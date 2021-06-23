@@ -26,7 +26,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       out->set_is_dynamic(in->is_dynamic());
       const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
       DimVector dim_vec;
@@ -34,7 +34,11 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
       dim_vec.insert(dim_vec.end(), instance_shape.dim_vec().cbegin(),
                      instance_shape.dim_vec().cend());
       *out->mut_shape() = Shape(dim_vec);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto data_type = ctx->Attr<DataType>("dtype");
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(IsPODDataType(data_type));
       *out->mut_data_type() = data_type;
       return Maybe<void>::Ok();
@@ -56,16 +60,21 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .Attr<int32_t>("instance_dims")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_OR_RETURN(IsPODDataType(in->data_type()));
       const Shape& in_shape = in->shape();
       const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
       CHECK_LT_OR_RETURN(instance_dims, in_shape.NumAxes());
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       out->set_is_dynamic(in->is_dynamic());
       DimVector out_dim_vec;
       out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
                          in_shape.dim_vec().cend() - instance_dims);
       *out->mut_shape() = Shape(out_dim_vec);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_OR_RETURN(IsPODDataType(in->data_type()));
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
@@ -90,7 +99,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Attr<DataType>("data_type")
     .Attr<bool>("dynamic_out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       const int64_t num_tensor_buffers = shape.elem_cnt();
       const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
@@ -98,8 +107,12 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       CHECK_EQ_OR_RETURN(num_tensor_buffers, shape_list.size());
       CHECK_EQ_OR_RETURN(num_tensor_buffers, value_list.size());
       *out->mut_shape() = shape;
-      *out->mut_data_type() = DataType::kTensorBuffer;
       out->set_is_dynamic(ctx->Attr<bool>("dynamic_out"));
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     });
 
@@ -112,18 +125,69 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       CHECK_GT_OR_RETURN(in->shape().elem_cnt(), 0);
-      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
       CHECK_OR_RETURN(!in->is_dynamic());
       const Shape& out_shape = ctx->Attr<Shape>("out_shape");
-      const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
-      CHECK_OR_RETURN(IsPODDataType(out_dtype));
       const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
       int64_t num_tensor_buffers = in->shape().elem_cnt();
       for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
         *out_i->mut_shape() = out_shape;
-        *out_i->mut_data_type() = out_dtype;
         out_i->set_is_dynamic(dynamic_out);
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+      const DataType out_dtype = ctx->Attr<DataType>("out_dtype");
+      CHECK_OR_RETURN(IsPODDataType(out_dtype));
+      int64_t num_tensor_buffers = ctx->outputs().size();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+        *out_i->mut_data_type() = out_dtype;
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
+                             const user_op::UserOpConfWrapper& conf) {
+      if (conf.attr<bool>("dynamic_out")) {
+        FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
+          user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
+          CHECK(out_i_modifier != nullptr);
+          out_i_modifier->set_header_infered_before_compute(false);
+        }
+      }
+    });
+
+REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
+    .Input("in")
+    .OutputWithMinimum("out", 1)
+    .Attr<std::vector<Shape>>("out_shapes")
+    .Attr<std::vector<DataType>>("out_dtypes")
+    .Attr<bool>("dynamic_out")
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_GT_OR_RETURN(in->shape().elem_cnt(), 0);
+      CHECK_OR_RETURN(!in->is_dynamic());
+      const std::vector<Shape>& out_shapes = ctx->Attr<std::vector<Shape>>("out_shapes");
+      const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
+      int64_t num_tensor_buffers = in->shape().elem_cnt();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+        *out_i->mut_shape() = out_shapes[i];
+        out_i->set_is_dynamic(dynamic_out);
+      }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      CHECK_EQ_OR_RETURN(in->data_type(), DataType::kTensorBuffer);
+      const std::vector<DataType>& out_dtypes = ctx->Attr<std::vector<DataType>>("out_dtypes");
+      int64_t num_tensor_buffers = ctx->outputs().size();
+      for (int64_t i = 0; i < num_tensor_buffers; ++i) {
+        CHECK_OR_RETURN(IsPODDataType(out_dtypes[i]));
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
+        *out_i->mut_data_type() = out_dtypes[i];
       }
       return Maybe<void>::Ok();
     })

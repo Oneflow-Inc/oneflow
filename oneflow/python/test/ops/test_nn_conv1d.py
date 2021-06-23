@@ -40,6 +40,8 @@ def compare_with_tensorflow(
     data_format="NCDHW",
     dilation=1,
 ):
+    if os.getenv("ONEFLOW_TEST_CPU_ONLY") and dilation > 1:
+        return
     assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     func_config = flow.FunctionConfig()

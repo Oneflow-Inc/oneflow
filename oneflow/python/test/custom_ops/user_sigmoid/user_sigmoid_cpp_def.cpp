@@ -24,9 +24,9 @@ REGISTER_USER_OP("user_sigmoid_forward")
     .Output("y")
     .Attr<std::string>("device_sub_tag", "py")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      *out_shape = *in_shape;
+      const Shape& in_shape = ctx->InputShape("x", 0);
+      Shape* out_shape = ctx->OutputShape("y", 0);
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -34,6 +34,10 @@ REGISTER_USER_OP("user_sigmoid_forward")
       FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
         ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 
@@ -43,11 +47,11 @@ REGISTER_USER_OP("user_sigmoid_backward")
     .Output("dx")
     .Attr<std::string>("device_sub_tag", "py")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* y_shape = ctx->Shape4ArgNameAndIndex("y", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *y_shape);
-      *dx_shape = *dy_shape;
+      const Shape& y_shape = ctx->InputShape("y", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK(dy_shape == y_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -59,6 +63,10 @@ REGISTER_USER_OP("user_sigmoid_backward")
             .Split(user_op::OpArg("dx", 0), i)
             .Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
       return Maybe<void>::Ok();
     });
 

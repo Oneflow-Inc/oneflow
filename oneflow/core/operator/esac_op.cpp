@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/esac_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -45,18 +44,16 @@ Maybe<void> EsacOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> EsacOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
 Maybe<void> EsacOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
-
-LogicalNode* EsacOp::NewProperLogicalNode() const { return new EsacLogicalNode(); }
 
 REGISTER_CPU_OP(OperatorConf::kEsacConf, EsacOp);
 

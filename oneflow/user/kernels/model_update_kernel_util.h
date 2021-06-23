@@ -46,8 +46,8 @@ struct SGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
-                     const G* model_diff, T* model);
+                     float learning_rate_val, const float* learning_rate, const T* scale_by_ptr,
+                     const int64_t* skip_if, const G* model_diff, T* model);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -134,8 +134,9 @@ struct LambUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct MomentumUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta,
-                     float weight_decay, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum);
+                     float weight_decay, float learning_rate_val, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* momentum);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -149,9 +150,9 @@ struct IndexedSlicesMomentumMdUpdateKernelUtil {
 template<DeviceType device_type, typename T, typename G>
 struct AdamUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
-                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
-                     T* m, T* v);
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* m, T* v);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>
@@ -207,7 +208,7 @@ struct RmsPropUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct RmsPropUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, bool centered,
-                     float epsilon, float weight_decay, float decay_rate,
+                     float epsilon, float weight_decay, float decay_rate, float learning_rate_val,
                      const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
                      const G* model_diff, T* model, T* mean_square, T* mean_gradient);
 };
@@ -218,10 +219,10 @@ struct LarsUpdateFunctor {
   void operator()(T* model_diff_tmp, T* model, float momentum_beta, T* momentum, float weight_decay,
                   const T local_learning_rate) const {
     const T model_val = *model;
-    T reg_diff = *model_diff_tmp + *model * weight_decay;
-    T next_momentum = *momentum * momentum_beta - local_learning_rate * reg_diff;
+    T next_momentum = *momentum * momentum_beta - local_learning_rate * *model_diff_tmp;
     *momentum = next_momentum;
-    *model = model_val + next_momentum;
+    const T next_model = model_val + next_momentum - local_learning_rate * weight_decay * model_val;
+    *model = next_model;
   }
 };
 
@@ -229,9 +230,8 @@ template<DeviceType device_type, typename T, typename G>
 struct LarsUpdateKernelUtil {
   static void Update(DeviceCtx* ctx, int64_t n, T scale, float l1, float l2, float momentum_beta,
                      float epsilon, float lars_coefficient, float weight_decay,
-                     const float* learning_rate, const int64_t* train_step, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, T* momentum,
-                     T* data_tmp, T* model_diff_tmp);
+                     const float* learning_rate, const T* scale_by_ptr, const int64_t* skip_if,
+                     const G* model_diff, T* model, T* momentum, T* data_tmp, T* model_diff_tmp);
 };
 
 #endif

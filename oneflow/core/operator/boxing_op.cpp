@@ -18,6 +18,22 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+
+void EraseEmptyBnInVec(const std::function<const BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                       PbRpf<std::string>* bns) {
+  size_t idx_available = 0;
+  for (size_t i = 0; i < bns->size(); ++i) {
+    if (GetBlobDesc4BnInOp((*bns)[i])) {
+      if (i != idx_available) { (*bns)[idx_available] = (*bns)[i]; }
+      ++idx_available;
+    }
+  }
+  bns->erase(bns->begin() + idx_available, bns->end());
+}
+
+}  // namespace
+
 void BoxingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
@@ -104,7 +120,7 @@ Maybe<void> BoxingOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> BoxingOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp, false);
 }
@@ -143,12 +159,12 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
 }
 
 Maybe<void> BoxingOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+  const cfg::SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     CHECK_OR_RETURN(sbp_parallel == JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
   }

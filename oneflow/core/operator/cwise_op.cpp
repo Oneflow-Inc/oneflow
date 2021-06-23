@@ -36,7 +36,7 @@ Maybe<void> CWiseOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> CWiseOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   for (size_t i = 1; i < input_bns().size(); ++i) {

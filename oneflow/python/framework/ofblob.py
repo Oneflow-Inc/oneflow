@@ -20,7 +20,7 @@ from functools import reduce
 
 import numpy as np
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 from google.protobuf import text_format
 from oneflow.python.framework.dtype import convert_proto_dtype_to_oneflow_dtype
 from oneflow.python.lib.core.box import Box
@@ -33,37 +33,39 @@ class OfBlob(object):
     @property
     def dtype(self):
         return convert_proto_dtype_to_oneflow_dtype(
-            oneflow_api.Ofblob_GetDataType(self.of_blob_ptr_)
+            oneflow._oneflow_internal.Ofblob_GetDataType(self.of_blob_ptr_)
         )
 
     @property
     def static_shape(self):
-        num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        num_axes = oneflow._oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.ndarray(num_axes, dtype=np.int64)
-        oneflow_api.OfBlob_CopyStaticShapeTo(self.of_blob_ptr_, dst_ndarray)
+        oneflow._oneflow_internal.OfBlob_CopyStaticShapeTo(
+            self.of_blob_ptr_, dst_ndarray
+        )
         return tuple(dst_ndarray.tolist())
 
     @property
     def shape(self):
-        num_axes = oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        num_axes = oneflow._oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
         dst_ndarray = np.zeros(num_axes, dtype=np.int64)
-        oneflow_api.OfBlob_CopyShapeTo(self.of_blob_ptr_, dst_ndarray)
+        oneflow._oneflow_internal.OfBlob_CopyShapeTo(self.of_blob_ptr_, dst_ndarray)
         return tuple(dst_ndarray.tolist())
 
     def set_shape(self, shape):
         assert isinstance(shape, (list, tuple))
-        assert len(shape) == oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
-        oneflow_api.OfBlob_CopyShapeFrom(
+        assert len(shape) == oneflow._oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
+        oneflow._oneflow_internal.OfBlob_CopyShapeFrom(
             self.of_blob_ptr_, np.array(shape, dtype=np.int64)
         )
 
     @property
     def num_axes(self):
-        return oneflow_api.OfBlob_NumAxes(self.of_blob_ptr_)
+        return oneflow._oneflow_internal.OfBlob_NumAxes(self.of_blob_ptr_)
 
     @property
     def is_dynamic(self):
-        return oneflow_api.OfBlob_IsDynamic(self.of_blob_ptr_)
+        return oneflow._oneflow_internal.OfBlob_IsDynamic(self.of_blob_ptr_)
 
     def CopyToNdarray(self):
         return self._CopyToNdarray()
@@ -73,25 +75,27 @@ class OfBlob(object):
             self.set_shape(src_ndarray.shape)
         else:
             shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-            oneflow_api.OfBlob_CopyShapeTo(self.of_blob_ptr_, shape_tensor)
+            oneflow._oneflow_internal.OfBlob_CopyShapeTo(
+                self.of_blob_ptr_, shape_tensor
+            )
             shape = tuple(shape_tensor.tolist())
             assert src_ndarray.shape == shape
         return self._CopyBodyFromNdarray(src_ndarray)
 
     def _CopyBodyFromNdarray(self, src_ndarray):
-        method_name = oneflow_api.Dtype_GetOfBlobCopyFromBufferFuncName(
-            oneflow_api.deprecated.GetProtoDtype4OfDtype(self.dtype)
+        method_name = oneflow._oneflow_internal.Dtype_GetOfBlobCopyFromBufferFuncName(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(self.dtype)
         )
-        copy_method = getattr(oneflow_api, method_name)
+        copy_method = getattr(oneflow._oneflow_internal, method_name)
         copy_method(self.of_blob_ptr_, src_ndarray)
 
     def _CopyToNdarray(self):
-        method_name = oneflow_api.Dtype_GetOfBlobCopyToBufferFuncName(
-            oneflow_api.deprecated.GetProtoDtype4OfDtype(self.dtype)
+        method_name = oneflow._oneflow_internal.Dtype_GetOfBlobCopyToBufferFuncName(
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(self.dtype)
         )
-        copy_method = getattr(oneflow_api, method_name)
+        copy_method = getattr(oneflow._oneflow_internal, method_name)
         shape_tensor = np.zeros(self.num_axes, dtype=np.int64)
-        oneflow_api.OfBlob_CopyShapeTo(self.of_blob_ptr_, shape_tensor)
+        oneflow._oneflow_internal.OfBlob_CopyShapeTo(self.of_blob_ptr_, shape_tensor)
         shape = tuple(shape_tensor.tolist())
         tensor = np.zeros(
             shape, dtype=flow.convert_oneflow_dtype_to_numpy_dtype(self.dtype)

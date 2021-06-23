@@ -24,30 +24,30 @@ import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("math.reduce_mean")
 def reduce_mean(
-    input_blob: oneflow_api.BlobDesc,
+    input_blob: oneflow._oneflow_internal.BlobDesc,
     axis: Optional[Union[collections.Sized, int]] = None,
     keepdims: bool = False,
     name: Optional[str] = None,
-) -> oneflow_api.BlobDesc:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator computes the mean of input Blob along the specified axis
 
     Args:
-        input_blob (oneflow_api.BlobDesc): A Blob
+        input_blob (oneflow._oneflow_internal.BlobDesc): A Blob
         axis (Optional[Union[collections.Sized, int]], optional): The dimension along which the mean value is computed. Defaults to None.
         keepdims (bool, optional): Whether to keep the reduced dimension in the output Blob. Defaults to False.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        oneflow_api.BlobDesc: The result of average on the specified axis of input Blob
+        oneflow._oneflow_internal.BlobDesc: The result of average on the specified axis of input Blob
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np

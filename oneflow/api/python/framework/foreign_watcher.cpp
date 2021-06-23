@@ -37,7 +37,7 @@ class PyForeignWatcher : public ForeignWatcher {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   using namespace oneflow;
 
-  py::class_<ForeignWatcher, PyForeignWatcher>(m, "ForeignWatcher")
+  py::class_<ForeignWatcher, PyForeignWatcher, std::shared_ptr<ForeignWatcher>>(m, "ForeignWatcher")
       .def(py::init<>())
       .def("Call", &ForeignWatcher::Call);
 }

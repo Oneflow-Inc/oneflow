@@ -127,13 +127,6 @@ void ClusterInstruction::MasterSendEagerInstruction(
   PushClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::MasterSendEagerSync() {
-  ClusterInstructionProto cluster_instruction;
-  cluster_instruction.mutable_cluster_ctrl_eager_sync();
-  PushClusterInstruction(cluster_instruction);
-  EagerSyncBarrier();
-}
-
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   PullClusterInstruction(cluster_instruction);
 }

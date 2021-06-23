@@ -23,18 +23,18 @@ import oneflow.python.framework.ofblob as ofblob
 import oneflow.python.framework.remote_blob as remote_blob_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.typing_util as oft_util
-import oneflow_api
+import oneflow._oneflow_internal
 from google.protobuf import text_format
 
 
 def BindUuidAndHandler(uuid, blob_watched, handler):
-    assert isinstance(blob_watched, oneflow_api.ConsistentBlob)
+    assert isinstance(blob_watched, oneflow._oneflow_internal.ConsistentBlob)
     session_ctx.GetDefaultSession().uuid2watch_handler[uuid] = (blob_watched, handler)
 
 
-class _Watcher(oneflow_api.ForeignWatcher):
+class _Watcher(oneflow._oneflow_internal.ForeignWatcher):
     def __init__(self):
-        oneflow_api.ForeignWatcher.__init__(self)
+        oneflow._oneflow_internal.ForeignWatcher.__init__(self)
 
     def Call(self, handler_uuid, of_blob_ptr):
         try:
@@ -56,4 +56,4 @@ def _WatcherHandler(handler_uuid, of_blob_ptr):
 
 # static lifetime
 _global_watcher = _Watcher()
-oneflow_api.RegisterWatcherOnlyOnce(_global_watcher)
+oneflow._oneflow_internal.RegisterWatcherOnlyOnce(_global_watcher)

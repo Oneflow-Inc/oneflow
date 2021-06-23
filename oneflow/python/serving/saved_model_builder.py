@@ -19,13 +19,14 @@ import typing
 from google.protobuf import text_format
 
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.core.serving.saved_model_pb2 as saved_model_pb
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_pb
 import oneflow.core.operator.interface_blob_conf_pb2 as interface_blob_conf_pb
+import oneflow.core.job.sbp_parallel_pb2 as sbp_parallel_pb
 from oneflow.python.oneflow_export import oneflow_export
 
 
@@ -99,7 +100,7 @@ class ModelBuilder(object):
                     check_name_conflict(output_name, output_def)
 
     @session_ctx.try_init_default_session
-    def Save(self):
+    def Save(self, save_model_before_graph_complete: bool = True):
         self._check_input_output_name_conflict()
         for _, graph_builder in self.graph_builders_.items():
             if not graph_builder.finished:
@@ -107,7 +108,11 @@ class ModelBuilder(object):
 
         sess = session_ctx.GetDefaultSession()
         for graph_name, graph_def in self.proto.graphs.items():
-            job = sess.Job(graph_name)
+            job = sess.Job(
+                graph_name
+                if save_model_before_graph_complete
+                else graph_name + "_after_complete"
+            )
             graph_def.op_list.extend(list(job.net.op))
 
         if not os.path.exists(self.saved_model_dir_):
@@ -198,13 +203,13 @@ class GraphBuilder(object):
         for _, signature_def in self.proto.signatures.items():
             for _, input_def in signature_def.inputs.items():
                 input_lbn = Lbi2Lbn(input_def.lbi)
-                oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
+                oneflow._oneflow_internal.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, input_lbn
                 )
                 GetInterfaceBlobConf(self.name, input_lbn, input_def.blob_conf)
 
             for _, output_def in signature_def.outputs.items():
-                oneflow_api.JobBuildAndInferCtx_CheckLbnValidAndExist(
+                oneflow._oneflow_internal.JobBuildAndInferCtx_CheckLbnValidAndExist(
                     self.name, Lbi2Lbn(output_def.lbi)
                 )
 
@@ -315,7 +320,10 @@ def GetInterfaceBlobConf(job_name, lbn, blob_conf=None):
     blob_conf.shape.dim.extend(shape)
     blob_conf.data_type = dtype
     if split_axis is not None:
-        blob_conf.split_axis.value = split_axis
+        sbp_parallel = sbp_parallel_pb.SbpParallel()
+        sbp_parallel.split_parallel.axis = split_axis
+        blob_conf.parallel_distribution.sbp_parallel.extend([sbp_parallel])
+
     blob_conf.is_dynamic = is_dynamic
     return blob_conf
 

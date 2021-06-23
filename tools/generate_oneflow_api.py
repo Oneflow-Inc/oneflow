@@ -12,6 +12,29 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+#                     will be removed in the future
+def dtype_related_symbols():
+    return [
+        """import oneflow._oneflow_internal""",
+        """locals()["dtype"] = oneflow._oneflow_internal.dtype""",
+        """locals()["char"] = oneflow._oneflow_internal.char""",
+        """locals()["float16"] = oneflow._oneflow_internal.float16""",
+        """locals()["half"] = oneflow._oneflow_internal.float16""",
+        """locals()["float32"] = oneflow._oneflow_internal.float32""",
+        """locals()["float"] = oneflow._oneflow_internal.float""",
+        """locals()["double"] = oneflow._oneflow_internal.double""",
+        """locals()["float64"] = oneflow._oneflow_internal.float64""",
+        """locals()["int8"] = oneflow._oneflow_internal.int8""",
+        """locals()["int"] = oneflow._oneflow_internal.int32""",
+        """locals()["int32"] = oneflow._oneflow_internal.int32""",
+        """locals()["int64"] = oneflow._oneflow_internal.int64""",
+        """locals()["long"] = oneflow._oneflow_internal.int64""",
+        """locals()["uint8"] = oneflow._oneflow_internal.uint8""",
+        """locals()["record"] = oneflow._oneflow_internal.record""",
+        """locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer""",
+    ]
+
 
 class VirtualModule(object):
     def __init__(self):
@@ -20,7 +43,9 @@ class VirtualModule(object):
 
     def add_func_or_class(self, api_name_base, func_or_class):
         assert api_name_base not in self._func_or_class_dict
-        assert api_name_base not in self._submodule_dict
+        assert (
+            api_name_base not in self._submodule_dict
+        ), "{} is already in submodule_dict.".format(api_name_base)
         self._func_or_class_dict[api_name_base] = func_or_class
 
     def find_or_create_submodule(self, submodule_name):
@@ -53,6 +78,10 @@ class VirtualModule(object):
                 mod_set.add(include_submodule(k))
             for k, v in self._func_or_class_dict.items():
                 lines += include_export(k, v)
+            # TODO(Liang Depeng): Temporarly solution for adding dtypes to experimental namespace
+            #                     will be removed in the future
+            if "experimental/__init__.py" in init_file_path:
+                lines += dtype_related_symbols()
             lines = list(mod_set) + lines
             f.write("\n" + "\n".join(lines) + "\n")
 

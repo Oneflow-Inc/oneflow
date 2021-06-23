@@ -27,13 +27,14 @@ class AssignOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
 void AssignOp::InitFromOpConf() {
@@ -66,14 +67,14 @@ Maybe<void> AssignOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> AssignOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> AssignOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .MakeSplitSignatureListBuilder(

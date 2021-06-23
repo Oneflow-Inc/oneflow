@@ -54,8 +54,9 @@ class DynamicReshapeOp final : public Operator {
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     const auto* sbp_signature = JUST(this->sbp_signature());
     const DynamicReshapeOpConf& conf = op_conf().dynamic_reshape_conf();
     const BlobDesc* in = GetBlobDesc4BnInOp("in");
@@ -67,10 +68,10 @@ class DynamicReshapeOp final : public Operator {
       //   ONLY support sbp: S(0); and -1 must at axis 0
       const auto& out_sbp_it = sbp_signature->bn_in_op2sbp_parallel().find("out");
       CHECK_OR_RETURN(out_sbp_it != sbp_signature->bn_in_op2sbp_parallel().end());
-      const SbpParallel& out_sbp = out_sbp_it->second;
+      const cfg::SbpParallel& out_sbp = out_sbp_it->second;
       const auto& in_sbp_it = sbp_signature->bn_in_op2sbp_parallel().find("in");
       CHECK_OR_RETURN(in_sbp_it != sbp_signature->bn_in_op2sbp_parallel().end());
-      const SbpParallel& in_sbp = in_sbp_it->second;
+      const cfg::SbpParallel& in_sbp = in_sbp_it->second;
       if (out_sbp.has_split_parallel()) {
         CHECK_EQ_OR_RETURN(out_sbp.split_parallel().axis(), 0);
         CHECK_EQ_OR_RETURN(out_dim_vec.at(0), -1);
@@ -102,7 +103,7 @@ class DynamicReshapeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+      const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)
@@ -129,8 +130,9 @@ class DynamicReshapeLikeOp final : public Operator {
     BlobDesc4BnInOp("y")->CopyFrom(*BlobDesc4BnInOp("like"));
     return Maybe<void>::Ok();
   }
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     CHECK_EQ_OR_RETURN(GetBlobDesc4BnInOp("x")->shape().elem_cnt(),
                        GetBlobDesc4BnInOp("like")->shape().elem_cnt());
     GetBlobDesc4BnInOp("y")->CopyFrom(*GetBlobDesc4BnInOp("like"));
@@ -140,7 +142,7 @@ class DynamicReshapeLikeOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override {
+      const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split(input_bns(), 0)
         .Split(output_bns(), 0)

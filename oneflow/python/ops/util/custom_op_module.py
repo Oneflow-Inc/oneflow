@@ -27,7 +27,7 @@ import numpy
 from oneflow.python.oneflow_export import oneflow_export
 import oneflow.python.framework.sysconfig as oneflow_sysconfig
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def run_cmd(cmd, cwd=None):
@@ -81,7 +81,7 @@ class PythonKernelRegistry(object):
 
 
 _python_kernel_reg = PythonKernelRegistry()
-oneflow_api.RegisterPyKernels(_python_kernel_reg.kernels_)
+oneflow._oneflow_internal.RegisterPyKernels(_python_kernel_reg.kernels_)
 
 
 @oneflow_export("experimental.custom_op_module")
@@ -146,7 +146,7 @@ class CustomOpModule(object):
         kernel = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(kernel)
         _python_kernel_reg.Register(self.op_module_name_, kernel)
-        oneflow_api.RegisterPyKernelCaller(self.op_module_name_)
+        oneflow._oneflow_internal.RegisterPyKernelCaller(self.op_module_name_)
         self.has_py_kernel_ = True
         return self
 

@@ -28,7 +28,7 @@ class KernelCtx;
 class Blob;
 class ParallelContext;
 
-namespace eager {
+namespace vm {
 
 class OpKernelObject : public vm::Object {
  public:
@@ -66,7 +66,7 @@ class OpKernelObject : public vm::Object {
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
                              const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                             const SbpSignature* sbp_signature,
+                             const cfg::SbpSignature* sbp_signature,
                              const ParallelContext* parallel_ctx);
   void NewPartialInitializedKernel(
       const Operator& op, const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -104,7 +104,7 @@ class SystemOpKernelObject : public vm::Object {
  private:
   Maybe<void> InferBlobDescs(const Operator& op,
                              const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
-                             const SbpSignature* sbp_signature,
+                             const cfg::SbpSignature* sbp_signature,
                              const ParallelContext* parallel_ctx);
   void ResetKernel(const Operator& op,
                    const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
@@ -117,7 +117,7 @@ class SystemOpKernelObject : public vm::Object {
   std::unique_ptr<const Kernel> kernel_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_OPKERNEL_OBJECT_H_

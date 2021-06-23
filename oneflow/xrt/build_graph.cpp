@@ -21,17 +21,17 @@ namespace xrt {
 
 namespace graph_builder {
 
-const Shape& InputTimeShape(const OpNode* op_node) {
+const Shape InputTimeShape(const OpNode* op_node) {
   CHECK_NOTNULL(op_node);
-  return *(op_node->GetInputBlobFastestTimeShape());
+  return *CHECK_JUST(op_node->op().GetInputBlobFastestTimeShape());
 }
 
-const Shape& OutputTimeShape(const OpNode* op_node) {
+const Shape OutputTimeShape(const OpNode* op_node) {
   CHECK_NOTNULL(op_node);
-  return *(op_node->out_blob_time_shape());
+  return *CHECK_JUST(op_node->op().GetOpTimeShape());
 }
 
-const SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
+const cfg::SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
   CHECK_NOTNULL(op_node);
   LogicalBlobId lbi = BlobNameToId(name);
   return op_node->SbpParallel4Lbi(lbi);
@@ -127,7 +127,7 @@ void GraphBuilder::SetupGraphEdges() {
     time_shape.push_back(InputTimeShape(dst));
     edge->Attr("time_shape", time_shape);
     // Set sbp policy
-    std::vector<SbpParallel> sbp_policy;
+    std::vector<cfg::SbpParallel> sbp_policy;
     sbp_policy.push_back(BlobSbpPolicy(src, name));
     sbp_policy.push_back(BlobSbpPolicy(dst, name));
     edge->Attr("sbp_policy", sbp_policy);

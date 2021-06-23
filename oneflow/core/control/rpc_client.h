@@ -26,6 +26,7 @@ namespace oneflow {
 class RpcClient {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RpcClient);
+  RpcClient() = default;
   virtual ~RpcClient() = default;
 
   void Barrier(const std::string& barrier_name);
@@ -64,9 +65,6 @@ class RpcClient {
   int32_t IncreaseCount(const std::string& k, int32_t v);
   int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
   void EraseCount(const std::string& k);
-
- protected:
-  RpcClient() = default;
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
   void LoadServer(const LoadServerRequest& request, CtrlService::Stub* stub);
   void PushMasterKV(const std::string& k, std::function<void(std::string*)> VSetter);
@@ -74,6 +72,10 @@ class RpcClient {
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
   CtrlService::Stub* GetThisStub();
   CtrlService::Stub* GetResponsibleStub(const std::string& key);
+  CtrlService::Stub* GetStubAt(int64_t i) { return stubs_[i].get(); };
+  size_t GetStubSize() { return stubs_.size(); };
+  void ReserveStubsOfSize(int64_t n) { stubs_.reserve(n); };
+  void AddStub(std::unique_ptr<CtrlService::Stub> s) { stubs_.push_back(std::move(s)); };
 
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;

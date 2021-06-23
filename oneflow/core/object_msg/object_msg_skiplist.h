@@ -111,7 +111,7 @@ namespace oneflow {
   using OF_PP_CAT(field_name, _ObjectMsgSkipListKeyType) =                                   \
       EmbeddedSkipListKey<key_type, max_level>;                                              \
   bool OF_PP_CAT(is_, OF_PP_CAT(field_name, _inserted))() const {                            \
-    return OF_PP_CAT(field_name, _).empty();                                                 \
+    return !OF_PP_CAT(field_name, _).empty();                                                \
   }                                                                                          \
   ConstType<key_type>& field_name() const { return OF_PP_CAT(field_name, _).key(); }         \
   key_type* OF_PP_CAT(mut_, field_name)() { return OF_PP_CAT(field_name, _).mut_key(); }     \

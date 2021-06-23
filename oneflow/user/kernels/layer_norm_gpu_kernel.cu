@@ -177,7 +177,7 @@ __global__ void LayerNormForwardImpl(const int num_instances, const int norm_siz
                                      const T* beta, ComputeType* mean, ComputeType* inv_variance,
                                      T* normalized, T* y) {
   using LU = LayerNormUtil<T>;
-  extern __shared__ __align__(sizeof(ComputeType)) unsigned char fw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char fw_shared_buf[];
   auto* compute_buf = reinterpret_cast<ComputeType*>(fw_shared_buf);
   __shared__ ComputeType row_mean_shared;
   __shared__ ComputeType row_inv_var_shared;
@@ -315,7 +315,7 @@ template<typename T, typename I>
 __global__ void LayerNormParamGradImpl(const I n, const I instance_size, const T* dy,
                                        const T* normalized, const T* gamma, T* gamma_diff,
                                        T* beta_diff, T* normalized_diff) {
-  extern __shared__ __align__(sizeof(T)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<T*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
@@ -345,7 +345,7 @@ __global__ void LayerNormParamGradHalfImpl(const I n, const I instance_size, con
                                            const half* normalized, const half* gamma,
                                            half* tmp_gamma_diff, half* tmp_beta_diff,
                                            half* normalized_diff) {
-  extern __shared__ __align__(sizeof(float)) unsigned char bw_shared_buf[];
+  extern __shared__ __align__(sizeof(double)) unsigned char bw_shared_buf[];
   auto* gamma_diff_sum_buf = reinterpret_cast<float*>(bw_shared_buf);
   auto* beta_diff_sum_buf = gamma_diff_sum_buf + instance_size;
   const I tid = threadIdx.x;
@@ -453,7 +453,7 @@ class LayerNormGpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
                        & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value)) \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                    \
-        user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);       \
+        user_op::TensorDesc* mean = ctx->OutputTensorDesc("mean", 0);                 \
         const DataType& data_type = mean->data_type();                                \
         const int64_t elem_cnt = mean->shape().elem_cnt();                            \
         return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type)) * 2;       \
@@ -488,7 +488,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
                                           reinterpret_cast<BNParamT*>(cudnn_bn_scale_ones_dptr));
     const void* sp_alpha = CudnnSPOnePtr<T>();
     const void* sp_beta;
-    if (ctx->user_op_conf().has_input("_add_to_output", 0)) {
+    if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* add_to_output = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       CHECK_EQ(add_to_output->data_type(), dx->data_type());
       CHECK_EQ(add_to_output->shape(), dx->shape());
@@ -526,7 +526,7 @@ class LayerNormGradGpuKernel final : public user_op::OpKernel {
       })                                                                                        \
       .SetInplaceProposalFn([](const user_op::InferContext& ctx,                                \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        if (ctx.user_op_conf().has_input("_add_to_output", 0)) {                                \
+        if (ctx.has_input("_add_to_output", 0)) {                                               \
           OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "_add_to_output", 0, true));          \
         }                                                                                       \
         return Maybe<void>::Ok();                                                               \
@@ -737,9 +737,9 @@ REGISTER_USER_KERNEL("layer_norm_param_grad")
                      & (user_op::HobDataType("dy", 0) == DataType::kFloat16))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
-      const bool has_gamma_diff = ctx->user_op_conf().has_output("gamma_diff", 0);
-      const bool has_beta_diff = ctx->user_op_conf().has_output("beta_diff", 0);
-      const bool has_normalized_diff = ctx->user_op_conf().has_output("normalized_diff", 0);
+      const bool has_gamma_diff = ctx->has_output("gamma_diff", 0);
+      const bool has_beta_diff = ctx->has_output("beta_diff", 0);
+      const bool has_normalized_diff = ctx->has_output("normalized_diff", 0);
       const auto* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       const int64_t instance_size = dy->shape().Count(begin_params_axis);
       size_t tmp_buffer_size = 0;

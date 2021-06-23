@@ -20,8 +20,8 @@ limitations under the License.
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/framework/op_kernel.h"
 
 namespace oneflow {
 
@@ -187,13 +187,12 @@ cudnnConvolutionBwdFilterAlgoPerf_t CudnnConvAlgoCache::Remember(
 CudnnConvDesc::~CudnnConvDesc() { OF_CUDNN_CHECK(cudnnDestroyConvolutionDescriptor(val_)); }
 
 CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_type,
-                             const ShapeView& in_blob_shape,
-                             const user_op::UserOpConfWrapper& conv_conf) {
+                             const ShapeView& in_blob_shape, const user_op::InferContext& ctx) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
   OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
-  const auto& padding_before = conv_conf.attr<std::vector<int32_t>>("padding_before");
-  const auto& strides = conv_conf.attr<std::vector<int32_t>>("strides");
-  const auto& dilation_rate = conv_conf.attr<std::vector<int32_t>>("dilation_rate");
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
   if (opkernel_dim == 2) {
     OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(
         val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
@@ -208,14 +207,43 @@ CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_ty
         val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
   }
-  const int32_t groups = conv_conf.attr<int32_t>("groups");
+  const int32_t groups = ctx.Attr<int32_t>("groups");
   if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
   if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
     OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
   }
 }
 
-CudnnConvArgs::CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataType x_data_type,
+CudnnConvDesc::CudnnConvDesc(const DataType compute_type, const DataType data_type,
+                             const ShapeView& in_blob_shape,
+                             const user_op::KernelComputeContext& ctx) {
+  int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
+  OF_CUDNN_CHECK(cudnnCreateConvolutionDescriptor(&val_));
+  const auto& padding_before = ctx.Attr<std::vector<int32_t>>("padding_before");
+  const auto& strides = ctx.Attr<std::vector<int32_t>>("strides");
+  const auto& dilation_rate = ctx.Attr<std::vector<int32_t>>("dilation_rate");
+  if (opkernel_dim == 2) {
+    OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(
+        val_, padding_before.at(0), padding_before.at(1), strides.at(0), strides.at(1),
+        dilation_rate.at(0), dilation_rate.at(1), CUDNN_CROSS_CORRELATION,
+        GetCudnnDataType(compute_type)));
+  } else if (opkernel_dim == 1) {
+    OF_CUDNN_CHECK(cudnnSetConvolution2dDescriptor(val_, padding_before.at(0), 0, strides.at(0), 1,
+                                                   dilation_rate.at(0), 1, CUDNN_CROSS_CORRELATION,
+                                                   GetCudnnDataType(compute_type)));
+  } else {
+    OF_CUDNN_CHECK(cudnnSetConvolutionNdDescriptor(
+        val_, opkernel_dim, padding_before.data(), strides.data(), dilation_rate.data(),
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(compute_type)));
+  }
+  const int32_t groups = ctx.Attr<int32_t>("groups");
+  if (groups != 1) { OF_CUDNN_CHECK(cudnnSetConvolutionGroupCount(val_, groups)); }
+  if (GetCudnnDataType(data_type) == CUDNN_DATA_HALF) {
+    OF_CUDNN_CHECK(cudnnSetConvolutionMathType(val_, CUDNN_TENSOR_OP_MATH));
+  }
+}
+
+CudnnConvArgs::CudnnConvArgs(const user_op::InferContext& ctx, DataType x_data_type,
                              const ShapeView& x_shape, DataType w_data_type,
                              const ShapeView& w_shape, DataType y_data_type,
                              const ShapeView& y_shape, const std::string& data_format,
@@ -224,7 +252,41 @@ CudnnConvArgs::CudnnConvArgs(const user_op::UserOpConfWrapper& conv_conf, DataTy
     : xdesc(x_data_type, x_shape, data_format),
       ydesc(y_data_type, y_shape, data_format),
       wdesc(w_data_type, w_shape, data_format),
-      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, conv_conf),
+      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, ctx),
+      heuristic(heuristic_search),
+      deterministic(use_deterministic_algo_only) {
+  std::memset(&params, 0, sizeof(CudnnConvParams));
+  OF_CUDNN_CHECK(cudnnGetTensorNdDescriptor(xdesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                            &params.x_data_type, &params.x_ndim, params.x_dims,
+                                            params.x_strides));
+  OF_CUDNN_CHECK(cudnnGetTensorNdDescriptor(ydesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                            &params.y_data_type, &params.y_ndim, params.y_dims,
+                                            params.y_strides));
+  OF_CUDNN_CHECK(cudnnGetFilterNdDescriptor(wdesc.Get(), CudnnConvParams::kTensorMaxDims,
+                                            &params.w_data_type, &params.w_format, &params.w_ndim,
+                                            params.w_dims));
+  cudnnConvolutionMode_t mode;
+  int conv_dim_size = 0;
+  OF_CUDNN_CHECK(cudnnGetConvolutionNdDescriptor(cdesc.Get(), CudnnConvParams::kConvMaxDims,
+                                                 &conv_dim_size, params.padding, params.stride,
+                                                 params.dilation, &mode, &params.data_type));
+  CHECK_EQ(params.x_data_type, params.w_data_type);
+  CHECK_EQ(params.x_ndim, params.w_ndim);
+  CHECK_EQ(conv_dim_size + 2, params.x_ndim);
+  OF_CUDNN_CHECK(cudnnGetConvolutionGroupCount(cdesc.Get(), &params.groups));
+  params.max_ws_size = max_workspace_size;
+}
+
+CudnnConvArgs::CudnnConvArgs(const user_op::KernelComputeContext& ctx, DataType x_data_type,
+                             const ShapeView& x_shape, DataType w_data_type,
+                             const ShapeView& w_shape, DataType y_data_type,
+                             const ShapeView& y_shape, const std::string& data_format,
+                             size_t max_workspace_size, bool heuristic_search,
+                             bool use_deterministic_algo_only, bool enable_pseudo_half)
+    : xdesc(x_data_type, x_shape, data_format),
+      ydesc(y_data_type, y_shape, data_format),
+      wdesc(w_data_type, w_shape, data_format),
+      cdesc(GetConvDescDataType(x_data_type, enable_pseudo_half), x_data_type, x_shape, ctx),
       heuristic(heuristic_search),
       deterministic(use_deterministic_algo_only) {
   std::memset(&params, 0, sizeof(CudnnConvParams));

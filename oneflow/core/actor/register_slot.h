@@ -34,10 +34,16 @@ class RegstSlot final {
   bool HasRegstDescId(int64_t regst_desc_id) const;
   const std::deque<Regst*>& RegstDeq4RegstDescId(int64_t regst_desc_id) const;
   void ForEachFrontRegst(std::function<void(Regst*)>) const;
+  void ForEachFrontRegst(std::function<void(int64_t regst_desc_id, Regst*)>) const;
   void ForEachRegstDeq(std::function<void(const std::deque<Regst*>&)>) const;
   void ForChosenFrontRegst(std::function<bool(int64_t)>, std::function<void(Regst*)>) const;
+  void ForChosenFrontRegst(std::function<bool(int64_t)>,
+                           std::function<void(int64_t regst_desc_id, Regst*)>) const;
   void ForChosenRegstDeq(std::function<bool(int64_t)>,
                          std::function<void(const std::deque<Regst*>&)>) const;
+  void ForChosenRegstDeq(
+      std::function<bool(int64_t)>,
+      std::function<void(int64_t regst_desc_id, const std::deque<Regst*>&)>) const;
 
   Regst* Front(int64_t regst_desc_id) const;
   Regst* SoleFront() const;
@@ -45,6 +51,7 @@ class RegstSlot final {
 
   // 0: success, -1: cannot find regst_desc_id
   int TryPushBackRegst(Regst* regst);
+  int TryPushBackRegst(Regst* regst, int64_t regst_desc_id);
   int TryPopFrontRegst(int64_t regst_desc_id);
 
   void PopFrontRegsts(const std::vector<int64_t>& regst_desc_ids);

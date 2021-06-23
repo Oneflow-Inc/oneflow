@@ -72,7 +72,7 @@ Maybe<void> ShapeElemCntOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> ShapeElemCntOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
@@ -89,7 +89,7 @@ void ShapeElemCntOp::VirtualGenKernelConf(
 
 Maybe<void> ShapeElemCntOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   int32_t num_axes = JUST(LogicalBlobDesc4Ibn("x")).shape().NumAxes();
   const auto& inclusive_axes = GetInclusiveAxes(op_conf().shape_elem_cnt_conf(), num_axes);
   auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(inclusive_axes, num_axes);

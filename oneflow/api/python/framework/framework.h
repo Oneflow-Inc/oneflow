@@ -37,15 +37,24 @@ limitations under the License.
 
 namespace oneflow {
 
-inline Maybe<void> RegisterForeignCallbackOnlyOnce(ForeignCallback* callback) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignCallback>::Get()) << "foreign callback registered";
-  Global<ForeignCallback>::SetAllocated(callback);
+inline Maybe<void> RegisterForeignCallbackOnlyOnce(
+    const std::shared_ptr<ForeignCallback>& callback) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignCallback>>::Get())
+      << "foreign callback registered";
+  // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
+  // glog is not constructed yet.
+  Global<std::shared_ptr<ForeignCallback>>::SetAllocated(
+      new std::shared_ptr<ForeignCallback>(callback));
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> RegisterWatcherOnlyOnce(ForeignWatcher* watcher) {
-  CHECK_ISNULL_OR_RETURN(Global<ForeignWatcher>::Get()) << "foreign watcher registered";
-  Global<ForeignWatcher>::SetAllocated(watcher);
+inline Maybe<void> RegisterWatcherOnlyOnce(const std::shared_ptr<ForeignWatcher>& watcher) {
+  CHECK_ISNULL_OR_RETURN(Global<std::shared_ptr<ForeignWatcher>>::Get())
+      << "foreign watcher registered";
+  // Global<T>::SetAllocated is preferred since Global<T>::New will output logs but
+  // glog is not constructed yet.
+  Global<std::shared_ptr<ForeignWatcher>>::SetAllocated(
+      new std::shared_ptr<ForeignWatcher>(watcher));
   return Maybe<void>::Ok();
 }
 
@@ -76,9 +85,7 @@ inline Maybe<std::string> GetSerializedInterUserJobInfo() {
   CHECK_OR_RETURN(GlobalProcessCtx::IsThisProcessMaster());
   CHECK_NOTNULL_OR_RETURN(Global<Oneflow>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<InterUserJobInfo>::Get());
-  std::string ret;
-  google::protobuf::TextFormat::PrintToString(*Global<InterUserJobInfo>::Get(), &ret);
-  return ret;
+  return Global<InterUserJobInfo>::Get()->SerializeAsString();
 }
 
 inline Maybe<const JobSet&> GetJobSet() {
@@ -92,7 +99,7 @@ inline Maybe<const JobSet&> GetJobSet() {
   return job_ctx_mgr->job_set();
 }
 
-inline Maybe<std::string> GetSerializedJobSet() { return PbMessage2TxtString(JUST(GetJobSet())); }
+inline Maybe<std::string> GetSerializedJobSet() { return JUST(GetJobSet()).SerializeAsString(); }
 
 inline Maybe<std::string> GetSerializedCurrentJob() {
   auto* job_ctx_mgr = Global<LazyJobBuildAndInferCtxMgr>::Get();
@@ -100,7 +107,7 @@ inline Maybe<std::string> GetSerializedCurrentJob() {
   auto* job_ctx =
       JUST(job_ctx_mgr->FindJobBuildAndInferCtx(*JUST(job_ctx_mgr->GetCurrentJobName())));
   CHECK_NOTNULL_OR_RETURN(job_ctx);
-  return PbMessage2TxtString(job_ctx->job());
+  return job_ctx->job().SerializeAsString();
 }
 
 inline Maybe<std::string> GetFunctionConfigDef() {

@@ -26,9 +26,16 @@ REGISTER_USER_OP("tril")
     .Attr<bool>("is_floating_fill_value", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
-      *out = *in;
+      *out->mut_shape() = in->shape();
+      *out->mut_is_dynamic() = in->is_dynamic();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -74,9 +81,16 @@ REGISTER_USER_OP("fused_scale_tril")
     .Attr<bool>("is_floating_scale_value", false)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_GE_OR_RETURN(in->shape().NumAxes(), 2);
-      *out = *in;
+      *out->mut_shape() = in->shape();
+      *out->mut_is_dynamic() = in->is_dynamic();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
+      *out->mut_data_type() = in->data_type();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {

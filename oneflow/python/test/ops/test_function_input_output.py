@@ -17,7 +17,7 @@ import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.typing as oft
-import oneflow_api
+import oneflow._oneflow_internal
 from typing import Tuple
 
 

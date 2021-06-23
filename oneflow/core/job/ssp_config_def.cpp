@@ -21,8 +21,8 @@ namespace {
 
 REGISTER_FUNCTION_CONFIG_DEF()
     .Bool("enable_ssp", false, "enable ssp")
-    .String("ssp_partition_strategy", "naive_sequantial",
-            "ssp partition strategy, Avaiable strategies: naive_sequantial | disable")
+    .String("ssp_partition_strategy", "naive_sequential",
+            "ssp partition strategy, Avaiable strategies: naive_sequential | disable")
     .ListInt64("ssp_partition_scope_ids", {}, "type: list[int64]. ssp partition scope symbol ids");
 
 REGISTER_SCOPE_CONFIG_DEF()

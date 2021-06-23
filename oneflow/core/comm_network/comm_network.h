@@ -20,7 +20,6 @@ limitations under the License.
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
-#include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/channel.h"
 
 namespace oneflow {
@@ -54,7 +53,6 @@ class CommNet {
 
  protected:
   CommNet();
-  DEPRECATED CommNet(const Plan& plan);
 
   virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
@@ -80,21 +78,20 @@ template<typename MemDescType>
 class CommNetIf : public CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNetIf);
-  CommNetIf() = default;
-  DEPRECATED CommNetIf(const Plan& plan) : CommNet(plan) {}
+  CommNetIf() : CommNet() {}
   virtual ~CommNetIf() {}
 
   void* RegisterMemory(void* ptr, size_t byte_size) override {
-    MemDescType* mem_desc = NewMemDesc(ptr, byte_size);
     std::unique_lock<std::mutex> lck(mem_descs_mtx_);
+    MemDescType* mem_desc = NewMemDesc(ptr, byte_size);
     CHECK(mem_descs_.insert(mem_desc).second);
     return mem_desc;
   }
 
   void UnRegisterMemory(void* token) override {
+    std::unique_lock<std::mutex> lck(mem_descs_mtx_);
     MemDescType* mem_desc = static_cast<MemDescType*>(token);
     delete mem_desc;
-    std::unique_lock<std::mutex> lck(mem_descs_mtx_);
     CHECK_EQ(mem_descs_.erase(mem_desc), 1);
   }
 

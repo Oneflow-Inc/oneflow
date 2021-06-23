@@ -15,11 +15,12 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_GRAPH_BOXING_IDENTITY_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_BOXING_IDENTITY_TASK_NODE_H_
-#include "oneflow/core/graph/task_node.h"
+
+#include "oneflow/core/graph/transport_task_node.h"
 
 namespace oneflow {
 
-class BoxingIdentityTaskNode : public TaskNode {
+class BoxingIdentityTaskNode : public TransportTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BoxingIdentityTaskNode);
   BoxingIdentityTaskNode() = default;
@@ -33,8 +34,6 @@ class BoxingIdentityTaskNode : public TaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() final;
   void InferProducedDataRegstTimeShape() final;
-
-  LogicalBlobId lbi_;
 };
 
 }  // namespace oneflow

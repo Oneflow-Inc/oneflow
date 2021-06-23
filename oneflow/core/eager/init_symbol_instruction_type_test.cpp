@@ -18,6 +18,7 @@ limitations under the License.
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
 #define private public
+#include "oneflow/core/control/ctrl_bootstrap.pb.h"
 #include "oneflow/core/vm/id_util.h"
 #include "oneflow/core/vm/virtual_machine.msg.h"
 #include "oneflow/core/vm/vm_desc.msg.h"
@@ -35,8 +36,16 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
+
+namespace {
+
+void InitNumProcessPerNode() { Global<NumProcessPerNode>::New()->set_value(1); }
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
+}  // namespace
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
@@ -63,15 +72,27 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(InitSymbolInstructionType, job_desc) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
+  DestroyNumProcessPerNode();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
+#else
+  vm::TestResourceDescScope resource_scope(0, 1);
+#endif
   TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job_rewriter/job_pass.h"
-#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
@@ -183,12 +182,15 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
         fused_op_builder.Input("mean_gradient", user_op_conf.input("mean_gradient", 0.f));
       }
     } else if (user_op_conf.op_type_name() == "lars_update") {
-      fused_op_builder.Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
+      fused_op_builder.Input("momentum", user_op_conf.input("momentum", 0))
+          .Attr<float>("momentum_beta", user_op_conf.attr<float>("momentum_beta"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"))
           .Attr<float>("lars_coefficient", user_op_conf.attr<float>("lars_coefficient"));
     } else {
       UNIMPLEMENTED();
     }
+    CHECK(user_op_conf.op_conf().has_scope_symbol_id());
+    fused_op_builder.ScopeSymbolId(user_op_conf.op_conf().scope_symbol_id());
     OperatorConf new_op_conf = user_op_conf.op_conf();
     *new_op_conf.mutable_user_conf() = fused_op_builder.Build().op_conf().user_conf();
     job_builder->MutOpsOnlyOnce({new_op_conf});

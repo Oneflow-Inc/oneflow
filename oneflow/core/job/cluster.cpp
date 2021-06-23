@@ -29,15 +29,18 @@ namespace oneflow {
 
 namespace {
 
-void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread) {
-  lazy_runtime_thread->AddWork([] {
+void AsyncRunLazyJobSet(ThreadPool* lazy_runtime_thread,
+                        std::shared_ptr<BlockingCounter> wait_session_init) {
+  lazy_runtime_thread->AddWork([wait_session_init] {
     ConfigProto config_proto;
     Global<CtrlClient>::Get()->PullKV("config_proto", &config_proto);
-    int32_t machine_num = config_proto.resource().machine_num();
+    CHECK_NOTNULL(Global<EnvDesc>::Get());
+    int32_t machine_num = Global<EnvDesc>::Get()->TotalMachineNum();
     // do nothing if it's not my business
     if (GlobalProcessCtx::Rank() >= machine_num) { return; }
     Global<SessionGlobalObjectsScope>::New();
     CHECK_JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
+    wait_session_init->Decrease();
     JobSet job_set;
     Global<CtrlClient>::Get()->PullKV("session_job_set", &job_set);
     {
@@ -63,6 +66,7 @@ Maybe<void> Cluster::WorkerLoop() {
     //
     // thread_num must be 1.
     ThreadPool lazy_runtime_thread(1);
+    std::list<std::shared_ptr<BlockingCounter>> wait_session_init_list;
     while (true) {
       auto mut_cluster_instruction = std::make_shared<ClusterInstructionProto>();
       ClusterInstruction::WorkerReceiveInstruction(mut_cluster_instruction.get());
@@ -72,12 +76,16 @@ Maybe<void> Cluster::WorkerLoop() {
         LOG(FATAL) << "received abort instruction";
       } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
         ClusterInstruction::NewSessionBarrier();
-        AsyncRunLazyJobSet(&lazy_runtime_thread);
+        auto wait_session_init = std::make_shared<BlockingCounter>(1);
+        wait_session_init_list.push_back(wait_session_init);
+        AsyncRunLazyJobSet(&lazy_runtime_thread, wait_session_init);
       } else if (mut_cluster_instruction->has_eager_instruction()) {
-        Global<eager::EagerOneflow>::Get()->RunPhysicalInstruction(
+        while (!wait_session_init_list.empty()) {
+          wait_session_init_list.front()->WaitUntilCntEqualZero();
+          wait_session_init_list.pop_front();
+        }
+        Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
             std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction));
-      } else if (mut_cluster_instruction->has_cluster_ctrl_eager_sync()) {
-        ClusterInstruction::EagerSyncBarrier();
       } else {
         OF_UNIMPLEMENTED();
       }

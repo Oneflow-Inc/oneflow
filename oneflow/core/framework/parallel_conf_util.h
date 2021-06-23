@@ -20,14 +20,18 @@ limitations under the License.
 #include <vector>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/job/placement.cfg.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape.cfg.h"
 
 namespace oneflow {
 
-Maybe<std::pair<std::string, std::vector<std::string>>> GetDeviceTagAndMachineDeviceIds(
+Maybe<std::tuple<std::string, std::vector<std::string>, std::shared_ptr<cfg::ShapeProto>>>
+GetDeviceTagAndMachineDeviceIdsAndHierarchy(
     const std::shared_ptr<cfg::ParallelConf>& parallel_conf);
 
 Maybe<cfg::ParallelConf> MakeParallelConf(const std::string& device_tag,
-                                          const std::vector<std::string>& machine_device_ids);
+                                          const std::vector<std::string>& machine_device_ids,
+                                          const std::shared_ptr<Shape>& hierarchy);
 
 }  // namespace oneflow
 

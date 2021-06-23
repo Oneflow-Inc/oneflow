@@ -20,17 +20,16 @@ namespace oneflow {
 namespace vm {
 
 void ThreadCtx::LoopRun() {
-  while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess)
-    ;
+  while (ReceiveAndRun() == kObjectMsgConditionListStatusSuccess) {}
 }
 
 ObjectMsgConditionListStatus ThreadCtx::ReceiveAndRun() {
   const StreamType& stream_type = stream_rt_desc().stream_type();
   OBJECT_MSG_LIST(Instruction, pending_instruction_link) tmp_list;
   ObjectMsgConditionListStatus status = mut_pending_instruction_list()->MoveTo(&tmp_list);
-  OBJECT_MSG_LIST_FOR_EACH_PTR(&tmp_list, instruction) {
-    stream_type.Run(instruction);
-    tmp_list.Erase(instruction);
+  OBJECT_MSG_LIST_FOR_EACH(&tmp_list, instruction) {
+    tmp_list.Erase(instruction.Mutable());
+    stream_type.Run(instruction.Mutable());
   }
   return status;
 }

@@ -38,21 +38,24 @@ REGISTER_USER_OP("moving_average_min_max_observer")
     // NOTE(Liang Depeng): smoothing parameter for exponential moving average operation
     .Attr<float>("momentum", 0.95)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* moving_max_shape = ctx->Shape4ArgNameAndIndex("moving_max", 0);
-      Shape* moving_min_shape = ctx->Shape4ArgNameAndIndex("moving_min", 0);
-      Shape* current_train_step = ctx->Shape4ArgNameAndIndex("current_train_step", 0);
+      const Shape& moving_max_shape = ctx->InputShape("moving_max", 0);
+      const Shape& moving_min_shape = ctx->InputShape("moving_min", 0);
+      const Shape& current_train_step = ctx->InputShape("current_train_step", 0);
 
       // NOTE(Liang Depeng): for now only support per-layer quantization
       // TODO(Liang Depeng): depthwise convolution support per-channel quantization
-      CHECK_OR_RETURN(moving_max_shape->NumAxes() == 1 && moving_max_shape->At(0) == 1);
-      CHECK_OR_RETURN(moving_min_shape->NumAxes() == 1 && moving_min_shape->At(0) == 1);
+      CHECK_OR_RETURN(moving_max_shape.NumAxes() == 1 && moving_max_shape.At(0) == 1);
+      CHECK_OR_RETURN(moving_min_shape.NumAxes() == 1 && moving_min_shape.At(0) == 1);
 
-      CHECK_OR_RETURN(current_train_step->NumAxes() == 1 && current_train_step->At(0) == 1);
+      CHECK_OR_RETURN(current_train_step.NumAxes() == 1 && current_train_step.At(0) == 1);
 
-      *ctx->Shape4ArgNameAndIndex("scale", 0) = Shape({1});
-      *ctx->Shape4ArgNameAndIndex("zero_point", 0) = Shape({1});
-      *ctx->Dtype4ArgNameAndIndex("scale", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("zero_point", 0) = *ctx->Dtype4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("scale", 0) = Shape({1});
+      *ctx->OutputShape("zero_point", 0) = Shape({1});
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("scale", 0) = ctx->InputDType("in", 0);
+      *ctx->OutputDType("zero_point", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

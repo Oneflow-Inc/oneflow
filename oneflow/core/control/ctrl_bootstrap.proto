@@ -9,6 +9,7 @@ message Address {
 message ProcessCtx {
   repeated Address ctrl_addr = 1;
   required int64 rank = 2;
+  required int64 node_size = 3;
 }
 
 message BootstrapConf {
@@ -17,4 +18,10 @@ message BootstrapConf {
   required int64 world_size = 3;
   optional string host = 4;
   optional int32 ctrl_port = 5 [default = -1];
+  optional int64 node_size = 6 [default = -1];
+  optional NumProcessPerNode num_process_per_node = 7;
+}
+
+message NumProcessPerNode {
+  required int64 value = 1;
 }

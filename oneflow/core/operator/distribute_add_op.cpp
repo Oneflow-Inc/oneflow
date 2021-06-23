@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -33,15 +32,15 @@ class DistributeAddOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override { return new DistributeConcatLogicalNode; }
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
 };
@@ -82,7 +81,7 @@ Maybe<void> DistributeAddOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> DistributeAddOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* first_blob_desc = nullptr;
   FOR_RANGE(int, i, 0, input_bns().size()) {
@@ -95,8 +94,8 @@ Maybe<void> DistributeAddOp::InferOutBlobDescs(
 }
 
 Maybe<void> DistributeAddOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), input_bns().size());

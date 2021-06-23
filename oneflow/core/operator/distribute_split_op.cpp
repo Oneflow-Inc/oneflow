@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
@@ -30,24 +29,23 @@ class DistributeSplitOp final : public Operator {
 
   void InitFromOpConf() override;
 
-  LogicalNode* NewProperLogicalNode() const override { return new DistributeSplitLogicalNode; }
-
  private:
   Maybe<void> InferBlobParallelDesc() override;
   Maybe<void> InferSbpSignature(
-      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
 
   int32_t FixAxis(const int32_t axis, const int64_t num_axes) const;
 };
@@ -78,7 +76,7 @@ Maybe<void> DistributeSplitOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> DistributeSplitOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const auto& in_blob_desc = *GetBlobDesc4BnInOp("in");
   if (parallel_ctx->parallel_num() > 1) {
@@ -119,8 +117,8 @@ Maybe<void> DistributeSplitOp::InferBlobParallelDesc() {
 }
 
 Maybe<void> DistributeSplitOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   CHECK_EQ_OR_RETURN(parallel_desc.parallel_num(), output_bns().size());
@@ -128,7 +126,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
     const SbpInferHint* sbp_infer_hint = JUST(SbpInferHint4Ibn(ibn));
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
-  SbpSignatureList sbp_sig_list;
+  cfg::SbpSignatureList sbp_sig_list;
   GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
@@ -136,7 +134,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
 
 Maybe<void> DistributeSplitOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   const auto& conf = op_conf().distribute_split_conf();
   const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes();
   const int32_t axis = FixAxis(conf.axis(), num_axes);

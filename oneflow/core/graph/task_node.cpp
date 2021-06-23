@@ -154,11 +154,7 @@ void TaskNode::ForEachProducedDataRegst(
   }
 }
 
-void TaskNode::Build() {
-  if (consumed_regsts_.size()) { CHECK(IsReadyForBuild()); }
-  BuildExecGphAndRegst();
-  LockRegsts();
-}
+void TaskNode::Build() { BuildExecGphAndRegst(); }
 
 void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
@@ -204,7 +200,8 @@ std::string TaskNode::VisualStr() const {
 
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
-void TaskNode::ToProto(TaskProto* task_proto) {
+void TaskNode::ToProto(TaskProto* task_proto) const {
+  // Step1: process some scalar items.
   CHECK_NE(chain_id_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
@@ -213,14 +210,20 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_job_id(GlobalJobDesc().job_id());
   task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
   task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
+
+  // Step2: process exec_gph.
   exec_gph_.ToExecSequence(parallel_ctx(), task_proto->mutable_exec_sequence());
-  auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
+
+  // Step3: process produced_regst.
+  auto* produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
+
+  // Step4: process consumed_regst.
+  auto* consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
     for (const std::shared_ptr<RegstDesc>& regst : pair.second) {
@@ -230,21 +233,18 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
-int64_t TaskNode::MemZoneId121() const {
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
-  if (device_type() == DeviceType::kCPU) {
-    return id_mgr->CpuMemZoneId();
-  } else {
-    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
-  }
+MemZoneId TaskNode::MemZoneId121() const {
+  StreamId stream_id = DeserializeStreamIdFromInt64(thrd_id_);
+  return MemZoneId{stream_id.device_id()};
 }
 
-void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+bool TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return false; }
   for (const TaskEdge* in_edge : dst_node->in_edges()) {
-    if (in_edge->src_node() == this) { return; }
+    if (in_edge->src_node() == this) { return false; }
   }
-  BuildCtrlRegstDesc(dst_node);
+  BuildCtrlRegstDesc(dst_node, name);
+  return true;
 }
 
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
@@ -332,30 +332,6 @@ void TaskNode::ConsumeRegst(const std::string& name, const std::shared_ptr<Regst
   consumed_regsts_[name].push_back(regst);
 }
 
-bool TaskNode::IsAllConsumedDataRegstLocked() {
-  for (const auto& pair : consumed_regsts_) {
-    for (const std::shared_ptr<RegstDesc>& regst_desc : pair.second) {
-      if (regst_desc->regst_desc_type().has_data_regst_desc() && regst_desc->IsLocked() == false) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-void TaskNode::TryLockConsumedRegst(const std::string& name) {
-  auto consumed_regsts_it = consumed_regsts_.find(name);
-  if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (const std::shared_ptr<RegstDesc>& wrd : consumed_regsts_it->second) {
-    const std::shared_ptr<RegstDesc>& srd = wrd;
-    if (srd->IsLocked() == false) { srd->Lock(); }
-  }
-}
-
-void TaskNode::LockRegsts() {
-  for (auto& pair : produced_regsts_) { pair.second->Lock(); }
-}
-
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
@@ -394,6 +370,30 @@ std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
 void TaskEdge::AddRegst(const std::string& name_in_producer,
                         const std::shared_ptr<RegstDesc>& regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+void TaskEdge::CheckRegstLbiValid() const {
+  HashMap<LogicalBlobId, std::shared_ptr<RegstDesc>> lbi2data_regst;
+  for (auto& pair : name_in_producer2regst_) {
+    std::shared_ptr<RegstDesc> regst = pair.second;
+    if (regst->regst_desc_type().has_data_regst_desc()) {
+      // NOTE(chengcheng): regst_desc_type is Set, BUT regst_desc_type.data_regst_desc is UNSET!
+      //  So you can ONLY use NumOfLbi and ForEachLbi interface.
+      CHECK_EQ(regst->NumOfLbi(), 1);
+      regst->ForEachLbi(
+          [&](const LogicalBlobId& lbi) { CHECK(lbi2data_regst.emplace(lbi, regst).second); });
+    }
+  }
+
+  CHECK_EQ(lbi2data_regst.size(), lbis_.size())
+      << " \n\n TaskEdge lbi and regst NOT match."
+      << " TaskEdge: edge_id = " << edge_id() << " From: [" << src_node()->VisualStr() << "] To: ["
+      << dst_node()->VisualStr() << "]\n";
+  for (auto& lbi : lbis_) {
+    CHECK(lbi2data_regst.find(lbi) != lbi2data_regst.end())
+        << " \n\n Cannot find lbi: " << lbi.DebugString() << " in TaskEdge From: ["
+        << src_node()->VisualStr() << "] To: [" << dst_node()->VisualStr() << "]\n\n";
+  }
 }
 
 RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,

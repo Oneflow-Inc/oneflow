@@ -31,7 +31,7 @@ Maybe<void> ForeignOutputOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> ForeignOutputOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ_OR_RETURN(parallel_ctx->parallel_num(), 1);
   return Maybe<void>::Ok();
@@ -39,7 +39,7 @@ Maybe<void> ForeignOutputOp::InferOutBlobDescs(
 
 Maybe<void> ForeignOutputOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

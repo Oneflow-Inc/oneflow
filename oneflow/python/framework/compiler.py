@@ -36,20 +36,25 @@ import oneflow.python.lib.core.func_inspect_util as func_inspect_util
 import oneflow.python.ops as ops
 import typing
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 import inspect
 
 
 def Compile(session, function_desc, config_proto):
     with InterpretScope(session, function_desc, config_proto):
         _CompileJob(session, function_desc)
-        oneflow_api.CurJobBuildAndInferCtx_Complete()
+        session.StashJob(function_desc.job_func.__name__)
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
+        session.StashJob(
+            function_desc.job_func.__name__,
+            function_desc.job_func.__name__ + "_after_complete",
+        )
 
 
 def EagerRun(session, function_desc, config_proto, args):
     with InterpretScope(session, function_desc, config_proto):
         ret = _InterpretGlobalFunction(function_desc, args)
-        oneflow_api.CurJobBuildAndInferCtx_Complete()
+        oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
         session_ctx.GetDefaultSession().UpdateInfo4InterfaceOp()
     return ret
 
@@ -61,19 +66,27 @@ def InterpretScope(session, function_desc, config_proto):
     placement_scope = function_desc.function_attribute.default_placement_scope
     if placement_scope is None:
         tag_and_dev_ids = placement_util.GetDefaultMachineDeviceIds(session.resource)
+        hierarchy = None
     else:
         assert isinstance(placement_scope, placement_ctx.EmptyPlacementScope)
         tag_and_dev_ids = (
             placement_scope.device_tag,
             placement_scope.machine_device_ids,
         )
+        hierarchy = placement_scope.hierarchy
+
     distribute_strategy = function_desc.function_attribute.default_distribute_strategy
     if distribute_strategy is None:
         distribute_strategy = distribute_util.DistributeConsistentStrategy()
     is_mirrored = isinstance(
         distribute_strategy, distribute_util.DistributeMirroredStrategy
     )
-    scope = scope_util.MakeInitialScope(job_conf, *tag_and_dev_ids, is_mirrored)
+    assert isinstance(hierarchy, (list, tuple)) or hierarchy is None
+    if hierarchy is not None:
+        hierarchy = oneflow._oneflow_internal.Size(tuple(hierarchy))
+    scope = scope_util.MakeInitialScope(
+        job_conf, *tag_and_dev_ids, hierarchy, is_mirrored
+    )
     with _JobBuildAndInferCtx(job_conf.job_name()), distribute_strategy:
         c_api_util.CurJobBuildAndInferCtx_SetJobConf(job_conf)
         with runtime_mode.ModeScope(runtime_mode.GLOBAL_MODE):
@@ -103,7 +116,6 @@ def _CompileJob(session, function_desc):
     func.__oneflow_output_remote_blobs__ = _RecursiveMakeRetRemoteBlobs(
         ret, allow_cpu_return_op=function_desc.function_attribute.allow_cpu_return_op
     )
-    session.StashJob(func.__name__)
 
 
 def _InterpretGlobalFunction(function_desc, args):
@@ -136,7 +148,7 @@ def _JobBuildAndInferCtx(job_name):
     try:
         yield
     finally:
-        oneflow_api.JobBuildAndInferCtx_Close()
+        oneflow._oneflow_internal.JobBuildAndInferCtx_Close()
 
 
 def _GetArgDefault(func):
@@ -194,7 +206,7 @@ def _RecusiveMakeInputBlobDef(cls):
 def _RecursiveMakeRetRemoteBlobs(remote_blobs, **kwarg):
     if remote_blobs is None:
         return None
-    if isinstance(remote_blobs, oneflow_api.BlobDesc):
+    if isinstance(remote_blobs, oneflow._oneflow_internal.BlobDesc):
         return ops.ReturnRemoteBlob(remote_blobs, **kwarg)
     if isinstance(remote_blobs, (tuple, list)):
         return type(remote_blobs)(

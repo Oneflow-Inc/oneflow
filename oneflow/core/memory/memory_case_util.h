@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/common/util.h"
 
@@ -47,9 +48,10 @@ struct MemoryCaseUtil {
 
   static int64_t GenMemZoneId(const MemoryCase& mem_case);
 
-  static int64_t MergeThrdMemZoneId(int64_t thrd_id, const MemoryCase& mem_case);
-
   static bool IsHostUnPinnedMemoryCase(const MemoryCase& mem_case);
+
+  static std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type,
+                                                 const int64_t device_id);
 };
 
 }  // namespace oneflow

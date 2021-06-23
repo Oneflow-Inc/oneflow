@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/stream.msg.h"
 #include "oneflow/core/vm/thread_ctx.msg.h"
-#include "oneflow/core/vm/cuda_instruction_status_querier.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/cuda_stream_handle_device_context.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
@@ -34,8 +34,9 @@ void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Strea
 
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
-  static_assert(sizeof(CudaInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CudaInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(), stream.device_id());
+  static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
+  CudaOptionalEventRecordStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data(),
+                                                     stream.device_id());
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
@@ -45,7 +46,13 @@ void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
 
 bool CudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+}
+
+void CudaStreamType::set_has_event_record(InstructionStatusBuffer* status_buffer, bool val) const {
+  auto* querier =
+      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  return querier->set_has_event_record(val);
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {
@@ -59,7 +66,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   }
   stream->mut_callback_list()->MoveTo(instruction->mut_callback_list());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
-  CudaInstrStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
+  CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
 ObjectMsgPtr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/vm/cpu_stream_type.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
  public:
   CpuLazyReferenceInstructionType() = default;
@@ -28,5 +28,23 @@ class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
 
 COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
 
-}  // namespace eager
+class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
+ public:
+  CpuAccessBlobByCallbackInstructionType() = default;
+  ~CpuAccessBlobByCallbackInstructionType() override = default;
+
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuAccessBlobByCallbackInstructionType>(
+    "cpu.AccessBlobByCallback"));
+
+class CpuSoftSyncStreamInstructionType : public SoftSyncStreamInstructionType {
+ public:
+  CpuSoftSyncStreamInstructionType() = default;
+  ~CpuSoftSyncStreamInstructionType() override = default;
+  using stream_type = vm::CpuStreamType;
+};
+COMMAND(vm::RegisterInstructionType<CpuSoftSyncStreamInstructionType>("cpu.SoftSyncStream"));
+
+}  // namespace vm
 }  // namespace oneflow

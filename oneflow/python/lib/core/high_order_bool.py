@@ -15,7 +15,7 @@ limitations under the License.
 """
 from __future__ import absolute_import
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def bool_functor(verbose_debug_str):
@@ -186,7 +186,7 @@ class HobContextAttr(HobContextGetter):
         @hob_context_attr("%s.%s" % (self.attr_name, attr_name))
         def HobCtxAttr(ctx):
             obj = self.attr_getter(ctx)
-            if isinstance(obj, oneflow_api.CfgMessage):
+            if isinstance(obj, oneflow._oneflow_internal.CfgMessage):
                 return getattr(obj, attr_name)()
             else:
                 return getattr(obj, attr_name)
@@ -197,7 +197,7 @@ class HobContextAttr(HobContextGetter):
         @bool_functor('%s.HasField("%s")' % (self.attr_name, attr_name))
         def BoolFunctor(ctx):
             obj = self.attr_getter(ctx)
-            if isinstance(obj, oneflow_api.CfgMessage):
+            if isinstance(obj, oneflow._oneflow_internal.CfgMessage):
                 assert hasattr(obj, "has_" + attr_name), type(obj)
                 return getattr(obj, "has_" + attr_name)()
             elif hasattr(obj, "HasField"):

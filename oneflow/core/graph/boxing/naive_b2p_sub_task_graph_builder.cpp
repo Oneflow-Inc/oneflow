@@ -27,8 +27,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
-    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
+    const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && out_parallel_desc.parallel_num() != 1 && out_sbp_parallel.has_partial_sum_parallel()) {
     HashMap<int64_t, int64_t> out_id2nearest_in_id;
@@ -50,8 +50,8 @@ Maybe<SubTskGphBuilderStatus> NaiveB2PSubTskGphBuilder::Build(
       const int64_t nearest_in_id = out_id2nearest_in_id.at(out_id);
       TaskNode* nearest_in_node = sorted_in_tasks.at(nearest_in_id);
       if (out_id == nearest_out_node_idx) {
-        TaskNode* proxy = ctx->GetProxyNode(nearest_in_node, nearest_in_node->MemZoneId121(),
-                                            out_parallel_desc, out_id);
+        TaskNode* proxy =
+            ctx->task_graph()->GetProxyNode(nearest_in_node, lbi, out_parallel_desc, out_id);
 
         sorted_out_tasks->push_back(proxy);
       } else {

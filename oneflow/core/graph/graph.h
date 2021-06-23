@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
 #include <stack>
+#include <bitset>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
@@ -615,19 +616,56 @@ Graph<NodeType, EdgeType>::MakePredicatorIsReachable(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode)
     const {
-  auto node2ancestor = std::make_shared<HashMap<const NodeType*, HashSet<const NodeType*>>>();
+  static constexpr int64_t BITSET_SIZE = 512;  // size of cache line
+  class BitSet {
+   public:
+    BitSet() = default;
+    ~BitSet() = default;
+
+    void Insert(int64_t k) { bitset_vec_.at(k / BITSET_SIZE).set(k % BITSET_SIZE, true); }
+
+    bool Contains(int64_t k) { return bitset_vec_.at(k / BITSET_SIZE).test(k % BITSET_SIZE); }
+
+    void Merge(const BitSet& other) {
+      CHECK_EQ(bitset_vec_.size(), other.bitset_vec_.size());
+      for (int64_t i = 0; i < bitset_vec_.size(); ++i) {
+        bitset_vec_.at(i) |= other.bitset_vec_.at(i);
+      }
+    }
+
+    void Resize(size_t size) {
+      const int64_t bitset_vec_size = RoundUp(size, BITSET_SIZE) / BITSET_SIZE;
+      bitset_vec_.resize(bitset_vec_size);
+    }
+
+   private:
+    using bitset_vec = std::vector<std::bitset<BITSET_SIZE>>;
+    bitset_vec bitset_vec_;
+  };
+
+  using NodePtr2Id = HashMap<const NodeType*, int64_t>;
+  using Id2Ancestor = std::vector<BitSet>;
+  std::shared_ptr<NodePtr2Id> node2id(new NodePtr2Id);
+  std::shared_ptr<Id2Ancestor> id2ancestor(new Id2Ancestor(node_num()));
+  int64_t id = 0;
+  node2id->reserve(node_num());
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
-    node2ancestor->emplace(node, HashSet<const NodeType*>());
+    node2id->emplace(node, id);
+    id2ancestor->at(id).Resize(node_num());
+    id += 1;
+  });
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](NodeType* node) {
+    const int64_t node_id = node2id->at(node);
+    auto& ancestor_bitset_vec = id2ancestor->at(node_id);
     ForEachInNode(node, [&](NodeType* in_node) {
-      node2ancestor->at(node).insert(in_node);
-      node2ancestor->at(node).insert(node2ancestor->at(in_node).begin(),
-                                     node2ancestor->at(in_node).end());
+      const int64_t in_node_id = node2id->at(in_node);
+      ancestor_bitset_vec.Insert(in_node_id);
+      ancestor_bitset_vec.Merge(id2ancestor->at(in_node_id));
     });
   });
-  return [node2ancestor](const NodeType* src, const NodeType* dst) -> bool {
-    const auto it = node2ancestor->find(dst);
-    if (it == node2ancestor->end()) { return false; }
-    return it->second.find(src) != it->second.end();
+  return [id2ancestor, node2id](const NodeType* src, const NodeType* dst) -> bool {
+    const int64_t dst_id = node2id->at(dst);
+    return id2ancestor->at(dst_id).Contains(node2id->at(src));
   };
 }
 

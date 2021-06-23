@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/operator/case_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -48,18 +47,16 @@ Maybe<void> CaseOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> CaseOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(*this, GetBlobDesc4BnInOp);
 }
 
 Maybe<void> CaseOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
-
-LogicalNode* CaseOp::NewProperLogicalNode() const { return new CaseLogicalNode(); }
 
 REGISTER_CPU_OP(OperatorConf::kCaseConf, CaseOp);
 

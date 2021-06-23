@@ -71,8 +71,9 @@ class BroadcastToCompatibleWithOp final : public Operator {
     return InferBlobDescs(op_conf(), BlobDesc4BnInOp);
   }
 
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override {
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override {
     return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
   }
 
@@ -92,7 +93,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override {
+      cfg::SbpSignatureList* sbp_sig_list) const override {
     Shape broadcasted_shape{1};
     for (const std::string ibn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
@@ -111,7 +112,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
       if (broadcasted_shape.At(i) == 1) { continue; }
-      SbpSignature sbp_sig;
+      cfg::SbpSignature sbp_sig;
       for (const auto& pair : ibn2extend_shape) {
         if (pair.second.At(i) == 1) {
           (*sbp_sig.mutable_bn_in_op2sbp_parallel())[pair.first].mutable_broadcast_parallel();

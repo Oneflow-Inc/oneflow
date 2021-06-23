@@ -35,6 +35,7 @@ limitations under the License.
 #include <random>
 #include <thread>
 #include <utility>
+#include <cfenv>
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
@@ -52,6 +53,15 @@ struct hash<std::pair<T0, T1>> {
     auto h0 = std::hash<T0>{}(p.first);
     auto h1 = std::hash<T1>{}(p.second);
     return h0 ^ h1;
+  }
+};
+
+template<typename T>
+struct hash<std::vector<T>> {
+  std::size_t operator()(const std::vector<T>& vec) const {
+    std::size_t hash_value = 0;
+    for (const auto& elem : vec) { hash_value ^= std::hash<T>()(elem); }
+    return hash_value;
   }
 };
 
@@ -192,6 +202,18 @@ bool IsKernelSafeInt32(int64_t n);
 inline void HashCombine(size_t* seed, size_t hash) {
   *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
 }
+
+class RoundModeGuard final {
+ public:
+  RoundModeGuard(int mode) {
+    saved_mode_ = std::fegetround();
+    CHECK_EQ(std::fesetround(mode), 0);
+  }
+  ~RoundModeGuard() { std::fesetround(saved_mode_); }
+
+ private:
+  int saved_mode_;
+};
 
 }  // namespace oneflow
 

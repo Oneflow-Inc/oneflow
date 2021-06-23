@@ -51,24 +51,15 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   explicit PlanTaskGraph(const Plan& plan);
   ~PlanTaskGraph() = default;
 
-  void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
-                                        HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
-  bool IsReachable(int64_t src_task_id, int64_t dst_task_id) const;
-
   const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
  private:
   void InitNodes();
   void InitEdges();
-  void InitNode2Ancestor();
-  void InitChainId2SortedPlanTaskNode();
-  bool IsReachableToAncestor(const PlanTaskNode* node, const PlanTaskNode* ancestor) const;
 
   const Plan* plan_;
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
-  HashMap<const PlanTaskNode*, HashSet<const PlanTaskNode*>> node2ancestors_;
-  HashMap<int64_t, std::vector<const PlanTaskNode*>> chain_id2sorted_plan_task_nodes_;
 };
 
 }  // namespace oneflow

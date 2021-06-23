@@ -22,15 +22,20 @@ from typing import Optional, Union, Sequence, List, Text, Callable
 import oneflow as flow
 import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
+import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
 import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
-import oneflow_api
+import oneflow._oneflow_internal
 
 
 def GetVariablesForCurrentJob() -> List[Text]:
     sess = session_ctx.GetDefaultSession()
-    job_name = oneflow_api.JobBuildAndInferCtx_GetCurrentJobName()
+    assert (
+        rt_mode.CurrentMode() == rt_mode.GLOBAL_MODE
+    ), "Optimizer's Variables() or minimize() method should be called inside a Job Function to implicitly get variables from a job."
+    # TODO(): Use new api when new GetCurrentJobName api is ready.
+    job_name = oneflow._oneflow_internal.JobBuildAndInferCtx_GetCurrentJobName()
     return list(sess.job_name2var_name2var_blob_[job_name].keys())
 
 
@@ -995,11 +1000,19 @@ class Optimizer:
         else:
             self.loss_scale_policy = loss_scale_policy
 
+        self._variables_list_init = False
+
     def Variables(self) -> List[Text]:
-        if hasattr(self, "variables"):
-            assert isinstance(self.variables, Sequence)
-            return list(self.variables)
-        return []
+        if not self._variables_list_init:
+            if self.variables is None:
+                self.variables = list(GetVariablesForCurrentJob())
+            elif callable(self.variables):
+                self.variables = list(self.variables())
+            else:
+                self.variables = list(self.variables)
+            self._variables_list_init = True
+
+        return self.variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf: job_conf_pb.TrainConf) -> None:
         raise NotImplementedError()
@@ -1015,7 +1028,11 @@ class Optimizer:
         return train_conf
 
     def minimize(
-        self, loss: Union[Sequence[oneflow_api.BlobDesc], oneflow_api.BlobDesc]
+        self,
+        loss: Union[
+            Sequence[oneflow._oneflow_internal.BlobDesc],
+            oneflow._oneflow_internal.BlobDesc,
+        ],
     ) -> None:
         if not isinstance(loss, collections.abc.Sequence):
             loss = [loss]
@@ -1099,10 +1116,7 @@ class SGD(Optimizer):
         self.lr_scheduler = lr_scheduler
         self.grad_clipping = grad_clipping
         self.momentum = momentum
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1113,7 +1127,7 @@ class SGD(Optimizer):
             optimizer_conf.naive_conf.SetInParent()
         else:
             optimizer_conf.momentum_conf.beta = self.momentum
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.SGDW")
@@ -1209,10 +1223,7 @@ class SGDW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1237,7 +1248,7 @@ class SGDW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.Adam")
@@ -1342,10 +1353,7 @@ class Adam(Optimizer):
         self.beta2 = beta2
         self.epsilon = epsilon
         self.do_bias_correction = do_bias_correction
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1356,7 +1364,7 @@ class Adam(Optimizer):
         optimizer_conf.adam_conf.beta2 = self.beta2
         optimizer_conf.adam_conf.epsilon = self.epsilon
         optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.AdamW")
@@ -1483,10 +1491,7 @@ class AdamW(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1511,7 +1516,7 @@ class AdamW(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.RMSProp")
@@ -1604,10 +1609,7 @@ class RMSProp(Optimizer):
         self.decay_rate = decay_rate
         self.epsilon = epsilon
         self.centered = centered
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1617,7 +1619,7 @@ class RMSProp(Optimizer):
         optimizer_conf.rmsprop_conf.decay_rate = self.decay_rate
         optimizer_conf.rmsprop_conf.epsilon = self.epsilon
         optimizer_conf.rmsprop_conf.centered = self.centered
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.LARS")
@@ -1628,11 +1630,11 @@ class LARS(Optimizer):
 
     .. math::
 
-        & local\_learning\_rate = learning\_rate*lars\_coeff*\frac{\lVert{parm_{old}\rVert}}{\epsilon+\lVert{grad\rVert}}
+        & local\_learning\_rate = learning\_rate*lars\_coeff*\frac{\lVert{parm_{old}\rVert}}{\epsilon+\lVert{grad\rVert}+weight_decay*\lVert{parm_{old}\rVert}}
 
         & momentum_t = \beta*momentum_{t-1} + local\_learning\_rate*(grad)
 
-        & param_{new} = param_{old} - momentum_t
+        & param_{new} = param_{old} - momentum_t - local_learning_rate * weight_decay * param_{old}
 
     Args:
         lr_scheduler (LrScheduler): The scheduler of learning rate.
@@ -1640,9 +1642,17 @@ class LARS(Optimizer):
         epsilon (float, optional): A small float constant value for numerical stability (:math:`\epsilon`). Defaults to 1e-9.
         lars_coefficient (float, optional): The coefficient factor, it defines how much we trust the layer to change its weights (:math:`lars\_coeff`). Defaults to 0.0001.
         loss_scale_factor (Optional[float], optional): The scale factor of loss. Defaults to None.
+        weight_decay (Optional[float], optional): The weight decay factor (In the equation is :math:`\lambda`). Defaults to None.
+        weight_decay_includes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that use weight decay. Defaults to None.
+        weight_decay_excludes (Optional[Union[Sequence[Text], Text]], optional): The name of the model parameters that do not use weight decay. Defaults to None.
         grad_clipping (Optional[ClipGradientConf], optional): The gradient clipping strategy. Defaults to None.
         train_step_lbn (Optional[Text], optional): [description]. Defaults to None.
         loss_scale_policy (Optional[LossScalePolicy]): The policy of loss scale.
+
+    Note:
+
+        Only one of `weight_decay_includes` and `weight_decay_excludes` can be set. If both are None,
+        all the model parameters will use weight decay.
 
     For example:
 
@@ -1677,6 +1687,9 @@ class LARS(Optimizer):
         epsilon: float = 1e-9,
         lars_coefficient: float = 0.0001,
         loss_scale_factor: Optional[float] = None,
+        weight_decay: Optional[float] = None,
+        weight_decay_includes: Optional[Union[Sequence[Text], Text]] = None,
+        weight_decay_excludes: Optional[Union[Sequence[Text], Text]] = None,
         grad_clipping: Optional[ClipGradientConf] = None,
         train_step_lbn: Optional[Text] = None,
         loss_scale_policy: Optional[LossScalePolicy] = None,
@@ -1692,10 +1705,14 @@ class LARS(Optimizer):
         self.momentum_beta = momentum_beta
         self.epsilon = epsilon
         self.lars_coefficient = lars_coefficient
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.weight_decay = weight_decay
+        if isinstance(weight_decay_includes, str):
+            weight_decay_includes = [weight_decay_includes]
+        if isinstance(weight_decay_excludes, str):
+            weight_decay_excludes = [weight_decay_excludes]
+        self.weight_decay_includes = weight_decay_includes
+        self.weight_decay_excludes = weight_decay_excludes
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1705,7 +1722,21 @@ class LARS(Optimizer):
         optimizer_conf.lars_conf.momentum_beta = self.momentum_beta
         optimizer_conf.lars_conf.epsilon = self.epsilon
         optimizer_conf.lars_conf.lars_coefficient = self.lars_coefficient
-        optimizer_conf.variable_op_names.extend(self.variables)
+        if self.weight_decay is not None:
+            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            assert not (
+                self.weight_decay_excludes is not None
+                and self.weight_decay_includes is not None
+            )
+            if self.weight_decay_includes is not None:
+                optimizer_conf.weight_decay_conf.includes.pattern.extend(
+                    self.weight_decay_includes
+                )
+            elif self.weight_decay_excludes is not None:
+                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
+                    self.weight_decay_excludes
+                )
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.LazyAdam")
@@ -1788,10 +1819,7 @@ class LazyAdam(Optimizer):
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1801,7 +1829,7 @@ class LazyAdam(Optimizer):
         optimizer_conf.lazy_adam_conf.beta1 = self.beta1
         optimizer_conf.lazy_adam_conf.beta2 = self.beta2
         optimizer_conf.lazy_adam_conf.epsilon = self.epsilon
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.LAMB")
@@ -1864,10 +1892,7 @@ class LAMB(Optimizer):
             weight_decay_excludes = [weight_decay_excludes]
         self.weight_decay_includes = weight_decay_includes
         self.weight_decay_excludes = weight_decay_excludes
-        if callable(variables):
-            self.variables = list(variables())
-        else:
-            self.variables = list(variables)
+        self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
         optimizer_conf = train_conf.optimizer_conf.add()
@@ -1891,7 +1916,7 @@ class LAMB(Optimizer):
                 optimizer_conf.weight_decay_conf.excludes.pattern.extend(
                     self.weight_decay_excludes
                 )
-        optimizer_conf.variable_op_names.extend(self.variables)
+        optimizer_conf.variable_op_names.extend(self.Variables())
 
 
 @oneflow_export("optimizer.CombinedOptimizer")
@@ -1918,10 +1943,7 @@ class CombinedOptimizer(Optimizer):
         super().__init__(
             loss_scale_factor, train_step_lbn, loss_scale_policy,
         )
-        self.optimizers = optimizers
-        self.variables = []
-        for optimizer in self.optimizers:
-            self.variables.append(optimizer.Variables())
+        for optimizer in optimizers:
             assert not isinstance(
                 optimizer, CombinedOptimizer
             ), "Forbid constructing CombinedOptimizer recursively"
@@ -1933,6 +1955,16 @@ class CombinedOptimizer(Optimizer):
                 "Only one loss scale policy among multi optimizers, please set this"
                 "parameter in CombinedOptimizer"
             )
+        self.optimizers = optimizers
+
+    def Variables(self) -> List[Text]:
+        if not self._variables_list_init:
+            self.variables = []
+            for optimizer in self.optimizers:
+                self.variables.append(optimizer.Variables())
+            self._variables_list_init = True
+
+        return self.variables
 
     def _SanityCheck(self):
         all_variables = set(GetVariablesForCurrentJob())

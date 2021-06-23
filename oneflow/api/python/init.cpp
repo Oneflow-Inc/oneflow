@@ -50,7 +50,7 @@ bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap
 
 }  // namespace
 
-PYBIND11_MODULE(oneflow_api, m) {
+PYBIND11_MODULE(_oneflow_internal, m) {
   m.def("MasterSendAbort", []() {
     if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
       return ClusterInstruction::MasterSendAbort();

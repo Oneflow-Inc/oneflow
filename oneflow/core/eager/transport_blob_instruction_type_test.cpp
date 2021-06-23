@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/control/ctrl_util.h"
 
 namespace oneflow {
-namespace eager {
+namespace vm {
 namespace test {
 
 namespace {
@@ -249,10 +249,22 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
+void InitNumProcessPerNode() {
+  Global<NumProcessPerNode>::New();
+  Global<NumProcessPerNode>::Get()->set_value(1);
+}
+
+void DestroyNumProcessPerNode() { Global<NumProcessPerNode>::Delete(); }
+
 }  // namespace
 
 TEST(SendReceiveInstructionType, naive) {
+  InitNumProcessPerNode();
+#ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
+#else
+  vm::TestResourceDescScope scope(0, 1, 2);
+#endif
   auto vm0 = MakeVM(0);
   int64_t src_blob_id = 0;
   {
@@ -292,8 +304,9 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
+  DestroyNumProcessPerNode();
 }
 
 }  // namespace test
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow

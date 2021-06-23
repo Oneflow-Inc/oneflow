@@ -83,6 +83,9 @@ void ConstantInitializer(const T& value, Blob* blob) {
 }
 
 template<typename T>
+void EmptyInitializer() {}
+
+template<typename T>
 void RandomUniformInitializer(const RandomUniformInitializerConf& initializer_conf,
                               uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
@@ -280,6 +283,21 @@ void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
     UNIMPLEMENTED();
 #endif  // WITH_CUDA
   }
+}
+
+void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
+                const MemoryCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const char value, size_t sz);
+  if (dst_mem_case.has_host_mem()) {
+    func = &Memset<DeviceType::kCPU>;
+  } else {
+#ifdef WITH_CUDA
+    func = &Memset<DeviceType::kGPU>;
+#else
+    UNIMPLEMENTED();
+#endif  // WITH_CUDA
+  }
+  func(ctx, dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \
@@ -523,6 +541,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RangeInitializer<T>(initializer_conf.range_conf(), random_seed, blob);
   } else if (initializer_conf.has_variance_scaling_conf()) {
     VarianceScalingInitializer<T>(initializer_conf.variance_scaling_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }
@@ -548,6 +568,8 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
     RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(), random_seed, blob);
   } else if (initializer_conf.has_int_range_conf()) {
     IntSequenceInitializer<T>(initializer_conf.int_range_conf(), random_seed, blob);
+  } else if (initializer_conf.has_empty_conf()) {
+    EmptyInitializer<T>();
   } else {
     UNIMPLEMENTED();
   }

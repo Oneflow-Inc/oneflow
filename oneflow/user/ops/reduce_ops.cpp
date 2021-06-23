@@ -20,18 +20,23 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
-  const Shape* input_shape = ctx->Shape4ArgNameAndIndex("input_tensor", 0);
+  const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
   CHECK_OR_RETURN(!reduce_axes.empty());
   const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
-  const Shape& reduce_shape = CreateReducedShape(*input_shape, reduce_axes_vec);
+  const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
   const bool keepdims = ctx->Attr<bool>("keepdims");
-  Shape* output_shape = ctx->Shape4ArgNameAndIndex("output_tensor", 0);
+  Shape* output_shape = ctx->OutputShape("output_tensor", 0);
   if (keepdims) {
     *output_shape = reduce_shape;
   } else {
     *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("output_tensor", 0) = ctx->InputDType("input_tensor", 0);
   return Maybe<void>::Ok();
 }
 
@@ -77,7 +82,8 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
       .Attr<std::vector<int32_t>>("axis")             \
       .Attr<bool>("keepdims")                         \
       .SetTensorDescInferFn(InferTensorDescFn)        \
-      .SetGetSbpFn(GetSbpFn<binary_func>);
+      .SetGetSbpFn(GetSbpFn<binary_func>)             \
+      .SetDataTypeInferFn(InferDataType);
 
 REGISTER_REDUCE_USER_OP("reduce_any", BinaryFuncAny)
 REGISTER_REDUCE_USER_OP("reduce_all", BinaryFuncAll)

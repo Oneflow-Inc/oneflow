@@ -18,7 +18,7 @@ from __future__ import absolute_import
 import threading
 import oneflow.python.framework.local_blob as local_blob_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-import oneflow_api
+import oneflow._oneflow_internal
 import numpy as np
 
 
@@ -143,9 +143,9 @@ class LazyFutureRemoteBlobs(FutureRemoteBlobs):
             raise NotImplementedError
 
     def _MakeRemoteBlobPullers(self, out_remote_blobs):
-        if isinstance(out_remote_blobs, oneflow_api.ConsistentBlob):
+        if isinstance(out_remote_blobs, oneflow._oneflow_internal.ConsistentBlob):
             return _ConsistentBlobPuller(out_remote_blobs, self.session_)
-        if isinstance(out_remote_blobs, oneflow_api.MirroredBlob):
+        if isinstance(out_remote_blobs, oneflow._oneflow_internal.MirroredBlob):
             return _MirroredBlobPuller(out_remote_blobs, self.session_)
         if isinstance(out_remote_blobs, list) or isinstance(out_remote_blobs, tuple):
             return type(out_remote_blobs)(
@@ -249,7 +249,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
             )
         elif isinstance(remote_blobs, dict):
             return {k: self._MakeRemoteBlobGetters(v) for k, v in remote_blobs.items()}
-        elif isinstance(remote_blobs, oneflow_api.EagerBlobTrait):
+        elif isinstance(remote_blobs, oneflow._oneflow_internal.EagerBlobTrait):
             return _EagerBlobGetter(remote_blobs)
         else:
             raise NotImplementedError
@@ -268,7 +268,7 @@ class EagerFutureRemoteBlobs(FutureRemoteBlobs):
 
 class _EagerBlobGetter(object):
     def __init__(self, eager_blob):
-        assert isinstance(eager_blob, oneflow_api.EagerBlobTrait)
+        assert isinstance(eager_blob, oneflow._oneflow_internal.EagerBlobTrait)
         self.eager_blob_ = eager_blob
         self.local_tensor_ = None
 

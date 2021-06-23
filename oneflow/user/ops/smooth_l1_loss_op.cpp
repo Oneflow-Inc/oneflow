@@ -23,13 +23,11 @@ REGISTER_USER_OP("smooth_l1_loss")
     .Output("loss")
     .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("prediction", 0),
-                         *ctx->Shape4ArgNameAndIndex("label", 0));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
-                         *ctx->Dtype4ArgNameAndIndex("label", 0));
+      const Shape& prediction_shape = ctx->InputShape("prediction", 0);
+      const Shape& label_shape = ctx->InputShape("label", 0);
+      CHECK_EQ_OR_RETURN(prediction_shape, label_shape);
       CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
-      *ctx->Shape4ArgNameAndIndex("loss", 0) = *ctx->Shape4ArgNameAndIndex("prediction", 0);
-      *ctx->Dtype4ArgNameAndIndex("loss", 0) = *ctx->Dtype4ArgNameAndIndex("prediction", 0);
+      *ctx->OutputShape("loss", 0) = prediction_shape;
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -45,6 +43,11 @@ REGISTER_USER_OP("smooth_l1_loss")
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0), ctx->InputDType("label", 0));
+      *ctx->OutputDType("loss", 0) = ctx->InputDType("prediction", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("smooth_l1_loss_grad")
@@ -54,19 +57,13 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
     .Output("prediction_grad")
     .Attr<float>("beta")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("loss_grad", 0),
-                         *ctx->Shape4ArgNameAndIndex("prediction", 0));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("loss_grad", 0),
-                         *ctx->Dtype4ArgNameAndIndex("prediction", 0));
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("prediction", 0),
-                         *ctx->Shape4ArgNameAndIndex("label", 0));
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("prediction", 0),
-                         *ctx->Dtype4ArgNameAndIndex("label", 0));
+      const Shape& loss_grad_shape = ctx->InputShape("loss_grad", 0);
+      const Shape& prediction_shape = ctx->InputShape("prediction", 0);
+      const Shape& label_shape = ctx->InputShape("label", 0);
+      CHECK_EQ_OR_RETURN(loss_grad_shape, prediction_shape);
+      CHECK_EQ_OR_RETURN(prediction_shape, label_shape);
       CHECK_GE_OR_RETURN(ctx->Attr<float>("beta"), 0);
-      *ctx->Shape4ArgNameAndIndex("prediction_grad", 0) =
-          *ctx->Shape4ArgNameAndIndex("loss_grad", 0);
-      *ctx->Dtype4ArgNameAndIndex("prediction_grad", 0) =
-          *ctx->Dtype4ArgNameAndIndex("loss_grad", 0);
+      *ctx->OutputShape("prediction_grad", 0) = loss_grad_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -75,6 +72,12 @@ REGISTER_USER_OP("smooth_l1_loss_grad")
       FOR_RANGE(int64_t, i, 0, prediction_tensor.shape().NumAxes()) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
       }
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("loss_grad", 0), ctx->InputDType("prediction", 0));
+      CHECK_EQ_OR_RETURN(ctx->InputDType("prediction", 0), ctx->InputDType("label", 0));
+      *ctx->OutputDType("prediction_grad", 0) = ctx->InputDType("loss_grad", 0);
       return Maybe<void>::Ok();
     });
 

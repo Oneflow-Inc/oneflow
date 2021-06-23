@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/global_for.h"
 
@@ -46,12 +47,14 @@ Resource GetResource() {
 
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
-  Global<ResourceDesc, ForSession>::New(GetResource());
+  Global<NumProcessPerNode>::New()->set_value(1);
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::NumOfProcessPerNode());
   Global<IDMgr>::New();
 }
 
 void Delete() {
   Global<IDMgr>::Delete();
+  Global<NumProcessPerNode>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
 }

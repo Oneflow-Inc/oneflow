@@ -31,7 +31,7 @@ class CtrlBootstrap {
  public:
   virtual ~CtrlBootstrap() {}
 
-  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* process_ctx);
+  Maybe<void> InitProcessCtx(int64_t port, ProcessCtx* ret_process_ctx);
 
  protected:
   virtual int64_t rank() const = 0;
@@ -39,6 +39,7 @@ class CtrlBootstrap {
   virtual Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const = 0;
   virtual Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const = 0;
   virtual Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const = 0;
+  virtual Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const = 0;
 
   virtual BootstrapServer* mut_bootstrap_server() = 0;
   virtual BootstrapClient* mut_bootstrap_client() = 0;
@@ -63,6 +64,7 @@ class HostListCtrlBootstrap final : public CtrlBootstrap {
   Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const override;
   Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const override;
   Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
+  Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;
@@ -91,6 +93,7 @@ class RankInfoCtrlBootstrap final : public CtrlBootstrap {
   Maybe<void> SetHostByMaster(Address*, int64_t world_rank) const override;
   Maybe<void> SetCurrentHostByMaster(WorkerProcessInfo*) const override;
   Maybe<void> SetCurrentHostByWorker(WorkerProcessInfo*) const override;
+  Maybe<void> SetNodeSize(ProcessCtx* process_ctx) const override;
 
   BootstrapServer* mut_bootstrap_server() override;
   BootstrapClient* mut_bootstrap_client() override;

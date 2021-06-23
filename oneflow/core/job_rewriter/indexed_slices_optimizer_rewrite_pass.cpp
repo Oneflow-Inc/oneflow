@@ -69,7 +69,7 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       if (dst_node->op().output_bns().empty()) { break; }
       const OperatorConf& dst_op_conf = dst_node->op().op_conf();
       if (dst_op_conf.has_user_conf()
-          && dst_op_conf.user_conf().op_type_name() == "parallel_cast") {
+          && dst_op_conf.user_conf().op_type_name() == "hierarchical_parallel_cast") {
         if (dst_node->out_edges().size() != 1) { return; }
         op_nodes_to_remove.push_back(dst_node);
         dst_node = dst_node->SoleOutEdge()->dst_node();
@@ -140,7 +140,8 @@ Maybe<void> IndexedSlicesOptimizerRewritePass::Apply(const OpGraph& op_graph,
       }
     }
     indexed_slices_op_builder.Input("model_diff_indices", indices_lbn)
-        .Input("model_diff_values", values_lbn);
+        .Input("model_diff_values", values_lbn)
+        .ScopeSymbolId(src_op_conf.scope_symbol_id());
     job_builder->DelOps({src_op_conf, user_op_conf.op_conf()});
     job_builder->AddOps(dst_node->parallel_desc().parallel_conf(),
                         {indexed_slices_op_builder.Build().op_conf()});

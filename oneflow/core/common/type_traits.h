@@ -99,7 +99,15 @@ class is_trivially_copyable<T*> : public true_type {};
 
 namespace oneflow {
 
+template<typename T>
+struct IsScalarType final {
+  static const bool value = std::is_scalar<T>::value;
+};
+
 namespace detail {
+
+template<typename T>
+using remove_cvref_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 
 template<typename T, typename Enabled = void>
 struct ScalarOrConstRef;

@@ -26,14 +26,14 @@ RuntimeBlobShapeInferHelper::RuntimeBlobShapeInferHelper(const OperatorConf& op_
                                                          const JobDesc* job_desc) {
   op_ = ConstructOp(op_conf);
   const OpAttribute& op_attribute = kernel_conf.op_attribute();
-  if (op_attribute.has_sbp_signature()) {
-    sbp_signature_.reset(new SbpSignature(op_attribute.sbp_signature()));
-    CHECK_JUST(op_->FillSbpSignature(*sbp_signature_));
-  }
   if (op_attribute.has_parallel_conf_signature()
       && op_attribute.parallel_conf_signature().has_op_parallel_conf()) {
-    op_->FillOpParallelDesc(
-        ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf()));
+    CHECK_JUST(op_->FillOpParallelDesc(
+        ParallelDesc(op_attribute.parallel_conf_signature().op_parallel_conf())));
+  }
+  if (op_attribute.has_sbp_signature()) {
+    sbp_signature_.reset(new cfg::SbpSignature(op_attribute.sbp_signature()));
+    CHECK_JUST(op_->FillSbpSignature(*sbp_signature_));
   }
   op_->ForEachBnInOp([&](const std::string& bn_in_op) { bn_in_op2blob_desc_[bn_in_op].reset(); });
   if (op_attribute.has_logical_blob_desc_signature()) {
@@ -77,12 +77,11 @@ void RuntimeBlobShapeInferHelper::UpdateInputBlobDescs7OpInferCacheKey(
 }
 
 BlobDesc* RuntimeBlobShapeInferHelper::BlobDesc4BnInOp(const std::string& bn_in_op,
-                                                       const RtBlobDesc& rt_blob_desc) {
-  BlobDesc* blob_desc = bn_in_op2blob_desc_.at(bn_in_op).get();
-  if (blob_desc != nullptr) { return blob_desc; }
-  blob_desc = new BlobDesc(rt_blob_desc.body(), rt_blob_desc.is_dynamic());
-  bn_in_op2blob_desc_.at(bn_in_op).reset(blob_desc);
-  return blob_desc;
+                                                       const BlobDesc& blob_desc) {
+  auto it = bn_in_op2blob_desc_.find(bn_in_op);
+  if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+  if (!it->second) { it->second.reset(new BlobDesc(blob_desc)); }
+  return it->second.get();
 }
 
 void RuntimeBlobShapeInferHelper::InferShape(std::function<Blob*(const std::string&)> BnInOp2Blob) {

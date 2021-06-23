@@ -24,12 +24,13 @@ namespace oneflow {
 
 class ParallelDesc;
 
-namespace eager {
+namespace vm {
 
 class BlobObject : public vm::Object {
  public:
-  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, DataType data_type)
-      : mem_case_(mem_case), blob_desc_(data_type) {}
+  BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
+             DataType data_type)
+      : mem_case_(mem_case), blob_desc_(shape, data_type) {}
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   virtual ~BlobObject() override = default;
@@ -40,16 +41,19 @@ class BlobObject : public vm::Object {
   virtual const Blob& blob() const = 0;
   virtual Blob* mut_blob() = 0;
   virtual Maybe<void> TryInitBlob() = 0;
-  virtual void TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) = 0;
+  virtual Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) = 0;
+  virtual Maybe<void> DeallocateBlobDataPtr() = 0;
 
   Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
+
+  const MemoryCase& mem_case() const { return *mem_case_; }
 
  protected:
   std::shared_ptr<MemoryCase> mem_case_;
   BlobDesc blob_desc_;
 };
 
-}  // namespace eager
+}  // namespace vm
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_BLOB_OBJECT_H_

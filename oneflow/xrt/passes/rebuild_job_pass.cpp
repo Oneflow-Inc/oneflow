@@ -85,8 +85,6 @@ class FoldSubgraphBuilder {
     // 2.Replace control_in_op_name by the XrtLaunch operator name if
     //   the operator has been folded.
     FixupControlInOpNames();
-    // 3.Add time shape for XrtLaunch operators.
-    FixupTimeShapes();
     // 4.Add sbp parallel strategy for XrtLaunch operators.
     FixupSbpSignatures();
     // 6.Finally remove the folded operators.
@@ -101,8 +99,6 @@ class FoldSubgraphBuilder {
   void BuildXrtLaunchOps();
 
   void FixupControlInOpNames();
-
-  void FixupTimeShapes();
 
   void FixupSbpSignatures();
 
@@ -226,7 +222,7 @@ void FoldSubgraphBuilder::BuildXrtLaunchOps() {
     OperatorConf op_conf;
     op_conf.set_name(node->name());
     DeviceType device_type = XrtDeviceToDeviceType(node->device());
-    op_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(device_type)));
+    op_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(device_type)));
 
     XrtLaunchOpConf* launch_conf = op_conf.mutable_xrt_launch_conf();
     // Add inputs and outputs in launch_conf
@@ -385,28 +381,19 @@ void FoldSubgraphBuilder::FixupInOutBlobNames() {
   }
 }
 
-void FoldSubgraphBuilder::FixupTimeShapes() {
-  for (int i = 0; i < launch_nodes_.size(); ++i) {
-    CHECK_GT(folded_nodes_[i].size(), 0);
-    const OpTimeShape& time_shape = builder_->TimeShape4OpName(folded_nodes_[i][0]->name());
-    // TODO(hjchen2) check time shape for all folded nodes
-    builder_->AddTimeShape4OpName(launch_nodes_[i]->name(), time_shape);
-  }
-}
-
 void FoldSubgraphBuilder::FixupSbpSignatures() {
   for (const XrtNode* node : launch_nodes_) {
-    SbpSignature sbp_conf;
+    cfg::SbpSignature sbp_conf;
     auto* sbp_parallel = sbp_conf.mutable_bn_in_op2sbp_parallel();
     for (const XrtEdge* edge : node->in_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string& bn = edge->argument().meta_data().consume_key;
-      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[1];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<cfg::SbpParallel>>("sbp_policy")[1];
     }
     for (const XrtEdge* edge : node->out_edges()) {
       CHECK(edge->HasAttr("sbp_policy"));
       const std::string& bn = edge->argument().meta_data().produce_key;
-      (*sbp_parallel)[bn] = edge->Attr<std::vector<SbpParallel>>("sbp_policy")[0];
+      (*sbp_parallel)[bn] = edge->Attr<std::vector<cfg::SbpParallel>>("sbp_policy")[0];
     }
     // Append sbp signatures to helper
     builder_->AddSbpSignature4OpName(node->name(), sbp_conf);
@@ -417,7 +404,7 @@ void FoldSubgraphBuilder::FixupSbpSignatures() {
     auto* sbp_signatures = launch_conf->mutable_sbp_signatures();
     for (const auto& node_conf : launch_conf->function().node()) {
       const std::string& node_name = node_conf.name();
-      (*sbp_signatures)[node_name] = builder_->SbpSignature4OpName(node_name);
+      builder_->SbpSignature4OpName(node_name).ToProto(&(*sbp_signatures)[node_name]);
     }
   }
 }

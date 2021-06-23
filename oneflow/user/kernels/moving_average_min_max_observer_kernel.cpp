@@ -75,7 +75,7 @@ void GenQuantScalePerLayerAffine(const T* in, const int64_t current_train_step,
 
   T denominator = static_cast<T>(pow(2.0, quantization_bit)) - 1;
   *scale = ((*moving_max) - (*moving_min)) / denominator;
-  *zero_point = -(*moving_min) / (*scale);
+  *zero_point = -std::round((*moving_min) / (*scale));
 }
 
 template<typename T>

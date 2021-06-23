@@ -36,6 +36,9 @@ class CriticalSectionDesc final {
   CriticalSection* MutCriticalSection(int64_t) const;
   const std::vector<int64_t>& CriticalSectionIds4JobId(int64_t) const;
   void DumpCriticalSectionId2IntersectinIds(PbRpf<Int64List>* id2id_list) const;
+  const std::vector<std::vector<int64_t>>& job_id2critical_section_ids() const {
+    return job_id2critical_section_ids_;
+  }
   const std::vector<int64_t>& job_id2total_job_critical_section_id() const {
     return job_id2total_job_critical_section_id_;
   }

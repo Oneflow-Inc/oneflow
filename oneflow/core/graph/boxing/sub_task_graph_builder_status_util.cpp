@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_status_util.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 

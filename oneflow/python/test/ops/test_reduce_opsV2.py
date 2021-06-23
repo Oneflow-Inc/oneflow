@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-import oneflow_api
+import oneflow._oneflow_internal
 import tensorflow as tf
 import test_global_storage
 from test_util import GenArgList
@@ -68,7 +68,7 @@ def compare_reduce_sum_with_tensorflow(
     loss_diff = test_global_storage.Get("loss_diff")
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
 
-    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-5, atol=1e-5)
+    assert np.allclose(of_out.numpy(), tf_out.numpy(), rtol=1e-3, atol=1e-3)
     assert np.allclose(
         test_global_storage.Get("x_diff"), tf_x_diff.numpy(), rtol=1e-5, atol=1e-5
     )

@@ -16,7 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 import oneflow.core.operator.op_node_signature_pb2 as op_node_signature_pb
 import oneflow.python.framework.c_api_util as c_api_util
-import oneflow_api.oneflow.core.operator.op_node_signature as op_node_signature_cfg
+import oneflow._oneflow_internal.oneflow.core.operator.op_node_signature as op_node_signature_cfg
 import oneflow
 from google.protobuf import text_format
 

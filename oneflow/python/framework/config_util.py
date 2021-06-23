@@ -19,7 +19,7 @@ import oneflow.python.framework.hob as hob
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.lib.core.enable_if as enable_if
 from oneflow.python.oneflow_export import oneflow_export
-import oneflow_api
+import oneflow._oneflow_internal
 import traceback
 
 
@@ -53,7 +53,7 @@ def api_load_library_now(val: str) -> None:
 @enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
 def load_library_now(val):
     assert type(val) is str
-    oneflow_api.LoadLibraryNow(val)
+    oneflow._oneflow_internal.LoadLibraryNow(val)
 
 
 @oneflow_export("config.machine_num")
@@ -81,7 +81,7 @@ def api_gpu_device_num(val: int) -> None:
         val (int): number of GPUs. It is identical on every machine. In other words,
         you can't specify different number of GPUs you would like to use on each machine.
     """
-    if oneflow_api.flags.with_cuda():
+    if oneflow._oneflow_internal.flags.with_cuda():
         return enable_if.unique([gpu_device_num, do_nothing])(val)
     else:
         print(
@@ -304,40 +304,6 @@ def enable_debug_mode(val):
     sess.config_proto.resource.enable_debug_mode = val
 
 
-@oneflow_export("config.save_downloaded_file_to_local_fs")
-def api_save_downloaded_file_to_local_fs(val: bool = True) -> None:
-    r"""Whether or not save downloaded file to local file system.
-
-    Args:
-        val (bool, optional): True or False. Defaults to True.
-    """
-    return enable_if.unique([save_downloaded_file_to_local_fs, do_nothing])(val=val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def save_downloaded_file_to_local_fs(val=True):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is bool
-    sess.config_proto.io_conf.save_downloaded_file_to_local_fs = val
-
-
-@oneflow_export("config.persistence_buf_byte")
-def api_persistence_buf_byte(val: int) -> None:
-    r"""Set up buffer size for persistence.
-
-    Args:
-        val (int): e.g. 1024(bytes)
-    """
-    return enable_if.unique([persistence_buf_byte, do_nothing])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
-def persistence_buf_byte(val):
-    sess = session_ctx.GetDefaultSession()
-    assert type(val) is int
-    sess.config_proto.io_conf.persistence_buf_byte = val
-
-
 @oneflow_export("config.legacy_model_io_enabled")
 def api_legacy_model_io_enabled():
     sess = session_ctx.GetDefaultSession()
@@ -445,6 +411,23 @@ def enable_tensor_float_32_compute(val=True):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.enable_tensor_float_32_compute = val
+
+
+@oneflow_export("config.enable_mem_chain_merge")
+def api_enable_mem_chain_merge(val: bool = True) -> None:
+    r"""Whether or not to enable MemChain merge.
+
+    Args:
+        val (bool, optional): True or False. Defaults to True.
+    """
+    return enable_if.unique([enable_mem_chain_merge, do_nothing])(val=val)
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def enable_mem_chain_merge(val=True):
+    sess = session_ctx.GetDefaultSession()
+    assert type(val) is bool
+    sess.config_proto.resource.enable_mem_chain_merge = val
 
 
 @oneflow_export("config.nccl_use_compute_stream")

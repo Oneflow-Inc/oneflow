@@ -42,14 +42,42 @@ Maybe<void> DeviceTickOp::InferLogicalOutBlobDescs(
 }
 
 Maybe<void> DeviceTickOp::InferOutBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
 Maybe<void> DeviceTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    SbpSignatureList* sbp_sig_list) const {
+    cfg::SbpSignatureList* sbp_sig_list) const {
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DeviceTickOp::InferOpTimeShape(
+    const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
+    std::shared_ptr<const Shape>* time_shape) const {
+  std::shared_ptr<const Shape> in_time_shape;
+  for (const auto& bn : input_bns()) {
+    std::shared_ptr<const Shape> ts = JUST(GetTimeShape4BnInOp(bn));
+    if (!in_time_shape) {
+      in_time_shape = ts;
+    } else {
+      CHECK_OR_RETURN(*in_time_shape == *ts);
+    }
+  }
+  if (this->op_conf().device_tick_conf().has_time_shape()) {
+    if (!in_time_shape) {
+      in_time_shape.reset(new Shape(this->op_conf().device_tick_conf().time_shape()));
+    } else {
+      CHECK_OR_RETURN(in_time_shape->elem_cnt()
+                      == Shape(this->op_conf().device_tick_conf().time_shape()).elem_cnt());
+    }
+  }
+  if (in_time_shape) {
+    *time_shape = in_time_shape;
+  } else {
+    *time_shape = std::make_shared<const Shape>(Shape({1, 1}));
+  }
   return Maybe<void>::Ok();
 }
 

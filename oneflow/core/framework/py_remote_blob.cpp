@@ -19,23 +19,6 @@ namespace oneflow {
 
 namespace compatible_py {
 
-namespace {
-
-Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (EagerExecutionEnabled()) {
-    return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-  } else {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  }
-}
-
-Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {
-  auto* mgr = JUST(GlobalJobBuildAndInferCtxMgr());
-  return mgr->FindJobBuildAndInferCtx(job_name);
-}
-
-}  // namespace
-
 ConsistentBlob::ConsistentBlob(const std::shared_ptr<cfg::LogicalBlobId>& lbi,
                                const std::string& job_name,
                                const std::shared_ptr<Distribute>& distribute)

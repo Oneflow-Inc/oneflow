@@ -46,7 +46,6 @@ OperatorConf GenForeignInputOpConf(const std::string& job_name, const int64_t in
   *blob_conf->mutable_shape()->mutable_dim()->Add() = input_size;
   blob_conf->set_is_dynamic(true);
   blob_conf->set_data_type(DataType::kInt8);
-  blob_conf->mutable_split_axis()->clear_value();
   return foreign_input_op_conf;
 }
 
@@ -102,24 +101,31 @@ void MakeModelInitJob(
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 1);
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
   if (var_op_name2op_conf.empty()) { return; }
-  std::string prev_post_model_init_tick_lbn = GenLogicalBlobName(
-      foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
+  HashMap<ParallelConf, std::vector<OperatorConf>> parallel_conf2variable_op_conf;
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
-    OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
     const ParallelBlobConf& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
+    OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
+  }
+  for (auto& pair : parallel_conf2variable_op_conf) {
+    std::vector<OperatorConf>& variable_op_confs = pair.second;
     OperatorConf model_init_op_conf{};
-    model_init_op_conf.set_name("System-ModelInit-" + var_op_name);
+    model_init_op_conf.set_name("System-ModelInit-" + NewUniqueId());
     ModelInitV2OpConf* model_init_conf = model_init_op_conf.mutable_model_init_v2_conf();
-    model_init_conf->set_ref(GetVariableLbn(variable_op_conf));
-    *model_init_conf->mutable_original_variable_conf() = variable_op_conf.variable_conf();
-    model_init_conf->set_variable_op_name(variable_op_conf.name());
-    model_init_conf->set_tick(prev_post_model_init_tick_lbn);
-    *model_init_conf->mutable_out() = "out";
-    prev_post_model_init_tick_lbn =
-        GenLogicalBlobName(model_init_op_conf.name(), model_init_conf->out());
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf, model_init_op_conf});
+    const int64_t num_var = variable_op_confs.size();
+    model_init_conf->mutable_ref()->Reserve(num_var);
+    model_init_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_init_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
+      model_init_conf->add_ref(GetVariableLbn(variable_op_confs.at(i)));
+      model_init_conf->add_variable_op_name(variable_op_confs.at(i).name());
+      *model_init_conf->add_original_variable_conf() =
+          std::move(*variable_op_confs.at(i).mutable_variable_conf());
+    }
+    job_builder.AddOps(pair.first, {model_init_op_conf});
   }
 }
 
@@ -137,29 +143,33 @@ void MakeModelLoadJob(
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 65536);
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
   if (var_op_name2op_conf.empty()) { return; }
-  std::string prev_post_model_load_tick_lbn = GenLogicalBlobName(
-      foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
+  HashMap<ParallelConf, std::vector<OperatorConf>> parallel_conf2variable_op_conf;
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
-    const ParallelConf& variable_op_parallel_conf =
-        var_op_name2parallel_blob_conf.at(var_op_name).parallel_conf();
-    const VariableOpConf& origin_variable_conf = variable_op_conf.variable_conf();
-    CHECK_NE(origin_variable_conf.data_type(), DataType::kInvalidDataType);
+    const ParallelBlobConf& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
     OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
+  }
+  for (auto& pair : parallel_conf2variable_op_conf) {
+    std::vector<OperatorConf>& variable_op_confs = pair.second;
     OperatorConf model_load_op_conf{};
-    model_load_op_conf.set_name("System-ModelLoad-" + var_op_name);
+    model_load_op_conf.set_name("System-ModelLoad-" + NewUniqueId());
     ModelLoadV2OpConf* model_load_conf = model_load_op_conf.mutable_model_load_v2_conf();
     model_load_conf->set_path(GenLogicalBlobName(foreign_input_op_conf.name(),
                                                  foreign_input_op_conf.foreign_input_conf().out()));
-    model_load_conf->set_ref(GetVariableLbn(new_var_op_conf));
-    *model_load_conf->mutable_variable_op_name() = var_op_name;
-    *model_load_conf->mutable_original_variable_conf() = origin_variable_conf;
-    *model_load_conf->mutable_out() = "out";
-    *model_load_conf->mutable_tick() = prev_post_model_load_tick_lbn;
-    prev_post_model_load_tick_lbn =
-        GenLogicalBlobName(model_load_op_conf.name(), model_load_conf->out());
-    job_builder.AddOps(variable_op_parallel_conf, {new_var_op_conf, model_load_op_conf});
+    const int64_t num_var = variable_op_confs.size();
+    model_load_conf->mutable_ref()->Reserve(num_var);
+    model_load_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_load_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
+      model_load_conf->add_ref(GetVariableLbn(variable_op_confs.at(i)));
+      model_load_conf->add_variable_op_name(variable_op_confs.at(i).name());
+      *model_load_conf->add_original_variable_conf() =
+          std::move(*variable_op_confs.at(i).mutable_variable_conf());
+    }
+    job_builder.AddOps(pair.first, {model_load_op_conf});
   }
 }
 
@@ -177,28 +187,33 @@ void MakeModelSaveJob(
   const OperatorConf foreign_input_op_conf = GenForeignInputOpConf(job_name, 65536);
   job_builder.AddOps(master_parallel_conf, {foreign_input_op_conf, tick_op_conf});
   if (var_op_name2op_conf.empty()) { return; }
-  std::string prev_post_model_save_tick_lbn = GenLogicalBlobName(
-      foreign_input_op_conf.name(), foreign_input_op_conf.foreign_input_conf().out());
+  HashMap<ParallelConf, std::vector<OperatorConf>> parallel_conf2variable_op_conf;
   for (const auto& pair : var_op_name2op_conf) {
     const auto& var_op_name = pair.first;
     const OperatorConf& variable_op_conf = pair.second;
-    const VariableOpConf& variable_conf = variable_op_conf.variable_conf();
     const auto& parallel_blob_conf = var_op_name2parallel_blob_conf.at(var_op_name);
+    parallel_conf2variable_op_conf[parallel_blob_conf.parallel_conf()].push_back(variable_op_conf);
     OperatorConf new_var_op_conf = CloneVariableOpConf(variable_op_conf);
-    const std::string lbn = GetVariableLbn(variable_op_conf);
+    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf});
+  }
+  for (auto pair : parallel_conf2variable_op_conf) {
+    std::vector<OperatorConf>& variable_op_confs = pair.second;
     OperatorConf model_save_op_conf{};
-    model_save_op_conf.set_name("System-ModelSave-" + var_op_name);
+    model_save_op_conf.set_name("System-ModelSave-" + NewUniqueId());
     ModelSaveV2OpConf* model_save_conf = model_save_op_conf.mutable_model_save_v2_conf();
     model_save_conf->set_path(GenLogicalBlobName(foreign_input_op_conf.name(),
                                                  foreign_input_op_conf.foreign_input_conf().out()));
-    *model_save_conf->mutable_in() = lbn;
-    *model_save_conf->mutable_tick() = prev_post_model_save_tick_lbn;
-    *model_save_conf->mutable_out() = "out";
-    *model_save_conf->mutable_variable_op_name() = var_op_name;
-    *model_save_conf->mutable_original_variable_conf() = variable_conf;
-    prev_post_model_save_tick_lbn =
-        GenLogicalBlobName(model_save_op_conf.name(), model_save_conf->out());
-    job_builder.AddOps(parallel_blob_conf.parallel_conf(), {new_var_op_conf, model_save_op_conf});
+    const int64_t num_var = variable_op_confs.size();
+    model_save_conf->mutable_in()->Reserve(num_var);
+    model_save_conf->mutable_variable_op_name()->Reserve(num_var);
+    model_save_conf->mutable_original_variable_conf()->Reserve(num_var);
+    for (int64_t i = 0; i < num_var; ++i) {
+      *model_save_conf->add_in() = GetVariableLbn(variable_op_confs.at(i));
+      *model_save_conf->add_variable_op_name() = variable_op_confs.at(i).name();
+      *model_save_conf->add_original_variable_conf() =
+          std::move(*variable_op_confs.at(i).mutable_variable_conf());
+    }
+    job_builder.AddOps(pair.first, {model_save_op_conf});
   }
 }
 

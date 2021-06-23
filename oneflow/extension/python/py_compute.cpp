@@ -200,7 +200,7 @@ void PyRegisterKernels(PyObject* py_kernels) {
 }
 
 void PyCompute(user_op::KernelComputeContext* ctx, const std::string& py_func_name) {
-  const std::string& op_type_name = ctx->user_op_conf().op_type_name();
+  const std::string& op_type_name = ctx->op_type_name();
   const user_op::OpRegistryResult* val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_type_name);
   CHECK(val) << "Op op_type_name " << op_type_name << " has no definition.";

@@ -26,10 +26,10 @@ REGISTER_USER_OP("dropout")
     .Output("out")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("out", 0) = *ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *in_shape);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      *ctx->OutputShape("out", 0) = in_shape;
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
@@ -49,6 +49,11 @@ REGISTER_USER_OP("dropout")
       float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
       return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("dropout_grad")
@@ -57,10 +62,10 @@ REGISTER_USER_OP("dropout_grad")
     .Output("dx")
     .Attr<float>("scale")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("dy", 0);
-      CHECK_EQ_OR_RETURN(*ctx->Shape4ArgNameAndIndex("mask", 0), *dy_shape);
-      CHECK_EQ_OR_RETURN(*ctx->Dtype4ArgNameAndIndex("mask", 0), DataType::kInt8);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      *ctx->OutputShape("dx", 0) = dy_shape;
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -78,6 +83,11 @@ REGISTER_USER_OP("dropout_grad")
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       float scale = op_conf.attr<float>("scale");
       CHECK_GT_OR_RETURN(scale, 1);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+      CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
       return Maybe<void>::Ok();
     });
 
@@ -103,8 +113,7 @@ REGISTER_USER_OP("random_mask_like")
     .Attr<float>("rate")
     .Attr<int64_t>("seed")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("like", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt8;
+      *ctx->OutputShape("out", 0) = ctx->InputShape("like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -123,6 +132,10 @@ REGISTER_USER_OP("random_mask_like")
       float rate = op_conf.attr<float>("rate");
       CHECK_GE_OR_RETURN(rate, 0);
       CHECK_LT_OR_RETURN(rate, 1);
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 

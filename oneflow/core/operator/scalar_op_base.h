@@ -27,20 +27,21 @@ class ScalarOpBase : public Operator {
   ~ScalarOpBase() override = default;
 
   void InitFromOpConf() override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual Maybe<void> VirtualGetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const {
+      cfg::SbpSignatureList* sbp_sig_list) const {
     return Maybe<void>::Ok();
   }
 
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

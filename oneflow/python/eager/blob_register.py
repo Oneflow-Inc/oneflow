@@ -16,13 +16,13 @@ limitations under the License.
 from __future__ import absolute_import
 
 import oneflow
-import oneflow_api
+import oneflow._oneflow_internal
 from contextlib import contextmanager
 
 
 @contextmanager
 def BnInOp2BlobObjectScope(blob_register, op_attribute):
-    bn_in_op2blob_object = oneflow_api.deprecated.BnInOp2BlobObject()
+    bn_in_op2blob_object = oneflow._oneflow_internal.deprecated.BnInOp2BlobObject()
     for ibn in op_attribute.input_bns:
         lbi = op_attribute.arg_signature.bn_in_op2lbi[ibn]
         bn_in_op2blob_object[ibn] = blob_register.GetObject4BlobName(

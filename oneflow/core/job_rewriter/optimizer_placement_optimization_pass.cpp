@@ -66,7 +66,7 @@ ParallelConf NonDistributedParallelConf4ParallelId(const ParallelDesc& pd,
   device_name += std::to_string(CHECK_JUST(pd.DeviceId4ParallelId(parallel_id)));
   ParallelConf parallel_conf;
   *parallel_conf.mutable_device_name()->Add() = device_name;
-  parallel_conf.set_device_tag(CHECK_JUST(DeviceTag4DeviceType(pd.device_type())));
+  parallel_conf.set_device_tag(*CHECK_JUST(DeviceTag4DeviceType(pd.device_type())));
   return parallel_conf;
 }
 
@@ -121,7 +121,9 @@ void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
   OpBlobArg op_blob_arg;
   op_blob_arg.set_op_name(node->op().op_name());
   op_blob_arg.set_bn_in_op(ibn);
-  builder->MutSbpParallel4Oba(op_blob_arg)->mutable_broadcast_parallel();
+  cfg::SbpParallel sbp_parallel;
+  sbp_parallel.mutable_broadcast_parallel();
+  builder->SetSbpParallel4Oba(op_blob_arg, sbp_parallel);
 }
 
 void SetBroadcastParallel4Consumers(JobBuilder* builder, const SequencePtr& sequence) {
@@ -186,22 +188,22 @@ void ForEachParallelSortedNodeSequence(
   }
 }
 
-bool IsS0Parallel(const SbpParallel& sbp_parallel) {
+bool IsS0Parallel(const cfg::SbpParallel& sbp_parallel) {
   return sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0;
 }
 
-bool IsS0Parallel(const SbpSignature& signature, const std::string& bn) {
+bool IsS0Parallel(const cfg::SbpSignature& signature, const std::string& bn) {
   return IsS0Parallel(signature.bn_in_op2sbp_parallel().at(bn));
 }
 
 bool IsS0SignatureSupported(const OpNode* node) {
   if (node->op().input_bns().size() != 1 || node->op().output_bns().size() != 1) { return false; }
-  SbpSignatureList list;
+  cfg::SbpSignatureList list;
   auto LogicalBlobDesc4Ibn = [&](const std::string& bn) -> Maybe<const BlobDesc&> {
     return Maybe<const BlobDesc&>(node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi(bn)));
   };
   node->op().GetSbpSignaturesIf(LogicalBlobDesc4Ibn, node->parallel_desc(), &list);
-  const auto IsInOutS0Parallel = [&](const SbpSignature& signature) {
+  const auto IsInOutS0Parallel = [&](const cfg::SbpSignature& signature) {
     return IsS0Parallel(signature, node->op().SoleIbn())
            && IsS0Parallel(signature, node->op().SoleObn());
   };
@@ -244,7 +246,9 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
-      new_var_op_conf.mutable_variable_conf()->mutable_split_axis()->set_value(0);
+      CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
+      new_var_op_conf.mutable_variable_conf()->clear_parallel_distribution();
+      *new_var_op_conf.mutable_variable_conf()->add_parallel_distribution() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();

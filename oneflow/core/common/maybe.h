@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include <google/protobuf/text_format.h>
+#include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/either_ptr.h"
 #include "oneflow/core/common/shared_or_scalar.h"
 #include "oneflow/core/common/error.h"
@@ -29,7 +30,7 @@ template<typename T, typename Enabled = void>
 class Maybe;
 
 template<typename T>
-class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
+class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && !std::is_reference<T>::value>::type>
     final {
  public:
@@ -149,7 +150,7 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
 };
 
 template<typename T>
-class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
+class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
@@ -205,7 +206,7 @@ class Maybe<T, typename std::enable_if<std::is_scalar<T>::value>::type> final {
 };
 
 template<typename T>
-class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is_scalar<T>::value)
+class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && std::is_reference<T>::value>::type>
     final {
   using ValueT = typename std::remove_reference<T>::type;
@@ -229,6 +230,11 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || std::is
 
   T GetDataAndSerializedErrorProto(std::string* error_str) const {
     return *maybe_ptr_.GetDataAndSerializedErrorProto(error_str, static_cast<PtrT>(nullptr));
+  }
+
+  T GetOrThrow() const {
+    if (!IsOk()) { ThrowError(error()); }
+    return Data_YouAreNotAllowedToCallThisFuncOutsideThisFile();
   }
 
  private:
@@ -266,16 +272,17 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
     maybe;                                                                     \
   }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 #define CHECK_JUST(...)                                                        \
-  ({                                                                           \
+  ([&](const char* func_name) {                                                \
     MAYBE_CONST_AUTO_REF maybe = __MaybeErrorStackCheckWrapper__(__VA_ARGS__); \
     if (!maybe.IsOk()) {                                                       \
       auto* stack_frame = maybe.error()->add_stack_frame();                    \
       stack_frame->set_location(MAYBE_FAILED_LOC);                             \
-      stack_frame->set_function(__FUNCTION__);                                 \
+      stack_frame->set_function(func_name);                                    \
       LOG(FATAL) << maybe.GetSerializedError();                                \
     }                                                                          \
-    maybe;                                                                     \
-  }).Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
+    return maybe;                                                              \
+  })(__FUNCTION__)                                                             \
+      .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()
 
 #define CHECK_OK(...) CHECK(MaybeIsOk(std::move(__VA_ARGS__)))
 

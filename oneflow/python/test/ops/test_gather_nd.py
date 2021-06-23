@@ -79,7 +79,10 @@ def _make_gather_nd_fn(
 
     def do_gather_nd(x, index):
         x_var = flow.get_variable(
-            "params", shape=(1,), dtype=x_dtype, initializer=flow.zeros_initializer(),
+            "params",
+            shape=(1,),
+            dtype=x_dtype,
+            initializer=flow.constant_initializer(0, x_dtype),
         )
         x = x + flow.cast_to_current_logical_view(x_var)
         y = flow.gather_nd(x, index)

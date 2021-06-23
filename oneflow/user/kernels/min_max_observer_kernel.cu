@@ -140,7 +140,7 @@ __global__ void CalScaleZeroPointAffine(const T* max_ptr, const T* min_ptr, cons
     T min = -min_ptr[gid];
     T s = (max_ptr[gid] - min) / denominator;
     scale[gid] = s;
-    zero_point[gid] = -min / s;
+    zero_point[gid] = -round(min / s);
     gid += gridDim.x * blockDim.x;
   }
 }
@@ -216,6 +216,9 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       }
     } else if (quantization_formula == "cambricon") {
+      if (!per_layer_quantization) {
+        UNIMPLEMENTED() << " per-channel mode is not supported in cambricon scheme";
+      }
       LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->device_ctx(), channel, 0, max_ptr,
                          min_ptr, channel, static_cast<double>(quantization_bit),
                          scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
@@ -235,8 +238,8 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
         size_t tmp_buffer_size = 1;                                                    \
         if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
-          const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);                 \
-          tmp_buffer_size = in_shape->At(0);                                           \
+          const Shape& in_shape = ctx->InputShape("in", 0);                            \
+          tmp_buffer_size = in_shape.At(0);                                            \
         }                                                                              \
         return 2 * tmp_buffer_size * sizeof(dtype);                                    \
       })

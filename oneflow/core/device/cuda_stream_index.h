@@ -28,6 +28,12 @@ class CudaStreamIndexGenerator final : public StreamIndexGenerator {
   stream_index_t GenerateMixStreamIndex() { return kMix; }
   stream_index_t GenerateNcclStreamIndex() { return kNccl; }
   stream_index_t GenerateDecodeH2DStreamIndex() { return kDecodeH2D; }
+  stream_index_t GenerateNcclComputeStreamIndex(const uint32_t id) {
+    stream_index_t idx = kNcclComputeBegin + id;
+    CHECK_LE(idx, kNcclComputeEnd);
+    return idx;
+  }
+  uint32_t GetNcclComputeStreamCount() const { return kNcclComputeEnd - kNcclComputeBegin + 1; }
 
  private:
   static const stream_index_t kCompute = 0;
@@ -36,6 +42,8 @@ class CudaStreamIndexGenerator final : public StreamIndexGenerator {
   static const stream_index_t kMix = 3;
   static const stream_index_t kNccl = 4;
   static const stream_index_t kDecodeH2D = 5;
+  static const stream_index_t kNcclComputeBegin = 10;
+  static const stream_index_t kNcclComputeEnd = 17;
 };
 
 }  // namespace oneflow

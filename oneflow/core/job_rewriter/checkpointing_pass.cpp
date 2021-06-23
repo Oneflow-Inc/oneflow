@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/scope.h"
+#include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/framework.h"
@@ -68,7 +69,8 @@ void CollectAllCheckpointingOpsInForwardPass(
   //   in the future, we need to support the recomputation version of batch_norm which do NOT
   //   update forward variables.
   HashSet<std::string> ignore_op_type_names = {"normalization", "normalization_add_relu",
-                                               "cudnn_fused_normalization_add_relu"};
+                                               "cudnn_fused_normalization_add_relu", "repeat",
+                                               "unpack"};
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -170,6 +172,14 @@ Maybe<void> CheckpointingPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
       OperatorConf fake_op_conf = node->op().op_conf();
       std::string fake_op_name = kCheckpointingFakeOpNamePrefix + fake_op_conf.name();
       fake_op_conf.set_name(fake_op_name);
+      const int64_t old_scope_symbol_id = fake_op_conf.scope_symbol_id();
+      // update fake op conf scope from fw to bw
+      const int64_t new_scope_symbol_id = JUST(
+          NewScopeSymbolId(old_scope_symbol_id, [](std::shared_ptr<cfg::ScopeProto> new_scope) {
+            CHECK_EQ(new_scope->calculation_pass_name(), kForwardPass);
+            new_scope->set_calculation_pass_name(kBackwardPass);
+          }));
+      fake_op_conf.set_scope_symbol_id(new_scope_symbol_id);
 
       auto* user_conf = fake_op_conf.mutable_user_conf();
       // change output lbns

@@ -38,6 +38,7 @@ const std::string MOVING_MAX_SUFFIX = "-fake-quant-moving-max";
 const std::string MOVING_MIN_SUFFIX = "-fake-quant-moving-min";
 const std::string MUL_BIAS_SUFFIX = "-fake-quant-mul-bias";
 const std::string OBSERVER_SUFFIX = "-fake-quant-observer";
+const std::string TRAIN_STEP_SUFFIX = "-fake-train-step";
 
 void VerifyQATList(const OpTypeSet& op_list) {
   for (const auto& op_type : op_list) {
@@ -73,7 +74,7 @@ Maybe<bool> IsConvBiasEdge(const QatConfig& qat_config, const OpEdge* edge,
       if (ibn[0] == "in_0") {
         *conv_input_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
       } else if (ibn[0] == "weight_0") {
-        if (qat_config.has_per_channel_weight_quantization()) {
+        if (qat_config.per_channel_weight_quantization()) {
           *weight_scale_length = conv_node->LogicalBlobDesc4Lbi(lbi).shape().At(0);
         }
         *conv_weight_scale_lbn = *JUST(GetScaleLbn(GenLogicalBlobName(in_edge->lbis()[0])));
@@ -123,6 +124,7 @@ std::string OpTypeName4OpNode(const OpNode* node) {
 
 using OpConfMap = HashMap<std::string, OperatorConf>;
 
+template<DataType data_type = DataType::kFloat>
 OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbol_id,
                                      const int64_t length, OpConfMap* inserted_ops) {
   OperatorConf variable_op_conf{};
@@ -131,8 +133,7 @@ OperatorConf Get1DZeroVariableOpConf(std::string name, const int64_t scope_symbo
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");
   *variable_conf->mutable_shape()->mutable_dim()->Add() = length;
-  variable_conf->set_data_type(DataType::kFloat);
-  variable_conf->mutable_split_axis()->clear_value();
+  variable_conf->set_data_type(data_type);
   variable_conf->mutable_initializer()->mutable_constant_conf()->set_value(0);
   (*inserted_ops)[name] = variable_op_conf;
   return variable_op_conf;
@@ -169,7 +170,7 @@ std::string QuantizationSchemeAttr4QatConfig(const QatConfig& qat_config) {
 // TODO: refactor the following 4 methods by registration
 std::string QuantizationFormulaAttr4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return "google";
   } else if (target_backend == "cambricon") {
     return "cambricon";
@@ -184,6 +185,8 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
     return {"add_n", "matmul", "batch_matmul", "conv2d", "avg_pool_2d", "max_pool_2d"};
   } else if (target_backend == "cambricon") {
     return {"conv2d", "matmul"};
+  } else if (target_backend == "tensorrt7") {
+    return {"conv2d"};
   } else {
     UNIMPLEMENTED();
   }
@@ -191,7 +194,7 @@ OpTypeSet Int8List4QatConfig(const QatConfig& qat_config) {
 
 OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return {"reshape"};
   } else if (target_backend == "cambricon") {
     return {};
@@ -202,7 +205,7 @@ OpTypeSet TransparentList4QatConfig(const QatConfig& qat_config) {
 
 bool InsertQuantOpAfterInt8Ops4QatConfig(const QatConfig& qat_config) {
   const auto target_backend = qat_config.target_backend();
-  if (target_backend == "") {
+  if (target_backend == "" || target_backend == "tensorrt7") {
     return true;
   } else if (target_backend == "cambricon") {
     return false;
@@ -254,11 +257,19 @@ user_op::UserOpConfWrapper MovingMinMaxObserver(const std::string& name, const s
       Get1DZeroVariableOpConf(moving_max_name, scope_symbol_id, 1, inserted_ops);
   const auto moving_min_var =
       Get1DZeroVariableOpConf(moving_min_name, scope_symbol_id, 1, inserted_ops);
+  std::string observer_current_train_step = train_step_lbn;
+  if (!GlobalJobDesc().IsTrain()) {
+    const std::string train_step_name = name + TRAIN_STEP_SUFFIX;
+    const auto train_step_var = Get1DZeroVariableOpConf<DataType::kInt64>(
+        train_step_name, scope_symbol_id, 1, inserted_ops);
+    observer_current_train_step =
+        GenLogicalBlobName(train_step_var.name(), train_step_var.variable_conf().out());
+  }
   const auto op_wrapper =
       user_op::UserOpConfWrapperBuilder(name)
           .Op("moving_average_min_max_observer")
           .Input("in", input)
-          .Input("current_train_step", train_step_lbn)
+          .Input("current_train_step", observer_current_train_step)
           .Input("moving_max",
                  GenLogicalBlobName(moving_max_var.name(), moving_max_var.variable_conf().out()))
           .Input("moving_min",

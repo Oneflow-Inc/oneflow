@@ -35,29 +35,35 @@ def check_file(path):
     with open(path) as f:
         content = f.read()
         txt = get_txt(path)
-        if content.startswith(txt) or (not content):
-            return (True, content)
-        else:
-            return (False, content)
+        if "import doctest" in content and "raise_on_error=True" not in content:
+            return ("please add 'doctest.testmod(raise_on_error=True)'", content)
+        elif content.count("The OneFlow Authors. All rights reserved.") > 1:
+            return ("license_duplicated", content)
+        elif content.startswith(txt) or (not content):
+            return ("ok", content)
+        elif content.startswith(txt) == False:
+            return ("license_absent", content)
 
 
 def format_file(path):
     txt = get_txt(path)
     with open(path, "r", encoding="utf-8") as r:
         content = r.read()
-    is_formatted, content = check_file(path)
-    if is_formatted:
+    format_status, content = check_file(path)
+    if format_status == "ok":
         return True
-    else:
+    elif format_status == "license_absent":
         with open(path, "w") as w:
             new_content = txt + content
             w.write(new_content)
         return False
+    else:
+        raise ValueError(f"{format_status} {path}")
 
 
 def do_check(x):
-    is_formatted, _ = check_file(x)
-    return (x, is_formatted)
+    format_status, _ = check_file(x)
+    return (x, format_status)
 
 
 def do_format(x):
@@ -69,6 +75,7 @@ def glob_files(path):
     for ext in ("**/*.cpp", "**/*.h", "**/*.hpp", "**/*.cu", "**/*.cuh", "**/*.py"):
         joined = os.path.join(path, ext)
         files.extend(glob.glob(joined, recursive=True))
+    files = [f for f in files if "version.py" not in f]
     return files
 
 
@@ -90,13 +97,16 @@ if __name__ == "__main__":
     with Pool(10) as p:
         if args.check:
             any_absence = False
-            for (p, is_formatted) in p.map(do_check, files):
-                if is_formatted == False:
-                    print("license absent:", p)
+            for (p, format_status) in p.map(do_check, files):
+                if format_status != "ok":
+                    print(f"{format_status}:", p)
                     any_absence = True
             if any_absence:
                 exit(1)
         if args.fix:
-            for (p, is_formatted) in p.map(do_format, files):
-                if is_formatted == False:
-                    print("license added:", p)
+            for (p, format_result) in p.map(do_format, files):
+                if format_result == True:
+                    if args.verbose:
+                        print("license already added:", p)
+                else:
+                    print("license just added:", p)

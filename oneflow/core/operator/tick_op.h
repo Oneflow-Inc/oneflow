@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_TICK_OP_H_
 
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -31,14 +30,14 @@ class TickOp final : public Operator {
   Maybe<void> InferLogicalOutBlobDescs(
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> InferOutBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const override;
-  LogicalNode* NewProperLogicalNode() const override { return new TickLogicalNode; }
+  Maybe<void> InferOutBlobDescs(
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      SbpSignatureList* sbp_sig_list) const override;
+      cfg::SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow
