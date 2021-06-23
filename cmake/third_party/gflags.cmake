@@ -50,4 +50,4 @@ ExternalProject_Add(gflags
 
 endif(THIRD_PARTY)
 add_library(gflags_imported UNKNOWN IMPORTED)
-set_property(TARGET gflags_imported PROPERTY IMPORTED_LOCATION "${GLOG_STATIC_LIBRARIES}")
+set_property(TARGET gflags_imported PROPERTY IMPORTED_LOCATION "${GFLAGS_STATIC_LIBRARIES}")
