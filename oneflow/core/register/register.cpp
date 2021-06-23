@@ -70,7 +70,7 @@ const Blob* Regst::GetSoleBlob() const {
 }
 
 void* Regst::comm_net_token() {
-  void* token = comm_net_token_;
+  void* token = comm_net_token_.load(std::memory_order_relaxed);
   if (token != nullptr) { return token; }
   {
     std::lock_guard<std::mutex> lock(comm_net_token_mutex_);
