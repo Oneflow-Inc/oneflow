@@ -35,7 +35,7 @@ else ()
   set(CUDNN_STATIC ON CACHE BOOL "")
 endif()
 
-project(oneflow C CXX)
+project(oneflow-project C CXX)
 
 set(oneflow_cmake_dir ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -181,5 +181,18 @@ endif()
 
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
-  include(oneflow)
+  ExternalProject_Add (oneflow
+    PREFIX oneflow
+    DOWNLOAD_COMMAND ""
+    SOURCE_DIR ${PROJECT_SOURCE_DIR}/oneflow # Source dir for configuration
+    INSTALL_DIR ${PROJECT_BINARY_DIR}/oneflow_install
+    CMAKE_CACHE_ARGS
+      -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+      -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
+      -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
+      -DCMAKE_CXX_FLAGS_DEBUG:STRING=${CMAKE_CXX_FLAGS_DEBUG}
+      -DCMAKE_CXX_FLAGS_RELEASE:STRING=${CMAKE_CXX_FLAGS_RELEASE}
+      -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
+      -DCUDA_NVCC_FLAGS:STRING=${CUDA_NVCC_FLAGS}
+  )
 endif()

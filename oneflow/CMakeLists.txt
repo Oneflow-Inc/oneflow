@@ -1,5 +1,6 @@
 include(python)
-
+cmake_minimum_required(VERSION 3.14.0)
+project(oneflow C CXX)
 function(oneflow_add_executable)
   if (BUILD_CUDA)
     cuda_add_executable(${ARGV})
