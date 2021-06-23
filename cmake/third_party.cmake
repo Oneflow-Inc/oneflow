@@ -1,3 +1,4 @@
+cmake_policy(SET CMP0074 NEW)
 if (NOT WIN32)
   find_package(Threads)
 endif()
