@@ -4,15 +4,13 @@ from PIL import Image
 import os
 import os.path
 import numpy as np
-import oneflow.experimental as flow
 import codecs
-import string
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.error import URLError
-from .utils import download_and_extract_archive, extract_archive, verify_str_arg, check_integrity
-import shutil
 
-flow.enable_eager_execution()
+import oneflow.experimental as flow
+from .utils import download_and_extract_archive, check_integrity
+
 
 class MNIST(VisionDataset):
     """`MNIST <http://yann.lecun.com/exdb/mnist/>`_ Dataset.
