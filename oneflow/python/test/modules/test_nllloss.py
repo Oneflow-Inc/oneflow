@@ -22,7 +22,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def nll_loss_1d(logs, targets, reduction="none"):
+def nll_loss_1d(logs, targets, reduction="none", ignore_index=None):
     input_shape = logs.shape
     N = input_shape[0]
     C = input_shape[1]
@@ -31,15 +31,23 @@ def nll_loss_1d(logs, targets, reduction="none"):
     for i in range(N):
         cur_target = targets[i]
         out[i] = -logs[i][cur_target]
+    if ignore_index is not None:
+        condition = targets != ignore_index
+        out *= condition
     if reduction == "sum":
         return np.sum(out)
     elif reduction == "mean":
-        return out.sum() / total_weight
+        if ignore_index is not None:
+            reduce_sum = out.sum()
+            reduce_count = np.argwhere(condition).shape[0]
+            return reduce_sum / reduce_count
+        else:
+            return out.sum() / total_weight
     elif reduction == "none":
         return out
 
 
-def nll_loss_2d(logs, targets, reduction="none"):
+def nll_loss_2d(logs, targets, reduction="none", ignore_index=None):
     input_shape = logs.shape
     N = input_shape[0]
     H = input_shape[2]
@@ -51,15 +59,23 @@ def nll_loss_2d(logs, targets, reduction="none"):
             for w in range(W):
                 cur_target = targets[i][h][w]
                 out[i][h][w] = -logs[i][cur_target][h][w]
+    if ignore_index is not None:
+        condition = targets != ignore_index
+        out *= condition
     if reduction == "sum":
         return np.sum(out)
     elif reduction == "mean":
-        return out.sum() / total_weight
+        if ignore_index is not None:
+            reduce_sum = out.sum()
+            reduce_count = np.argwhere(condition).shape[0]
+            return reduce_sum / reduce_count
+        else:
+            return out.sum() / total_weight
     elif reduction == "none":
         return out
 
 
-def nll_loss_bert(logs, targets, reduction="none"):
+def nll_loss_bert(logs, targets, reduction="none", ignore_index=None):
     input_shape = logs.shape
     N = input_shape[0]
     H = input_shape[2]
@@ -69,10 +85,18 @@ def nll_loss_bert(logs, targets, reduction="none"):
         for h in range(H):
             cur_target = targets[i][h]
             out[i][h] = -logs[i][cur_target][h]
+    if ignore_index is not None:
+        condition = targets != ignore_index
+        out *= condition
     if reduction == "sum":
         return np.sum(out)
     elif reduction == "mean":
-        return out.sum() / total_weight
+        if ignore_index is not None:
+            reduce_sum = out.sum()
+            reduce_count = np.argwhere(condition).shape[0]
+            return reduce_sum / reduce_count
+        else:
+            return out.sum() / total_weight
     elif reduction == "none":
         return out
 
@@ -89,12 +113,18 @@ def _test_nllloss_none(test_case, device):
     ).astype(np.float32)
     y = np.array([0, 2, 1, 1, 0]).astype(np.int)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
-
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="none")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_1d(input.numpy(), target.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="none", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_1d(input.numpy(), target.numpy(), ignore_index=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -110,12 +140,20 @@ def _test_nllloss_mean(test_case, device):
     ).astype(np.float32)
     y = np.array([0, 2, 1, 1, 0]).astype(np.int)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
-
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="mean")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_1d(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -131,12 +169,18 @@ def _test_nllloss_sum(test_case, device):
     ).astype(np.float32)
     y = np.array([0, 2, 1, 1, 0]).astype(np.int)
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
-
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="sum")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="sum", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_1d(input.numpy(), target.numpy(), reduction="sum", ignore_index=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -147,10 +191,17 @@ def _test_nllloss_segmentation_none(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="none")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_2d(input.numpy(), target.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="none", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_2d(input.numpy(), target.numpy(), ignore_index=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -161,10 +212,19 @@ def _test_nllloss_segmentation_mean(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="mean")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_2d(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -175,10 +235,17 @@ def _test_nllloss_segmentation_sum(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[[1, 0], [0, 1]]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="sum")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="sum", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_2d(input.numpy(), target.numpy(), reduction="sum", ignore_index=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -189,10 +256,17 @@ def _test_nllloss_bert_none(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="none")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_bert(input.numpy(), target.numpy())
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="none", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_bert(input.numpy(), target.numpy(), ignore_index=1)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -203,10 +277,19 @@ def _test_nllloss_bert_mean(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="mean")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="mean")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="mean", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_bert(
+        input.numpy(), target.numpy(), reduction="mean", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 
@@ -217,10 +300,19 @@ def _test_nllloss_bert_sum(test_case, device):
     input = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
     y = np.array([[1, 0, 0, 1]]).astype(np.int)
     target = flow.Tensor(y, dtype=flow.int64, device=flow.device(device))
+
     nll_loss = flow.nn.NLLLoss(reduction="sum")
     nll_loss = nll_loss.to(device)
     of_out = nll_loss(input, target)
     np_out = nll_loss_bert(input.numpy(), target.numpy(), reduction="sum")
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
+
+    nll_loss = flow.nn.NLLLoss(reduction="sum", ignore_index=1)
+    nll_loss = nll_loss.to(device)
+    of_out = nll_loss(input, target)
+    np_out = nll_loss_bert(
+        input.numpy(), target.numpy(), reduction="sum", ignore_index=1
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out))
 
 

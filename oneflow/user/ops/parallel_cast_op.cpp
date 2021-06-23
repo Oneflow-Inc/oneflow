@@ -25,7 +25,7 @@ REGISTER_USER_OP("parallel_cast")
     .Attr<std::string>("grad_sbp_parallel", "")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetSbpSignatureInferFn([](user_op::InferSbpSignatureFnContext* ctx) -> Maybe<void> {

@@ -28,7 +28,7 @@ REGISTER_USER_OP("dropout")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
       *ctx->OutputShape("out", 0) = in_shape;
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) = *ctx->IsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), in_shape);
       return Maybe<void>::Ok();
     })
@@ -64,7 +64,7 @@ REGISTER_USER_OP("dropout_grad")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       *ctx->OutputShape("dx", 0) = dy_shape;
-      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = *ctx->IsDynamic4ArgNameAndIndex("dy", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("dy", 0);
       CHECK_EQ_OR_RETURN(ctx->InputShape("mask", 0), dy_shape);
       return Maybe<void>::Ok();
     })
