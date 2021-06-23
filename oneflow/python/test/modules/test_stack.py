@@ -31,6 +31,16 @@ def _test_stack(test_case, device, shape):
     test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
 
 
+def _test_stack_tuple_input(test_case, device, shape):
+    x = np.random.rand(*shape)
+    y = np.random.rand(*shape)
+    x_tensor = flow.Tensor(x, dtype=flow.float32, device=flow.device(device))
+    y_tensor = flow.Tensor(y, dtype=flow.float32, device=flow.device(device))
+    out_np = np.stack([x, y], axis=0)
+    out_of = flow.experimental.stack((x_tensor, y_tensor), dim=0).numpy()
+    test_case.assertTrue(np.allclose(out_np, out_of, 1e-5, 1e-5))
+
+
 def _test_stack_backward(test_case, device, shape):
     x = np.random.rand(*shape)
     y = np.random.rand(*shape)
@@ -81,6 +91,7 @@ class TestStack(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_stack,
+            _test_stack_tuple_input,
             _test_stack_backward,
             _test_stack_different_dim,
             _test_stack_multi_input,

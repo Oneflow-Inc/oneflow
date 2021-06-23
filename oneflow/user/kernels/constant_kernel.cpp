@@ -19,32 +19,14 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-class ConstState final : public OpKernelState {
- public:
-  ConstState(bool is_init) : is_init_(is_init) {}
-  ~ConstState() = default;
-  bool is_inited() const { return is_init_; }
-  void set_is_inited(bool val) { is_init_ = val; }
-
- private:
-  bool is_init_;
-};
-
 template<DeviceType device_type, typename T>
 class ConstantKernel final : public OpKernel {
  public:
   ConstantKernel() = default;
   ~ConstantKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<ConstState>(false);
-  }
-
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
-    auto* const_state = dynamic_cast<ConstState*>(state);
-    if (const_state->is_inited()) { return; }
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     Tensor* out_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool is_floating_value = ctx->Attr<bool>("is_floating_value");
     const int64_t elem_cnt = out_tensor->shape().elem_cnt();
@@ -54,8 +36,6 @@ class ConstantKernel final : public OpKernel {
                                          ? static_cast<T>(ctx->Attr<double>("floating_value"))
                                          : static_cast<T>(ctx->Attr<int64_t>("integer_value")),
                                      out_tensor->mut_dptr<T>());
-
-    const_state->set_is_inited(true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

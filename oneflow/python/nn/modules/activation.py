@@ -40,6 +40,67 @@ def _softmax_need_transpose(x, axis):
     return need_transpose, permute
 
 
+@oneflow_export("nn.PReLU")
+@experimental_api
+class PReLU(Module):
+    """Applies the element-wise function:
+
+    .. math::
+        PReLU(x) = \max(0,x) + a * \min(0,x)
+
+    Here :math:`a` is a learnable parameter. When called without arguments, `nn.PReLU()` uses a single
+    parameter :math:`a` across all input channels. If called with `nn.PReLU(nChannels)`,
+    a separate :math:`a` is used for each input channel.
+
+
+    .. note::
+        weight decay should not be used when learning :math:`a` for good performance.
+
+    .. note::
+        Channel dim is the 2nd dim of input. When input has dims < 2, then there is
+        no channel dim and the number of channels = 1.
+
+    Args:
+        num_parameters (int): number of :math:`a` to learn.
+            Although it takes an int as input, there is only two values are legitimate:
+            1, or the number of channels at input. Default: 1
+        init (float): the initial value of :math:`a`. Default: 0.25
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    Attr:
+        - weight (Tensor): the learnable weights of shape (:attr:`num_parameters`).
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> m = flow.nn.PReLU()
+        >>> input = flow.Tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
+        >>> print(m(input).numpy())
+        [[[[ 1.  -0.5]
+           [ 3.   4. ]]]]
+
+    """
+
+    def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
+        super().__init__()
+        self.num_parameters = num_parameters
+        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters, 1, 1).fill_(init))
+        self.op = flow.builtin_op("prelu").Input("x").Input("alpha").Output("y").Build()
+
+    def forward(self, x):
+        assert (
+            self.num_parameters == 1 or self.num_parameters == x.shape[1]
+        ), f"num_parameters in prelu must be 1 or {x.shape[1]}"
+        return self.op(x, self.weight)[0]
+
+
 @oneflow_export("nn.ReLU")
 @experimental_api
 class ReLU(Module):
@@ -72,11 +133,9 @@ class ReLU(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("relu").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.relu(x)
 
 
 @oneflow_export("nn.ReLU6")
@@ -120,18 +179,9 @@ class ReLU6(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", 0.0)
-            .Attr("max_val", 6.0)
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardtanh(x, min_val=0.0, max_val=6.0)
 
 
 @oneflow_export("nn.Tanh")
@@ -170,11 +220,9 @@ class Tanh(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("tanh").Input("x").Output("y").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.tanh(x)
 
 
 @oneflow_export("tanh")
@@ -256,17 +304,10 @@ class ELU(Module):
 
     def __init__(self, alpha: float = 1.0, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("elu")
-            .Input("in")
-            .Attr("alpha", alpha)
-            .Output("out")
-            .Build()
-        )
+        self.alpha = alpha
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.elu(x, alpha=self.alpha)
 
 
 @oneflow_export("nn.GELU")
@@ -305,11 +346,9 @@ class GELU(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("gelu").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.gelu(x)
 
 
 @oneflow_export("gelu")
@@ -379,10 +418,9 @@ class Sigmoid(Module):
 
     def __init__(self):
         super().__init__()
-        self._op = flow.builtin_op("sigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.sigmoid(x)
 
 
 @oneflow_export("sigmoid")
@@ -457,11 +495,9 @@ class Hardsigmoid(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardsigmoid").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardsigmoid(x)
 
 
 @oneflow_export("nn.Softmax")
@@ -470,23 +506,15 @@ class Softmax(Module):
     def __init__(self, dim: Optional[int] = None):
         super().__init__()
         self.axis = -1 if dim is None else dim
-        self._op = flow.builtin_op("softmax").Input("in").Output("out").Build()
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.axis)
         if need_transpose:
-            x = self._transpose_op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
-        res = self._op(x)[0]
+        res = flow.F.softmax(x)
         if need_transpose:
-            res = self._transpose_op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
         return res
 
 
@@ -586,13 +614,6 @@ class LogSoftmax(Module):
     ):
         super().__init__()
         self.dim = dim
-        self._op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
 
     def __setstate__(self, state):
         self.__dict__.update(state)
@@ -602,13 +623,13 @@ class LogSoftmax(Module):
     def forward(self, x):
         need_transpose, permute = _softmax_need_transpose(x, self.dim)
         if need_transpose:
-            x = self._op(x, perm=permute)[0]
+            x = flow.F.transpose(x, perm=permute)
 
         x = x.softmax()
         res = x.log()
 
         if need_transpose:
-            res = self._op(res, perm=permute)[0]
+            res = flow.F.transpose(res, perm=permute)
 
         return res
 
@@ -753,11 +774,9 @@ class Hardswish(Module):
 
     def __init__(self, inplace: bool = False):
         super().__init__()
-        self._op = flow.builtin_op("hardswish").Input("in").Output("out").Build()
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardswish(x)
 
 
 @oneflow_export("nn.Hardtanh")
@@ -828,18 +847,12 @@ class Hardtanh(Module):
                 "keyword argument max_value is deprecated and rename to max_val"
             )
             max_val = max_value
-        self._op = (
-            flow.builtin_op("hardtanh")
-            .Input("in")
-            .Attr("min_val", min_val)
-            .Attr("max_val", max_val)
-            .Output("out")
-            .Build()
-        )
+
+        self.min_val = min_val
+        self.max_val = max_val
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.hardtanh(x, min_val=self.min_val, max_val=self.max_val)
 
 
 @oneflow_export("nn.LeakyReLU")
@@ -880,17 +893,10 @@ class LeakyReLU(Module):
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
         super().__init__()
-        self._op = (
-            flow.builtin_op("leaky_relu")
-            .Input("x")
-            .Attr("alpha", negative_slope)
-            .Output("y")
-            .Build()
-        )
+        self.negative_slope = negative_slope
 
     def forward(self, x):
-        res = self._op(x)[0]
-        return res
+        return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
 
 if __name__ == "__main__":

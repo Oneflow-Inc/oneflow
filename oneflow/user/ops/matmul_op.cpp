@@ -35,10 +35,10 @@ Maybe<void> InferTensorDesc4Matmul(user_op::InferContext* ctx) {
     }
   }
 
-  user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   *ctx->OutputShape("out", 0) = ctx->InputShape("a", 0);
-  *ctx->IsDynamic4ArgNameAndIndex("out", 0) = ctx->InputIsDynamic4ArgNameAndIndex("a", 0);
+  *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("a", 0);
 
   int64_t m, n, k;  // tensor a (no trans): m*k, tensor b (no trans): k*n
   if (!transpose_a) {
@@ -254,7 +254,7 @@ REGISTER_USER_OP("broadcast_matmul")
 
       const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
       // NOTE: support broadcast b to a for now
       // TODO(zwx): support broadcast a to b
@@ -355,7 +355,7 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* a = ctx->TensorDesc4ArgNameAndIndex("a", 0);
       const user_op::TensorDesc* b = ctx->TensorDesc4ArgNameAndIndex("b", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
       CHECK_EQ_OR_RETURN(a->shape().NumAxes(), b->shape().NumAxes());
       for (int i = 0; i < a->shape().NumAxes() - 1; ++i) {

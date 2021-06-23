@@ -26,18 +26,12 @@ class Slice(Module):
         self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
     ) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("slice")
-            .Input("x")
-            .Output("y")
-            .Attr("start", start)
-            .Attr("stop", stop)
-            .Attr("step", step)
-            .Build()
-        )
+        self.start = start
+        self.stop = stop
+        self.step = step
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.slice(x, start=self.start, stop=self.stop, step=self.step)
 
 
 @oneflow_export("slice")
@@ -74,19 +68,14 @@ class SliceUpdate(Module):
         self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
     ) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("slice_update")
-            .Input("x")
-            .Input("update")
-            .Output("y")
-            .Attr("start", start)
-            .Attr("stop", stop)
-            .Attr("step", step)
-            .Build()
-        )
+        self.start = start
+        self.stop = stop
+        self.step = step
 
     def forward(self, x, update):
-        return self._op(x, update)[0]
+        return flow.F.slice_update(
+            x, update, start=self.start, stop=self.stop, step=self.step
+        )
 
 
 @oneflow_export("slice_update")
@@ -122,18 +111,14 @@ class LogicalSliceAssign(Module):
         self, start: Tuple[int, ...], stop: Tuple[int, ...], step: Tuple[int, ...]
     ) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("logical_slice_assign")
-            .Input("ref")
-            .Input("value")
-            .Attr("start", start)
-            .Attr("stop", stop)
-            .Attr("step", step)
-            .Build()
-        )
+        self.start = start
+        self.stop = stop
+        self.step = step
 
     def forward(self, x, update):
-        return self._op(x, update)
+        return flow.F.logical_slice_assign(
+            x, update, start=self.start, stop=self.stop, step=self.step
+        )
 
 
 # NOTE: conflict with existing userop: flow.experimental.logical_slice_assign, so use tmp.logical_slice_assign

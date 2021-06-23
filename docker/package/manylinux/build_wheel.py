@@ -371,8 +371,6 @@ if __name__ == "__main__":
         extra_oneflow_cmake_args += " -DWITH_MLIR=ON"
     else:
         extra_oneflow_cmake_args += " -DWITH_MLIR=Off"
-    if args.xla == True and args.cpu == True:
-        raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
 
         cache_dir = None
@@ -391,6 +389,11 @@ if __name__ == "__main__":
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args
                 ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
                 enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
+            if args.xla and args.cpu:
+                # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
+                enforced_oneflow_cmake_args += (
+                    ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
+                )
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:

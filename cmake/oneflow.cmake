@@ -207,7 +207,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir ${PROTOBUF_COPY_TARGETS})
+add_dependencies(of_protoobj make_pyproto_dir protobuf)
 
 # cfg obj lib
 include(cfg)
@@ -215,8 +215,8 @@ GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOUR
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj generate_cfg)
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj ${PROTOBUF_STATIC_LIBRARIES})
-  target_link_libraries(of_cfgobj ${PROTOBUF_STATIC_LIBRARIES})
+  target_link_libraries(of_protoobj protobuf_imported)
+  target_link_libraries(of_cfgobj protobuf_imported)
   target_link_libraries(of_cfgobj of_protoobj)
 else()
   # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
@@ -236,7 +236,7 @@ include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 endif()
@@ -257,7 +257,7 @@ endif()
 if (BUILD_SHARED_LIBS)
   get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
   get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
-  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} "${GLOG_STATIC_LIBRARIES}")
+  target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
   set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 endif()
 
@@ -365,16 +365,11 @@ endif()
 
 # build include
 set(ONEFLOW_INCLUDE_DIR "${PROJECT_BINARY_DIR}/python_scripts/oneflow/include")
-add_custom_target(of_include_copy ALL
-  COMMAND ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
-add_dependencies(of_include_copy of_ccobj)
-file(REMOVE_RECURSE "${ONEFLOW_INCLUDE_DIR}")
+add_custom_target(of_include_copy
+  COMMAND ${CMAKE_COMMAND} -E remove_directory "${ONEFLOW_INCLUDE_DIR}" && ${CMAKE_COMMAND} -E make_directory "${ONEFLOW_INCLUDE_DIR}")
+add_dependencies(of_include_copy generate_api)
 foreach(of_include_src_dir ${ONEFLOW_INCLUDE_SRC_DIRS})
   set(oneflow_all_include_file)
-  #file(GLOB_RECURSE h_files "${of_include_src_dir}/*.h")
-  #list(APPEND oneflow_all_include_file ${h_files})
-  #file(GLOB_RECURSE hpp_files "${of_include_src_dir}/*.hpp")
-  #list(APPEND oneflow_all_include_file ${hpp_files})
   file(GLOB_RECURSE oneflow_all_include_file "${of_include_src_dir}/*.*")
   copy_files("${oneflow_all_include_file}" "${of_include_src_dir}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
 endforeach()
@@ -413,3 +408,5 @@ list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/sbp_signature_b
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/job/parallel_desc.h")
 list(APPEND OF_CORE_HDRS "${PROJECT_SOURCE_DIR}/oneflow/core/autograd/autograd_meta.h")
 copy_files("${OF_CORE_HDRS}" "${PROJECT_SOURCE_DIR}" "${ONEFLOW_INCLUDE_DIR}" of_include_copy)
+add_custom_target(oneflow_py ALL)
+add_dependencies(oneflow_py of_include_copy)
