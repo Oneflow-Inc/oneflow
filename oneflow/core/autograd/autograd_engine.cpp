@@ -70,7 +70,7 @@ StackFunctionNode::StackFunctionNode(
   for (int i = 0; i < inputs.size(); ++i) {
     input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
     if (input_meta_datas_.at(i)->requires_grad()) {
-      next_functions_->emplace_back(inputs.at(i)->grad_fn_node());
+      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
     }
   }
 
@@ -233,6 +233,84 @@ void GraphFunctionNode::ReleaseData() {
   if (!input_meta_datas_.empty()) { backward_fn_.reset(); }
 }
 
+GraphFunctionNode::GraphFunctionNode(
+    const std::string& op_type_name,
+    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
+        backward_fn,
+    const TensorTuple& inputs, const TensorTuple& outputs)
+    : FunctionNode(op_type_name) {
+  input_meta_datas_.resize(inputs.size());
+  next_functions_->reserve(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
+    if (input_meta_datas_.at(i)->requires_grad()) {
+      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
+    }
+  }
+
+  output_meta_datas_.resize(outputs.size());
+  output_tensor_infos_.reserve(outputs.size());
+  for (int i = 0; i < outputs.size(); ++i) {
+    output_meta_datas_.at(i) = outputs.at(i)->mut_autograd_meta();
+    output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
+  }
+
+  backward_fn_ = backward_fn;
+}
+
+GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph)
+    : retain_graph_(retain_graph), create_graph_(create_graph) {
+  roots_.reserve(outputs.size());
+  for (const auto& out_tensor : outputs) {
+    FunctionNode* node = out_tensor->mut_grad_fn_node().get();
+    roots_.push_back(node);
+    dependencies_.insert(std::make_pair(node, 0));
+  }
+}
+
+// Computes the number of dependencies for each FunctionNode
+Maybe<void> GraphTask::ComputeDependencies() {
+  std::unordered_set<FunctionNode*> seen;
+  std::vector<FunctionNode*> queue(roots_);
+
+  while (!queue.empty()) {
+    FunctionNode* node = queue.back();
+    // TODO: check node could apply
+    queue.pop_back();
+    if (!seen.insert(node).second) { continue; }
+    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+      FunctionNode* next_node = next_grad_fn.get();
+      dependencies_[next_node] += 1;
+      if (seen.find(next_node) == seen.end()) { queue.push_back(next_node); }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> GraphTask::Apply() {
+  std::vector<FunctionNode*> queue;
+  for (FunctionNode* node : roots_) {
+    if (dependencies_[node] == 0) { queue.push_back(node); }
+  }
+
+  while (!queue.empty()) {
+    FunctionNode* node = queue.back();
+    queue.pop_back();
+    CHECK_OR_RETURN(JUST(node->Apply(create_graph_)));
+    JUST(node->AccGrad4LeafTensor(create_graph_));
+    JUST(node->AccGrad4RetainGradTensor());
+    node->ReleaseOutTensorArgs();
+    if (!retain_graph_) { node->ReleaseData(); }
+
+    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+      FunctionNode* next_node = next_grad_fn.get();
+      dependencies_[next_node] -= 1;
+      if (dependencies_[next_node] == 0) { queue.push_back(next_node); }
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
                                                                     const TensorTuple& out_grads,
                                                                     bool retain_graph,
@@ -272,7 +350,7 @@ std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
     }
   }
 
-  std::shared_ptr<GraphFunctionNode> func_node =
+  std::shared_ptr<FunctionNode> func_node =
       std::make_shared<GraphFunctionNode>(op_type_name, backward_fn, inputs, *outputs);
   for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
     out_tensor->set_grad_fn_node(func_node);

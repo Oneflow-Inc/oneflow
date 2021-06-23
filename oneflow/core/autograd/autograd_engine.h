@@ -22,6 +22,7 @@ limitations under the License.
 #include <memory>
 #include <functional>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 
 namespace oneflow {
 
@@ -29,8 +30,6 @@ namespace one {
 
 class Tensor;
 class TensorTuple;
-class AutogradMeta;
-class TensorInfo;
 
 // Calculates one backward op
 class FunctionNode {
@@ -43,22 +42,20 @@ class FunctionNode {
   void ReleaseOutTensorArgs();
   // Releases the eventual c++ std::function for backward if retain_graph=False to avoid calling
   // `Apply` in second time
-  virtual void ReleaseData();
+  virtual void ReleaseData() = 0;
 
   // Getters
-  const std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>>& GetNextFunctions()
-      const {
+  std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>> GetNextFunctions() {
     return next_functions_;
   }
   const std::string& GetOpTypeName() const { return op_name_; }
 
  protected:
   explicit FunctionNode(const std::string& op_type_name)
-      : op_name_(op_type_name),
-        next_functions_(new std::vector<std::shared_ptr<const FunctionNode>>{}) {}
+      : op_name_(op_type_name), next_functions_(new std::vector<std::shared_ptr<FunctionNode>>{}) {}
 
   const std::string op_name_;
-  std::shared_ptr<std::vector<std::shared_ptr<const FunctionNode>>> next_functions_;
+  std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>> next_functions_;
 
   std::vector<std::shared_ptr<AutogradMeta>> input_meta_datas_;
   std::vector<std::shared_ptr<AutogradMeta>> output_meta_datas_;
@@ -156,16 +153,18 @@ class GraphFunctionNode final : public FunctionNode {
 };
 
 class GraphTask final {
-public:
+ public:
   OF_DISALLOW_COPY_AND_MOVE(GraphTask);
   GraphTask() = delete;
-  GraphTask(const std::shared_ptr<std::vector<FunctionNode>>& roots, bool retain_graph, bool create_graph);
+  GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph);
 
-  Maybe<void> PruneFunctionNode(...);
+  Maybe<void> PruneFunctionNode(const std::set<FunctionNode*>& target_nodes);
   Maybe<void> Apply();
 
-private:
-  std::shared_ptr<std::vector<FunctionNode>> roots_;
+ private:
+  bool retain_graph_;
+  bool create_graph_;
+  std::vector<FunctionNode*> roots_;
   HashMap<FunctionNode*, int> dependencies_;
   std::unordered_set<FunctionNode*> need_excute_;
 
@@ -186,7 +185,7 @@ class GraphAutogradEngine final : public AutogradEngine {
                                                           const TensorTuple& out_grads,
                                                           bool retain_graph,
                                                           bool create_graph) override;
-  void ClearEngine() override {};
+  void ClearEngine() override{};
   std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
