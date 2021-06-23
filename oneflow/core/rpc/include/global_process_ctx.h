@@ -26,6 +26,7 @@ struct GlobalProcessCtx {
   static int64_t Rank();
   static int64_t NodeSize();
   static int64_t ThisNodeId();
+  static int64_t NodeId4Rank(int64_t rank);
   static int64_t NumOfProcessOnNode();
   static const NumProcessDistribution& NumProcessDistributionInCluster();
   static bool IsThisProcessMaster();

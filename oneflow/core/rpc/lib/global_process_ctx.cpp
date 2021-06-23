@@ -22,12 +22,12 @@ namespace oneflow {
 void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64_t* device_id) {
   *machine_id = Rank();
   int64_t node_id = ThisNodeId();
-  int64_t acc_rank_index = 0;
+  int64_t rank_index_offset = 0;
   for (int64_t i = 0; i < node_id; ++i) {
-    acc_rank_index +=
+    rank_index_offset +=
         Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(i);
   }
-  *device_id = *machine_id - acc_rank_index;
+  *device_id = *machine_id - rank_index_offset;
 }
 
 int64_t GlobalProcessCtx::Rank() {
@@ -42,13 +42,19 @@ int64_t GlobalProcessCtx::NodeSize() {
 
 int64_t GlobalProcessCtx::ThisNodeId() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  int64_t acc_rank_index = 0;
+  return NodeId4Rank(Rank());
+}
+
+int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  int64_t rank_index_offset = 0;
   for (int64_t node_id = 0;
        node_id
-       < Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process_size();) {
-    acc_rank_index +=
+       < Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process_size();
+       ++node_id) {
+    rank_index_offset +=
         Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(node_id);
-    if (Rank() < acc_rank_index) { return node_id; }
+    if (rank < rank_index_offset) { return node_id; }
   }
   UNIMPLEMENTED();
 }
