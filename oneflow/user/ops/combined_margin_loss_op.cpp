@@ -33,7 +33,7 @@ REGISTER_USER_OP("combined_margin_loss")
       CHECK_EQ_OR_RETURN(label->shape().At(0), x->shape().At(0));
       CHECK_GE_OR_RETURN(x->shape().NumAxes(), 2);
       *ctx->OutputShape("y", 0) = ctx->InputShape("x", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("y", 0) = ctx->InputIsDynamic("x", 0);
       *theta->mut_is_dynamic() = x->is_dynamic();
       *theta->mut_shape() = label->shape();
       return Maybe<void>::Ok();
@@ -81,7 +81,7 @@ REGISTER_USER_OP("combined_margin_loss_grad")
       CHECK_EQ_OR_RETURN(label->shape().At(0), theta->shape().At(0));
       CHECK_GE_OR_RETURN(dy->shape().NumAxes(), 2);
       *ctx->OutputShape("dx", 0) = ctx->InputShape("dy", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic4ArgNameAndIndex("dy", 0);
+      *ctx->IsDynamic4ArgNameAndIndex("dx", 0) = ctx->InputIsDynamic("dy", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
