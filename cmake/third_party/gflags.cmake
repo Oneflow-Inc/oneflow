@@ -10,13 +10,10 @@ set(gflags_URL https://github.com/Oneflow-Inc/gflags/archive/9314597d4.tar.gz)
 use_mirror(VARIABLE gflags_URL URL ${gflags_URL})
 
 if(WIN32)
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
     set(GFLAGS_LIBRARY_NAMES gflags_static.lib)
 elseif(APPLE AND ("${CMAKE_GENERATOR}" STREQUAL "Xcode"))
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR}/${CMAKE_BUILD_TYPE})
     set(GFLAGS_LIBRARY_NAMES libgflags.a)
 else()
-    set(GFLAGS_BUILD_LIBRARY_DIR ${gflags_LIB_DIR})
     set(GFLAGS_LIBRARY_NAMES libgflags.a)
 endif()
 

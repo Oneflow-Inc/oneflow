@@ -8,7 +8,6 @@ set(glog_URL https://github.com/Oneflow-Inc/glog/archive/4f3e18bf2.tar.gz)
 use_mirror(VARIABLE glog_URL URL ${glog_URL})
 
 if(WIN32)
-    set(GLOG_BUILD_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/glog/src/glog/${CMAKE_BUILD_TYPE})
     set(GLOG_LIBRARY_NAMES glog.lib)
 else()
     if(BUILD_SHARED_LIBS)
