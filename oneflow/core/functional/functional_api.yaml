@@ -31,8 +31,60 @@
   signature: "Tensor ScalarAdd(Tensor x, *, Scalar alpha)"
   bind_python: True
 
+- name: "add_scalar_by_tensor"
+  signature: "Tensor ScalarAddByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_add"
+  signature: "Tensor BroadcastAdd(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "sub_scalar_by_tensor"
+  signature: "Tensor ScalarSubByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_sub"
+  signature: "Tensor BroadcastSub(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "mul"
+  signature: "Tensor Multiply(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "mul_scalar"
   signature: "Tensor ScalarMul(Tensor x, *, Scalar alpha)"
+  bind_python: True
+
+- name: "mul_scalar_by_tensor"
+  signature: "Tensor ScalarMulByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_mul"
+  signature: "Tensor BroadcastMul(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "div_scalar_by_tensor"
+  signature: "Tensor ScalarDivByTensor(Tensor x, Tensor scalar)"
+  bind_python: True
+
+- name: "broadcast_div"
+  signature: "Tensor BroadcastDiv(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_equal"
+  signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_greater"
+  signature: "Tensor BroadcastGreater(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_less"
+  signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "pow"
+  signature: "Tensor Pow(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "pow_scalar"
@@ -83,13 +135,57 @@
   signature: "Tensor Square(Tensor x)"
   bind_python: True
 
+- name: "relu"
+  signature: "Tensor Relu(Tensor x)"
+  bind_python: True
+
+- name: "hardtanh"
+  signature: "Tensor HardTanh(Tensor x, *, Double min_val, Double max_val)"
+  bind_python: True
+
+- name: "hardtanh_grad"
+  signature: "Tensor HardTanhGrad(Tensor y, Tensor dy, *, Double min_val, Double max_val)"
+  bind_python: False
+
 - name: "tanh"
   signature: "Tensor Tanh(Tensor x)"
+  bind_python: True
+
+- name: "elu"
+  signature: "Tensor Elu(Tensor x, *, Double alpha)"
+  bind_python: True
+
+- name: "elu_grad"
+  signature: "Tensor EluGrad(Tensor x, Tensor dy, *, Double alpha)"
+  bind_python: False
+
+- name: "gelu"
+  signature: "Tensor Gelu(Tensor x)"
   bind_python: True
 
 - name: "sigmoid"
   signature: "Tensor Sigmoid(Tensor x)"
   bind_python: True
+
+- name: "hardsigmoid"
+  signature: "Tensor HardSigmoid(Tensor x)"
+  bind_python: True
+
+- name: "softmax"
+  signature: "Tensor Softmax(Tensor x)"
+  bind_python: True
+
+- name: "hardswish"
+  signature: "Tensor HardSwish(Tensor x)"
+  bind_python: True
+
+- name: "leaky_relu"
+  signature: "Tensor LeakyRelu(Tensor x, *, Float alpha)"
+  bind_python: True
+
+- name: "leaky_relu_grad"
+  signature: "Tensor LeakyReluGrad(Tensor x, Tensor dy, *, Float alpha)"
+  bind_python: False
 
 - name: "normalization"
   signature:
@@ -102,20 +198,106 @@
   signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
   bind_python: True
 
+- name: "flatten"
+  signature: "Tensor Flatten(Tensor x, *, Int32 start_dim=0, Int32 end_dim=-1)"
+  bind_python: True
+
 - name: "argmax"
   signature: "Tensor ArgMax(Tensor x)"
+  bind_python: True
+
+- name: "argwhere"
+  signature: "TensorTuple ArgWhere(Tensor x, *, DataType dtype=kInt32)"
+  bind_python: True
+
+- name: "broadcast_like"
+  signature: "Tensor BroadcastLike(Tensor x, Tensor like, *, Int32List broadcast_axes)"
   bind_python: True
 
 - name: "cast"
   signature: "Tensor Cast(Tensor x, *, DataType dtype)"
   bind_python: True
 
+- name: "constant"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
+  bind_python: True
+
+- name: "zeros_like"
+  signature: "Tensor ZerosLike(Tensor x)"
+  bind_python: True
+
+- name: "ones_like"
+  signature: "Tensor OnesLike(Tensor x)"
+  bind_python: True
+
+- name: "concat"
+  signature: "Tensor Concat(TensorTuple inputs, *, Int64 axis, Int64 max_dim_size)"
+  bind_python: True
+
+- name: "expand"
+  signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  bind_python: True
+
+- name: "expand_dims"
+  signature: "Tensor ExpandDims(Tensor x, *, Int32 axis)"
+  bind_python: True
+
 - name: "exp"
   signature: "Tensor Exp(Tensor x)"
   bind_python: True
 
+- name: "gather"
+  signature: "Tensor Gather(Tensor x, Tensor indices, *, Int64 axis)"
+  bind_python: True
+
+- name: "dim_gather"
+  signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
+  bind_python: True
+
+- name: "where"
+  signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
+  bind_python: True
+
+- name: "prelu"
+  signature: "Tensor PRelu(Tensor x, Tensor alpha)"
+  bind_python: True
+
+- name: "reshape"
+  signature: "Tensor Reshape(Tensor x, *, Shape shape)"
+  bind_python: True
+
+- name: "slice"
+  signature: "Tensor Slice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "slice_update"
+  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice"
+  signature: "Tensor LogicalSlice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice_assign"
+  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "squeeze"
+  signature: "Tensor Squeeze(Tensor x, *, Int32List dim)"
+  bind_python: True
+
+- name: "copy"
+  signature: "Tensor Copy(Tensor x, *, String device_type, Int64 device_id)"
+  bind_python: True
+
+- name: "upsample"
+  signature:
+    "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String interpolation, String data_format=\"channels_first\")"
   bind_python: True
 
 - name: "abs"
@@ -193,3 +375,8 @@
 - name: "softplus"
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
+
+- name: "unsorted_segment_sum_like"
+  signature:
+    "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
+  bind_python: False

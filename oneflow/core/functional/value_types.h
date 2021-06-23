@@ -61,6 +61,8 @@ enum ValueType {
   kDOUBLE_LIST,
   kBOOL_LIST,
   kSTRING_LIST,
+  kVOID_MAYBE,
+  kBOOL_MAYBE,
   kSCALAR,
   kTENSOR,
   kTENSOR_REF,
@@ -98,6 +100,9 @@ VALUE_TYPE_OF_IMPL(std::vector<float>, kFLOAT_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<double>, kDOUBLE_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<bool>, kBOOL_LIST);
 VALUE_TYPE_OF_IMPL(std::vector<std::string>, kSTRING_LIST);
+
+VALUE_TYPE_OF_IMPL(Maybe<void>, kVOID_MAYBE);
+VALUE_TYPE_OF_IMPL(Maybe<bool>, kBOOL_MAYBE);
 
 VALUE_TYPE_OF_IMPL(Scalar, kSCALAR);
 VALUE_TYPE_OF_IMPL(one::Tensor, kTENSOR);

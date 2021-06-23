@@ -26,47 +26,28 @@ from oneflow.python.ops.transpose_util import (
 class Argmax(Module):
     def __init__(self, dim: int = None, keepdim: bool = False) -> None:
         super().__init__()
-        self._op_softmax_last_dim = (
-            flow.builtin_op("argmax").Input("in").Output("out").Build()
-        )
-        self._flatten = (
-            flow.builtin_op("flatten")
-            .Input("in")
-            .Output("out")
-            .Attr("start_dim", 0)
-            .Attr("end_dim", -1)
-            .Build()
-        )
-        self._transpose_op = (
-            flow.builtin_op("transpose")
-            .Input("input")
-            .Output("output")
-            .Attr("perm", [])
-            .Build()
-        )
-
         self.dim = dim
         self.keepdim = keepdim
 
     def forward(self, input):
         if self.dim == None:
-            input = self._flatten(input)[0]
+            input = flow.F.flatten(input)
             self.dim = 0
 
         num_axes = len(input.shape)
         axis = self.dim if self.dim >= 0 else self.dim + num_axes
         assert 0 <= axis < num_axes, "axis out of range"
         if axis == num_axes - 1:
-            x = self._op_softmax_last_dim(input)[0]
+            x = flow.F.argmax(input)
             if self.keepdim == True:
                 x = flow.experimental.unsqueeze(x, -1)
             return x
         else:
             perm = get_perm_when_transpose_axis_to_last_dim(num_axes, axis)
-            x = self._transpose_op(input, perm=perm)[0]
-            x = self._op_softmax_last_dim(x)[0]
+            x = flow.F.transpose(input, perm=perm)
+            x = flow.F.argmax(x)
             x = flow.experimental.unsqueeze(x, -1)
-            x = self._transpose_op(x, perm=get_inversed_perm(perm))[0]
+            x = flow.F.transpose(x, perm=get_inversed_perm(perm))
             if self.keepdim == False:
                 x = x.squeeze(dim=[axis])
             return x
