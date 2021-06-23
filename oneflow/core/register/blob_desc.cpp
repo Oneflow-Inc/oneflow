@@ -71,7 +71,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 size_t BlobDesc::ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
 
 size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
-  return RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kAlignSize);
+  return RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kHeaderAlignSize);
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
