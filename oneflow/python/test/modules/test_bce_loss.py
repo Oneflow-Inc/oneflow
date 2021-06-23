@@ -82,9 +82,11 @@ def _test_bceloss_impl(test_case, device, reduction):
         ).astype(np.float32)
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
-
     input_none = input = flow.Tensor(
-        np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32), dtype=flow.float32, requires_grad=True, device=flow.device(device)
+        np.array([[1.2, 0.2, -0.3], [0.7, 0.6, -2]]).astype(np.float32),
+        dtype=flow.float32,
+        requires_grad=True,
+        device=flow.device(device),
     )
     sigmoid_input_none = activation(input_none)
     loss_none = flow.nn.BCELoss(reduction=reduction)
@@ -98,21 +100,19 @@ def _test_bceloss_impl(test_case, device, reduction):
 
     if reduction == "none":
         np_grad_none = np.array(
-            [[ 0.7685, -0.4502,  0.4256],
-            [-0.3318,  0.6457, -0.8808]]
+            [[0.7685, -0.4502, 0.4256], [-0.3318, 0.6457, -0.8808]]
         ).astype(np.float32)
     elif reduction == "sum":
         np_grad_none = np.array(
-            [[ 0.7685, -0.4502,  0.4256],
-            [-0.3318,  0.6457, -0.8808]]
+            [[0.7685, -0.4502, 0.4256], [-0.3318, 0.6457, -0.8808]]
         ).astype(np.float32)
     else:
         np_grad_none = np.array(
-            [[ 0.1281, -0.0750,  0.0709],
-            [-0.0553,  0.1076, -0.1468]]
+            [[0.1281, -0.0750, 0.0709], [-0.0553, 0.1076, -0.1468]]
         ).astype(np.float32)
-    
+
     test_case.assertTrue(np.allclose(input_none.grad.numpy(), np_grad_none, 1e-4, 1e-4))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
