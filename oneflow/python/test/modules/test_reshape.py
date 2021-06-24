@@ -28,7 +28,6 @@ def _test_reshape(test_case, device):
     ).astype(np.float32)
     input = flow.Tensor(x, device=flow.device(device))
     of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
-    of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
