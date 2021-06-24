@@ -74,6 +74,7 @@ jobs:
           set -x
           cmake_flags=""
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -DBUILD_TESTING=ON"
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
