@@ -47,8 +47,39 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-<<<<<<< HEAD
-=======
+class Conv1DFunctor {
+ public:
+  Conv1DFunctor() {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap conv_attrs;
+    std::vector<int32_t> kernel_size_vec{(weight->shape())->At(2)};
+    JUST(conv_attrs.SetAttr<int32_t>("filters", int64_t((weight->shape())->At(0))));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    std::shared_ptr<one::Tensor> conv_out =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+    MutableAttrMap bias_attrs;
+    JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+    return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, bias}, bias_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+
 class Conv2DFunctor {
  public:
   Conv2DFunctor() {
@@ -82,7 +113,6 @@ class Conv2DFunctor {
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
 };
->>>>>>> 5573cea95... align Torch params
 
 class MatMulBaseFunctor {
  public:
@@ -254,11 +284,8 @@ class NormalizationFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
-<<<<<<< HEAD
   m.add_functor<impl::Conv1DFunctor>("Conv1D");
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
-=======
->>>>>>> 86b81530a2b807c08c105e1ce72e2680175e324b
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
