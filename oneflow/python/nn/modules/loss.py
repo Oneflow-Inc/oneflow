@@ -185,14 +185,6 @@ class CrossEntropyLoss(Module):
 
         self.ignore_index = ignore_index
         self.reduction = reduction
-        self._op = (
-            flow.builtin_op("sparse_softmax_cross_entropy")
-            .Input("prediction")
-            .Input("label")
-            .Output("prob")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
@@ -211,7 +203,9 @@ class CrossEntropyLoss(Module):
         elif input_shape_len >= 5:
             raise NotImplemented
 
-        prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
+        out = flow.F.sparse_softmax_cross_entropy(
+            input, target, depth=input.shape[len(input.shape) - 1]
+        )
         if self.ignore_index is not None:
             zeros = flow.experimental.zeros(
                 size=out.shape, dtype=out.dtype, device=out.device
@@ -438,19 +432,11 @@ class NLLLoss(Module):
 
         self.ignore_index = ignore_index
         self.reduction = reduction
-        self._dim_gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", 1)
-            .Build()
-        )
 
     def nllloss_1d(self, input, target):
-        target = flow.experimental.reshape(target, (target.shape[0], 1))
-        res = self._dim_gather_op(input, target)[0]
-        res = flow.experimental.squeeze(res, dim=[1])
+        target = flow.F.reshape(target, shape=(target.shape[0], 1))
+        res = flow.F.dim_gather(input, target, dim=1)
+        res = flow.F.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
