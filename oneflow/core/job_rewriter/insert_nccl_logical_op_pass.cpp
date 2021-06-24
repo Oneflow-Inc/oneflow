@@ -340,8 +340,8 @@ bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
 }
 
 bool TryBuildNcclBy3DHierarchyChangeDim0(OperatorConf* ret,
-                                         const ParallelDistribution& src_parallel_distribution,
-                                         const ParallelDistribution& dst_parallel_distribution,
+                                         const cfg::ParallelDistribution& src_parallel_distribution,
+                                         const cfg::ParallelDistribution& dst_parallel_distribution,
                                          const std::shared_ptr<Shape> hierarchy,
                                          const std::string& lbn, const int64_t scope_symbol_id,
                                          const BlobDesc& logical_blob_desc) {
@@ -349,8 +349,8 @@ bool TryBuildNcclBy3DHierarchyChangeDim0(OperatorConf* ret,
   CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 3);
   CHECK(src_parallel_distribution.sbp_parallel(1) == dst_parallel_distribution.sbp_parallel(1));
   CHECK(src_parallel_distribution.sbp_parallel(2) == dst_parallel_distribution.sbp_parallel(2));
-  const SbpParallel& src_dim0_sbp = src_parallel_distribution.sbp_parallel(0);
-  const SbpParallel& dst_dim0_sbp = dst_parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& src_dim0_sbp = src_parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& dst_dim0_sbp = dst_parallel_distribution.sbp_parallel(0);
 
   if (src_dim0_sbp.has_partial_sum_parallel() && dst_dim0_sbp.has_broadcast_parallel()) {
     // (*, P)->(*, B) : AllReduce
@@ -368,8 +368,8 @@ bool TryBuildNcclBy3DHierarchyChangeDim0(OperatorConf* ret,
 }
 
 bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
-                                         const ParallelDistribution& src_parallel_distribution,
-                                         const ParallelDistribution& dst_parallel_distribution,
+                                         const cfg::ParallelDistribution& src_parallel_distribution,
+                                         const cfg::ParallelDistribution& dst_parallel_distribution,
                                          const std::shared_ptr<Shape> hierarchy,
                                          const std::string& lbn, const int64_t scope_symbol_id,
                                          const BlobDesc& logical_blob_desc) {
@@ -377,8 +377,8 @@ bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
   CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 3);
   CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
   CHECK(src_parallel_distribution.sbp_parallel(2) == dst_parallel_distribution.sbp_parallel(2));
-  const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
-  const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
+  const cfg::SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
+  const cfg::SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
 
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
     // (*, P)->(*, B) : AllReduce
@@ -396,8 +396,8 @@ bool TryBuildNcclBy3DHierarchyChangeDim1(OperatorConf* ret,
 }
 
 bool TryBuildNcclBy3DHierarchyChangeDim2(OperatorConf* ret,
-                                         const ParallelDistribution& src_parallel_distribution,
-                                         const ParallelDistribution& dst_parallel_distribution,
+                                         const cfg::ParallelDistribution& src_parallel_distribution,
+                                         const cfg::ParallelDistribution& dst_parallel_distribution,
                                          const std::shared_ptr<Shape> hierarchy,
                                          const std::string& lbn, const int64_t scope_symbol_id,
                                          const BlobDesc& logical_blob_desc) {
@@ -405,8 +405,8 @@ bool TryBuildNcclBy3DHierarchyChangeDim2(OperatorConf* ret,
   CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 3);
   CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
   CHECK(src_parallel_distribution.sbp_parallel(1) == dst_parallel_distribution.sbp_parallel(1));
-  const SbpParallel& src_dim2_sbp = src_parallel_distribution.sbp_parallel(2);
-  const SbpParallel& dst_dim2_sbp = dst_parallel_distribution.sbp_parallel(2);
+  const cfg::SbpParallel& src_dim2_sbp = src_parallel_distribution.sbp_parallel(2);
+  const cfg::SbpParallel& dst_dim2_sbp = dst_parallel_distribution.sbp_parallel(2);
 
   if (src_dim2_sbp.has_partial_sum_parallel() && dst_dim2_sbp.has_broadcast_parallel()) {
     // (*, P)->(*, B) : AllReduce
