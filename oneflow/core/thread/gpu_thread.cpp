@@ -41,8 +41,8 @@ void SetAffinityByDevice(int64_t dev_id) {
 
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
-  SetAffinityByDevice(dev_id);
   mut_actor_thread() = std::thread([this, dev_id, thrd_id]() {
+    SetAffinityByDevice(dev_id);
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Actor : ("
                                       + std::to_string(thrd_id) + ")");
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
@@ -52,6 +52,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     PollMsgChannel(ctx);
   });
   cb_event_poller_ = std::thread([this, dev_id, thrd_id]() {
+    SetAffinityByDevice(dev_id);
     OF_PROFILER_NAME_THIS_HOST_THREAD("GPU " + std::to_string(dev_id) + " Poller : ("
                                       + std::to_string(thrd_id) + ")");
     OF_CUDA_CHECK(cudaSetDevice(dev_id));
