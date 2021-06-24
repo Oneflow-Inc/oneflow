@@ -49,6 +49,7 @@ REGISTER_USER_OP("indexed_slices_reduce_sum")
       user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
       *num_unique->mut_data_type() = DataType::kInt64;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow
