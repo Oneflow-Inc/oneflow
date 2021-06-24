@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/framework.h"
+
+#if CUDA_VERSION >= 11000
 #include <cuda_bf16.h>
 
 namespace oneflow {
@@ -102,3 +103,4 @@ REGISTER_USER_KERNEL("relu_grad")
 
 }  // namespace user_op
 }  // namespace oneflow
+#endif
