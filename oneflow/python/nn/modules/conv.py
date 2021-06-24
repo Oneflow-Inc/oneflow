@@ -246,7 +246,7 @@ class Conv2d(Module):
                     flow.F.conv2d(
                         in_split_list[i],
                         self.weight[i : i + 1, :, :, :],
-                        self.bias[i : i + 1, :, :, :],
+                        self.bias[i : i + 1] if self.bias else None,
                         stride=self.stride,
                         padding=self.padding,
                         dilation=self.dilation,

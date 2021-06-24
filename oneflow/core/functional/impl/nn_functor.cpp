@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -56,8 +57,8 @@ class Conv2DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& bias,
-                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec;
@@ -69,11 +70,15 @@ class Conv2DFunctor {
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
-    std::shared_ptr<one::Tensor> conv_out =
+    const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
-    MutableAttrMap bias_attrs;
-    JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-    return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, bias}, bias_attrs);
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+    } else {
+      return conv_out;
+    }
   }
 
  private:
