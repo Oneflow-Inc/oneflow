@@ -296,7 +296,8 @@ Maybe<void> GraphTask::Apply() {
   while (!queue.empty()) {
     FunctionNode* node = queue.back();
     queue.pop_back();
-    CHECK_OR_RETURN(JUST(node->Apply(create_graph_)));
+    // CHECK_OR_RETURN(JUST(node->Apply(create_graph_)));
+    if (!(JUST(node->Apply(create_graph_)))) { continue; }
     JUST(node->AccGrad4LeafTensor(create_graph_));
     JUST(node->AccGrad4RetainGradTensor());
     node->ReleaseOutTensorArgs();
