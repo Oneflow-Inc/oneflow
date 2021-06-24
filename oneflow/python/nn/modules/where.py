@@ -124,11 +124,11 @@ def where_op(condition, x, y):
         ... )
         >>> y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
         >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
-        >>> out = condition.where(x, y).numpy()
-        >>> print(out)
-        [[1.     0.3139]
-         [0.3898 1.    ]
-         [0.0478 1.    ]]
+        >>> out = condition.where(x, y)
+        >>> out #doctest: +ELLIPSIS
+        tensor([[1.    , 0.3139],
+                ...
+                [0.0478, 1.    ]], dtype=oneflow.float32)
 
     """
     return Where()(condition, x, y)
