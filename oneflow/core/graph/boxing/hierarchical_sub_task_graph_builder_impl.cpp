@@ -445,8 +445,8 @@ class InterGroup3DSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()
         && in_parallel_desc.hierarchy()->NumAxes() == 3
@@ -534,8 +534,8 @@ class Same3DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if ((in_parallel_desc.hierarchy()->NumAxes() == 3)
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())) {
@@ -561,10 +561,10 @@ class Same3DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
         out_parallel_conf.set_device_tag(out_parallel_desc.device_tag());
         out_parallel_conf.mutable_hierarchy()->add_dim(hierarchy->At(1));
         out_parallel_conf.mutable_hierarchy()->add_dim(hierarchy->At(2));
-        ParallelDistribution new_in_parallel_distribution;
+        cfg::ParallelDistribution new_in_parallel_distribution;
         *new_in_parallel_distribution.add_sbp_parallel() = in_parallel_distribution.sbp_parallel(1);
         *new_in_parallel_distribution.add_sbp_parallel() = in_parallel_distribution.sbp_parallel(2);
-        ParallelDistribution new_out_parallel_distribution;
+        cfg::ParallelDistribution new_out_parallel_distribution;
         *new_out_parallel_distribution.add_sbp_parallel() =
             out_parallel_distribution.sbp_parallel(1);
         *new_out_parallel_distribution.add_sbp_parallel() =
