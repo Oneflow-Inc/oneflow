@@ -43,8 +43,10 @@ class Where(Module):
             and condition.device.type == y.device.type
         )
 
-        assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(y.shape), f"The dim of where module's input is not match, please check!"
-        
+        assert len(condition.shape) == len(x.shape) and len(condition.shape) == len(
+            y.shape
+        ), f"The dim of where module's inputs can not match, please check!"
+
         broadcast_cond = condition
         broadcast_x = x
         broadcast_y = y
