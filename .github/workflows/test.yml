@@ -408,18 +408,10 @@ jobs:
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
       - name: Op test (distributed, 3rd try)
         if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
-        continue-on-error: true
+        continue-on-error: false
         id: distributed_try_3
         run: |
           python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
-      - name: Op test (distributed, check success)
-        if: always()
-        run: |
-          if ${{ steps.distributed_try_1.outcome=='success' || steps.distributed_try_2.outcome=='success' || steps.distributed_try_3.outcome=='success' }}; then
-             echo success
-          else
-             exit 1
-          fi
       - name: Upload log (distributed test)
         if: failure() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
