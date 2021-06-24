@@ -10,6 +10,9 @@ class SubModule(flow.nn.Module):
         super().__init__()
         self.conv1 = flow.nn.Conv2d(1, 1, 5)
         self.relu = flow.nn.ReLU()
+        self.register_buffer(
+            "dummy_buff", flow.Tensor(10),
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -56,6 +59,10 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertTrue(isinstance(g.m, flow.experimental.nn.graph.Node))
         # g.m.name is "m"
         test_case.assertEqual(g.m.name, "m")
+        # g.m.layer.dummy_buff is Tensor, Graph.build(...) need buffer to be Tensor
+        test_case.assertTrue(isinstance(g.m.layer.dummy_buff, flow.Tensor))
+        # g.m.layer._buffers["dummy_buff"] is Node
+        test_case.assertTrue(isinstance(g.m.layer._buffers["dummy_buff"], flow.experimental.nn.graph.Node))
         # conv1 is Node
         test_case.assertTrue(isinstance(g.m.layer.conv1, flow.experimental.nn.graph.Node))
         # conv1.name is "conv1"
