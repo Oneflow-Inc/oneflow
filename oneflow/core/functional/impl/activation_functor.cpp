@@ -42,12 +42,7 @@ class ReluFunctor {
     if (inplace) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
-      if (autograd::GradMode::is_enabled()) {
-        /* const auto& facade_input = JUST(x->clone()); */
-        JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), {}));
-      } else {
-        JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), {}));
-      }
+      JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), {}));
       return outputs->at(0);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
