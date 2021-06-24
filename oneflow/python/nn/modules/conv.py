@@ -167,6 +167,7 @@ class Conv1d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
@@ -209,16 +210,25 @@ class Conv1d(Module):
     def forward(self, x):
         if x.device.type == "cpu" and self.groups > 1:
             in_channel_axis = 1
+            weight_channel_axis = 0
+            bias_channel_axis = 0
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
+            weight_split_list = ConvUtil.split(
+                self.weight, axis=weight_channel_axis, split_num=self.groups
+            )
+            bias_split_list = ConvUtil.split(
+                self.bias, axis=bias_channel_axis, split_num=self.groups
+            )
+
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
                     flow.F.conv1d(
                         in_split_list[i],
-                        self.weight[i : i + 1, :, :],
-                        self.bias[i : i + 1],
+                        weight_split_list[i],
+                        bias_split_list[i],
                         stride=self.stride,
                         padding=self.padding,
                         dilation=self.dilation,
@@ -356,6 +366,7 @@ class Conv2d(Module):
     .. _link:
         https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
     """
+
     def __init__(
         self,
         in_channels: int,
