@@ -592,9 +592,9 @@ class PolynomialScheduler(LrScheduler):
             learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
         learning_rate_decay_conf.mutable_polynomial_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate((
-            self.end_learning_rate
-        ))
+        learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate(
+            (self.end_learning_rate)
+        )
         learning_rate_decay_conf.mutable_polynomial_conf().set_power(self.power)
         learning_rate_decay_conf.mutable_polynomial_conf().set_cycle(self.cycle)
         return learning_rate_decay_conf
@@ -704,8 +704,12 @@ class LinearCosineScheduler(LrScheduler):
         learning_rate_decay_conf = (
             learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.mutable_linear_cosine_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_linear_cosine_conf().set_num_periods(self.num_periods)
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_num_periods(
+            self.num_periods
+        )
         learning_rate_decay_conf.mutable_linear_cosine_conf().set_alpha(self.alpha)
         learning_rate_decay_conf.mutable_linear_cosine_conf().set_beta(self.beta)
         return learning_rate_decay_conf
@@ -787,9 +791,15 @@ class ExponentialScheduler(LrScheduler):
         learning_rate_decay_conf = (
             learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.mutable_exponential_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_exponential_conf().set_decay_rate(self.decay_rate)
-        learning_rate_decay_conf.mutable_exponential_conf().set_staircase(self.staircase)
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
 
 
@@ -869,9 +879,15 @@ class InverseTimeScheduler(LrScheduler):
         learning_rate_decay_conf = (
             learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_rate(self.decay_rate)
-        learning_rate_decay_conf.mutable_inverse_time_conf().set_staircase(self.staircase)
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
 
 
@@ -952,7 +968,9 @@ class NaturalExpScheduler(LrScheduler):
             learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
         learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_batches(self.steps)
-        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_rate(self.decay_rate)
+        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_rate(
+            self.decay_rate
+        )
         learning_rate_decay_conf.mutable_natural_exp_conf.set_staircase(self.staircase)
         return learning_rate_decay_conf
 
@@ -986,7 +1004,9 @@ class DynamicLossScalePolicy(LossScalePolicy):
         train_conf.mutable_dynamic_loss_scale_policy().set_initial_loss_scale(
             self.initial_loss_scale
         )
-        train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(self.increment_period)
+        train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(
+            self.increment_period
+        )
         train_conf.mutable_dynamic_loss_scale_policy().set_ultiplier(self.multiplier)
 
 
@@ -1240,7 +1260,9 @@ class SGDW(Optimizer):
         else:
             optimizer_conf.mutable_momentum_conf().set_beta(self.momentum)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
@@ -1371,9 +1393,12 @@ class Adam(Optimizer):
         optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
         optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
-        optimizer_conf.mutable_adam_conf().set_do_bias_correction(self.do_bias_correction)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
+
 
 @oneflow_export("optimizer.AdamW")
 class AdamW(Optimizer):
@@ -1509,9 +1534,13 @@ class AdamW(Optimizer):
         optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
         optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
-        optimizer_conf.mutable_adam_conf().set_do_bias_correction(self.do_bias_correction)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
@@ -1735,7 +1764,9 @@ class LARS(Optimizer):
         optimizer_conf.mutable_lars_conf().set_epsilon(self.epsilon)
         optimizer_conf.mutable_lars_conf().set_lars_coefficient(self.lars_coefficient)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
@@ -1847,6 +1878,7 @@ class LazyAdam(Optimizer):
         for variable in self.Variables():
             optimizer_conf.add_variable_op_names(variable)
 
+
 @oneflow_export("optimizer.LAMB")
 class LAMB(Optimizer):
 
@@ -1918,7 +1950,9 @@ class LAMB(Optimizer):
         optimizer_conf.mutable_lamb_conf().set_beta2(self.beta2)
         optimizer_conf.mutable_lamb_conf().set_epsilon(self.epsilon)
         if self.weight_decay is not None:
-            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(self.weight_decay)
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
