@@ -179,6 +179,8 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
 
 const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device(
     const Device& device) {
+  // std::cout << "\n const std::shared_ptr<const ParallelDesc>& EnvGlobalObjectsScope::MutParallelDesc4Device() >> " << std::endl;
+  // std::cout << "\n thread_id:" << thread_id_ << "; this_thread id: " << std::this_thread::get_id() << std::endl;
   CHECK(thread_id_ == std::this_thread::get_id());
   {
     const auto& iter = device2parallel_desc_.find(device);

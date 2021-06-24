@@ -13,7 +13,7 @@ import sys
 
 import traceback
 
-api_enable_eager_execution()
+# api_enable_eager_execution()
 
 class KeyErrorMessage(str):
     r"""str subclass that returns itself in repr"""
