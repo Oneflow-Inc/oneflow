@@ -1,10 +1,13 @@
 #include <bits/stdint-intn.h>
+#include <bits/stdint-uintn.h>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "oneflow/api/java/library.h"
+#include "oneflow/api/python/framework/framework.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/session/session.h"
 #include "oneflow/api/python/env/env.h"
@@ -18,6 +21,7 @@
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/job/foreign_job_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/job_set.pb.h"
@@ -144,4 +148,65 @@ void JNICALL Java_org_oneflow_Library_unsetScopeForCurJob(JNIEnv* env, jobject o
 JNIEXPORT
 void JNICALL Java_org_oneflow_Library_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj) {
   oneflow::JobBuildAndInferCtx_Close().GetOrThrow();
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_Library_startLazyGlobalSession(JNIEnv* env, jobject obj) {
+  oneflow::StartLazyGlobalSession().GetOrThrow();
+}
+
+namespace oneflow {
+
+class JavaForeignJobInstance : public ForeignJobInstance {
+ public:
+  JavaForeignJobInstance(std::string job_name,  std::string sole_input_op_name_in_user_job,
+                         std::string sole_output_op_name_in_user_job, std::function<void(uint64_t)> push_cb,
+                         std::function<void(uint64_t)> pull_cb, std::function<void()> finish) : 
+                           job_name_(job_name), 
+                           sole_input_op_name_in_user_job_(sole_input_op_name_in_user_job),
+                           sole_output_op_name_in_user_job_(sole_output_op_name_in_user_job),
+                           push_cb_(push_cb),
+                           pull_cb_(pull_cb),
+                           finish_(finish) {
+  }
+  ~JavaForeignJobInstance() {}
+  std::string job_name() const { return job_name_; }
+  std::string sole_input_op_name_in_user_job() const { return sole_input_op_name_in_user_job_; }
+  std::string sole_output_op_name_in_user_job() const { return sole_output_op_name_in_user_job_; }
+  void PushBlob(uint64_t ofblob_ptr) const {
+    if (push_cb_ != nullptr) push_cb_(ofblob_ptr);
+  }
+  void PullBlob(uint64_t ofblob_ptr) const {
+    if (pull_cb_ != nullptr) pull_cb_(ofblob_ptr);
+  }
+  void Finish() const {
+    if (finish_ != nullptr) finish_();
+  }
+
+ private:
+  std::string job_name_;
+  std::string sole_input_op_name_in_user_job_;
+  std::string sole_output_op_name_in_user_job_;
+  std::function<void(uint64_t)> push_cb_;
+  std::function<void(uint64_t)> pull_cb_;
+  std::function<void()> finish_;
+};
+
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj) {
+  auto copy_model_load_path = [](uint64_t of_blob_ptr) -> void {
+    using namespace oneflow;
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    int64_t shape[1] = { 20 };
+	  int8_t path[20] = { 46, 47, 109, 111, 100, 101, 108, 115, 47,
+      49, 47, 118, 97, 114, 105, 97, 98, 108, 101, 115 };
+    of_blob->CopyShapeFrom(shape, 1);
+    of_blob->AutoMemCopyFrom(path, 20);
+  };
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
+    new oneflow::JavaForeignJobInstance("System-ModelLoad", "", "", copy_model_load_path, nullptr, nullptr)
+  );
+  oneflow::LaunchJob(job_inst);
 }

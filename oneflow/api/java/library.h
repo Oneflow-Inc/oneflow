@@ -26,6 +26,10 @@ JNIEXPORT void      JNICALL Java_org_oneflow_Library_rebuildCurJobBuildAndInferC
 JNIEXPORT void      JNICALL Java_org_oneflow_Library_unsetScopeForCurJob(JNIEnv* env, jobject obj);
 JNIEXPORT void      JNICALL Java_org_oneflow_Library_closeJobBuildAndInferCtx(JNIEnv* env, jobject obj);
 
+// launch
+JNIEXPORT void      JNICALL Java_org_oneflow_Library_startLazyGlobalSession(JNIEnv* env, jobject obj);
+JNIEXPORT void      JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj);
+
 #ifdef __cplusplus
 }
 #endif
