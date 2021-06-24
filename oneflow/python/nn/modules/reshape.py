@@ -84,6 +84,41 @@ def reshape_op(x, shape: Sequence[int] = None):
     return Reshape(shape=shape)(x)
 
 
+@oneflow_export("view")
+@register_tensor_op("view")
+@experimental_api
+def view_op(x, shape: Sequence[int] = None):
+    """This operator reshapes a Tensor.
+
+    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
+
+    Args:
+        x: A Tensor.
+        shape: Shape of the output tensor.
+    Returns:
+        A Tensor has the same type as `x`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array(
+        ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ... ).astype(np.float32)
+        >>> input = flow.Tensor(x)
+
+        >>> y = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
+        >>> print(y)
+        (2, 2, 2, 2)
+
+    """
+    return Reshape(shape=shape)(x)
+
+
 if __name__ == "__main__":
     import doctest
 

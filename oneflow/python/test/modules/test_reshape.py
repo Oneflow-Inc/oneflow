@@ -28,6 +28,7 @@ def _test_reshape(test_case, device):
     ).astype(np.float32)
     input = flow.Tensor(x, device=flow.device(device))
     of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
+    of_shape = flow.reshape(input, shape=[2, 2, 2, -1]).numpy().shape
     np_shape = (2, 2, 2, 2)
     test_case.assertTrue(np.array_equal(of_shape, np_shape))
 
@@ -70,6 +71,55 @@ def _test_reshape_backward(test_case, device):
     test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
 
 
+def _test_view(test_case, device):
+    x = np.array(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+    ).astype(np.float32)
+    input = flow.Tensor(x, device=flow.device(device))
+    of_shape = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
+    of_shape = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
+    np_shape = (2, 2, 2, 2)
+    test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+
+def _test_view_tuple(test_case, device):
+    x = np.array(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+    ).astype(np.float32)
+    input = flow.Tensor(x, device=flow.device(device))
+    of_shape = flow.view(input, shape=(2, 2, 2, -1)).numpy().shape
+    np_shape = (2, 2, 2, 2)
+    test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+
+def _test_tensor_view(test_case, device):
+    x = np.array(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+    ).astype(np.float32)
+    input = flow.Tensor(x, device=flow.device(device))
+    of_shape = input.view(shape=[2, 2, 2, -1]).numpy().shape
+    np_shape = (2, 2, 2, 2)
+    test_case.assertTrue(np.array_equal(of_shape, np_shape))
+
+
+def _test_view_backward(test_case, device):
+    x = np.array(
+        [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+    ).astype(np.float32)
+    input = flow.Tensor(x, device=flow.device(device), requires_grad=True)
+    of_out = flow.view(input, shape=[2, 2, 2, -1]).sum()
+    of_out.backward()
+    np_grad = np.array(
+        [
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+            [1.0, 1.0, 1.0, 1.0],
+        ]
+    )
+    test_case.assertTrue(np.allclose(np_grad, input.grad.numpy(), 1e-4, 1e-4))
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -82,6 +132,10 @@ class TestModule(flow.unittest.TestCase):
             _test_reshape_tuple,
             _test_tensor_reshape,
             _test_reshape_backward,
+            _test_view,
+            _test_view_tuple,
+            _test_tensor_view,
+            _test_view_backward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
