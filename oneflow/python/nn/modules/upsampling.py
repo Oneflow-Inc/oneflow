@@ -75,12 +75,11 @@ class Upsample(Module):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-        >>> output = m(input).numpy()
-        >>> print(output)
-        [[[[1. 1. 2. 2.]
-           [1. 1. 2. 2.]
-           [3. 3. 4. 4.]
-           [3. 3. 4. 4.]]]]
+        >>> output = m(input)
+        >>> output #doctest: +ELLIPSIS
+        tensor([[[[1., 1., 2., 2.],
+                  ...
+                  [3., 3., 4., 4.]]]], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -121,18 +120,6 @@ class Upsample(Module):
         if self.mode == "nearest" and self.align_corners:
             raise ValueError('interpolation "nearest" does not support align_corners.')
 
-        self._op = (
-            flow.builtin_op("upsample")
-            .Input("x")
-            .Output("y")
-            .Attr("height_scale", float(1.0))
-            .Attr("width_scale", float(1.0))
-            .Attr("align_corners", self.align_corners)
-            .Attr("data_format", "channels_first")
-            .Attr("interpolation", self.mode)
-            .Build()
-        )
-
     def forward(self, x):
         assert (
             self.size != None or self.scale_factor != None
@@ -149,9 +136,14 @@ class Upsample(Module):
             else:
                 self.width_scale = 1.0 * self.size[1] / w
 
-        res = self._op(x, height_scale=self.height_scale, width_scale=self.width_scale)[
-            0
-        ]
+        res = flow.F.upsample(
+            x,
+            height_scale=self.height_scale,
+            width_scale=self.width_scale,
+            align_corners=self.align_corners,
+            interpolation=self.mode,
+            data_format="channels_first",
+        )
         return res
 
 
@@ -195,12 +187,11 @@ class UpsamplingNearest2d(Upsample):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
-        >>> output = m(input).numpy()
-        >>> print(output)
-        [[[[1. 1. 2. 2.]
-           [1. 1. 2. 2.]
-           [3. 3. 4. 4.]
-           [3. 3. 4. 4.]]]]
+        >>> output = m(input)
+        >>> output #doctest: +ELLIPSIS
+        tensor([[[[1., 1., 2., 2.],
+                  ...
+                  [3., 3., 4., 4.]]]], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -253,12 +244,12 @@ class UpsamplingBilinear2d(Upsample):
         >>> input = flow.Tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)
-        >>> output = m(input).numpy()
-        >>> print(output)
-        [[[[1.        1.3333334 1.6666667 2.       ]
-           [1.6666667 2.        2.3333335 2.6666667]
-           [2.3333335 2.6666667 3.        3.3333335]
-           [3.        3.3333333 3.6666667 4.       ]]]]
+        >>> output = m(input)
+        >>> output #doctest: +ELLIPSIS
+        tensor([[[[1.    , 1.3333, 1.6667, 2.    ],
+                  ...
+                  [3.    , 3.3333, 3.6667, 4.    ]]]], device='cuda:0',
+               dtype=oneflow.float32)
 
     """
 
