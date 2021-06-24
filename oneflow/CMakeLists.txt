@@ -10,17 +10,40 @@ include(proto2cpp)
 include(cfg)
 include(functional)
 
+function(check_dir)
+  cmake_parse_arguments(
+    PARSED_ARGS
+    ""
+    "NAME;DIR"
+    ""
+    ${ARGN}
+  )
+  if(NOT PARSED_ARGS_NAME)
+    message(FATAL_ERROR "NAME required")
+  endif()
+  if(NOT PARSED_ARGS_DIR)
+    message(FATAL_ERROR "DIR required")
+  endif()
+  if(NOT IS_DIRECTORY ${PARSED_ARGS_DIR})
+    message(FATAL_ERROR "directory of ${PARSED_ARGS_NAME} not valid, val: ${PARSED_ARGS_DIR}")
+  endif()
+endfunction()
 
 find_package(Protobuf REQUIRED NO_CMAKE_SYSTEM_PATH)
-find_package(gflags    REQUIRED NO_CMAKE_SYSTEM_PATH)
-find_package(glog    REQUIRED NO_CMAKE_SYSTEM_PATH)
-if(NOT IS_DIRECTORY ${PROTOBUF_INCLUDE_DIR})
-  message(FATAL_ERROR "PROTOBUF_INCLUDE_DIR not a valid directory, val: ${PROTOBUF_INCLUDE_DIR}")
-endif()
+find_package(gflags REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_package(glog REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_library(gtest_LIBRARY gtest REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_path(gtest_INCLUDE gtest PATH_SUFFIXES include REQUIRED NO_CMAKE_SYSTEM_PATH)
+set(PROTOBUF_INCLUDE_DIR ${Protobuf_ROOT}/include CACHE STRING "")
+check_dir(NAME protobuf DIR ${PROTOBUF_INCLUDE_DIR})
+check_dir(NAME gflags DIR ${gflags_ROOT}/include)
+check_dir(NAME glog DIR ${glog_ROOT}/include)
 set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
 include_directories(
-  ${PROTOBUF_INCLUDE_DIR}
-  ${gflags_INCLUDE_DIR}
+  ${gflags_ROOT}/include
+  ${Protobuf_ROOT}/include
+  ${glog_ROOT}/include
+  ${gtest_INCLUDE}
 )
 
 
