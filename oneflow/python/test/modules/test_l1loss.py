@@ -37,7 +37,7 @@ def _np_l1loss(np_input, np_target):
 def _np_l1loss_grad(np_input, np_target):
     elem_cnt = np_input.size
     np_grad = np.zeros_like(np_target)
-    np_grad = np.where(np_input - np_target > 0, 1.0, -1.0)
+    np_grad = np.sign(np_input - np_target)
     np_l1_grad_sum = np_grad
     np_l1_grad_mean = np_l1_grad_sum / elem_cnt
 
@@ -65,7 +65,6 @@ def _test_l1loss_impl(test_case, device, shape, reduction):
     of_out = of_out.sum()
     of_out.backward()
     np_grad = _np_l1loss_grad(x, y)[reduction]
-
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
@@ -89,8 +88,7 @@ class TestL1LossModule(flow.unittest.TestCase):
         ]
         arg_dict["reduction"] = ["none", "sum", "mean"]
         for arg in GenArgList(arg_dict):
-            for i in range(2000):
-                arg[0](test_case, *arg[1:])
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":
