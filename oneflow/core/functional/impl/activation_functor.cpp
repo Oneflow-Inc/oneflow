@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/scalar.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -32,9 +33,29 @@ namespace functional {
 
 namespace impl {
 
-class ReluFunctor : public UnaryFunctor {
+class ReluFunctor {
  public:
-  ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("in").Output("out").Build()); }
+  ReluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("relu").Input("in", 1).Output("out", 1).Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, bool inplace) const {
+    if (inplace) {
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      if (autograd::GradMode::is_enabled()) {
+        /* const auto& facade_input = JUST(x->clone()); */
+        JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), {}));
+      } else {
+        JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*op_, {x}, outputs.get(), {}));
+      }
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class PReluFunctor : public BinaryFunctor {

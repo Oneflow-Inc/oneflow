@@ -78,6 +78,7 @@ class Tensor {
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const = 0;
+  virtual Maybe<bool> has_eager_blob_object() const = 0;
 
   // Setters
   virtual Maybe<void> set_consumer_forced_parallel_distribution(
@@ -103,6 +104,7 @@ class Tensor {
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
   virtual bool has_autograd_meta() const = 0;
+  virtual Maybe<void> create_autograd_meta() = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
 
@@ -206,6 +208,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
     return impl_->compute_local_dep_object();
   }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
+  Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
   Maybe<void> set_consumer_forced_parallel_distribution(
@@ -236,6 +239,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
+  Maybe<void> create_autograd_meta() override { return impl_->create_autograd_meta(); }
 
   // Operators for tensor
   Maybe<MirroredTensor> api_detach() const override;
@@ -292,6 +296,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<TensorStorage> tensor_storage() const override { return impl_->tensor_storage(); }
+  Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
   Maybe<void> set_consumer_forced_parallel_distribution(
@@ -319,6 +324,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
+  Maybe<void> create_autograd_meta() override { return impl_->create_autograd_meta(); }
 
   // Operators for tensor
   virtual Maybe<ConsistentTensor> api_detach() const override;

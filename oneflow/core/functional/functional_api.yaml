@@ -136,7 +136,7 @@
   bind_python: True
 
 - name: "relu"
-  signature: "Tensor relu(Tensor x, *, Bool inplace=False)"
+  signature: "Tensor Relu(Tensor x, *, Bool inplace=False)"
   bind_python: True
 
 - name: "hardtanh"

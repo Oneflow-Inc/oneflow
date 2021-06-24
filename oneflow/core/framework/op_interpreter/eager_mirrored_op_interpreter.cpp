@@ -74,15 +74,15 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
   bool need_event_record = false;
+  bool is_inplace = true;
+  for (int i = 0; i < outputs->size(); i++) {
+    if (!JUST(outputs->at(i)->has_eager_blob_object())) { is_inplace = false; }
+  }
 
-  bool is_inplace =
-      std::all_of(output_eager_blob_objects->begin(), output_eager_blob_objects->end(),
-                  [](const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object) {
-                    return eager_blob_object != nullptr;
-                  });
   if (is_inplace) {
-    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
-      CHECK_EQ_OR_RETURN(*out_devices->at(i), *JUST(inputs.at(i)->device()));
+    for (int i = 0; i < outputs->size(); i++) {
+      CHECK_EQ_OR_RETURN(*JUST(outputs->at(i)->device()), *JUST(inputs.at(i)->device()));
+      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
       CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i)->blob_desc().shape(),
                          input_eager_blob_objects->at(i)->blob_desc().shape());
     }

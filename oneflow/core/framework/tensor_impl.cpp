@@ -59,9 +59,11 @@ Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MirroredTensorImpl::set_device(const std::shared_ptr<const Device>& device) {
-  device_ = device;
+Maybe<void> TensorImpl::create_autograd_meta() {
+  autograd_meta_ = NewAutogradMeta(requires_grad_, is_leaf_);
   return Maybe<void>::Ok();
+}
+
 namespace {
 
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
@@ -89,8 +91,7 @@ EagerMirroredTensorImpl::~EagerMirroredTensorImpl() {}
 EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
     std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
-    : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf),
-      tensor_storage_(tensor_storage) {}
+    : MirroredTensorImpl(tensor_meta, requires_grad, is_leaf), tensor_storage_(tensor_storage) {}
 
 Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& blob_object = JUST(eager_blob_object());

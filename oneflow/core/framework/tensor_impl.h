@@ -90,6 +90,7 @@ class TensorImpl {
   virtual Maybe<vm::EagerBlobObject> eager_blob_object() const = 0;
   virtual Maybe<VmLocalDepObject> compute_local_dep_object() const = 0;
   virtual Maybe<TensorStorage> tensor_storage() const = 0;
+  virtual Maybe<bool> has_eager_blob_object() const = 0;
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
@@ -105,7 +106,8 @@ class TensorImpl {
   Maybe<void> set_retain_grad(bool retain_grad);
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
-  bool has_autograd_meta() const { return autograd_meta_ == nullptr; }
+  Maybe<void> create_autograd_meta();
+  bool has_autograd_meta() const { return autograd_meta_.get(); }
 
  protected:
   TensorImpl(bool requires_grad, bool is_leaf) : requires_grad_(requires_grad), is_leaf_(is_leaf) {}
@@ -152,7 +154,8 @@ class MirroredTensorImpl : public TensorImpl {
   virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }
 
  protected:
-  MirroredTensorImpl(const std::shared_ptr<const Device>& device, bool requires_grad, bool is_leaf)
+  MirroredTensorImpl(const std::shared_ptr<const MirroredTensorMeta>& tensor_meta,
+                     bool requires_grad, bool is_leaf)
       : TensorImpl(requires_grad, is_leaf), tensor_meta_(tensor_meta) {}
 
   std::shared_ptr<const MirroredTensorMeta> tensor_meta_;
@@ -200,6 +203,7 @@ class ConsistentTensorImpl : public TensorImpl {
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
+  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
 
@@ -243,6 +247,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
     return Error::Unimplemented();
   }
+  Maybe<bool> has_eager_blob_object() const override { OF_UNIMPLEMENTED(); }
 };
 
 class EagerMirroredTensorImpl final : public MirroredTensorImpl {
@@ -271,6 +276,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
     CHECK_OR_RETURN(eager_blob_object_);
     return tensor_storage_;
   }
+  Maybe<bool> has_eager_blob_object() const override { return eager_blob_object_.get(); }
 
   // Setters
   Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
