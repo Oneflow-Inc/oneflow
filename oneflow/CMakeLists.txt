@@ -13,8 +13,16 @@ include(functional)
 
 find_package(Protobuf REQUIRED NO_CMAKE_SYSTEM_PATH)
 find_package(gflags    REQUIRED NO_CMAKE_SYSTEM_PATH)
-set(PROTOBUF_INCLUDE_DIR ${Protobuf_ROOT}/include) # refine me
+find_package(glog    REQUIRED NO_CMAKE_SYSTEM_PATH)
+if(NOT IS_DIRECTORY ${PROTOBUF_INCLUDE_DIR})
+  message(FATAL_ERROR "PROTOBUF_INCLUDE_DIR not a valid directory, val: ${PROTOBUF_INCLUDE_DIR}")
+endif()
 set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
+include_directories(
+  ${PROTOBUF_INCLUDE_DIR}
+  ${gflags_INCLUDE_DIR}
+)
+
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)

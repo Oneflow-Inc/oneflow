@@ -181,13 +181,14 @@ endif()
 
 # skip oneflow cmake to avoid errors caused by the absences of python-dev, proto src
 if (ONEFLOW)
-  ExternalProject_Add (oneflow
+  ExternalProject_Add(oneflow
     PREFIX oneflow
     DEPENDS prepare_oneflow_third_party
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${PROJECT_SOURCE_DIR}/oneflow # Source dir for configuration
     INSTALL_DIR ${PROJECT_BINARY_DIR}/oneflow_install
     CMAKE_CACHE_ARGS
+      -DCMAKE_GENERATOR:STRING=${CMAKE_GENERATOR}
       -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
       -DBUILD_SHARED_LIBS:BOOL=${BUILD_SHARED_LIBS}
       -DCMAKE_CXX_FLAGS:STRING=${CMAKE_CXX_FLAGS}
@@ -196,6 +197,8 @@ if (ONEFLOW)
       -DCMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=${CMAKE_CXX_FLAGS_RELWITHDEBINFO}
       -DCUDA_NVCC_FLAGS:STRING=${CUDA_NVCC_FLAGS}
       -DProtobuf_ROOT:STRING=${PROTOBUF_INSTALL_DIR}
+      -DPROTOBUF_INCLUDE_DIR:PATH=${PROTOBUF_INCLUDE_DIR}
+      -Dglog_ROOT:STRING=${GLOG_INSTALL_DIR}
       -Dgflags_ROOT:STRING=${GFLAGS_INSTALL_DIR}
   )
 endif()
