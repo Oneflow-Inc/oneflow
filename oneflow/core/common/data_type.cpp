@@ -60,6 +60,7 @@ size_t GetSizeOfDataType(DataType data_type) {
 #define MAKE_CASE(type_cpp, type_proto) \
   case type_proto: return sizeof(type_cpp);
     OF_PP_FOR_EACH_TUPLE(MAKE_CASE, ALL_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BUFFER_DATA_TYPE_SEQ);
+    case kBFloat16: return 2;
     default: LOG(FATAL) << "invalid data_type: " << DataType_Name(data_type);
   }
 }
