@@ -217,6 +217,7 @@ class Conv2d(Module):
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
+<<<<<<< HEAD
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
@@ -292,6 +293,8 @@ class Conv2d(Module):
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
+=======
+>>>>>>> 5573cea95... align Torch params
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
@@ -321,13 +324,11 @@ class Conv2d(Module):
                     flow.F.conv2d(
                         in_split_list[i],
                         self.weight[i : i + 1, :, :, :],
-                        filters=self.out_channels // self.groups,
-                        kernel_size=self.kernel_size,
-                        strides=self.stride,
-                        padding_before=self.padding,
-                        dilation_rate=self.dilation,
+                        self.bias[i : i + 1, :, :, :],
+                        stride=self.stride,
+                        padding=self.padding,
+                        dilation=self.dilation,
                         groups=1,
-                        data_format="channels_first",
                     )
                 )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
@@ -335,17 +336,12 @@ class Conv2d(Module):
             res = flow.F.conv2d(
                 x,
                 self.weight,
-                filters=self.out_channels,
-                kernel_size=self.kernel_size,
-                strides=self.stride,
-                padding_before=self.padding,
-                dilation_rate=self.dilation,
+                self.bias,
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
                 groups=self.groups,
-                data_format="channels_first",
             )
-
-        if self.bias is not None:
-            res = flow.F.bias_add(res, self.bias, axis=1)
         return res
 
 

@@ -47,6 +47,42 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+<<<<<<< HEAD
+=======
+class Conv2DFunctor {
+ public:
+  Conv2DFunctor() {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const std::shared_ptr<one::Tensor>& bias,
+                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap conv_attrs;
+    std::vector<int32_t> kernel_size_vec;
+    for (int i = 0; i < 2; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    std::shared_ptr<one::Tensor> conv_out =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+    MutableAttrMap bias_attrs;
+    JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+    return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, bias}, bias_attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+>>>>>>> 5573cea95... align Torch params
 
 class MatMulBaseFunctor {
  public:

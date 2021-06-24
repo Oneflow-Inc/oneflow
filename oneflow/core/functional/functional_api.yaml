@@ -238,6 +238,31 @@
   signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
   bind_python: True
 
+- name: "conv2d"
+  signature:
+    "Tensor Conv2D(Tensor x, Tensor weight, Tensor bias, *, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
+
+- name: "conv_data_grad"
+  signature:
+    "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
+                         Int32List kernel_size, Int32List strides, Int32List padding_before,
+                         Int32List dilation_rate, Int32 groups=1,
+                         String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_filter_grad"
+  signature:
+    "Tensor ConvFilterGrad(Tensor dy, Tensor x, *, Int32 num_spatial_dims, Int32List kernel_size,
+                           Int32List strides, Int32List padding_before, Int32List dilation_rate,
+                           Int32 groups=1, String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_bias_grad"
+  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  bind_python: False
+
 - name: "expand"
   signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
   bind_python: True
