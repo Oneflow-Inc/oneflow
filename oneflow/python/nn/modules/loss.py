@@ -1124,4 +1124,4 @@ class BCEWithLogitsLoss(Module):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
