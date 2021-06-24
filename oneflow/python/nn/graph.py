@@ -91,6 +91,23 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+    
+    def __repr__(self):
+        lines = None
+        if len(self._nodes) > 0:
+            child_lines = []
+            for n, m in self._nodes.items():
+                mod_str = repr(m)
+                mod_str = _add_indent(mod_str, 2)
+                child_lines.append(mod_str)
+            lines = child_lines
+
+        main_str = "(" + self.__class__.__name__ + ":graph): ("
+        if lines is not None:
+            main_str += '\n  ' + '\n  '.join(lines) + '\n'
+        main_str += ")"
+        return main_str
+
 
 
 @oneflow_export("experimental.nn.graph.Node")
@@ -191,6 +208,27 @@ class Node(object):
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
 
+    def __repr__(self):
+        lines = None
+        if self._type == "module":
+            child_lines = []
+            def _append_child(d):
+                for _, n in d.items():
+                    n_str = repr(n)
+                    n_str = _add_indent(n_str, 2)
+                    child_lines.append(n_str)
+            _append_child(self._modules)
+            _append_child(self._parameters)
+            _append_child(self._buffers)
+            if len(child_lines) > 0:
+                lines = child_lines
+
+        main_str = "(" + self._name + ":" + self._origin.__class__.__name__ + ":" + self._type + "): ("
+        if lines is not None:
+            main_str += '\n  ' + '\n  '.join(lines) + '\n'
+        main_str += ')'
+        return main_str
+
 @oneflow_export("experimental.nn.graph.GraphConfig")
 class GraphConfig(FunctionConfig):
     def __init__(self):
@@ -238,3 +276,12 @@ class OptimizerConfig(object):
         self.grad_clipping_conf = grad_clipping_conf
         self.weight_decay_conf = weight_decay_conf
 
+def _add_indent(in_s, num_spaces):
+    s = in_s.split('\n')
+    if len(s) == 1:
+        return in_s
+    first = s.pop(0)
+    s = [(num_spaces * ' ') + line for line in s]
+    s = '\n'.join(s)
+    s = first + '\n' + s
+    return s
