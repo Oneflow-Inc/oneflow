@@ -28,7 +28,7 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
       if (axis.empty()) { CHECK_EQ_OR_RETURN(x_tensor->shape(), like_tensor->shape()); }
-      user_op::TensorDesc* y_tensor = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y_tensor = ctx->OutputTensorDesc("y", 0);
       *y_tensor->mut_shape() = like_tensor->shape();
       *y_tensor->mut_is_dynamic() = like_tensor->is_dynamic();
       return Maybe<void>::Ok();
@@ -81,7 +81,7 @@ REGISTER_USER_OP("reduce_sum_like")
       const user_op::TensorDesc* x_tensor = ctx->TensorDesc4ArgNameAndIndex("x", 0);
       const user_op::TensorDesc* like_tensor = ctx->TensorDesc4ArgNameAndIndex("like", 0);
       CHECK_EQ_OR_RETURN(x_tensor->data_type(), like_tensor->data_type());
-      *ctx->Dtype4ArgNameAndIndex("y", 0) = like_tensor->data_type();
+      *ctx->OutputDType("y", 0) = like_tensor->data_type();
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,

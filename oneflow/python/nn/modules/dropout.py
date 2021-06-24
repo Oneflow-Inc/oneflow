@@ -28,7 +28,6 @@ class _DropoutNd(Module):
 
     def __init__(self, p: float = 0.5, inplace: bool = False) -> None:
         super(_DropoutNd, self).__init__()
-        assert inplace is False, "Not support inplace=True yet!"
         if p < 0 or p > 1:
             raise ValueError(
                 "dropout probability has to be between 0 and 1, " "but got {}".format(p)
@@ -82,11 +81,11 @@ class Dropout(_DropoutNd):
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = m(x).numpy()
-        >>> print(y)
-        [[-0.7797  0.2264  0.2458  0.4163]
-         [ 0.4299  0.3626 -0.4892  0.4141]
-         [-1.4115  1.2183 -0.5503  0.652 ]]
+        >>> y = m(x)
+        >>> y #doctest: +ELLIPSIS
+        tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
+                ...
+                [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
 
 
     """

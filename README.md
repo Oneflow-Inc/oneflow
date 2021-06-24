@@ -1,4 +1,8 @@
+# OneFlow
+
 **OneFlow is a performance-centered and open-source deep learning framework.**
+
+[![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 
 ## Install OneFlow
 
@@ -36,6 +40,7 @@
     - All available `[PLATFORM]`:
       | Platform |CUDA Driver Version| Supported GPUs |
       |---|---|---|
+      | cu112  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
       | cu111  | >= 450.80.02  | GTX 10xx, RTX 20xx, A100, RTX 30xx |
       | cu110, cu110_xla  | >= 450.36.06  | GTX 10xx, RTX 20xx, A100|
       | cu102, cu102_xla  | >= 440.33  | GTX 10xx, RTX 20xx |
@@ -127,7 +132,7 @@
     python3 -m oneflow --doctor
     ```
 
-  - If you are in China, please add this CMake flag `-DTHIRD_PARTY_MIRROR=aliyun` to speed up the downloading procedure for some dependency tar files.
+  - If you are in China, please add these CMake flags `-DTHIRD_PARTY_MIRROR=aliyun -DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple` for faster dependency downloads.
   - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 </details>
 

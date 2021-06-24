@@ -56,11 +56,11 @@ class LambdaLR(LrScheduler):
 
     def __init__(self, optimizer, lr_lambda, last_step=-1, verbose=False):
         if not isinstance(lr_lambda, (list, tuple)):
-            self.lr_lambdas = [lr_lambda] * len(optimizer._param_groups)
+            self.lr_lambdas = [lr_lambda] * len(optimizer.param_groups)
         else:
             assert len(lr_lambda) == len(
-                optimizer._param_groups
-            ), f"Expected {len(optimizer._param_groups)} lr_lambdas, but got {len(lr_lambda)}"
+                optimizer.param_groups
+            ), f"Expected {len(optimizer.param_groups)} lr_lambdas, but got {len(lr_lambda)}"
             self.lr_lambdas = list(lr_lambda)
 
         super().__init__(optimizer, last_step, verbose)

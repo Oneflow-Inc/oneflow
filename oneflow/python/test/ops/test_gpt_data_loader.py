@@ -16,6 +16,7 @@ limitations under the License.
 import numpy as np
 import unittest
 import oneflow as flow
+import os
 
 
 def _make_gpt_data_loader_func(
@@ -90,6 +91,10 @@ def _make_gpt_data_loader_func(
     return gpt_loader_fn
 
 
+@unittest.skipIf(
+    os.getenv("ONEFLOW_TEST_GITHUB_HOSTED"),
+    "/dataset not available on GitHub hosted servers",
+)
 class TestGPTDataLoader(flow.unittest.TestCase):
     DATA_FILE_PREFIX = "/dataset/Megatron-LM/dummy/gpt_sample_dataset_text_document"
     SEQ_LENGTH = 1024

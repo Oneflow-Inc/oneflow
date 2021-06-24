@@ -30,9 +30,9 @@ namespace oneflow {
 namespace {
 
 void ParallelDimReduce(const ParallelDesc& parallel_desc,
-                       const ParallelDistribution& parallel_distribution,
+                       const cfg::ParallelDistribution& parallel_distribution,
                        ParallelDesc* reduced_parallel_desc,
-                       ParallelDistribution* reduced_parallel_distribution) {
+                       cfg::ParallelDistribution* reduced_parallel_distribution) {
   const auto& hierarchy = parallel_desc.hierarchy();
   DimVector reduced_hierarchy;
   reduced_hierarchy.push_back(hierarchy->At(0));
@@ -52,12 +52,12 @@ void ParallelDimReduce(const ParallelDesc& parallel_desc,
 
 void CollaborativeParallelDimReduce(const ParallelDesc& in_parallel_desc,
                                     const ParallelDesc& out_parallel_desc,
-                                    const ParallelDistribution& in_parallel_distribution,
-                                    const ParallelDistribution& out_parallel_distribution,
+                                    const cfg::ParallelDistribution& in_parallel_distribution,
+                                    const cfg::ParallelDistribution& out_parallel_distribution,
                                     ParallelDesc* reduced_in_parallel_desc,
                                     ParallelDesc* reduced_out_parallel_desc,
-                                    ParallelDistribution* reduced_in_parallel_distribution,
-                                    ParallelDistribution* reduced_out_parallel_distribution) {
+                                    cfg::ParallelDistribution* reduced_in_parallel_distribution,
+                                    cfg::ParallelDistribution* reduced_out_parallel_distribution) {
   const auto& in_hierarchy = in_parallel_desc.hierarchy();
   const auto& out_hierarchy = out_parallel_desc.hierarchy();
   CHECK_EQ(in_hierarchy->NumAxes(), out_hierarchy->NumAxes());
@@ -110,9 +110,10 @@ std::shared_ptr<ChainSubTskGphBuilder> Make1DSubTskGphBuilder() {
   return std::make_shared<ChainSubTskGphBuilder>(builders);
 }
 
-bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
+bool ParallelDistributionAllSameSplitParallel(
+    const cfg::ParallelDistribution& parallel_distribution) {
   CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
-  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
   FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
     if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
@@ -124,12 +125,12 @@ bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parall
 
 void InOutParallelDimReduce(const ParallelDesc& in_parallel_desc,
                             const ParallelDesc& out_parallel_desc,
-                            const ParallelDistribution& in_parallel_distribution,
-                            const ParallelDistribution& out_parallel_distribution,
+                            const cfg::ParallelDistribution& in_parallel_distribution,
+                            const cfg::ParallelDistribution& out_parallel_distribution,
                             ParallelDesc* reduced_in_parallel_desc,
                             ParallelDesc* reduced_out_parallel_desc,
-                            ParallelDistribution* reduced_in_parallel_distribution,
-                            ParallelDistribution* reduced_out_parallel_distribution) {
+                            cfg::ParallelDistribution* reduced_in_parallel_distribution,
+                            cfg::ParallelDistribution* reduced_out_parallel_distribution) {
   const int64_t in_hierarchy_axes = in_parallel_desc.hierarchy()->NumAxes();
   const int64_t out_hierarchy_axes = out_parallel_desc.hierarchy()->NumAxes();
   if (in_hierarchy_axes == 1 && out_hierarchy_axes == 1) {
@@ -163,8 +164,8 @@ class FlatSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 1
         && out_parallel_desc.hierarchy()->NumAxes() == 1) {
@@ -194,8 +195,8 @@ class IntraGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()
         && in_parallel_desc.hierarchy()->NumAxes() == 2
@@ -274,8 +275,8 @@ class InterGroupSubTskGphBuilder final : public HierarchicalSubTskGphBuilder {
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()
         && in_parallel_desc.hierarchy()->NumAxes() == 2
@@ -359,8 +360,8 @@ class Dim0ParallelDistributionMismatchedSubTskGphBuilder final
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())
@@ -401,8 +402,8 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->NumAxes() == 2
         && (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy())) {
@@ -641,15 +642,15 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
                                       const ParallelDesc& in_parallel_desc,
                                       const ParallelDesc& out_parallel_desc,
                                       const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc,
-                                      const ParallelDistribution& in_parallel_distribution,
-                                      const ParallelDistribution& out_parallel_distribution,
+                                      const cfg::ParallelDistribution& in_parallel_distribution,
+                                      const cfg::ParallelDistribution& out_parallel_distribution,
                                       const Shape& time_shape) const override {
     if (in_parallel_desc.hierarchy()->elem_cnt() == out_parallel_desc.hierarchy()->elem_cnt()
         && in_parallel_desc.hierarchy()->NumAxes() == 1
         && out_parallel_desc.hierarchy()->NumAxes() == 2) {
       ParallelConf intermediate_parallel_conf = in_parallel_desc.parallel_conf();
       out_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      ParallelDistribution intermediate_parallel_distribution;
+      cfg::ParallelDistribution intermediate_parallel_distribution;
       *intermediate_parallel_distribution.add_sbp_parallel() =
           in_parallel_distribution.sbp_parallel(0);
       *intermediate_parallel_distribution.add_sbp_parallel() =
@@ -663,7 +664,7 @@ class ExpandToSame2DHierarchySubTskGphBuilder final : public HierarchicalSubTskG
                && out_parallel_desc.hierarchy()->NumAxes() == 1) {
       ParallelConf intermediate_parallel_conf = out_parallel_desc.parallel_conf();
       in_parallel_desc.hierarchy()->ToProto(intermediate_parallel_conf.mutable_hierarchy());
-      ParallelDistribution intermediate_parallel_distribution;
+      cfg::ParallelDistribution intermediate_parallel_distribution;
       *intermediate_parallel_distribution.add_sbp_parallel() =
           out_parallel_distribution.sbp_parallel(0);
       *intermediate_parallel_distribution.add_sbp_parallel() =
@@ -709,12 +710,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const ParallelDistribution& in_parallel_distribution,
-    const ParallelDistribution& out_parallel_distribution, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const cfg::ParallelDistribution& in_parallel_distribution,
+    const cfg::ParallelDistribution& out_parallel_distribution, const Shape& time_shape) const {
   ParallelDesc reduced_in_parallel_desc = in_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = out_parallel_desc;
-  ParallelDistribution reduced_in_parallel_distribution;
-  ParallelDistribution reduced_out_parallel_distribution;
+  cfg::ParallelDistribution reduced_in_parallel_distribution;
+  cfg::ParallelDistribution reduced_out_parallel_distribution;
   InOutParallelDimReduce(in_parallel_desc, out_parallel_desc, in_parallel_distribution,
                          out_parallel_distribution, &reduced_in_parallel_desc,
                          &reduced_out_parallel_desc, &reduced_in_parallel_distribution,

@@ -1,3 +1,4 @@
+cmake_policy(SET CMP0074 NEW)
 if (NOT WIN32)
   find_package(Threads)
 endif()
@@ -31,55 +32,64 @@ if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
+option(CUDA_STATIC "" ON)
+
 if (BUILD_CUDA)
+  if ((NOT CUDA_STATIC) OR WITH_XLA OR BUILD_SHARED_LIBS)
+    set(OF_CUDA_LINK_DYNAMIC_LIBRARY ON)
+  else()
+    set(OF_CUDA_LINK_DYNAMIC_LIBRARY OFF)
+  endif()
+  if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
+    set(CUDA_USE_STATIC_CUDA_RUNTIME OFF)
+  endif()
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
-  foreach(cuda_lib_path ${CUDA_LIBRARIES})
-    get_filename_component(cuda_lib_name ${cuda_lib_path} NAME)
-    if (${cuda_lib_name} STREQUAL libcudart_static.a)
-      get_filename_component(cuda_lib_dir ${cuda_lib_path} DIRECTORY)
-      break()
-    endif()
-  endforeach()
-  if(NOT EXISTS ${cuda_lib_dir}/libcudart_static.a)
-    if(NOT EXISTS ${CUDA_cudart_static_LIBRARY})
-      message(FATAL_ERROR "cuda lib not found: ${cuda_lib_dir}/libcudart_static.a")
-    endif()
-    get_filename_component(cuda_lib_dir ${CUDA_cudart_static_LIBRARY} DIRECTORY)
-  endif()
-  set(extra_cuda_libs libculibos.a libcurand_static.a)
-  if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
-    list(APPEND extra_cuda_libs libnvjpeg_static.a libnppc_static.a libnppig_static.a)
-  endif()
-  foreach(extra_cuda_lib ${extra_cuda_libs})
-    list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
-  endforeach()
-  foreach(cublas_lib_path ${CUDA_CUBLAS_LIBRARIES})
-    get_filename_component(cublas_lib_name ${cublas_lib_path} NAME)
-    if (${cublas_lib_name} STREQUAL libcublas.so)
-      get_filename_component(cublas_lib_dir ${cublas_lib_path} DIRECTORY)
-      break()
-    endif()
-  endforeach()
-  if (WITH_XLA)
-    if(EXISTS ${cublas_lib_dir}/libcublas.so AND EXISTS ${cublas_lib_dir}/libcublasLt.so)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt.so)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas.so)
-    elseif(EXISTS ${cublas_lib_dir}/libcublas.so)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas.so)
-    elseif(EXISTS ${cuda_lib_dir}/libcublas.so)
-      list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas.so)
-    else()
-      message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas.so or ${cuda_lib_dir}/libcublas.so")
+  set(VENDOR_CUDA_LIBRARIES ${CUDA_LIBRARIES})
+  if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
+    list(APPEND VENDOR_CUDA_LIBRARIES ${CUDA_CUBLAS_LIBRARIES})
+    list(APPEND VENDOR_CUDA_LIBRARIES ${CUDA_curand_LIBRARY})
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
+      find_cuda_helper_libs(nvjpeg)
+      list(APPEND VENDOR_CUDA_LIBRARIES ${CUDA_nvjpeg_LIBRARY})
+      list(APPEND VENDOR_CUDA_LIBRARIES ${CUDA_nppc_LIBRARY})
+      list(APPEND VENDOR_CUDA_LIBRARIES ${CUDA_nppig_LIBRARY})
     endif()
   else()
+    foreach(cuda_lib_path ${CUDA_LIBRARIES})
+      get_filename_component(cuda_lib_name ${cuda_lib_path} NAME)
+      if (${cuda_lib_name} STREQUAL libcudart_static.a)
+        get_filename_component(cuda_lib_dir ${cuda_lib_path} DIRECTORY)
+        break()
+      endif()
+    endforeach()
+    if(NOT EXISTS ${cuda_lib_dir}/libcudart_static.a)
+      if(NOT EXISTS ${CUDA_cudart_static_LIBRARY})
+        message(FATAL_ERROR "cuda lib not found: ${cuda_lib_dir}/libcudart_static.a")
+      endif()
+      get_filename_component(cuda_lib_dir ${CUDA_cudart_static_LIBRARY} DIRECTORY)
+    endif()
+    set(extra_cuda_libs libculibos.a libcurand_static.a)
+    if(CUDA_VERSION VERSION_GREATER_EQUAL "10.2")
+      list(APPEND extra_cuda_libs libnvjpeg_static.a libnppc_static.a libnppig_static.a)
+    endif()
+    foreach(extra_cuda_lib ${extra_cuda_libs})
+      list(APPEND VENDOR_CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
+    endforeach()
+    foreach(cublas_lib_path ${CUDA_CUBLAS_LIBRARIES})
+      get_filename_component(cublas_lib_name ${cublas_lib_path} NAME)
+      if (${cublas_lib_name} STREQUAL libcublas.so)
+        get_filename_component(cublas_lib_dir ${cublas_lib_path} DIRECTORY)
+        break()
+      endif()
+    endforeach()
     if(EXISTS ${cublas_lib_dir}/libcublas_static.a AND EXISTS ${cublas_lib_dir}/libcublasLt_static.a)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+      list(APPEND VENDOR_CUDA_LIBRARIES ${cublas_lib_dir}/libcublasLt_static.a)
+      list(APPEND VENDOR_CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
     elseif(EXISTS ${cublas_lib_dir}/libcublas_static.a)
-      list(APPEND CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
+      list(APPEND VENDOR_CUDA_LIBRARIES ${cublas_lib_dir}/libcublas_static.a)
     elseif(EXISTS ${cuda_lib_dir}/libcublas_static.a)
-      list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
+      list(APPEND VENDOR_CUDA_LIBRARIES ${cuda_lib_dir}/libcublas_static.a)
     else()
       message(FATAL_ERROR "cuda lib not found: ${cublas_lib_dir}/libcublas_static.a or ${cuda_lib_dir}/libcublas_static.a")
     endif()
@@ -103,22 +113,21 @@ message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
 # libraries only a top level .so or exe should be linked to
 set(oneflow_exe_third_party_libs
-    ${GLOG_STATIC_LIBRARIES}
-    ${GFLAGS_STATIC_LIBRARIES}
+    glog_imported
+    gflags_imported
 )
 
 set(oneflow_third_party_libs
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
-    ${PROTOBUF_STATIC_LIBRARIES}
+    protobuf_imported
     ${GRPC_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    ${ZLIB_STATIC_LIBRARIES}
-    ${CARES_STATIC_LIBRARIES}
+    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -137,15 +146,10 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib_copy_headers_to_destination
-  zlib_copy_libs_to_destination
-  protobuf_copy_headers_to_destination
-  protobuf_copy_libs_to_destination
-  protobuf_copy_binary_to_destination
-  gflags_copy_headers_to_destination
-  gflags_copy_libs_to_destination
-  glog_copy_headers_to_destination
-  glog_copy_libs_to_destination
+  zlib
+  protobuf
+  gflags
+  glog
   googletest_copy_headers_to_destination
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
@@ -165,8 +169,7 @@ set(oneflow_third_party_dependencies
 )
 
 if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc)
 endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
@@ -185,7 +188,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
-    ${CARES_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}
@@ -199,13 +201,12 @@ if (BUILD_CUDA)
   include(cub)
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${CUDA_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
   list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${NCCL_STATIC_LIBRARIES})
+  list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
 
   list(APPEND oneflow_third_party_dependencies cub_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies nccl_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies nccl)
 
   list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${CUDNN_INCLUDE_DIRS}
@@ -241,6 +242,6 @@ if(WITH_TENSORRT)
   list(APPEND oneflow_third_party_libs ${TENSORRT_LIBRARIES})
 endif()
 
-message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
+message(STATUS "oneflow_third_party_libs: ${oneflow_third_party_libs}")
 
 add_definitions(-DHALF_ENABLE_CPP11_USER_LITERALS=0)

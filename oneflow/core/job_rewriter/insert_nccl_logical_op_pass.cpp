@@ -52,7 +52,7 @@ class InsertNcclLogicalOpPass final : public JobPass {
 
 const std::string kNcclLogicalOpNamePrefix = "System-NCCL-Logical";
 
-std::string ParallelDistributionToString(const ParallelDistribution& parallel_distribution) {
+std::string ParallelDistributionToString(const cfg::ParallelDistribution& parallel_distribution) {
   std::string serialized_parallel_distribution;
   const int64_t num_axes = parallel_distribution.sbp_parallel_size();
   serialized_parallel_distribution += "[";
@@ -152,9 +152,10 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
             });
 }
 
-bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parallel_distribution) {
+bool ParallelDistributionAllSameSplitParallel(
+    const cfg::ParallelDistribution& parallel_distribution) {
   CHECK_GT(parallel_distribution.sbp_parallel_size(), 0);
-  const SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& first_sbp = parallel_distribution.sbp_parallel(0);
   if (!first_sbp.has_split_parallel()) { return false; }
   FOR_RANGE(int64_t, i, 1, parallel_distribution.sbp_parallel_size()) {
     if (parallel_distribution.sbp_parallel(i) != first_sbp) { return false; }
@@ -162,8 +163,8 @@ bool ParallelDistributionAllSameSplitParallel(const ParallelDistribution& parall
   return true;
 }
 
-bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
-                               const SbpParallel& dst_sbp, const std::string& lbn,
+bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sbp,
+                               const cfg::SbpParallel& dst_sbp, const std::string& lbn,
                                const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
                                const int64_t parallel_num) {
   if (src_sbp.has_partial_sum_parallel() && dst_sbp.has_broadcast_parallel()) {
@@ -235,16 +236,16 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
 }
 
 bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
-                                       const ParallelDistribution& src_parallel_distribution,
-                                       const ParallelDistribution& dst_parallel_distribution,
+                                       const cfg::ParallelDistribution& src_parallel_distribution,
+                                       const cfg::ParallelDistribution& dst_parallel_distribution,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_parallel_distribution.sbp_parallel_size(), 2);
   CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 2);
   CHECK(src_parallel_distribution.sbp_parallel(0) == dst_parallel_distribution.sbp_parallel(0));
-  const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
-  const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
+  const cfg::SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(1);
+  const cfg::SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(1);
 
   // split when dim0 sbp is split parallel
   DimVector dim_vec = logical_blob_desc.shape().dim_vec();
@@ -313,16 +314,16 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret,
 }
 
 bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret,
-                                       const ParallelDistribution& src_parallel_distribution,
-                                       const ParallelDistribution& dst_parallel_distribution,
+                                       const cfg::ParallelDistribution& src_parallel_distribution,
+                                       const cfg::ParallelDistribution& dst_parallel_distribution,
                                        const std::shared_ptr<Shape> hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_parallel_distribution.sbp_parallel_size(), 2);
   CHECK_EQ(dst_parallel_distribution.sbp_parallel_size(), 2);
   CHECK(src_parallel_distribution.sbp_parallel(1) == dst_parallel_distribution.sbp_parallel(1));
-  const SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(0);
-  const SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& src_dim1_sbp = src_parallel_distribution.sbp_parallel(0);
+  const cfg::SbpParallel& dst_dim1_sbp = dst_parallel_distribution.sbp_parallel(0);
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
     // (P, *) -> (B, *) : AllReduce
     *ret =
@@ -432,8 +433,8 @@ bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const 
   // reduce hierarchy
   ParallelDesc src_parallel_desc = src_node->parallel_desc();
   ParallelDesc dst_parallel_desc = dst_node->parallel_desc();
-  ParallelDistribution src_parallel_distribution;
-  ParallelDistribution dst_parallel_distribution;
+  cfg::ParallelDistribution src_parallel_distribution;
+  cfg::ParallelDistribution dst_parallel_distribution;
   InOutParallelDimReduce(
       src_node->parallel_desc(), dst_node->parallel_desc(), src_node->ParallelDistribution4Lbi(lbi),
       dst_node->ParallelDistribution4Lbi(lbi), &src_parallel_desc, &dst_parallel_desc,

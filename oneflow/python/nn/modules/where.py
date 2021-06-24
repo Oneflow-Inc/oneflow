@@ -22,14 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Where(Module):
     def __init__(self) -> None:
         super().__init__()
-        self._where_op = (
-            flow.builtin_op("where")
-            .Input("condition")
-            .Input("x")
-            .Input("y")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, condition, x, y):
         assert condition.dtype == flow.int32 or condition.dtype == flow.int8
@@ -92,7 +84,7 @@ class Where(Module):
                 y, broadcast_like_tensor, broadcast_axes=tuple(broadcast_y_axes)
             )
 
-        return self._where_op(broadcast_cond, broadcast_x, broadcast_y)[0]
+        return flow.F.where(broadcast_cond, broadcast_x, broadcast_y)
 
 
 @oneflow_export("where")
@@ -132,11 +124,11 @@ def where_op(condition, x, y):
         ... )
         >>> y = flow.Tensor(np.ones(shape=(3, 2)), dtype=flow.float32)
         >>> condition = flow.Tensor(np.array([[0, 1], [1, 0], [1, 0]]), dtype=flow.int32)
-        >>> out = condition.where(x, y).numpy()
-        >>> print(out)
-        [[1.     0.3139]
-         [0.3898 1.    ]
-         [0.0478 1.    ]]
+        >>> out = condition.where(x, y)
+        >>> out #doctest: +ELLIPSIS
+        tensor([[1.    , 0.3139],
+                ...
+                [0.0478, 1.    ]], dtype=oneflow.float32)
 
     """
     return Where()(condition, x, y)
