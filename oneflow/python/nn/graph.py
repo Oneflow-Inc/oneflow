@@ -73,7 +73,6 @@ class Graph(object):
 
     def __setattr__(self, name: str, value = None):
         if isinstance(value, Module):
-            print("graph add module attr: ", name)
             self.add_module(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
@@ -113,7 +112,6 @@ class Graph(object):
 @oneflow_export("experimental.nn.graph.Node")
 class Node(object):
     def __init__(self, name: str, value: Union[Module, Parameter, Tensor] = None):
-        print(">>>", name, "node start creating.")
         assert not isinstance(value, Node)
         self._name = name
         self._type = ""
@@ -137,7 +135,6 @@ class Node(object):
             self._type = "buffer"
         else:
             raise NotImplementedError()
-        print("<<<", name, "node created, type", self._type, ".")
 
     @property
     def name(self):
