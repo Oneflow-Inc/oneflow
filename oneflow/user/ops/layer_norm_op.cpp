@@ -71,13 +71,13 @@ REGISTER_USER_OP("layer_norm")
       if (param_shape_dim_vec.empty()) { param_shape_dim_vec.push_back(1); }
       const Shape param_shape(param_shape_dim_vec);
       if (center) {
-        const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
-        CHECK_EQ_OR_RETURN(beta->shape(), param_shape);
+        const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
+        CHECK_EQ_OR_RETURN(beta.shape(), param_shape);
       }
       if (scale) {
         user_op::TensorDesc* normalized = ctx->TensorDesc4ArgNameAndIndex("normalized", 0);
-        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_EQ_OR_RETURN(gamma->shape(), param_shape);
+        const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
         *normalized = x;
       }
       const int64_t begin_norm_axis =
@@ -108,13 +108,13 @@ REGISTER_USER_OP("layer_norm")
       user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
       *y->mut_data_type() = x.data_type();
       if (center) {
-        const user_op::TensorDesc* beta = ctx->TensorDesc4ArgNameAndIndex("beta", 0);
-        CHECK_EQ_OR_RETURN(beta->data_type(), x.data_type());
+        const user_op::TensorDesc& beta = ctx->InputTensorDesc("beta", 0);
+        CHECK_EQ_OR_RETURN(beta.data_type(), x.data_type());
       }
       const bool scale = ctx->Attr<bool>("scale");
       if (scale) {
-        const user_op::TensorDesc* gamma = ctx->TensorDesc4ArgNameAndIndex("gamma", 0);
-        CHECK_EQ_OR_RETURN(gamma->data_type(), x.data_type());
+        const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
+        CHECK_EQ_OR_RETURN(gamma.data_type(), x.data_type());
       }
       user_op::TensorDesc* mean = ctx->TensorDesc4ArgNameAndIndex("mean", 0);
       *mean->mut_data_type() = InferBnParamDataType(x.data_type());
