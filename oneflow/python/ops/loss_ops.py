@@ -208,3 +208,31 @@ def ctc_loss(
         return flow.math.reduce_sum(loss, name=name + "_reduce_sum")
     else:
         return loss
+
+
+@oneflow_export("nn.ctc_greedy_decoder")
+def ctc_greedy_decoder(
+    log_probs: oneflow._oneflow_internal.BlobDesc,
+    input_lengths: oneflow._oneflow_internal.BlobDesc,
+    merge_repeated: bool = False,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""Performs greedy decoding on the logits given in input (best path).
+
+
+
+    """
+    name = name if name is not None else id_util.UniqueStr("CTCGreedyDecode_")
+    decoded, neg_sum_logits = (
+        flow.user_op_builder(name)
+        .Op("ctc_greedy_decoder")
+        .Input("log_probs", [log_probs])
+        .Input("input_lengths", [input_lengths])
+        .Output("decoded")
+        .Output("neg_sum_logits")
+        .Attr("merge_repeated", merge_repeated)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()
+    )
+    return decoded
