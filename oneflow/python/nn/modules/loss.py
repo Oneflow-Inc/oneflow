@@ -79,6 +79,7 @@ class L1Loss(Module):
         >>> out = m_mean(input, target)
         >>> out
         tensor([24.], dtype=oneflow.float32)
+        
     """
 
     def __init__(self, reduction: str = "mean", reduce=True) -> None:
@@ -306,7 +307,7 @@ class BCELoss(Module):
 
     """
 
-    def __init__(self, weight: Tensor = None, reduction: str = None) -> None:
+    def __init__(self, weight: Tensor = None, reduction: str = "mean") -> None:
         super().__init__()
         assert reduction in [
             "none",
