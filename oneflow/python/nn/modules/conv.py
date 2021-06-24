@@ -75,6 +75,7 @@ class ConvUtil(object):
             result_list.append(result)
         return result_list
 
+
 @oneflow_export("nn.Conv1d")
 @experimental_api
 class Conv1d(Module):
@@ -90,6 +91,86 @@ class Conv1d(Module):
         bias: bool = True,
         padding_mode: str = "zeros",  # TODO: refine this type
     ):
+        r"""
+        In the simplest case, the output value of the layer with input size
+        :math:`(N, C_{\text{in}}, L)` and output :math:`(N, C_{\text{out}}, L_{\text{out}})` can be
+        precisely described as:
+        .. math::
+            \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+            \sum_{k = 0}^{C_{in} - 1} \text{weight}(C_{\text{out}_j}, k)
+            \star \text{input}(N_i, k)
+        where :math:`\star` is the valid `cross-correlation`_ operator,
+        :math:`N` is a batch size, :math:`C` denotes a number of channels,
+        :math:`L` is a length of signal sequence.
+
+        This module supports :ref:`TensorFloat32<tf32_on_ampere>`.
+        * :attr:`stride` controls the stride for the cross-correlation, a single
+        number or a one-element tuple.
+        * :attr:`padding` controls the amount of padding applied to the input. It
+        can be either a string {{'valid', 'same'}} or a tuple of ints giving the
+        amount of implicit padding applied on both sides.
+        * :attr:`dilation` controls the spacing between the kernel points; also
+        known as the à trous algorithm. It is harder to describe, but this `link`_
+        has a nice visualization of what :attr:`dilation` does.
+        {groups_note}
+        Note:
+            {depthwise_separable_note}
+        Note:
+            {cudnn_reproducibility_note}
+        Note:
+            ``padding='valid'`` is the same as no padding. ``padding='same'`` pads
+            the input so the output has the shape as the input. However, this mode
+            doesn't support any stride values other than 1.
+        Args:
+            in_channels (int): Number of channels in the input image
+            out_channels (int): Number of channels produced by the convolution
+            kernel_size (int or tuple): Size of the convolving kernel
+            stride (int or tuple, optional): Stride of the convolution. Default: 1
+            padding (int, tuple or str, optional): Padding added to both sides of
+                the input. Default: 0
+            padding_mode (string, optional): ``'zeros'``, ``'reflect'``,
+                ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+            dilation (int or tuple, optional): Spacing between kernel
+                elements. Default: 1
+            groups (int, optional): Number of blocked connections from input
+                channels to output channels. Default: 1
+            bias (bool, optional): If ``True``, adds a learnable bias to the
+                output. Default: ``True``
+
+        Shape:
+        - Input: :math:`(N, C_{in}, L_{in})`
+        - Output: :math:`(N, C_{out}, L_{out})` where
+          .. math::
+              L_{out} = \left\lfloor\frac{L_{in} + 2 \times \text{padding} - \text{dilation}
+                        \times (\text{kernel\_size} - 1) - 1}{\text{stride}} + 1\right\rfloor
+        Attributes:
+            weight (Tensor): the learnable weights of the module of shape
+                :math:`(\text{out\_channels},
+                \frac{\text{in\_channels}}{\text{groups}}, \text{kernel\_size})`.
+                The values of these weights are sampled from
+                :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
+            bias (Tensor):   the learnable bias of the module of shape
+                (out_channels). If :attr:`bias` is ``True``, then the values of these weights are
+                sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                :math:`k = \frac{groups}{C_\text{in} * \text{kernel\_size}}`
+
+        For example: 
+        .. code-block:: python
+            >>> import numpy as np
+            >>> import oneflow.experimental as flow
+            >>> import oneflow.experimental.nn as nn
+            >>> flow.enable_eager_execution()
+            >>> arr = np.random.randn(20, 16, 50)
+            >>> input = flow.Tensor(arr)
+            >>> m = nn.Conv1d(16, 33, 3, stride=2)
+            >>> output = m(input)
+        .. _cross-correlation:
+            https://en.wikipedia.org/wiki/Cross-correlation
+        .. _link:
+            https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+        """
+
         super().__init__()
 
         assert padding_mode == "zeros"
@@ -165,6 +246,96 @@ class Conv2d(Module):
         bias: bool = True,
         padding_mode: str = "zeros",  # TODO: refine this type
     ):
+        r"""Applies a 2D convolution over an input signal composed of several input
+        planes.
+        In the simplest case, the output value of the layer with input size
+        :math:`(N, C_{\text{in}}, H, W)` and output :math:`(N, C_{\text{out}}, H_{\text{out}}, W_{\text{out}})`
+        can be precisely described as:
+        .. math::
+            \text{out}(N_i, C_{\text{out}_j}) = \text{bias}(C_{\text{out}_j}) +
+            \sum_{k = 0}^{C_{\text{in}} - 1} \text{weight}(C_{\text{out}_j}, k) \star \text{input}(N_i, k)
+        where :math:`\star` is the valid 2D `cross-correlation`_ operator,
+        :math:`N` is a batch size, :math:`C` denotes a number of channels,
+        :math:`H` is a height of input planes in pixels, and :math:`W` is
+        width in pixels.
+        * :attr:`stride` controls the stride for the cross-correlation, a single
+        number or a tuple.
+        * :attr:`padding` controls the amount of implicit padding on both
+        sides for :attr:`padding` number of points for each dimension.
+        * :attr:`dilation` controls the spacing between the kernel points; also
+        known as the à trous algorithm. It is harder to describe, but this `link`_
+        has a nice visualization of what :attr:`dilation` does.
+        * :attr:`groups` controls the connections between inputs and outputs.
+        :attr:`in_channels` and :attr:`out_channels` must both be divisible by
+        :attr:`groups`. For example,
+            * At groups=1, all inputs are convolved to all outputs.
+            * At groups=2, the operation becomes equivalent to having two conv
+            layers side by side, each seeing half the input channels
+            and producing half the output channels, and both subsequently
+            concatenated.
+            * At groups= :attr:`in_channels`, each input channel is convolved with
+            its own set of filters (of size
+            :math:`\frac{\text{out_channels}}{\text{in_channels}}`).,
+        The parameters :attr:`kernel_size`, :attr:`stride`, :attr:`padding`, :attr:`dilation` can either be:
+            - a single ``int`` -- in which case the same value is used for the height and width dimension
+            - a ``tuple`` of two ints -- in which case, the first `int` is used for the height dimension,
+            and the second `int` for the width dimension
+        Note:
+            When `groups == in_channels` and `out_channels == K * in_channels`,
+            where `K` is a positive integer, this operation is also known as a "depthwise convolution".
+            In other words, for an input of size :math:`(N, C_{in}, L_{in})`,
+            a depthwise convolution with a depthwise multiplier `K` can be performed with the arguments
+            :math:`(C_\text{in}=C_\text{in}, C_\text{out}=C_\text{in} \times \text{K}, ..., \text{groups}=C_\text{in})`.
+        Args:
+            in_channels (int): Number of channels in the input image
+            out_channels (int): Number of channels produced by the convolution
+            kernel_size (int or tuple): Size of the convolving kernel
+            stride (int or tuple, optional): Stride of the convolution. Default: 1
+            padding (int or tuple, optional): Zero-padding added to both sides of
+                the input. Default: 0
+            padding_mode (string, optional): ``'zeros'``, ``'reflect'``,
+                ``'replicate'`` or ``'circular'``. Default: ``'zeros'``
+            dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
+            groups (int, optional): Number of blocked connections from input
+                channels to output channels. Default: 1
+            bias (bool, optional): If ``True``, adds a learnable bias to the
+                output. Default: ``True``
+        Shape:
+            - Input: :math:`(N, C_{in}, H_{in}, W_{in})`
+            - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
+            .. math::
+                H_{out} = \left\lfloor\frac{H_{in}  + 2 \times \text{padding}[0] - \text{dilation}[0]
+                            \times (\text{kernel_size}[0] - 1) - 1}{\text{stride}[0]} + 1\right\rfloor
+            .. math::
+                W_{out} = \left\lfloor\frac{W_{in}  + 2 \times \text{padding}[1] - \text{dilation}[1]
+                            \times (\text{kernel_size}[1] - 1) - 1}{\text{stride}[1]} + 1\right\rfloor
+        Attr:
+            - weight (Tensor): the learnable weights of the module of shape
+                :math:`(\text{out_channels}, \frac{\text{in_channels}}{\text{groups}},`
+                :math:`\text{kernel_size[0]}, \text{kernel_size[1]})`.
+                The values of these weights are sampled from
+                :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
+            - bias (Tensor):   the learnable bias of the module of shape
+                (out_channels). If :attr:`bias` is ``True``,
+                then the values of these weights are
+                sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
+                :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{1}\text{kernel_size}[i]}`
+        For example: 
+        .. code-block:: python
+            >>> import numpy as np
+            >>> import oneflow.experimental as flow
+            >>> import oneflow.experimental.nn as nn
+            >>> flow.enable_eager_execution()
+            >>> arr = np.random.randn(20, 16, 50, 100)
+            >>> input = flow.Tensor(arr)
+            >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
+            >>> output = m(input)
+        .. _cross-correlation:
+            https://en.wikipedia.org/wiki/Cross-correlation
+        .. _link:
+            https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+        """
         super().__init__()
 
         assert padding_mode == "zeros"
