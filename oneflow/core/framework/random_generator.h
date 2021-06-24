@@ -68,24 +68,24 @@ class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
 
 class Generator final {
  public:
-  // TODO: make seed randomly generated?
-  explicit Generator() : seed_(0) {}
+  // TODO: make default value random like pytorh
+  explicit Generator(int64_t seed = 0) : seed_(seed) {}
 
   void set_current_seed(const int64_t seed) { seed_ = seed; }
 
   template<DeviceType device_type>
   Maybe<std::shared_ptr<GeneratorImpl<device_type>>> GetDeviceGenerator() {
     CHECK_OR_RETURN(device_type == DeviceType::kInvalidDevice);
-    const auto& it = gen_map_.find(device_type);
-    if (it == gen_map_.end()) {
-      gen_map_[device_type] = std::make_shared<GeneratorImpl<device_type>>(seed_);
+    auto it = generators_.find(device_type);
+    if (it == generators_.end()) {
+      it = generators_.emplace(device_type, std::make_shared<GeneratorImpl<device_type>>(seed_)).first;
     }
-    return dynamic_cast<std::shared_ptr<GeneratorImpl<device_type>>>(gen_map_[device_type]);
+    return dynamic_cast<std::shared_ptr<GeneratorImpl<device_type>>>(it->second);
   }
 
  private:
   int64_t seed_;
-  std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> gen_map_;
+  std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> generators_;
 };
 
 }  // namespace one
