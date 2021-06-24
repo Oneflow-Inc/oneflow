@@ -390,7 +390,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     for (int i = 0; i < outputs.size(); ++i) {
       JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
     }
-    graph_task.Apply();
+    JUST(graph_task.Apply());
     // Gets input grads and resume retain_grad
     for (int i = 0; i < inputs.size(); ++i) {
       input_now_grads->at(i) = inputs.at(i)->acc_grad();
