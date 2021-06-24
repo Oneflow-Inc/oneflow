@@ -205,3 +205,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.meshgrid
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
+.. autofunction:: oneflow.experimental.diag
+.. autofunction:: oneflow.experimental.Tensor.diag
