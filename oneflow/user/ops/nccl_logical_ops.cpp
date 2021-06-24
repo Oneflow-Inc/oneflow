@@ -54,7 +54,7 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-    })
+        })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_reduce_scatter")
@@ -93,7 +93,7 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
             out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
           }
           return Maybe<void>::Ok();
-    })
+        })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather")
@@ -133,7 +133,7 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-    })
+        })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
@@ -176,7 +176,7 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-    })
+        })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_s2s")
