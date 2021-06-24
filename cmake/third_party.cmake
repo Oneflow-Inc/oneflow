@@ -32,6 +32,8 @@ if (WITH_TENSORRT)
   include(tensorrt)
 endif()
 
+include(hwloc)
+
 option(CUDA_STATIC "" ON)
 
 if (BUILD_CUDA)
@@ -228,6 +230,13 @@ if(BUILD_RDMA)
   else()
     message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
+endif()
+
+if(BUILD_HWLOC)
+  list(APPEND oneflow_third_party_dependencies hwloc)
+  list(APPEND oneflow_third_party_libs ${HWLOC_STATIC_LIBRARIES})
+  list(APPEND ONEFLOW_INCLUDE_SRC_DIRS ${HWLOC_INCLUDE_DIR})
+  add_definitions(-DWITH_HWLOC)
 endif()
 
 include_directories(${ONEFLOW_INCLUDE_SRC_DIRS})

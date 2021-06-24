@@ -323,7 +323,6 @@ DecodeHandleFactory CreateDecodeHandleFactory<DeviceType::kGPU>() {
   OF_CUDA_CHECK(cudaGetDevice(&dev));
   return [dev]() -> std::shared_ptr<DecodeHandle> {
     OF_CUDA_CHECK(cudaSetDevice(dev));
-    CudaDeviceSetCpuAffinity(dev);
     return std::make_shared<GpuDecodeHandle>(dev);
   };
 }

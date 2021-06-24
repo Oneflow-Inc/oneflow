@@ -16,7 +16,11 @@ limitations under the License.
 #include "oneflow/core/device/node_device_descriptor.h"
 #include "oneflow/core/device/device_descriptor_class.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include <json.hpp>
+#ifdef WITH_HWLOC
+#include <hwloc.h>
+#endif  // WITH_HWLOC
 
 namespace oneflow {
 
@@ -28,6 +32,212 @@ constexpr char kJsonKeyClasses[] = "classes";
 constexpr char kJsonKeyClassName[] = "class_name";
 constexpr char kJsonKeySerializedDescriptorList[] = "serialized_descriptor_list";
 constexpr char kJsonKeyHostMemorySize[] = "host_memory_size_bytes";
+constexpr char kJsonKeyTopology[] = "topology";
+
+class DummyCPUAffinityDescriptor : public TopologyCPUAffinityDescriptor {
+ public:
+  DummyCPUAffinityDescriptor() = default;
+  ~DummyCPUAffinityDescriptor() override = default;
+};
+
+class DummyMemoryAffinityDescriptor : public TopologyMemoryAffinityDescriptor {
+ public:
+  DummyMemoryAffinityDescriptor() = default;
+  ~DummyMemoryAffinityDescriptor() override = default;
+};
+
+class DummyTopologyDescriptor : public TopologyDescriptor {
+ public:
+  DummyTopologyDescriptor() = default;
+  ~DummyTopologyDescriptor() override = default;
+
+  std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinity() const override {
+    return std::make_shared<const DummyCPUAffinityDescriptor>();
+  }
+
+  std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinity() const override {
+    return std::make_shared<const DummyMemoryAffinityDescriptor>();
+  }
+
+  std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinityByPCIBusID(
+      const std::string& bus_id) const override {
+    return std::make_shared<const DummyCPUAffinityDescriptor>();
+  }
+
+  std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinityByPCIBusID(
+      const std::string& bus_id) const override {
+    return std::make_shared<const DummyMemoryAffinityDescriptor>();
+  }
+
+  void SetCPUAffinity(
+      const std::shared_ptr<const TopologyCPUAffinityDescriptor>& affinity) const override {}
+
+  void SetMemoryAffinity(
+      const std::shared_ptr<const TopologyMemoryAffinityDescriptor>& affinity) const override {}
+};
+
+#ifdef WITH_HWLOC
+
+class HWLocCPUAffinityDescriptor : public TopologyCPUAffinityDescriptor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(HWLocCPUAffinityDescriptor);
+  explicit HWLocCPUAffinityDescriptor(hwloc_cpuset_t hwloc_cpu_set)
+      : hwloc_cpu_set_(hwloc_cpu_set) {}
+  ~HWLocCPUAffinityDescriptor() override { hwloc_bitmap_free(hwloc_cpu_set_); }
+
+  hwloc_cpuset_t HWLocCPUSet() const { return hwloc_cpu_set_; }
+
+ private:
+  hwloc_cpuset_t hwloc_cpu_set_;
+};
+
+class HWLocMemoryAffinityDescriptor : public TopologyMemoryAffinityDescriptor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(HWLocMemoryAffinityDescriptor);
+  explicit HWLocMemoryAffinityDescriptor(hwloc_bitmap_t hwloc_bitmap, hwloc_membind_policy_t policy)
+      : hwloc_bitmap_(hwloc_bitmap), policy_(policy) {}
+  ~HWLocMemoryAffinityDescriptor() override { hwloc_bitmap_free(hwloc_bitmap_); }
+
+  hwloc_bitmap_t HWLocBitmap() const { return hwloc_bitmap_; }
+  hwloc_membind_policy_t HWLocPolicy() const { return policy_; }
+
+ private:
+  hwloc_bitmap_t hwloc_bitmap_;
+  hwloc_membind_policy_t policy_;
+};
+
+class HWLocTopologyDescriptor : public TopologyDescriptor {
+ public:
+  ~HWLocTopologyDescriptor() override { hwloc_topology_destroy(topology_); }
+
+  std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinity() const override {
+    hwloc_bitmap_t set = hwloc_bitmap_alloc();
+    if (hwloc_get_cpubind(topology_, set, HWLOC_CPUBIND_THREAD) != 0) { return nullptr; }
+    return std::make_shared<const HWLocCPUAffinityDescriptor>(set);
+  }
+
+  std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinity() const override {
+    hwloc_bitmap_t set = hwloc_bitmap_alloc();
+    hwloc_membind_policy_t policy;
+    if (hwloc_get_membind(topology_, set, &policy, HWLOC_MEMBIND_THREAD) != 0) { return nullptr; }
+    return std::make_shared<const HWLocMemoryAffinityDescriptor>(set, policy);
+  }
+
+  std::shared_ptr<const TopologyCPUAffinityDescriptor> GetCPUAffinityByPCIBusID(
+      const std::string& bus_id) const override {
+    hwloc_obj_t non_io_ancestor = GetNonIOAncestorByPCIBusID(bus_id);
+    if (non_io_ancestor == nullptr) { return nullptr; }
+    if (non_io_ancestor->cpuset == nullptr) { return nullptr; }
+    return std::make_shared<const HWLocCPUAffinityDescriptor>(
+        hwloc_bitmap_dup(non_io_ancestor->cpuset));
+  }
+
+  std::shared_ptr<const TopologyMemoryAffinityDescriptor> GetMemoryAffinityByPCIBusID(
+      const std::string& bus_id) const override {
+    hwloc_obj_t non_io_ancestor = GetNonIOAncestorByPCIBusID(bus_id);
+    if (non_io_ancestor == nullptr) { return nullptr; }
+    if (non_io_ancestor->nodeset == nullptr) { return nullptr; }
+    return std::make_shared<const HWLocMemoryAffinityDescriptor>(
+        hwloc_bitmap_dup(non_io_ancestor->nodeset), HWLOC_MEMBIND_BIND);
+  }
+
+  void SetCPUAffinity(
+      const std::shared_ptr<const TopologyCPUAffinityDescriptor>& affinity) const override {
+    auto hwloc_affinity = std::dynamic_pointer_cast<const HWLocCPUAffinityDescriptor>(affinity);
+    if (!hwloc_affinity) { return; }
+    hwloc_set_cpubind(topology_, hwloc_affinity->HWLocCPUSet(), HWLOC_CPUBIND_THREAD);
+  }
+
+  void SetMemoryAffinity(
+      const std::shared_ptr<const TopologyMemoryAffinityDescriptor>& affinity) const override {
+    auto hwloc_affinity = std::dynamic_pointer_cast<const HWLocMemoryAffinityDescriptor>(affinity);
+    if (!hwloc_affinity) { return; }
+    hwloc_set_membind(topology_, hwloc_affinity->HWLocBitmap(), hwloc_affinity->HWLocPolicy(),
+                      HWLOC_MEMBIND_THREAD);
+  }
+
+  static std::shared_ptr<const HWLocTopologyDescriptor> Query() {
+    hwloc_topology_t topology = nullptr;
+    do {
+      if (hwloc_topology_init(&topology) != 0) { break; }
+      if (hwloc_topology_set_io_types_filter(topology, HWLOC_TYPE_FILTER_KEEP_ALL) != 0) { break; }
+      if (hwloc_topology_load(topology) != 0) { break; }
+      auto* desc = new HWLocTopologyDescriptor(topology);
+      return std::shared_ptr<const HWLocTopologyDescriptor>(desc);
+    } while (false);
+    if (topology != nullptr) { hwloc_topology_destroy(topology); }
+    return nullptr;
+  }
+
+  static std::shared_ptr<const HWLocTopologyDescriptor> Deserialize(const std::string& serialized) {
+    hwloc_topology_t topology = nullptr;
+    do {
+      if (hwloc_topology_init(&topology) != 0) { break; }
+      if (hwloc_topology_set_xmlbuffer(topology, serialized.data(),
+                                       static_cast<int>(serialized.size()))
+          != 0) {
+        break;
+      }
+      if (hwloc_topology_load(topology) != 0) { break; }
+      auto* desc = new HWLocTopologyDescriptor(topology);
+      return std::shared_ptr<const HWLocTopologyDescriptor>(desc);
+    } while (false);
+    if (topology != nullptr) { hwloc_topology_destroy(topology); }
+    return nullptr;
+  }
+
+  void Serialize(std::string* serialized) const {
+    char* buffer;
+    int len;
+    if (hwloc_topology_export_xmlbuffer(topology_, &buffer, &len, 0) == 0) {
+      *serialized = buffer;
+      hwloc_free_xmlbuffer(topology_, buffer);
+    }
+  }
+
+ private:
+  hwloc_obj_t GetNonIOAncestorByPCIBusID(const std::string& pci_bus_id) const {
+    hwloc_obj_t device = hwloc_get_pcidev_by_busidstring(topology_, pci_bus_id.data());
+    if (device == nullptr) { return nullptr; }
+    hwloc_obj_t non_io_ancestor = hwloc_get_non_io_ancestor_obj(topology_, device);
+    return non_io_ancestor;
+  }
+
+  explicit HWLocTopologyDescriptor(hwloc_topology_t topology) : topology_(topology) {}
+  hwloc_topology_t topology_;
+};
+
+#endif  // WITH_HWLOC
+
+std::shared_ptr<const TopologyDescriptor> QueryTopologyDescriptor() {
+  std::shared_ptr<const TopologyDescriptor> topology;
+#ifdef WITH_HWLOC
+  topology = HWLocTopologyDescriptor::Query();
+#endif  // WITH_HWLOC
+  if (!topology) { topology.reset(new DummyTopologyDescriptor()); }
+  return topology;
+}
+
+std::shared_ptr<const TopologyDescriptor> DeserializeTopologyDescriptor(
+    const std::string& serialized) {
+  std::shared_ptr<const TopologyDescriptor> topology;
+  if (serialized.empty()) {
+    topology.reset(new DummyTopologyDescriptor());
+  } else {
+#ifdef WITH_HWLOC
+    topology = HWLocTopologyDescriptor::Deserialize(serialized);
+#endif  // WITH_HWLOC
+  }
+  return topology;
+}
+
+void SerializeTopologyDescriptor(const std::shared_ptr<const TopologyDescriptor>& topology,
+                                 std::string* serialized) {
+#ifdef WITH_HWLOC
+  auto hwloc_topology = std::dynamic_pointer_cast<const HWLocTopologyDescriptor>(topology);
+  if (hwloc_topology) { hwloc_topology->Serialize(serialized); }
+#endif  // WITH_HWLOC
+}
 
 }  // namespace
 
@@ -35,6 +245,7 @@ struct NodeDeviceDescriptor::Impl {
   std::unordered_map<std::string, std::shared_ptr<const DeviceDescriptorList>>
       class_name2descriptor_list;
   size_t host_memory_size_bytes{};
+  std::shared_ptr<const TopologyDescriptor> topology;
 };
 
 NodeDeviceDescriptor::NodeDeviceDescriptor() { impl_.reset(new Impl()); }
@@ -49,11 +260,28 @@ bool NodeDeviceDescriptor::HasDeviceClass(const std::string& class_name) const {
 std::shared_ptr<const DeviceDescriptorList> NodeDeviceDescriptor::GetDeviceDescriptorList(
     const std::string& class_name) const {
   auto it = impl_->class_name2descriptor_list.find(class_name);
-  CHECK(it != impl_->class_name2descriptor_list.end());
-  return it->second;
+  if (it != impl_->class_name2descriptor_list.end()) {
+    return it->second;
+  } else {
+    return nullptr;
+  }
+}
+
+std::shared_ptr<const DeviceDescriptor> NodeDeviceDescriptor::GetDevice(
+    const std::string& class_name, size_t ordinal) const {
+  const auto device_list = GetDeviceDescriptorList(class_name);
+  if (device_list) {
+    return device_list->GetDevice(ordinal);
+  } else {
+    return nullptr;
+  }
 }
 
 size_t NodeDeviceDescriptor::HostMemorySizeBytes() const { return impl_->host_memory_size_bytes; }
+
+std::shared_ptr<const TopologyDescriptor> NodeDeviceDescriptor::Topology() const {
+  return impl_->topology;
+}
 
 void NodeDeviceDescriptor::Serialize(std::string* serialized) const {
   nlohmann::json json_object;
@@ -67,6 +295,9 @@ void NodeDeviceDescriptor::Serialize(std::string* serialized) const {
         {{kJsonKeyClassName, clz->Name()},
          {kJsonKeySerializedDescriptorList, serialized_descriptor_list}});
   }
+  std::string serialized_topology;
+  SerializeTopologyDescriptor(impl_->topology, &serialized_topology);
+  json_object[kJsonKeyTopology] = serialized_topology;
   *serialized = json_object.dump();
 }
 
@@ -76,6 +307,11 @@ void NodeDeviceDescriptor::DumpSummary(const std::string& path) const {
     auto clz = DeviceDescriptorClass::GetRegisteredClass(pair.first);
     CHECK(clz);
     clz->DumpDeviceDescriptorListSummary(pair.second, JoinPath(classes_base, pair.first));
+  }
+  std::string serialized_topology;
+  SerializeTopologyDescriptor(impl_->topology, &serialized_topology);
+  if (!serialized_topology.empty()) {
+    TeePersistentLogStream::Create(JoinPath(path, "topology"))->Write(serialized_topology);
   }
 }
 
@@ -89,6 +325,7 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Query() {
     desc->impl_->class_name2descriptor_list.emplace(descriptor_class->Name(),
                                                     descriptor_class->QueryDeviceDescriptorList());
   }
+  desc->impl_->topology = QueryTopologyDescriptor();
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
 }
 
@@ -107,6 +344,7 @@ std::shared_ptr<const NodeDeviceDescriptor> NodeDeviceDescriptor::Deserialize(
     const auto descriptor_list = clz->DeserializeDeviceDescriptorList(serialized_descriptor_list);
     desc->impl_->class_name2descriptor_list.emplace(class_name, descriptor_list);
   }
+  desc->impl_->topology = DeserializeTopologyDescriptor(json_object[kJsonKeyTopology]);
   return std::shared_ptr<const NodeDeviceDescriptor>(desc);
 }
 
