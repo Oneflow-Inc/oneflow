@@ -128,14 +128,14 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
-        if: startsWith(runner.os, 'Linux')
+        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
         shell: bash
       - name: Op test
-        if: always()
+        continue-on-error: true
         run: |
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh

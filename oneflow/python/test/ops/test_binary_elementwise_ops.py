@@ -13,12 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import platform
-import os
-
-# FIXME: remove this skip to see the error
-if os.getenv("ONEFLOW_TEST_GITHUB_HOSTED") and platform.system() == "Darwin":
-    exit()
 import unittest
 import numpy as np
 import tensorflow as tf
