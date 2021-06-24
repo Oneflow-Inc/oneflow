@@ -226,8 +226,11 @@ std::shared_ptr<const TopologyDescriptor> DeserializeTopologyDescriptor(
   } else {
 #ifdef WITH_HWLOC
     topology = HWLocTopologyDescriptor::Deserialize(serialized);
+#else
+    UNIMPLEMENTED();
 #endif  // WITH_HWLOC
   }
+  if (!topology) { topology.reset(new DummyTopologyDescriptor()); }
   return topology;
 }
 
