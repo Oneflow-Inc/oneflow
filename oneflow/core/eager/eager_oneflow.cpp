@@ -68,11 +68,11 @@ Maybe<void> StorageAdd(const EagerSymbol& symbol) {
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
     const std::shared_ptr<const ClusterInstructionProto>& cluster_instruction) {
   vm::InstructionMsgList instruction_list;
-  const auto& eage_instructions = cluster_instruction->eager_instruction();
-  for (const auto& instr_proto : eage_instructions.instruction_list().instruction()) {
+  const auto& eager_instructions = cluster_instruction->eager_instruction();
+  for (const auto& instr_proto : eager_instructions.instruction_list().instruction()) {
     instruction_list.EmplaceBack(ObjectMsgPtr<vm::InstructionMsg>::New(instr_proto));
   }
-  return RunPhysicalInstruction(&instruction_list, eage_instructions.eager_symbol_list());
+  return RunPhysicalInstruction(&instruction_list, eager_instructions.eager_symbol_list());
 }
 
 Maybe<void> EagerOneflow::RunPhysicalInstruction(
