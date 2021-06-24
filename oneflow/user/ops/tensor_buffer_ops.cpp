@@ -114,7 +114,8 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .Input("in")
@@ -157,7 +158,8 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
     .Input("in")
@@ -200,7 +202,8 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace
 

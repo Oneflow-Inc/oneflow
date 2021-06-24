@@ -59,6 +59,7 @@ REGISTER_USER_OP("unique_with_counts")
       user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
       *num_unique->mut_data_type() = out_idx;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow
