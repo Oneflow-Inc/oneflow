@@ -42,6 +42,16 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
+# define sbp
+locals()["B"] = oneflow._oneflow_internal.sbp.broadcast()
+locals()["P"] = oneflow._oneflow_internal.sbp.partial_sum()
+locals()["S0"] = oneflow._oneflow_internal.sbp.split(0)
+locals()["S1"] = oneflow._oneflow_internal.sbp.split(1)
+locals()["S2"] = oneflow._oneflow_internal.sbp.split(2)
+locals()["S3"] = oneflow._oneflow_internal.sbp.split(3)
+locals()["S4"] = oneflow._oneflow_internal.sbp.split(4)
+locals()["S5"] = oneflow._oneflow_internal.sbp.split(5)
+
 from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
