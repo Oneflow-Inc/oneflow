@@ -48,8 +48,8 @@ def atanh_op(input):
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
         >>> output = flow.atanh(input)
-        >>> print(output.numpy())
-        [0.54930615 0.6931472  0.8673005 ]
+        >>> output
+        tensor([0.5493, 0.6931, 0.8673], dtype=oneflow.float32)
 
     """
 
