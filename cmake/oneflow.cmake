@@ -255,10 +255,7 @@ if (USE_CLANG_FORMAT)
 endif()
 
 if (BUILD_SHARED_LIBS)
-  get_filename_component(GLOG_RPATH "${GLOG_STATIC_LIBRARIES}" DIRECTORY)
-  get_filename_component(PB_RPATH "${PROTOBUF_LIBRARY_DIR}" DIRECTORY)
   target_link_libraries(of_ccobj of_protoobj of_cfgobj ${ONEFLOW_CUDA_LIBS} glog_imported)
-  set_target_properties(of_ccobj PROPERTIES INSTALL_RPATH "${GLOG_RPATH} ${PB_RPATH}")
 endif()
 
 # py ext lib
