@@ -1,4 +1,28 @@
+cmake_minimum_required(VERSION 3.14.0)
+cmake_policy(SET CMP0074 NEW)
+project(oneflow C CXX)
+get_filename_component(PROJECT_SOURCE_DIR ${PROJECT_SOURCE_DIR}/.. REALPATH)
+
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+include(util)
 include(python)
+include(proto2cpp)
+include(cfg)
+include(functional)
+
+
+find_package(Protobuf REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_package(gflags    REQUIRED NO_CMAKE_SYSTEM_PATH)
+find_package(glog    REQUIRED NO_CMAKE_SYSTEM_PATH)
+if(NOT IS_DIRECTORY ${PROTOBUF_INCLUDE_DIR})
+  message(FATAL_ERROR "PROTOBUF_INCLUDE_DIR not a valid directory, val: ${PROTOBUF_INCLUDE_DIR}")
+endif()
+set(PROTOBUF_PROTOC_EXECUTABLE protobuf::protoc)
+include_directories(
+  ${PROTOBUF_INCLUDE_DIR}
+  ${gflags_INCLUDE_DIR}
+)
+
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
@@ -207,7 +231,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${of_all_rel_protos})
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
-add_dependencies(of_protoobj make_pyproto_dir protobuf)
+add_dependencies(of_protoobj make_pyproto_dir)
 
 # cfg obj lib
 include(cfg)
@@ -215,8 +239,8 @@ GENERATE_CFG_AND_PYBIND11_CPP(CFG_SRCS CFG_HRCS CFG_PYBIND11_SRCS ${PROJECT_SOUR
 oneflow_add_library(of_cfgobj ${CFG_SRCS} ${CFG_HRCS})
 add_dependencies(of_cfgobj of_protoobj generate_cfg)
 if (BUILD_SHARED_LIBS)
-  target_link_libraries(of_protoobj protobuf_imported)
-  target_link_libraries(of_cfgobj protobuf_imported)
+  target_link_libraries(of_protoobj protobuf::libprotobuf)
+  target_link_libraries(of_cfgobj protobuf::libprotobuf)
   target_link_libraries(of_cfgobj of_protoobj)
 else()
   # For some unknown reasons, when building static libraries, we have to link of_protoobj and of_cfgobj with oneflow_third_party_libs
@@ -236,14 +260,14 @@ include_directories(${PROJECT_BINARY_DIR})
 
 if(BUILD_CUDA)
   oneflow_add_library(of_cudaobj ${of_cuda_src})
-  add_dependencies(of_cudaobj of_protoobj of_cfgobj prepare_oneflow_third_party)
+  add_dependencies(of_cudaobj of_protoobj of_cfgobj)
   target_link_libraries(of_cudaobj ${oneflow_third_party_libs})
   set(ONEFLOW_CUDA_LIBS of_cudaobj)
 endif()
 
 # cc obj lib
 oneflow_add_library(of_ccobj ${of_all_obj_cc})
-add_dependencies(of_ccobj prepare_oneflow_third_party generate_functional)
+add_dependencies(of_ccobj generate_functional)
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_cfgobj)
