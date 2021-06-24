@@ -13,11 +13,11 @@ from oneflow.python.framework.function_util import FunctionConfig
 @oneflow_export("experimental.nn.Graph", "experimental.nn.graph.Graph")
 class Graph(object):
     def __init__(self):
-        self.training = True
         self.config = GraphConfig()
         self._nodes = OrderedDict()
         self._optimizers = OrderedDict()
         self._runnable_func = None
+        self.train(True)
 
     def build(self, *args):
         raise NotImplementedError()
@@ -60,8 +60,16 @@ class Graph(object):
     ):
         self._optimizers[name] = self.OptimizerConfig(optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf)
     
+    @property
+    def training(self):
+        return self.config.training
+
     def train(self, mode: bool = True):
-        self.training = mode
+        self.config._train(mode)
+        # TODO(): set sub module to mode
+        for name, node in self._nodes.items():
+            assert node.type == "module"
+            node.origin.train(mode)
 
     def __setattr__(self, name: str, value = None):
         if isinstance(value, Module):
@@ -88,7 +96,7 @@ class Graph(object):
 @oneflow_export("experimental.nn.graph.Node")
 class Node(object):
     def __init__(self, name: str, value: Union[Module, Parameter, Tensor] = None):
-        print(">>>", name, " node start creating")
+        print(">>>", name, "node start creating.")
         assert not isinstance(value, Node)
         self._name = name
         self._type = ""
@@ -112,18 +120,8 @@ class Node(object):
             self._type = "buffer"
         else:
             raise NotImplementedError()
-        print("<<<", name, " node created.")
+        print("<<<", name, "node created, type", self._type, ".")
 
-    def __call__(self, *args):
-        assert self._type == "module"
-        return self._origin.__class__.__call__(self, *args) 
-    
-    def forward(self, *args):
-        assert self._type == "module"
-        return self._origin.__class__.forward(self, *args) 
-    
-
-    
     @property
     def name(self):
         return self._name
@@ -135,6 +133,14 @@ class Node(object):
     @property
     def origin(self):
         return self._origin
+    
+    def __call__(self, *args):
+        assert self._type == "module"
+        return self._origin.__class__.__call__(self, *args) 
+    
+    def forward(self, *args):
+        assert self._type == "module"
+        return self._origin.__class__.forward(self, *args) 
     
     def __setattr__(self, name: str, value = None) -> None:
         if value is None or not isinstance(value, Node):
@@ -189,6 +195,26 @@ class Node(object):
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
+    
+    @property
+    def proto(self):
+        return self.function_desc.job_config_proto
+    
+    @property
+    def training(self):
+        if self.function_desc.job_config_proto.has_train_conf():
+            return True
+        if self.function_desc.job_config_proto.has_predict_conf():
+            return False
+        raise NotImplementedError
+
+    def _train(self, mode: bool = True):
+        if mode:
+            self.function_desc.job_config_proto.mutable_train_conf()
+        else:
+            self.function_desc.job_config_proto.mutable_predict_conf()
+
+
 
 @oneflow_export("experimental.nn.graph.NodeConfig")
 class NodeConfig(object):
