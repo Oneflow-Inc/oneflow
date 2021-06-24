@@ -38,9 +38,9 @@ class TestGraph(flow.unittest.TestCase):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
+        # Module init and call
         m = CustomModule()
         y = m(x)
-        print(y.numpy())
 
         class CustomGraph(flow.experimental.nn.Graph):
             def __init__(self):
@@ -50,15 +50,18 @@ class TestGraph(flow.unittest.TestCase):
             def build(self, x):
                 return self.m(x)
         
+        # Graph init
         g = CustomGraph()
-        print(g.m.name)
-        print(g.m.layer.name)
-        print(g.m.layer.conv1.name)
-        print(g.m.layer.conv1)
-        print(g.m.layer.conv1.kernel_size)
-        print(g.m.layer.conv1.weight)
+        test_case.assertTrue(isinstance(g.m, flow.experimental.nn.graph.Node))
+        test_case.assertEqual(g.m.name, "m")
+        test_case.assertTrue(isinstance(g.m.layer.conv1, flow.experimental.nn.graph.Node))
+        test_case.assertEqual(g.m.layer.conv1.name, "conv1")
+        test_case.assertEqual(g.m.layer.conv1.kernel_size, (5, 5))
+        test_case.assertTrue(isinstance(g.m.layer.conv1.weight, flow.Tensor))
+        test_case.assertTrue(isinstance(g.m.layer.conv1._parameters["weight"], flow.experimental.nn.graph.Node))
+
+        # Graph build
         z = g.build(x)
-        print(z.numpy())
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
     
     # TODO(): test_graph_config

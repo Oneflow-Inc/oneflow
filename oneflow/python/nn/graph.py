@@ -10,7 +10,7 @@ from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
 
-@oneflow_export("experimental.nn.Graph")
+@oneflow_export("experimental.nn.Graph", "experimental.nn.graph.Graph")
 class Graph(object):
     def __init__(self):
         self.training = True
@@ -72,7 +72,6 @@ class Graph(object):
                 "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(type(self).__name__, name)
             )
         else:
-            print("graph add other type attr: ", name)
             object.__setattr__(self, name, value)
 
     def __getattr__(self, name: str):
@@ -86,6 +85,7 @@ class Graph(object):
         )
 
 
+@oneflow_export("experimental.nn.graph.Node")
 class Node(object):
     def __init__(self, name: str, value: Union[Module, Parameter, Tensor] = None):
         print(">>>", name, " node start creating")
@@ -96,34 +96,33 @@ class Node(object):
         self._config = NodeConfig() 
     
         if isinstance(value, Module):
-            print("create module node: ", name)
             self._type = "module"
             self._modules = OrderedDict()
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
             for n, m in list(value.named_children()):
-                print("node ", name, " has sub module n ", n, " module ", type(m))
                 self.__setattr__(n, Node(n, m))
-            # for n, p in list(value.named_parameters()):
-            #     print("node ", name, " has parameter n", n, " p ", type(p))
-            #     # self.__setattr__(n, Node(n, p))
-            # for n, b in list(value.named_buffers()):
-            #     print("node ", name, " has buffer n", n, " b ", type(b))
-            #     # self.__setattr__(n, Node(n, b))
+            for n, p in list(value.named_parameters("", False)):
+                self.__setattr__(n, Node(n, p))
+            for n, b in list(value.named_buffers("", False)):
+                self.__setattr__(n, Node(n, b))
         elif isinstance(value, Parameter):
-            print("create parameter node: ", name)
             self._type = "parameter"
         elif isinstance(value, Tensor):
-            print("create buffer node: ", name)
             self._type = "buffer"
         else:
             raise NotImplementedError()
         print("<<<", name, " node created.")
 
     def __call__(self, *args):
-        if self._type == "module":
-            return self._origin.__class__.__call__(self, *args) 
-        # TODO(): deal with parameter and buff
+        assert self._type == "module"
+        return self._origin.__class__.__call__(self, *args) 
+    
+    def forward(self, *args):
+        assert self._type == "module"
+        return self._origin.__class__.forward(self, *args) 
+    
+
     
     @property
     def name(self):
@@ -171,11 +170,13 @@ class Node(object):
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
                     # TODO(): return node when need config
+                    # return _parameters[name]
                     return _parameters[name].origin
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
                     # TODO(): return node when need config
+                    # return _buffers[name]
                     return _buffers[name].origin
             if name in self._origin.__dict__:
                 return self._origin.__dict__[name]
@@ -184,15 +185,18 @@ class Node(object):
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
 
+@oneflow_export("experimental.nn.graph.GraphConfig")
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
 
+@oneflow_export("experimental.nn.graph.NodeConfig")
 class NodeConfig(object):
     def __init__(self):
         # TODO(): implement config for node
         pass
 
+@oneflow_export("experimental.nn.graph.OptimizerConfig")
 class OptimizerConfig(object):
     def __init__(
         self,
