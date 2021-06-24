@@ -99,7 +99,7 @@ class L1Loss(Module):
             input.shape == target.shape
         ), "The Input shape must be the same as Target shape"
 
-        l1_value = flow.experimental.abs(flow.experimental.sub(target, input))
+        l1_value = flow.experimental.abs(flow.experimental.sub(input, target))
         if self.reduction == "mean":
             return flow.experimental.mean(l1_value)
         elif self.reduction == "sum":
