@@ -20,7 +20,7 @@ batch_size = 10
 # 将训练数据的特征和标签组合
 dataset = Data.TensorDataset(features, labels)
 # 随机读取小批量
-data_iter = Data.DataLoader(dataset, batch_size, shuffle=True)
+data_iter = Data.DataLoader(dataset, batch_size, shuffle=True, num_workers=2)
 
 
 class MSELoss(nn.Module):

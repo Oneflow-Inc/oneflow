@@ -4,11 +4,21 @@ These **needs** to be in global scope since Py2 doesn't support serializing
 static methods.
 """
 
-import oneflow as flow
+from oneflow.python.framework.env_util import api_enable_eager_execution
 import random
 import os
 import queue
 from dataclasses import dataclass
+import sys
+
+import traceback
+
+api_enable_eager_execution()
+
+class KeyErrorMessage(str):
+    r"""str subclass that returns itself in repr"""
+    def __repr__(self):
+        return self
 
 class ExceptionWrapper(object):
     r"""Wraps an exception plus traceback to communicate across threads"""
@@ -38,8 +48,9 @@ class ExceptionWrapper(object):
             raise self.exc_type(message=msg)
         raise self.exc_type(msg)
 
+
 from typing import Union
-from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS
+from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS, HAS_NUMPY
 
 if IS_WINDOWS:
     import ctypes
@@ -110,7 +121,7 @@ class WorkerInfo(object):
 
 def get_worker_info():
     r"""Returns the information about the current
-    :class:`~torch.utils.data.DataLoader` iterator worker process.
+    :class:`~flow.utils.data.DataLoader` iterator worker process.
 
     When called in a worker, this returns an object guaranteed to have the
     following attributes:
@@ -119,7 +130,7 @@ def get_worker_info():
     * :attr:`num_workers`: the total number of workers.
     * :attr:`seed`: the random seed set for the current worker. This value is
       determined by main process RNG and the worker id. See
-      :class:`~torch.utils.data.DataLoader`'s documentation for more details.
+      :class:`~flow.utils.data.DataLoader`'s documentation for more details.
     * :attr:`dataset`: the copy of the dataset object in **this** process. Note
       that this will be a different object in a different process than the one
       in the main process.
@@ -128,7 +139,7 @@ def get_worker_info():
 
     .. note::
        When used in a :attr:`worker_init_fn` passed over to
-       :class:`~torch.utils.data.DataLoader`, this method can be useful to
+       :class:`~flow.utils.data.DataLoader`, this method can be useful to
        set up each worker process differently, for instance, using ``worker_id``
        to configure the ``dataset`` object to only read a specific fraction of a
        sharded dataset, or use ``seed`` to seed other libraries used in dataset
@@ -147,8 +158,61 @@ r"""Dummy class used to resume the fetching when worker reuse is enabled"""
 class _ResumeIteration(object):
     pass
 
+
+def _generate_state(base_seed, worker_id):
+    INIT_A = 0x43b0d7e5
+    MULT_A = 0x931e8875
+    INIT_B = 0x8b51f9dd
+    MULT_B = 0x58f38ded
+    MIX_MULT_L = 0xca01f9dd
+    MIX_MULT_R = 0x4973f715
+    XSHIFT = 4 * 8 // 2
+    MASK32 = 0xFFFFFFFF
+
+    entropy = [worker_id, base_seed & MASK32, base_seed >> 32, 0]
+    pool = [0] * 4
+
+    hash_const_A = INIT_A
+
+    def hash(value):
+        nonlocal hash_const_A
+        value = (value ^ hash_const_A) & MASK32
+        hash_const_A = (hash_const_A * MULT_A) & MASK32
+        value = (value * hash_const_A) & MASK32
+        value = (value ^ (value >> XSHIFT)) & MASK32
+        return value
+
+    def mix(x, y):
+        result_x = (MIX_MULT_L * x) & MASK32
+        result_y = (MIX_MULT_R * y) & MASK32
+        result = (result_x - result_y) & MASK32
+        result = (result ^ (result >> XSHIFT)) & MASK32
+        return result
+
+    # Add in the entropy to the pool.
+    for i in range(len(pool)):
+        pool[i] = hash(entropy[i])
+
+    # Mix all bits together so late bits can affect earlier bits.
+    for i_src in range(len(pool)):
+        for i_dst in range(len(pool)):
+            if i_src != i_dst:
+                pool[i_dst] = mix(pool[i_dst], hash(pool[i_src]))
+
+    hash_const_B = INIT_B
+    state = []
+    for i_dst in range(4):
+        data_val = pool[i_dst]
+        data_val = (data_val ^ hash_const_B) & MASK32
+        hash_const_B = (hash_const_B * MULT_B) & MASK32
+        data_val = (data_val * hash_const_B) & MASK32
+        data_val = (data_val ^ (data_val >> XSHIFT)) & MASK32
+        state.append(data_val)
+    return state
+
+
 def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
-                 auto_collation, collate_fn, drop_last, seed, init_fn, worker_id,
+                 auto_collation, collate_fn, drop_last, base_seed, init_fn, worker_id,
                  num_workers, persistent_workers):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
@@ -159,17 +223,26 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         # handlers, likely when the same fatal signal had already happened
         # again.
         # https://docs.python.org/3/library/signal.html#execution-of-python-signal-handlers
-        signal_handling._set_worker_signal_handlers()
-
-        torch.set_num_threads(1)
+        
+        # TODO:zhaoluyang add c++ function seting cpu threadnum in per worker
+        # signal_handling._set_worker_signal_handlers()
+        # flow.set_num_threads(1)
+        seed = base_seed + worker_id
         random.seed(seed)
-        torch.manual_seed(seed)
+        # flow.manual_seed(seed)
 
+        if HAS_NUMPY:
+            np_seed = _generate_state(base_seed, worker_id)
+            import numpy as np
+            np.random.seed(np_seed)
+
+        print("worker_id >>>", worker_id, "; num_workers >>>", num_workers, ";seed >>> ", np_seed[worker_id])
         global _worker_info
+        # TODO:zhaoluyang use c++seed or np_seed
         _worker_info = WorkerInfo(id=worker_id, num_workers=num_workers,
-                                  seed=seed, dataset=dataset)
+                                  seed=np_seed[worker_id], dataset=dataset)
 
-        from torch.utils.data import _DatasetKind
+        from oneflow.python.utils.data import _DatasetKind
 
         init_exception = None
 
@@ -199,7 +272,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
         watchdog = ManagerWatchdog()
 
         while watchdog.is_alive():
+            print("while watchdog.is_alive() >>>>>>>> True")
             try:
+                print("r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)")
                 r = index_queue.get(timeout=MP_STATUS_CHECK_INTERVAL)
             except queue.Empty:
                 continue
@@ -220,6 +295,8 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 # (None) yet. I will keep continuing until get it, and skip the
                 # processing steps.
                 continue
+
+        
             idx, index = r
             data: Union[_IterableDatasetStopIteration, ExceptionWrapper]
             if init_exception is not None:
@@ -227,7 +304,9 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                 init_exception = None
             else:
                 try:
+                    print("try >>>>>>>>>>>>> data = fetcher.fetch(index)")
                     data = fetcher.fetch(index)
+                    print("try >>>>>>>>>>>>> data = fetcher.fetch(index) >> Success!")
                 except Exception as e:
                     if isinstance(e, StopIteration) and dataset_kind == _DatasetKind.Iterable:
                         data = _IterableDatasetStopIteration(worker_id)
@@ -241,6 +320,7 @@ def _worker_loop(dataset_kind, dataset, index_queue, data_queue, done_event,
                         # See NOTE [ Python Traceback Reference Cycle Problem ]
                         data = ExceptionWrapper(
                             where="in DataLoader worker process {}".format(worker_id))
+            print("try >>>>>>>>>>>>> data_queue.put((idx, data))")
             data_queue.put((idx, data))
             del data, idx, index, r  # save memory
     except KeyboardInterrupt:
