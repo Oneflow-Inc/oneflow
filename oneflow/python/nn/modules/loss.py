@@ -79,7 +79,6 @@ class L1Loss(Module):
         >>> out = m_mean(input, target)
         >>> out
         tensor([24.], dtype=oneflow.float32)
-        
     """
 
     def __init__(self, reduction: str = "mean", reduce=True) -> None:
@@ -156,14 +155,14 @@ class CrossEntropyLoss(Module):
         ...        [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> out = flow.nn.CrossEntropyLoss(reduction="none")(input, target)
-        >>> print(out.numpy())
-        [0.80199665 1.1166505  0.35826024]
+        >>> out
+        tensor([0.802 , 1.1167, 0.3583], dtype=oneflow.float32)
         >>> out_sum = flow.nn.CrossEntropyLoss(reduction="sum")(input, target)
-        >>> print(out_sum.numpy())
-        [2.2769072]
+        >>> out_sum
+        tensor([2.2769], dtype=oneflow.float32)
         >>> out_mean = flow.nn.CrossEntropyLoss(reduction="mean")(input, target)
-        >>> print(out_mean.numpy())
-        [0.75896907]
+        >>> out_mean
+        tensor([0.759], dtype=oneflow.float32)
 
 
     """
@@ -186,14 +185,6 @@ class CrossEntropyLoss(Module):
 
         self.ignore_index = ignore_index
         self.reduction = reduction
-        self._op = (
-            flow.builtin_op("sparse_softmax_cross_entropy")
-            .Input("prediction")
-            .Input("label")
-            .Output("prob")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, input, target):
         assert len(input.shape) <= 4
@@ -212,7 +203,9 @@ class CrossEntropyLoss(Module):
         elif input_shape_len >= 5:
             raise NotImplemented
 
-        prob, out = self._op(input, target, depth=input.shape[len(input.shape) - 1])
+        out = flow.F.sparse_softmax_cross_entropy(
+            input, target, depth=input.shape[len(input.shape) - 1]
+        )
         if self.ignore_index is not None:
             zeros = flow.experimental.zeros(
                 size=out.shape, dtype=out.dtype, device=out.device
@@ -299,10 +292,15 @@ class BCELoss(Module):
         >>> out = m_mean(sigmoid_input, target)
         >>> out
         tensor([2.0611], dtype=oneflow.float32)
-        
+        >>> m_none = flow.nn.BCELoss()
+        >>> out = m_none(sigmoid_input, target)
+        >>> out
+        tensor([[1.4633, 0.5981, 0.5544],
+                [0.4032, 1.0375, 2.1269]], dtype=oneflow.float32)
+
     """
 
-    def __init__(self, weight, reduction: str = None) -> None:
+    def __init__(self, weight: Tensor = None, reduction: str = None) -> None:
         super().__init__()
         assert reduction in [
             "none",
@@ -403,19 +401,19 @@ class NLLLoss(Module):
         ... [-1.135804, -0.50371903, 0.7645404]], dtype=flow.float32)
         >>> target = flow.Tensor(np.array([0, 1, 2]), dtype=flow.int32)
         >>> m = flow.nn.NLLLoss(reduction="none")
-        >>> out = m(input, target).numpy()
-        >>> print(out)
-        [ 0.1664078  -0.53737473 -0.7645404 ]
+        >>> out = m(input, target)
+        >>> out
+        tensor([ 0.1664, -0.5374, -0.7645], dtype=oneflow.float32)
 
         >>> m = flow.nn.NLLLoss(reduction="sum")
-        >>> out = m(input, target).numpy()
-        >>> print(out)
-        [-1.1355073]
+        >>> out = m(input, target)
+        >>> out
+        tensor([-1.1355], dtype=oneflow.float32)
 
         >>> m = flow.nn.NLLLoss(reduction="mean")
-        >>> out = m(input, target).numpy()
-        >>> print(out)
-        [-0.37850246]
+        >>> out = m(input, target)
+        >>> out
+        tensor([-0.3785], dtype=oneflow.float32)
 
     """
 
@@ -434,19 +432,11 @@ class NLLLoss(Module):
 
         self.ignore_index = ignore_index
         self.reduction = reduction
-        self._dim_gather_op = (
-            flow.builtin_op("dim_gather")
-            .Input("input")
-            .Input("index")
-            .Output("output")
-            .Attr("dim", 1)
-            .Build()
-        )
 
     def nllloss_1d(self, input, target):
-        target = flow.experimental.reshape(target, (target.shape[0], 1))
-        res = self._dim_gather_op(input, target)[0]
-        res = flow.experimental.squeeze(res, dim=[1])
+        target = flow.F.reshape(target, shape=(target.shape[0], 1))
+        res = flow.F.dim_gather(input, target, dim=1)
+        res = flow.F.squeeze(res, dim=[1])
         return res
 
     def forward(self, input, target):
