@@ -55,7 +55,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                            TensorTuple* outputs, const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
-  for (int i = 0; i < inputs.size(); i++) {
+  for (int i = 0; i < inputs.size(); ++i) {
     const auto& input_device = JUST(inputs.at(i)->device());
     if (i > 0) {
       CHECK_OR_RETURN(*default_device == *input_device) << Error::InputDeviceNotMatchError();
@@ -64,7 +64,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
-  for (int i = 0; i < outputs->size(); i++) {
+  for (int i = 0; i < outputs->size(); ++i) {
     if (!outputs->at(i)) {
       outputs->at(i) =
           std::make_shared<MirroredTensor>(std::make_shared<EagerMirroredTensorImpl>());
@@ -83,7 +83,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                     return eager_blob_object != nullptr;
                   });
   if (is_inplace) {
-    for (int i = 0; i < outputs->size(); i++) {
+    for (int i = 0; i < outputs->size(); ++i) {
       CHECK_EQ_OR_RETURN(*JUST(outputs->at(i)->device()), *JUST(inputs.at(i)->device()));
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
       CHECK_EQ_OR_RETURN(output_eager_blob_objects->at(i), input_eager_blob_objects->at(i));
@@ -97,7 +97,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     if (!user_op_expr.has_device_infer_fn()) {
       op_device = default_device;
       op_parallel_desc = op_device->parallel_desc_ptr();
-      for (int i = 0; i < outputs->size(); i++) {
+      for (int i = 0; i < outputs->size(); ++i) {
         auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
         *tensor_impl->mut_device() = default_device;
       }
@@ -123,7 +123,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
           return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
         }));
 
-    for (int i = 0; i < output_eager_blob_objects->size(); i++) {
+    for (int i = 0; i < output_eager_blob_objects->size(); ++i) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       JUST(tensor_impl->InitEagerBlobObject(JUST(outputs->at(i)->device())->mem_case()));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
