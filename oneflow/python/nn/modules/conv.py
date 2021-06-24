@@ -220,6 +220,7 @@ class Conv2d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
         )
+        self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_channels))

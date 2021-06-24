@@ -1,3 +1,4 @@
+cmake_policy(SET CMP0074 NEW)
 if (NOT WIN32)
   find_package(Threads)
 endif()
@@ -113,7 +114,7 @@ message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 # libraries only a top level .so or exe should be linked to
 set(oneflow_exe_third_party_libs
     glog_imported
-    ${GFLAGS_STATIC_LIBRARIES}
+    gflags_imported
 )
 
 set(oneflow_third_party_libs
@@ -126,8 +127,7 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${COCOAPI_STATIC_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
-    ${ZLIB_STATIC_LIBRARIES}
-    ${CARES_STATIC_LIBRARIES}
+    zlib_imported
     ${ABSL_STATIC_LIBRARIES}
     ${OPENSSL_STATIC_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
@@ -146,13 +146,10 @@ if(WIN32)
 endif()
 
 set(oneflow_third_party_dependencies
-  zlib_copy_headers_to_destination
-  zlib_copy_libs_to_destination
+  zlib
   protobuf
-  gflags_copy_headers_to_destination
-  gflags_copy_libs_to_destination
-  glog_copy_headers_to_destination
-  glog_copy_libs_to_destination
+  gflags
+  glog
   googletest_copy_headers_to_destination
   googletest_copy_libs_to_destination
   googlemock_copy_headers_to_destination
@@ -172,8 +169,7 @@ set(oneflow_third_party_dependencies
 )
 
 if (RPC_BACKEND MATCHES "GRPC")
-  list(APPEND oneflow_third_party_dependencies grpc_copy_headers_to_destination)
-  list(APPEND oneflow_third_party_dependencies grpc_copy_libs_to_destination)
+  list(APPEND oneflow_third_party_dependencies grpc)
 endif()
 
 list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
@@ -192,7 +188,6 @@ list(APPEND ONEFLOW_INCLUDE_SRC_DIRS
     ${HALF_INCLUDE_DIR}
     ${JSON_INCLUDE_DIR}
     ${ABSL_INCLUDE_DIR}
-    ${CARES_INCLUDE_DIR}
     ${OPENSSL_INCLUDE_DIR}
     ${FLATBUFFERS_INCLUDE_DIR}
     ${LZ4_INCLUDE_DIR}

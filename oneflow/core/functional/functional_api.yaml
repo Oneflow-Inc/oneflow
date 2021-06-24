@@ -316,7 +316,7 @@
 
 - name: "layer_norm_affine"
   signature:
-    "Tensor LayerNormAffine(Tensor x, Tensor beta, Tensor gamma, *, Int64 begin_norm_axis,
+    "Tensor LayerNormAffine(Tensor x, Tensor gamma, Tensor beta, *, Int64 begin_norm_axis,
                             Int64 begin_params_axis, Double epsilon)"
   bind_python: True
 
