@@ -159,7 +159,7 @@ class GraphTask final {
   GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph);
 
   Maybe<void> ComputeDependencies();
-  Maybe<void> PruneFunctionNode(const std::set<FunctionNode*>& target_nodes);
+  Maybe<bool> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
   Maybe<void> Apply();
 
  private:
@@ -167,7 +167,7 @@ class GraphTask final {
   bool create_graph_;
   std::vector<FunctionNode*> roots_;
   HashMap<FunctionNode*, int> dependencies_;
-  std::unordered_set<FunctionNode*> need_excute_;
+  HashSet<FunctionNode*> need_execute_;
 };
 
 class GraphAutogradEngine final : public AutogradEngine {
