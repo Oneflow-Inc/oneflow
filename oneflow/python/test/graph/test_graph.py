@@ -96,6 +96,8 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.training, True)
         test_case.assertEqual(g.m.training, True)
         test_case.assertEqual(g.m.layer.conv1.training, True)
+        g.config.enable_fuse_add_to_output(True)
+        print(g.config.proto)
 
         g.train(False)
         test_case.assertEqual(g.training, False)
@@ -103,8 +105,6 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.m.training, False)
         test_case.assertEqual(g.m.layer.conv1.training, False)
 
-        g.config.enable_fuse_add_to_output(True)
-        print(g.config.proto)
         g.config.enable_fuse_add_to_output(False)
         print(g.config.proto)
 
