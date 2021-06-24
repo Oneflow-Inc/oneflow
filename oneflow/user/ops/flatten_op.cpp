@@ -104,6 +104,7 @@ REGISTER_USER_OP_GRAD("flatten").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(reshape_grad_op.output("out", 0), "in", 0);
     AddOp(reshape_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

@@ -33,9 +33,10 @@ REGISTER_USER_OP("dropout")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask = GetInputArgModifierFn("mask", 0);
       mask->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -105,6 +106,7 @@ REGISTER_USER_OP_GRAD("dropout").SetGenBackwardOpConfFn([](const user_op::UserOp
     op.BindGradTensorWithOpInput(dropout_grad_op.output("dx", 0), "in", 0);
     AddOp(dropout_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 REGISTER_USER_OP("random_mask_like")

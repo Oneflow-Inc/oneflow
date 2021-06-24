@@ -70,6 +70,7 @@ namespace oneflow {
           op.BindGradTensorWithOpInput(binary_grad_op.output("dy", 0), "y", 0);                 \
           AddOp(binary_grad_op);                                                                \
         }                                                                                       \
+        return Maybe<void>::Ok();                                                               \
       });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_BINARY_ELEMENTWISE_OP_AND_GRAD, MATH_BINARY_ELEMENTWISE_FUNC_SEQ)

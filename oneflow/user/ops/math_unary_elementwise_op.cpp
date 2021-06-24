@@ -45,6 +45,7 @@ namespace oneflow {
           op.BindGradTensorWithOpInput(unary_grad_op.output("dx", 0), "x", 0);                \
           AddOp(unary_grad_op);                                                               \
         }                                                                                     \
+        return Maybe<void>::Ok();                                                             \
       });
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_OP_AND_GRAD, MATH_UNARY_ELEMENTWISE_FUNC_SEQ)

@@ -82,7 +82,7 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
     });
 
 REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
         const auto& grad_mode = ctx->FwOp().attr<std::string>("grad_mode");
         if (grad_mode == "identity") {
@@ -120,6 +120,7 @@ REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
           UNIMPLEMENTED();
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

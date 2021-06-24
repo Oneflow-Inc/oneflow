@@ -68,7 +68,7 @@ REGISTER_USER_OP("scalar_pow_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("scalar_pow").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("scalar_pow").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto scalar_pow_grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(scalar_pow_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("scalar_pow_grad")

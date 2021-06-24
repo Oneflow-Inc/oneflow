@@ -411,11 +411,11 @@ REGISTER_USER_OP("broadcast_matmul_grad_b")
     });
 
 REGISTER_USER_OP_GRAD("broadcast_matmul")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> void {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       bool transpose_a = ctx->FwOp().attr<bool>("transpose_a");
       bool transpose_b = ctx->FwOp().attr<bool>("transpose_b");
       double alpha = ctx->FwOp().attr<double>("alpha");
-      CHECK(!transpose_a);
+      CHECK_OR_RETURN(!transpose_a);
 
       std::string a_grad_op_name = ctx->FwOp().op_name() + "_a_grad";
       ctx->DefineOp(a_grad_op_name,
@@ -457,6 +457,7 @@ REGISTER_USER_OP_GRAD("broadcast_matmul")
       ctx->FwOp().InputGradBind(user_op::OpArg("b", 0), [&]() -> const std::string& {
         return ctx->GetOp(b_grad_op_name).output("out", 0);
       });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

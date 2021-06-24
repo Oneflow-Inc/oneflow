@@ -80,6 +80,7 @@ REGISTER_USER_OP_GRAD("expand").SetGenBackwardOpConfFn([](const user_op::UserOpW
     op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
     AddOp(grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

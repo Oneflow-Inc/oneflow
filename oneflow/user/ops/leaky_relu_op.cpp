@@ -48,7 +48,7 @@ REGISTER_USER_OP("leaky_relu_grad")
       const Shape& x_shape = ctx->InputShape("x", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == x_shape);
+      CHECK_OR_RETURN(dy_shape == x_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
@@ -87,6 +87,7 @@ REGISTER_USER_OP_GRAD("leaky_relu")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

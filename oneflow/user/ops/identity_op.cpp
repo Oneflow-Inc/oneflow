@@ -58,6 +58,7 @@ REGISTER_USER_OP_GRAD("identity")
         op.BindGradTensorWithOpInput(identity_op.output("out", 0), "in", 0);
         AddOp(identity_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

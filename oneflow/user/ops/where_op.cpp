@@ -56,7 +56,7 @@ REGISTER_USER_OP("where")
     .Output("out")
     .SetTensorDescInferFn(InferWhereTensorDesc)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("condition", 0);
       cond_arg_modifier->set_requires_grad(false);
     })
@@ -70,7 +70,7 @@ REGISTER_USER_OP("where")
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
 
-REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
   ctx->DefineOp(zero_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("zero_like")

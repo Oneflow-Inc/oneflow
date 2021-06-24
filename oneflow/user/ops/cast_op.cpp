@@ -51,7 +51,7 @@ REGISTER_USER_OP("cast")
     .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) {
+                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
   if (op.NeedGenGradTensor4OpInput("in", 0)) {
     user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
     const DataType& dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
@@ -64,6 +64,7 @@ REGISTER_USER_OP_GRAD("cast").SetGenBackwardOpConfFn([](const user_op::UserOpWra
     op.BindGradTensorWithOpInput(cast_grad_op.output("out", 0), "in", 0);
     AddOp(cast_grad_op);
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

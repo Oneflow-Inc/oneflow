@@ -85,7 +85,7 @@ Maybe<void> GetOpGradSbpSignature(user_op::SbpContext* ctx) {
       })                                                                                     \
       .SetGetSbpFn(GetOpSbpSignature)                                                        \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,            \
-                              const user_op::UserOpConfWrapper&) {                           \
+                              const user_op::UserOpConfWrapper&) -> Maybe<void> {            \
         user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);               \
         CHECK_NOTNULL(x_modifier);                                                           \
         x_modifier->set_requires_grad(true);                                                 \

@@ -63,7 +63,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0);
       CHECK_NOTNULL(label_modifier);
       label_modifier->set_requires_grad(false);
@@ -136,7 +136,7 @@ REGISTER_USER_OP("distributed_partial_fc_sample_disable_boxing")
     });
 
 REGISTER_USER_OP_GRAD("distributed_partial_fc_sample")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto disable_boxing_op_name = ctx->FwOp().op_name() + "_disable_boxing";
       ctx->DefineOp(disable_boxing_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("distributed_partial_fc_sample_disable_boxing")

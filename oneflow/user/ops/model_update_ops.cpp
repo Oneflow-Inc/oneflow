@@ -270,20 +270,21 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                                const std::string& arg_name, int32_t arg_index) {
+                                const std::string& arg_name, int32_t arg_index) -> Maybe<void> {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
-  CHECK_NOTNULL(arg_modifier);
+  CHECK_NOTNULL_OR_RETURN(arg_modifier);
   arg_modifier->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
-void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                           const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
 }
 
-void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                           const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
@@ -383,7 +384,7 @@ REGISTER_USER_OP("sgd_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
     .SetDataTypeInferFn(InferSGDUpdateDataType);
@@ -417,7 +418,7 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
     })
     .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
@@ -449,7 +450,7 @@ REGISTER_USER_OP("momentum_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
@@ -488,7 +489,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
     })
@@ -649,12 +650,13 @@ REGISTER_USER_OP("rmsprop_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "mean_square", 0);
       if (conf.attr<bool>("centered")) {
         SetInputArgModifierMutable(GetInputArgModifierFn, "mean_gradient", 0);
       }
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferRmsPropUpdateDataType);
 

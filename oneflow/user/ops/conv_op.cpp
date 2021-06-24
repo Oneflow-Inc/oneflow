@@ -23,7 +23,7 @@ namespace {
 template<size_t NDims>
 Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
   const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-  CHECK_EQ(NDims + 2, in->shape().NumAxes());
+  CHECK_EQ_OR_RETURN(NDims + 2, in->shape().NumAxes());
 
   auto data_format = ctx->Attr<std::string>("data_format");
   auto kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -73,7 +73,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
     const user_op::TensorDesc* weight = ctx->TensorDesc4ArgNameAndIndex("weight", 0);
-    CHECK_EQ(weight->shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight->shape(), Shape(weight_shape));
   }
 
   const user_op::TensorDesc* bias = ctx->TensorDesc4ArgNameAndIndex("bias", 0);
@@ -155,7 +155,7 @@ Maybe<void> CheckAttr(const user_op::UserOpDefWrapper& def,
   }
 }
 
-void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
   const auto& padding_before = op.attr<std::vector<int32_t>>("padding_before");
   std::string data_format = op.attr<std::string>("data_format");
   std::vector<int32_t> kernel_size = op.attr<std::vector<int32_t>>("kernel_size");
@@ -164,8 +164,8 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
   int32_t groups = op.attr<int32_t>("groups");
 
   int32_t ndims = kernel_size.size();
-  CHECK_EQ(ndims, strides.size());
-  CHECK_EQ(ndims, dilation_rate.size());
+  CHECK_EQ_OR_RETURN(ndims, strides.size());
+  CHECK_EQ_OR_RETURN(ndims, dilation_rate.size());
 
   if (op.user_op_conf().has_input("bias", 0)) {
     if (op.NeedGenGradTensor4OpInput("bias", 0)) {
@@ -220,6 +220,7 @@ void GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_op::AddO
     op.BindGradTensorWithOpInput(data_grad_op.output("dx", 0), "in", 0);
     AddOp(data_grad_op);
   }
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

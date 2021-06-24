@@ -54,7 +54,7 @@ std::string CreateReduceSumLikeBlob(const std::string& in_lbn, const Shape& in_s
 }  // namespace
 
 REGISTER_USER_OP_GRAD("broadcast_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -71,10 +71,11 @@ REGISTER_USER_OP_GRAD("broadcast_add")
             CreateReduceSumLikeBlob(dz_lbn, z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_sub")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
       const Shape& z_shape = op.TensorDesc4ArgNameAndIndex("z", 0).shape();
       const std::string& dz_lbn = op.GetGradTensorWithOpOutput("z", 0);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
@@ -102,6 +103,7 @@ REGISTER_USER_OP_GRAD("broadcast_sub")
             scalar_mul_op.output("out", 0), z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_mul")
@@ -136,6 +138,7 @@ REGISTER_USER_OP_GRAD("broadcast_mul")
             broadcast_mul_op.output("z", 0), z_shape, y_lbn, y_shape, op.op_name() + "_y", AddOp);
         op.BindGradTensorWithOpInput(out_lbn, "y", 0);
       }
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("broadcast_div")
@@ -167,6 +170,7 @@ REGISTER_USER_OP_GRAD("broadcast_div")
         op.BindGradTensorWithOpInput(grad_op.output("dy", 0), "y", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

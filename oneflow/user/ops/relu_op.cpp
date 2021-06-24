@@ -73,7 +73,7 @@ REGISTER_USER_OP("relu_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto relu_grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(relu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("relu_grad")

@@ -58,7 +58,7 @@ REGISTER_USER_OP("bias_add")
     });
 
 REGISTER_USER_OP_GRAD("bias_add")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("a", 0)) {
         op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "a", 0);
       }
@@ -78,6 +78,7 @@ REGISTER_USER_OP_GRAD("bias_add")
                            .Build();
         AddOp(grad_op);
         op.BindGradTensorWithOpInput(grad_op.output("output_tensor", 0), "b", 0);
+        return Maybe<void>::Ok();
       }
     });
 

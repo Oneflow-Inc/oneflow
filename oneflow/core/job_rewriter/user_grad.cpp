@@ -37,13 +37,13 @@ Maybe<void> GenerateBackwardOpConf(
   if (nullptr != val->bw_gen_fn) {
     // new refined interface
     user_op::BackwardOpConfContext ctx(fw_user_op, bw_op_confs);
-    val->bw_gen_fn(&ctx);
+    JUST(val->bw_gen_fn(&ctx));
   } else if (nullptr != val->gen_bw_fn) {
     // old interface, will be removed when all backward gradient configs are using new interface
     auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
       bw_op_confs->push_back(wrapper.op_conf());
     };
-    val->gen_bw_fn(fw_user_op, AddOp);
+    JUST(val->gen_bw_fn(fw_user_op, AddOp));
   }
 
   for (const std::string& ibn : fw_op.input_bns()) {

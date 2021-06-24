@@ -33,7 +33,7 @@ REGISTER_USER_OP("add_n")
       *out->mut_is_dynamic() = in_0->is_dynamic();
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) {
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       int64_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape().NumAxes();
       for (int64_t i = 0; i < num_axes; ++i) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(user_op::OpArg("out", 0), i).Build();
@@ -55,13 +55,14 @@ REGISTER_USER_OP("add_n")
     });
 
 REGISTER_USER_OP_GRAD("add_n").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                         user_op::AddOpFn AddOp) {
+                                                         user_op::AddOpFn AddOp) -> Maybe<void> {
   int32_t in_size = op.input_size("in");
   for (int i = 0; i < in_size; ++i) {
     if (op.NeedGenGradTensor4OpInput("in", i)) {
       op.BindGradTensorWithOpInput(op.GetGradTensorWithOpOutput("out", 0), "in", i);
     }
   }
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

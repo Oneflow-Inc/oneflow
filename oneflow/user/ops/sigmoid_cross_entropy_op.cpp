@@ -22,7 +22,7 @@ REGISTER_USER_OP("sigmoid_cross_entropy")
     .Input("label")
     .Output("loss")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
       cond_arg_modifier->set_requires_grad(false);
     })
@@ -58,7 +58,7 @@ REGISTER_USER_OP("sigmoid_cross_entropy_grad")
     .Input("label")
     .Output("prediction_diff")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* cond_arg_modifier = GetInputArgModifierFn("label", 0);
       cond_arg_modifier->set_requires_grad(false);
     })

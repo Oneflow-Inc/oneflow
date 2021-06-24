@@ -137,7 +137,7 @@ Maybe<void> GetSliceGradOpSbpSignature(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InferSliceGradInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
                                     const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* dy_modifier = GetInputArgModifierFn("dy", 0);
   CHECK_NOTNULL(dy_modifier);
@@ -269,7 +269,7 @@ Maybe<void> GetLogicalSliceAssignSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InferLogicalSliceAssignInputArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
                                              const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* ref_modifier = GetInputArgModifierFn("ref", 0);
   CHECK(ref_modifier != nullptr);
@@ -319,7 +319,7 @@ Maybe<void> GetLogicalSliceSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_update_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("slice")

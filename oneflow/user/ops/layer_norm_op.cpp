@@ -19,10 +19,10 @@ namespace oneflow {
 
 namespace {
 
-int64_t ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
+Maybe<int64_t> ShiftNegativeAxisIfNeed(const Shape& shape, int64_t axis) {
   const int64_t shifted = axis < 0 ? axis + shape.NumAxes() : axis;
-  CHECK_GE(shifted, 0);
-  CHECK_LT(shifted, shape.NumAxes());
+  CHECK_GE_OR_RETURN(shifted, 0);
+  CHECK_LT_OR_RETURN(shifted, shape.NumAxes());
   return shifted;
 }
 
@@ -140,7 +140,7 @@ REGISTER_USER_OP("layer_norm_grad")
       user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
       CHECK_EQ_OR_RETURN(dy->shape(), x->shape());
       const int64_t begin_norm_axis = ctx->Attr<int64_t>("begin_norm_axis");
-      CHECK_GT(begin_norm_axis, 0);
+      CHECK_GT_OR_RETURN(begin_norm_axis, 0);
       const Shape& bn_param_shape = InferBnParamShape(x->shape(), begin_norm_axis);
       CHECK_EQ_OR_RETURN(mean->shape(), bn_param_shape);
       CHECK_EQ_OR_RETURN(inv_variance->shape(), bn_param_shape);
@@ -337,6 +337,7 @@ REGISTER_USER_OP_GRAD("layer_norm")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

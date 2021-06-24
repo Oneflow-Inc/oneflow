@@ -19,11 +19,11 @@ namespace oneflow {
 
 namespace {
 
-int32_t TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
+Maybe<int32_t> TransformNegativeAxisToPositive(int32_t axis, const int32_t num_axes) {
   axis = axis < 0 ? axis + num_axes + 1 : axis;
-  CHECK_GE(axis, 0);
-  CHECK_LE(axis, num_axes);
-  return axis;
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LE_OR_RETURN(axis, num_axes);
+  return Maybe<int32_t>(axis);
 }
 
 }  // namespace
@@ -79,6 +79,7 @@ REGISTER_USER_OP_GRAD("expand_dims")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

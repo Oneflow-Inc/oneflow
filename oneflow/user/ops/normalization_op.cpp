@@ -70,7 +70,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
   };
 }
 
-void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                         const user_op::UserOpConfWrapper& conf) {
   bool training;
   if (conf.op_type_name() == "normalization") {
@@ -486,7 +486,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
 #endif
 
 REGISTER_USER_OP_GRAD("normalization")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
@@ -660,7 +660,7 @@ REGISTER_USER_OP_GRAD("normalization")
     });
 
 REGISTER_USER_OP_GRAD("normalization_add_relu")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_add_relu_grad")

@@ -98,7 +98,7 @@ REGISTER_USER_OP("adaptive_avg_pool2d_grad")
     .SetDataTypeInferFn(InferBWDataType);
 
 REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto adaptive_avg_pool2d_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(adaptive_avg_pool2d_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("adaptive_avg_pool2d_grad")
@@ -112,6 +112,7 @@ REGISTER_USER_OP_GRAD("adaptive_avg_pool2d")
           [&ctx, &adaptive_avg_pool2d_grad_op_name]() -> const std::string& {
             return ctx->GetOp(adaptive_avg_pool2d_grad_op_name).output("dx", 0);
           });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

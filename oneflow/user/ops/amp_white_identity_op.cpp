@@ -22,14 +22,14 @@ namespace {
 REGISTER_USER_OP("amp_white_identity")
     .Input("in")
     .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) {
+    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
       user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_shape() = in->shape();
       *out->mut_is_dynamic() = in->is_dynamic();
       return Maybe<void>::Ok();
     })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) {
+    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
       for (int i = 0; i < in.shape().NumAxes(); ++i) {
         ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
@@ -45,7 +45,7 @@ REGISTER_USER_OP("amp_white_identity")
     });
 
 REGISTER_USER_OP_GRAD("amp_white_identity")
-    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
@@ -56,6 +56,7 @@ REGISTER_USER_OP_GRAD("amp_white_identity")
         op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

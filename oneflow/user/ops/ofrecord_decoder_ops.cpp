@@ -38,7 +38,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
@@ -70,7 +70,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
@@ -97,7 +97,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
@@ -142,7 +142,7 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);

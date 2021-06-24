@@ -47,14 +47,15 @@ REGISTER_USER_OP("fake_quantization")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* scale = GetInputArgModifierFn("scale", 0);
-      CHECK(scale != nullptr);
+      CHECK_OR_RETURN(scale != nullptr);
       scale->set_requires_grad(false);
 
       user_op::InputArgModifier* zero_point = GetInputArgModifierFn("zero_point", 0);
-      CHECK(zero_point != nullptr);
+      CHECK_OR_RETURN(zero_point != nullptr);
       zero_point->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
@@ -124,6 +125,7 @@ REGISTER_USER_OP_GRAD("fake_quantization")
         op.BindGradTensorWithOpInput(identity_op.output("out", 0), "in", 0);
         AddOp(identity_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace

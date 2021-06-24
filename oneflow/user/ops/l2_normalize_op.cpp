@@ -123,6 +123,7 @@ REGISTER_USER_OP_GRAD("l2_normalize")
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "x", 0);
         AddOp(grad_op);
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow
