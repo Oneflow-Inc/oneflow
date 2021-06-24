@@ -14,8 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import platform
-import unittest
 import os
+
+# FIXME: remove this skip to see the error
+if os.getenv("ONEFLOW_TEST_GITHUB_HOSTED") and platform.system() == "Darwin":
+    exit()
+import unittest
 import numpy as np
 import tensorflow as tf
 import oneflow as flow
@@ -143,11 +147,6 @@ def compare_with_tensorflow(
     flow.clear_default_session()
 
 
-# FIXME: remove this skip to see the error
-@unittest.skipIf(
-    os.getenv("ONEFLOW_TEST_GITHUB_HOSTED") and platform.system() == "Darwin",
-    "this often fails on GitHub hosted macOS servers",
-)
 @flow.unittest.skip_unless_1n1d()
 class TestBinaryElementwiseOps(flow.unittest.TestCase):
     def test_floordiv(test_case):
