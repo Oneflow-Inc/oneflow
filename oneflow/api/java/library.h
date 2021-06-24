@@ -29,6 +29,9 @@ JNIEXPORT void      JNICALL Java_org_oneflow_Library_closeJobBuildAndInferCtx(JN
 // launch
 JNIEXPORT void      JNICALL Java_org_oneflow_Library_startLazyGlobalSession(JNIEnv* env, jobject obj);
 JNIEXPORT void      JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj);
+JNIEXPORT void      JNICALL Java_org_oneflow_Library_runPushJob(JNIEnv* env, jobject obj, jfloatArray javaArr);
+JNIEXPORT void      JNICALL Java_org_oneflow_Library_runInferenceJob(JNIEnv* env, jobject obj);
+JNIEXPORT void      JNICALL Java_org_oneflow_Library_runPullJob(JNIEnv* env, jobject obj);
 
 #ifdef __cplusplus
 }

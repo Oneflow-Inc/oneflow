@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "jni.h"
 #include "oneflow/api/java/library.h"
 #include "oneflow/api/python/framework/framework.h"
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
@@ -125,7 +126,7 @@ void JNICALL Java_org_oneflow_Library_curJobAddOp(JNIEnv* env, jobject obj, jstr
   op_conf.set_scope_symbol_id(scope->symbol_id().GetOrThrow());
   op_conf.set_device_tag(scope->device_parallel_desc_symbol()->device_tag());
 
-  std::cout << op_conf.DebugString() << std::endl;
+  // std::cout << op_conf.DebugString() << std::endl;
 
   oneflow::CurJobBuildAndInferCtx_AddAndInferConsistentOp(op_conf.DebugString());
 }
@@ -209,4 +210,65 @@ void JNICALL Java_org_oneflow_Library_loadCheckpoint(JNIEnv* env, jobject obj) {
     new oneflow::JavaForeignJobInstance("System-ModelLoad", "", "", copy_model_load_path, nullptr, nullptr)
   );
   oneflow::LaunchJob(job_inst);
+}
+
+JNIEXPORT 
+void JNICALL Java_org_oneflow_Library_runPushJob(JNIEnv* env, jobject obj, jfloatArray javaArr) {
+  // Input_15 shape[1] = { 1 }, data[0] = { 0 } dtype = int32
+  auto input_15 = [](uint64_t of_blob_ptr) -> void {
+    using namespace oneflow;
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    int64_t shape[1] = { 1 };
+	  int32_t data[20] = { 0 };
+    of_blob->CopyShapeFrom(shape, 1);
+    of_blob->AutoMemCopyFrom(data, 1);
+  };
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_input_15(
+    new oneflow::JavaForeignJobInstance("System-Push-Input_15", "Input_15", "", input_15, nullptr, nullptr)
+  );
+  oneflow::LaunchJob(job_inst_input_15);
+
+  // Input_14 set to all zero
+  
+  // get an float array
+  float *arr = (*env).GetFloatArrayElements(javaArr, 0);
+  float image_data[28 * 28] = { 0 };
+  for (int i = 0; i < 28 * 28; i++) image_data[i] = arr[i];
+  delete arr;
+  
+  auto input_14 = [image_data](uint64_t of_blob_ptr) -> void {
+    using namespace oneflow;
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    int64_t shape[4] = { 1, 1, 28, 28 };
+    of_blob->CopyShapeFrom(shape, 4);
+    of_blob->AutoMemCopyFrom(image_data, 28 * 28);
+  };
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_input_14(
+    new oneflow::JavaForeignJobInstance("System-Push-Input_14", "Input_14", "", input_14, nullptr, nullptr)
+  );
+  oneflow::LaunchJob(job_inst_input_14);
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_Library_runInferenceJob(JNIEnv* env, jobject obj) {
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst(
+    new oneflow::JavaForeignJobInstance("mlp_inference", "", "", nullptr, nullptr, nullptr)
+  );
+  oneflow::LaunchJob(job_inst);
+}
+
+JNIEXPORT
+void JNICALL Java_org_oneflow_Library_runPullJob(JNIEnv* env, jobject obj) {
+  float data[10] = { 0 };
+  auto return_17 = [&data](uint64_t of_blob_ptr) -> void {
+    using namespace oneflow;
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->AutoMemCopyTo(data, 10);
+    for (int i = 0; i < 10; i++) std::cout << data[i] << " ";
+    std::cout << std::endl;
+  };
+  const std::shared_ptr<oneflow::ForeignJobInstance> job_inst_return_17(
+    new oneflow::JavaForeignJobInstance("System-Pull-Return_17", "", "Return_17", nullptr, return_17, nullptr)
+  );
+  oneflow::LaunchJob(job_inst_return_17);
 }
