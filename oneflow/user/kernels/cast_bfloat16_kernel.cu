@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include <cuda.h>
 
-#if CUDA_VERSION >= 11000
+#if defined(CUDA_VERSION) && CUDA_VERSION >= 11000
+
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
@@ -92,4 +94,4 @@ REGISTER_USER_KERNEL("cast_like")
 }  // namespace user_op
 }  // namespace oneflow
 
-#endif
+#endif  // defined(CUDA_VERSION) && CUDA_VERSION >= 11000
