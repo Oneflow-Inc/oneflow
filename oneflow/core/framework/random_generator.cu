@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// #include "oneflow/user/kernels/random_mask_generator.h"
+// #include "oneflow/core/framework/random_generator.h"
 
 // namespace oneflow {
+// namespace one {
 
 // namespace {
 
@@ -77,8 +78,7 @@ limitations under the License.
 
 // }  // namespace
 
-// RandomMaskGenerator<DeviceType::kGPU>::RandomMaskGenerator(int64_t seed) {
-
+// GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(int64_t seed) {
 //   cudaDeviceProp prop;
 //   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
 //   block_num_ = prop.multiProcessorCount;
@@ -87,20 +87,11 @@ limitations under the License.
 //   SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
 // }
 
-// RandomMaskGenerator<DeviceType::kGPU>::~RandomMaskGenerator() {
+// GeneratorImpl<DeviceType::kGPU>::~GeneratorImpl() {
 //   OF_CUDA_CHECK(cudaFree(curand_states_));
 // }
 
-// void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
-//                                                      const float rate, int8_t* mask) {
-//   const int32_t elem_cnt_per_block = thread_num_ * sizeof(PackType) * kMinPackPerThread;
-//   const int32_t block_num =
-//       std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block),
-//       block_num_);
-//   GenerateGpu<<<block_num, thread_num_, 0, device_ctx->cuda_stream()>>>(curand_states_, n, rate,
-//                                                                         mask);
-// }
+// template class GeneratorImpl<DeviceType::kGPU>;
 
-// template class RandomMaskGenerator<DeviceType::kGPU>;
-
+// } // namespace one
 // }  // namespace oneflow

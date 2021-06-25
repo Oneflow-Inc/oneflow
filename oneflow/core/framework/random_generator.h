@@ -18,10 +18,10 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/device/device_context.h"
-// #ifdef WITH_CUDA
-// #include <curand.h>
-// #include <curand_kernel.h>
-// #endif
+#ifdef WITH_CUDA
+#include <curand.h>
+#include <curand_kernel.h>
+#endif
 
 namespace oneflow {
 namespace one {
@@ -32,6 +32,7 @@ class GeneratorImplBase {
   virtual ~GeneratorImplBase() = default;
 
  protected:
+  DeviceType device_type_;
   int64_t seed_;
 };
 
@@ -47,8 +48,9 @@ class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
   }
   virtual ~GeneratorImpl() = default;
 
- protected:
-  DeviceType device_type_;
+  std::mt19937& generator() { return mt19937_generator_; }
+
+ public:
   std::mt19937 mt19937_generator_;
 };
 
@@ -71,16 +73,31 @@ class Generator final {
   // TODO: make default value random like pytorh
   explicit Generator(int64_t seed = 0) : seed_(seed) {}
 
+  // TODO: should also set seed of generators?
   void set_current_seed(const int64_t seed) { seed_ = seed; }
+  int64_t get_current_seed() { return seed_; }
 
   template<DeviceType device_type>
-  Maybe<std::shared_ptr<GeneratorImpl<device_type>>> GetDeviceGenerator() {
-    CHECK_OR_RETURN(device_type == DeviceType::kInvalidDevice);
+  Maybe<GeneratorImpl<device_type>> GetDeviceGenerator() {
+    CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
     auto it = generators_.find(device_type);
     if (it == generators_.end()) {
-      it = generators_.emplace(device_type, std::make_shared<GeneratorImpl<device_type>>(seed_)).first;
+      it = generators_.emplace(device_type, std::make_shared<GeneratorImpl<device_type>>(seed_))
+               .first;
     }
-    return dynamic_cast<std::shared_ptr<GeneratorImpl<device_type>>>(it->second);
+    return std::dynamic_pointer_cast<GeneratorImpl<device_type>>(it->second);
+  }
+
+  template<DeviceType device_type>
+  static Maybe<GeneratorImpl<device_type>> GetDefaultDeviceGenerator() {
+    CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
+    static auto generator = GetDefaultGenerator();
+    return generator.GetDeviceGenerator<device_type>();
+  }
+
+  static const std::shared_ptr<Generator> GetDefaultGenerator() {
+    static auto generator = std::make_shared<Generator>();
+    return generator;
   }
 
  private:

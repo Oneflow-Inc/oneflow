@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/user/kernels/dropout_kernel.cpp"
 
 namespace oneflow {
 namespace one {
@@ -35,15 +36,23 @@ class DropoutFunctor {
  public:
   DropoutFunctor() {
     rml_op_ = CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
-    do_op_ = CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Build());
+    do_op_ = CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
                            const std::shared_ptr<one::Generator>& gen) const {
     MutableAttrMap rml_attrs;
     JUST(rml_attrs.SetAttr<float>("rate", p));
     JUST(rml_attrs.SetAttr<int64_t>("seed", 0));  // FIXME: get from generator?
-    // FIXME: add eager check
-    auto const& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*rml_op_, {x}, rml_attrs));
+
+    // alow gen to be null here?
+    const auto& rml_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    // if (oneflow::EagerExecutionEnabled()) {
+    //   if (gen == nullptr) {
+    //     gen = one::Generator::GetDefaultGenerator();
+    //   }
+    //   rml_ctx.state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    // }
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*rml_op_, {x}, {rml_attrs, rml_state}));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
     MutableAttrMap do_attrs;

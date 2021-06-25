@@ -648,13 +648,14 @@ Maybe<void> InstructionsBuilder::BuildRecvInstruction(
 Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-    const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
+    const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+    const one::OpExprInterpContext& ctx,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
     const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, ctx);
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));

@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,23 +12,21 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from __future__ import absolute_import
+*/
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
+namespace oneflow {
 
-import oneflow
-import oneflow._oneflow_internal
-from oneflow.python.oneflow_export import oneflow_export
+namespace {
+#define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
+  REGISTER_USER_KERNEL("random_mask_like")         \
+      .SetCreateFn<RandomMaskLikeKernel<device>>() \
+      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
 
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
+// #ifdef WITH_CUDA
+// REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+// #endif
+}  // namespace
 
-@oneflow_export("Generator")
-class Generator(object):
-    def __init__(self):
-        self._gen = oneflow._oneflow_internal.one.Generator()
-
-    def manual_seed(self, seed):
-        self._gen.manual_seed(seed)
-
-    @property
-    def gen(self):
-        return self._gen
+}  // namespace oneflow
