@@ -129,6 +129,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
+        if: always()
         continue-on-error: true
         run: |
           mkdir -p build
@@ -136,6 +137,7 @@ jobs:
           ./bin/oneflow_testexe
         shell: bash
       - name: Op test
+        if: always()
         continue-on-error: true
         run: |
           source build/source.sh
