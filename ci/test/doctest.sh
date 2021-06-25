@@ -4,7 +4,7 @@ export PYTHONUNBUFFERED=1
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 
 unset val_stdout val_stderr
-eval "$( python3 -c "import oneflow; print(oneflow.__path__[0])" \
+eval "$(python3 -c 'import oneflow; print(oneflow.__path__[0])' \
         2> >(readarray -t val_stderr; typeset -p val_stderr) \
          > >(readarray -t val_stdout; typeset -p val_stdout) )"
 cd ${val_stdout}
