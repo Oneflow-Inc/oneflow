@@ -26,32 +26,43 @@ static const int64_t kAxisNumMax = 6;
 
 namespace {
 
-std::vector<std::shared_ptr<cfg::SbpParallel>> MakeSplitSbpParallelList(int axis_num_max) {
-  std::vector<std::shared_ptr<cfg::SbpParallel>> ret(axis_num_max);
+Maybe<std::vector<std::shared_ptr<cfg::SbpParallel>>> MakeSplitSbpParallelList(int axis_num_max) {
+  std::shared_ptr<std::vector<std::shared_ptr<cfg::SbpParallel>>> ret =
+      std::make_shared<std::vector<std::shared_ptr<cfg::SbpParallel>>>(axis_num_max);
   for (int i = 0; i < axis_num_max; ++i) {
     std::shared_ptr<cfg::SbpParallel> split_sbp_parallel = std::make_shared<cfg::SbpParallel>();
     split_sbp_parallel->mutable_split_parallel()->set_axis(i);
-    ret[i] = (split_sbp_parallel);
+    ret->at(i) = split_sbp_parallel;
   }
   return ret;
 }
 
-Maybe<cfg::SbpParallel> GetSplitSbpParallel(int axis) {
-  CHECK_LT_OR_RETURN(axis, kAxisNumMax);
-  static std::vector<std::shared_ptr<cfg::SbpParallel>> split_sbp_list =
-      MakeSplitSbpParallelList(kAxisNumMax);
-  return split_sbp_list.at(axis);
-}
-
-Maybe<cfg::SbpParallel> GetBroadcastSbpParallel() {
+Maybe<cfg::SbpParallel> MakeBroadcastSbpParallel() {
   std::shared_ptr<cfg::SbpParallel> broadcast_sbp = std::make_shared<cfg::SbpParallel>();
   broadcast_sbp->mutable_broadcast_parallel();
   return broadcast_sbp;
 }
 
-Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
+Maybe<cfg::SbpParallel> MakePartialSumSbpParallel() {
   std::shared_ptr<cfg::SbpParallel> partial_sum_sbp = std::make_shared<cfg::SbpParallel>();
   partial_sum_sbp->mutable_partial_sum_parallel();
+  return partial_sum_sbp;
+}
+
+Maybe<cfg::SbpParallel> GetSplitSbpParallel(int axis) {
+  CHECK_LT_OR_RETURN(axis, kAxisNumMax);
+  static std::vector<std::shared_ptr<cfg::SbpParallel>> split_sbp_list =
+      *JUST(MakeSplitSbpParallelList(kAxisNumMax));
+  return split_sbp_list.at(axis);
+}
+
+Maybe<cfg::SbpParallel> GetBroadcastSbpParallel() {
+  static std::shared_ptr<cfg::SbpParallel> broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+  return broadcast_sbp;
+}
+
+Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
+  static std::shared_ptr<cfg::SbpParallel> partial_sum_sbp = JUST(MakePartialSumSbpParallel());
   return partial_sum_sbp;
 }
 
