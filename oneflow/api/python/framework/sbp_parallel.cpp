@@ -22,14 +22,14 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-static const int64_t kAxisNumMax = 6;
+static const int64_t kMaxSplitAxis = 6;
 
 namespace {
 
-Maybe<std::vector<std::shared_ptr<cfg::SbpParallel>>> MakeSplitSbpParallelList(int axis_num_max) {
+Maybe<std::vector<std::shared_ptr<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
   std::shared_ptr<std::vector<std::shared_ptr<cfg::SbpParallel>>> ret =
-      std::make_shared<std::vector<std::shared_ptr<cfg::SbpParallel>>>(axis_num_max);
-  for (int i = 0; i < axis_num_max; ++i) {
+      std::make_shared<std::vector<std::shared_ptr<cfg::SbpParallel>>>(max_split_axis);
+  for (int i = 0; i < max_split_axis; ++i) {
     std::shared_ptr<cfg::SbpParallel> split_sbp_parallel = std::make_shared<cfg::SbpParallel>();
     split_sbp_parallel->mutable_split_parallel()->set_axis(i);
     ret->at(i) = split_sbp_parallel;
@@ -50,9 +50,9 @@ Maybe<cfg::SbpParallel> MakePartialSumSbpParallel() {
 }
 
 Maybe<cfg::SbpParallel> GetSplitSbpParallel(int axis) {
-  CHECK_LT_OR_RETURN(axis, kAxisNumMax);
+  CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
   static std::vector<std::shared_ptr<cfg::SbpParallel>> split_sbp_list =
-      *JUST(MakeSplitSbpParallelList(kAxisNumMax));
+      *JUST(MakeSplitSbpParallelList(kMaxSplitAxis));
   return split_sbp_list.at(axis);
 }
 
@@ -69,6 +69,7 @@ Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
+  m.attr("kMaxSplitAxis") = kMaxSplitAxis;
   m.def("split", [](int axis) { return GetSplitSbpParallel(axis).GetPtrOrThrow(); });
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetPtrOrThrow(); });
   m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetPtrOrThrow(); });
