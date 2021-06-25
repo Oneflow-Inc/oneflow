@@ -379,6 +379,7 @@ if __name__ == "__main__":
             if cuda_version in ["11.0", "11.1"]:
                 versioned_img_tag = f"{img_prefix}:0.2"
             enforced_oneflow_cmake_args = ""
+            enforced_oneflow_cmake_args += " -DBUILD_TESTING=ON"
             if float(cuda_version) >= 11:
                 assert (
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args

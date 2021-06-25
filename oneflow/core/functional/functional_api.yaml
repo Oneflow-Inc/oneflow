@@ -246,7 +246,7 @@
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, Tensor bias, *, Int32List stride, 
+    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
   
