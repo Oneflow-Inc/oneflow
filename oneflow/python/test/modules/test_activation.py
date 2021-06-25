@@ -229,6 +229,12 @@ def numpy_softplus(x, beta, threshold):
     return np.where(x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x)))
 
 
+def numpy_mish_grad(x):
+    f = 1 + np.exp(x)
+    y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / ((f * f + 1) * (f * f + 1))
+    return y_grad
+
+
 def _test_sigmoid(test_case, device):
     m = flow.nn.Sigmoid()
     input_arr = np.random.randn(2, 3, 4, 5)
@@ -740,7 +746,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
 def _test_mish(test_case, shape, device):
     np_input = np.random.randn(*shape)
     of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
+        np_input, dtype=flow.float32, device=flow.device(device)
     )
 
     m = flow.nn.Mish()
@@ -749,14 +755,14 @@ def _test_mish(test_case, shape, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
-def _test_mish_backward(test_case, device):
+def _test_mish_backward(test_case, shape, device):
     m = flow.nn.Mish()
-    arr = np.array([1.0, 2.0, 21.0, 20.0, 4.0])
+    arr = np.random.randn(*shape)
     x = flow.Tensor(arr, device=flow.device(device), requires_grad=True)
     of_out = m(x)
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = [1.0490363, 1.0693179, 1., 1., 1.0044327]
+    np_grad = numpy_mish_grad(arr)
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
@@ -765,12 +771,13 @@ def _test_mish_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestMishModule(flow.unittest.TestCase):
-    def test_mish_relu(test_case):
+    def test_mish(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_mish,
             _test_mish_backward,
         ]
+        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
