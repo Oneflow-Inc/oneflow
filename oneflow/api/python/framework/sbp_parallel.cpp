@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 
 namespace py = pybind11;
@@ -26,43 +28,58 @@ static const int64_t kMaxSplitAxis = 6;
 
 namespace {
 
-Maybe<std::vector<std::shared_ptr<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
-  std::shared_ptr<std::vector<std::shared_ptr<cfg::SbpParallel>>> ret =
-      std::make_shared<std::vector<std::shared_ptr<cfg::SbpParallel>>>(max_split_axis);
+std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
+  std::string sbp_str = "sbp(type='";
+  if (sbp_sym->has_broadcast_parallel()) {
+    sbp_str += "B";
+  } else if (sbp_sym->has_partial_sum_parallel()) {
+    sbp_str += "P";
+  } else if (sbp_sym->has_split_parallel()) {
+    sbp_str += "S" + std::to_string(sbp_sym->split_parallel().axis());
+  } else {
+    UNIMPLEMENTED();
+  }
+  sbp_str += "')";
+  return sbp_str;
+}
+
+Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
+  std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> ret =
+      std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(max_split_axis);
   for (int i = 0; i < max_split_axis; ++i) {
-    std::shared_ptr<cfg::SbpParallel> split_sbp_parallel = std::make_shared<cfg::SbpParallel>();
-    split_sbp_parallel->mutable_split_parallel()->set_axis(i);
-    ret->at(i) = split_sbp_parallel;
+    cfg::SbpParallel split_sbp_parallel;
+    split_sbp_parallel.mutable_split_parallel()->set_axis(i);
+    ret->at(i) = Symbol<cfg::SbpParallel>(split_sbp_parallel);
   }
   return ret;
 }
 
-Maybe<cfg::SbpParallel> MakeBroadcastSbpParallel() {
-  std::shared_ptr<cfg::SbpParallel> broadcast_sbp = std::make_shared<cfg::SbpParallel>();
-  broadcast_sbp->mutable_broadcast_parallel();
-  return broadcast_sbp;
+Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
+  cfg::SbpParallel broadcast_sbp;
+  broadcast_sbp.mutable_broadcast_parallel();
+  return Symbol<cfg::SbpParallel>(broadcast_sbp);
 }
 
-Maybe<cfg::SbpParallel> MakePartialSumSbpParallel() {
-  std::shared_ptr<cfg::SbpParallel> partial_sum_sbp = std::make_shared<cfg::SbpParallel>();
-  partial_sum_sbp->mutable_partial_sum_parallel();
-  return partial_sum_sbp;
+Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
+  cfg::SbpParallel partial_sum_sbp;
+  partial_sum_sbp.mutable_partial_sum_parallel();
+  return Symbol<cfg::SbpParallel>(partial_sum_sbp);
 }
 
-Maybe<cfg::SbpParallel> GetSplitSbpParallel(int axis) {
+Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
   CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
-  static std::vector<std::shared_ptr<cfg::SbpParallel>> split_sbp_list =
+  static std::vector<Symbol<cfg::SbpParallel>> split_sbp_sym_list =
       *JUST(MakeSplitSbpParallelList(kMaxSplitAxis));
-  return split_sbp_list.at(axis);
+  return split_sbp_sym_list.at(axis);
 }
 
-Maybe<cfg::SbpParallel> GetBroadcastSbpParallel() {
-  static std::shared_ptr<cfg::SbpParallel> broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+Maybe<Symbol<cfg::SbpParallel>> GetBroadcastSbpParallel() {
+  static Symbol<cfg::SbpParallel> broadcast_sbp = JUST(MakeBroadcastSbpParallel());
   return broadcast_sbp;
 }
 
-Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
-  static std::shared_ptr<cfg::SbpParallel> partial_sum_sbp = JUST(MakePartialSumSbpParallel());
+Maybe<Symbol<cfg::SbpParallel>> GetPartialSumSbpParallel() {
+  static Symbol<cfg::SbpParallel> partial_sum_sbp = JUST(MakePartialSumSbpParallel());
   return partial_sum_sbp;
 }
 
@@ -70,9 +87,12 @@ Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
-  m.def("split", [](int axis) { return GetSplitSbpParallel(axis).GetPtrOrThrow(); });
-  m.def("broadcast", []() { return GetBroadcastSbpParallel().GetPtrOrThrow(); });
-  m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetPtrOrThrow(); });
+  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "SbpSymbol")
+      .def("__str__", &SbpParallelSymbolToString)
+      .def("__repr__", &SbpParallelSymbolToString);
+  m.def("split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); });
+  m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });
+  m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetOrThrow(); });
 }
 
 }  // namespace oneflow
