@@ -226,12 +226,16 @@ def numpy_logsoftmax(x, dim):
 
 
 def numpy_softplus(x, beta, threshold):
-    return np.where(x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x)))
+    return np.where(
+        x * beta > threshold, x, 1.0 / beta * np.log(1.0 + np.exp(beta * x))
+    )
 
 
 def numpy_mish_grad(x):
     f = 1 + np.exp(x)
-    y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / ((f * f + 1) * (f * f + 1))
+    y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
+        (f * f + 1) * (f * f + 1)
+    )
     return y_grad
 
 
@@ -745,9 +749,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
 
 def _test_mish(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    of_input = flow.Tensor(
-        np_input, dtype=flow.float32, device=flow.device(device)
-    )
+    of_input = flow.Tensor(np_input, dtype=flow.float32, device=flow.device(device))
 
     m = flow.nn.Mish()
     of_out = m(of_input)

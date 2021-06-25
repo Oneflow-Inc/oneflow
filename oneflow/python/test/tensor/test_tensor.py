@@ -1015,13 +1015,13 @@ class TestTensor(flow.unittest.TestCase):
         def np_mish(x):
             f = 1 + np.exp(x)
             y = x * ((f * f - 1) / (f * f + 1))
-            y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / ((f * f + 1) * (f * f + 1))
+            y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
+                (f * f + 1) * (f * f + 1)
+            )
             return [y, y_grad]
 
         np_input = np.random.randn(2, 4, 5, 6,)
-        of_input = flow.Tensor(
-            np_input, dtype=flow.float32, requires_grad=True
-        )
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.mish()
 
         np_out, np_grad = np_mish(np_input)
