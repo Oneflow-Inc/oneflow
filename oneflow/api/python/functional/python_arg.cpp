@@ -71,6 +71,11 @@ Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Ten
 }
 
 template<>
+Maybe<one::Tensor> PythonArg::ObjectAs<one::Tensor>() const {
+  return *JUST(detail::cast<std::shared_ptr<one::Tensor>>(Borrow()));
+}
+
+template<>
 Maybe<std::shared_ptr<one::TensorTuple>> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>()
     const {
   py::object obj = Borrow();
