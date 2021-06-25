@@ -29,8 +29,8 @@ jobs:
       matrix:
         test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
-        cmake_build_type: ["CMAKE_BUILD_TYPE=Debug", "CMAKE_BUILD_TYPE=Release"]
-        build_shared_libs: ["BUILD_SHARED_LIBS=ON", "BUILD_SHARED_LIBS=OFF"]
+        cmake_build_type: ["Debug", "Release"]
+        build_shared_libs: ["ON", "OFF"]
         include:
           - test_suite: mac
             os: "macos-10.15"
@@ -74,9 +74,10 @@ jobs:
           set -x
           cmake_flags=""
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -DBUILD_TESTING=ON"
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
-          cmake_flags+=" -D${{ matrix.cmake_build_type }}"
-          cmake_flags+=" -D${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
+          cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
@@ -134,3 +135,23 @@ jobs:
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
         shell: bash
+      - name: "Tar logs"
+        if: always()
+        run: |
+          set -ex
+          if [[ -d "${HOME}/oneflow_temp" ]]
+          then
+              tar -cvf home_oneflow_temp.tar ${HOME}/oneflow_temp
+          fi
+          if [[ -d "${PWD}/test_tmp_dir" ]]
+          then
+              tar -cvf cwd_test_tmp_dir.tar ${PWD}/test_tmp_dir
+          fi
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs-${{ matrix.test_suite }}-${{ matrix.cmake_generator }}-${{ matrix.cmake_build_type }}-shared-${{ matrix.build_shared_libs }}
+          path: |
+            home_oneflow_temp.tar
+            cwd_test_tmp_dir.tar
