@@ -193,3 +193,8 @@
 - name: "softplus"
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
+
+- name: "one_hot"
+  signature: "Tensor OneHot(Tensor x, Scalar on_value=1, Scalar off_value=0, Int64 depth, Int32 axis=-1, DataType dtype)"
+  bind_python: True
+

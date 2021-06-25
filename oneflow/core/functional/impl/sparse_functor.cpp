@@ -33,23 +33,24 @@ class OneHotFunctor {
   OneHotFunctor() {
     one_hot_op_ = CHECK_JUST(one::OpBuilder("one_hot").Input("indices").Output("out").Build());
   }
-  Maybe<Tensor> operator()(const int64_t& depth, const Scalar& value, const DataType& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& on_value, const Scalar& off_value, const int64_t& depth, const int32_t& axis, const DataType& dtype) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
     JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
     if (IsIntegralDataType(dtype)) {
-      JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(value.As<int64_t>())));
-      JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
     } else {
-      JUST(attrs.SetAttr<double>("floating_on_value", JUST(value.As<double>())));
-      JUST(attrs.SetAttr<double>("floating_off_value", JUST(value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_on_value", JUST(on_value.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_off_value", JUST(off_value.As<double>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {x}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
-}
+  std::shared_ptr<OpExpr> one_hot_op_;
+};
 
 }  // namespace impl
 
