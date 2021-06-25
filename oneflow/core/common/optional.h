@@ -22,6 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace internal {
+
 template<typename T, typename U = void>
 class Storage;
 
@@ -103,13 +105,16 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
   std::shared_ptr<T> value_;
 };
 
+}  // namespace internal
+
 template<typename T>
 class Optional {
  public:
   Optional() : init_(false) {}
 
-  template<typename... Args, typename std::enable_if<
-                                 std::is_constructible<Storage<T>, Args...>::value, int>::type = 0>
+  template<typename... Args,
+           typename std::enable_if<std::is_constructible<internal::Storage<T>, Args...>::value,
+                                   int>::type = 0>
   Optional(Args&&... args) : init_(true), storage_(std::forward<Args>(args)...) {}
 
   ~Optional() = default;
@@ -156,7 +161,7 @@ class Optional {
 
  private:
   bool init_;
-  Storage<T> storage_;
+  internal::Storage<T> storage_;
 };
 
 template<typename T>
