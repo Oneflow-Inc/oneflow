@@ -59,11 +59,6 @@ Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorImpl::create_autograd_meta() {
-  autograd_meta_ = NewAutogradMeta(requires_grad_, is_leaf_);
-  return Maybe<void>::Ok();
-}
-
 namespace {
 
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
