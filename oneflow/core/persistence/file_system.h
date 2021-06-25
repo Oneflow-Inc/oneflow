@@ -129,7 +129,7 @@ class FileSystem {
 
   // Creates the specified directory.
   virtual void CreateDir(const std::string& dirname) = 0;
-  void CreateDirIfNotExist(const std::string& dirname);
+  virtual void CreateDirIfNotExist(const std::string& dirname);
   virtual void RecursivelyCreateDir(const std::string& dirname);
   void RecursivelyCreateDirIfNotExist(const std::string& dirname);
 

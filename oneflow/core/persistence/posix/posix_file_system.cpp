@@ -141,6 +141,11 @@ void PosixFileSystem::CreateDir(const std::string& dirname) {
   PCHECK(mkdir(TranslateName(dirname).c_str(), 0755) == 0) << "Fail to create dir " << dirname;
 }
 
+void PosixFileSystem::CreateDirIfNotExist(const std::string& dirname) {
+  int ret = mkdir(TranslateName(dirname).c_str(), 0755);
+  PCHECK(ret == 0 || (errno == EEXIST && IsDirectory(dirname))) << "Fail to create dir " << dirname;
+}
+
 void PosixFileSystem::DeleteDir(const std::string& dirname) {
   PCHECK(rmdir(TranslateName(dirname).c_str()) == 0) << "Fail to delete dir " << dirname;
 }

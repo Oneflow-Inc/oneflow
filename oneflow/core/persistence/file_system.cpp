@@ -32,8 +32,29 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
 }
 
 void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
-  if (IsDirectory(dirname)) { return; }
-  RecursivelyCreateDir(dirname);
+  // if (IsDirectory(dirname)) { return; }
+  // RecursivelyCreateDir(dirname);
+  std::string remaining_dir = dirname;
+  std::vector<std::string> sub_dirs;
+  while (!remaining_dir.empty()) {
+    bool status = FileExists(remaining_dir);
+    if (status) { break; }
+    // Basename returns "" for / ending dirs.
+    if (remaining_dir[remaining_dir.length() - 1] != '/') {
+      sub_dirs.push_back(Basename(remaining_dir));
+    }
+    remaining_dir = Dirname(remaining_dir);
+  }
+
+  // sub_dirs contains all the dirs to be created but in reverse order.
+  std::reverse(sub_dirs.begin(), sub_dirs.end());
+
+  // Now create the directories.
+  std::string built_path = remaining_dir;
+  for (const std::string& sub_dir : sub_dirs) {
+    built_path = JoinPath(built_path, sub_dir);
+    CreateDirIfNotExist(built_path);
+  }
 }
 
 bool FileSystem::IsDirEmpty(const std::string& dirname) { return ListDir(dirname).empty(); }
