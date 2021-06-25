@@ -69,7 +69,7 @@ Maybe<cfg::SbpParallel> GetPartialSumSbpParallel() {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
-  m.attr("kMaxSplitAxis") = kMaxSplitAxis;
+  m.attr("max_split_axis") = kMaxSplitAxis;
   m.def("split", [](int axis) { return GetSplitSbpParallel(axis).GetPtrOrThrow(); });
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetPtrOrThrow(); });
   m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetPtrOrThrow(); });
