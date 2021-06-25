@@ -245,8 +245,21 @@ class Conv2d(Module):
                 out_list.append(
                     flow.F.conv2d(
                         in_split_list[i],
-                        self.weight[i : i + 1, :, :, :],
-                        self.bias[i : i + 1] if self.bias else None,
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
                         stride=self.stride,
                         padding=self.padding,
                         dilation=self.dilation,
