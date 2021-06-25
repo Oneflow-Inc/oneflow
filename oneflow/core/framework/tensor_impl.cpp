@@ -42,6 +42,11 @@ std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
 
 }  // namespace
 
+Maybe<MirroredTensorImpl> LazyMirroredTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<LazyMirroredTensorImpl>(tensor_meta_, false, true);
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+}
+
 EagerMirroredTensorImpl::EagerMirroredTensorImpl()
     : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), NewAutogradMeta(false, false)) {}
 
@@ -61,8 +66,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)),
       tensor_storage_(tensor_storage) {}
-
-void EagerMirroredTensorImpl::UpdateTensorStorage() {
+Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
@@ -72,6 +76,7 @@ void EagerMirroredTensorImpl::UpdateTensorStorage() {
           builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
       });
+  return Maybe<void>::Ok();
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
@@ -105,7 +110,7 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
                   == tensor_meta()->shape_ptr().get());
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
-  UpdateTensorStorage();
+  JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
 
@@ -127,6 +132,13 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   eager_blob_object_->set_is_shape_synced(true);
   return eager_blob_object_->blob_desc().shape_ptr();
+}
+
+Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
+  auto detached_impl =
+      std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
+  detached_impl->eager_blob_object_ = eager_blob_object_;
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
