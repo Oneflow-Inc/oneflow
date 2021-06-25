@@ -195,6 +195,7 @@ class Conv1d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
         )
+        self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
@@ -215,20 +216,25 @@ class Conv1d(Module):
             in_split_list = ConvUtil.split(
                 x, axis=in_channel_axis, split_num=self.groups
             )
-            weight_split_list = ConvUtil.split(
-                self.weight, axis=weight_channel_axis, split_num=self.groups
-            )
-            bias_split_list = ConvUtil.split(
-                self.bias, axis=bias_channel_axis, split_num=self.groups
-            )
-
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
                     flow.F.conv1d(
                         in_split_list[i],
-                        weight_split_list[i],
-                        bias_split_list[i],
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                        ],
+                        self.bias[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups
+                        ]
+                        if self.bias
+                        else None,
                         stride=self.stride,
                         padding=self.padding,
                         dilation=self.dilation,

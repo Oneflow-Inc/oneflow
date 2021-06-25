@@ -57,23 +57,27 @@ class Conv1DFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const std::shared_ptr<one::Tensor>& bias,
-                           const std::vector<int32_t>& stride, const std::vector<int32_t>& padding,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
-    std::vector<int32_t> kernel_size_vec{(weight->shape())->At(2)};
-    JUST(conv_attrs.SetAttr<int32_t>("filters", int64_t((weight->shape())->At(0))));
+    std::vector<int32_t> kernel_size_vec{(int32_t)(weight->shape())->At(2)};
+    JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
-    std::shared_ptr<one::Tensor> conv_out =
+    const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
-    MutableAttrMap bias_attrs;
-    JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-    return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, bias}, bias_attrs);
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+    } else {
+      return conv_out;
+    }
   }
 
  private:
