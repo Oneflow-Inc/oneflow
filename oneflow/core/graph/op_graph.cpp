@@ -377,13 +377,14 @@ Maybe<void> OpGraph::InferLogicalBlobDesc(const Job& job) const {
           job_parallel_view_conf.op_name2parallel_distribution_signature_conf();
       const auto& iter = op_name2parallel_distribution_sig_conf.find(op_node->op().op_name());
       if (iter != op_name2parallel_distribution_sig_conf.end()) {
-        parallel_distribution_sig_conf = iter->second;
+        parallel_distribution_sig_conf = cfg::ParallelDistributionSignature(iter->second);
         if (op_node->parallel_desc().hierarchy()->NumAxes() == 1) {
           const auto& op_name2sbp_sig_conf = job_parallel_view_conf.op_name2sbp_signature_conf();
           const auto& op_name2sbp_sig_conf_it = op_name2sbp_sig_conf.find(op_node->op().op_name());
           CHECK(op_name2sbp_sig_conf_it != op_name2sbp_sig_conf.end());
-          CheckSbpSignatureAndParallelDistributionEquals(op_name2sbp_sig_conf_it->second,
-                                                         iter->second);
+          CheckSbpSignatureAndParallelDistributionEquals(
+              cfg::SbpSignature(op_name2sbp_sig_conf_it->second),
+              cfg::ParallelDistributionSignature(iter->second));
         } else {
           // do nothing
         }
