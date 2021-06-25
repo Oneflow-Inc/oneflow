@@ -26,9 +26,8 @@ template<DeviceType device_type, typename T>
 struct CTCGreedyDecoderFunctor final {
   void operator()(DeviceCtx* ctx, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
-                  const bool merge_repeated, NdIndexOffsetHelper<int64_t, 3>& input_helper,
-                  const int64_t max_input_length, const int64_t batch_size,
-                  const int64_t num_labels);
+                  const bool merge_repeated, const int64_t max_input_length,
+                  const int64_t batch_size, const int64_t num_labels);
 };
 
 }  // namespace
@@ -45,22 +44,19 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
     const user_op::Tensor* input_lengths = ctx->Tensor4ArgNameAndIndex("input_lengths", 0);
     user_op::Tensor* decoded = ctx->Tensor4ArgNameAndIndex("decoded", 0);
     user_op::Tensor* neg_sum_logits = ctx->Tensor4ArgNameAndIndex("neg_sum_logits", 0);
-
     const T* log_probs_ptr = log_probs->dptr<T>();
     const int64_t* input_lengths_ptr = input_lengths->dptr<int64_t>();
     const bool merge_repeated = ctx->Attr<bool>("merge_repeated");
-
     const int64_t max_input_length = log_probs->shape().At(0);
     const int64_t batch_size = log_probs->shape().At(1);
     const int64_t num_labels = log_probs->shape().At(2);
     CHECK_EQ(batch_size, input_lengths->shape().At(0));
-    NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
     int64_t* decoded_ptr = decoded->mut_dptr<int64_t>();
     T* neg_sum_logits_ptr = neg_sum_logits->mut_dptr<T>();
 
-    CTCGreedyDecoderFunctor<device_type, T>()(
-        ctx->device_ctx(), decoded_ptr, neg_sum_logits_ptr, log_probs_ptr, input_lengths_ptr,
-        merge_repeated, input_helper, max_input_length, batch_size, num_labels);
+    CTCGreedyDecoderFunctor<device_type, T>()(ctx->device_ctx(), decoded_ptr, neg_sum_logits_ptr,
+                                              log_probs_ptr, input_lengths_ptr, merge_repeated,
+                                              max_input_length, batch_size, num_labels);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -15,11 +15,12 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
+from typing import Tuple
 
 import numpy as np
 import oneflow as flow
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import oneflow.typing as tp
+from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
 import os
 
 ninf = -float("inf")
@@ -47,6 +48,28 @@ def log_softmax(logits, axis=0):
     exp_sum = np.sum(exp, axis, keepdims=True)
     dist = exp / exp_sum
     return np.log(dist)
+
+
+def np_ctc_greedy_decoder(log_probs, input_lengths, merge_repeated=True):
+    blank_label = log_probs.shape[2] - 1
+    decodes = np.zeros(
+        (log_probs.shape[1], log_probs.shape[0]), dtype=input_lengths.dtype
+    )
+    neg_sum_logits = np.zeros((input_lengths.size, 1), dtype=log_probs.dtype)
+    for b in range(input_lengths.size):
+        input_length = input_lengths[b]
+        prev_indices = -1
+        t_dec = 0
+        for t in range(input_length):
+            max_indice = np.argmax(log_probs[t, b, :])
+            neg_sum_logits[b, 0] -= log_probs[t, b, max_indice]
+            if max_indice != blank_label and not (
+                merge_repeated and max_indice == prev_indices
+            ):
+                decodes[b, t_dec] = max_indice
+                t_dec += 1
+            prev_indices = max_indice
+    return decodes, neg_sum_logits
 
 
 def compare_with_np(
@@ -81,7 +104,7 @@ def compare_with_np(
     ).astype(np_data_type)
     log_probs = log_softmax(log_probs, axis=2)
     input_lengths = np.random.randint(
-        max_input_length / 2, high=max_input_length, size=(batch_size,), dtype=np.int32
+        max_input_length / 2, high=max_input_length, size=(batch_size,), dtype=np.int64
     )
 
     @flow.global_function(function_config=func_config)
@@ -89,17 +112,22 @@ def compare_with_np(
         log_probs: tp.Numpy.Placeholder(
             shape=(max_input_length, batch_size, num_classes), dtype=flow_data_type
         ),
-        input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int32),
-    ) -> tp.Numpy:
+        input_lengths: tp.Numpy.Placeholder(shape=(batch_size,), dtype=flow.int64),
+    ) -> Tuple[tp.Numpy, tp.Numpy]:
         with flow.scope.placement(device_type, "0:0"):
-            decoded = flow.nn.ctc_greedy_decoder(
+            decoded, neg_sum_logits = flow.nn.ctc_greedy_decoder(
                 log_probs, input_lengths, merge_repeated
             )
 
-        return decoded
+        return decoded, neg_sum_logits
 
-    decoded = ctc_greedy_decoder_job(log_probs, input_lengths)
-    print(decoded)
+    of_decoded, of_neg_sum_logits = ctc_greedy_decoder_job(log_probs, input_lengths)
+    np_decoded, np_neg_sum_logits = np_ctc_greedy_decoder(
+        log_probs, input_lengths, merge_repeated
+    )
+
+    np.allclose(of_decoded, np_decoded, atol=1e-5)
+    np.allclose(of_neg_sum_logits, np_neg_sum_logits, atol=1e-5)
 
 
 def gen_arg_list(type):
@@ -108,7 +136,7 @@ def gen_arg_list(type):
         arg_dict["device_type"] = ["gpu"]
         arg_dict["device_num"] = [2]
     else:
-        arg_dict["device_type"] = ["cpu",]
+        arg_dict["device_type"] = ["cpu", "gpu"]
         arg_dict["device_num"] = [1]
     arg_dict["data_type"] = ["float32"]
     arg_dict["max_input_length"] = [20]

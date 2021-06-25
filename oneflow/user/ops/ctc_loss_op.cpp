@@ -125,6 +125,7 @@ REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpC
                               return ctx->GetOp(ctc_loss_grad_op_name).output("grad", 0);
                             });
 });
+
 REGISTER_USER_OP("ctc_greedy_decoder")
     .Input("log_probs")
     .Input("input_lengths")
@@ -139,7 +140,6 @@ REGISTER_USER_OP("ctc_greedy_decoder")
       CHECK_EQ_OR_RETURN(batch_size, input_lengths->shape().At(0));
       *ctx->OutputShape("decoded", 0) = Shape({batch_size, log_probs->shape().At(0)});
       *ctx->OutputShape("neg_sum_logits", 0) = Shape({batch_size, 1});
-      // neg_sum_logits
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -152,7 +152,7 @@ REGISTER_USER_OP("ctc_greedy_decoder")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("decoded", 0) = DataType::kInt64;  // ctx->InputDType("input_lengths", 0);
+      *ctx->OutputDType("decoded", 0) = ctx->InputDType("input_lengths", 0);
       *ctx->OutputDType("neg_sum_logits", 0) = ctx->InputDType("log_probs", 0);
       return Maybe<void>::Ok();
     });

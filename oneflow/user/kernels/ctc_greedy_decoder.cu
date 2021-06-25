@@ -23,29 +23,54 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void vector_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t stride) {
-  CUDA_1D_KERNEL_LOOP(i, size) { out_buf[i * stride] = in_buf[i]; }
-}
+__global__ void CtcGreedyDecodeGpu(int64_t* decoded_ptr, T* neg_sum_logits_ptr,
+                                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
+                                   const bool merge_repeated, const int64_t max_input_length,
+                                   const int64_t batch_size, const int64_t num_labels) {
+  for (int64_t b = 0; b < batch_size; b++) {
+    if (input_lengths_ptr[b] > max_input_length) __trap();
+  }
+  NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
 
-template<typename T>
-__global__ void matrix_diagonal_kernel(T* out_buf, const T* in_buf, int32_t size, int32_t stride) {
-  CUDA_1D_KERNEL_LOOP(i, size) { out_buf[i] = in_buf[i * stride]; }
+  CUDA_1D_KERNEL_LOOP(b, batch_size) {
+    int prev_indices = -1, t_dec = 0;
+    neg_sum_logits_ptr[b] = 0;
+    FOR_RANGE(int64_t, t, 0, input_lengths_ptr[b]) {
+      const T* prob_data_t = &log_probs_ptr[input_helper.NdIndexToOffset(t, b, 0)];
+      int64_t max_indice = -1;
+      T max_value = -FLT_MAX;
+      FOR_RANGE(int64_t, c, 0, num_labels) {
+        if (prob_data_t[c] > max_value) {
+          max_indice = c;
+          max_value = prob_data_t[c];
+        }
+      }
+      neg_sum_logits_ptr[b] -= max_value;
+      if (max_indice != num_labels - 1 && !(merge_repeated && (prev_indices == max_indice))) {
+        decoded_ptr[b * max_input_length + t_dec] = max_indice;
+        t_dec++;
+      }
+      prev_indices = max_indice;
+    }
+    FOR_RANGE(int64_t, t, t_dec, max_input_length) { decoded_ptr[b * max_input_length + t] = 0; }
+  }
 }
 
 template<typename T>
 struct CTCGreedyDecoderFunctor<DeviceType::kGPU, T> final {
   void operator()(DeviceCtx* ctx, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
-                  const bool merge_repeated, NdIndexOffsetHelper<int64_t, 3>& input_helper,
-                  const int64_t max_input_length, const int64_t batch_size,
-                  const int64_t num_labels) {
-    // TODO
+                  const bool merge_repeated, const int64_t max_input_length,
+                  const int64_t batch_size, const int64_t num_labels) {
+    CtcGreedyDecodeGpu<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                         ctx->cuda_stream()>>>(decoded_ptr, neg_sum_logits_ptr, log_probs_ptr,
+                                               input_lengths_ptr, merge_repeated, max_input_length,
+                                               batch_size, num_labels);
   }
 };
 
 }  // namespace
 
-REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, half);
 REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, float);
 REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, double);
 
