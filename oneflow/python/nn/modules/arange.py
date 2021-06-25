@@ -93,7 +93,7 @@ def arange_op(
         >>> flow.enable_eager_execution()
 
         >>> y = flow.arange(0, 5)
-        >>> print(y)
+        >>> y
         tensor([0, 1, 2, 3, 4], dtype=oneflow.int64)
 
     """
