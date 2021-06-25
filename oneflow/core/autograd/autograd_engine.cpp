@@ -290,7 +290,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
 
 // Computes the number of dependencies for each FunctionNode and prunes useless FunctionNode
 // according to input tensors
-Maybe<bool> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
+Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs) {
   struct NodeFrame {
     NodeFrame(FunctionNode* node) : node_(node), next_function_idx_(0) {}
     FunctionNode* node_;
@@ -306,6 +306,11 @@ Maybe<bool> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
     }
   };
 
+  for (const auto& input : inputs) {
+    CHECK_NOTNULL_OR_RETURN(input->mut_grad_fn_node().get());
+    need_execute_.insert(input->mut_grad_fn_node().get());
+  }
+
   HashSet<FunctionNode*> seen;
   std::vector<NodeFrame> stack;
 
@@ -313,7 +318,7 @@ Maybe<bool> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
   for (const auto& root : roots_) { stack.push_back(NodeFrame(root)); }
   while (!stack.empty()) {
     NodeFrame& frame = stack.back();
-    if (/*bool has_seen=*/!seen.insert(frame.node_).second) {
+    if (/*bool has_seen=*/seen.find(frame.node_) != seen.end()) {
       stack.pop_back();
       continue;
     }
@@ -330,14 +335,14 @@ Maybe<bool> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
                                         return need_execute_.find(fn.get()) != need_execute_.end();
                                       });
       if (need_execute) { need_execute_.insert(frame.node_); }
+      seen.insert(frame.node_);
       stack.pop_back();
     }
   }
-
-  return !need_execute_.empty();
+  return Maybe<void>::Ok();
 }
 
-Maybe<void> GraphTask::Apply() {
+Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
   std::vector<FunctionNode*> queue;
   for (FunctionNode* node : roots_) {
     if (dependencies_[node] == 0) { queue.push_back(node); }
@@ -346,10 +351,13 @@ Maybe<void> GraphTask::Apply() {
   while (!queue.empty()) {
     FunctionNode* node = queue.back();
     queue.pop_back();
-    if (!need_execute_.empty() && need_execute_.find(node) == need_execute_.end()) { continue; }
+    if (!need_execute_.empty() && need_execute_.find(node) == need_execute_.end()) {
+      node->ReleaseOutTensorArgs();
+      continue;
+    }
     // CHECK_OR_RETURN(JUST(node->Apply(create_graph_)));
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
-    JUST(node->AccGrad4LeafTensor(create_graph_));
+    if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
     node->ReleaseOutTensorArgs();
     if (!retain_graph_) { node->ReleaseData(); }
@@ -372,7 +380,7 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
   }
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependencies());
-  JUST(graph_task.Apply());
+  JUST(graph_task.Apply(/*save_grad_for_leaf=*/true));
   return Maybe<void>::Ok();
 }
 
@@ -381,23 +389,24 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     bool retain_graph, bool create_graph) {
   std::shared_ptr<TensorTuple> input_now_grads = std::make_shared<TensorTuple>(inputs.size());
   GraphTask graph_task(outputs, retain_graph, create_graph);
-  if (/*bool can_apply=*/JUST(graph_task.ComputeDependenciesAndPruneNode(inputs))) {
-    std::vector<bool> ori_retain_grad(inputs.size());
-    for (int i = 0; i < inputs.size(); ++i) {
-      ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-      inputs.at(i)->set_retain_grad(true);
-    }
-    for (int i = 0; i < outputs.size(); ++i) {
-      JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
-    }
-    JUST(graph_task.Apply());
-    // Gets input grads and resume retain_grad
-    for (int i = 0; i < inputs.size(); ++i) {
-      input_now_grads->at(i) = inputs.at(i)->acc_grad();
-      if (!ori_retain_grad.at(i)) {
-        inputs.at(i)->mut_acc_grad().reset();
-        inputs.at(i)->set_retain_grad(false);
-      }
+  std::vector<bool> ori_retain_grad(inputs.size());
+  for (int i = 0; i < inputs.size(); ++i) {
+    ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
+    inputs.at(i)->set_retain_grad(true);
+  }
+  for (int i = 0; i < outputs.size(); ++i) {
+    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+  }
+
+  JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
+  JUST(graph_task.Apply(/*save_grad_for_leaf=*/false));
+
+  // Gets input grads and resume retain_grad
+  for (int i = 0; i < inputs.size(); ++i) {
+    input_now_grads->at(i) = inputs.at(i)->acc_grad();
+    if (!ori_retain_grad.at(i)) {
+      inputs.at(i)->mut_acc_grad().reset();
+      inputs.at(i)->set_retain_grad(false);
     }
   }
   return input_now_grads;

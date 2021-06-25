@@ -159,8 +159,8 @@ class GraphTask final {
   GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_graph);
 
   Maybe<void> ComputeDependencies();
-  Maybe<bool> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
-  Maybe<void> Apply();
+  Maybe<void> ComputeDependenciesAndPruneNode(const TensorTuple& inputs);
+  Maybe<void> Apply(bool save_grad_for_leaf);
 
  private:
   bool retain_graph_;
