@@ -42,12 +42,10 @@ class Arange(Module):
         self.device = device
         self.requires_grad = requires_grad
 
-        self._op_arange = (
-            flow.builtin_op("range").Output("out").Attr("dtype", flow.int64).Build()
-        )
-
     def forward(self):
-        tmp = self._op_arange(start=self.start, delta=self.step, limit=self.end)[0]
+        tmp = flow.F.range(
+            start=self.start, limit=self.end, delta=self.step, dtype=flow.int64
+        )
         tmp.requires_grad = self.requires_grad
 
         if isinstance(self.device, str):
@@ -95,7 +93,7 @@ def arange_op(
         >>> flow.enable_eager_execution()
 
         >>> y = flow.arange(0, 5)
-        >>> print(y)
+        >>> y
         tensor([0, 1, 2, 3, 4], dtype=oneflow.int64)
 
     """
