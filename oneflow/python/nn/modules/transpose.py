@@ -82,9 +82,9 @@ def transpose_op(tensor, dim0, dim1):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.random.randn(2, 6, 5, 3), dtype=flow.float32)
-        >>> out = flow.transpose(input, 0, 1).numpy().shape
-        >>> print(out)
-        (6, 2, 5, 3)
+        >>> out = flow.transpose(input, 0, 1).shape
+        >>> out
+        flow.Size([6, 2, 5, 3])
 
     """
     return Transpose(dim0=dim0, dim1=dim1)(tensor)
