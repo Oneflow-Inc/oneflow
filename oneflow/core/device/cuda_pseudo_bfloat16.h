@@ -16,13 +16,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_PSEUDO_BFLOAT16_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_PSEUDO_BFLOAT16_H_
 
-#ifdef WITH_CUDA&& CUDA_VERSION >= 11000
+#ifdef WITH_CUDA
 
 #include <cuda.h>
 #include <cuda_bf16.h>
 #include <cuda_runtime_api.h>
 
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
+#if CUDA_VERSION >= 11000 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
 
 #define DEFINE_CUDA_PSEUDO_BFLOAT16_ARITHMETIC_BINARY_OPERATOR(op)                \
   __device__ __forceinline__ __nv_bfloat16 operator op(const __nv_bfloat16& lh,   \
@@ -174,7 +174,7 @@ DEFINE_CUDA_PSEUDO_BFLOAT16_MATH_FUNC(sqrt)
 
 #undef DEFINE_CUDA_PSEUDO_BFLOAT16_MATH_FUNC
 
-#endif  // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
+#endif  // CUDA_VERSION >= 11000 && defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 800
 
 #endif  // WITH_CUDA
 
