@@ -109,19 +109,47 @@
     sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
     ```
     If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
-  - In the root directory of OneFlow source code, run:
+  - Create a `build` directory, run:
 
     ```
     mkdir build
     cd build
-    cmake ..
+    ```
+
+  - Config the project, inside `build` directory:
+    - If you are in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/cn/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/cn/cpu.cmake
+      ```
+
+    - If you are not in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/international/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/international/cpu.cmake
+      ```
+
+  - Build the project, inside `build` directory, run:
+    ```
     make -j$(nproc)
     ```
 
-  - Add oneflow to your PYTHONPATH
+  - Add oneflow to your PYTHONPATH, inside `build` directory, run:
 
     ```
-    source build/source.sh
+    source source.sh
     ```
 
     Please note that this change is not permanent.
@@ -131,9 +159,6 @@
     ```
     python3 -m oneflow --doctor
     ```
-
-  - If you are in China, please add these CMake flags `-DTHIRD_PARTY_MIRROR=aliyun -DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple` for faster dependency downloads.
-  - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 </details>
 
 ### Troubleshooting
