@@ -34,12 +34,18 @@ class OpInterpUtil {
   static Maybe<AutogradInterpreter> GetInterpreter();
 
   template<typename T>
-  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs);
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs, const AttrMap& attrs) {
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext{attrs, nullptr});
+  }
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
     return Dispatch<T>(op_expr, inputs, AttrMap{});
   }
+
+  template<typename T>
+  static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs,
+                           const OpExprInterpContext& ctx);
 
   static Maybe<OperatorConf> GenBuiltinOpConf(const BuiltinOpExpr& op_expr, const AttrMap& attrs);
 

@@ -89,8 +89,7 @@ class TensorScalarSub : public TensorScalarAddOrSub {
                     TensorTuple* in_grads) const override {
     in_grads->resize(2);
     if (ctx->x_requires_grad) {
-      in_grads->at(0) =
-          JUST(OpInterpUtil::Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}, /*attrs=*/{}));
+      in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*identity_op_, {out_grads.at(0)}));
     }
     if (ctx->scalar_requires_grad) {
       int32_t num_axes = out_grads.at(0)->shape()->NumAxes();

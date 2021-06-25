@@ -131,7 +131,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       }
     }
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      attrs, op_parallel_desc, instr_type_name);
+                                      ctx, op_parallel_desc, instr_type_name);
   }));
   return Maybe<void>::Ok();
 }
