@@ -244,10 +244,10 @@ def ctc_greedy_decoder(
             log_probs: tp.Numpy.Placeholder(shape=(4, 2, 5)),
             input_lengths: tp.Numpy.Placeholder(shape=(2,), dtype=flow.int64),
         ) -> Tuple[tp.Numpy, tp.Numpy]:
-            loss = flow.nn.ctc_greedy_decoder(
+            decoded, neg_sum_logits = flow.nn.ctc_greedy_decoder(
                 log_probs, input_lengths, merge_repeated=True
             )
-            return loss
+            return decoded, neg_sum_logits
 
 
         log_probs = np.array(
@@ -259,9 +259,10 @@ def ctc_greedy_decoder(
             ]
         ).astype(np.float32)
         input_lengths = np.array([4, 4])
-        decoded, _ = ctc_greedy_decoder_job(log_probs, input_lengths)
+        decoded, neg_sum_logits = ctc_greedy_decoder_job(log_probs, input_lengths)
 
         # decoded [[1 3 1 2] [0 2 0 0]]
+        # neg_sum_logits [[5.26] [4.79]]
 
 
     """
