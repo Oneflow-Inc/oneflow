@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/random_generator.h"
-#include "oneflow/user/kernels/dropout_kernel.cpp"
+#include "oneflow/user/kernels/random_mask_like_kernel.h"
 
 namespace oneflow {
 namespace one {
