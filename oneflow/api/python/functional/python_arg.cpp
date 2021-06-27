@@ -71,6 +71,11 @@ Maybe<std::shared_ptr<one::Tensor>> PythonArg::ObjectAs<std::shared_ptr<one::Ten
 }
 
 template<>
+Maybe<one::Tensor> PythonArg::ObjectAs<one::Tensor>() const {
+  return *JUST(detail::cast<std::shared_ptr<one::Tensor>>(Borrow()));
+}
+
+template<>
 Maybe<std::shared_ptr<one::TensorTuple>> PythonArg::ObjectAs<std::shared_ptr<one::TensorTuple>>()
     const {
   py::object obj = Borrow();
@@ -132,6 +137,22 @@ Maybe<DataType> PythonArg::ObjectAs<DataType>() const {
                                 << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
   return kInvalidDataType;
+}
+
+template<>
+Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
+  py::object obj = Borrow();
+  if (detail::isinstance<Shape>(obj)) {
+    return *JUST(detail::cast<std::shared_ptr<Shape>>(obj));
+  } else if (detail::isinstance<py::list>(obj) || detail::isinstance<py::tuple>(obj)) {
+    const auto& shape = JUST(ObjectAs<std::vector<int64_t>>());
+    DimVector dim_vec(shape->size());
+    for (int i = 0; i < shape->size(); ++i) { dim_vec[i] = shape->at(i); }
+    return std::make_shared<Shape>(std::move(dim_vec));
+  } else {
+    UNIMPLEMENTED_THEN_RETURN() << "Can not convert object to Shape from "
+                                << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
+  }
 }
 
 }  // namespace functional

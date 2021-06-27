@@ -21,18 +21,10 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 class BroadCastLike(Module):
     def __init__(self, broadcast_axes: None) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("broadcast_like")
-            .Input("x")
-            .Input("like")
-            .Attr("broadcast_axes", broadcast_axes)
-            .Output("y")
-            .Build()
-        )
         self.broadcast_axes = broadcast_axes
 
     def forward(self, x, like_tensor):
-        return self._op(x, like_tensor, broadcast_axes=self.broadcast_axes)[0]
+        return flow.F.broadcast_like(x, like_tensor, broadcast_axes=self.broadcast_axes)
 
 
 @oneflow_export("broadcast_like")
