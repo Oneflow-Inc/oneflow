@@ -34,33 +34,28 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
   RandomMaskGenerator(std::shared_ptr<one::Generator> generator) : generator_(generator) {}
-  ~RandomMaskGenerator() {}
+  ~RandomMaskGenerator() = default;
 
   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
  private:
-  int64_t seed;
   std::shared_ptr<one::Generator> generator_;
 };
 
-// #ifdef WITH_CUDA
-// template<>
-// class RandomMaskGenerator<DeviceType::kGPU> final {
-//  public:
-//   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-//   RandomMaskGenerator(std::shared_ptr<one::Generator>& generator) : generator_(generator) {}
-//   ~RandomMaskGenerator();
+#ifdef WITH_CUDA
+template<>
+class RandomMaskGenerator<DeviceType::kGPU> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
+  RandomMaskGenerator(std::shared_ptr<one::Generator>& generator) : generator_(generator) {}
+  ~RandomMaskGenerator() = default;
 
-//   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
+  void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
-//  private:
-//   curandState* curand_states_;
-//   int32_t block_num_;
-//   int32_t thread_num_;
-//   int64_t seed;
-//   std::shared_ptr<one::Generator> generator_;
-// };
-// #endif
+ private:
+  std::shared_ptr<one::Generator> generator_;
+};
+#endif
 
 }  // namespace oneflow
 

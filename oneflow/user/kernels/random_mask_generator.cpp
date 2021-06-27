@@ -22,8 +22,7 @@ void RandomMaskGenerator<DeviceType::kCPU>::Generate(DeviceCtx* device_ctx, cons
   CHECK_GE(n, 0);
   std::uniform_real_distribution<float> random_distribution(GetZeroVal<float>(),
                                                             GetOneVal<float>());
-  const std::shared_ptr<one::GeneratorImpl<DeviceType::kCPU>>& cpu_generator =
-      CHECK_JUST(generator_->GetDeviceGenerator<DeviceType::kCPU>());
+  const auto& cpu_generator = CHECK_JUST(generator_->GetDeviceGenerator<DeviceType::kCPU>());
   for (int64_t i = 0; i < n; ++i) {
     mask[i] = random_distribution(cpu_generator->mt19937_generator_) > rate;
   }

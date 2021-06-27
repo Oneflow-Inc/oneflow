@@ -54,19 +54,23 @@ class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
   std::mt19937 mt19937_generator_;
 };
 
-// #ifdef WITH_CUDA
-// template<>
-// class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase{
-//  public:
-//   GeneratorImpl(int64_t seed);
-//   virtual ~GeneratorImpl() = default;
+#ifdef WITH_CUDA
+template<>
+class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase {
+ public:
+  GeneratorImpl(int64_t seed);
+  virtual ~GeneratorImpl();
 
-//  protected:
-//   curandState* curand_states_;
-//   int32_t block_num_;
-//   int32_t thread_num_;
-// };
-// #endif
+  const int32_t& block_num() const { return block_num_; }
+  const int32_t& thread_num() const { return thread_num_; }
+  curandState* curand_states() const { return curand_states_; }
+
+ protected:
+  curandState* curand_states_;
+  int32_t block_num_;
+  int32_t thread_num_;
+};
+#endif
 
 class Generator final {
  public:
@@ -75,7 +79,7 @@ class Generator final {
 
   // TODO: should also set seed of generators?
   void set_current_seed(const int64_t seed) { seed_ = seed; }
-  int64_t get_current_seed() { return seed_; }
+  int64_t get_current_seed() const { return seed_; }
 
   template<DeviceType device_type>
   Maybe<GeneratorImpl<device_type>> GetDeviceGenerator() {
@@ -92,7 +96,7 @@ class Generator final {
   static Maybe<GeneratorImpl<device_type>> GetDefaultDeviceGenerator() {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
     static auto generator = GetDefaultGenerator();
-    return generator.GetDeviceGenerator<device_type>();
+    return generator->GetDeviceGenerator<device_type>();
   }
 
   static const std::shared_ptr<Generator> GetDefaultGenerator() {
