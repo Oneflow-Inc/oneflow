@@ -33,13 +33,13 @@ template<>
 class RandomMaskGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(std::shared_ptr<one::Generator> generator) : generator_(generator) {}
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) : generator_(generator) {}
   ~RandomMaskGenerator() = default;
 
   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
  private:
-  std::shared_ptr<one::Generator> generator_;
+  const std::shared_ptr<one::Generator> generator_;
 };
 
 #ifdef WITH_CUDA
@@ -47,13 +47,13 @@ template<>
 class RandomMaskGenerator<DeviceType::kGPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomMaskGenerator);
-  RandomMaskGenerator(std::shared_ptr<one::Generator>& generator) : generator_(generator) {}
+  RandomMaskGenerator(const std::shared_ptr<one::Generator>& generator) : generator_(generator) {}
   ~RandomMaskGenerator() = default;
 
   void Generate(DeviceCtx* device_ctx, int64_t n, float rate, int8_t* mask);
 
  private:
-  std::shared_ptr<one::Generator> generator_;
+  const std::shared_ptr<one::Generator> generator_;
 };
 #endif
 

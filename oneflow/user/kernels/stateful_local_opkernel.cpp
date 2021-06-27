@@ -417,18 +417,10 @@ void StatefulLocalOpKernel::TryInitOpKernelState(const user_op::OpKernel* op_ker
                                                  DeviceCtx* device_ctx,
                                                  const EagerBlobObjectListPtr& inputs,
                                                  const EagerBlobObjectListPtr& outputs,
-                                                 const OpExprInterpContext& ctx,
                                                  user_op::OpKernelState** state) {
   auto it = op_kernel_state_map_.find(op_kernel);
   if (it != op_kernel_state_map_.end()) {
     *state = it->second.get();
-    return;
-  }
-
-  auto ctx_state = ctx.state;
-  if (ctx_state != nullptr) {
-    op_kernel_state_map_.emplace(op_kernel, ctx_state);
-    *state = ctx_state.get();
     return;
   }
 

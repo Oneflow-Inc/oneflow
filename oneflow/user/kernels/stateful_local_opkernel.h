@@ -359,9 +359,7 @@ class StatefulLocalOpKernel final {
 
   void TryInitOpKernelState(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
                             const EagerBlobObjectListPtr& inputs,
-                            const EagerBlobObjectListPtr& outputs,
-                            const OpExprInterpContext& op_interp_ctx,
-                            user_op::OpKernelState** state);
+                            const EagerBlobObjectListPtr& outputs, user_op::OpKernelState** state);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 

@@ -550,9 +550,12 @@ struct LocalCallOpKernelUtil final {
 
   static inline void TryInitOpKernelState(LocalCallOpKernelPhyInstrOperand* operand,
                                           DeviceCtx* device_ctx, user_op::OpKernelState** state) {
+    if (operand->op_interp_ctx().state) {
+      *state = operand->op_interp_ctx().state.get();
+      return;
+    }
     operand->mut_opkernel()->TryInitOpKernelState(operand->user_opkernel(), device_ctx,
-                                                  operand->inputs(), operand->outputs(),
-                                                  operand->op_interp_ctx(), state);
+                                                  operand->inputs(), operand->outputs(), state);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,

@@ -40,7 +40,7 @@ class OpInterpUtil {
 
   template<typename T>
   static Maybe<T> Dispatch(const OpExpr& op_expr, const TensorTuple& inputs) {
-    return Dispatch<T>(op_expr, inputs, AttrMap{});
+    return Dispatch<T>(op_expr, inputs, OpExprInterpContext{AttrMap{}, nullptr});
   }
 
   template<typename T>

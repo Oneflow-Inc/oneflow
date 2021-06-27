@@ -157,7 +157,7 @@ class AutogradInterpreter {
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs) const {
-    return Apply(op_expr, inputs, outputs, AttrMap{});
+    return Apply(op_expr, inputs, outputs, OpExprInterpContext{});
   }
 
   Maybe<void> Apply(const OpExpr& op_expr, const TensorTuple& inputs, TensorTuple* outputs,

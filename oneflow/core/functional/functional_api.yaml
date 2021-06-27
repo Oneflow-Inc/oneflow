@@ -467,5 +467,5 @@
 
 - name: "dropout"
   signature:
-    "Tensor Dropout(Tensor x, *, Float p, Generator gen)"
+    "Tensor Dropout(Tensor x, *, Float p, Generator generator)"
   bind_python: True

@@ -35,34 +35,37 @@ namespace impl {
 class DropoutFunctor {
  public:
   DropoutFunctor() {
-    rml_op_ = CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
-    do_op_ = CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
+    random_mask_like_op_ =
+        CHECK_JUST(one::OpBuilder("random_mask_like").Input("like").Output("out").Build());
+    dropout_op_ =
+        CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
                            const std::shared_ptr<one::Generator>& gen) const {
-    MutableAttrMap rml_attrs;
-    JUST(rml_attrs.SetAttr<float>("rate", p));
-    JUST(rml_attrs.SetAttr<int64_t>("seed", 0));  // FIXME: get from generator?
+    MutableAttrMap random_mask_like_attrs;
+    JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", 0));  // FIXME: get from generator?
 
     // alow gen to be null here?
-    const auto& rml_state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
     // if (oneflow::EagerExecutionEnabled()) {
     //   if (gen == nullptr) {
     //     gen = one::Generator::GetDefaultGenerator();
     //   }
-    //   rml_ctx.state = std::make_shared<RandomMaskLikeKernelState>(gen);
+    //   random_mask_like_ctx.state = std::make_shared<RandomMaskLikeKernelState>(gen);
     // }
-    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(*rml_op_, {x}, {rml_attrs, rml_state}));
+    const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
+        *random_mask_like_op_, {x}, {random_mask_like_attrs, random_mask_like_state}));
     float scale = 1.0;
     if (p != 1.0) { scale = 1.0 / (1.0 - p); }
-    MutableAttrMap do_attrs;
-    JUST(do_attrs.SetAttr<float>("scale", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*do_op_, {x, mask}, do_attrs);
+    MutableAttrMap dropout_attrs;
+    JUST(dropout_attrs.SetAttr<float>("scale", scale));
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x, mask}, dropout_attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> rml_op_;
-  std::shared_ptr<OpExpr> do_op_;
+  std::shared_ptr<OpExpr> random_mask_like_op_;
+  std::shared_ptr<OpExpr> dropout_op_;
 };
 
 }  // namespace impl

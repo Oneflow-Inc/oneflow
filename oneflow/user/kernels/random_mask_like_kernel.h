@@ -25,7 +25,7 @@ class RandomMaskLikeKernelState : public user_op::OpKernelState {
   explicit RandomMaskLikeKernelState(const std::shared_ptr<one::Generator>& generator)
       : generator_(generator) {}
 
-  const std::shared_ptr<one::Generator> generator() { return generator_; }
+  const std::shared_ptr<one::Generator> generator() const { return generator_; }
 
  private:
   const std::shared_ptr<one::Generator> generator_;
@@ -51,12 +51,12 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t elem_cnt = like->shape().elem_cnt();
     int8_t* mask = out->mut_dptr<int8_t>();
-    auto* rml_state = dynamic_cast<RandomMaskLikeKernelState*>(state);
-    CHECK_NOTNULL(rml_state);
-    auto generator = rml_state->generator();
+    auto* random_mask_like_state = dynamic_cast<RandomMaskLikeKernelState*>(state);
+    CHECK_NOTNULL(random_mask_like_state);
+    const auto& generator = random_mask_like_state->generator();
     CHECK_NOTNULL(generator);
-    auto rml_gen = std::make_shared<RandomMaskGenerator<device_type>>(generator);
-    rml_gen->Generate(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), mask);
+    auto random_mask_like_gen = std::make_shared<RandomMaskGenerator<device_type>>(generator);
+    random_mask_like_gen->Generate(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

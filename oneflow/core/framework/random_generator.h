@@ -95,11 +95,11 @@ class Generator final {
   template<DeviceType device_type>
   static Maybe<GeneratorImpl<device_type>> GetDefaultDeviceGenerator() {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
-    static auto generator = GetDefaultGenerator();
+    const auto& generator = GetDefaultGenerator();
     return generator->GetDeviceGenerator<device_type>();
   }
 
-  static const std::shared_ptr<Generator> GetDefaultGenerator() {
+  static const std::shared_ptr<Generator>& GetDefaultGenerator() {
     static auto generator = std::make_shared<Generator>();
     return generator;
   }
