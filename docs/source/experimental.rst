@@ -35,6 +35,9 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.LogSigmoid
 .. autofunction:: oneflow.experimental.nn.Softplus
 .. autofunction:: oneflow.experimental.nn.LogSoftmax
+.. autofunction:: oneflow.experimental.nn.Mish
+.. autofunction:: oneflow.experimental.mish
+.. autofunction:: oneflow.experimental.Tensor.mish
 .. autofunction:: oneflow.experimental.acosh
 .. autofunction:: oneflow.experimental.Tensor.acosh
 .. autofunction:: oneflow.experimental.arccosh
@@ -211,3 +214,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.topk
 .. autofunction:: oneflow.experimental.Tensor.topk
 .. autofunction:: oneflow.experimental.nn.GroupNorm
+.. autofunction:: oneflow.experimental.nn.ZeroPad2d

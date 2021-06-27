@@ -473,17 +473,17 @@ def asin_op(input):
         >>> flow.enable_eager_execution()
         >>> input = flow.Tensor(np.array([-0.5,  0.8, 1.0,  -0.8]), dtype=flow.float32)
         >>> output = flow.asin(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([4])
-        >>> print(output.numpy())
-        [-0.5235988  0.9272952  1.5707964 -0.9272952]
+        >>> output
+        tensor([-0.5236,  0.9273,  1.5708, -0.9273], dtype=oneflow.float32)
         >>> input1 = flow.Tensor(np.array([[0.8, 1.0], [-0.6, -1.0]]), dtype=flow.float32)
         >>> output1 = input1.asin()
-        >>> print(output1.shape)
+        >>> output1.shape
         flow.Size([2, 2])
-        >>> print(output1.numpy())
-        [[ 0.9272952   1.5707964 ]
-         [-0.64350116 -1.5707964 ]]
+        >>> output1
+        tensor([[ 0.9273,  1.5708],
+                [-0.6435, -1.5708]], dtype=oneflow.float32)
     """
     return Asin()(input)
 
@@ -547,17 +547,18 @@ def asinh_op(input):
         >>> flow.enable_eager_execution() 
         >>> input = flow.Tensor(np.array([2, 3, 4]), dtype=flow.float32)
         >>> output = flow.asinh(input)
-        >>> print(output.shape)
+        >>> output.shape
         flow.Size([3])
-        >>> print(output.numpy())
-        [1.4436355 1.8184465 2.0947125]
+        >>> output
+        tensor([1.4436, 1.8184, 2.0947], dtype=oneflow.float32)
+
         >>> input1 = flow.Tensor(np.array([[-1, 0, -0.4], [5, 7, 0.8]]), dtype=flow.float32)
         >>> output1 = input1.asinh()
-        >>> print(output1.shape)
+        >>> output1.shape
         flow.Size([2, 3])
-        >>> print(output1.numpy())
-        [[-0.8813736   0.         -0.39003533]
-         [ 2.3124382   2.6441207   0.7326682 ]]
+        >>> output1
+        tensor([[-0.8814,  0.    , -0.39  ],
+                [ 2.3124,  2.6441,  0.7327]], dtype=oneflow.float32)
 
     """
     return Asinh()(input)
@@ -623,12 +624,12 @@ def sin_op(tensor):
         >>> flow.enable_eager_execution()
         >>> x1 = flow.Tensor(np.array([-0.5461,  0.1347, -2.7266, -0.2746]).astype(np.float32))
         >>> out1 = flow.sin(x1)
-        >>> out1.numpy() #doctest: +ELLIPSIS
-        array([-0.5193...,  0.1342..., -0.4031..., -0.2711...], dtype=float32)
+        >>> out1
+        tensor([-0.5194,  0.1343, -0.4032, -0.2712], dtype=oneflow.float32)
         >>> x2 = flow.Tensor(np.array([-1.4, 2.6, 3.7]).astype(np.float32),device=flow.device('cuda'))
         >>> out2 = flow.sin(x2)
-        >>> out2.numpy() #doctest: +ELLIPSIS
-        array([-0.9854...,  0.5155..., -0.5298...], dtype=float32)
+        >>> out2
+        tensor([-0.9854,  0.5155, -0.5298], device='cuda:0', dtype=oneflow.float32)
 
     """
 
@@ -1201,21 +1202,21 @@ def clamp_op(tensor, min=None, max=None):
         >>> flow.enable_eager_execution()
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=0.5).numpy()
+        >>> output = flow.clamp(input, min=-0.5, max=0.5)
         >>> output
-        array([ 0.2,  0.5, -0.5, -0.3], dtype=float32)
+        tensor([ 0.2,  0.5, -0.5, -0.3], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=None, max=0.5).numpy()
+        >>> output = flow.clamp(input, min=None, max=0.5)
         >>> output
-        array([ 0.2,  0.5, -1.5, -0.3], dtype=float32)
+        tensor([ 0.2,  0.5, -1.5, -0.3], dtype=oneflow.float32)
 
         >>> arr = np.array([0.2, 0.6, -1.5, -0.3])
         >>> input = flow.Tensor(arr)
-        >>> output = flow.clamp(input, min=-0.5, max=None).numpy()
+        >>> output = flow.clamp(input, min=-0.5, max=None)
         >>> output
-        array([ 0.2,  0.6, -0.5, -0.3], dtype=float32)
+        tensor([ 0.2,  0.6, -0.5, -0.3], dtype=oneflow.float32)
 
     """
     return Clamp(min, max)(tensor)
