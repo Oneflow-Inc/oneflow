@@ -1007,6 +1007,30 @@ class TestTensor(flow.unittest.TestCase):
         of_out.backward()
         test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_mish(test_case):
+        def np_mish(x):
+            f = 1 + np.exp(x)
+            y = x * ((f * f - 1) / (f * f + 1))
+            y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
+                (f * f + 1) * (f * f + 1)
+            )
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.mish()
+
+        np_out, np_grad = np_mish(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 if __name__ == "__main__":
     unittest.main()
