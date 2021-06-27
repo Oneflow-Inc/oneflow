@@ -1013,8 +1013,18 @@ class Pow(Module):
 @experimental_api
 def pow_op(tensor, exponent):
     r"""Takes the power of each element in input with exponent and returns a tensor with the result.
-    exponent can be either a single float number or a single int number.
-    
+    exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
+
+    When exponent is a scalar value, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ \text{exponent}
+​
+    When exponent is a tensor, the operation applied is:
+
+    .. math::
+        \text{out}_i = x_i ^ {\text{exponent}_i}
+​
     For example:
 
     .. code-block:: python
@@ -1029,6 +1039,11 @@ def pow_op(tensor, exponent):
         >>> out
         array([ 1.,  4.,  9., 16., 25., 36.], dtype=float32)
 
+        >>> x = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
+        >>> out = flow.pow(x, y).numpy()
+        >>> out
+        array([ 1.,  4.,  27., 256.], dtype=float32)
 
     """
     return Pow()(tensor, exponent)

@@ -41,15 +41,11 @@ def _test_pow_elementwise_impl(test_case, shape, scalar, device):
 
 
 def _test_pow_backward_impl(test_case, device):
-    # elementwise-pow backward test
-    np_input_x = np.array(
-        [[0.86895168, 0.51427012, 0.8693118], [0.27302601, 0.68126282, 0.85506865]]
-    )
-    np_input_y = np.array(
-        [[0.42736459, 0.0727016, 0.90737411], [0.7220017, 0.32741095, 0.49669031]]
-    )
-    np_x_grad = np.array([[0.4632, 0.1347, 0.9192], [1.0358, 0.4238, 0.5374]])
-    np_y_grad = np.array([[-0.1323, -0.6336, -0.1233], [-0.5085, -0.3385, -0.1449]])
+    shape = (2, 3)
+    np_input_x = 10 * np.random.rand(*shape)
+    np_input_y = np.random.randint(1, 3, shape) + np.random.randn(*shape)
+    np_x_grad = np_input_y * (np.power(np_input_x, np_input_y - 1))
+    np_y_grad = np.power(np_input_x, np_input_y) * np.log(np_input_x)
 
     def test_x_y_grad():
         of_input_x = flow.Tensor(
@@ -111,9 +107,6 @@ def _test_pow_backward_impl(test_case, device):
     test_x_y_grad()
     test_x_grad()
     test_y_grad()
-
-    # TODO(liupeihong): scalar-pow backward test
-    # ...
 
 
 @unittest.skipIf(
