@@ -24,8 +24,8 @@ import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.session_context as session_ctx
 import oneflow.python.framework.runtime_mode as rt_mode
 from oneflow.python.oneflow_export import oneflow_export, oneflow_deprecate
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
-import oneflow.core.job.learning_rate_schedule_conf_pb2 as learning_rate_schedule_conf_pb
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.learning_rate_schedule_conf as learning_rate_schedule_conf_cfg
 import oneflow._oneflow_internal
 
 
@@ -41,7 +41,7 @@ def GetVariablesForCurrentJob() -> List[Text]:
 
 class ClipGradientConf:
     @property
-    def clip_conf(self) -> job_conf_pb.ClipConf:
+    def clip_conf(self) -> job_conf_cfg.ClipConf:
         raise NotImplementedError()
 
 
@@ -99,14 +99,14 @@ class by_global_norm(ClipGradientConf):
 
     @property
     def clip_conf(self):
-        clip_conf = job_conf_pb.ClipConf()
-        clip_conf.clip_by_global_norm.clip_norm = self.clip_norm
+        clip_conf = job_conf_cfg.ClipConf()
+        clip_conf.mutable_clip_by_global_norm().set_clip_norm(self.clip_norm)
         return clip_conf
 
 
 class WarmupConf:
     @property
-    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
+    def warmup_conf(self) -> learning_rate_schedule_conf_cfg.WarmupConf:
         raise NotImplementedError()
 
 
@@ -163,10 +163,10 @@ class constant(WarmupConf):
         self.multiplier = multiplier
 
     @property
-    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
-        warmup_conf = learning_rate_schedule_conf_pb.WarmupConf()
-        warmup_conf.constant_conf.warmup_batches = self.steps
-        warmup_conf.constant_conf.multiplier = self.multiplier
+    def warmup_conf(self) -> learning_rate_schedule_conf_cfg.WarmupConf:
+        warmup_conf = learning_rate_schedule_conf_cfg.WarmupConf()
+        warmup_conf.mutable_constant_conf().set_warmup_batches(self.steps)
+        warmup_conf.mutable_constant_conf().set_multiplier(self.multiplier)
         return warmup_conf
 
 
@@ -218,10 +218,10 @@ class linear(WarmupConf):
         self.start_multiplier = start_multiplier
 
     @property
-    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
-        warmup_conf = learning_rate_schedule_conf_pb.WarmupConf()
-        warmup_conf.linear_conf.warmup_batches = self.steps
-        warmup_conf.linear_conf.start_multiplier = self.start_multiplier
+    def warmup_conf(self) -> learning_rate_schedule_conf_cfg.WarmupConf:
+        warmup_conf = learning_rate_schedule_conf_cfg.WarmupConf()
+        warmup_conf.mutable_linear_conf().set_warmup_batches(self.steps)
+        warmup_conf.mutable_linear_conf().set_start_multiplier(self.start_multiplier)
         return warmup_conf
 
 
@@ -237,7 +237,7 @@ class LrScheduler:
         self.warmup = warmup
 
     @property
-    def warmup_conf(self) -> learning_rate_schedule_conf_pb.WarmupConf:
+    def warmup_conf(self) -> learning_rate_schedule_conf_cfg.WarmupConf:
         if self.warmup is None:
             return None
         return self.warmup.warmup_conf
@@ -245,7 +245,7 @@ class LrScheduler:
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         raise NotImplementedError()
 
     def SetLrFieldsInOptimizerConf(self, optimizer_conf) -> None:
@@ -253,14 +253,14 @@ class LrScheduler:
             assert self.base_lr is None
             assert self.warmup is None
             assert self.learning_rate_decay_conf is None
-            optimizer_conf.learning_rate_lbn = self.lr_lbn
+            optimizer_conf.set_learning_rate_lbn(self.lr_lbn)
         else:
             assert self.base_lr is not None
-            optimizer_conf.base_learning_rate = self.base_lr
+            optimizer_conf.set_base_learning_rate(self.base_lr)
             if self.warmup_conf is not None:
-                optimizer_conf.warmup_conf.CopyFrom(self.warmup_conf)
+                optimizer_conf.mutable_warmup_conf().CopyFrom(self.warmup_conf)
             if self.learning_rate_decay_conf is not None:
-                optimizer_conf.learning_rate_decay.CopyFrom(
+                optimizer_conf.mutable_learning_rate_decay().CopyFrom(
                     self.learning_rate_decay_conf
                 )
 
@@ -332,12 +332,12 @@ class CosineScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.cosine_conf.decay_batches = self.steps
-        learning_rate_decay_conf.cosine_conf.alpha = self.alpha
+        learning_rate_decay_conf.mutable_cosine_conf().set_decay_batches(self.steps)
+        learning_rate_decay_conf.mutable_cosine_conf().set_alpha(self.alpha)
         return learning_rate_decay_conf
 
 
@@ -349,7 +349,7 @@ class CustomScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> learning_rate_schedule_conf_pb.LearningRateDecayConf:
+    ) -> learning_rate_schedule_conf_cfg.LearningRateDecayConf:
         return None
 
 
@@ -416,14 +416,16 @@ class PiecewiseConstantScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.piecewise_constant_conf.boundaries.extend(
-            self.boundaries
-        )
-        learning_rate_decay_conf.piecewise_constant_conf.values.extend(self.values)
+        for boundary in self.boundaries:
+            learning_rate_decay_conf.mutable_piecewise_constant_conf().add_boundaries(
+                boundary
+            )
+        for value in self.values:
+            learning_rate_decay_conf.mutable_piecewise_constant_conf().add_values(value)
         return learning_rate_decay_conf
 
 
@@ -491,19 +493,21 @@ class PiecewiseScalingScheduler(LrScheduler):
         if not isinstance(scale, collections.abc.Sequence):
             scale = [scale] * len(boundaries)
         assert len(boundaries) == len(scale)
-        self.scale = [1] + list(scale)
+        self.scales = [1] + list(scale)
 
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.piecewise_scaling_conf.boundaries.extend(
-            self.boundaries
-        )
-        learning_rate_decay_conf.piecewise_scaling_conf.scales.extend(self.scale)
+        for boundary in self.boundaries:
+            learning_rate_decay_conf.mutable_piecewise_scaling_conf().add_boundaries(
+                boundary
+            )
+        for scale in self.scales:
+            learning_rate_decay_conf.mutable_piecewise_scaling_conf().add_scales(scale)
         return learning_rate_decay_conf
 
 
@@ -583,16 +587,16 @@ class PolynomialScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.polynomial_conf.decay_batches = self.steps
-        learning_rate_decay_conf.polynomial_conf.end_learning_rate = (
-            self.end_learning_rate
+        learning_rate_decay_conf.mutable_polynomial_conf().set_decay_batches(self.steps)
+        learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate(
+            (self.end_learning_rate)
         )
-        learning_rate_decay_conf.polynomial_conf.power = self.power
-        learning_rate_decay_conf.polynomial_conf.cycle = self.cycle
+        learning_rate_decay_conf.mutable_polynomial_conf().set_power(self.power)
+        learning_rate_decay_conf.mutable_polynomial_conf().set_cycle(self.cycle)
         return learning_rate_decay_conf
 
 
@@ -696,14 +700,18 @@ class LinearCosineScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.linear_cosine_conf.decay_batches = self.steps
-        learning_rate_decay_conf.linear_cosine_conf.num_periods = self.num_periods
-        learning_rate_decay_conf.linear_cosine_conf.alpha = self.alpha
-        learning_rate_decay_conf.linear_cosine_conf.beta = self.beta
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_num_periods(
+            self.num_periods
+        )
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_alpha(self.alpha)
+        learning_rate_decay_conf.mutable_linear_cosine_conf().set_beta(self.beta)
         return learning_rate_decay_conf
 
 
@@ -779,13 +787,19 @@ class ExponentialScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.exponential_conf.decay_batches = self.steps
-        learning_rate_decay_conf.exponential_conf.decay_rate = self.decay_rate
-        learning_rate_decay_conf.exponential_conf.staircase = self.staircase
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_exponential_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
 
 
@@ -861,13 +875,19 @@ class InverseTimeScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.inverse_time_conf.decay_batches = self.steps
-        learning_rate_decay_conf.inverse_time_conf.decay_rate = self.decay_rate
-        learning_rate_decay_conf.inverse_time_conf.staircase = self.staircase
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_batches(
+            self.steps
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_inverse_time_conf().set_staircase(
+            self.staircase
+        )
         return learning_rate_decay_conf
 
 
@@ -943,13 +963,15 @@ class NaturalExpScheduler(LrScheduler):
     @property
     def learning_rate_decay_conf(
         self,
-    ) -> Optional[learning_rate_schedule_conf_pb.LearningRateDecayConf]:
+    ) -> Optional[learning_rate_schedule_conf_cfg.LearningRateDecayConf]:
         learning_rate_decay_conf = (
-            learning_rate_schedule_conf_pb.LearningRateDecayConf()
+            learning_rate_schedule_conf_cfg.LearningRateDecayConf()
         )
-        learning_rate_decay_conf.natural_exp_conf.decay_batches = self.steps
-        learning_rate_decay_conf.natural_exp_conf.decay_rate = self.decay_rate
-        learning_rate_decay_conf.natural_exp_conf.staircase = self.staircase
+        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_batches(self.steps)
+        learning_rate_decay_conf.mutable_natural_exp_conf.set_decay_rate(
+            self.decay_rate
+        )
+        learning_rate_decay_conf.mutable_natural_exp_conf.set_staircase(self.staircase)
         return learning_rate_decay_conf
 
 
@@ -979,11 +1001,13 @@ class DynamicLossScalePolicy(LossScalePolicy):
         self.multiplier = multiplier
 
     def SetLossScaleFieldsInTrainConf(self, train_conf):
-        train_conf.dynamic_loss_scale_policy.initial_loss_scale = (
+        train_conf.mutable_dynamic_loss_scale_policy().set_initial_loss_scale(
             self.initial_loss_scale
         )
-        train_conf.dynamic_loss_scale_policy.increment_period = self.increment_period
-        train_conf.dynamic_loss_scale_policy.multiplier = self.multiplier
+        train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(
+            self.increment_period
+        )
+        train_conf.mutable_dynamic_loss_scale_policy().set_ultiplier(self.multiplier)
 
 
 class Optimizer:
@@ -1014,14 +1038,14 @@ class Optimizer:
 
         return self.variables
 
-    def _AddOptimizerConfInTrainConf(self, train_conf: job_conf_pb.TrainConf) -> None:
+    def _AddOptimizerConfInTrainConf(self, train_conf: job_conf_cfg.TrainConf) -> None:
         raise NotImplementedError()
 
     @property
-    def train_conf(self) -> job_conf_pb.TrainConf:
-        train_conf = job_conf_pb.TrainConf()
+    def train_conf(self) -> job_conf_cfg.TrainConf:
+        train_conf = job_conf_cfg.TrainConf()
         if self.train_step_lbn is not None:
-            train_conf.train_step_lbn = self.train_step_lbn
+            train_conf.set_train_step_lbn(self.train_step_lbn)
         if self.loss_scale_policy is not None:
             self.loss_scale_policy.SetLossScaleFieldsInTrainConf(train_conf)
         self._AddOptimizerConfInTrainConf(train_conf)
@@ -1119,15 +1143,16 @@ class SGD(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
         if self.momentum == 0:
-            optimizer_conf.naive_conf.SetInParent()
+            optimizer_conf.mutable_naive_conf()
         else:
-            optimizer_conf.momentum_conf.beta = self.momentum
-        optimizer_conf.variable_op_names.extend(self.Variables())
+            optimizer_conf.mutable_momentum_conf().set_beta(self.momentum)
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.SGDW")
@@ -1226,29 +1251,34 @@ class SGDW(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
         if self.momentum == 0:
-            optimizer_conf.naive_conf.SetInParent()
+            optimizer_conf.mutable_naive_conf()
         else:
-            optimizer_conf.momentum_conf.beta = self.momentum
+            optimizer_conf.mutable_momentum_conf().set_beta(self.momentum)
         if self.weight_decay is not None:
-            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                optimizer_conf.weight_decay_conf.includes.pattern.extend(
-                    self.weight_decay_includes
-                )
+                for weight_decay_include in self.weight_decay_includes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
-                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
-                    self.weight_decay_excludes
-                )
-        optimizer_conf.variable_op_names.extend(self.Variables())
+                for weight_decay_exclude in self.weight_decay_excludes:
+                    optimizer_conf.weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.Adam")
@@ -1356,15 +1386,18 @@ class Adam(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.adam_conf.beta1 = self.beta1
-        optimizer_conf.adam_conf.beta2 = self.beta2
-        optimizer_conf.adam_conf.epsilon = self.epsilon
-        optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
-        optimizer_conf.variable_op_names.extend(self.Variables())
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
+        optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
+        optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.AdamW")
@@ -1494,29 +1527,36 @@ class AdamW(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.adam_conf.beta1 = self.beta1
-        optimizer_conf.adam_conf.beta2 = self.beta2
-        optimizer_conf.adam_conf.epsilon = self.epsilon
-        optimizer_conf.adam_conf.do_bias_correction = self.do_bias_correction
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_adam_conf().set_beta1(self.beta1)
+        optimizer_conf.mutable_adam_conf().set_beta2(self.beta2)
+        optimizer_conf.mutable_adam_conf().set_epsilon(self.epsilon)
+        optimizer_conf.mutable_adam_conf().set_do_bias_correction(
+            self.do_bias_correction
+        )
         if self.weight_decay is not None:
-            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                optimizer_conf.weight_decay_conf.includes.pattern.extend(
-                    self.weight_decay_includes
-                )
+                for weight_decay_include in self.weight_decay_includes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
-                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
-                    self.weight_decay_excludes
-                )
-        optimizer_conf.variable_op_names.extend(self.Variables())
+                for weight_decay_exclude in self.weight_decay_excludes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.RMSProp")
@@ -1612,14 +1652,15 @@ class RMSProp(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.rmsprop_conf.decay_rate = self.decay_rate
-        optimizer_conf.rmsprop_conf.epsilon = self.epsilon
-        optimizer_conf.rmsprop_conf.centered = self.centered
-        optimizer_conf.variable_op_names.extend(self.Variables())
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_rmsprop_conf().set_decay_rate(self.decay_rate)
+        optimizer_conf.mutable_rmsprop_conf().set_centered(self.centered)
+        optimizer_conf.mutable_rmsprop_conf().set_epsilon(self.epsilon)
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.LARS")
@@ -1715,28 +1756,33 @@ class LARS(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.lars_conf.momentum_beta = self.momentum_beta
-        optimizer_conf.lars_conf.epsilon = self.epsilon
-        optimizer_conf.lars_conf.lars_coefficient = self.lars_coefficient
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_lars_conf().set_momentum_beta(self.momentum_beta)
+        optimizer_conf.mutable_lars_conf().set_epsilon(self.epsilon)
+        optimizer_conf.mutable_lars_conf().set_lars_coefficient(self.lars_coefficient)
         if self.weight_decay is not None:
-            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                optimizer_conf.weight_decay_conf.includes.pattern.extend(
-                    self.weight_decay_includes
-                )
+                for weight_decay_include in self.weight_decay_includes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
-                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
-                    self.weight_decay_excludes
-                )
-        optimizer_conf.variable_op_names.extend(self.Variables())
+                for weight_decay_exclude in self.weight_decay_excludes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.LazyAdam")
@@ -1822,14 +1868,15 @@ class LazyAdam(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.lazy_adam_conf.beta1 = self.beta1
-        optimizer_conf.lazy_adam_conf.beta2 = self.beta2
-        optimizer_conf.lazy_adam_conf.epsilon = self.epsilon
-        optimizer_conf.variable_op_names.extend(self.Variables())
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_lazy_adam_conf().set_beta1(self.beta1)
+        optimizer_conf.mutable_lazy_adam_conf().set_beta2(self.beta2)
+        optimizer_conf.mutable_lazy_adam_conf().set_epsilon(self.epsilon)
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.LAMB")
@@ -1895,28 +1942,33 @@ class LAMB(Optimizer):
         self.variables = variables
 
     def _AddOptimizerConfInTrainConf(self, train_conf) -> None:
-        optimizer_conf = train_conf.optimizer_conf.add()
+        optimizer_conf = train_conf.mutable_optimizer_conf().Add()
         self.lr_scheduler.SetLrFieldsInOptimizerConf(optimizer_conf)
         if self.grad_clipping is not None:
-            optimizer_conf.clip_conf.CopyFrom(self.grad_clipping.clip_conf)
-        optimizer_conf.lamb_conf.beta1 = self.beta1
-        optimizer_conf.lamb_conf.beta2 = self.beta2
-        optimizer_conf.lamb_conf.epsilon = self.epsilon
+            optimizer_conf.mutable_clip_conf().CopyFrom(self.grad_clipping.clip_conf)
+        optimizer_conf.mutable_lamb_conf().set_beta1(self.beta1)
+        optimizer_conf.mutable_lamb_conf().set_beta2(self.beta2)
+        optimizer_conf.mutable_lamb_conf().set_epsilon(self.epsilon)
         if self.weight_decay is not None:
-            optimizer_conf.weight_decay_conf.weight_decay_rate = self.weight_decay
+            optimizer_conf.mutable_weight_decay_conf().set_weight_decay_rate(
+                self.weight_decay
+            )
             assert not (
                 self.weight_decay_excludes is not None
                 and self.weight_decay_includes is not None
             )
             if self.weight_decay_includes is not None:
-                optimizer_conf.weight_decay_conf.includes.pattern.extend(
-                    self.weight_decay_includes
-                )
+                for weight_decay_include in self.weight_decay_includes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_includes().add_pattern(
+                        weight_decay_include
+                    )
             elif self.weight_decay_excludes is not None:
-                optimizer_conf.weight_decay_conf.excludes.pattern.extend(
-                    self.weight_decay_excludes
-                )
-        optimizer_conf.variable_op_names.extend(self.Variables())
+                for weight_decay_exclude in self.weight_decay_excludes:
+                    optimizer_conf.mutable_weight_decay_conf().mutable_excludes().add_pattern(
+                        weight_decay_exclude
+                    )
+        for variable in self.Variables():
+            optimizer_conf.add_variable_op_names(variable)
 
 
 @oneflow_export("optimizer.CombinedOptimizer")
