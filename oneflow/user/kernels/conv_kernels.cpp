@@ -396,9 +396,8 @@ class ConvCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto state = CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
-    auto* conv_state = state.get();
-    CHECK_NOTNULL(conv_state);
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "in", "out", "weight");
+    CHECK_NOTNULL(conv_state.get());
 
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
@@ -493,9 +492,8 @@ class ConvDataGradCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
-    auto* conv_state = state.get();
-    CHECK_NOTNULL(conv_state);
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "dx", "dy", "filter");
+    CHECK_NOTNULL(conv_state.get());
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
@@ -566,9 +564,8 @@ class ConvFilterGradCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
-    auto* conv_state = state.get();
-    CHECK_NOTNULL(conv_state);
+    const auto& conv_state = CreateConvOpKernelState<T>(ctx, "x", "dy", "filter_diff");
+    CHECK_NOTNULL(conv_state.get());
 
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);

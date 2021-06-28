@@ -240,9 +240,8 @@
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Int32 filters, Int32List kernel_size,
-                   Int32List strides, Int32List padding_before, Int32List dilation_rate,
-                   Int32 groups=1, String data_format=\"channels_first\")"
+    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
 - name: "conv_data_grad"

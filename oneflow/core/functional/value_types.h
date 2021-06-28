@@ -21,6 +21,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 class Shape;
@@ -82,6 +83,11 @@ enum ValueType {
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
   template<typename T, typename std::enable_if<std::is_same<T, cpp_type>::value, int>::type = 0> \
+  inline ValueType ValueTypeOf() {                                                               \
+    return value_type;                                                                           \
+  }                                                                                              \
+  template<typename T,                                                                           \
+           typename std::enable_if<std::is_same<T, Optional<cpp_type>>::value, int>::type = 0>   \
   inline ValueType ValueTypeOf() {                                                               \
     return value_type;                                                                           \
   }
