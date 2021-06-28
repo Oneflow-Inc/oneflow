@@ -119,7 +119,10 @@ def calc_ndim_same_padding(
     for i in range(ndims):
         ndim_padding_needed.append(
             calc_same_padding(
-                input_shape[dhw_offset + i], kernel_sizes[i], dilations[i], strides[i],
+                input_shape[dhw_offset + i],
+                kernel_sizes[i],
+                dilations[i],
+                strides[i],
             )
         )
     pads_small = [padding_needed // 2 for padding_needed in ndim_padding_needed]
@@ -326,7 +329,12 @@ def conv1d(
         else:
             raise ValueError("invalid data_format")
     inputs, pads_list = calc_conv_padding(
-        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
+        input,
+        padding,
+        data_format.upper(),
+        kernel_size_list,
+        dilations,
+        strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -371,6 +379,7 @@ def conv2d(
     filters: oneflow._oneflow_internal.BlobDesc,
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     data_format: str = "NCHW",
     dilations: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
@@ -452,6 +461,9 @@ def conv2d(
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
 
+    if bias is not None:
+        assert len(bias.shape) == 1
+
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
@@ -501,7 +513,12 @@ def conv2d(
 
     assert isinstance(kernel_size_list, tuple)
     inputs, pads_list = calc_conv_padding(
-        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
+        input,
+        padding,
+        data_format.upper(),
+        kernel_size_list,
+        dilations,
+        strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -511,7 +528,8 @@ def conv2d(
     assert groups <= inputs.shape[in_channel_axis]
     assert inputs.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
-
+    if bias is not None:
+        assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
     if (
         groups > 1
         and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
@@ -520,6 +538,11 @@ def conv2d(
         filter_split_list = ConvUtil.split(
             filters, axis=filter_out_axis, split_num=groups
         )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
+        )
         out_list = []
         name = name if name is not None else id_util.UniqueStr("Conv2d_")
         for i in range(len(in_split_list)):
@@ -527,6 +550,7 @@ def conv2d(
                 conv2d_op(
                     in_split_list[i],
                     filter_split_list[i],
+                    bias_spilt_list[i],
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -541,6 +565,7 @@ def conv2d(
         return conv2d_op(
             inputs,
             filters,
+            bias,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -554,6 +579,7 @@ def conv2d(
 def conv2d_op(
     inputs,
     filters,
+    bias,
     padding_before,
     channel_pos,
     kernel_size_list,
@@ -562,7 +588,7 @@ def conv2d_op(
     groups,
     name,
 ):
-    return (
+    op_builder = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
         .Op("conv2d")
         .Input("in", [inputs])
@@ -575,10 +601,10 @@ def conv2d_op(
         .Attr("strides", strides)
         .Attr("dilation_rate", dilations)
         .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
     )
+    if bias is not None:
+        op_builder = op_builder.Input("bias", [bias])
+    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.conv3d")
@@ -729,7 +755,12 @@ def conv3d(
         else:
             raise ValueError("invalid data_format")
     inputs, pads_list = calc_conv_padding(
-        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
+        input,
+        padding,
+        data_format.upper(),
+        kernel_size_list,
+        dilations,
+        strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -1726,7 +1757,7 @@ def max_pool2d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r""" Performs the 2d-max pooling on the input `Blob`.
+    r"""Performs the 2d-max pooling on the input `Blob`.
 
     Args:
         input (oneflow._oneflow_internal.BlobDesc): A 4-D `Blob` of the format specified by data_format.
@@ -2660,14 +2691,22 @@ def random_mask_like(
         return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         module = flow.find_or_create_module(
-            name, lambda: RandomMaskLike(rate=rate, seed=seed, name=name,),
+            name,
+            lambda: RandomMaskLike(
+                rate=rate,
+                seed=seed,
+                name=name,
+            ),
         )
         return module(like)
 
 
 class RandomMaskLike(module_util.Module):
     def __init__(
-        self, rate: float, seed: Optional[int] = None, name: str = None,
+        self,
+        rate: float,
+        seed: Optional[int] = None,
+        name: str = None,
     ):
         module_util.Module.__init__(self, name)
         if seed is None:
@@ -3300,7 +3339,8 @@ def hard_sigmoid(
 
 @oneflow_export("nn.mish")
 def mish(
-    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
+    x: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """The Mish activation function.
 
