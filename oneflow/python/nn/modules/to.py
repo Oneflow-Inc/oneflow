@@ -23,20 +23,16 @@ from typing import Optional, Union
 class To(Module):
     def __init__(self, copy):
         super().__init__()
-        self._copy_op = flow.builtin_op("copy").Input("in").Output("out").Build()
-        self._cast_op = flow.builtin_op("cast").Input("in").Output("out").Build()
         self.copy = copy
 
     def forward(self, x, device, dtype):
         result = x
         if device is not None:
             if x.device != device or self.copy:
-                result = self._copy_op(
-                    x, device_type=device.type, device_id=device.index
-                )[0]
+                result = flow.F.copy(x, device_type=device.type, device_id=device.index)
         if dtype is not None:
             if x.dtype != dtype or self.copy:
-                result = self._cast_op(result, dtype=dtype)[0]
+                result = flow.F.cast(result, dtype=dtype)
         return result
 
 
@@ -70,7 +66,7 @@ def to_op(input, *args, **kwargs):
         >>> arr = np.random.randint(1, 9, size=(1, 2, 3, 4))
         >>> input = flow.Tensor(arr)
         >>> output = input.to(dtype=flow.float32)
-        >>> print(np.array_equal(arr.astype(np.float32), output.numpy()))
+        >>> np.array_equal(arr.astype(np.float32), output.numpy())
         True
 
     """

@@ -123,7 +123,7 @@ jobs:
     strategy:
       max-parallel: 5
       matrix:
-        test_suite: ["cuda", "cpu", "xla"]
+        test_suite: ["cuda", "cpu", "xla", "xla_cpu"]
         include:
           - test_suite: cuda
             cuda_version: 10.2
@@ -138,6 +138,11 @@ jobs:
           - test_suite: xla
             cuda_version: 10.1
             extra_flags: --extra_oneflow_cmake_args=-DCUDA_NVCC_GENCODES=arch=compute_61,code=sm_61 --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
+            os: [self-hosted, linux, build]
+            allow_fail: true
+          - test_suite: xla_cpu
+            cuda_version: 10.1
+            extra_flags: --extra_oneflow_cmake_args=-DRPC_BACKEND=GRPC,LOCAL --xla --cpu --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple
             os: [self-hosted, linux, build]
             allow_fail: true
     steps:
@@ -278,6 +283,7 @@ jobs:
             "xla",
             "cuda_op_eager",
             "cpu_op_eager",
+            "xla_cpu",
           ]
         include:
           - test_suite: "cuda"
@@ -308,6 +314,10 @@ jobs:
             os: [self-hosted, linux, gpu]
             allow_fail: true
             build_env: build.xla.env
+          - test_suite: "xla_cpu"
+            os: [self-hosted, linux, cpu]
+            allow_fail: true
+            build_env: build.xla_cpu.env
     steps:
       - name: Fix permissions
         run: |
@@ -350,9 +360,9 @@ jobs:
           if [ "$test_suite" == "cuda" ] || [  "$test_suite" == "cpu" ]; then
             echo "bin_dir=${PWD}/bin_tmp" >> $GITHUB_ENV
           fi
-          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ]; then
+          if [ "$test_suite" == "cpu" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "xla_cpu" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
-            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
+            extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
           fi
           if [ "$test_suite" == "cuda_op_eager" ] || [ "$test_suite" == "cpu_op_eager" ] || [ "$test_suite" == "cuda_new_interface" ]; then
             extra_docker_args+=" --env ONEFLOW_TEST_ENABLE_EAGER=1"
@@ -384,14 +394,24 @@ jobs:
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-      - name: Op test (distributed)
+      - name: Op test (distributed, 1st try)
         if: matrix.test_suite == 'cuda'
+        continue-on-error: true
+        id: distributed_try_1
         run: |
-          set -x
-          python3 ci/test/distributed_run.py \
-            --bash_script=ci/test/2node_op_test.sh \
-            --custom_img_tag=${image_name} \
-            --oneflow_wheel_path=${wheelhouse_dir}
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 2nd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+        continue-on-error: true
+        id: distributed_try_2
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 3rd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+        continue-on-error: false
+        id: distributed_try_3
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
       - name: Upload log (distributed test)
         if: failure() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss
@@ -487,7 +507,7 @@ jobs:
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/1node_benchmark_test_fp16.sh"
       - name: XLA Test
-        if: matrix.test_suite == 'xla'
+        if: contains(fromJson('["xla", "xla_cpu"]'), matrix.test_suite) && env.is_built != '1'
         run: |
           set -x
           docker run $extra_docker_args \

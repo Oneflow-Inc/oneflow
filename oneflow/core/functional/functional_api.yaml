@@ -198,24 +198,168 @@
   signature: "Tensor Range(*, Int64 start, Int64 limit, Int64 delta, DataType dtype=kInt64)"
   bind_python: True
 
+- name: "flatten"
+  signature: "Tensor Flatten(Tensor x, *, Int32 start_dim=0, Int32 end_dim=-1)"
+  bind_python: True
+
 - name: "argmax"
   signature: "Tensor ArgMax(Tensor x)"
+  bind_python: True
+
+- name: "argwhere"
+  signature: "TensorTuple ArgWhere(Tensor x, *, DataType dtype=kInt32)"
+  bind_python: True
+
+- name: "broadcast_like"
+  signature: "Tensor BroadcastLike(Tensor x, Tensor like, *, Int32List broadcast_axes)"
   bind_python: True
 
 - name: "cast"
   signature: "Tensor Cast(Tensor x, *, DataType dtype)"
   bind_python: True
 
+- name: "constant"
+  signature: "Tensor Constant(*, Shape shape, Scalar value, DataType dtype)"
+  bind_python: True
+
+- name: "zeros_like"
+  signature: "Tensor ZerosLike(Tensor x)"
+  bind_python: True
+
+- name: "ones_like"
+  signature: "Tensor OnesLike(Tensor x)"
+  bind_python: True
+
+- name: "concat"
+  signature: "Tensor Concat(TensorTuple inputs, *, Int64 axis, Int64 max_dim_size)"
+  bind_python: True
+
+- name: "bias_add"
+  signature: "Tensor BiasAdd(Tensor x, Tensor bias, *, Int32 axis=1)"
+  bind_python: True
+
+- name: "conv2d"
+  signature:
+    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
+
+- name: "conv_data_grad"
+  signature:
+    "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
+                         Int32List kernel_size, Int32List strides, Int32List padding_before,
+                         Int32List dilation_rate, Int32 groups=1,
+                         String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_filter_grad"
+  signature:
+    "Tensor ConvFilterGrad(Tensor dy, Tensor x, *, Int32 num_spatial_dims, Int32List kernel_size,
+                           Int32List strides, Int32List padding_before, Int32List dilation_rate,
+                           Int32 groups=1, String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "conv_bias_grad"
+  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  bind_python: False
+
+- name: "expand"
+  signature: "Tensor Expand(Tensor x, *, Int32List in_shape, Int32List out_shape, Int32List stride)"
+  bind_python: True
+
+- name: "expand_dims"
+  signature: "Tensor ExpandDims(Tensor x, *, Int32 axis)"
+  bind_python: True
+
 - name: "exp"
   signature: "Tensor Exp(Tensor x)"
+  bind_python: True
+
+- name: "gather"
+  signature: "Tensor Gather(Tensor x, Tensor indices, *, Int64 axis)"
+  bind_python: True
+
+- name: "dim_gather"
+  signature: "Tensor DimGather(Tensor x, Tensor indices, *, Int32 dim)"
+  bind_python: True
+
+- name: "matmul"
+  signature:
+    "Tensor MatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                   Double alpha=1.0)"
+  bind_python: True
+
+- name: "broadcast_matmul"
+  signature:
+    "Tensor BroadcastMatMul(Tensor a, Tensor b, *, Bool transpose_a=False,
+                            Bool transpose_b=False, Double alpha=1.0)"
+  bind_python: True
+
+- name: "sparse_softmax_cross_entropy"
+  signature: "Tensor SparseSoftmaxCrossEntropy(Tensor logits, Tensor label, *, Int64 depth)"
+  bind_python: True
+
+- name: "where"
+  signature: "Tensor Where(Tensor condition, Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "batch_matmul"
+  signature:
+    "Tensor BatchMatMul(Tensor a, Tensor b, *, Bool transpose_a=False, Bool transpose_b=False,
+                        Double alpha=1.0)"
   bind_python: True
 
 - name: "negative"
   signature: "Tensor Negative(Tensor x)"
   bind_python: True
 
+- name: "layer_norm_affine"
+  signature:
+    "Tensor LayerNormAffine(Tensor x, Tensor gamma, Tensor beta, *, Int64 begin_norm_axis,
+                            Int64 begin_params_axis, Double epsilon)"
+  bind_python: True
+
+- name: "layer_norm"
+  signature:
+    "Tensor LayerNorm(Tensor x, *, Int64 begin_norm_axis, Int64 begin_params_axis, Double epsilon)"
+  bind_python: True
+
 - name: "prelu"
   signature: "Tensor PRelu(Tensor x, Tensor alpha)"
+  bind_python: True
+
+- name: "reshape"
+  signature: "Tensor Reshape(Tensor x, *, Shape shape)"
+  bind_python: True
+
+- name: "slice"
+  signature: "Tensor Slice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "slice_update"
+  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice"
+  signature: "Tensor LogicalSlice(Tensor x, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "logical_slice_assign"
+  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  bind_python: True
+
+- name: "squeeze"
+  signature: "Tensor Squeeze(Tensor x, *, Int32List dim)"
+  bind_python: True
+
+- name: "copy"
+  signature: "Tensor Copy(Tensor x, *, String device_type, Int64 device_id)"
+  bind_python: True
+
+- name: "upsample"
+  signature:
+    "Tensor Upsample(Tensor x, *, Float height_scale, Float width_scale, Bool align_corners,
+                     String interpolation, String data_format=\"channels_first\")"
   bind_python: True
 
 - name: "abs"
@@ -293,3 +437,8 @@
 - name: "softplus"
   signature: "Tensor Softplus(Tensor x)"
   bind_python: True
+
+- name: "unsorted_segment_sum_like"
+  signature:
+    "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
+  bind_python: False
