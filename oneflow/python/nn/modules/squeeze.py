@@ -26,18 +26,10 @@ class Squeeze(Module):
         super().__init__()
         self.dim = dim
 
-        self._op = (
-            flow.builtin_op("squeeze")
-            .Input("in")
-            .Output("out")
-            .Attr("axes", dim)
-            .Build()
-        )
-
     def forward(self, x):
         if self.dim is None:
             return x
-        return self._op(x)[0]
+        return flow.F.squeeze(x, dim=self.dim)
 
 
 @oneflow_export("squeeze")
@@ -65,9 +57,9 @@ def squeeze_op(input, dim: Optional[Sequence[int]] = None):
         >>> flow.enable_eager_execution()
 
         >>> input = flow.Tensor(np.array([[[[1, 1, 1]]]]).astype(np.int32))
-        >>> out = flow.squeeze(input, dim=[1, 2]).numpy().shape
-        >>> print(out)
-        (1, 3)
+        >>> out = flow.squeeze(input, dim=[1, 2]).shape
+        >>> out
+        flow.Size([1, 3])
 
     """
     if isinstance(dim, int):
