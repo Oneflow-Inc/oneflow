@@ -65,6 +65,20 @@ def choose(x):
 def random(low, high):
     def generator(annotation):
         if hasattr(annotation, "__origin__"):
+            # PyTorch _size_2_t and similar types are defined by type variables,
+            # leading to unexpected __args__ and __origin__
+            #
+            # _size_2_t = Union[T, Tuple[T, T]][int]
+            # _size_2_t.__origin__
+            # >> typing.Union[~T, typing.Tuple[~T, ~T]]
+            # 
+            # So recreate a new annotation object by eval and repr
+            #
+            # _size_2_t
+            # >> typing.Union[int, typing.Tuple[int, int]]
+            # _size_2_t_new = eval(repr(annotation))
+            # _size_2_t_new.__origin__
+            # >> typing.Union
             annotation = eval(repr(annotation))
             if annotation.__origin__ is Union:
                 x = choose(annotation.__args__)(None)
