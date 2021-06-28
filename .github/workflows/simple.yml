@@ -128,7 +128,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }}
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
