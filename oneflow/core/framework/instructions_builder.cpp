@@ -139,8 +139,8 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
   std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
       bn_in_op2blob_object =
           std::make_shared<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>();
-  JUST(builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
-                                 bn_in_op2blob_object));
+  builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
+                            bn_in_op2blob_object);
   return JUST(MapAt(*bn_in_op2blob_object, "out"));
 }
 
@@ -364,7 +364,7 @@ Maybe<int64_t> InstructionsBuilder::NewSymbolId4OpNodeSignature(
 
 Maybe<int64_t> InstructionsBuilder::NewSharedOpKernelObjectId4ParallelConfSymbolId(
     const std::shared_ptr<ParallelDesc>& parallel_desc_sym) {
-  return JUST(NewObjectId(parallel_desc_sym));
+  return NewObjectId(parallel_desc_sym);
 }
 
 Maybe<void> InstructionsBuilder::DeleteObject(compatible_py::Object* blob_object) {
@@ -496,7 +496,7 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
   } else {
     scope_proto->mutable_opt_mirrored_parallel_conf()->clear_mirrored_parallel();
   }
-  return JUST(GetScopeSymbol(scope_proto));
+  return GetScopeSymbol(scope_proto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
@@ -531,9 +531,8 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
     parallel_conf->hierarchy().ToProto(&hierarchy_proto);
     hierarchy.reset(new Shape(hierarchy_proto));
   }
-  return JUST(BuildScopeWithNewParallelDesc(scope, std::get<0>(*tag_and_dev_ids_and_hierarchy),
-                                            std::get<1>(*tag_and_dev_ids_and_hierarchy),
-                                            hierarchy));
+  return BuildScopeWithNewParallelDesc(scope, std::get<0>(*tag_and_dev_ids_and_hierarchy),
+                                       std::get<1>(*tag_and_dev_ids_and_hierarchy), hierarchy);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_ptr<Scope>& scope,
@@ -546,7 +545,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewIsMirrored(const std::shared_
     }
   };
 
-  return JUST(BuildScopeByProtoSetter(scope, SetScopeProto));
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_ptr<Scope>& scope,
@@ -555,7 +554,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewScopeName(const std::shared_p
     scope_proto->add_scope_op_name_prefixes(scope_name);
   };
 
-  return JUST(BuildScopeByProtoSetter(scope, SetScopeProto));
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
@@ -563,7 +562,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeByProtoSetter(
     const std::function<void(const std::shared_ptr<cfg::ScopeProto>&)>& Setter) {
   std::shared_ptr<cfg::ScopeProto> scope_proto = JUST(scope->MakeChildScopeProto());
   Setter(scope_proto);
-  return JUST(GetScopeSymbol(scope_proto));
+  return GetScopeSymbol(scope_proto);
 }
 
 Maybe<compatible_py::BlobObject> InstructionsBuilder::BroadcastBlobReference(
@@ -605,8 +604,8 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
       std::make_tuple(token_id_0, token_id_1);
-  JUST(BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids));
-  JUST(BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids));
+  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
+  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
   return Maybe<void>::Ok();
 }
 
@@ -1150,8 +1149,7 @@ Maybe<void> InstructionsBuilder::StatefulCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return JUST(
-        CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr));
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
 
   JUST(_StatefulCall(op_attribute, opkernel_object, bn_in_op2blob_object, GetDelegateBlobObject));
@@ -1184,8 +1182,7 @@ Maybe<void> InstructionsBuilder::StatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return JUST(
-        CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr));
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
 
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
@@ -1228,8 +1225,7 @@ Maybe<void> InstructionsBuilder::NoBoxingStatelessCall(
           const std::shared_ptr<compatible_py::BlobObject>& blob_object,
           const std::shared_ptr<compatible_py::OpArgParallelAttribute>& op_arg_parallel_attr)
       -> Maybe<compatible_py::BlobObject> {
-    return JUST(
-        CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr));
+    return CreateDelegateBlobObject(FetchDelegateBlobObject, blob_object, op_arg_parallel_attr);
   };
   JUST(_StatelessCall("compute", op_attribute, op_parallel_desc_sym, op_parallel_desc_sym,
                       bn_in_op2blob_object, GetDirectOr121BlobObject));
