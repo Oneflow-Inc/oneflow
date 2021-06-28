@@ -86,6 +86,44 @@ class Conv2DFunctor {
   std::shared_ptr<OpExpr> bias_op_;
 };
 
+class Conv3DFunctor {
+ public:
+  Conv3DFunctor() {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv3d").Input("in").Input("weight").Output("out").Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap conv_attrs;
+    std::vector<int32_t> kernel_size_vec;
+    for (int i = 0; i < 3; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    const std::shared_ptr<one::Tensor>& conv_out =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+    } else {
+      return conv_out;
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+
 class MatMulBaseFunctor {
  public:
   MatMulBaseFunctor() = default;
@@ -257,6 +295,7 @@ class NormalizationFunctor {
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::Conv3DFunctor>("Conv3D");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");

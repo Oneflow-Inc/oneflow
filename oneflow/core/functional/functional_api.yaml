@@ -244,6 +244,12 @@
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
+- name: "conv3d"
+  signature:
+    "Tensor Conv3D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+                   Int32List padding, Int32List dilation, Int32 groups=1)"
+  bind_python: True
+
 - name: "conv_data_grad"
   signature:
     "Tensor ConvDataGrad(Tensor dy, Tensor weight, Tensor x, *, Int32 num_spatial_dims,
