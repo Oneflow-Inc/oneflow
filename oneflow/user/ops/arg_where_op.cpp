@@ -44,6 +44,7 @@ REGISTER_USER_OP("argwhere")
       user_op::TensorDesc* output_size_desc = ctx->OutputTensorDesc("output_size", 0);
       *output_size_desc->mut_data_type() = dtype;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

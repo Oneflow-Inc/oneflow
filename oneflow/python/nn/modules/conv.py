@@ -209,20 +209,60 @@ class Conv2d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
-        self.kernel_size = _pair(kernel_size)
-        self.stride = _pair(stride)
-        self.padding = _pair(padding)
-        self.dilation = _pair(dilation)
+        kernel_size = _pair(kernel_size)
+        self.kernel_size = kernel_size
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.out_channels = out_channels
         self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            flow.Tensor(out_channels, in_channels // groups, *kernel_size)
         )
+        self.out_channel_groups = out_channels // groups
         self.bias = None
+        self._bias_add_op = None
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
+            self._bias_add_op = (
+                flow.builtin_op("bias_add")
+                .Input("a")
+                .Input("b")
+                .Output("out")
+                .Attr("axis", 1)
+                .Build()
+            )
+
+        self._op = (
+            flow.builtin_op("conv2d")
+            .Input("in")
+            .Input("weight")
+            .Attr("filters", out_channels)
+            .Attr("padding_before", padding)
+            .Attr("strides", stride)
+            .Attr("kernel_size", kernel_size)
+            .Attr("dilation_rate", dilation)
+            .Attr("groups", groups)
+            .Attr("data_format", "channels_first")
+            .Output("out")
+            .Build()
+        )
+        self._cpu_op = (
+            flow.builtin_op("conv2d")
+            .Input("in")
+            .Input("weight")
+            .Attr("filters", out_channels // groups)
+            .Attr("padding_before", padding)
+            .Attr("strides", stride)
+            .Attr("kernel_size", kernel_size)
+            .Attr("dilation_rate", dilation)
+            .Attr("groups", 1)
+            .Attr("data_format", "channels_first")
+            .Output("out")
+            .Build()
+        )
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -241,34 +281,24 @@ class Conv2d(Module):
             out_list = []
             for i in range(len(in_split_list)):
                 out_list.append(
-                    flow.F.conv2d(
+                    self._cpu_op(
                         in_split_list[i],
-                        self.weight[i : i + 1, :, :, :],
-                        filters=self.out_channels // self.groups,
-                        kernel_size=self.kernel_size,
-                        strides=self.stride,
-                        padding_before=self.padding,
-                        dilation_rate=self.dilation,
-                        groups=1,
-                        data_format="channels_first",
-                    )
+                        self.weight[
+                            i
+                            * self.out_channel_groups : (i + 1)
+                            * self.out_channel_groups,
+                            :,
+                            :,
+                            :,
+                        ],
+                    )[0]
                 )
             res = flow.experimental.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow.F.conv2d(
-                x,
-                self.weight,
-                filters=self.out_channels,
-                kernel_size=self.kernel_size,
-                strides=self.stride,
-                padding_before=self.padding,
-                dilation_rate=self.dilation,
-                groups=self.groups,
-                data_format="channels_first",
-            )
+            res = self._op(x, self.weight)[0]
 
-        if self.bias is not None:
-            res = flow.F.bias_add(res, self.bias, axis=1)
+        if self._bias_add_op is not None:
+            res = self._bias_add_op(res, self.bias)[0]
         return res
 
 

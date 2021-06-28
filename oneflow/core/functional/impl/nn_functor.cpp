@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -50,28 +51,39 @@ class BiasAddFunctor {
 class Conv2DFunctor {
  public:
   Conv2DFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& weight, const int32_t& filters,
-                           const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& strides,
-                           const std::vector<int32_t>& padding_before,
-                           const std::vector<int32_t>& dilation_rate, const int32_t& groups,
-                           const std::string& data_format) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("filters", filters));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
-    JUST(attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_rate));
-    JUST(attrs.SetAttr<int32_t>("groups", groups));
-    JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, weight}, attrs);
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap conv_attrs;
+    std::vector<int32_t> kernel_size_vec;
+    for (int i = 0; i < 2; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    const std::shared_ptr<one::Tensor>& conv_out =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+    } else {
+      return conv_out;
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
 };
 
 class MatMulBaseFunctor {
@@ -144,8 +156,8 @@ class LayerNormAffineFunctor {
   LayerNormAffineFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("layer_norm")
                          .Input("x")
-                         .Input("beta")
                          .Input("gamma")
+                         .Input("beta")
                          .Output("y")
                          .Output("mean")
                          .Output("inv_variance")
@@ -153,17 +165,16 @@ class LayerNormAffineFunctor {
                          .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& beta,
                            const std::shared_ptr<one::Tensor>& gamma,
-                           const int64_t& begin_norm_axis, const int64_t& begin_params_axis,
-                           const double& epsilon) const {
+                           const std::shared_ptr<one::Tensor>& beta, const int64_t& begin_norm_axis,
+                           const int64_t& begin_params_axis, const double& epsilon) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
     JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("center", true));
     JUST(attrs.SetAttr<bool>("scale", true));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, beta, gamma}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
   }
 
  private:

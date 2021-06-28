@@ -121,7 +121,7 @@ void RtRegstDesc::ForEachBlobDescOffsetInOnRegst(
     const LogicalBlobId& lbi = sorted_lbi_vec_.at(i);
     Handler(i, lbi, blob_desc, cur_body_offset, cur_header_offset);
     cur_body_offset += blob_desc->AlignedByteSizeOfBlobBody();
-    cur_header_offset += blob_desc->ByteSizeOfBlobHeader();
+    cur_header_offset += blob_desc->AlignedByteSizeOfBlobHeader();
   }
 }
 
