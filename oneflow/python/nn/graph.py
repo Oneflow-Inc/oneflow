@@ -226,6 +226,7 @@ class Node(object):
         main_str += ')'
         return main_str
 
+# TODO(): move the config api into nn.Graph
 @oneflow_export("experimental.nn.graph.GraphConfig")
 class GraphConfig(FunctionConfig):
     def __init__(self):
