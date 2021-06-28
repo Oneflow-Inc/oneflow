@@ -79,7 +79,10 @@ class ConvUtil(object):
 @oneflow_export("nn.Conv1d")
 @experimental_api
 class Conv1d(Module):
-    r"""Applies a 1D convolution over an input signal composed of several input
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
+    
+    Applies a 1D convolution over an input signal composed of several input
     planes.
 
     In the simplest case, the output value of the layer with input size
@@ -158,7 +161,7 @@ class Conv1d(Module):
 
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
-        >>> m = nn.Conv1d(16, 33, 3, stride=2))
+        >>> m = nn.Conv1d(16, 33, 3, stride=2)
         >>> output = m(input)
 
     .. _cross-correlation:
@@ -258,7 +261,10 @@ class Conv1d(Module):
 @oneflow_export("nn.Conv2d")
 @experimental_api
 class Conv2d(Module):
-    r"""Applies a 2D convolution over an input signal composed of several input
+    r"""The interface is consistent with PyTorch.    
+    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
+    
+    Applies a 2D convolution over an input signal composed of several input
     planes.
 
     In the simplest case, the output value of the layer with input size
