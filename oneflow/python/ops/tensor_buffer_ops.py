@@ -26,6 +26,7 @@ from typing import Optional, Sequence, List
 
 
 @oneflow_export("tensor_buffer_to_tensor")
+@stable_api
 def tensor_buffer_to_tensor(
     x: oneflow._oneflow_internal.BlobDesc,
     dtype: flow.dtype,
@@ -89,6 +90,7 @@ def tensor_buffer_to_tensor(
 
 
 @oneflow_export("tensor_to_tensor_buffer")
+@stable_api
 def tensor_to_tensor_buffer(
     x: oneflow._oneflow_internal.BlobDesc,
     instance_dims: int,

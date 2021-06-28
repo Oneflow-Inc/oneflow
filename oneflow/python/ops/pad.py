@@ -372,16 +372,8 @@ def replication_pad2d(
         assert len(padding) == len(x.shape), ValueError(
             "padding boundry must be the same size of input dims"
         )
-        assert (
-            padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W
-        ), ValueError(
-            "Padding size should be less than the corresponding input dimension!"
-        )
         boundry = [padding[0], padding[1], padding[2], padding[3]]
     elif isinstance(padding, int):
-        assert padding < H and padding < W, ValueError(
-            "Padding size should be less than the corresponding input dimension!"
-        )
         boundry = [padding, padding, padding, padding]
     else:
         raise ValueError("padding must be in or list or tuple!")
@@ -456,16 +448,8 @@ def constant_pad2d(
         assert len(padding) == len(x.shape), ValueError(
             "padding boundry must be the same size of input dims"
         )
-        assert (
-            padding[2] < H and padding[3] < H and padding[0] < W and padding[1] < W
-        ), ValueError(
-            "Padding size should be less than the corresponding input dimension!"
-        )
         boundry = [padding[0], padding[1], padding[2], padding[3]]
     elif isinstance(padding, int):
-        assert padding < H and padding < W, ValueError(
-            "Padding size should be less than the corresponding input dimension!"
-        )
         boundry = [padding, padding, padding, padding]
     else:
         raise ValueError("padding must be in or list or tuple!")
