@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import inspect
-import typing   # This unused import is needed
+import typing  # This unused import is needed
 from typing import Dict, List, Optional, Tuple, Any, Union
 import random as random_util
 import os
@@ -80,8 +80,8 @@ def random(low, high):
             # _size_2_t = Union[T, Tuple[T, T]][int]
             # _size_2_t.__origin__
             # >> typing.Union[~T, typing.Tuple[~T, ~T]]
-            # 
-            # So recreate a new annotation object by eval and repr
+            #
+            # So recreate a new annotation object by repr and eval
             #
             # _size_2_t
             # >> typing.Union[int, typing.Tuple[int, int]]
@@ -119,7 +119,7 @@ def constant(val):
     return generator
 
 
-def test_against_pytorch(
+def test_module_against_pytorch(
     func_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
@@ -157,7 +157,9 @@ def test_against_pytorch(
             return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
         else:
             assert name in spec.kwonlyargs
-            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(spec.kwonlydefaults)
+            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(
+                spec.kwonlydefaults
+            )
 
     def generate(name):
         annotation = annotations[name]
@@ -166,25 +168,28 @@ def test_against_pytorch(
         return default_generators[annotation]()
 
     while n > 0:
-        flow_param_dict = {}
-        torch_param_dict = {}
+        flow_attr_dict = {}
+        torch_attr_dict = {}
         for name in args:
             if has_default(name):
                 if rng.random() < 1 / 3:
                     continue
             flow_data, torch_data = generate(name)
-            flow_param_dict[name] = flow_data
-            torch_param_dict[name] = torch_data
+            flow_attr_dict[name] = flow_data
+            torch_attr_dict[name] = torch_data
 
         if verbose:
-            print(torch_param_dict)
+            print(f"attr = {torch_attr_dict}, device = {device}")
 
         flow_input_original, torch_input_original = generate("input")
         flow_input_original.requires_grad_(backward)
         torch_input_original.requires_grad_(backward)
-        flow_input, torch_input = flow_input_original.to(device), torch_input_original.to(device)
+        flow_input, torch_input = (
+            flow_input_original.to(device),
+            torch_input_original.to(device),
+        )
         try:
-            torch_module = torch_func(**torch_param_dict)
+            torch_module = torch_func(**torch_attr_dict)
             torch_module = torch_module.to(device)
             torch_module.train(training)
             torch_res = torch_module(torch_input)
@@ -194,28 +199,45 @@ def test_against_pytorch(
             state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
         except Exception as e:
             if verbose:
-                print(f'PyTorch error: {e}')
+                print(f"PyTorch error: {e}")
             # The random generated test data is not always valid,
             # so just skip when PyTorch raises an exception
             continue
 
         flow_func = eval(f"flow.{func_name}")
-        flow_module = flow_func(**flow_param_dict)
+        flow_module = flow_func(**flow_attr_dict)
         flow_module = flow_module.to(device)
         flow_module.train(training)
         flow_module.load_state_dict(state_dict)
         flow_res = flow_module(flow_input)
         loss = flow_res.sum()
         loss.backward()
-        is_allclose = np.allclose(
-            flow_res.numpy(), torch_res.detach().cpu().numpy(), rtol=rtol, atol=atol
-        )
-        is_allclose &= np.allclose(flow_input_original.grad.numpy(), torch_input_original.grad.detach().cpu().numpy(), rtol=rtol, atol=atol)
+
+        def allclose_or_raise(flow_tensor, torch_tensor):
+            is_allclose = np.allclose(
+                flow_tensor.numpy(),
+                torch_tensor.detach().cpu().numpy(),
+                rtol=rtol,
+                atol=atol,
+            )
+            if not is_allclose:
+                raise ValueError(
+                    f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}"
+                )
+
+        allclose_or_raise(flow_res, torch_res)
+        allclose_or_raise(flow_input_original.grad, torch_input_original.grad)
         flow_parameters = dict(flow_module.named_parameters())
         for name, torch_param in torch_module.named_parameters():
             flow_param = flow_parameters[name]
-            is_allclose &= np.allclose(flow_param.grad.numpy(), torch_param.grad.detach().cpu().numpy(), rtol=rtol, atol=atol)
+            allclose_or_raise(flow_param.grad, torch_param.grad)
         n -= 1
-        if not is_allclose:
-            return False, (torch_input, torch_param_dict, state_dict)
-    return True, None
+
+
+__all__ = [
+    "random_4d_tensor",
+    "random",
+    "choose",
+    "constant",
+    "test_module_against_pytorch",
+]

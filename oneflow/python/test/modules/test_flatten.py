@@ -71,15 +71,11 @@ class TestFlattenModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     def test_with_random_data(test_case):
-        passed, test_data = test_against_pytorch(
+        test_module_against_pytorch(
             "nn.Flatten",
-            extra_generators={
-                "start_dim": random(1, 6),
-                "end_dim": random(1, 6),
-            },
+            extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
             n=10,
         )
-        test_case.assertTrue(passed)
 
 
 if __name__ == "__main__":

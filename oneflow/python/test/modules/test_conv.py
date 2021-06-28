@@ -1810,24 +1810,23 @@ class TestConv2d(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
     def test_with_random_data(test_case):
-        passed, test_data = test_against_pytorch(
-            "nn.Conv2d",
-            extra_generators={
-                "input": random_4d_tensor(channels=4),
-                "in_channels": constant(4),
-                "out_channels": random(1, 129),
-                "kernel_size": random(1, 4),
-                "stride": random(1, 4),
-                "padding": random(1, 5),
-                "dilation": random(1, 5),
-                "groups": random(1, 5),
-                "padding_mode": constant("zeros"),
-                "device": constant(None),
-                "dtype": constant(None),
-            },
-            n=10,
-        )
-        test_case.assertTrue(passed)
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                "nn.Conv2d",
+                extra_generators={
+                    "input": random_4d_tensor(channels=4),
+                    "in_channels": constant(4),
+                    "out_channels": random(1, 129),
+                    "kernel_size": random(1, 4),
+                    "stride": random(1, 4),
+                    "padding": random(1, 5),
+                    "dilation": random(1, 5),
+                    "groups": random(1, 5),
+                    "padding_mode": constant("zeros"),
+                },
+                n=10,
+                device=device,
+            )
 
 
 if __name__ == "__main__":
