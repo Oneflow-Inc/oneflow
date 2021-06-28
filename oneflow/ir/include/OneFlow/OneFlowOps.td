@@ -173,12 +173,26 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 def OneFlow_MlirJitOp : OneFlow_UserBaseWithCtrlOp<"mlir_jit", []> {}
 
 def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0)">;
+// TODO: remove attr binding if possible
 def OutlineFuseCastScale : Pat<
   (
-    OneFlow_ScalarMulByTensorOp(
-      OneFlow_CastOp $attr0, $attr1, $attr2, $attr3, $attr4, $attr5, $attr6
-    ):$cast_result,
-    $x, $something, $attr_1_2, $attr_1_3, $attr_1_4, $attr_1_5, $attr_1_6
+    OneFlow_ScalarMulByTensorOp : $mul_op(
+      OneFlow_CastOp : $cast_op
+        $cast_x,
+        $cast_op_name,
+        $cast_trainable,
+        $cast_device_tag,
+        $cast_device_name,
+        $cast_scope_symbol_id,
+        $cast_hierarchy
+    ),
+    $scalar,
+    $mul_op_name,
+    $mul_trainable,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
   ),
-  (OutlineFunction $something)
+  (OutlineFunction $mul_op_name)
 >;
