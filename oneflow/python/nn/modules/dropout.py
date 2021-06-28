@@ -90,20 +90,17 @@ class Dropout(_DropoutNd):
 
     """
 
-    def __init__(self, p: float = 0.5, inplace: bool = False):
+    def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
         _DropoutNd.__init__(self, p, inplace)
-
-        if self.p == 1.0:
-            self.scale = 1.0
-        else:
-            self.scale = float(1.0 / (1.0 - self.p))
-        # TODO: use global generator if generator is None
-        self.generator = flow.Generator()
+        self.p = p
+        if generator is None:
+            generator = flow.Generator()
+        self.generator = generator
 
     def forward(self, x):
         if self.p == 0.0:
             return x
-        return flow.F.dropout(x, self.generator.gen)
+        return flow.F.dropout(x, self.p, self.generator)
 
 
 if __name__ == "__main__":

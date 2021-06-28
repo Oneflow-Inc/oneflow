@@ -17,6 +17,8 @@ from __future__ import absolute_import
 import oneflow
 import oneflow._oneflow_internal
 
+
 def RegisterGeneratorApis():
     import oneflow
+
     setattr(oneflow, "Generator", oneflow._oneflow_internal.one.Generator)
