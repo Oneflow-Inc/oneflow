@@ -126,7 +126,7 @@ class CastToMirroredOp : public MirroredCastOp {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_to_mirrored_conf().sbp_parallel().parallel_type_case(),
-                       cfg::SbpParallel::PARALLEL_TYPE_NOT_SET)
+                       SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
@@ -184,7 +184,7 @@ class CastFromMirroredOp : public MirroredCastOp {
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_from_mirrored_conf().sbp_parallel().parallel_type_case(),
-                       cfg::SbpParallel::PARALLEL_TYPE_NOT_SET)
+                       SbpParallel::PARALLEL_TYPE_NOT_SET)
         << "attribute sbp_parallel not set.";
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());

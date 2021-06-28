@@ -166,7 +166,7 @@ class ConvGpuKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -185,9 +185,8 @@ class ConvGpuKernel final : public user_op::OpKernel {
 
     const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
     if (bias != nullptr) {
-      auto state = CreateConvCudnnOpKernelState(ctx);
-      auto* conv_state = state.get();
-      CHECK_NOTNULL(conv_state);
+      const auto& conv_state = CreateConvCudnnOpKernelState(ctx);
+      CHECK_NOTNULL(conv_state.get());
       OF_CUDNN_CHECK(cudnnAddTensor(ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(),
                                     conv_state->bias_desc->Get(), bias->dptr<T>(),
                                     CudnnSPOnePtr<T>(), args.ydesc.Get(), out->mut_dptr<T>()));
@@ -387,9 +386,8 @@ class ConvBiasGradGpuKernel final : public user_op::OpKernel {
 
     std::unique_ptr<CudnnTensorDesc> dy_desc;
     dy_desc.reset(new CudnnTensorDesc(dy->data_type(), dy->shape(), data_format));
-    auto state = CreateConvBiasGradState(ctx);
-    auto* bias_grad_state = state.get();
-    CHECK_NOTNULL(bias_grad_state);
+    const auto& bias_grad_state = CreateConvBiasGradState(ctx);
+    CHECK_NOTNULL(bias_grad_state.get());
     OF_CUDNN_CHECK(cudnnConvolutionBackwardBias(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), dy_desc->Get(), dy->dptr<T>(),
         CudnnSPZeroPtr<T>(), bias_grad_state->bias_diff_desc->Get(), bias_diff->mut_dptr<T>()));

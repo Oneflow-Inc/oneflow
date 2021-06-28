@@ -103,8 +103,8 @@ class AvgPool2d(Module):
             stride=(2, 1),
         )
         x = flow.Tensor(shape=(1, 1, 10, 10))
-        of_y = of_avgpool2d(x)
-
+        of_y = of_avgpool2d(x)   
+        
     """
 
     def __init__(
@@ -379,16 +379,16 @@ class MaxPool2d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
         >>> y = m(x)
-        >>> print(y.numpy()) #doctest: +ELLIPSIS
-        [[[[0.5488135  0.71518934 0.71518934 0.71518934 0.6458941 ]
-           ...
-           [0.56804454 0.92559665 0.92559665 0.92559665 0.5288949 ]]]]
+        >>> y #doctest: +ELLIPSIS
+        tensor([[[[0.5488, 0.7152, 0.7152, 0.7152, 0.6459],
+                  ...
+                  [0.568 , 0.9256, 0.9256, 0.9256, 0.5289]]]], dtype=oneflow.float32)
 
         >>> kernel_size, stride, padding = (2, 3), (4, 5), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 32, 20))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.size()
         flow.Size([9, 7, 9, 5])
 
     """
@@ -512,16 +512,15 @@ class MaxPool3d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
         >>> y = m(x)
-        >>> print(y.numpy()) #doctest: +ELLIPSIS
-        [[[[[0.77815676 0.87001216 0.9786183  0.9786183  0.9786183 ]
-            ...
-            [0.9446689  0.9446689  0.9446689  0.6667667  0.6667667 ]]]]]
-
+        >>> y #doctest: +ELLIPSIS
+        tensor([[[[[0.7782, 0.87  , 0.9786, 0.9786, 0.9786],
+                   ...
+                   [0.9447, 0.9447, 0.9447, 0.6668, 0.6668]]]]], dtype=oneflow.float32)
         >>> kernel_size, stride, padding = (2, 2, 3), (3, 4, 5), (2, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.size()
         flow.Size([9, 7, 5, 9, 5])
 
     """
