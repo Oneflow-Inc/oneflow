@@ -75,7 +75,8 @@ class PosixWritableFile : public WritableFile {
   }
 
   void Append(const char* data, size_t n) override {
-    PCHECK(fwrite(data, sizeof(char), n, file_) == n) << "Fail to append to file " << fname_ << ", errno is " << errno;
+    PCHECK(fwrite(data, sizeof(char), n, file_) == n)
+        << "Fail to append to file " << fname_ << ", errno is " << errno;
   }
 
   void Close() override {
@@ -84,7 +85,9 @@ class PosixWritableFile : public WritableFile {
     file_ = nullptr;
   }
 
-  void Flush() override { PCHECK(fflush(file_) == 0) << "Fail to flush file " << fname_ << ", errno is " << errno; }
+  void Flush() override {
+    PCHECK(fflush(file_) == 0) << "Fail to flush file " << fname_ << ", errno is " << errno;
+  }
 };
 
 void PosixFileSystem::NewRandomAccessFile(const std::string& fname,
