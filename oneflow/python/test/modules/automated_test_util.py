@@ -47,7 +47,7 @@ def generate_bool():
     return val, val
 
 
-def random_4d_tensor(batch_size=1, channels=4, height=5, width=6):
+def random_4d_tensor(batch_size=1, channels=4, height=5, width=6, requires_grad=True):
     def generator(_):
         np_arr = rng.random((batch_size, channels, height, width))
         return flow.Tensor(np_arr), torch.Tensor(np_arr)
@@ -116,11 +116,14 @@ def test_against_pytorch(
     extra_generators: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
+    backward: bool = True,
     rtol=1e-5,
     atol=1e-8,
     n=1,
 ):
     assert device in ["cuda", "cpu"]
+    if not training:
+        assert not backward
     if extra_annotations is None:
         extra_annotations = {}
     if extra_generators is None:
@@ -152,16 +155,20 @@ def test_against_pytorch(
             flow_param_dict[name] = flow_data
             torch_param_dict[name] = torch_data
 
-        flow_input, torch_input = generate("input")
-        flow_input, torch_input = flow_input.to(device), torch_input.to(device)
+        flow_input_original, torch_input_original = generate("input")
+        flow_input_original.requires_grad_(backward)
+        torch_input_original.requires_grad_(backward)
+        flow_input, torch_input = flow_input_original.to(device), torch_input_original.to(device)
         try:
             torch_module = torch_func(**torch_param_dict)
             torch_module = torch_module.to(device)
             torch_module.train(training)
             torch_res = torch_module(torch_input)
+            loss = torch_res.sum()
+            loss.backward()
             state_dict = torch_module.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
-        except:
+        except Exception as e:
             continue
 
         flow_func = eval(f"flow.{func_name}")
@@ -170,9 +177,16 @@ def test_against_pytorch(
         flow_module.train(training)
         flow_module.load_state_dict(state_dict)
         flow_res = flow_module(flow_input)
+        loss = flow_res.sum()
+        loss.backward()
         is_allclose = np.allclose(
             flow_res.numpy(), torch_res.detach().cpu().numpy(), rtol=rtol, atol=atol
         )
+        is_allclose &= np.allclose(flow_input_original.grad.numpy(), torch_input_original.grad.detach().cpu().numpy(), rtol=rtol, atol=atol)
+        flow_parameters = dict(flow_module.named_parameters())
+        for name, torch_param in torch_module.named_parameters():
+            flow_param = flow_parameters[name]
+            is_allclose &= np.allclose(flow_param.grad.numpy(), torch_param.grad.detach().cpu().numpy(), rtol=rtol, atol=atol)
         n -= 1
         if not is_allclose:
             return False, (torch_input, torch_param_dict, state_dict)
