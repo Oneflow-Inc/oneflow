@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 
 namespace oneflow {
@@ -24,7 +25,7 @@ void GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(int64_t* machine_id, int64
   *machine_id = Rank();
   int64_t node_id = ThisNodeId();
   const auto& node_id2rankoffset = NodeId2RankOffset();
-  int64_t rank_offset = node_id2rankoffset.at(node_id);
+  int64_t rank_offset = CHECK_JUST(MapAt(node_id2rankoffset, node_id));
   *device_id = *machine_id - rank_offset;
 }
 
@@ -46,8 +47,7 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   const auto& rank2node_id = Global<ProcessCtx>::Get()->rank2node_id();
-  CHECK(rank2node_id.find(rank) != rank2node_id.end());
-  return rank2node_id.at(rank);
+  return CHECK_JUST(MapAt(rank2node_id, rank));
 }
 
 HashMap<int64_t, int64_t> GlobalProcessCtx::NodeId2RankOffset() {
