@@ -38,8 +38,8 @@ def bmm_op(x, y):
     If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
 
     Args:
-        input('Tensor'):  the first batch of matrices to be multiplied
-        mat2('Tensor'): the second batch of matrices to be multiplied
+        input(oneflow.Tensor):  the first batch of matrices to be multiplied
+        mat2(oneflow.Tensor): the second batch of matrices to be multiplied
     
     For example:
 
