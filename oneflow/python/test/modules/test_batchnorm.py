@@ -436,24 +436,27 @@ class TestBatchNorm(flow.unittest.TestCase):
 
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
-            test_module_against_pytorch(
-                test_case,
-                "nn.BatchNorm2d",
-                extra_annotations={
-                    "num_features": int,
-                    "eps": float,
-                    "momentum": float,
-                    "affine": bool,
-                    "track_running_stats": bool,
+            for training in [True, False]:
+                test_module_against_pytorch(
+                    test_case,
+                    "nn.BatchNorm2d",
+                    extra_annotations={
+                        "num_features": int,
+                        "eps": float,
+                        "momentum": float,
+                        "affine": bool,
+                        "track_running_stats": bool,
+                        },
+                    extra_generators={
+                        "input": random_4d_tensor(channels=8),
+                        "num_features": constant(8),
+                        "eps": random(1e-6, 1),
+                        "momentum": random(0, 1)
                     },
-                extra_generators={
-                    "input": random_4d_tensor(channels=8),
-                    "num_features": constant(8),
-                    "eps": choose([1e-6, 1e-5, 1e-4, 1e-1]),
-                    "momentum": choose([0.1, 0.5, 0.9]),
-                },
-                device=device,
-            )
+                    device=device,
+                    training=training,
+                    n=10,
+                )
 
 
 if __name__ == "__main__":

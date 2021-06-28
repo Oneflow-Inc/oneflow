@@ -217,7 +217,7 @@ def test_module_against_pytorch(
         flow_module = flow_func(**flow_attr_dict)
         flow_module = flow_module.to(device)
         flow_module.train(training)
-        flow_module.load_state_dict(state_dict, strict=False)
+        flow_module.load_state_dict(state_dict)
         flow_res = flow_module(flow_input)
         loss = flow_res.sum()
         loss.backward()
