@@ -56,6 +56,7 @@ Maybe<void> SingleClientSync() {
 Maybe<void> MultiClientSync() {
   BlockingCounter bc(1);
   PhysicalRun([&bc](InstructionsBuilder* builder) {
+    builder->ComputeGlobalFrontSeqBarrier();
     builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
   });
 

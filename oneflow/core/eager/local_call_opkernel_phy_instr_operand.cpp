@@ -36,8 +36,10 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const {
   // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
   // same device.
-  auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
-  DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+  if (opkernel().device()->type() == "cuda_d2d") {
+    auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
+    DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
+  }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
