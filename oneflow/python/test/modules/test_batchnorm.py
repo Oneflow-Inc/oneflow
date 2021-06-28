@@ -20,6 +20,7 @@ import numpy as np
 
 import oneflow.experimental as flow
 from test_util import GenArgList
+from automated_test_util import *
 
 
 def _test_batchnorm1d_2d_input(test_case, device):
@@ -432,6 +433,28 @@ class TestBatchNorm(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_with_random_data(test_case):
+        for device in ["cpu", "cuda"]:
+            test_module_against_pytorch(
+                test_case,
+                "nn.BatchNorm2d",
+                extra_annotations={
+                    "num_features": int,
+                    "eps": float,
+                    "momentum": float,
+                    "affine": bool,
+                    "track_running_stats": bool,
+                    },
+                extra_generators={
+                    "input": random_4d_tensor(channels=8),
+                    "num_features": constant(8),
+                    "eps": choose([1e-6, 1e-5, 1e-4, 1e-1]),
+                    "momentum": choose([0.1, 0.5, 0.9]),
+                },
+                n=10,
+                device=device,
+            )
 
 
 if __name__ == "__main__":

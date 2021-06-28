@@ -1812,6 +1812,7 @@ class TestConv2d(flow.unittest.TestCase):
     def test_with_random_data(test_case):
         for device in ["cpu", "cuda"]:
             test_module_against_pytorch(
+                test_case,
                 "nn.Conv2d",
                 extra_generators={
                     "input": random_4d_tensor(channels=4),

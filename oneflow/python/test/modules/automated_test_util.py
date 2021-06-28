@@ -44,7 +44,7 @@ def data_generator(annotation):
 
 @data_generator(bool)
 def random_bool():
-    val = choose([True, False])(None)
+    val = random_util.choice([True, False])
     return val, val
 
 
@@ -56,7 +56,13 @@ def random_tensor():
     return flow.Tensor(np_arr), torch.Tensor(np_arr)
 
 
-def random_4d_tensor(batch_size=1, channels=4, height=5, width=6):
+def random_4d_tensor(batch_size=1, channels=None, height=None, width=None):
+    if channels is None:
+        channels = rng.integers(low=1, high=8)
+    if height is None:
+        height = rng.integers(low=1, high=8)
+    if width is None:
+        width = rng.integers(low=1, high=8)
     def generator(_):
         np_arr = rng.random((batch_size, channels, height, width))
         return flow.Tensor(np_arr), torch.Tensor(np_arr)
@@ -66,7 +72,8 @@ def random_4d_tensor(batch_size=1, channels=4, height=5, width=6):
 
 def choose(x):
     def generator(_):
-        return random_util.choice(x)
+        val = random_util.choice(x)
+        return val, val
 
     return generator
 
@@ -90,7 +97,7 @@ def random(low, high):
             # >> typing.Union
             annotation = eval(repr(annotation))
             if annotation.__origin__ is Union:
-                x = choose(annotation.__args__)(None)
+                x = random_util.choice(annotation.__args__)
                 return generator(x)
             if annotation.__origin__ is Tuple:
                 t = [generator(x) for x in annotation.__args__]
@@ -120,14 +127,15 @@ def constant(val):
 
 
 def test_module_against_pytorch(
+    test_case,
     func_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
     training: bool = True,
     backward: bool = True,
-    rtol=1e-5,
-    atol=1e-8,
+    rtol=1e-4,
+    atol=1e-5,
     n=1,
 ):
     assert device in ["cuda", "cpu"]
@@ -208,29 +216,27 @@ def test_module_against_pytorch(
         flow_module = flow_func(**flow_attr_dict)
         flow_module = flow_module.to(device)
         flow_module.train(training)
-        flow_module.load_state_dict(state_dict)
+        flow_module.load_state_dict(state_dict, strict=False)
         flow_res = flow_module(flow_input)
         loss = flow_res.sum()
         loss.backward()
 
-        def allclose_or_raise(flow_tensor, torch_tensor):
+        def allclose_or_fail(flow_tensor, torch_tensor):
             is_allclose = np.allclose(
                 flow_tensor.numpy(),
                 torch_tensor.detach().cpu().numpy(),
                 rtol=rtol,
                 atol=atol,
             )
-            if not is_allclose:
-                raise ValueError(
-                    f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}"
-                )
+            test_case.assertTrue(is_allclose,
+                    f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}")
 
-        allclose_or_raise(flow_res, torch_res)
-        allclose_or_raise(flow_input_original.grad, torch_input_original.grad)
+        allclose_or_fail(flow_res, torch_res)
+        allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
         flow_parameters = dict(flow_module.named_parameters())
         for name, torch_param in torch_module.named_parameters():
             flow_param = flow_parameters[name]
-            allclose_or_raise(flow_param.grad, torch_param.grad)
+            allclose_or_fail(flow_param.grad, torch_param.grad)
         n -= 1
 
 
