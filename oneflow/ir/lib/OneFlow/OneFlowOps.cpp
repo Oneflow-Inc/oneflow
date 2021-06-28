@@ -158,19 +158,20 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
   return {};
 }
 
-// turn matched DAG into a JIT op
+// outline matched DAG into a JIT op
 // a JIT op generates its oneflow op/kernel
 // a JIT op contains a module could be converted to LLVM
 // a JIT module has a function with memref arg and runtime calls generated kernel with blob ptr
-// ultimate goal: end user of oneflow only need to write pdl or its python wrapper to test out fuse
-ModuleOp Fuse(ModuleOp* op) {
-  return {
-      // match scale and cast
-      // create JIT op and kernel
-  };
+// ultimate goal: end user of oneflow only need to write pdl or python wrapper to test fusers
+::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
+                                                      ::mlir::StringAttr something) {
+  // get matched scale and cast
+  // create JIT op and kernel
+  return {};
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
+#include "OneFlow/OneFlowPatterns.inc"
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"

@@ -100,9 +100,18 @@ def OneFlow_SystemOp : OneFlow_Op<"system", []> {
   let hasCanonicalizer = 1;
 }
 
-def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {}
+def OneFlow_CastOp : OneFlow_BaseOp<"cast", []> {
+  let input = (ins AnyType:$x);
+  let output = (outs AnyType:$y);
+}
 
-def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {}
+def OneFlow_ScalarMulByTensorOp : OneFlow_BaseOp<"scalar_mul_by_tensor", []> {
+  let input = (ins
+    AnyType:$x,
+    AnyType:$scalar
+  );
+  let output = (outs AnyType:$y);
+}
 
 class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
@@ -158,3 +167,18 @@ def OneFlow_NegativeOp : OneFlow_InvolutionBaseOp<"negative", []> {}
 def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 #endif // ONEFLOW_OPS
+
+// JIT ops
+
+def OneFlow_MlirJitOp : OneFlow_UserBaseWithCtrlOp<"mlir_jit", []> {}
+
+def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0)">;
+def OutlineFuseCastScale : Pat<
+  (
+    OneFlow_ScalarMulByTensorOp(
+      OneFlow_CastOp $attr0, $attr1, $attr2, $attr3, $attr4, $attr5, $attr6
+    ):$cast_result,
+    $x, $something, $attr_1_2, $attr_1_3, $attr_1_4, $attr_1_5, $attr_1_6
+  ),
+  (OutlineFunction $something)
+>;
