@@ -4,7 +4,7 @@ mlir_tablegen(OneFlowEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIROneFlowEnumsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS OneFlowOps.td)
-mlir_tablegen(OneFlowPatterns.inc -gen-rewriters)
+mlir_tablegen(OneFlowPatterns.cpp.inc -gen-rewriters)
 add_public_tablegen_target(MLIROneFlowPatternsIncGen)
 
 add_mlir_dialect(OneFlowOps oneflow DEPENDS MLIROneFlowEnumsIncGen MLIROneFlowPatternsIncGen)

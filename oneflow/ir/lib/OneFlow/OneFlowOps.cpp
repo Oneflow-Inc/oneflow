@@ -171,7 +171,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 }
 
 #include "OneFlow/OneFlowEnums.cpp.inc"
-#include "OneFlow/OneFlowPatterns.inc"
+#include "OneFlow/OneFlowPatterns.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"
