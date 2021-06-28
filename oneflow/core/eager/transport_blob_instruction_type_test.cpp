@@ -68,6 +68,7 @@ struct ReceiveRequest {
 HashMap<uint64_t, SendRequest> token2send_request;
 HashMap<uint64_t, ReceiveRequest> token2recv_request;
 
+#ifdef __linux__
 class TestSendBlobInstructionType : public SendBlobInstructionType {
  public:
   TestSendBlobInstructionType() = default;
@@ -125,6 +126,7 @@ class TestReceiveBlobInstructionType : public ReceiveBlobInstructionType {
   }
 };
 COMMAND(vm::RegisterInstructionType<TestReceiveBlobInstructionType>("TestReceiveBlob"));
+#endif  // __linux__
 
 using InstructionMsgList = OBJECT_MSG_LIST(vm::InstructionMsg, instr_msg_link);
 
@@ -258,6 +260,7 @@ void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete();
 
 }  // namespace
 
+#ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {
   InitNumProcessDistribution();
 #ifdef WITH_CUDA
@@ -306,6 +309,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
   DestroyNumProcessDistribution();
 }
+#endif  // __linux__
 
 }  // namespace test
 }  // namespace vm
