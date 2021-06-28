@@ -293,10 +293,7 @@ class NormalizationFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
-<<<<<<< HEAD
   m.add_functor<impl::Conv1DFunctor>("Conv1D");
-=======
->>>>>>> master
   m.add_functor<impl::Conv2DFunctor>("Conv2D");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");

@@ -105,24 +105,16 @@ class Storage<T, typename std::enable_if<!IsScalarType<T>::value>::type> {
   std::shared_ptr<T> value_;
 };
 
-<<<<<<< HEAD
-=======
 }  // namespace internal
 
->>>>>>> master
 template<typename T>
 class Optional {
  public:
   Optional() : init_(false) {}
 
-<<<<<<< HEAD
-  template<typename... Args, typename std::enable_if<
-                                 std::is_constructible<Storage<T>, Args...>::value, int>::type = 0>
-=======
   template<typename... Args,
            typename std::enable_if<std::is_constructible<internal::Storage<T>, Args...>::value,
                                    int>::type = 0>
->>>>>>> master
   Optional(Args&&... args) : init_(true), storage_(std::forward<Args>(args)...) {}
 
   ~Optional() = default;
@@ -169,11 +161,7 @@ class Optional {
 
  private:
   bool init_;
-<<<<<<< HEAD
-  Storage<T> storage_;
-=======
   internal::Storage<T> storage_;
->>>>>>> master
 };
 
 template<typename T>
