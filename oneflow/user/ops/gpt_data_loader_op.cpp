@@ -88,6 +88,7 @@ REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
       CHECK(input_modifier != nullptr);
       input_modifier->set_is_mutable(true);
       input_modifier->set_requires_grad(false);
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

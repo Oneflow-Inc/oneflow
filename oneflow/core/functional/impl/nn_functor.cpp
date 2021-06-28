@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -21,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/impl/common.h"
+#include "oneflow/core/functional/impl/unary_functor.h"
 #include "oneflow/core/functional/scalar.h"
 
 namespace oneflow {
@@ -28,6 +31,176 @@ namespace one {
 namespace functional {
 
 namespace impl {
+
+class BiasAddFunctor {
+ public:
+  BiasAddFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& bias, const int32_t& axis) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("axis", axis));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class Conv2DFunctor {
+ public:
+  Conv2DFunctor() {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& weight,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+    MutableAttrMap conv_attrs;
+    std::vector<int32_t> kernel_size_vec;
+    for (int i = 0; i < 2; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(conv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
+    JUST(conv_attrs.SetAttr<int32_t>("groups", groups));
+    JUST(conv_attrs.SetAttr<std::string>("data_format", std::string("channels_first")));
+    const std::shared_ptr<one::Tensor>& conv_out =
+        JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
+    if (bias) {
+      MutableAttrMap bias_attrs;
+      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias.value())}, bias_attrs);
+    } else {
+      return conv_out;
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> conv_op_;
+  std::shared_ptr<OpExpr> bias_op_;
+};
+
+class MatMulBaseFunctor {
+ public:
+  MatMulBaseFunctor() = default;
+  virtual ~MatMulBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                           const std::shared_ptr<one::Tensor>& b, const bool& transpose_a,
+                           const bool& transpose_b, const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
+    JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class MatMulFunctor : public MatMulBaseFunctor {
+ public:
+  MatMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
+  }
+};
+
+class BatchMatMulFunctor : public MatMulBaseFunctor {
+ public:
+  BatchMatMulFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("batch_matmul").Input("a").Input("b").Output("out").Build());
+  }
+};
+
+class BroadcastMatMulFunctor : public MatMulBaseFunctor {
+ public:
+  BroadcastMatMulFunctor() {
+    op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_matmul").Input("a").Input("b").Output("out").Build());
+  }
+};
+
+class LayerNormFunctor {
+ public:
+  LayerNormFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm")
+                         .Input("x")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& begin_norm_axis,
+                           const int64_t& begin_params_axis, const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    JUST(attrs.SetAttr<bool>("center", false));
+    JUST(attrs.SetAttr<bool>("scale", false));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class LayerNormAffineFunctor {
+ public:
+  LayerNormAffineFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("layer_norm")
+                         .Input("x")
+                         .Input("gamma")
+                         .Input("beta")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Output("normalized")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, const int64_t& begin_norm_axis,
+                           const int64_t& begin_params_axis, const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("begin_norm_axis", begin_norm_axis));
+    JUST(attrs.SetAttr<int64_t>("begin_params_axis", begin_params_axis));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    JUST(attrs.SetAttr<bool>("center", true));
+    JUST(attrs.SetAttr<bool>("scale", true));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SparseSoftmaxCrossEntropyFunctor {
+ public:
+  SparseSoftmaxCrossEntropyFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("sparse_softmax_cross_entropy")
+                         .Input("prediction")
+                         .Input("label")
+                         .Output("out")
+                         .Output("prob")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
+                           const std::shared_ptr<one::Tensor>& label, const int64_t& depth) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int64_t>("depth", depth));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
 
 class NormalizationFunctor {
  public:
@@ -81,7 +254,17 @@ class NormalizationFunctor {
 
 }  // namespace impl
 
-ONEFLOW_FUNCTION_LIBRARY(m) { m.add_functor<impl::NormalizationFunctor>("Normalization"); };
+ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::BiasAddFunctor>("BiasAdd");
+  m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::MatMulFunctor>("MatMul");
+  m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
+  m.add_functor<impl::LayerNormFunctor>("LayerNorm");
+  m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
+  m.add_functor<impl::NormalizationFunctor>("Normalization");
+};
 
 }  // namespace functional
 }  // namespace one
