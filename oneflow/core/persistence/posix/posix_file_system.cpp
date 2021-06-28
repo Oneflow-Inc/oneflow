@@ -153,7 +153,6 @@ void PosixFileSystem::DeleteDir(const std::string& dirname) {
 uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   struct stat sbuf;
   PCHECK(stat(TranslateName(fname).c_str(), &sbuf) == 0) << "Fail to load statistics of " << fname;
-  ;
   return sbuf.st_size;
 }
 
