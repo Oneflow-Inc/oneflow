@@ -1825,7 +1825,6 @@ class TestConv2d(flow.unittest.TestCase):
                     "groups": random(1, 5),
                     "padding_mode": constant("zeros"),
                 },
-                n=10,
                 device=device,
             )
 

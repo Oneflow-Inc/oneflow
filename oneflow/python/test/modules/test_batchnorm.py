@@ -452,7 +452,6 @@ class TestBatchNorm(flow.unittest.TestCase):
                     "eps": choose([1e-6, 1e-5, 1e-4, 1e-1]),
                     "momentum": choose([0.1, 0.5, 0.9]),
                 },
-                n=10,
                 device=device,
             )
 

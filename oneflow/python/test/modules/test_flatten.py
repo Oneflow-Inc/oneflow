@@ -75,7 +75,6 @@ class TestFlattenModule(flow.unittest.TestCase):
             test_case,
             "nn.Flatten",
             extra_generators={"start_dim": random(1, 6), "end_dim": random(1, 6),},
-            n=10,
         )
 
 

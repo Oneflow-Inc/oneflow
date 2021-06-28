@@ -136,7 +136,7 @@ def test_module_against_pytorch(
     backward: bool = True,
     rtol=1e-4,
     atol=1e-5,
-    n=1,
+    n=20,
 ):
     assert device in ["cuda", "cpu"]
     if not training:
@@ -207,7 +207,8 @@ def test_module_against_pytorch(
             state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
         except Exception as e:
             if verbose:
-                print(f"PyTorch error: {e}")
+                pass
+                # print(f"PyTorch error: {e}")
             # The random generated test data is not always valid,
             # so just skip when PyTorch raises an exception
             continue
