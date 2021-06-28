@@ -604,7 +604,7 @@ def _test_maxpool3d_negative_input_backward(test_case, device):
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestPoolingModule(flow.unittest.TestCase):
+class TestPooling(flow.unittest.TestCase):
     def test_maxpool1d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
