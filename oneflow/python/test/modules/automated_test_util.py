@@ -15,9 +15,10 @@ limitations under the License.
 """
 
 import inspect
-import typing
+import typing   # This unused import is needed
 from typing import Dict, List, Optional, Tuple, Any, Union
 import random as random_util
+import os
 
 import oneflow.experimental as flow
 
@@ -42,12 +43,20 @@ def data_generator(annotation):
 
 
 @data_generator(bool)
-def generate_bool():
+def random_bool():
     val = choose([True, False])(None)
     return val, val
 
 
-def random_4d_tensor(batch_size=1, channels=4, height=5, width=6, requires_grad=True):
+@data_generator(torch.Tensor)
+def random_tensor():
+    ndim = rng.integers(low=1, high=6)
+    shape = [rng.integers(low=1, high=6) for _ in range(ndim)]
+    np_arr = rng.random(shape)
+    return flow.Tensor(np_arr), torch.Tensor(np_arr)
+
+
+def random_4d_tensor(batch_size=1, channels=4, height=5, width=6):
     def generator(_):
         np_arr = rng.random((batch_size, channels, height, width))
         return flow.Tensor(np_arr), torch.Tensor(np_arr)
@@ -129,6 +138,8 @@ def test_against_pytorch(
     if extra_generators is None:
         extra_generators = {}
 
+    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+
     torch_func = eval(f"torch.{func_name}")
     spec = inspect.getfullargspec(torch_func)
     annotations = spec.annotations
@@ -141,6 +152,13 @@ def test_against_pytorch(
     ), f"args = {args}, annotations = {annotations.keys()}"
     annotations.update({"input": torch.Tensor})
 
+    def has_default(name):
+        if name in spec.args:
+            return (len(spec.args) - spec.args.index(name)) <= len(spec.defaults)
+        else:
+            assert name in spec.kwonlyargs
+            return (len(spec.kwonlyargs) - spec.kwonlyargs.index(name)) <= len(spec.kwonlydefaults)
+
     def generate(name):
         annotation = annotations[name]
         if name in extra_generators:
@@ -151,9 +169,15 @@ def test_against_pytorch(
         flow_param_dict = {}
         torch_param_dict = {}
         for name in args:
+            if has_default(name):
+                if rng.random() < 1 / 3:
+                    continue
             flow_data, torch_data = generate(name)
             flow_param_dict[name] = flow_data
             torch_param_dict[name] = torch_data
+
+        if verbose:
+            print(torch_param_dict)
 
         flow_input_original, torch_input_original = generate("input")
         flow_input_original.requires_grad_(backward)
@@ -169,6 +193,10 @@ def test_against_pytorch(
             state_dict = torch_module.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
         except Exception as e:
+            if verbose:
+                print(f'PyTorch error: {e}')
+            # The random generated test data is not always valid,
+            # so just skip when PyTorch raises an exception
             continue
 
         flow_func = eval(f"flow.{func_name}")
