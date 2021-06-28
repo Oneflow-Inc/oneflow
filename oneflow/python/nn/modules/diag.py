@@ -20,19 +20,19 @@ from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
 
 class Diag(Module):
-    def __init__(self):
+    def __init__(self, diagonal):
         super().__init__()
-        self._op = flow.builtin_op("diag").Input("in").Output("out").Build()
+        self._op = flow.builtin_op("diag").Input("in").Output("out").Attr("diagonal", diagonal).Build()
 
-    def forward(self, x):
-        return self._op(x)[0]
+    def forward(self, input):
+        return self._op(input)[0]
 
 
 
 @oneflow_export("diag")
 @register_tensor_op("diag")
 @experimental_api
-def diag_op(tensor):
+def diag_op(input, diagonal):
     r"""
     Returns a new tensor with the diagonal.
 
@@ -40,6 +40,7 @@ def diag_op(tensor):
 
     Args:
         input (Tensor): the input tensor.
+        diagonal (Optional[int], 0): The diagonal to consider. If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
 
     For example:
 
@@ -57,7 +58,8 @@ def diag_op(tensor):
         >>> print(output.numpy())
         [1. 5. 9.]
     """
-    return Diag()(tensor)
+
+    return Diag(diagonal)(input)
 
 if __name__ == "__main__":
     import doctest
