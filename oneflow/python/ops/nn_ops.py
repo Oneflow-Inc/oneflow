@@ -193,6 +193,52 @@ def calc_conv_padding(inputs, padding, data_format, kernel_sizes, dilations, str
         return inputs, return_pads_list
 
 
+class ConvUtil(object):
+    @classmethod
+    def split(cls, x, axis, split_num):
+        split_len = x.shape[axis] // split_num
+        result_list = []
+        slice_begin = [0] * len(x.shape)
+        slice_size = [-1] * len(x.shape)
+        slice_size[axis] = split_len
+        for i in range(split_num):
+            slice_begin[axis] = i * split_len
+            result = flow.slice(x, slice_begin, slice_size)
+            result_list.append(result)
+        return result_list
+
+
+def conv_op(
+    conv_type,
+    inputs,
+    filters,
+    padding_before,
+    channel_pos,
+    kernel_size_list,
+    strides,
+    dilations,
+    groups,
+    name,
+):
+    return (
+        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv_"))
+        .Op(conv_type)
+        .Input("in", [inputs])
+        .Input("weight", [filters])
+        .Output("out")
+        .Attr("filters", filters.shape[0])
+        .Attr("padding_before", padding_before)
+        .Attr("data_format", channel_pos)
+        .Attr("kernel_size", kernel_size_list)
+        .Attr("strides", strides)
+        .Attr("dilation_rate", dilations)
+        .Attr("groups", groups)
+        .Build()
+        .InferAndTryRun()
+        .RemoteBlobList()[0]
+    )
+
+
 @oneflow_export("nn.conv1d")
 def conv1d(
     input: oneflow._oneflow_internal.BlobDesc,
@@ -307,62 +353,73 @@ def conv1d(
 
     if channel_pos == "channels_first":
         kernel_size_list = filters.shape[2:3]
+        in_channel_axis = 1
+        filter_out_axis = 0
+        filter_in_axis = 1
     elif channel_pos == "channels_last":
         kernel_size_list = filters.shape[-2:-1]
+        in_channel_axis = 2
+        filter_out_axis = 0
+        filter_in_axis = 2
+        if groups > 1:
+            raise ValueError("data_format NWC not support groups > 1")
     else:
         raise ValueError("invalid data_format")
     assert isinstance(kernel_size_list, tuple)
     assert isinstance(groups, int)
     assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCW":
-            assert groups <= filters.shape[0]
-            assert filters.shape[0] % groups == 0
-            assert groups <= input.shape[1]
-            assert input.shape[1] % groups == 0
-            assert filters.shape[1] == input.shape[1] // groups
-        elif data_format.upper() == "NWC":
-            raise ValueError("data_format NWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
+
+    assert groups <= filters.shape[filter_out_axis]
+    assert filters.shape[filter_out_axis] % groups == 0
+    assert groups <= input.shape[in_channel_axis]
+    assert input.shape[in_channel_axis] % groups == 0
+    assert filters.shape[filter_in_axis] == input.shape[in_channel_axis] // groups
+
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
 
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv1d_"))
-        .Op("conv1d")
-        .Input("in", [inputs])
-        .Input("weight", [filters])
-        .Output("out")
-        .Attr("filters", filters.shape[0])
-        .Attr("padding_before", padding_before)
-        .Attr("data_format", channel_pos)
-        .Attr("kernel_size", kernel_size_list)
-        .Attr("strides", strides)
-        .Attr("dilation_rate", dilations)
-        .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
-
-
-class ConvUtil(object):
-    @classmethod
-    def split(cls, x, axis, split_num):
-        split_len = x.shape[axis] // split_num
-        result_list = []
-        slice_begin = [0] * len(x.shape)
-        slice_size = [-1] * len(x.shape)
-        slice_size[axis] = split_len
-        for i in range(split_num):
-            slice_begin[axis] = i * split_len
-            result = flow.slice(x, slice_begin, slice_size)
-            result_list.append(result)
-        return result_list
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
+        in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
+        out_list = []
+        name = name if name is not None else id_util.UniqueStr("Conv1d_")
+        for i in range(len(in_split_list)):
+            out_list.append(
+                conv_op(
+                    "conv1d",
+                    in_split_list[i],
+                    filter_split_list[i],
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
+                )
+            )
+        return flow.concat(out_list, axis=in_channel_axis)
+    else:
+        return conv_op(
+            "conv1d",
+            inputs,
+            filters,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
 
 
 @oneflow_export("nn.conv2d")
@@ -524,7 +581,8 @@ def conv2d(
         name = name if name is not None else id_util.UniqueStr("Conv2d_")
         for i in range(len(in_split_list)):
             out_list.append(
-                conv2d_op(
+                conv_op(
+                    "conv2d",
                     in_split_list[i],
                     filter_split_list[i],
                     padding_before,
@@ -538,7 +596,8 @@ def conv2d(
             )
         return flow.concat(out_list, axis=in_channel_axis)
     else:
-        return conv2d_op(
+        return conv_op(
+            "conv2d",
             inputs,
             filters,
             padding_before,
@@ -549,36 +608,6 @@ def conv2d(
             groups,
             name,
         )
-
-
-def conv2d_op(
-    inputs,
-    filters,
-    padding_before,
-    channel_pos,
-    kernel_size_list,
-    strides,
-    dilations,
-    groups,
-    name,
-):
-    return (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv2d_"))
-        .Op("conv2d")
-        .Input("in", [inputs])
-        .Input("weight", [filters])
-        .Output("out")
-        .Attr("filters", filters.shape[0])
-        .Attr("padding_before", padding_before)
-        .Attr("data_format", channel_pos)
-        .Attr("kernel_size", kernel_size_list)
-        .Attr("strides", strides)
-        .Attr("dilation_rate", dilations)
-        .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
 
 
 @oneflow_export("nn.conv3d")
@@ -710,46 +739,73 @@ def conv3d(
 
     if channel_pos == "channels_first":
         kernel_size_list = filters.shape[2:5]
+        in_channel_axis = 1
+        filter_out_axis = 0
+        filter_in_axis = 1
     elif channel_pos == "channels_last":
         kernel_size_list = filters.shape[-4:-1]
+        in_channel_axis = 4
+        filter_out_axis = 0
+        filter_in_axis = 4
+        if groups > 1:
+            raise ValueError("data_format NDHWC not support groups > 1")
     else:
         raise ValueError("invalid data_format")
     assert isinstance(kernel_size_list, tuple)
     assert isinstance(groups, int)
     assert groups > 0
-    if groups > 1:
-        if data_format.upper() == "NCDHW":
-            assert groups <= filters.shape[0]
-            assert filters.shape[0] % groups == 0
-            assert groups <= input.shape[1]
-            assert input.shape[1] % groups == 0
-            assert filters.shape[1] == input.shape[1] // groups
-        elif data_format.upper() == "NDHWC":
-            raise ValueError("data_format NHWC not support groups > 1")
-        else:
-            raise ValueError("invalid data_format")
+
+    assert groups <= filters.shape[filter_out_axis]
+    assert filters.shape[filter_out_axis] % groups == 0
+    assert groups <= input.shape[in_channel_axis]
+    assert input.shape[in_channel_axis] % groups == 0
+    assert filters.shape[filter_in_axis] == input.shape[1] // groups
+
     inputs, pads_list = calc_conv_padding(
         input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
-    output = (
-        flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv3d_"))
-        .Op("conv3d")
-        .Input("in", [inputs])
-        .Input("weight", [filters])
-        .Output("out")
-        .Attr("filters", filters.shape[0])
-        .Attr("padding_before", padding_before)
-        .Attr("data_format", channel_pos)
-        .Attr("kernel_size", kernel_size_list)
-        .Attr("strides", strides)
-        .Attr("dilation_rate", dilations)
-        .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
-    )
+
+    if (
+        groups > 1
+        and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
+    ):
+        in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
+        filter_split_list = ConvUtil.split(
+            filters, axis=filter_out_axis, split_num=groups
+        )
+        out_list = []
+        name = name if name is not None else id_util.UniqueStr("Conv3d_")
+        for i in range(len(in_split_list)):
+            out_list.append(
+                conv_op(
+                    "conv3d",
+                    in_split_list[i],
+                    filter_split_list[i],
+                    padding_before,
+                    channel_pos,
+                    kernel_size_list,
+                    strides,
+                    dilations,
+                    groups=1,
+                    name=name + str(i),
+                )
+            )
+        output = flow.concat(out_list, axis=in_channel_axis)
+    else:
+        output = conv_op(
+            "conv3d",
+            inputs,
+            filters,
+            padding_before,
+            channel_pos,
+            kernel_size_list,
+            strides,
+            dilations,
+            groups,
+            name,
+        )
 
     if need_transpose:
         output = flow.transpose(output, perm=[0, 2, 3, 4, 1])
