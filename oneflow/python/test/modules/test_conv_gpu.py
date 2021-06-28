@@ -13,10 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from __future__ import absolute_import
 import oneflow
-import oneflow._oneflow_internal
+import oneflow.experimental as flow
+import numpy as np
 
-def RegisterGeneratorApis():
-    import oneflow
-    setattr(oneflow, "Generator", oneflow._oneflow_internal.one.Generator)
+flow.enable_eager_execution()
+
+# to_device = flow.device("cpu")
+# m = flow.nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
+# m.to(to_device)
+# in_tensor = flow.Tensor(np.random.randn(20, 16, 50, 100), device=to_device)
+# output = m(in_tensor)
+# print(output)
+
+to_device = flow.device("cuda")
+in_tensor = flow.Tensor(np.random.randn(3, 3), device=to_device)
+print(in_tensor)
+gen = flow.Generator()
+gen.manual_seed(1)
+output = oneflow.F.dropout(in_tensor, 0.5, gen.gen)
+print(output)

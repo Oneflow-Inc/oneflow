@@ -28,10 +28,16 @@ void Generator_ManualSeed(const std::shared_ptr<one::Generator>& gen, const int6
   gen->set_current_seed(seed);
 }
 
+int64_t Generator_InitialSeed(const std::shared_ptr<one::Generator>& gen) {
+  return gen->get_current_seed();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
       .def(py::init())
-      .def("manual_seed", &Generator_ManualSeed);
+      .def(py::init<const int64_t>())
+      .def("manual_seed", &Generator_ManualSeed)
+      .def("initial_seed", &Generator_InitialSeed);
 }
 
 }  // namespace oneflow
