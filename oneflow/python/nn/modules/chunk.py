@@ -19,6 +19,8 @@ import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
+import collections
+import json
 
 
 @oneflow_export("chunk")
@@ -64,29 +66,43 @@ class Chunk(Module):
             dim_size = input.shape[dim]
             chunk_size = (dim_size + chunks - 1) / chunks
             last_chunk_size = dim_size % chunk_size 
+
+            slice_tuple = {}
             
             start_list = []
             stop_list = []
             step_list = []
+            splits = {}
+            splits_chunk = {}
+            # dim --- tuple_list
             for dim_i in input.dim():
                 if dim_i != dim:
-                    slice_tup_list = [None, None, None] # start, stop, step
+                    slice_tuple[dim_i] = [None, None, None]
+                    splits[dim_i] = oneflow.experimental.slice(input, slice_tup_list=slice_tuple[dim_i]) 
+                      
                 else:
-                    for chunk in chunks:
+                    for chunk in chunks: # 一个 chunk，对应一个  slice_tuple
                         if last_chunk_size == 0:
-                            start_list.append(chunk * chunk_size)
-                            stop_list.append((chunk + 1) * chunk_size)
-                            step_list.append(1)
+                            start = chunk * chunk_size
+                            stop = (chunk + 1) * chunk_size
                         else:
                             if chunk < chunks -1 :
-                                start_list.append(chunk * chunk_size)
-                                stop_list.append((chunk + 1) * chunk_size)
-                                step_list.append(1)
+                                start = chunk * chunk_size
+                                stop = (chunk + 1) * chunk_size
                             else:
-                                start_list.append(dim_size - 1 - last_chunk_size)
-                                stop_list.append(dim_size - 1)
-                                step_list.append(1)
+                                start = dim_size - 1 - last_chunk_size
+                                stop = dim_size - 1
 
+                        tree = lambda : collections.defaultdict(tree)
+                        slice_tuple_chunk = tree()
+                        slice_tuple_chunk[dim_i][chunk] = [start, stop, step]
+                        splits_chunk[chunk] = oneflow.experimental.slice(input, slice_tup_list=slice_tuple_chunk[dim_i][chunk])      
+            
+
+
+
+            
+                
 
                             
                              

@@ -144,7 +144,11 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
         >>> update = flow.Tensor(np.array([2, 3, 4]).astype(np.float32))
         >>> y = flow.tmp.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
     """
-    start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
+    """[summary]
+
+    Returns:
+        [type]: [description]
+    """    start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)
 
 
