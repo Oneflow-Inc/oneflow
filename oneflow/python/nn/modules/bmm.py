@@ -32,6 +32,28 @@ class BMM(Module):
 @experimental_api
 def bmm_op(x, y):
     """
+    Performs a batch matrix-matrix product of matrices stored in input and mat2.
+
+    `input` and `mat2` must be 3-D tensors each containing the same number of matrices.
+
+    If input is a ($b \times n \times m$) tensor, mat2 is a ($b \times m \times p$) tensor, out will be a ($b \times n \times p$) tensor.
+
+    Args:
+        input('Tensor'):  the first batch of matrices to be multiplied
+        mat2('Tensor'): the second batch of matrices to be multiplied
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+        >>> input1 = flow.Tensor(np.random.randn(10, 3, 4), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.random.randn(10, 4, 5), dtype=flow.float32)
+        >>> of_out = flow.bmm(input1, input2)
+        >>> of_out.shape
+        flow.Size([10, 3, 5])
     """
     return BMM()(x, y)
 
