@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifdef __linux__
+
 #ifndef ONEFLOW_CORE_EAGER_SEND_BLOB_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_EAGER_SEND_BLOB_INSTRUCTION_TYPE_H_
 
@@ -69,3 +71,5 @@ class ReceiveBlobInstructionType : public vm::InstructionType {
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_EAGER_SEND_BLOB_INSTRUCTION_TYPE_H_
+
+#endif  // __linux__
