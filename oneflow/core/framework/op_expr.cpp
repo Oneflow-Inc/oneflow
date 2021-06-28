@@ -102,22 +102,19 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
 
 template<>
 Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
-  const std::string& op_type_name = op_proto_.op_type_name();
-  const user_op::OpGradRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(op_type_name);
-  if (val) { return false; }
-  return !IsClassRegistered<std::string, OpExprGradFunctionIf>(op_type_name);
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
+  CHECK_NOTNULL_OR_RETURN(registry);
+  return registry->no_grad;
 }
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
-    } else {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("default"));
-    }
-    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    CHECK_OR_RETURN((IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())))
+        << "The gradient function for op " << proto().op_type_name()
+        << " is not found. Please check whether it has been implemented and registered correctly.";
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
