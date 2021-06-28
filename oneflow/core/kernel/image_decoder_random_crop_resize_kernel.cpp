@@ -373,9 +373,9 @@ void GpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
   int width;
   int height;
   nvjpegChromaSubsampling_t subsampling;
-  int nComponents;
-  nvjpegStatus_t status =
-      nvjpegGetImageInfo(jpeg_handle_, data, length, &nComponents, &subsampling, &width, &height);
+  int num_components;
+  nvjpegStatus_t status = nvjpegGetImageInfo(jpeg_handle_, data, length, &num_components,
+                                             &subsampling, &width, &height);
   if (status != NVJPEG_STATUS_SUCCESS) {
     CHECK_LE(target_width * target_height * kNumChannels, fallback_buffer_size_);
     fallback_handle_.DecodeRandomCropResize(data, length, crop_generator, nullptr, 0,
