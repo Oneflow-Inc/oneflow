@@ -46,8 +46,8 @@ inline void CurJobBuildAndInferCtx_SetJobConf(const oneflow::cfg::JobConfigProto
   return oneflow::CurJobBuildAndInferCtx_SetJobConf(cfg_job_conf).GetOrThrow();
 }
 
-inline void CurJobBuildAndInferCtx_SetTrainConf(const std::string& serialized_train_conf) {
-  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(serialized_train_conf).GetOrThrow();
+inline void CurJobBuildAndInferCtx_SetTrainConf(const oneflow::cfg::TrainConf& cfg_train_conf) {
+  return oneflow::CurJobBuildAndInferCtx_SetTrainConf(cfg_train_conf).GetOrThrow();
 }
 
 inline void CurJobBuildAndInferCtx_Complete() {
