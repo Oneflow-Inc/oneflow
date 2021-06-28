@@ -26,14 +26,9 @@ namespace oneflow {
 
 namespace fs {
 
-void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
-  if (IsDirectory(dirname)) { return; }
-  CreateDir(dirname);
-}
-
-void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
+std::string FileSystem::SplitRecursiveDir(const std::string& dirname,
+                                          std::vector<std::string>& sub_dirs) {
   std::string remaining_dir = dirname;
-  std::vector<std::string> sub_dirs;
   while (!remaining_dir.empty()) {
     bool status = FileExists(remaining_dir);
     if (status) { break; }
@@ -46,6 +41,19 @@ void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
 
   // sub_dirs contains all the dirs to be created but in reverse order.
   std::reverse(sub_dirs.begin(), sub_dirs.end());
+  return remaining_dir;
+}
+
+void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname)) { return; }
+  CreateDir(dirname);
+}
+
+void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname)) { return; }
+  // sub_dirs contains all the dirs to be created but in reverse order.
+  std::vector<std::string> sub_dirs;
+  std::string remaining_dir = SplitRecursiveDir(dirname, sub_dirs);
 
   // Now create the directories.
   std::string built_path = remaining_dir;
@@ -102,20 +110,9 @@ void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
 }
 
 void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
-  std::string remaining_dir = dirname;
-  std::vector<std::string> sub_dirs;
-  while (!remaining_dir.empty()) {
-    bool status = FileExists(remaining_dir);
-    if (status) { break; }
-    // Basename returns "" for / ending dirs.
-    if (remaining_dir[remaining_dir.length() - 1] != '/') {
-      sub_dirs.push_back(Basename(remaining_dir));
-    }
-    remaining_dir = Dirname(remaining_dir);
-  }
-
   // sub_dirs contains all the dirs to be created but in reverse order.
-  std::reverse(sub_dirs.begin(), sub_dirs.end());
+  std::vector<std::string> sub_dirs;
+  std::string remaining_dir = SplitRecursiveDir(dirname, sub_dirs);
 
   // Now create the directories.
   std::string built_path = remaining_dir;

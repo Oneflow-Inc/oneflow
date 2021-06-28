@@ -163,6 +163,9 @@ class FileSystem {
 
  protected:
   FileSystem() = default;
+
+ private:
+  std::string SplitRecursiveDir(const std::string& dirname, std::vector<std::string>& sub_dirs);
 };
 
 }  // namespace fs
