@@ -365,7 +365,7 @@ class AvgPool1DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
@@ -379,7 +379,7 @@ class AvgPool1DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
@@ -393,7 +393,7 @@ class AvgPool2DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
@@ -407,7 +407,7 @@ class AvgPool2DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
@@ -421,7 +421,7 @@ class AvgPool3DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
     PoolCpuKernelUtil<T>::AvgFWCompute(ctx, pool_state.get());
   };
 };
@@ -435,7 +435,7 @@ class AvgPool3DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
     PoolCpuKernelUtil<T>::AvgBWCompute(ctx, pool_state.get());
   };
 };
@@ -449,7 +449,7 @@ class MaxPool1DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
@@ -463,7 +463,7 @@ class MaxPool1DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 1);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 1);
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };
@@ -477,7 +477,7 @@ class MaxPool2DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
@@ -491,7 +491,7 @@ class MaxPool2DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 2);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 2);
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };
@@ -505,7 +505,7 @@ class MaxPool3DCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
     PoolCpuKernelUtil<T>::MaxFWCompute(ctx, pool_state.get());
   };
 };
@@ -519,7 +519,7 @@ class MaxPool3DGradCpuKernel final : public user_op::OpKernel {
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    auto pool_state = DoCreatePoolOpKernelState(ctx, 3);
+    const auto& pool_state = DoCreatePoolOpKernelState(ctx, 3);
     PoolCpuKernelUtil<T>::MaxBWCompute(ctx, pool_state.get());
   };
 };

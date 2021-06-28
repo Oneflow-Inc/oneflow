@@ -113,7 +113,7 @@ class PoolNdGradFunctor {
  public:
   PoolNdGradFunctor() {
     for (const auto& mode : {"max", "avg"}) {
-      for (const auto& ndims : {1, 2, 3}) {
+      for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] = CHECK_JUST(
             one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
@@ -123,7 +123,6 @@ class PoolNdGradFunctor {
   static std::string GetOpTypeName(const std::string& mode, const int32_t& ndims) {
     return mode + "_pool_" + std::to_string(ndims) + "d_grad";
   }
-  virtual ~PoolNdGradFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
@@ -142,10 +141,10 @@ class PoolNdGradFunctor {
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
-    CHECK_OR_RETURN(it != op_expr_map_.end()) << op_type_name << " not found";
-    const auto op = it->second;
-    CHECK_NOTNULL_OR_RETURN(op);
-    return OpInterpUtil::Dispatch<Tensor>(*op, {x, y, dy}, attrs);
+    CHECK_OR_RETURN(it != op_expr_map_.end())
+        << "Encounter unsupported op " << op_type_name << " in PoolNdGradFunctor.";
+    CHECK_NOTNULL_OR_RETURN(it->second);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
   }
 
  protected:
