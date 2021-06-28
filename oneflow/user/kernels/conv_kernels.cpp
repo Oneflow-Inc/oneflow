@@ -69,6 +69,7 @@ size_t CalcElemNumOfColBuf(const ShapeView& out_shape, const ShapeView& weight_s
                            const int32_t idx_offset) {
   int64_t col_buf_elem_cnt = 1;
   int64_t ndims = out_shape.NumAxes() - 2;
+
   for (size_t i = 0; i != ndims + 1; ++i) { col_buf_elem_cnt *= weight_shape.At(i + 1); }
   for (size_t i = 0; i != ndims; ++i) { col_buf_elem_cnt *= out_shape.At(idx_offset + i); }
   return col_buf_elem_cnt;
@@ -428,7 +429,7 @@ class ConvCpuKernel final : public user_op::OpKernel {
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("bias", 0);
       if (bias != nullptr) {
         int64_t num_of_col_buf = CalcElemNumOfColBuf(out->shape(), weight->shape(), idx_offset);
-        int64_t num_of_bias_mul = tmp_buffer->shape().elem_cnt() - num_of_col_buf;
+        int64_t num_of_bias_mul = tmp_buffer->shape().elem_cnt() - num_of_col_buf * sizeof(T);
         CHECK_GT(num_of_bias_mul, 0);
         T* bias_mul_dptr = col_buf_dptr + num_of_col_buf * sizeof(T);
         if (!is_bias_mul_inited) {

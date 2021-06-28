@@ -119,10 +119,7 @@ def calc_ndim_same_padding(
     for i in range(ndims):
         ndim_padding_needed.append(
             calc_same_padding(
-                input_shape[dhw_offset + i],
-                kernel_sizes[i],
-                dilations[i],
-                strides[i],
+                input_shape[dhw_offset + i], kernel_sizes[i], dilations[i], strides[i],
             )
         )
     pads_small = [padding_needed // 2 for padding_needed in ndim_padding_needed]
@@ -329,12 +326,7 @@ def conv1d(
         else:
             raise ValueError("invalid data_format")
     inputs, pads_list = calc_conv_padding(
-        input,
-        padding,
-        data_format.upper(),
-        kernel_size_list,
-        dilations,
-        strides,
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -513,12 +505,7 @@ def conv2d(
 
     assert isinstance(kernel_size_list, tuple)
     inputs, pads_list = calc_conv_padding(
-        input,
-        padding,
-        data_format.upper(),
-        kernel_size_list,
-        dilations,
-        strides,
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -755,12 +742,7 @@ def conv3d(
         else:
             raise ValueError("invalid data_format")
     inputs, pads_list = calc_conv_padding(
-        input,
-        padding,
-        data_format.upper(),
-        kernel_size_list,
-        dilations,
-        strides,
+        input, padding, data_format.upper(), kernel_size_list, dilations, strides,
     )
     assert len(pads_list) == len(inputs.shape) - 2
     padding_before = [pad[0] for pad in pads_list]
@@ -2691,22 +2673,14 @@ def random_mask_like(
         return mask_op.Build().InferAndTryRun().RemoteBlobList()[0]
     else:
         module = flow.find_or_create_module(
-            name,
-            lambda: RandomMaskLike(
-                rate=rate,
-                seed=seed,
-                name=name,
-            ),
+            name, lambda: RandomMaskLike(rate=rate, seed=seed, name=name,),
         )
         return module(like)
 
 
 class RandomMaskLike(module_util.Module):
     def __init__(
-        self,
-        rate: float,
-        seed: Optional[int] = None,
-        name: str = None,
+        self, rate: float, seed: Optional[int] = None, name: str = None,
     ):
         module_util.Module.__init__(self, name)
         if seed is None:
@@ -3339,8 +3313,7 @@ def hard_sigmoid(
 
 @oneflow_export("nn.mish")
 def mish(
-    x: oneflow._oneflow_internal.BlobDesc,
-    name: Optional[str] = None,
+    x: oneflow._oneflow_internal.BlobDesc, name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
     """The Mish activation function.
 
