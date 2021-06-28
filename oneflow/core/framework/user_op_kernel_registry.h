@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/high_order_bool.h"
 
 namespace oneflow {
-
+extern std::vector<Error> registry_error;
 namespace user_op {
 
 class OpKernel;

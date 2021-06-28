@@ -27,6 +27,10 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
+extern std::vector<Error> registry_error;
+inline Maybe<void> CheckRegistry() {
+  return registry_error.empty() ? Maybe<void>::Ok() : *registry_error.begin();
+}
 
 inline Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));

@@ -37,7 +37,7 @@ OpGradRegistry& OpGradRegistry::SetBackwardOpConfGenFn(BackwardOpConfGenFn fn) {
 }
 
 OpGradRegistry& OpGradRegistry::Finish() {
-  CHECK((result_.gen_bw_fn != nullptr) || (result_.bw_gen_fn != nullptr))
+  CHECK_REGISTRY_ERROR((result_.gen_bw_fn != nullptr) || (result_.bw_gen_fn != nullptr))
       << "No BackwardOpConf generate function for " << result_.op_type_name;
   return *this;
 }

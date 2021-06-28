@@ -340,4 +340,10 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 
 #define UNIMPLEMENTED_THEN_RETURN() OF_UNIMPLEMENTED()
 
+#define CHECK_REGISTRY_ERROR(expr)                                           \
+  if (!(expr))                                                               \
+    registry_error.emplace(registry_error.end(), Error::CheckFailedError())  \
+      ->AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) << "Check failed: "    \
+      << OF_PP_STRINGIZE(expr) << "\t"
+      
 #endif  // ONEFLOW_CORE_COMMON_MAYBE_H_

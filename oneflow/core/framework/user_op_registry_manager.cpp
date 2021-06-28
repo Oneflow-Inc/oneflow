@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
-
+std::vector<Error> registry_error;
 namespace user_op {
 
 UserOpRegistryMgr& UserOpRegistryMgr::Get() {

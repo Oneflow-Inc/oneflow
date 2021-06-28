@@ -26,6 +26,7 @@ limitations under the License.
 namespace oneflow {
 
 class Device;
+extern std::vector<Error> registry_error;
 
 namespace user_op {
 

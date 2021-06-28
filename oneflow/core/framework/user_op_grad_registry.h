@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
-
+extern std::vector<Error> registry_error;
 namespace user_op {
 
 using AddOpFn = std::function<void(const UserOpConfWrapper&)>;

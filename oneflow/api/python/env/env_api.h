@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "oneflow/api/python/env/env.h"
 
+inline void CheckRegistry() { return oneflow::CheckRegistry().GetOrThrow(); }
+
 inline std::string CurrentResource() { return oneflow::CurrentResource().GetOrThrow(); }
 
 inline std::string EnvResource() { return oneflow::EnvResource().GetOrThrow(); }
