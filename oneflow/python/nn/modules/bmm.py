@@ -30,10 +30,10 @@ class BMM(Module):
 @oneflow_export("bmm")
 @register_tensor_op("bmm")
 @experimental_api
-def bmm_op(condition, x, y):
+def bmm_op(x, y):
     """
     """
-    return BMM()(condition, x, y)
+    return BMM()(x, y)
 
 
 if __name__ == "__main__":
