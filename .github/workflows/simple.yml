@@ -79,6 +79,8 @@ jobs:
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
+          cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
