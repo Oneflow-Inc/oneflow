@@ -18,7 +18,6 @@ from __future__ import absolute_import
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
