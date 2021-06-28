@@ -87,7 +87,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
       xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
-      for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, pair.second}); }
+      for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)}); }
       const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
