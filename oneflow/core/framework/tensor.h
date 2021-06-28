@@ -104,7 +104,7 @@ class Tensor {
   virtual void set_is_leaf(bool is_leaf) = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
   virtual bool has_autograd_meta() const = 0;
-  virtual void create_autograd_meta() = 0;
+  virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
 
@@ -239,7 +239,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor>,
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
-  void create_autograd_meta() override { impl_->create_autograd_meta(); }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
+    impl_->set_autograd_meta(autograd_meta);
+  }
 
   // Operators for tensor
   Maybe<MirroredTensor> api_detach() const override;
@@ -324,7 +326,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
-  void create_autograd_meta() override { impl_->create_autograd_meta(); }
+  void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
+    impl_->set_autograd_meta(autograd_meta);
+  }
 
   // Operators for tensor
   virtual Maybe<ConsistentTensor> api_detach() const override;

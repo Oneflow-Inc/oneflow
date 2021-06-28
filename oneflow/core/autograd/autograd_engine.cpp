@@ -77,7 +77,9 @@ StackFunctionNode::StackFunctionNode(
   output_meta_datas_.resize(outputs.size());
   output_tensor_infos_.reserve(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
-    outputs.at(i)->create_autograd_meta();
+    const auto& autograd_meta =
+        NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
+    outputs.at(i)->set_autograd_meta(autograd_meta);
     output_meta_datas_.at(i) = outputs.at(i)->mut_autograd_meta();
     output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
   }
