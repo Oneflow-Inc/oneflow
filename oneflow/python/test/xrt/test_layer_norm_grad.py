@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 
 import numpy as np
@@ -57,6 +58,7 @@ def make_xla_job(shape, mean_shape, norm_axis, dtype=flow.float32):
     return xla_layer_norm_grad_job
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLayerNormGrad(unittest.TestCase):
     def _test_body(self, dy, x, mean, inv_variance, norm_axis, dtype=np.float32):
         f1 = make_job(x.shape, mean.shape, norm_axis, dtype=flow.float32)

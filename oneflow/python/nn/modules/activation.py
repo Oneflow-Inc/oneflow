@@ -899,6 +899,75 @@ class LeakyReLU(Module):
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
 
 
+@oneflow_export("nn.Mish")
+@experimental_api
+class Mish(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+
+
+@oneflow_export("mish")
+@experimental_api
+def mish_op(x):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    See :mod:`oneflow.experimental.nn.Mish`
+    """
+
+    return Mish()(x)
+
+
+@register_tensor_op("mish")
+@experimental_api
+def mish_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.mish`
+    """
+
+    return Mish()(x)
+
+
 if __name__ == "__main__":
     import doctest
 
