@@ -35,6 +35,11 @@ def compare(
     func_config.default_data_type(flow.float)
     flow.clear_default_session()
 
+    params = {
+        "x": np.array(0),
+        "conv-weight": np.array(0),
+    }
+
     @flow.global_function(type="train", function_config=func_config)
     def RunConvBias():
         with flow.scope.placement(device_type, "0:0"):
@@ -87,7 +92,11 @@ def compare(
 
             return loss
 
-    of_bias_out = RunConvBias()
+    for k, v in flow.get_all_variables().items():
+        if k in params:
+            params[k] = v.numpy()
+
+    of_bias_out = RunConvBias().get()
     flow.clear_default_session()
 
     @flow.global_function(type="train", function_config=func_config)
@@ -133,7 +142,8 @@ def compare(
 
             return loss
 
-    of_out = RunConv()
+    flow.load_variables(params)
+    of_out = RunConv().get()
     flow.clear_default_session()
     assert np.allclose(of_bias_out.numpy(), of_out.numpy(), rtol=5e-3, atol=5e-3)
 
