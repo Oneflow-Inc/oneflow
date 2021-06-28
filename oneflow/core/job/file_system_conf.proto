@@ -1,0 +1,20 @@
+syntax = "proto2";
+package oneflow;
+
+message LocalFsConf {
+}
+
+message NetworkFsConf {
+}
+
+message HdfsConf {
+    required string namenode = 1;
+}
+
+message FileSystemConf {
+    oneof fs_type {
+        LocalFsConf localfs_conf = 1;
+        NetworkFsConf networkfs_conf = 2;
+        HdfsConf hdfs_conf = 3;
+    }
+}

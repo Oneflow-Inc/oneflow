@@ -107,8 +107,6 @@ std::string GetHashKey(const T&... args) {
   return internal::GetHashKeyImpl({args...});
 }
 
-std::string ToLower(const std::string& cap);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STR_UTIL_H_

@@ -538,7 +538,8 @@ def _GetDefaultConfigProto():
     else:
         config_proto.resource.cpu_device_num = 1
         config_proto.resource.gpu_device_num = 0
-    config_proto.io_conf.SetInParent()
+    config_proto.io_conf.data_fs_conf.localfs_conf.SetInParent()
+    config_proto.io_conf.snapshot_fs_conf.localfs_conf.SetInParent()
     config_proto.session_id = session_ctx.GetDefaultSession().id
     return config_proto
 
