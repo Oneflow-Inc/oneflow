@@ -112,6 +112,7 @@ class ZeroCopyBaseContext {
 
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
+
   void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
  private:
