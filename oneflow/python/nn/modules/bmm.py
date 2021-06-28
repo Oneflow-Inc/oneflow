@@ -28,7 +28,6 @@ class BMM(Module):
 
 
 @oneflow_export("bmm")
-@register_tensor_op("bmm")
 @experimental_api
 def bmm_op(x, y):
     """
@@ -36,7 +35,7 @@ def bmm_op(x, y):
 
     `input` and `mat2` must be 3-D tensors each containing the same number of matrices.
 
-    If input is a ($b \times n \times m$) tensor, mat2 is a ($b \times m \times p$) tensor, out will be a ($b \times n \times p$) tensor.
+    If input is a (b x n x m) tensor, mat2 is a (b x m x p) tensor, out will be a (b x n x p) tensor.
 
     Args:
         input('Tensor'):  the first batch of matrices to be multiplied
@@ -54,6 +53,19 @@ def bmm_op(x, y):
         >>> of_out = flow.bmm(input1, input2)
         >>> of_out.shape
         flow.Size([10, 3, 5])
+    """
+    return BMM()(x, y)
+
+
+@register_tensor_op("bmm")
+@experimental_api
+def bmm_op_tensor(x, y):
+    r"""
+
+    bmm() -> Tensor
+
+    See :func:`oneflow.experimental.bmm`
+
     """
     return BMM()(x, y)
 
