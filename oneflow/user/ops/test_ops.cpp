@@ -91,7 +91,8 @@ REGISTER_USER_OP("TestReshape")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestSource")
     .Output("out")
@@ -270,7 +271,8 @@ REGISTER_USER_OP("TestRandomSource")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = DataType::kFloat;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestDataTypeAttr")
     .Input("in")
@@ -285,7 +287,8 @@ REGISTER_USER_OP("TestDataTypeAttr")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("output_type");
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
     .Input("in")
@@ -308,7 +311,8 @@ REGISTER_USER_OP("TestListDataTypeAndListShapeAndListStringAttr")
         *ctx->OutputDType("out", i) = out_types.at(i);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Input("in")
@@ -316,7 +320,8 @@ REGISTER_USER_OP("test_user_op_attr_auto_type")
     .Attr<int32_t>("int1")
     .Attr<int32_t>("int2")
     .SetTensorDescInferFn(user_op::TensorDescInferFnUtil::Unchanged)
-    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType);
+    .SetDataTypeInferFn(user_op::TensorDescInferFnUtil::UnchangedDataType)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_CPU_ONLY_USER_OP("cpu_only_relu_test")
     .Input("in")

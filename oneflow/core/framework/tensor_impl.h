@@ -238,7 +238,7 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<VmLocalDepObject> compute_local_dep_object() const override { OF_UNIMPLEMENTED(); }
   Maybe<TensorStorage> tensor_storage() const override { OF_UNIMPLEMENTED(); }
-
+  Maybe<MirroredTensorImpl> detach() const override;
   Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) override {
     return Error::Unimplemented();
   }
@@ -259,6 +259,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override;
+  Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
 
   // Getters valid only for EagerMirroredTensorImpl
@@ -280,12 +281,6 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   }
 
   Maybe<void> InitEagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case);
-
-  Maybe<MirroredTensorImpl> detach() const override {
-    auto* detached_impl = new EagerMirroredTensorImpl(tensor_meta_, tensor_storage_, false, true);
-    detached_impl->eager_blob_object_ = eager_blob_object_;
-    return std::shared_ptr<MirroredTensorImpl>(detached_impl);
-  }
 
  private:
   Maybe<void> UpdateTensorStorage();

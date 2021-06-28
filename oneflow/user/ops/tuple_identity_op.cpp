@@ -26,7 +26,7 @@ REGISTER_USER_OP("tuple_identity")
       CHECK_EQ_OR_RETURN(ctx->output_size("out"), in_size);
       for (int64_t i = 0; i < in_size; ++i) {
         *ctx->OutputShape("out", i) = ctx->InputShape("in", i);
-        *ctx->IsDynamic4ArgNameAndIndex("out", i) = ctx->InputIsDynamic4ArgNameAndIndex("in", i);
+        *ctx->IsDynamic4ArgNameAndIndex("out", i) = ctx->InputIsDynamic("in", i);
       }
       return Maybe<void>::Ok();
     })
@@ -59,7 +59,8 @@ REGISTER_USER_OP("tuple_identity")
         (*bn2sbp)[obn] = *sbp_parallel;
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("tuple_identity")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op, user_op::AddOpFn AddOp) {

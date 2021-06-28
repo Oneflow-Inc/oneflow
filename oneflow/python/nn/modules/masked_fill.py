@@ -23,20 +23,12 @@ class MaskedFill(Module):
     def __init__(self, value) -> None:
         super().__init__()
         self.value = value
-        self._where_op = (
-            flow.builtin_op("where")
-            .Input("condition")
-            .Input("x")
-            .Input("y")
-            .Output("out")
-            .Build()
-        )
 
     def forward(self, input, mask):
         in_shape = tuple(input.shape)
         value_like_x = flow.Tensor(*in_shape, device=input.device)
         value_like_x.fill_(self.value)
-        return self._where_op(mask, value_like_x, input)[0]
+        return flow.F.where(mask, value_like_x, input)
 
 
 @oneflow_export("masked_fill")
