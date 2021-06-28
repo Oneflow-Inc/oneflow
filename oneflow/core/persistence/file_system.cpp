@@ -32,8 +32,6 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
 }
 
 void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
-  // if (IsDirectory(dirname)) { return; }
-  // RecursivelyCreateDir(dirname);
   std::string remaining_dir = dirname;
   std::vector<std::string> sub_dirs;
   while (!remaining_dir.empty()) {
