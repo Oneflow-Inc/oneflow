@@ -516,7 +516,7 @@ Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     scope_proto->set_host_parallel_desc_symbol_id(CHECK_JUST(host_parallel_desc_sym->symbol_id()));
   };
 
-  return JUST(BuildScopeByProtoSetter(scope, SetScopeProto));
+  return BuildScopeByProtoSetter(scope, SetScopeProto);
 }
 
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelConf(
