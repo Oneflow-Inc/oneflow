@@ -81,7 +81,7 @@ jobs:
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
-        if: matrix.cmake_generator != "Ninja"
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           set -x
           mkdir -p build-third_party
@@ -91,7 +91,7 @@ jobs:
           cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
-        if: matrix.cmake_generator != "Ninja"
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -99,7 +99,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
-        if: always() && matrix.cmake_generator != "Ninja"
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -107,7 +107,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
       - name: Build (oneflow_py)
-        if: always() && matrix.cmake_generator != "Ninja"
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -115,7 +115,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
         shell: bash
       - name: Build (oneflow_testexe)
-        if: always() && matrix.cmake_generator != "Ninja"
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
