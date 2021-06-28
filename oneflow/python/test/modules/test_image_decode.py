@@ -16,7 +16,7 @@ limitations under the License.
 import unittest
 
 import numpy as np
-from PIL import Image
+import cv2
 
 import oneflow.experimental as flow
 
@@ -52,23 +52,16 @@ class TestImageDecode(flow.unittest.TestCase):
         decoded_images_buffer = image_decoder(images_buffer)
         of_decoded_images = decoded_images_buffer.numpy()
 
-        pil_images = [Image.open(image) for image in images]
-        # convert image to BGR
-        pil_decoded_images = [np.array(image)[:, :, ::-1] for image in pil_images]
+        cv2_images = [cv2.imread(image) for image in images]
+        cv2_decoded_images = [np.array(image) for image in cv2_images]
 
-        for of_decoded_image, pil_decoded_image in zip(
-            of_decoded_images, pil_decoded_images
+        for of_decoded_image, cv2_decoded_image in zip(
+            of_decoded_images, cv2_decoded_images
         ):
             test_case.assertTrue(len(of_decoded_image.shape) == 3)
-            test_case.assertTrue(len(pil_decoded_image.shape) == 3)
+            test_case.assertTrue(len(cv2_decoded_image.shape) == 3)
 
-            diff = of_decoded_image - pil_decoded_image
-            diff_index = np.where(diff != 0)
-            diff_abs_values = diff[diff_index]
-
-            # only green channel has difference of 1
-            test_case.assertTrue(np.all(diff_index[-1] == 1))
-            test_case.assertTrue(np.all(diff_abs_values == 1))
+            test_case.assertTrue(np.allclose(of_decoded_image, cv2_decoded_image))
 
 
 if __name__ == "__main__":
