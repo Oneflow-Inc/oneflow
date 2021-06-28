@@ -39,7 +39,7 @@ int GetThreadNum(const cudaDeviceProp& prop) {
   }
 }
 
-__global__ void SetupKernel(int64_t seed, curandState* state) {
+__global__ void SetupKernel(uint64_t seed, curandState* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   size_t local_seed = (static_cast<size_t>(seed) + 0x9e3779b9U + (static_cast<size_t>(id) << 6U)
                        + (static_cast<size_t>(id) >> 2U));
@@ -48,7 +48,7 @@ __global__ void SetupKernel(int64_t seed, curandState* state) {
 
 }  // namespace
 
-GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(int64_t seed) {
+GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(uint64_t seed) {
   cudaDeviceProp prop;
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   block_num_ = prop.multiProcessorCount;

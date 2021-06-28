@@ -33,7 +33,7 @@ class GeneratorImplBase {
 
  protected:
   DeviceType device_type_;
-  int64_t seed_;
+  uint64_t seed_;
 };
 
 template<DeviceType device_type>
@@ -42,7 +42,7 @@ class GeneratorImpl;
 template<>
 class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
  public:
-  GeneratorImpl(int64_t seed) : mt19937_generator_(seed) {
+  GeneratorImpl(uint64_t seed) : mt19937_generator_(seed) {
     seed_ = seed;
     device_type_ = DeviceType::kCPU;
   }
@@ -58,7 +58,7 @@ class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
 template<>
 class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase {
  public:
-  GeneratorImpl(int64_t seed);
+  GeneratorImpl(uint64_t seed);
   virtual ~GeneratorImpl();
 
   const int32_t& block_num() const { return block_num_; }
@@ -75,11 +75,11 @@ class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase {
 class Generator final {
  public:
   // TODO: make default value random like pytorh
-  explicit Generator(int64_t seed = 0) : seed_(seed) {}
+  explicit Generator(uint64_t seed = 0) : seed_(seed) {}
 
   // TODO: should also set seed of generators?
-  void set_current_seed(const int64_t seed) { seed_ = seed; }
-  int64_t get_current_seed() const { return seed_; }
+  void set_current_seed(const uint64_t seed) { seed_ = seed; }
+  uint64_t get_current_seed() const { return seed_; }
 
   template<DeviceType device_type>
   Maybe<GeneratorImpl<device_type>> GetDeviceGenerator() {
@@ -105,7 +105,7 @@ class Generator final {
   }
 
  private:
-  int64_t seed_;
+  uint64_t seed_;
   std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> generators_;
 };
 

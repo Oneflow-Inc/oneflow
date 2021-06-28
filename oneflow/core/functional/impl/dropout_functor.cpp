@@ -41,19 +41,14 @@ class DropoutFunctor {
         CHECK_JUST(one::OpBuilder("dropout").Input("in").Input("mask").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const std::shared_ptr<one::Generator>& gen) const {
+                           const std::shared_ptr<one::Generator>& generator) const {
     MutableAttrMap random_mask_like_attrs;
     JUST(random_mask_like_attrs.SetAttr<float>("rate", p));
-    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", 0));  // FIXME: get from generator?
 
-    // alow gen to be null here?
-    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    // if (oneflow::EagerExecutionEnabled()) {
-    //   if (gen == nullptr) {
-    //     gen = one::Generator::GetDefaultGenerator();
-    //   }
-    //   random_mask_like_ctx.state = std::make_shared<RandomMaskLikeKernelState>(gen);
-    // }
+    // TODO: make generator optional
+    JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", generator->get_current_seed()));
+    const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(generator);
+    
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
         *random_mask_like_op_, {x}, {random_mask_like_attrs, random_mask_like_state}));
     float scale = 1.0;

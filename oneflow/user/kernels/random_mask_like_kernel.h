@@ -41,8 +41,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const auto& gen = one::Generator::GetDefaultGenerator();
-    return std::make_shared<RandomMaskLikeKernelState>(gen);
+    const auto generator = std::make_shared<one::Generator>(static_cast<uint64_t>(ctx->Attr<int64_t>("seed")));
+    return std::make_shared<RandomMaskLikeKernelState>(generator);
   }
 
  private:
