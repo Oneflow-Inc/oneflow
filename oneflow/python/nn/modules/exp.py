@@ -54,9 +54,9 @@ def exp_op(x):
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([1, 2, 3]).astype(np.float32))
-        >>> y = x.exp().numpy()
-        >>> print(y)
-        [ 2.7182817  7.389056  20.085537 ]
+        >>> y = x.exp()
+        >>> y
+        tensor([ 2.7183,  7.3891, 20.0855], dtype=oneflow.float32)
 
     """
     return Exp()(x)

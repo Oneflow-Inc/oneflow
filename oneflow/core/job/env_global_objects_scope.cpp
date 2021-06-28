@@ -142,16 +142,20 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
     Global<EpollCommNet>::New();
     Global<Transport>::New();
+#endif  // __linux__
   }
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+#ifdef __linux__
     Global<Transport>::Delete();
     Global<EpollCommNet>::Delete();
+#endif  // __linux__
   }
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();

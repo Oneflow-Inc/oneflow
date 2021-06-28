@@ -22,19 +22,17 @@ from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 
 
-@oneflow_export("nn.ConstantPad2d")
+@oneflow_export("nn.ZeroPad2d")
 @experimental_api
-class ConstantPad2d(Module):
+class ZeroPad2d(Module):
     r"""The interface is consistent with PyTorch.
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.nn.ConstantPad2d.html?highlight=constantpad2d#torch.nn.ConstantPad2d
+    https://pytorch.org/docs/stable/generated/torch.nn.ZeroPad2d.html
 
-    This operator pads the input with constant value that user specifies. User can set the amount of padding by setting the parameter `paddings`.
+    Pads the input tensor boundaries with zero. User can set the amount of padding by setting the parameter `paddings`.
 
     Args:
-        padding (Union[int, tuple, list]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
-        
-        value (Union[int, float]): The constant value used for padding. Defaults to 0.
+        padding (Union[int, tuple]):  the size of the padding. If is `int`, uses the same padding in all boundaries. If a 4-`tuple`, uses (:math:`\mathrm{padding_{left}}`, :math:`\mathrm{padding_{right}}`, :math:`\mathrm{padding_{top}}`, :math:`\mathrm{padding_{bottom}}`)
 
     Shape:
         - Input: :math:`(N, C, H_{in}, W_{in})`
@@ -51,51 +49,55 @@ class ConstantPad2d(Module):
         >>> import oneflow.experimental as flow
         >>> import numpy as np
         >>> flow.enable_eager_execution()
-        >>> constantpad_layer_0 = flow.nn.ConstantPad2d((2, 2, 1, 1), 1)
+        >>> zeropad_layer_int = flow.nn.ZeroPad2d(2)
+        >>> zeropad_layer_tuple = flow.nn.ZeroPad2d((1,2,2,0))
         >>> input = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.float32))
-        >>> input_int = flow.Tensor(np.arange(18).reshape((1, 2, 3, 3)).astype(np.int32))
-        >>> output = constantpad_layer_0(input)
-        >>> output.shape
-        flow.Size([1, 2, 5, 7])
-        >>> output
-        tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
-                  [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
-                  [ 1.,  1.,  6.,  7.,  8.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]],
-        <BLANKLINE>
-                 [[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  9., 10., 11.,  1.,  1.],
-                  [ 1.,  1., 12., 13., 14.,  1.,  1.],
-                  [ 1.,  1., 15., 16., 17.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
-        >>> output_int = constantpad_layer_0(input_int)
+        >>> output_int = zeropad_layer_int(input)
+        >>> output_int.shape
+        flow.Size([1, 2, 7, 7])
         >>> output_int
-        tensor([[[[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  0.,  1.,  2.,  1.,  1.],
-                  [ 1.,  1.,  3.,  4.,  5.,  1.,  1.],
-                  [ 1.,  1.,  6.,  7.,  8.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]],
+        tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  1.,  2.,  0.,  0.],
+                  [ 0.,  0.,  3.,  4.,  5.,  0.,  0.],
+                  [ 0.,  0.,  6.,  7.,  8.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]],
         <BLANKLINE>
-                 [[ 1.,  1.,  1.,  1.,  1.,  1.,  1.],
-                  [ 1.,  1.,  9., 10., 11.,  1.,  1.],
-                  [ 1.,  1., 12., 13., 14.,  1.,  1.],
-                  [ 1.,  1., 15., 16., 17.,  1.,  1.],
-                  [ 1.,  1.,  1.,  1.,  1.,  1.,  1.]]]], dtype=oneflow.float32)
+                 [[ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  9., 10., 11.,  0.,  0.],
+                  [ 0.,  0., 12., 13., 14.,  0.,  0.],
+                  [ 0.,  0., 15., 16., 17.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.,  0.]]]], dtype=oneflow.float32)
+        >>> output_tuple = zeropad_layer_tuple(input)
+        >>> output_tuple
+        tensor([[[[ 0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  1.,  2.,  0.,  0.],
+                  [ 0.,  3.,  4.,  5.,  0.,  0.],
+                  [ 0.,  6.,  7.,  8.,  0.,  0.]],
+        <BLANKLINE>
+                 [[ 0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  0.,  0.,  0.,  0.,  0.],
+                  [ 0.,  9., 10., 11.,  0.,  0.],
+                  [ 0., 12., 13., 14.,  0.,  0.],
+                  [ 0., 15., 16., 17.,  0.,  0.]]]], dtype=oneflow.float32)
     """
 
-    def __init__(self, padding: Union[int, tuple, list], value: Union[int, float] = 0):
+    def __init__(self, padding: Union[int, tuple]):
         super().__init__()
-        if isinstance(padding, (tuple, list)):
+        if isinstance(padding, tuple):
             assert len(padding) == 4, ValueError("Length of padding must be 4")
             boundary = [padding[0], padding[1], padding[2], padding[3]]
         elif isinstance(padding, int):
             boundary = [padding, padding, padding, padding]
         else:
-            raise ValueError("padding must be int or list or tuple!")
+            raise ValueError("padding must be int  or tuple!")
 
         self.padding = boundary
-        self.value = value
+        self.value = 0.0000
 
     def forward(self, x):
         _, _, h, w = x.shape
@@ -106,7 +108,6 @@ class ConstantPad2d(Module):
         else:
             floating_value = float(0)
             integral_value = int(self.value)
-
         self._op = (
             flow.builtin_op("constant_pad2d")
             .Input("x")
