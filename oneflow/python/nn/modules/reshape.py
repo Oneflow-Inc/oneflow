@@ -88,9 +88,26 @@ def reshape_op(x, shape: Sequence[int] = None):
 @register_tensor_op("view")
 @experimental_api
 def view_op(x, shape: Sequence[int] = None):
-    """This operator reshapes a Tensor.
+    r"""
+    Returns a new tensor with the same data as the :attr:`self` tensor but of a
+    different :attr:`shape`.
 
-    We can set one dimension in `shape` as `-1`, the operator will infer the complete shape.
+    The returned tensor shares the same data and must have the same number
+    of elements, but may have a different size. For a tensor to be viewed, the new
+    view size must be compatible with its original size and stride, i.e., each new
+    view dimension must either be a subspace of an original dimension, or only span
+    across original dimensions :math:`d, d+1, \dots, d+k` that satisfy the following
+    contiguity-like condition that :math:`\forall i = d, \dots, d+k-1`,
+
+    .. math::
+
+      \text{stride}[i] = \text{stride}[i+1] \times \text{size}[i+1]
+
+    Otherwise, it will not be possible to view :attr:`self` tensor as :attr:`shape`
+    without copying it (e.g., via :meth:`contiguous`). When it is unclear whether a
+    :meth:`view` can be performed, it is advisable to use :meth:`reshape`, which
+    returns a view if the shapes are compatible, and copies (equivalent to calling
+    :meth:`contiguous`) otherwise.
 
     Args:
         x: A Tensor.
@@ -112,7 +129,7 @@ def view_op(x, shape: Sequence[int] = None):
         >>> input = flow.Tensor(x)
 
         >>> y = flow.view(input, shape=[2, 2, 2, -1]).numpy().shape
-        >>> print(y)
+        >>> y
         (2, 2, 2, 2)
 
     """
