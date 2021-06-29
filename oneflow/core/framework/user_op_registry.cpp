@@ -204,8 +204,8 @@ OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
   return *this;
 }
 
-OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
+Maybe<OpRegistry&> OpRegistry::Finish() {
+  CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
   if (!result_.physical_tensor_desc_infer_fn) {
     const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
@@ -237,7 +237,7 @@ OpRegistry& OpRegistry::Finish() {
     };
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  CHECK(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
+  CHECK_OR_RETURN(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
     result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<const Device> {
       for (const auto& pair : ctx->inputs()) {
