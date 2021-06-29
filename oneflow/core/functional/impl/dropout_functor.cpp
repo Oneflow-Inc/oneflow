@@ -51,7 +51,7 @@ class DropoutFunctor {
     } else {
       gen = JUST(generator.value());
     }
-  
+
     JUST(random_mask_like_attrs.SetAttr<int64_t>("seed", gen->get_current_seed()));
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
