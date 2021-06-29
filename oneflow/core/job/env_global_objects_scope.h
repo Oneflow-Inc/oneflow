@@ -37,9 +37,9 @@ class EnvGlobalObjectsScope final {
   const std::shared_ptr<const ParallelDesc>& MutParallelDesc4Device(const Device& device);
 
  private:
+  std::mutex mutex_;
   Maybe<bool> is_default_physical_env_;
   HashMap<Device, std::shared_ptr<const ParallelDesc>> device2parallel_desc_;
-  std::thread::id thread_id_;
 };
 
 }  // namespace oneflow
