@@ -86,9 +86,23 @@ void TestDirOperation(FileSystem* file_system) {
   ASSERT_TRUE(!file_system->IsDirectory(test_root_path));
 }
 
+void TestMultiThreadsDirOperation(FileSystem* file_system) {
+  std::string current_dir = GetCwd();
+  StringReplace(&current_dir, '\\', '/');
+  std::string test_root_path = JoinPath(current_dir, "tmp_multithread_test_dir");
+  std::vector<std::thread> thread_vector;
+  for (int i = 0; i < 10; i++) {
+    thread_vector.emplace_back(
+        std::thread([&]() { file_system->RecursivelyCreateDirIfNotExist(test_root_path); }));
+  }
+  for (int i = 0; i < 10; i++) { thread_vector[i].join(); }
+  ASSERT_TRUE(file_system->IsDirectory(test_root_path));
+}
+
 void TestFileSystem(FileSystem* file_system) {
   TestFileOperation(file_system);
   TestDirOperation(file_system);
+  TestMultiThreadsDirOperation(file_system);
 }
 
 }  // namespace fs
