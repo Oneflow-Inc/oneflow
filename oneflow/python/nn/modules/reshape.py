@@ -89,6 +89,9 @@ def reshape_op(x, shape: Sequence[int] = None):
 @experimental_api
 def view_op(x, shape: Sequence[int] = None):
     r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
+
     Returns a new tensor with the same data as the :attr:`self` tensor but of a
     different :attr:`shape`.
 
