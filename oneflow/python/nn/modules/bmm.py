@@ -24,6 +24,9 @@ class BMM(Module):
         super().__init__()
 
     def forward(self, input, mat2):
+        assert (
+            input.shape[0] == mat2.shape[0] and input.shape[2] == mat2.shape[1]
+        ), f"batch dim or matmul dim not match, please check input!"
         return flow.F.batch_matmul(input, mat2)
 
 
