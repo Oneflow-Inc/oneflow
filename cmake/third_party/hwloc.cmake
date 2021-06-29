@@ -64,6 +64,7 @@ ExternalProject_Add(pciaccess
   PATCH_COMMAND cp ${XORG_MACROS_INSTALL}/share/aclocal/xorg-macros.m4 ${PCIACCESS_SOURCE_DIR}/src/pciaccess/m4
   CONFIGURE_COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/autogen.sh COMMAND ${PCIACCESS_SOURCE_DIR}/src/pciaccess/configure --prefix=${PCIACCESS_INSTALL}
   BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${PCIACCESS_CFLAGS}
+  BUILD_BYPRODUCTS ${PCIACCESS_STATIC_LIBRARIES}
   INSTALL_COMMAND make install
   DEPENDS xorg-macros
 )
@@ -81,6 +82,7 @@ ExternalProject_Add(hwloc
         UPDATE_COMMAND ""
         CONFIGURE_COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/autogen.sh COMMAND ${HWLOC_SOURCE_DIR}/src/hwloc/configure --prefix=${HWLOC_INSTALL} PKG_CONFIG_PATH=${PCIACCESS_INSTALL}/lib/pkgconfig --disable-libxml2 --enable-static
         BUILD_COMMAND make -j${PROC_NUM} CFLAGS=${HWLOC_CFLAGS}
+        BUILD_BYPRODUCTS ${HWLOC_STATIC_LIBRARIES}
         INSTALL_COMMAND make install
         DEPENDS pciaccess
         )
