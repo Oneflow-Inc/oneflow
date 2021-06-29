@@ -18,9 +18,6 @@ else()
     set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/${CMAKE_INSTALL_LIBDIR})
     set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
     set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
-    if (NOT APPLE)
-      set(OPENCV_3RDPARTY_LIBRARY_NAMES ${OPENCV_3RDPARTY_LIBRARY_NAMES} libittnotify.a)
-    endif()
 endif()
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
@@ -37,7 +34,7 @@ endforeach()
 if (THIRD_PARTY)
 
 ExternalProject_Add(opencv
-    DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
+    DEPENDS zlib libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     URL ${OPENCV_URL}
     URL_MD5 59870e55385f5202c1aa178fe37ed2de
@@ -47,6 +44,7 @@ ExternalProject_Add(opencv
     SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv
     BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/build
     CMAKE_CACHE_ARGS
+        -DCMAKE_POLICY_DEFAULT_CMP0074:STRING=NEW
         -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX:STRING=${OPENCV_INSTALL_DIR}
         -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
@@ -97,7 +95,8 @@ ExternalProject_Add(opencv
         -DBUILD_opencv_world:BOOL=OFF
         -DBUILD_opencv_apps:BOOL=OFF
         -DBUILD_opencv_js:BOOL=OFF
-        -DBUILD_ZLIB:BOOL=ON
+        -DBUILD_ZLIB:BOOL=OFF
+        -DZLIB_ROOT:PATH=${ZLIB_INSTALL}
         -DBUILD_TIFF:BOOL=ON
         -DBUILD_JASPER:BOOL=ON
         -DWITH_JPEG:BOOL=ON
@@ -108,7 +107,7 @@ ExternalProject_Add(opencv
         -DBUILD_OPENEXR:BOOL=ON
         -DBUILD_TBB:BOOL=ON
         -DBUILD_IPP_IW:BOOL=OFF
-        -DWITH_ITT:BOOL=ON
+        -DWITH_ITT:BOOL=OFF
         -DBUILD_opencv_flann:BOOL=OFF
         -DBUILD_opencv_ml:BOOL=OFF
         -DBUILD_opencv_objdetect:BOOL=OFF
