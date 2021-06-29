@@ -339,7 +339,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 }
 
 /* static */ Maybe<StatefulLocalOpKernel> StatefulLocalOpKernel::New(
-    const std::shared_ptr<OperatorConf>& op_conf, const std::shared_ptr<const Device>& device,
+    const std::shared_ptr<OperatorConf>& op_conf, const Symbol<Device>& device,
     const AttrMap& base_attrs, const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple) {
