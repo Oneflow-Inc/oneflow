@@ -149,31 +149,46 @@ model_dict = {
     "alexnet": alexnet_model.alexnet,
 }
 
-optimizer_dict = {
-    "sgd": {"naive_conf": {}},
-    "adam": {"adam_conf": {"beta1": 0.9}},
-    "momentum": {"momentum_conf": {"beta": 0.9}},
-    "momentum-decay": {
-        "momentum_conf": {"beta": 0.9},
-        "learning_rate_decay": {
-            "polynomial_conf": {"decay_batches": 300000, "end_learning_rate": 0.0001,},
-        },
-    },
-}
-
 #        "warmup_conf": {"linear_conf": {"warmup_batches":10000, "start_multiplier":0}},
 
 func_config = flow.FunctionConfig()
 func_config.default_distribute_strategy(flow.scope.consistent_view())
-func_config.train.primary_lr(args.learning_rate)
 func_config.default_data_type(flow.float)
-func_config.train.model_update_conf(optimizer_dict[args.optimizer])
 func_config.enable_auto_mixed_precision(args.enable_auto_mixed_precision)
 
 if args.weight_l2:
     func_config.train.weight_l2(args.weight_l2)
 
 flow.config.gpu_device_num(args.gpu_num_per_node)
+
+
+def set_up_optimizer(loss, args):
+    # set up optimizer
+    loss_scale_policy = None
+    if args.enable_auto_mixed_precision:
+        loss_scale_policy = flow.optimizer.loss_scale.dynamic_loss_scale(
+            increment_period=2000
+        )
+    if args.optimizer == "sgd":
+        print("Optimizer:  SGD")
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [args.learning_rate]),
+            loss_scale_policy=loss_scale_policy,
+        ).minimize(loss)
+    elif args.optimizer == "momentum":
+        print("Optimizer:  Momentum")
+        flow.optimizer.SGD(
+            flow.optimizer.PiecewiseConstantScheduler([], [args.learning_rate]),
+            momentum=0.9,
+            loss_scale_policy=loss_scale_policy,
+        ).minimize(loss)
+    elif args.optimizer == "adam":
+        print("Optimizer:  Adam")
+        flow.optimizer.Adam(
+            flow.optimizer.PiecewiseConstantScheduler([], [args.learning_rate]),
+            beta1=0.9,
+            loss_scale_policy=loss_scale_policy,
+        ).minimize(loss)
 
 
 @flow.global_function(func_config)
@@ -200,8 +215,7 @@ def TrainNet():
     loss = flow.nn.sparse_softmax_cross_entropy_with_logits(
         labels, logits, name="softmax_loss"
     )
-    flow.losses.add_loss(loss)
-
+    set_up_optimizer(loss, args)
     return loss
 
 
