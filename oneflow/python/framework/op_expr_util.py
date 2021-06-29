@@ -34,10 +34,7 @@ def user_op_expr_call(self, *args, **kwargs):
             self.op_type_name, attr_name, attr_value
         )
 
-    try:
-        results = self.apply(args, attrs)
-    except flow._oneflow_internal.exception.Exception:
-        raise oneflow._oneflow_internal.exception.GetThreadLocalLastError()
+    results = self.apply(args, attrs)
 
     return results
 

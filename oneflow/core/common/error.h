@@ -88,7 +88,6 @@ class Error final {
 };
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
-const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
 
 template<typename T>
 Error& operator<<(Error& error, const T& x) {

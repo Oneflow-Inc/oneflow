@@ -27,11 +27,6 @@ void LogError(const Error& error) {
   LOG(ERROR) << error->msg();
 }
 
-std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
-  thread_local std::shared_ptr<cfg::ErrorProto> error;
-  return &error;
-}
-
 }  // namespace
 
 Error&& Error::AddStackFrame(const std::string& location, const std::string& function) {
@@ -265,7 +260,6 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
-  *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   switch (error->error_type_case()) {
 #define MAKE_ENTRY(cls)                                      \
@@ -278,7 +272,5 @@ void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
     default: UNIMPLEMENTED();
   }
 }
-
-const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
 
 }  // namespace oneflow
