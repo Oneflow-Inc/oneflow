@@ -283,7 +283,7 @@ jobs:
             "xla",
             "cuda_op_eager",
             "cpu_op_eager",
-            "xla_cpu"
+            "xla_cpu",
           ]
         include:
           - test_suite: "cuda"
@@ -394,14 +394,24 @@ jobs:
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/build_docs.sh"
-      - name: Op test (distributed)
+      - name: Op test (distributed, 1st try)
         if: matrix.test_suite == 'cuda'
+        continue-on-error: true
+        id: distributed_try_1
         run: |
-          set -x
-          python3 ci/test/distributed_run.py \
-            --bash_script=ci/test/2node_op_test.sh \
-            --custom_img_tag=${image_name} \
-            --oneflow_wheel_path=${wheelhouse_dir}
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 2nd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_1.outcome=='failure'
+        continue-on-error: true
+        id: distributed_try_2
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
+      - name: Op test (distributed, 3rd try)
+        if: matrix.test_suite == 'cuda' && steps.distributed_try_2.outcome=='failure'
+        continue-on-error: false
+        id: distributed_try_3
+        run: |
+          python3 ci/test/distributed_run.py --bash_script=ci/test/2node_op_test.sh --custom_img_tag=${{ env.image_name }} --oneflow_wheel_path=${{ env.wheelhouse_dir }}
       - name: Upload log (distributed test)
         if: failure() && matrix.test_suite == 'cuda'
         uses: ./.github/actions/upload_oss

@@ -54,7 +54,8 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
@@ -92,7 +93,8 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
             out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather")
     .Input("in")
@@ -131,7 +133,8 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
     .Input("in")
@@ -173,7 +176,8 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_s2s")
     .Input("in")
@@ -216,6 +220,7 @@ REGISTER_USER_OP("_nccl_logical_s2s")
         out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

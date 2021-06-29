@@ -53,7 +53,8 @@ REGISTER_USER_OP("cast_to_tick")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace
 

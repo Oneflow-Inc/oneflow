@@ -26,6 +26,7 @@ jobs:
     needs: [cancel_previous]
     strategy:
       fail-fast: false
+      max-parallel: 3
       matrix:
         test_suite: ["mac", "ubuntu"]
         cmake_generator: ["Ninja", "Unix Makefiles"]
@@ -74,13 +75,13 @@ jobs:
           set -x
           cmake_flags=""
           cmake_flags+=" -DBUILD_CUDA=OFF"
+          cmake_flags+=" -DBUILD_TESTING=ON"
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
-        if: startsWith(runner.os, 'Linux')
         run: |
           set -x
           mkdir -p build-third_party
@@ -90,7 +91,6 @@ jobs:
           cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
-        if: startsWith(runner.os, 'Linux')
         run: |
           mkdir -p build
           cd build
@@ -98,7 +98,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
-        if: startsWith(runner.os, 'Linux')
+        if: always()
         run: |
           mkdir -p build
           cd build
@@ -106,15 +106,23 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
       - name: Build (oneflow_py)
-        if: startsWith(runner.os, 'Linux')
+        if: always()
         run: |
           mkdir -p build
           cd build
           cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
         shell: bash
+      - name: Build (oneflow_testexe)
+        if: always()
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_testexe
+        shell: bash
       - name: Build (ALL)
-        if: startsWith(runner.os, 'Linux')
+        if: always()
         run: |
           mkdir -p build
           cd build
@@ -122,14 +130,16 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
-        if: startsWith(runner.os, 'Linux')
+        if: always()
+        continue-on-error: true
         run: |
           mkdir -p build
           cd build
           ./bin/oneflow_testexe
         shell: bash
       - name: Op test
-        if: startsWith(runner.os, 'Linux')
+        if: always()
+        continue-on-error: true
         run: |
           source build/source.sh
           ONEFLOW_TEST_GITHUB_HOSTED=1 ONEFLOW_TEST_CPU_ONLY=1 bash ci/test/1node_op_test.sh
