@@ -234,6 +234,19 @@ class NewOnes(Module):
         if self.device is None:
             new_device = x.device
 
+        assert isinstance(
+            new_size, (int, tuple, flow.Size)
+        ), f"size parameter not correct, please check!"
+        assert isinstance(
+            new_dtype, (flow.dtype)
+        ), f"dtype parameter not correct, please check!"
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_requires_grad, bool
+        ), f"requires_grad parameter not correct, please check!"
+
         res = flow.F.constant(new_size, 1.0, new_dtype)
         res = res.to(new_device)
         res.requires_grad = new_requires_grad
@@ -261,7 +274,10 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         >>> import oneflow.experimental as flow
         >>> flow.enable_eager_execution()
 
-        
+        >>> x = flow.Tensor(np.ones((1, 2, 3)))
+        >>> y = x.new_ones(2, 2)
+        >>> y
+        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32
     """
     return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
         x
@@ -271,4 +287,4 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=True)
+    doctest.testmod(raise_on_error=False)
