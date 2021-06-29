@@ -228,6 +228,8 @@ void SetLocalProcessCtx(oneflow::ProcessCtx* ctx) {
   ctx->set_rank(0);
   ctx->set_node_size(1);
   ctx->mutable_num_process_distribution_in_cluster()->add_num_process(1);
+  (*ctx->mutable_rank2node_id())[0] = 0;
+  (*ctx->mutable_node_id2rankoffset())[0] = 0;
 }
 
 Maybe<void> LocalRpcManager::Bootstrap() {
