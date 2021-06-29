@@ -101,11 +101,7 @@ def _test_new_ones(test_case, device, shape):
     x = x.new_ones(shape, device=device, requires_grad=True)
     y = x.sum()
     y.backward()
-    test_case.assertTrue(
-        np.array_equal(np.ones_like(x.numpy()), x.grad.numpy())
-    )
-
-
+    test_case.assertTrue(np.array_equal(np.ones_like(x.numpy()), x.grad.numpy()))
 
 
 @unittest.skipIf(
