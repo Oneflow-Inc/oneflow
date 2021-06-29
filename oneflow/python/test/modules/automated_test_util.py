@@ -136,7 +136,7 @@ def constant(val):
 
 def test_module_against_pytorch(
     test_case,
-    func_name,
+    module_class_name,
     extra_annotations: Optional[Dict[str, Any]] = None,
     extra_generators: Optional[Dict[str, Any]] = None,
     device: str = "cuda",
@@ -145,6 +145,7 @@ def test_module_against_pytorch(
     rtol=1e-4,
     atol=1e-5,
     n=20,
+    pytorch_module_class_name=None,
 ):
     assert device in ["cuda", "cpu"]
     if not training:
@@ -153,11 +154,13 @@ def test_module_against_pytorch(
         extra_annotations = {}
     if extra_generators is None:
         extra_generators = {}
+    if pytorch_module_class_name is None:
+        pytorch_module_class_name = module_class_name
 
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
-    torch_func = eval(f"torch.{func_name}")
-    spec = inspect.getfullargspec(torch_func)
+    torch_module_class = eval(f"torch.{pytorch_module_class_name}")
+    spec = inspect.getfullargspec(torch_module_class)
     annotations = spec.annotations
     annotations.update(extra_annotations)
     if "return" in annotations:
@@ -205,7 +208,7 @@ def test_module_against_pytorch(
             torch_input_original.to(device),
         )
         try:
-            torch_module = torch_func(**torch_attr_dict)
+            torch_module = torch_module_class(**torch_attr_dict)
             torch_module = torch_module.to(device)
             torch_module.train(training)
             torch_res = torch_module(torch_input)
@@ -220,8 +223,8 @@ def test_module_against_pytorch(
             # so just skip when PyTorch raises an exception
             continue
 
-        flow_func = eval(f"flow.{func_name}")
-        flow_module = flow_func(**flow_attr_dict)
+        flow_module_class = eval(f"flow.{module_class_name}")
+        flow_module = flow_module_class(**flow_attr_dict)
         flow_module = flow_module.to(device)
         flow_module.train(training)
         flow_module.load_state_dict(state_dict)
