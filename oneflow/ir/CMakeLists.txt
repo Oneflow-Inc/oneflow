@@ -42,6 +42,7 @@ if(NOT llvm_monorepo_POPULATED)
   execute_process(COMMAND "${CMAKE_COMMAND}" ${llvm_monorepo_SOURCE_DIR}/llvm
     -DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL_DIR}
     -DLLVM_ENABLE_RTTI=ON # turn this on to make it compatible with protobuf
+    -DLLVM_ENABLE_EH=ON # turn this on to make it compatible with half (the library)
     -DLLVM_INCLUDE_EXAMPLES=OFF
     -DLLVM_INCLUDE_TESTS=OFF
     -DLLVM_INCLUDE_BENCHMARKS=OFF
@@ -107,3 +108,4 @@ add_subdirectory(lib)
 add_subdirectory(test)
 add_subdirectory(oneflow-opt)
 add_subdirectory(oneflow-translate)
+add_subdirectory(oneflow-extension)
