@@ -24,8 +24,7 @@ namespace {
 
 struct PoolOpKernelState final : public user_op::OpKernelState {
   Params3D params_3d;
-  PoolOpKernelState(Params3D params_3d)
-      : params_3d(params_3d) {}
+  PoolOpKernelState(Params3D params_3d) : params_3d(params_3d) {}
   const Params3D& GetParams3D() { return params_3d; }
 };
 

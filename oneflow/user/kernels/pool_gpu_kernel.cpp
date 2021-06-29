@@ -94,8 +94,8 @@ class GPUPoolOpKernelState final : public user_op::OpKernelState {
                              pool_size, strides, ceil_mode);
     const Shape y_shape = ctx->TensorDesc4ArgNameAndIndex("y", 0)->shape();
     const DataType dtype = x_desc->data_type();
-    return std::make_shared<GPUPoolOpKernelState>(dim, pooling_type, x_shape, y_shape, data_format, dtype,
-                                                  params_3d);
+    return std::make_shared<GPUPoolOpKernelState>(dim, pooling_type, x_shape, y_shape, data_format,
+                                                  dtype, params_3d);
   }
 
   const cudnnTensorDescriptor_t& cudnn_x_tensor_desc() const { return x_desc_->Get(); }
