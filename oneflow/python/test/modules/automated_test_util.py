@@ -43,23 +43,22 @@ def data_generator(annotation):
 
 
 @data_generator(bool)
-def random_bool():
+def _random_bool():
     val = random_util.choice([True, False])
     return val, val
 
 
 @data_generator(torch.Tensor)
-def random_tensor():
-    ndim = rng.integers(low=1, high=6)
-    shape = [rng.integers(low=1, high=6) for _ in range(ndim)]
-    np_arr = rng.random(shape)
-    return flow.Tensor(np_arr), torch.Tensor(np_arr)
+def _random_tensor():
+    return random_tensor()(None)
 
 
-def random_nd_tensor(
-    ndim, batch_size=1, channels=None, height=None, width=None, depth=None
+def random_tensor(
+    ndim=None, batch_size=1, channels=None, height=None, width=None, depth=None
 ):
-    assert 1 <= ndim <= 5
+    assert ndim is None or 1 <= ndim <= 5
+    if ndim is None:
+        ndim = rng.integers(low=1, high=6)
     shape = rng.integers(low=1, high=8, size=ndim)
     if batch_size is not None:
         shape[0] = batch_size
@@ -216,8 +215,7 @@ def test_module_against_pytorch(
             state_dict = {k: v.detach().cpu().numpy() for k, v in state_dict.items()}
         except Exception as e:
             if verbose:
-                pass
-                # print(f"PyTorch error: {e}")
+                print(f"PyTorch error: {e}")
             # The random generated test data is not always valid,
             # so just skip when PyTorch raises an exception
             continue
@@ -253,7 +251,7 @@ def test_module_against_pytorch(
 
 
 __all__ = [
-    "random_nd_tensor",
+    "random_tensor",
     "random",
     "choose",
     "constant",
