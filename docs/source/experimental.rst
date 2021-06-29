@@ -154,6 +154,8 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.acos
 .. autofunction:: oneflow.experimental.matmul
 .. autofunction:: oneflow.experimental.Tensor.matmul
+.. autofunction:: oneflow.experimental.bmm
+.. autofunction:: oneflow.experimental.Tensor.bmm
 .. autofunction:: oneflow.experimental.negative
 .. autofunction:: oneflow.experimental.neg
 .. autofunction:: oneflow.experimental.Tensor.negative
