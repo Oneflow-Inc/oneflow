@@ -92,7 +92,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
         return success();
       }
     } else if (op_type_name.equals("scalar_mul_by_tensor")) {
-      // TODO: refine redundant code
+      // TODO: refine repetitive code
       NamedAttrList attributes(op->getAttrDictionary());
       attributes.erase("operand_segment_sizes");
       attributes.erase("result_segment_sizes");
