@@ -449,7 +449,7 @@ class TestBatchNorm(flow.unittest.TestCase):
                         "track_running_stats": bool,
                     },
                     extra_generators={
-                        "input": random_tensor(ndim=4, channels=8),
+                        "input": random_tensor(ndim=4, dim1=8),
                         "num_features": constant(8),
                         "eps": random(1e-6, 1),
                         "momentum": random(0, 1),

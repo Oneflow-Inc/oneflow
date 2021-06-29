@@ -49,22 +49,22 @@ def _random_tensor():
 
 
 def random_tensor(
-    ndim=None, batch_size=1, channels=None, height=None, width=None, depth=None
+    ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None
 ):
     assert ndim is None or 1 <= ndim <= 5
     if ndim is None:
         ndim = rng.integers(low=1, high=6)
     shape = rng.integers(low=1, high=8, size=ndim)
-    if batch_size is not None:
-        shape[0] = batch_size
-    if ndim >= 2 and channels is not None:
-        shape[1] = channels
-    if ndim >= 3 and height is not None:
-        shape[2] = height
-    if ndim >= 4 and width is not None:
-        shape[3] = width
-    if ndim == 5 and depth is not None:
-        shape[4] = depth
+    if dim0 is not None:
+        shape[0] = dim0
+    if ndim >= 2 and dim1 is not None:
+        shape[1] = dim1
+    if ndim >= 3 and dim2 is not None:
+        shape[2] = dim2
+    if ndim >= 4 and dim3 is not None:
+        shape[3] = dim3
+    if ndim == 5 and dim4 is not None:
+        shape[4] = dim4
 
     def generator(_):
         np_arr = rng.random(shape)

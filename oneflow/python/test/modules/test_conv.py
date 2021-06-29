@@ -1815,7 +1815,7 @@ class TestConv2d(flow.unittest.TestCase):
                 test_case,
                 "nn.Conv2d",
                 extra_generators={
-                    "input": random_tensor(ndim=4, channels=4),
+                    "input": random_tensor(ndim=4, dim1=4),
                     "in_channels": constant(4),
                     "out_channels": random(1, 129),
                     "kernel_size": random(1, 4),
