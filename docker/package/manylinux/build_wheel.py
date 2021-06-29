@@ -193,10 +193,10 @@ make -j`nproc` prepare_oneflow_third_party
 
 
 def get_python_bin(version):
-    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    assert version in ["3.5", "3.6", "3.7", "3.8", "3.9"]
     py_ver = "".join(version.split("."))
     py_abi = f"cp{py_ver}-cp{py_ver}"
-    if py_ver != "38":
+    if version in ["3.5", "3.6", "3.7"]:
         py_abi = f"{py_abi}m"
     py_root = f"/opt/python/{py_abi}"
     py_bin = f"{py_root}/bin/python"
