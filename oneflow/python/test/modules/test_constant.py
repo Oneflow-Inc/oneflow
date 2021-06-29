@@ -82,6 +82,12 @@ def _test_zeros_like(test_case, device, shape):
     )
 
 
+def _test_new_ones_forward(test_case, device, shape):
+    x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    y = x.new_ones(shape)
+    test_case.assertTrue(x.dtype == y.dtype)
+
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -96,6 +102,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_zeros_backward,
             _test_ones_like,
             _test_zeros_like,
+            _test_new_ones_forward,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]

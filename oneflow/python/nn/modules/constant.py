@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
+from oneflow.python.framework.tensor import register_tensor_op
 from oneflow.python.nn.module import Module
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.common_types import _size_any_t
@@ -199,6 +200,72 @@ def ones_like_op(other):
 
     """
     return OnesLike()(other)
+
+
+class NewOnes(Module):
+    def __init__(
+        self,
+        size: Union[_size_any_t, flow.Size] = None,
+        dtype: Optional[flow.dtype] = None,
+        device: Union[flow.device, str] = None,
+        requires_grad: bool = False,
+    ):
+        super().__init__()
+
+        self.device = device
+        self.requires_grad = requires_grad
+        if size != None:
+            size = _single(size)
+        self.size = size
+        self.dtype = dtype
+
+    def forward(self, x):
+        new_size = self.size
+        new_dtype = self.dtype
+        new_device = self.device
+        new_requires_grad = self.requires_grad
+
+        if self.size is None:
+            new_size = x.shape
+
+        if self.dtype is None:
+            new_dtype = x.dtype
+
+        if self.device is None:
+            new_device = x.device
+
+        res = flow.F.constant(new_size, 1.0, new_dtype)
+        res = res.to(device=new_device)
+        res.requires_grad = new_requires_grad
+        return res
+
+
+@register_tensor_op("new_ones")
+@experimental_api
+def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
+    r"""
+    
+    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        
+    """
+    return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
+        x
+    )
 
 
 if __name__ == "__main__":
