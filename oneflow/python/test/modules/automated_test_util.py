@@ -16,7 +16,7 @@ limitations under the License.
 
 import inspect
 import typing  # This unused import is needed
-from typing import Dict, List, Optional, Tuple, Any, Union
+from typing import Dict, Optional, Tuple, Any, Union
 import random as random_util
 import os
 
@@ -56,15 +56,24 @@ def random_tensor():
     return flow.Tensor(np_arr), torch.Tensor(np_arr)
 
 
-def random_4d_tensor(batch_size=1, channels=None, height=None, width=None):
-    if channels is None:
-        channels = rng.integers(low=1, high=8)
-    if height is None:
-        height = rng.integers(low=1, high=8)
-    if width is None:
-        width = rng.integers(low=1, high=8)
+def random_nd_tensor(
+    ndim, batch_size=1, channels=None, height=None, width=None, depth=None
+):
+    assert 1 <= ndim <= 5
+    shape = rng.integers(low=1, high=8, size=ndim)
+    if batch_size is not None:
+        shape[0] = batch_size
+    if ndim >= 2 and channels is not None:
+        shape[1] = channels
+    if ndim >= 3 and height is not None:
+        shape[2] = height
+    if ndim >= 4 and width is not None:
+        shape[3] = width
+    if ndim == 5 and depth is not None:
+        shape[4] = depth
+
     def generator(_):
-        np_arr = rng.random((batch_size, channels, height, width))
+        np_arr = rng.random(shape)
         return flow.Tensor(np_arr), torch.Tensor(np_arr)
 
     return generator
@@ -229,8 +238,10 @@ def test_module_against_pytorch(
                 rtol=rtol,
                 atol=atol,
             )
-            test_case.assertTrue(is_allclose,
-                    f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}")
+            test_case.assertTrue(
+                is_allclose,
+                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict}",
+            )
 
         allclose_or_fail(flow_res, torch_res)
         allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
@@ -242,7 +253,7 @@ def test_module_against_pytorch(
 
 
 __all__ = [
-    "random_4d_tensor",
+    "random_nd_tensor",
     "random",
     "choose",
     "constant",
