@@ -35,12 +35,12 @@ namespace one {
 Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                       TensorTuple* outputs, const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  ConsistentTensorMetaInferArgs infer_args{};
+  const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New());
   const auto& placement_scope = JUST(GetCurrentScope())->placement_scope();
-  JUST(infer_args.Init(inputs, placement_scope, attrs));
-  const auto& resualt =
-      JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(infer_args));
-  const auto& output_tensor_metas = resualt->output_tensor_metas();
+  JUST(infer_args->Init(inputs, placement_scope, attrs));
+  const auto& result =
+      JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
+  const auto& output_tensor_metas = result->output_tensor_metas();
   const auto& parallel_desc =
       JUST(placement_scope->GetParallelDesc(user_op_expr.op_type_name())).shared_from_symbol();
   int64_t parallel_id = -1;

@@ -68,7 +68,6 @@ class UserOpExpr;
 
 class ConsistentTensorMetaInferArgs final {
  public:
-  ConsistentTensorMetaInferArgs() = default;
   ConsistentTensorMetaInferArgs(const ConsistentTensorMetaInferArgs&) = default;
   ConsistentTensorMetaInferArgs(ConsistentTensorMetaInferArgs&&) = default;
   ~ConsistentTensorMetaInferArgs() = default;
@@ -97,7 +96,13 @@ class ConsistentTensorMetaInferArgs final {
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
       std::vector<ParallelDistributionInferHint>* hints) const;
 
+  static Maybe<ConsistentTensorMetaInferArgs> New() {
+    std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
+    return infer_args;
+  }
+
  private:
+  ConsistentTensorMetaInferArgs() = default;
   Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors);
 
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;

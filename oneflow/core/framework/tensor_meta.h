@@ -37,7 +37,7 @@ class TensorMeta : public user_op::TensorDesc {
       : shape_(shape), data_type_(dtype), is_dynamic_(false) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
-  ~TensorMeta() = default;
+  virtual ~TensorMeta() = default;
 
   const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
 
@@ -65,6 +65,7 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      const std::shared_ptr<const Device>& device)
       : TensorMeta(shape, dtype), device_(device) {}
+  virtual ~MirroredTensorMeta() = default;
 
   const std::shared_ptr<const Device>& device() const { return device_; }
 
@@ -87,7 +88,7 @@ class ConsistentTensorMeta : public TensorMeta {
         parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
-  ~ConsistentTensorMeta() = default;
+  virtual ~ConsistentTensorMeta() = default;
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
@@ -114,8 +115,8 @@ namespace std {
 
 template<>
 struct hash<oneflow::one::ConsistentTensorMeta> final {
-  size_t operator()(const oneflow::one::ConsistentTensorMeta& other) const {
-    return other.CalcHashValue();
+  size_t operator()(const oneflow::one::ConsistentTensorMeta& consistent_tensor_meta) const {
+    return consistent_tensor_meta.CalcHashValue();
   }
 };
 
