@@ -502,19 +502,18 @@ Maybe<Scope> InstructionsBuilder::BuildInitialScope(
 Maybe<Scope> InstructionsBuilder::BuildScopeWithNewParallelDesc(
     const std::shared_ptr<Scope>& scope, const std::string& device_tag,
     const std::vector<std::string>& machine_device_ids, const std::shared_ptr<Shape>& hierarchy) {
-  const auto SetScopeProto =
-      [this, &device_tag, &machine_device_ids,
-       &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) -> Maybe<void> {
+  const auto SetScopeProto = [this, &device_tag, &machine_device_ids,
+                              &hierarchy](const std::shared_ptr<cfg::ScopeProto>& scope_proto) {
     std::shared_ptr<cfg::ParallelConf> parallel_conf =
-        JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
+        CHECK_JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> device_parallel_desc_sym =
-        JUST(GetParallelDescSymbol(parallel_conf));
-    parallel_conf = JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
+        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+    parallel_conf = CHECK_JUST(MakeParallelConf("cpu", machine_device_ids, hierarchy));
     std::shared_ptr<ParallelDesc> host_parallel_desc_sym =
-        JUST(GetParallelDescSymbol(parallel_conf));
-    scope_proto->set_device_parallel_desc_symbol_id(JUST(device_parallel_desc_sym->symbol_id()));
-    scope_proto->set_host_parallel_desc_symbol_id(JUST(host_parallel_desc_sym->symbol_id()));
-    return Maybe<void>::Ok();
+        CHECK_JUST(GetParallelDescSymbol(parallel_conf));
+    scope_proto->set_device_parallel_desc_symbol_id(
+        CHECK_JUST(device_parallel_desc_sym->symbol_id()));
+    scope_proto->set_host_parallel_desc_symbol_id(CHECK_JUST(host_parallel_desc_sym->symbol_id()));
   };
 
   return BuildScopeByProtoSetter(scope, SetScopeProto);
