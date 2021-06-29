@@ -23,8 +23,7 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -55,15 +54,15 @@ REGISTER_USER_OP("_nccl_logical_all_reduce")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_reduce_scatter")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -94,15 +93,15 @@ REGISTER_USER_OP("_nccl_logical_reduce_scatter")
             out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(0);
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather")
     .Input("in")
     .Output("out")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -134,7 +133,8 @@ REGISTER_USER_OP("_nccl_logical_all_gather")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
     .Input("in")
@@ -142,8 +142,7 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
     .Attr<int64_t>("in_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -177,7 +176,8 @@ REGISTER_USER_OP("_nccl_logical_all_gather_noncontinuous")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("_nccl_logical_s2s")
     .Input("in")
@@ -186,8 +186,7 @@ REGISTER_USER_OP("_nccl_logical_s2s")
     .Attr<int64_t>("out_split_axis", -1)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("in", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("in", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -221,6 +220,7 @@ REGISTER_USER_OP("_nccl_logical_s2s")
         out_distribution->add_sbp_parallel()->mutable_split_parallel()->set_axis(out_split_axis);
       }
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow
