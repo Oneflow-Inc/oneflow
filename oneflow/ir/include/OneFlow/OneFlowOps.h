@@ -79,4 +79,6 @@ class IsInvolutionOfIdenticalPlacement
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.h.inc"
 
+void populateFuserPasses(::mlir::RewritePatternSet& patterns);
+
 #endif  // ONEFLOW_ONEFLOWOPS_H

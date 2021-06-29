@@ -173,5 +173,9 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 #include "OneFlow/OneFlowEnums.cpp.inc"
 #include "OneFlow/OneFlowPatterns.cpp.inc"
 
+void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
+  patterns.add<OutlineFuseCastScale>(patterns.getContext());
+}
+
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlowOps.cpp.inc"

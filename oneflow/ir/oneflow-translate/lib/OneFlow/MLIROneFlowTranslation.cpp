@@ -931,6 +931,17 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   return success();
 }
 
+LogicalResult ApplyFuserPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
+                                 MLIRContext* context, OwningModuleRef& module) {
+  RewritePatternSet patterns(module->getContext());
+  populateFuserPasses(patterns);
+  if (failed(applyPatternsAndFoldGreedily(module.get(), std::move(patterns)))) {
+    module->emitError("Failed to run fusers");
+    return failure();
+  }
+  return success();
+}
+
 OwningModuleRef TranslateOneFlowJobToModule(llvm::StringRef str, MLIRContext* context) {
   std::string cpp_str = str.str();
   ::oneflow::Job job;
@@ -956,6 +967,7 @@ void RoundTripOneFlowJob(
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
+    if (failed(ApplyFuserPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (std::getenv("ONEFLOW_MLIR_STDOUT") != nullptr) { module->print(llvm::outs()); }
     // TODO: Add flag in oneflow to define if failure in MLIR is allowed
     if (failed(imp.TryToUpdateJob())) {
