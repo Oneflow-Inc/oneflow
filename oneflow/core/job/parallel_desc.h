@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
