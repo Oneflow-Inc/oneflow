@@ -464,50 +464,52 @@ TaskEdge* TaskGraph::NewTaskEdgeWithLbis(const std::vector<LogicalBlobId>& lbis)
 }
 
 TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
-                                  int64_t dst_machine_id, int64_t dst_mem_zone_id) {
-  int64_t src_mem_zone_id = src_node->MemZoneId121();
-  const ProxyKey key(src_node, lbi, dst_machine_id, dst_mem_zone_id);
-  if (proxy2node.find(key) != proxy2node.cend()) {
-    return proxy2node.at(key);
+                                  const MemZoneId& dst_mem_zone_id) {
+  const auto& src_mem_zone_id = src_node->MemZoneId121();
+  const ProxyKey key(src_node, lbi, dst_mem_zone_id);
+  auto it = proxy2node.find(key);
+  if (it != proxy2node.cend()) {
+    // hit cache
+    return it->second;
   } else {
-    if (dst_machine_id == src_node->machine_id() && dst_mem_zone_id == src_mem_zone_id) {
+    if (src_mem_zone_id == dst_mem_zone_id) {
+      // in the same memory zone
       proxy2node[key] = src_node;
       return src_node;
-    } else if (Global<IDMgr>::Get()->IsGpuMemZone(dst_mem_zone_id)) {
-      TaskNode* proxy_on_dst_host =
-          GetProxyNode(src_node, lbi, dst_machine_id, Global<IDMgr>::Get()->CpuMemZoneId());
-      CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-      copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
-                      Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id), lbi);
-      Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
-      proxy2node[key] = copy_task;
-      return copy_task;
-    } else if (Global<IDMgr>::Get()->IsCpuMemZone(dst_mem_zone_id)) {
-      if (src_node->machine_id() == dst_machine_id) {
-        if (Global<IDMgr>::Get()->IsGpuMemZone(src_mem_zone_id)) {
-          CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-          copy_task->Init(CopyHdOpConf::D2H, src_node->machine_id(),
-                          Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(src_mem_zone_id), lbi);
-          Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
-          proxy2node[key] = copy_task;
-          return copy_task;
-        } else {
-          UNIMPLEMENTED();
-        }
+    } else if (dst_mem_zone_id.device_type() == DeviceType::kCPU) {
+      if (src_mem_zone_id.node_index() == dst_mem_zone_id.node_index()) {
+        CHECK_EQ(src_mem_zone_id.device_type(), DeviceType::kGPU);
+        // on the same node, not on the same device
+        // src must be not on the cpu mem zone, copy d2h first
+        CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+        copy_task->Init(CopyHdOpConf::D2H, src_mem_zone_id.node_index(),
+                        src_mem_zone_id.device_index(), lbi);
+        Connect<TaskNode>(src_node, NewTaskEdgeWithLbi(lbi), copy_task);
+        proxy2node[key] = copy_task;
+        return copy_task;
       } else {
-        TaskNode* proxy_on_src_host = GetProxyNode(src_node, lbi, src_node->machine_id(),
-                                                   Global<IDMgr>::Get()->CpuMemZoneId());
+        // not on the same node, need CopyCommNet from src to dst
+        // build src cpu proxy first
+        TaskNode* proxy_on_src_host =
+            GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(src_mem_zone_id.node_index()));
         CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-        copy_comm_net_task->Init(dst_machine_id, lbi);
+        copy_comm_net_task->Init(dst_mem_zone_id.node_index(), lbi);
         Connect<TaskNode>(proxy_on_src_host, NewTaskEdgeWithLbi(lbi), copy_comm_net_task);
         proxy2node[key] = copy_comm_net_task;
         return copy_comm_net_task;
       }
     } else {
-      UNIMPLEMENTED();
+      CHECK_EQ(dst_mem_zone_id.device_type(), DeviceType::kGPU);
+      TaskNode* proxy_on_dst_host =
+          GetProxyNode(src_node, lbi, GetNodeCPUMemZoneId(dst_mem_zone_id.node_index()));
+      CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+      copy_task->Init(CopyHdOpConf::H2D, proxy_on_dst_host->machine_id(),
+                      dst_mem_zone_id.device_index(), lbi);
+      Connect<TaskNode>(proxy_on_dst_host, NewTaskEdgeWithLbi(lbi), copy_task);
+      proxy2node[key] = copy_task;
+      return copy_task;
     }
   }
-  UNIMPLEMENTED();
   return nullptr;
 }
 
@@ -515,18 +517,14 @@ TaskNode* TaskGraph::GetProxyNode(TaskNode* src_node, const LogicalBlobId& lbi,
                                   const ParallelDesc& dst_parallel_desc, int64_t dst_parallel_id) {
   const int64_t dst_machine_id =
       CHECK_JUST(dst_parallel_desc.MachineId4ParallelId(dst_parallel_id));
-  int64_t dst_mem_zone_id;
-  const IDMgr* id_mgr = Global<IDMgr>::Get();
-  if (dst_parallel_desc.device_type() == DeviceType::kCPU) {
-    dst_mem_zone_id = id_mgr->CpuMemZoneId();
-  } else if (dst_parallel_desc.device_type() == DeviceType::kGPU) {
-    const int64_t dst_dev_phy_id =
-        CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
-    dst_mem_zone_id = id_mgr->GpuMemZoneId(dst_dev_phy_id);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return GetProxyNode(src_node, lbi, dst_machine_id, dst_mem_zone_id);
+  const int64_t dev_id = CHECK_JUST(dst_parallel_desc.DeviceId4ParallelId(dst_parallel_id));
+  DeviceType device_type = dst_parallel_desc.device_type();
+  auto device_index =
+      (device_type == DeviceType::kCPU ? DeviceId::kCPUDeviceIndex
+                                       : static_cast<DeviceId::device_index_t>(dev_id));
+  MemZoneId mem_zone_id{static_cast<MemZoneId::node_index_t>(dst_machine_id), device_type,
+                        device_index};
+  return GetProxyNode(src_node, lbi, mem_zone_id);
 }
 
 void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_nodes,
@@ -848,9 +846,7 @@ void TaskGraph::ConnectWithLbi(TaskNode* src_node, TaskNode* dst_node, const Log
 }
 
 void TaskGraph::BuildTaskPath(TaskNode* src_node, TaskNode* dst_node, const LogicalBlobId& lbi) {
-  int64_t dst_machine_id = dst_node->machine_id();
-  int64_t dst_mem_zone_id = dst_node->MemZoneId121();
-  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_machine_id, dst_mem_zone_id);
+  TaskNode* proxy_node = GetProxyNode(src_node, lbi, dst_node->MemZoneId121());
   ConnectWithLbi(proxy_node, dst_node, lbi);
 }
 

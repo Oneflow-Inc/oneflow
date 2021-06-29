@@ -22,41 +22,16 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_acos_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(2, 6, 5, 3), device=flow.device(device))
+def _test_acos_impl(test_case, shape, device):
+    input = flow.Tensor(
+        np.random.rand(*shape) - 0.5, device=flow.device(device), requires_grad=True
+    )
     of_out = flow.acos(input)
     np_out = np.arccos(input.numpy())
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
-
-
-def _test_acos_tensor_function_forward(test_case, device):
-    input = flow.Tensor(np.random.randn(8, 11, 9, 7), device=flow.device(device))
-    of_out = input.acos()
-    np_out = np.arccos(input.numpy())
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-
-def _test_acos_backward(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
-    )
-    of_out = flow.acos(input).sum()
-    of_out.backward()
-    np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
-    )
-
-
-def _test_acos_tensor_function_backward(test_case, device):
-    input = flow.Tensor(
-        np.random.randn(8, 11, 9, 7), requires_grad=True, device=flow.device(device)
-    )
-    of_out = input.acos().sum()
+    of_out = of_out.sum()
     of_out.backward()
     np_grad = -1.0 / np.sqrt(1 - np.square(input.numpy()))
     test_case.assertTrue(
@@ -71,15 +46,10 @@ def _test_acos_tensor_function_backward(test_case, device):
 class TestAcos(flow.unittest.TestCase):
     def test_acos(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_acos_forward,
-            _test_acos_tensor_function_forward,
-            _test_acos_backward,
-            _test_acos_tensor_function_backward,
-        ]
+        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4), (2, 4, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+            _test_acos_impl(test_case, *arg)
 
 
 if __name__ == "__main__":

@@ -588,7 +588,8 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     // every bn has sbp broadcast signature
     .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetDataTypeInferFn(InferLambUpdateDataType);
+    .SetDataTypeInferFn(InferLambUpdateDataType)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Input("learning_rate")
@@ -598,14 +599,14 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Attr<float>("beta2", 0.999)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("learning_rate", 0);
-      *ctx->IsDynamic4ArgNameAndIndex("out", 0) =
-          *ctx->IsDynamic4ArgNameAndIndex("learning_rate", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("learning_rate", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("learning_rate", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 // every bn has sbp broadcast signature
 

@@ -22,16 +22,10 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Cast(Module):
     def __init__(self, dtype: flow.dtype) -> None:
         super().__init__()
-        self._op = (
-            flow.builtin_op("cast")
-            .Input("in")
-            .Output("out")
-            .Attr("dtype", dtype)
-            .Build()
-        )
+        self.dtype = dtype
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.cast(x, dtype=self.dtype)
 
 
 @oneflow_export("cast")
@@ -58,7 +52,7 @@ def cast_op(x, dtype):
         >>> np_arr = np.random.randn(2, 3, 4, 5).astype(np.float32)
         >>> input = flow.Tensor(np_arr, dtype=flow.float32)
         >>> output = flow.cast(input, flow.int8)
-        >>> print(np.array_equal(output.numpy(), np_arr.astype(np.int8)))
+        >>> np.array_equal(output.numpy(), np_arr.astype(np.int8))
         True
 
     """

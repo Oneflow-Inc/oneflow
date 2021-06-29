@@ -193,10 +193,10 @@ make -j`nproc` prepare_oneflow_third_party
 
 
 def get_python_bin(version):
-    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    assert version in ["3.5", "3.6", "3.7", "3.8", "3.9"]
     py_ver = "".join(version.split("."))
     py_abi = f"cp{py_ver}-cp{py_ver}"
-    if py_ver != "38":
+    if version in ["3.5", "3.6", "3.7"]:
         py_abi = f"{py_abi}m"
     py_root = f"/opt/python/{py_abi}"
     py_bin = f"{py_root}/bin/python"
@@ -366,8 +366,6 @@ if __name__ == "__main__":
         extra_oneflow_cmake_args += " -DWITH_XLA=ON"
     else:
         extra_oneflow_cmake_args += " -DWITH_XLA=Off"
-    if args.xla == True and args.cpu == True:
-        raise ValueError("flag xla can't coexist with flag cpu")
     for cuda_version in cuda_versions:
 
         cache_dir = None
@@ -381,11 +379,17 @@ if __name__ == "__main__":
             if cuda_version in ["11.0", "11.1"]:
                 versioned_img_tag = f"{img_prefix}:0.2"
             enforced_oneflow_cmake_args = ""
+            enforced_oneflow_cmake_args += " -DBUILD_TESTING=ON"
             if float(cuda_version) >= 11:
                 assert (
                     "CUDNN_STATIC" not in extra_oneflow_cmake_args
                 ), "CUDNN_STATIC will be set to OFF if cuda_version > 11"
                 enforced_oneflow_cmake_args += " -DCUDNN_STATIC=OFF"
+            if args.xla and args.cpu:
+                # https://github.com/tensorflow/tensorflow/issues/35867#issuecomment-578998683
+                enforced_oneflow_cmake_args += (
+                    ' -DBAZEL_ENV_ARGS="BAZEL_LINKLIBS=-l%:libstdc++.a"'
+                )
             user_img_tag = f"{img_prefix}:{user}"
             extra_docker_args = args.extra_docker_args
             if "--name" not in extra_docker_args:

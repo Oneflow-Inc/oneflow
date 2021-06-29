@@ -22,9 +22,6 @@ from oneflow.python.framework.tensor import register_tensor_op
 class Eq(Module):
     def __init__(self) -> None:
         super().__init__()
-        self.eq_op = (
-            flow.builtin_op("broadcast_equal").Input("x").Input("y").Output("z").Build()
-        )
 
     def forward(self, input, other):
         if isinstance(other, flow.Tensor) or isinstance(
@@ -34,14 +31,15 @@ class Eq(Module):
                 assert (
                     input.shape[i] >= other.shape[i]
                 ), "The second tensor's shape should broadcastable with the first argument."
+                if input.dtype != other.dtype:
+                    other = other.to(dtype=input.dtype)
         elif isinstance(other, int) or isinstance(other, float):
             other = flow.Tensor([other], dtype=input.dtype, device=input.device)
         else:
             raise NotImplementedError(
                 "Unsupport data type, The second argument can be a tensor whose shape is broadcastable with the first argument."
             )
-
-        return self.eq_op(input, other)[0]
+        return flow.F.broadcast_equal(input, other)
 
 
 @oneflow_export("eq", "equal")

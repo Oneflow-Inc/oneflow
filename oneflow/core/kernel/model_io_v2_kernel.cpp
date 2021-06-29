@@ -68,7 +68,7 @@ class OnDemandHostBlob final {
 
  private:
   void Init() {
-    header.resize(blob_desc_->ByteSizeOfBlobHeader());
+    header.resize(blob_desc_->AlignedByteSizeOfBlobHeader());
     data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
     MemoryCase host_mem_case;
     host_mem_case.mutable_host_mem();
