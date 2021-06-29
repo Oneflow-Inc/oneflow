@@ -214,7 +214,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override { return this; }
 
  private:
-  void UpdateTensorStorage();
+  Maybe<void> UpdateTensorStorage();
   Maybe<void> set_eager_blob_object(std::shared_ptr<vm::EagerBlobObject> eager_blob_object);
 
   std::shared_ptr<TensorStorage> tensor_storage_;

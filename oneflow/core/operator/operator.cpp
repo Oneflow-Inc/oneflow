@@ -1402,11 +1402,12 @@ Maybe<Operator> ConstructAndInferOp(const OperatorConf& op_conf,
   };
   JUST(op->FillLogicalInBlobDesc(ConstBlobDesc4Ibn));
   // infer is_mirrored
-  JUST(InferMirroredSignature(op.get(), upstream_signature, is_mirrored, parallel_desc));
+  JUST(InferMirroredSignature(op.get(), cfg::OpNodeSignature(upstream_signature), is_mirrored,
+                              parallel_desc));
   cfg::SbpSignature sbp_sig_conf;
   // iner sbp
-  JUST(InferOpOutSbpParallel(op.get(), upstream_signature, ConstBlobDesc4Ibn, sbp_sig_conf,
-                             parallel_desc));
+  JUST(InferOpOutSbpParallel(op.get(), cfg::OpNodeSignature(upstream_signature), ConstBlobDesc4Ibn,
+                             sbp_sig_conf, parallel_desc));
   // infer logical blob_desc
   JUST(op->InferLogicalOutBlobDescsIf());
   return op;

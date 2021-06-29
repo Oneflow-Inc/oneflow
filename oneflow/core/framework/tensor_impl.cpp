@@ -66,8 +66,7 @@ EagerMirroredTensorImpl::EagerMirroredTensorImpl(
     std::shared_ptr<TensorStorage> tensor_storage, bool requires_grad, bool is_leaf)
     : MirroredTensorImpl(tensor_meta, NewAutogradMeta(requires_grad, is_leaf)),
       tensor_storage_(tensor_storage) {}
-
-void EagerMirroredTensorImpl::UpdateTensorStorage() {
+Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& eager_blob_object = eager_blob_object_;
   tensor_storage_ = std::make_shared<TensorStorage>(eager_blob_object->tensor_buffer());
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
@@ -77,6 +76,7 @@ void EagerMirroredTensorImpl::UpdateTensorStorage() {
           builder->ReleaseTensor(eager_blob_object, parallel_desc);
         });
       });
+  return Maybe<void>::Ok();
 }
 
 Maybe<VmLocalDepObject> EagerMirroredTensorImpl::compute_local_dep_object() const {
@@ -110,7 +110,7 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().shape_ptr().get()
                   == tensor_meta()->shape_ptr().get());
   CHECK_OR_RETURN(eager_blob_object_->blob_desc().data_type() == tensor_meta()->dtype());
-  UpdateTensorStorage();
+  JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
 

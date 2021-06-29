@@ -112,7 +112,7 @@ Maybe<void> InterfaceOpUtil::ParseParallelDistributionFromBlobConf(
     cfg::ParallelDistribution* parallel_distribution) {
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (blob_conf.has_parallel_distribution()) {
-    *parallel_distribution = blob_conf.parallel_distribution();
+    *parallel_distribution = cfg::ParallelDistribution(blob_conf.parallel_distribution());
   } else {
     parallel_distribution->clear_sbp_parallel();
     FOR_RANGE(int64_t, i, 0, num_axes) {

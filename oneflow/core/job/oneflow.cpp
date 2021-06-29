@@ -59,6 +59,12 @@ struct hash<oneflow::ParallelBlobConf> {
 
 namespace oneflow {
 
+bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
+  return lhs.parallel_type_case() == rhs.parallel_type_case();
+}
+
+bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
+
 bool operator==(const ParallelDistribution& lhs, const ParallelDistribution& rhs) {
   if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
   for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
