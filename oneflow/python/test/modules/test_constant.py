@@ -16,6 +16,8 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 
+from oneflow.python.framework.tensor import register_tensor_op
+
 import numpy as np
 
 import oneflow.experimental as flow
@@ -82,10 +84,20 @@ def _test_zeros_like(test_case, device, shape):
     )
 
 
-def _test_new_ones_forward(test_case, device, shape):
+def _test_new_ones(test_case, device, shape):
     x = flow.Tensor(np.ones(shape), device=flow.device(device))
-    y = x.new_ones(shape)
+    y = x.new_ones(shape, device=device)
     test_case.assertTrue(x.dtype == y.dtype)
+    test_case.assertTrue(x.device == y.device)
+    test_case.assertTrue(x.requires_grad == y.requires_grad)
+
+    x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    x = x.new_ones(shape, device=device, requires_grad=True)
+    y = x.sum()
+    y.backward()
+    test_case.assertTrue(
+        np.array_equal(np.ones_like(x.numpy()), x.grad.numpy())
+    )
 
 
 @unittest.skipIf(
@@ -102,7 +114,7 @@ class TestConstantModule(flow.unittest.TestCase):
             _test_zeros_backward,
             _test_ones_like,
             _test_zeros_like,
-            _test_new_ones_forward,
+            _test_new_ones,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]

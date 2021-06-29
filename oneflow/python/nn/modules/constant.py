@@ -235,7 +235,7 @@ class NewOnes(Module):
             new_device = x.device
 
         res = flow.F.constant(new_size, 1.0, new_dtype)
-        res = res.to(device=new_device)
+        res = res.to(new_device)
         res.requires_grad = new_requires_grad
         return res
 
