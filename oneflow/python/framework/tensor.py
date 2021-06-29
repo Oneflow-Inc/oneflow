@@ -457,7 +457,9 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
         else:
-            prepended_broadcasting_dims = range(len(self.shape) - len(unsqueeze_dims) - len(value.shape))
+            prepended_broadcasting_dims = range(
+                len(self.shape) - len(unsqueeze_dims) - len(value.shape)
+            )
             for dim in prepended_broadcasting_dims:
                 value = flow.experimental.unsqueeze(value, dim)
             for dim in unsqueeze_dims:
