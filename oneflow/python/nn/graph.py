@@ -1,3 +1,18 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
@@ -10,7 +25,9 @@ from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
 
-@oneflow_export("experimental.nn.Graph", "experimental.nn.graph.Graph")
+
+@oneflow_export("nn.Graph", "nn.graph.Graph")
+@experimental_api
 class Graph(object):
     def __init__(self):
         self.config = GraphConfig()
@@ -22,7 +39,7 @@ class Graph(object):
     def build(self, *args):
         raise NotImplementedError()
 
-    def __call__(self, *args):  
+    def __call__(self, *args):
         if self._runnable_func is None:
             # TODO(): implement compile
             self._runnable_func = vm_api.compile_job(self, *args)
@@ -54,12 +71,14 @@ class Graph(object):
         self,
         name: str,
         optimizer: Optimizer = None,
-        lr_scheduler = None, 
-        grad_clipping_conf = None,
-        weight_decay_conf = None,
+        lr_scheduler=None,
+        grad_clipping_conf=None,
+        weight_decay_conf=None,
     ):
-        self._optimizers[name] = self.OptimizerConfig(optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf)
-    
+        self._optimizers[name] = self.OptimizerConfig(
+            optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
+        )
+
     @property
     def training(self):
         return self.config.training
@@ -71,12 +90,14 @@ class Graph(object):
             assert node.type == "module"
             node.origin.train(mode)
 
-    def __setattr__(self, name: str, value = None):
+    def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
             self.add_module(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
-                "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(type(self).__name__, name)
+                "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(
+                    type(self).__name__, name
+                )
             )
         else:
             object.__setattr__(self, name, value)
@@ -90,7 +111,7 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
-    
+
     def __repr__(self):
         lines = None
         if len(self._nodes) > 0:
@@ -103,21 +124,21 @@ class Graph(object):
 
         main_str = "(" + self.__class__.__name__ + ":graph): ("
         if lines is not None:
-            main_str += '\n  ' + '\n  '.join(lines) + '\n'
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
 
 
-
-@oneflow_export("experimental.nn.graph.Node")
+@oneflow_export("nn.graph.Node")
+@experimental_api
 class Node(object):
     def __init__(self, name: str, value: Union[Module, Parameter, Tensor] = None):
         assert not isinstance(value, Node)
         self._name = name
         self._type = ""
         self._origin = value
-        self._config = NodeConfig() 
-    
+        self._config = NodeConfig()
+
         if isinstance(value, Module):
             self._type = "module"
             self._modules = OrderedDict()
@@ -136,6 +157,13 @@ class Node(object):
         else:
             raise NotImplementedError()
 
+        # TODO():
+        # register self into GraphInfo
+
+    # def __del__(self):
+    # TODO():
+    # release self from GraphInfo
+
     @property
     def name(self):
         return self._name
@@ -143,44 +171,56 @@ class Node(object):
     @property
     def type(self):
         return self._type
-    
+
     @property
     def origin(self):
         return self._origin
-    
+
     def __call__(self, *args):
         assert self._type == "module"
-        return self._origin.__class__.__call__(self, *args) 
-    
+        # TODO(): with oneflow_c_api.set_scope(self.config_):
+        return self._origin.__class__.__call__(self, *args)
+
     def forward(self, *args):
+        # TODO():
+        # set current graph is self in GraphInfo
         assert self._type == "module"
-        return self._origin.__class__.forward(self, *args) 
-    
-    def __setattr__(self, name: str, value = None) -> None:
+        return self._origin.__class__.forward(self, *args)
+
+    def __setattr__(self, name: str, value=None) -> None:
         if value is None or not isinstance(value, Node):
             self.__dict__[name] = value
         else:
-            dicts_or_sets = (self.__dict__, self._modules, self._parameters, self._buffers)
+            dicts_or_sets = (
+                self.__dict__,
+                self._modules,
+                self._parameters,
+                self._buffers,
+            )
             for d in dicts_or_sets:
                 if name in d:
                     raise AttributeError(
-                        "'{}' object has duplicated attribute named '{}'".format(self._name, name)
+                        "'{}' object has duplicated attribute named '{}'".format(
+                            self._name, name
+                        )
                     )
             if value.type == "module":
                 self._modules[name] = value
             elif value.type == "parameter":
-                self._parameters[name] = value 
+                self._parameters[name] = value
             elif value.type == "buffer":
                 self._buffers[name] = value
             else:
                 raise AttributeError(
-                    "'{}' object are not allowed to set attribute named '{}'".format(type(self).__name__, name)
+                    "'{}' object are not allowed to set attribute named '{}'".format(
+                        type(self).__name__, name
+                    )
                 )
 
     def __getattr__(self, name: str):
         if name in self.__dict__:
             return self.__dict__[name]
-        
+
         if self._type == "module":
             if "_modules" in self.__dict__:
                 modules = self.__dict__["_modules"]
@@ -209,33 +249,45 @@ class Node(object):
         lines = None
         if self._type == "module":
             child_lines = []
+
             def _append_child(d):
                 for _, n in d.items():
                     n_str = repr(n)
                     n_str = _add_indent(n_str, 2)
                     child_lines.append(n_str)
+
             _append_child(self._modules)
             _append_child(self._parameters)
             _append_child(self._buffers)
             if len(child_lines) > 0:
                 lines = child_lines
 
-        main_str = "(" + self._name + ":" + self._origin.__class__.__name__ + ":" + self._type + "): ("
+        main_str = (
+            "("
+            + self._name
+            + ":"
+            + self._origin.__class__.__name__
+            + ":"
+            + self._type
+            + "): ("
+        )
         if lines is not None:
-            main_str += '\n  ' + '\n  '.join(lines) + '\n'
-        main_str += ')'
+            main_str += "\n  " + "\n  ".join(lines) + "\n"
+        main_str += ")"
         return main_str
 
+
 # TODO(): move the config api into nn.Graph
-@oneflow_export("experimental.nn.graph.GraphConfig")
+@oneflow_export("nn.graph.GraphConfig")
+@experimental_api
 class GraphConfig(FunctionConfig):
     def __init__(self):
         super().__init__()
-    
+
     @property
     def proto(self):
         return self.function_desc.job_config_proto
-    
+
     @property
     def training(self):
         if self.function_desc.job_config_proto.has_train_conf():
@@ -251,22 +303,24 @@ class GraphConfig(FunctionConfig):
             self.function_desc.job_config_proto.mutable_predict_conf()
 
 
-
-@oneflow_export("experimental.nn.graph.NodeConfig")
+@oneflow_export("nn.graph.NodeConfig")
+@experimental_api
 class NodeConfig(object):
     def __init__(self):
         # TODO(): implement config for node
         pass
 
-@oneflow_export("experimental.nn.graph.OptimizerConfig")
+
+@oneflow_export("nn.graph.OptimizerConfig")
+@experimental_api
 class OptimizerConfig(object):
     def __init__(
         self,
         name: str,
         optimizer: Optimizer = None,
-        lr_scheduler = None, 
-        grad_clipping_conf = None,
-        weight_decay_conf = None,
+        lr_scheduler=None,
+        grad_clipping_conf=None,
+        weight_decay_conf=None,
     ):
         self.name = name
         self.optimizer = optimizer
@@ -274,12 +328,13 @@ class OptimizerConfig(object):
         self.grad_clipping_conf = grad_clipping_conf
         self.weight_decay_conf = weight_decay_conf
 
+
 def _add_indent(in_s, num_spaces):
-    s = in_s.split('\n')
+    s = in_s.split("\n")
     if len(s) == 1:
         return in_s
     first = s.pop(0)
-    s = [(num_spaces * ' ') + line for line in s]
-    s = '\n'.join(s)
-    s = first + '\n' + s
+    s = [(num_spaces * " ") + line for line in s]
+    s = "\n".join(s)
+    s = first + "\n" + s
     return s
