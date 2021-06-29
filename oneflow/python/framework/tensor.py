@@ -374,6 +374,8 @@ class Tensor:
         def get_canonical_index(index, length, *, start=0):
             if index < 0:
                 index += length
+            if index > length or index < 0:
+                raise IndexError(f"Index should be in [0, {length}), but got {index}")
             return max(min(index, length), start)
 
         def get_slice_if_int(x):
