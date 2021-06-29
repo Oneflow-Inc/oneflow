@@ -100,7 +100,7 @@ def compare_with_tensorflow(
                 "conv-bias",
                 shape=(filters,),
                 dtype=flow.float,
-                initializer=flow.zeros_initializer(),
+                initializer=flow.random_uniform_initializer(minval=0, maxval=100),
             )
             loss = flow.nn.conv2d(
                 x,
@@ -129,6 +129,7 @@ def compare_with_tensorflow(
             return loss
 
     of_out = RunConvBias().get()
+    flow.clear_default_session()
 
     with tf.GradientTape(persistent=True) as tape:
         x = tf.Variable(test_global_storage.Get("x").transpose(xy_data_transpose))
@@ -138,7 +139,6 @@ def compare_with_tensorflow(
             weight = tf.Variable(
                 test_global_storage.Get("weight").transpose(weight_data_transpose)
             )
-            print(x.get_shape())
             conv_out = tf.nn.conv2d(
                 x,
                 weight,
@@ -150,17 +150,16 @@ def compare_with_tensorflow(
             weight = tf.Variable(
                 test_global_storage.Get("weight").transpose(weight_data_transpose)
             )
-            print(weight.get_shape())
             conv_out = grouped_convolution2D(
                 x, weight, padding=padding, num_groups=groups
             )
-        # bias = tf.Variable(test_global_storage.Get("bias"))
-        # tf_out = tf.nn.bias_add(conv_out, bias, data_format="NHWC")
-        tf_out = conv_out
+        bias = tf.Variable(test_global_storage.Get("bias"))
+        tf_out = tf.nn.bias_add(conv_out, bias, data_format="NHWC")
 
     loss_diff = test_global_storage.Get("loss_diff").transpose(xy_data_transpose)
     tf_x_diff = tape.gradient(tf_out, x, loss_diff)
     tf_weight_diff = tape.gradient(tf_out, weight, loss_diff)
+    tf_bias_diff = tape.gradient(tf_out, bias, loss_diff)
 
     max_diff = np.max(
         np.absolute(of_out.numpy().transpose(xy_data_transpose) - tf_out.numpy())
@@ -183,6 +182,12 @@ def compare_with_tensorflow(
         rtol=5e-3,
         atol=5e-3,
     )
+    assert np.allclose(
+        test_global_storage.Get("bias_diff"),
+        tf_bias_diff.numpy(),
+        rtol=5e-3,
+        atol=5e-3,
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -197,96 +202,95 @@ class TestNnConv2dBias(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             compare_with_tensorflow(*arg)
 
-    # def test_cpu1(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 10, 10)]
-    #     arg_dict["filters"] = [128]
-    #     arg_dict["kernel_size"] = [1]
-    #     arg_dict["groups"] = [32]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_cpu1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu"]
+        arg_dict["x_shape"] = [(10, 32, 10, 10)]
+        arg_dict["filters"] = [128]
+        arg_dict["kernel_size"] = [1]
+        arg_dict["groups"] = [32]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_cpu2(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 226, 226)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [1]
-    #     arg_dict["groups"] = [4]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_cpu2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu"]
+        arg_dict["x_shape"] = [(10, 32, 226, 226)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [1]
+        arg_dict["groups"] = [4]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_cpu3(test_case):
-    #     return
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["cpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [5]
-    #     arg_dict["groups"] = [1]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_cpu3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["cpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [5]
+        arg_dict["groups"] = [1]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv1(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [3]
-    #     arg_dict["groups"] = [32]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv1(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["groups"] = [32]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv2(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [3]
-    #     arg_dict["groups"] = [4]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv2(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["groups"] = [4]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv3(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [3]
-    #     arg_dict["groups"] = [8]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv3(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["groups"] = [8]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv4(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [3]
-    #     arg_dict["groups"] = [32]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv4(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["groups"] = [32]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv5(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [1]
-    #     arg_dict["groups"] = [8]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv5(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [1]
+        arg_dict["groups"] = [8]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
-    # def test_conv6(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["device_type"] = ["gpu"]
-    #     arg_dict["x_shape"] = [(10, 32, 20, 20)]
-    #     arg_dict["filters"] = [64]
-    #     arg_dict["kernel_size"] = [1]
-    #     arg_dict["groups"] = [32]
-    #     for arg in GenArgList(arg_dict):
-    #         compare_with_tensorflow(*arg)
+    def test_conv6(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["device_type"] = ["gpu"]
+        arg_dict["x_shape"] = [(10, 32, 20, 20)]
+        arg_dict["filters"] = [64]
+        arg_dict["kernel_size"] = [1]
+        arg_dict["groups"] = [32]
+        for arg in GenArgList(arg_dict):
+            compare_with_tensorflow(*arg)
 
 
 if __name__ == "__main__":
