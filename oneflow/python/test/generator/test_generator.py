@@ -25,5 +25,6 @@ class TestGenerator(flow.unittest.TestCase):
         generator.manual_seed(2)
         test_case.assertTrue(generator.initial_seed() == 2)
 
+
 if __name__ == "__main__":
     unittest.main()
