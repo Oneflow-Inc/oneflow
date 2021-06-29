@@ -45,7 +45,7 @@ class FunctionNode {
   virtual void ReleaseData() = 0;
 
   // Getters
-  std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>> GetNextFunctions() {
+  const std::shared_ptr<std::vector<std::shared_ptr<FunctionNode>>>& GetNextFunctions() const {
     return next_functions_;
   }
   const std::string& GetOpTypeName() const { return op_name_; }

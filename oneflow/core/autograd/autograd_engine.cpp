@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <stack>
+#include <queue>
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/tensor.h"
@@ -194,8 +196,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   for (int i = 0; i < inputs.size(); ++i) {
     input_now_grads->at(i) = inputs.at(i)->acc_grad();
     if (!ori_retain_grad.at(i)) {
-      std::shared_ptr<Tensor> null_tensor_ptr;
-      inputs.at(i)->set_acc_grad(null_tensor_ptr);
+      inputs.at(i)->set_acc_grad(nullptr);
       inputs.at(i)->set_retain_grad(false);
     }
   }
@@ -273,17 +274,18 @@ GraphTask::GraphTask(const TensorTuple& outputs, bool retain_graph, bool create_
 // Computes the number of dependencies for each FunctionNode
 Maybe<void> GraphTask::ComputeDependencies() {
   HashSet<FunctionNode*> seen;
-  std::vector<FunctionNode*> stack(roots_);
+  std::stack<FunctionNode*> stack;
+  for (FunctionNode* node : roots_) { stack.push(node); }
 
   while (!stack.empty()) {
-    FunctionNode* node = stack.back();
+    FunctionNode* node = stack.top();
     // TODO: check node could apply
-    stack.pop_back();
+    stack.pop();
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
     for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] += 1;
-      if (seen.find(next_node) == seen.end()) { stack.push_back(next_node); }
+      if (seen.find(next_node) == seen.end()) { stack.push(next_node); }
     }
   }
   return Maybe<void>::Ok();
@@ -313,20 +315,20 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
   }
 
   HashSet<FunctionNode*> seen;
-  std::vector<NodeFrame> stack;
+  std::stack<NodeFrame> stack;
 
   // Note: dfs to determine each FunctionNode should execute or not.
-  for (const auto& root : roots_) { stack.push_back(NodeFrame(root)); }
+  for (const auto& root : roots_) { stack.push(NodeFrame(root)); }
   while (!stack.empty()) {
-    NodeFrame& frame = stack.back();
+    NodeFrame& frame = stack.top();
     if (/*bool has_seen=*/seen.find(frame.node_) != seen.end()) {
-      stack.pop_back();
+      stack.pop();
       continue;
     }
     if (FunctionNode* node = frame.GetNextFunction()) {
       dependencies_[node] += 1;
       if (seen.find(node) == seen.end()) {
-        stack.push_back(NodeFrame(node));
+        stack.push(NodeFrame(node));
         continue;  // recurse
       }
     } else {
@@ -337,21 +339,21 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
                                       });
       if (need_execute) { need_execute_.insert(frame.node_); }
       seen.insert(frame.node_);
-      stack.pop_back();
+      stack.pop();
     }
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
-  std::vector<FunctionNode*> queue;
+  std::queue<FunctionNode*> queue;
   for (FunctionNode* node : roots_) {
-    if (dependencies_[node] == 0) { queue.push_back(node); }
+    if (dependencies_[node] == 0) { queue.push(node); }
   }
 
   while (!queue.empty()) {
-    FunctionNode* node = queue.back();
-    queue.pop_back();
+    FunctionNode* node = queue.front();
+    queue.pop();
     if (!need_execute_.empty() && need_execute_.find(node) == need_execute_.end()) {
       node->ReleaseOutTensorArgs();
       continue;
@@ -366,7 +368,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] -= 1;
-      if (dependencies_[next_node] == 0) { queue.push_back(next_node); }
+      if (dependencies_[next_node] == 0) { queue.push(next_node); }
     }
   }
   return Maybe<void>::Ok();
@@ -406,8 +408,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   for (int i = 0; i < inputs.size(); ++i) {
     input_now_grads->at(i) = inputs.at(i)->acc_grad();
     if (!ori_retain_grad.at(i)) {
-      std::shared_ptr<Tensor> null_tensor_ptr;
-      inputs.at(i)->set_acc_grad(null_tensor_ptr);
+      inputs.at(i)->set_acc_grad(nullptr);
       inputs.at(i)->set_retain_grad(false);
     }
   }
