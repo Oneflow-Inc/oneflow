@@ -48,9 +48,7 @@ def _random_tensor():
     return random_tensor()(None)
 
 
-def random_tensor(
-    ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None
-):
+def random_tensor(ndim=None, dim0=1, dim1=None, dim2=None, dim3=None, dim4=None):
     assert ndim is None or 1 <= ndim <= 5
     if ndim is None:
         ndim = rng.integers(low=1, high=6)
