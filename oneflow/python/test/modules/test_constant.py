@@ -92,12 +92,20 @@ def _test_new_ones(test_case, device, shape):
     test_case.assertTrue(x.requires_grad == y.requires_grad)
 
     x = flow.Tensor(np.ones(shape), device=flow.device(device))
+    y = x.new_ones(x.shape, device=device)
+    test_case.assertTrue(x.dtype == y.dtype)
+    test_case.assertTrue(x.device == y.device)
+    test_case.assertTrue(x.requires_grad == y.requires_grad)
+
+    x = flow.Tensor(np.ones(shape), device=flow.device(device))
     x = x.new_ones(shape, device=device, requires_grad=True)
     y = x.sum()
     y.backward()
     test_case.assertTrue(
         np.array_equal(np.ones_like(x.numpy()), x.grad.numpy())
     )
+
+
 
 
 @unittest.skipIf(
