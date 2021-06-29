@@ -37,7 +37,7 @@ namespace {
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
   const auto& shape = std::make_shared<Shape>();
   const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
 }
 
 }  // namespace
