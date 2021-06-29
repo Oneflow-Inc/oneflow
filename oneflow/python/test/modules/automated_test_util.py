@@ -21,15 +21,10 @@ import random as random_util
 import os
 
 import oneflow.experimental as flow
-
-flow.enable_eager_execution()
 import torch
 import numpy as np
 
-
-from numpy.random import default_rng
-
-rng = default_rng()
+rng = np.random.default_rng()
 
 default_generators = {}
 
