@@ -18,6 +18,8 @@ import oneflow as flow
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
+from typing import Optional
+
 
 class Diag(Module):
     def __init__(self, diagonal):
@@ -30,9 +32,8 @@ class Diag(Module):
 
 
 @oneflow_export("diag")
-@register_tensor_op("diag")
 @experimental_api
-def diag_op(input, diagonal):
+def diag_op(input, diagonal = 0):
     r"""
     Returns a new tensor with the diagonal.
 
@@ -65,3 +66,4 @@ if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=True)
+    
