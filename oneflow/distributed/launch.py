@@ -170,12 +170,18 @@ def main():
         dist_rank = args.nproc_per_node * args.node_rank + local_rank
         current_env["RANK"] = str(dist_rank)
         current_env["LOCAL_RANK"] = str(local_rank)
+        current_env["ONEFLOW_DEBUG_MODE"] = "ON"
+        if local_rank == 0:
+            cwd = "/tmp/rank1"
+        else:
+            cwd = "/tmp/rank2"
 
         # spawn the processes
         with_python = not args.no_python
         cmd = []
         if with_python:
-            cmd = [sys.executable, "-u"]
+            cmd = ["nsys", "profile", "--stats=true", sys.executable, "-u"]
+            # cmd = [sys.executable, "-u"]
             if args.module:
                 cmd.append("-m")
         else:
@@ -249,7 +255,7 @@ def main():
             else subprocess_file_handles[local_rank][1]
         )
         process = subprocess.Popen(
-            cmd, env=current_env, stdout=stdout_handle, stderr=stderr_handle
+            cmd, env=current_env, stdout=stdout_handle, stderr=stderr_handle, cwd=cwd
         )
         processes.append(process)
 
