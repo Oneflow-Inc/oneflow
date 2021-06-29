@@ -24,13 +24,9 @@ namespace {
 
 struct PoolOpKernelState final : public user_op::OpKernelState {
   Params3D params_3d;
-  bool is_dynamic;
-  PoolOpKernelState(Params3D params_3d, bool is_dynamic)
-      : params_3d(params_3d), is_dynamic(is_dynamic) {}
+  PoolOpKernelState(Params3D params_3d)
+      : params_3d(params_3d) {}
   const Params3D& GetParams3D() { return params_3d; }
-  void Update(const ShapeView& x_shape) {
-    if (is_dynamic) { params_3d.Reset(x_shape); }
-  }
 };
 
 std::shared_ptr<PoolOpKernelState> DoCreatePoolOpKernelState(user_op::KernelComputeContext* ctx,
@@ -43,10 +39,9 @@ std::shared_ptr<PoolOpKernelState> DoCreatePoolOpKernelState(user_op::KernelComp
   const std::vector<int32_t>& pool_size = ctx->Attr<std::vector<int32_t>>("pool_size");
   const std::vector<int32_t>& strides = ctx->Attr<std::vector<int32_t>>("strides");
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
-  bool is_dynamic = ctx->TensorDesc4ArgNameAndIndex("x", 0)->is_dynamic();
   Params3D params_3d = Params3D(dim, x_shape, data_format, padding, padding_before, padding_after,
                                 pool_size, strides, ceil_mode);
-  std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d, is_dynamic));
+  std::shared_ptr<PoolOpKernelState> state(new PoolOpKernelState(params_3d));
   return std::move(state);
 }
 
