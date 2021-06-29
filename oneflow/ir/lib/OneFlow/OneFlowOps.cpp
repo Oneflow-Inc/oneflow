@@ -171,7 +171,6 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-      mul_op->dump();
       NamedAttrList attributes(cast_op->getAttrDictionary());
       attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
       auto jit_op_name = cast_op->getAttrOfType<StringAttr>("op_name").getValue() + "@@"
@@ -179,10 +178,11 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       SmallString<64> data;
       attributes.set("op_name", rewriter.getStringAttr(jit_op_name.toStringRef(data)));
       auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(),
-                                                /* resultTypes */ cast_op->getResultTypes(),
-                                                /* operands */ mul_op->getOperands(),
+                                                /* resultTypes */ mul_op->getResultTypes(),
+                                                /* operands */ cast_op->getOperands(),
                                                 /* attributes */ attributes);
-      created->dump();
+      cast_op.replaceAllUsesWith(created);
+      cast_op.erase();
       return created->getResults();
     }
   }
