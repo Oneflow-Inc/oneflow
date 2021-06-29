@@ -19,12 +19,8 @@ import oneflow as flow
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
-import collections
-import json
 
 
-@oneflow_export("chunk")
-@experimental_api
 class Chunk(Module):
     r"""Splits a tensor into a specific number of chunks. Each chunk is a view of the input tensor. Last chunk will be smaller if the tensor size along the given dimension dim is not divisible by chunks.
 
@@ -44,10 +40,10 @@ class Chunk(Module):
         >>> import numpy as np
         >>> flow.enable_eager_execution()
 
-        >>> input = flow.Tensor(np.random.randn(2, 2, 3).astype(np.float32))
-        >>> out = flow.nn.chunk(input, chunks = 2, dim = 1)
+        >>> input = flow.Tensor([[1, 2, 3], [7, 8, 9]], dtype = flow.float32)
+        >>> out = flow.chunk(input, chunks=2, dim=0)
         >>> out
-        
+        [tensor([[1., 2., 3.]], dtype=oneflow.float32), tensor([[7., 8., 9.]], dtype=oneflow.float32)]
     """
 
     def __init__(self) -> None:
@@ -62,7 +58,8 @@ class Chunk(Module):
             assert (
                 chunks > 0
             ), "chunk expects `chunks` to be greater than 0"
-
+            
+            ndim = len(input.shape)
             dim_size = input.shape[dim]
             chunk_size = (dim_size + chunks - 1) / chunks
             last_chunk_size = chunk_size if dim_size % chunk_size == 0  else  dim_size % chunk_size
@@ -81,21 +78,33 @@ class Chunk(Module):
                         if last_chunk_size == 0:
                             start = chunk * chunk_size
                             stop = (chunk + 1) * chunk_size
+                            step = 1
+                            
                         else:
                             start = chunk * chunk_size if chunk < chunks -1 else dim_size - 1 - last_chunk_size
                             stop = (chunk + 1) * chunk_size if chunk < chunks -1 else dim_size - 1
+                            step = 1
                         chunk_dim.append([start, stop, step])
 
-            for tuple_dim in range(0, chunk_dim):
+            for tuple_dim in chunk_dim:
                 slice_tuple_dict[dim] = tuple_dim
             
-            for dim_i in range(0, dim_size):
-                slice_tuple_list.append(slice_tuple_dict[dim_i])
+            for d in range(0, ndim):
+                slice_tuple_list.append(slice_tuple_dict[d])
 
-            for chunk in range(0, chunks):
-                splits.append(oneflow.experimental.slice(input, slice_tup_list=slice_tuple_list))  
+            flow.experimental.slice(input, slice_tup_list=slice_tuple_list))  ## 需要想一想
 
             return splits
+
+@oneflow_export("chunk")
+@experimental_api
+def chunk_op(input, chunks, dim):
+    return Chunk()(input, chunks, dim)
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=False)
 
                         
 
