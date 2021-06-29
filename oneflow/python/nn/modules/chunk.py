@@ -65,47 +65,36 @@ class Chunk(Module):
 
             dim_size = input.shape[dim]
             chunk_size = (dim_size + chunks - 1) / chunks
-            last_chunk_size = chunk_size if dim_size / chunk_size  else  dim_size % chunk_size
+            last_chunk_size = chunk_size if dim_size % chunk_size == 0  else  dim_size % chunk_size
 
-            slice_tuple = {}
-            start_list = []
-            stop_list = []
-            step_list = []
-            splits = []
-            splits_chunk = {}
+            slice_tuple_dict = {}
+            slice_tuple_list = []
             chunk_dim = []
-            # dim --- tuple_list
+            splits = []
+
             dim_size = input.dim()
             for dim_i in range(0, dim_size):
                 if dim_i != dim:
-                    slice_tuple[dim_i] = [None, None, None]
-                    # splits[dim_i] = oneflow.experimental.slice(input, slice_tup_list=slice_tuple[dim_i]) 
-                      
+                    slice_tuple_dict[dim_i] = [None, None, None]   
                 else:
-                    for chunk in range(0, chunks): # 一个 chunk，对应一个  slice_tuple
+                    for chunk in range(0, chunks): 
                         if last_chunk_size == 0:
                             start = chunk * chunk_size
                             stop = (chunk + 1) * chunk_size
                         else:
-                            if chunk < chunks -1 :
-                                start = chunk * chunk_size
-                                stop = (chunk + 1) * chunk_size
-                            else:
-                                start = dim_size - 1 - last_chunk_size
-                                stop = dim_size - 1
-
+                            start = chunk * chunk_size if chunk < chunks -1 else dim_size - 1 - last_chunk_size
+                            stop = (chunk + 1) * chunk_size if chunk < chunks -1 else dim_size - 1
                         chunk_dim.append([start, stop, step])
 
-            for d in range(0, chunk_dim):
-                slice_tuple[dim] = d
+            for tuple_dim in range(0, chunk_dim):
+                slice_tuple_dict[dim] = tuple_dim
             
-            # slice_tuple 转 list
-            slice_tuple_list = []
             for dim_i in range(0, dim_size):
-                slice_tuple_list.append(slice_tuple[dim_i])
+                slice_tuple_list.append(slice_tuple_dict[dim_i])
 
             for chunk in range(0, chunks):
-                splits.append(oneflow.experimental.slice(input, slice_tup_list=slice_tuple_list))   
+                splits.append(oneflow.experimental.slice(input, slice_tup_list=slice_tuple_list))  
+
             return splits
 
                         
