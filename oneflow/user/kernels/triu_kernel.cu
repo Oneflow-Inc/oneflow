@@ -1,10 +1,25 @@
+/*
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
 
 namespace oneflow {
 
-namespace{
+namespace {
 
 template<typename T>
 __global__ void TriuGpu(const int64_t elem_cnt, const int64_t num_rows, const int64_t num_cols,
@@ -58,37 +73,36 @@ __global__ void TriuWarpProcessRowGpu<half>(const int64_t total_rows, const int6
   }
 }
 
-
-} // namespace 
+}  // namespace
 
 template<typename T>
-class GpuTriuKernel final: public user_op::OpKernel{
-public: 
-    GpuTriuKernel() = default; 
-    ~GpuTriuKernel() override = default; 
+class GpuTriuKernel final : public user_op::OpKernel {
+ public:
+  GpuTriuKernel() = default;
+  ~GpuTriuKernel() override = default;
 
-private: 
-    void Compute(user_op::KernelComputeContext* ctx) const override{
-        const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
-        const auto shape = x->shape(); 
-        const auto diagonal = ctx->Attr<int64_t>("diagonal");
-        const int64_t num_rows = shape.At(shape.NumAxes()-2);
-        const int64_t num_cols = shape.At(shape.NumAxes()-1);
-        user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0); 
-        const int32_t elem_cnt = shape.elem_cnt(); 
-        if (num_cols % (kCudaWarpSize * 2) == 0) {
-          const int64_t total_rows = elem_cnt / num_cols;
-          TriuWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("in", 0);
+    const auto shape = x->shape();
+    const auto diagonal = ctx->Attr<int64_t>("diagonal");
+    const int64_t num_rows = shape.At(shape.NumAxes() - 2);
+    const int64_t num_cols = shape.At(shape.NumAxes() - 1);
+    user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const int32_t elem_cnt = shape.elem_cnt();
+    if (num_cols % (kCudaWarpSize * 2) == 0) {
+      const int64_t total_rows = elem_cnt / num_cols;
+      TriuWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),
                               kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
           total_rows, num_rows, num_cols, diagonal, x->dptr<T>(), y->mut_dptr<T>());
-        } else {
-          TriuGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+    } else {
+      TriuGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                 ctx->device_ctx()->cuda_stream()>>>(elem_cnt, num_rows, num_cols, diagonal,
                                                     x->dptr<T>(), y->mut_dptr<T>());
-        }
     }
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-}; 
+};
 
 #define REGISTER_GPU_TRIU_KERNEL(dtype)                                                         \
   REGISTER_USER_KERNEL("triu")                                                                  \
@@ -108,4 +122,4 @@ REGISTER_GPU_TRIU_KERNEL(int8_t)
 REGISTER_GPU_TRIU_KERNEL(int32_t)
 REGISTER_GPU_TRIU_KERNEL(int64_t)
 
-}
+}  // namespace oneflow

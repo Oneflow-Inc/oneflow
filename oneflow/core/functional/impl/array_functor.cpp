@@ -389,14 +389,8 @@ class UnsortedSegmentSumLikeFunctor {
 
 class TriuFunctor {
  public:
-  TriuFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("triu")
-                         .Input("in")
-                         .Output("out")
-                         .Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const int64_t& diagonal) const {
+  TriuFunctor() { op_ = CHECK_JUST(one::OpBuilder("triu").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& diagonal) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("diagonal", diagonal));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
