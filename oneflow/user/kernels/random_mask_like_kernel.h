@@ -25,10 +25,10 @@ class RandomMaskLikeKernelState : public user_op::OpKernelState {
   explicit RandomMaskLikeKernelState(const std::shared_ptr<one::Generator>& generator)
       : generator_(generator) {}
 
-  const std::shared_ptr<one::Generator> generator() const { return generator_; }
+  const std::shared_ptr<one::Generator>& generator() const { return generator_; }
 
  private:
-  const std::shared_ptr<one::Generator> generator_;
+  const std::shared_ptr<one::Generator>& generator_;
 };
 
 namespace {

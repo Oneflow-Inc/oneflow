@@ -79,6 +79,7 @@ enum ValueType {
   kSHAPE,
   kGENERATOR,
   kGENERATOR_REF,
+  kGENERATOR_MAYBE,
 };
 
 #define VALUE_TYPE_OF_IMPL(cpp_type, value_type)                                                 \
@@ -127,6 +128,7 @@ VALUE_TYPE_OF_IMPL(DataType, kDTYPE);
 VALUE_TYPE_OF_IMPL(Shape, kSHAPE);
 VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
+VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 
 #undef VALUE_TYPE_OF_IMPL
 

@@ -155,6 +155,11 @@ Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
                                 << *JUST(detail::cast<std::string>(py::str(py::type::of(obj))));
   }
 }
+template<>
+Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>()
+    const {
+  return *JUST(detail::cast<std::shared_ptr<one::Generator>>(Borrow()));
+}
 
 template<>
 Maybe<std::shared_ptr<one::Generator>> PythonArg::ObjectAs<std::shared_ptr<one::Generator>>()

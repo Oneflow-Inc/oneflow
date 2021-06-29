@@ -20,5 +20,6 @@ import oneflow._oneflow_internal
 
 def RegisterGeneratorApis():
     import oneflow
-
+    import oneflow.experimental
     setattr(oneflow, "Generator", oneflow._oneflow_internal.one.Generator)
+    setattr(oneflow.experimental, "Generator", oneflow._oneflow_internal.one.Generator)

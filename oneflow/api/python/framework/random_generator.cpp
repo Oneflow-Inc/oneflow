@@ -24,20 +24,12 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-void Generator_ManualSeed(const std::shared_ptr<one::Generator>& gen, const int64_t seed) {
-  gen->set_current_seed(seed);
-}
-
-int64_t Generator_InitialSeed(const std::shared_ptr<one::Generator>& gen) {
-  return gen->get_current_seed();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("one", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
       .def(py::init())
       .def(py::init<const int64_t>())
-      .def("manual_seed", &Generator_ManualSeed)
-      .def("initial_seed", &Generator_InitialSeed);
+      .def("manual_seed", &one::Generator::set_current_seed)
+      .def("initial_seed", &one::Generator::get_current_seed);
 }
 
 }  // namespace oneflow
