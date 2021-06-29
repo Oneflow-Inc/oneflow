@@ -182,9 +182,11 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
                                                 /* resultTypes */ cast_op->getResultTypes(),
                                                 /* operands */ mul_op->getOperands(),
                                                 /* attributes */ attributes);
+      created->dump();
       return created->getResults();
     }
   }
+  // TODO: raise a more reasonable error
   return {};
 }
 
