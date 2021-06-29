@@ -27,20 +27,34 @@ def _test_type_as(test_case, shape, device):
     input = flow.tensor(np_input, dtype=flow.float, device=device)
     target = flow.tensor(np_input, dtype=flow.int32, device=device)
     input = input.type_as(target)
-    test_case.assertTrue(input.dtype == target.dtype)
+    test_case.assertEqual(input.dtype, target.dtype)
+
+
+def _test_long(test_case, shape, device):
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=flow.float, device=device)
+    input = input.long()
+    test_case.assertEqual(input.dtype, flow.int64)
 
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
 )
-class TestPow(flow.unittest.TestCase):
-    def test_pow_forward(test_case):
+class TestTensorOps(flow.unittest.TestCase):
+    def test_type_as(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_type_as(test_case, *arg)
+
+    def test_long(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_long(test_case, *arg)
 
 
 if __name__ == "__main__":

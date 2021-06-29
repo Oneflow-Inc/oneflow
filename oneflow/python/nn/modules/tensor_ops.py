@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow as flow
 from oneflow.python.oneflow_export import experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import register_tensor_op
@@ -52,6 +53,39 @@ def type_as_op(input, target):
 
     """
     return TypeAs()(input, target)
+
+
+class Long(Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input):
+        return input.to(dtype=flow.int64)
+
+
+@register_tensor_op("long")
+@experimental_api
+def long_op(input):
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow.experimental as flow
+        >>> import numpy as np
+        >>> flow.enable_eager_execution()
+
+        >>> input = flow.Tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.long()
+        >>> input.dtype
+        oneflow.int64
+
+    """
+    return Long()(input)
 
 
 if __name__ == "__main__":
