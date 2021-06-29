@@ -275,9 +275,10 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.ones((1, 2, 3)))
-        >>> y = x.new_ones(2, 2)
+        >>> y = x.new_ones((2, 2))
         >>> y
-        tensor([0., 0., 0., 0., 0.], dtype=oneflow.float32
+        tensor([[1., 1.],
+                [1., 1.]], dtype=oneflow.float32)
     """
     return NewOnes(size=size, dtype=dtype, device=device, requires_grad=requires_grad)(
         x
@@ -287,4 +288,4 @@ def new_ones_op(x, size=None, dtype=None, device=None, requires_grad=False):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
