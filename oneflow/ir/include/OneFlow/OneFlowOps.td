@@ -170,9 +170,9 @@ def OneFlow_ReciprocalOp : OneFlow_InvolutionBaseOp<"reciprocal", []> {}
 
 // JIT ops
 
-def OneFlow_MlirJitOp : OneFlow_UserBaseWithCtrlOp<"mlir_jit", []> {}
+def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {}
 
-def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0)">;
+def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def OutlineFuseCastScale : Pat<
   (
@@ -194,5 +194,5 @@ def OutlineFuseCastScale : Pat<
     $mul_scope_symbol_id,
     $mul_hierarchy
   ),
-  (OutlineFunction $mul_op_name)
+  (OutlineFunction $mul_op, $cast_op)
 >;

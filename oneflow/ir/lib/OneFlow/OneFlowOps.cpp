@@ -164,9 +164,27 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 // a JIT module has a function with memref arg and runtime calls generated kernel with blob ptr
 // ultimate goal: end user of oneflow only need to write pdl or python wrapper to test fusers
 ::llvm::SmallVector<::mlir::Value, 4> OutlineFunction(::mlir::PatternRewriter& rewriter,
-                                                      ::mlir::StringAttr something) {
+                                                      mlir::OpResult mul_res,
+                                                      mlir::OpResult cast_res) {
   // get matched scale and cast
   // create JIT op and kernel
+
+  if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
+    if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
+      mul_op->dump();
+      NamedAttrList attributes(cast_op->getAttrDictionary());
+      attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
+      auto jit_op_name = cast_op->getAttrOfType<StringAttr>("op_name").getValue() + "@@"
+                         + mul_op->getAttrOfType<StringAttr>("op_name").getValue();
+      SmallString<64> data;
+      attributes.set("op_name", rewriter.getStringAttr(jit_op_name.toStringRef(data)));
+      auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(),
+                                                /* resultTypes */ cast_op->getResultTypes(),
+                                                /* operands */ mul_op->getOperands(),
+                                                /* attributes */ attributes);
+      return created->getResults();
+    }
+  }
   return {};
 }
 
