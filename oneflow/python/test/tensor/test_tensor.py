@@ -1053,17 +1053,20 @@ class TestTensor(flow.unittest.TestCase):
             y_grad = np.triu(np.ones_like(x), diagonal)
             return [y, y_grad]
 
-        diagonal = 2
-        np_input = np.random.randn(2, 4, 6)
-        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
-        of_out = of_input.triu(diagonal)
+        diagonal_list = [2, -1]
+        for diagonal in diagonal_list:
+            np_input = np.random.randn(2, 4, 6)
+            of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+            of_out = of_input.triu(diagonal)
 
-        np_out, np_grad = np_triu(np_input, diagonal)
-        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+            np_out, np_grad = np_triu(np_input, diagonal)
+            test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
-        of_out = of_out.sum()
-        of_out.backward()
-        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+            of_out = of_out.sum()
+            of_out.backward()
+            test_case.assertTrue(
+                np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5)
+            )
 
 
 if __name__ == "__main__":
