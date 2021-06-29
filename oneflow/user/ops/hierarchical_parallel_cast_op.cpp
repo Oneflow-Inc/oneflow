@@ -50,7 +50,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .Input("in")
@@ -79,7 +80,8 @@ REGISTER_USER_OP("hierarchical_parallel_cast_like")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("hierarchical_parallel_cast")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
