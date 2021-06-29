@@ -63,7 +63,7 @@ Maybe<void> Device::Init() {
 /*static*/ Maybe<Symbol<Device>> Device::New(const std::string& type, int64_t device_id) {
   Device device(type, device_id);
   JUST(device.Init());
-  return Symbol<Device>(device);
+  return SymbolOf(device);
 }
 
 /*static*/ Maybe<Symbol<Device>> Device::ThreadLocalGetOrNew(const std::string& type,
