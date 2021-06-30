@@ -489,6 +489,22 @@ class Tensor:
     def __lt__(self, other):
         return self.lt(other)
 
+    @register_local_tensor_method()
+    def __ge__(self, other):
+        return self.ge(other)
+
+    @register_local_tensor_method()
+    def __le__(self, other):
+        return self.le(other)
+
+    @register_local_tensor_method()
+    def __eq__(self, other):
+        return self.eq(other)
+
+    @register_local_tensor_method()
+    def __ne__(self, other):
+        return self.ne(other)
+
     def __array__(self):
         TODO()
 
