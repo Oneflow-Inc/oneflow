@@ -222,3 +222,4 @@ Experimental features
 .. autofunction:: oneflow.experimental.tensor_to_tensor_buffer
 .. autofunction:: oneflow.experimental.Tensor.type_as
 .. autofunction:: oneflow.experimental.Tensor.long
+.. autofunction:: oneflow.experimental.bernoulli
