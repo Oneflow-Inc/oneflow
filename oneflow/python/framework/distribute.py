@@ -233,7 +233,6 @@ def split_sbp(
 
 
 @oneflow_export_value("sbp.broadcast")
-@experimental_api
 def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
     r"""Generate a broadcast scheme.
     Returns:
@@ -247,7 +246,6 @@ def broadcast_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.S
 
 
 @oneflow_export_value("sbp.partial_sum")
-@experimental_api
 def partial_sum_sbp() -> oneflow._oneflow_internal.oneflow.core.job.sbp_parallel.SbpParallel:
     r"""Generate a partial_sum scheme.
     Returns:
