@@ -37,7 +37,7 @@ def diag_op(input, diagonal = 0):
     r"""
     Returns a new tensor with the diagonal.
 
-    ..math::
+    .. math::
 
     Args:
         input (Tensor): the input tensor.
@@ -58,6 +58,7 @@ def diag_op(input, diagonal = 0):
         >>> output = flow.diag(input)
         >>> print(output.numpy())
         [1. 5. 9.]
+        
     """
 
     return Diag(diagonal)(input)

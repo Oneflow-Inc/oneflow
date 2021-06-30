@@ -33,8 +33,9 @@ def diag(
 
     If input is a vector, then returns a square matrix with the elements of input as the diagonal.
     If input is a matrix, then returns a vector with the diagonal elements of input.
+    
     Args:
-        input (remote_blob_util.BlobDef): The input Blob.
+        input (remote_blob_util.BlobDef): The input Blob
         diagonal (Optional[int], 0): The diagonal to consider. If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
 
     Returns:
