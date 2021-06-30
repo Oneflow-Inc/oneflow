@@ -226,7 +226,7 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - ### International
   - [Discord](https://discord.gg/4kpjGA5bZY)
   - [Twitter](https://twitter.com/OneFlowNews)
-  - [Linkedin](https://www.linkedin.com/company/oneflow-inc)
+  - [LinkedIn](https://www.linkedin.com/company/oneflow-inc)
   - [Medium](https://oneflow2020.medium.com)
 
 ## The Team
