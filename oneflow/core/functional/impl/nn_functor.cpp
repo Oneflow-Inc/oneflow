@@ -200,6 +200,45 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PoolNDFunctor {
+ public:
+  PoolNDFunctor() = default;
+  virtual ~PoolNDFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& strides, const std::string& padding,
+                           const std::vector<int32_t>& padding_before,
+                           const std::vector<int32_t>& padding_after,
+                           const std::string& data_format, const bool& ceil_mode) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("pool_size", kernel_size));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(attrs.SetAttr<std::string>("padding", padding));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_before));
+    JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
+    JUST(attrs.SetAttr<std::string>("data_format", data_format));
+    JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ protected:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class AvgPool2DFunctor : public PoolNDFunctor {
+ public:
+  AvgPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("avg_pool_2d").Input("x").Output("y").Build());
+  }
+};
+
+class MaxPool2DFunctor : public PoolNDFunctor {
+ public:
+  MaxPool2DFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("max_pool_2d").Input("x").Output("y").Build());
+  }
+};
+
 class SparseSoftmaxCrossEntropyFunctor {
  public:
   SparseSoftmaxCrossEntropyFunctor() {
@@ -282,6 +321,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::AvgPool2DFunctor>("AvgPool2D");
+  m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
 };
