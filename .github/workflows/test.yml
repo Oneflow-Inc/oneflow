@@ -116,6 +116,7 @@ jobs:
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Build Clang plug-in
         run: |
+          ls ${{ env.LLVM_PATH }}
           cd tools/clang-plugin
           mkdir build
           cd build
