@@ -122,7 +122,7 @@ jobs:
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
-      - name: Check unused Maybe
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
           mkdir build
           cd build
