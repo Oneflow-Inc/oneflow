@@ -140,7 +140,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-          cmake --build . -j$(nproc) --target of_ccobj
+          cmake --build . -j$(nproc) --target
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
