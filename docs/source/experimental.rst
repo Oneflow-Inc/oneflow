@@ -220,3 +220,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ZeroPad2d
 .. autofunction:: oneflow.experimental.tensor_buffer_to_tensor
 .. autofunction:: oneflow.experimental.tensor_to_tensor_buffer
+.. autofunction:: oneflow.experimental.Tensor.type_as
+.. autofunction:: oneflow.experimental.Tensor.long
