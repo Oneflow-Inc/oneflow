@@ -58,7 +58,7 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_histogram")
     .Input("step")
     .Input("tag")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CheckStepShape(&ctx->InputShape("step", 0));
+      JUST(CheckStepShape(&ctx->InputShape("step", 0)));
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
@@ -68,7 +68,7 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_pb")
     .Input("in")
     .Input("step")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CheckStepShape(&ctx->InputShape("step", 0));
+      JUST(CheckStepShape(&ctx->InputShape("step", 0)));
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
@@ -79,7 +79,7 @@ REGISTER_CPU_ONLY_USER_OP("summary_write_image")
     .Input("step")
     .Input("tag")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      CheckStepShape(&ctx->InputShape("step", 0));
+      JUST(CheckStepShape(&ctx->InputShape("step", 0)));
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })

@@ -108,11 +108,11 @@ Maybe<void> DistributeSplitOp::InferBlobParallelDesc() {
     bn2parallel_desc[output_bns().Get(i)] =
         std::make_shared<const ParallelDesc>(op_parallel_desc->GetParallelIdOnlyParallelConf(i));
   }
-  FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+  JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
     auto it = bn2parallel_desc.find(bn);
     CHECK_OR_RETURN(it != bn2parallel_desc.end());
     return it->second;
-  });
+  }));
   return Maybe<void>::Ok();
 }
 
@@ -127,7 +127,7 @@ Maybe<void> DistributeSplitOp::InferSbpSignature(
     return Maybe<const BlobDesc&>(sbp_infer_hint->logical_blob_desc());
   };
   cfg::SbpSignatureList sbp_sig_list;
-  GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list);
+  JUST(GetSbpSignatures(LogicalBlobDesc4Ibn, &sbp_sig_list));
   *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
   return Maybe<void>::Ok();
 }
