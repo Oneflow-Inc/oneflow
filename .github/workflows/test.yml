@@ -121,12 +121,14 @@ jobs:
           cd build
           cmake .. -DCP_LLVM_INSTALL_DIR=${{ env.LLVM_PATH }}
           make -j$(nproc)
-          echo "clang_plugin_path=${cmake_flags}" >> $GITHUB_ENV
+          echo "clang_plugin_path=${PWD}/lib/libCheckUnusedMaybe.so" >> $GITHUB_ENV
       - name: Check unused Maybe
         run: |
           mkdir build
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
           cmake --build . -j$(nproc) --target of_ccobj
 
