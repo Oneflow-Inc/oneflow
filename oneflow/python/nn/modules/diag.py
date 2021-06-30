@@ -37,6 +37,7 @@ class Diag(Module):
 
 
 @oneflow_export("diag")
+@register_tensor_op("diag")
 @experimental_api
 def diag_op(input, diagonal=0):
     r"""
