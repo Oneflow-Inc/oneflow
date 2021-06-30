@@ -215,8 +215,8 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
-- [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues): any install, bug, feature issues.
+- [www.oneflow.org](http://www.oneflow.org): brand related information.
 
 - ### 中文
   - QQ 群: 331883
