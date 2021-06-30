@@ -29,17 +29,16 @@ static const int64_t kMaxSplitAxis = 6;
 namespace {
 
 std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
-  std::string sbp_str = "sbp(type='";
+  std::string sbp_str = "oneflow.sbp.";
   if (sbp_sym->has_broadcast_parallel()) {
-    sbp_str += "B";
+    sbp_str += "broadcast";
   } else if (sbp_sym->has_partial_sum_parallel()) {
-    sbp_str += "P";
+    sbp_str += "partial_sum";
   } else if (sbp_sym->has_split_parallel()) {
-    sbp_str += "S" + std::to_string(sbp_sym->split_parallel().axis());
+    sbp_str += "split(axis=" + std::to_string(sbp_sym->split_parallel().axis()) + ")";
   } else {
     UNIMPLEMENTED();
   }
-  sbp_str += "')";
   return sbp_str;
 }
 
@@ -49,7 +48,7 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_sp
   for (int i = 0; i < max_split_axis; ++i) {
     cfg::SbpParallel split_sbp_parallel;
     split_sbp_parallel.mutable_split_parallel()->set_axis(i);
-    ret->at(i) = Symbol<cfg::SbpParallel>(split_sbp_parallel);
+    ret->at(i) = SymbolOf(split_sbp_parallel);
   }
   return ret;
 }
@@ -57,13 +56,13 @@ Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_sp
 Maybe<Symbol<cfg::SbpParallel>> MakeBroadcastSbpParallel() {
   cfg::SbpParallel broadcast_sbp;
   broadcast_sbp.mutable_broadcast_parallel();
-  return Symbol<cfg::SbpParallel>(broadcast_sbp);
+  return SymbolOf(broadcast_sbp);
 }
 
 Maybe<Symbol<cfg::SbpParallel>> MakePartialSumSbpParallel() {
   cfg::SbpParallel partial_sum_sbp;
   partial_sum_sbp.mutable_partial_sum_parallel();
-  return Symbol<cfg::SbpParallel>(partial_sum_sbp);
+  return SymbolOf(partial_sum_sbp);
 }
 
 Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
@@ -90,7 +89,8 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(m, "SbpSymbol")
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString);
-  m.def("split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); });
+  m.def(
+      "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });
   m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetOrThrow(); });
 }

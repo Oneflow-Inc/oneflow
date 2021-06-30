@@ -99,20 +99,24 @@ def include_submodule(modname):
 
 
 def include_export(api_name_base, symbol):
+    # print(symbol._IS_VALUE)
     if symbol.__name__ == api_name_base:
-        return ["from {} import {}".format(symbol.__module__, api_name_base)]
+        output = ["from {} import {}".format(symbol.__module__, api_name_base)]
     else:
         if inspect.isclass(symbol):
-            return [
+            output = [
                 "from {} import {}".format(symbol.__module__, symbol.__name__),
                 "{} = {}".format(api_name_base, symbol.__name__),
             ]
         else:
-            return [
+            output = [
                 "from {} import {} as {}".format(
                     symbol.__module__, symbol.__name__, api_name_base
                 )
             ]
+    if symbol._IS_VALUE:
+        output.append("{} = {}()".format(api_name_base, api_name_base))
+    return output
 
 
 def exported_symbols():

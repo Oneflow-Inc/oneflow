@@ -42,12 +42,6 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
-# define sbp
-locals()["B"] = oneflow._oneflow_internal.sbp.broadcast()
-locals()["P"] = oneflow._oneflow_internal.sbp.partial_sum()
-for i in range(oneflow._oneflow_internal.sbp.max_split_axis):
-    locals()["S%d" % i] = oneflow._oneflow_internal.sbp.split(i)
-del i
 
 from oneflow.python.version import __version__
 

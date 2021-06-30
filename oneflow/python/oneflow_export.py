@@ -32,6 +32,22 @@ def oneflow_export(*api_names, **kwargs):
         else:
             new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
         func_or_class._ONEFLOW_API = new_api_names
+        func_or_class._IS_VALUE = False
+        return func_or_class
+
+    return Decorator
+
+
+def oneflow_export_value(*api_names, **kwargs):
+    def Decorator(func_or_class):
+        new_api_names = list(api_names)
+        if hasattr(func_or_class, "_ONEFLOW_API_TAG"):
+            if func_or_class._ONEFLOW_API_TAG == "experimental_api":
+                new_api_names = ["experimental." + n for n in new_api_names]
+        else:
+            new_api_names = ["experimental." + n for n in new_api_names] + new_api_names
+        func_or_class._ONEFLOW_API = new_api_names
+        func_or_class._IS_VALUE = True
         return func_or_class
 
     return Decorator
