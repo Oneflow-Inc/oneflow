@@ -97,37 +97,26 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
-      - name: Set environment variables
-        run: |
-          sudo apt install -y tree
-          echo "llvm_cache_dir=.cache/llvm" >> $GITHUB_ENV
       - name: Check out OneFlow
         uses: actions/checkout@v2
         with:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - name: Cache LLVM and Clang
-        id: cache-llvm
-        uses: actions/cache@v2
-        with:
-          path: |
-            ${{ env.llvm_cache_dir }}
-          key: ${{ runner.os }}-llvm-12
       - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v1
-        with:
-          version: "12.0"
-          directory: ${{ env.llvm_cache_dir }}
-          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
+          sudo apt-get update
+          sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev 
+
       - name: Build Clang plug-in
         run: |
-          tree ${{ env.LLVM_PATH }}
-          export CC=${{ env.LLVM_PATH }}/bin/clang
-          export CXX=${{ env.LLVM_PATH }}/bin/clang++
+          export CC=clang-12
+          export CXX=clang++-12
           cd tools/clang-plugin
           mkdir build
           cd build
-          cmake .. -DCP_LLVM_INSTALL_DIR=${{ env.LLVM_PATH }}
+          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
           make -j$(nproc)
           clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
           ldd ${clang_plugin_path}
@@ -136,10 +125,9 @@ jobs:
         run: |
           mkdir build
           cd build
-          export CC=${{ env.LLVM_PATH }}/bin/clang
-          export CXX=${{ env.LLVM_PATH }}/bin/clang++
+          export CC=clang-12
+          export CXX=clang++-12
           export ONEFLOW_MAYBE_CHECK_ONLY_FN=/oneflow/
-          export LD_LIBRARY_PATH=${{ env.LLVM_PATH }}/lib:$LD_LIBRARY_PATH
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
