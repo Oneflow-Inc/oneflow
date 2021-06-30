@@ -46,30 +46,34 @@ int64_t GlobalProcessCtx::ThisNodeId() {
 
 int64_t GlobalProcessCtx::NodeId4Rank(int64_t rank) {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  const auto& rank2node_id = Global<ProcessCtx>::Get()->rank2node_id();
+  const auto& rank2node_id = Global<ProcessCtx>::Get()->rank_info_in_cluster().rank2node_id();
   return CHECK_JUST(MapAt(rank2node_id, rank));
 }
 
 HashMap<int64_t, int64_t> GlobalProcessCtx::NodeId2RankOffset() {
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return PbMap2HashMap(Global<RankInfoInCluster>::Get()->node_id2rankoffset());
+  }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return PbMap2HashMap(Global<ProcessCtx>::Get()->node_id2rankoffset());
+  return PbMap2HashMap(Global<ProcessCtx>::Get()->rank_info_in_cluster().node_id2rankoffset());
 }
 
 int64_t GlobalProcessCtx::NumOfProcessOnNode() {
-  if (Global<NumProcessDistribution>::Get() != nullptr) {
-    return int64_t(Global<NumProcessDistribution>::Get()->num_process(0));
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return Global<RankInfoInCluster>::Get()->num_process_distribution().num_process(0);
   }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   int64_t node_id = ThisNodeId();
-  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster().num_process(node_id);
+  return Global<ProcessCtx>::Get()->rank_info_in_cluster().num_process_distribution().num_process(
+      node_id);
 }
 
 const NumProcessDistribution& GlobalProcessCtx::NumProcessDistributionInCluster() {
-  if (Global<NumProcessDistribution>::Get() != nullptr) {
-    return *Global<NumProcessDistribution>::Get();
+  if (Global<RankInfoInCluster>::Get() != nullptr) {
+    return Global<RankInfoInCluster>::Get()->num_process_distribution();
   }
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
-  return Global<ProcessCtx>::Get()->num_process_distribution_in_cluster();
+  return Global<ProcessCtx>::Get()->rank_info_in_cluster().num_process_distribution();
 }
 
 bool GlobalProcessCtx::IsThisProcessMaster() {

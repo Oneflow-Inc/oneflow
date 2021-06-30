@@ -140,11 +140,16 @@ Maybe<void> HostListCtrlBootstrap::SetNodeSize(ProcessCtx* process_ctx) const {
 Maybe<void> HostListCtrlBootstrap::InitProcessDistributionInClusterInfo(
     ProcessCtx* process_ctx) const {
   for (int64_t rank = 0; rank < world_size(); ++rank) {
-    process_ctx->mutable_num_process_distribution_in_cluster()->add_num_process(1);
+    process_ctx->mutable_rank_info_in_cluster()
+        ->mutable_num_process_distribution()
+        ->add_num_process(1);
   }
-  const auto& num_process_distribution = process_ctx->num_process_distribution_in_cluster();
-  InitRank2NodeId(num_process_distribution, process_ctx->mutable_rank2node_id());
-  InitNodeId2RankOffset(num_process_distribution, process_ctx->mutable_node_id2rankoffset());
+  const auto& num_process_distribution =
+      process_ctx->rank_info_in_cluster().num_process_distribution();
+  InitRank2NodeId(num_process_distribution,
+                  process_ctx->mutable_rank_info_in_cluster()->mutable_rank2node_id());
+  InitNodeId2RankOffset(num_process_distribution,
+                        process_ctx->mutable_rank_info_in_cluster()->mutable_node_id2rankoffset());
   return Maybe<void>::Ok();
 }
 
@@ -226,12 +231,17 @@ Maybe<void> RankInfoCtrlBootstrap::InitProcessDistributionInClusterInfo(
   if (!rank2host_and_num_process_on_corresponding_node_) { InitRank2HosAndNumProcess(); }
   for (int64_t rank = 0; rank < world_size();) {
     int64_t num_process = rank2host_and_num_process_on_corresponding_node_->at(rank).second;
-    process_ctx->mutable_num_process_distribution_in_cluster()->add_num_process(num_process);
+    process_ctx->mutable_rank_info_in_cluster()
+        ->mutable_num_process_distribution()
+        ->add_num_process(num_process);
     rank += num_process;
   }
-  const auto& num_process_distribution = process_ctx->num_process_distribution_in_cluster();
-  InitRank2NodeId(num_process_distribution, process_ctx->mutable_rank2node_id());
-  InitNodeId2RankOffset(num_process_distribution, process_ctx->mutable_node_id2rankoffset());
+  const auto& num_process_distribution =
+      process_ctx->rank_info_in_cluster().num_process_distribution();
+  InitRank2NodeId(num_process_distribution,
+                  process_ctx->mutable_rank_info_in_cluster()->mutable_rank2node_id());
+  InitNodeId2RankOffset(num_process_distribution,
+                        process_ctx->mutable_rank_info_in_cluster()->mutable_node_id2rankoffset());
   return Maybe<void>::Ok();
 }
 

@@ -41,9 +41,13 @@ namespace test {
 
 namespace {
 
-void InitNumProcessDistribution() { Global<NumProcessDistribution>::New()->add_num_process(1); }
+void InitRankInfoInCluster() {
+  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
+  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
+  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
+}
 
-void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
+void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
 
 }  // namespace
 
@@ -72,25 +76,25 @@ void TestInitSymbolInstructionType(const std::string& instr_type_name) {
 }
 
 TEST(InitSymbolInstructionType, job_desc) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<JobDesc, JobConfigProto>("InitJobDescSymbol");
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(InitSymbolInstructionType, operator_conf) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster();
 #ifdef WITH_CUDA
   vm::TestResourceDescScope resource_scope(1, 1);
 #else
   vm::TestResourceDescScope resource_scope(0, 1);
 #endif
   TestInitSymbolInstructionType<OperatorConfSymbol, OperatorConf>("InitOperatorConfSymbol");
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 }  // namespace test

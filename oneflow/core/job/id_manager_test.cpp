@@ -24,10 +24,11 @@ namespace {
 static const int64_t machine_id_shl = 11 + 21 + 21;
 static const int64_t thread_id_shl = 21 + 21;
 static const int64_t local_work_stream_shl = 21;
+static const int64_t machine_num = 10;
 
 EnvProto GetEnvProto() {
   EnvProto ret;
-  for (size_t i = 0; i < 10; ++i) {
+  for (size_t i = 0; i < machine_num; ++i) {
     auto* machine = ret.add_machine();
     machine->set_id(i);
     machine->set_addr("192.168.1." + std::to_string(i));
@@ -38,7 +39,7 @@ EnvProto GetEnvProto() {
 
 Resource GetResource() {
   Resource ret;
-  ret.set_machine_num(10);
+  ret.set_machine_num(machine_num);
   ret.set_gpu_device_num(8);
   ret.set_cpu_device_num(5);
   ret.set_comm_net_worker_num(4);
@@ -47,7 +48,12 @@ Resource GetResource() {
 
 void New() {
   Global<EnvDesc>::New(GetEnvProto());
-  Global<NumProcessDistribution>::New()->add_num_process(1);
+  Global<RankInfoInCluster>::New();
+  for (size_t i = 0; i < machine_num; ++i) {
+    Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
+    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
+    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+  }
   Global<ResourceDesc, ForSession>::New(GetResource(),
                                         GlobalProcessCtx::NumProcessDistributionInCluster());
   Global<IDMgr>::New();
@@ -55,7 +61,7 @@ void New() {
 
 void Delete() {
   Global<IDMgr>::Delete();
-  Global<NumProcessDistribution>::Delete();
+  Global<RankInfoInCluster>::Delete();
   Global<ResourceDesc, ForSession>::Delete();
   Global<EnvDesc>::Delete();
 }

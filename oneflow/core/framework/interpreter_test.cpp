@@ -30,17 +30,18 @@ namespace test {
 
 namespace {
 
-void InitNumProcessDistribution() {
-  Global<NumProcessDistribution>::New();
-  Global<NumProcessDistribution>::Get()->add_num_process(1);
+void InitRankInfoInCluster() {
+  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
+  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
+  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
 }
 
-void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
+void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
 
 class TestVirtualMachineScope {
  public:
   TestVirtualMachineScope(int64_t gpu_device_num, int64_t cpu_device_num) {
-    InitNumProcessDistribution();
+    InitRankInfoInCluster();
     Global<ProcessCtx>::New();
     Global<ProcessCtx>::Get()->set_rank(0);
     test_resource_desc_scope_.reset(new vm::TestResourceDescScope(gpu_device_num, cpu_device_num));
@@ -52,7 +53,7 @@ class TestVirtualMachineScope {
     virtual_machine_scope_.reset();
     test_resource_desc_scope_.reset();
     Global<ProcessCtx>::Delete();
-    DestroyNumProcessDistribution();
+    DestroyRankInfoInCluster();
   }
 
  private:

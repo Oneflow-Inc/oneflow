@@ -36,15 +36,16 @@ namespace test {
 
 namespace {
 
-void InitNumProcessDistribution() {
-  Global<NumProcessDistribution>::New();
-  Global<NumProcessDistribution>::Get()->add_num_process(1);
+void InitRankInfoInCluster() {
+  Global<RankInfoInCluster>::New()->mutable_num_process_distribution()->add_num_process(1);
+  (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[0] = 0;
+  (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[0] = 0;
 }
 
-void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
+void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
 
 TEST(ControlStreamType, new_object) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster();
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -57,11 +58,11 @@ TEST(ControlStreamType, new_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ControlStreamType, delete_object) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster();
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewObject"});
   CachedObjectMsgAllocator allocator(20, 100);
@@ -75,7 +76,7 @@ TEST(ControlStreamType, delete_object) {
     vm->Schedule();
     OBJECT_MSG_LIST_FOR_EACH_PTR(vm->mut_thread_ctx_list(), t) { t->TryReceiveAndRun(); }
   }
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 }  // namespace

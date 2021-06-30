@@ -251,18 +251,22 @@ class SendRecvUtil {
   std::string recv_instr_name_;
 };
 
-void InitNumProcessDistribution() {
-  Global<NumProcessDistribution>::New();
-  Global<NumProcessDistribution>::Get()->add_num_process(1);
+void InitRankInfoInCluster(int64_t machine_num) {
+  Global<RankInfoInCluster>::New();
+  for (size_t i = 0; i < machine_num; ++i) {
+    Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
+    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
+    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+  }
 }
 
-void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
+void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
 
 }  // namespace
 
 #ifdef __linux__
 TEST(SendReceiveInstructionType, naive) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster(2);
 #ifdef WITH_CUDA
   vm::TestResourceDescScope scope(1, 1, 2);
 #else
@@ -307,7 +311,7 @@ TEST(SendReceiveInstructionType, naive) {
   ASSERT_TRUE(token2recv_request.find(header_token) != token2recv_request.end());
   ASSERT_TRUE(token2send_request.find(body_token) != token2send_request.end());
   ASSERT_TRUE(token2recv_request.find(body_token) != token2recv_request.end());
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 #endif  // __linux__
 

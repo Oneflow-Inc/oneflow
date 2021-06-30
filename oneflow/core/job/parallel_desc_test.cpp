@@ -25,29 +25,34 @@ namespace test {
 
 namespace {
 
-void InitNumProcessDistribution() {
-  Global<NumProcessDistribution>::New();
-  Global<NumProcessDistribution>::Get()->add_num_process(1);
+void InitRankInfoInCluster(int64_t machine_num) {
+  Global<RankInfoInCluster>::New();
+  for (size_t i = 0; i < machine_num; ++i) {
+    Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(1);
+    (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
+    (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
+  }
 }
 
-void DestroyNumProcessDistribution() { Global<NumProcessDistribution>::Delete(); }
+void DestroyRankInfoInCluster() { Global<RankInfoInCluster>::Delete(); }
 
 }  // namespace
 
 TEST(ParallelDesc, continuous_1n4d) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster(1);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process) {
-  InitNumProcessDistribution();
-  Global<NumProcessDistribution>::Get()->add_num_process(4);
+  InitRankInfoInCluster(1);
+  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->clear_num_process();
+  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -59,12 +64,13 @@ TEST(ParallelDesc, continuous_1n4d_multi_process) {
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 1), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 2), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 3), 1);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
-  InitNumProcessDistribution();
-  Global<NumProcessDistribution>::Get()->add_num_process(4);
+  InitRankInfoInCluster(1);
+  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->clear_num_process();
+  Global<RankInfoInCluster>::Get()->mutable_num_process_distribution()->add_num_process(4);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("@0:0-3");
@@ -74,11 +80,11 @@ TEST(ParallelDesc, continuous_1n4d_multi_process_with_rank) {
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
   ASSERT_EQ(machine_ids.size(), 1);
   ASSERT_EQ(std::count(machine_ids.begin(), machine_ids.end(), 0), 1);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, discrete_1n4d) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster(1);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -86,11 +92,11 @@ TEST(ParallelDesc, discrete_1n4d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 4);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, continuous_2n8d) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster(2);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-3");
@@ -98,11 +104,11 @@ TEST(ParallelDesc, continuous_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 TEST(ParallelDesc, discrete_2n8d) {
-  InitNumProcessDistribution();
+  InitRankInfoInCluster(2);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
   parallel_conf.add_device_name("0:0-1");
@@ -112,7 +118,7 @@ TEST(ParallelDesc, discrete_2n8d) {
   ParallelDesc parallel_desc(parallel_conf);
   ASSERT_EQ(parallel_desc.device_tag(), "cpu");
   ASSERT_EQ(parallel_desc.parallel_num(), 8);
-  DestroyNumProcessDistribution();
+  DestroyRankInfoInCluster();
 }
 
 }  // namespace test

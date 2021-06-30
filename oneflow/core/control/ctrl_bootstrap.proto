@@ -10,9 +10,7 @@ message ProcessCtx {
   repeated Address ctrl_addr = 1;
   required int64 rank = 2;
   required int64 node_size = 3;
-  required NumProcessDistribution num_process_distribution_in_cluster = 4;
-  map<int64, int64> rank2node_id = 5;
-  map<int64, int64> node_id2rankoffset = 6;
+  required RankInfoInCluster rank_info_in_cluster = 4;
 }
 
 message BootstrapConf {
@@ -26,4 +24,10 @@ message BootstrapConf {
 
 message NumProcessDistribution {
   repeated int64 num_process = 1;
+}
+
+message RankInfoInCluster {
+  required NumProcessDistribution num_process_distribution = 1;
+  map<int64, int64> rank2node_id = 2;
+  map<int64, int64> node_id2rankoffset = 3;
 }
