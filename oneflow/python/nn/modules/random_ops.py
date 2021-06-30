@@ -42,7 +42,7 @@ class Bernoulli(Module):
 @oneflow_export("bernoulli")
 @experimental_api
 def bernoulli(input, *, generator=None, out=None):
-    r"""This operator returns a Blob with binaray random numbers (0 / 1) from a Bernoulli distribution.
+    r"""This operator returns a Tensor with binaray random numbers (0 / 1) from a Bernoulli distribution.
 
     Args:
         input(Tensor) - the input tensor of probability values for the Bernoulli distribution
@@ -63,17 +63,17 @@ def bernoulli(input, *, generator=None, out=None):
 
         >>> arr = np.array(
         ...    [
-        ...        [0.25, 0.45, 0.3],
-        ...        [0.55, 0.32, 0.13],
-        ...        [0.75, 0.15, 0.1],
+        ...        [1.0, 1.0, 1.0],
+        ...        [1.0, 1.0, 1.0],
+        ...        [1.0, 1.0, 1.0],
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
         >>> y = flow.bernoulli(x)
         >>> y
-        tensor([[0., 0., 0.],
-                [0., 0., 0.],
-                [0., 1., 0.]], dtype=oneflow.float32)
+        tensor([[1., 1., 1.],
+                [1., 1., 1.],
+                [1., 1., 1.]], dtype=oneflow.float32)
 
 
     """

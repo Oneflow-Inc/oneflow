@@ -13,20 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# import unittest
-# import numpy as np
-# import oneflow.experimental as flow
-
-
-# flow.enable_eager_execution()
-# arr = np.array([[0.25, 0.45, 0.3], [0.55, 0.32, 0.13],[0.75, 0.15, 0.1],])
-# x = flow.Tensor(arr)
-# x2 = flow.ones_like(x)
-# y = flow.bernoulli(x2)
-
-# print(y)
-
-
 import unittest
 from collections import OrderedDict
 
