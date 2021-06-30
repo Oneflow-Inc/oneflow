@@ -251,7 +251,7 @@ def _AddAndInferMirroredOp(mirrored_lbn, op_conf, sub_consistent_blob_list):
 
 
 def _MakePushNdarrayCallback(ndarray):
-    copied = np.copy(ndarray)
+    copied = np.copy(ndarray, order='C')
 
     def Copy(ofblob):
         capacity = reduce(lambda x, y: x * y, ofblob.static_shape, 1)

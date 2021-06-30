@@ -22,7 +22,7 @@ import random
 import oneflow.typing as oft
 
 
-def _test_input_ndarray_contiguous(test_case, shape):
+def _test_input_ndarray_not_contiguous(test_case, shape):
     assert len(shape) > 1
     more_than_one_dim_list = []
     for axis, dim in enumerate(shape[1:], 1):
@@ -65,9 +65,23 @@ def _test_input_ndarray_contiguous(test_case, shape):
         return y
 
     ret = foo_job(slice_input).get()
-    # print(ret.numpy().flags)
     test_case.assertTrue(ret.numpy().data.c_contiguous)
     test_case.assertTrue(np.array_equal(ret.numpy(), slice_input + 1.0))
+
+    # test transpose
+    flow.clear_default_session()
+
+    @flow.global_function()
+    def foo_job(
+        x_def: oft.Numpy.Placeholder(shape=input.shape[::-1], dtype=flow.float)
+    ):
+        y = x_def + flow.constant(1.0, shape=(1,), dtype=flow.float)
+        return y
+
+    transpose_input = input.T
+    ret = foo_job(transpose_input).get()
+    test_case.assertTrue(ret.numpy().data.c_contiguous)
+    test_case.assertTrue(np.array_equal(ret.numpy(), transpose_input + 1.0))
 
 
 # TODO: system op need manaully register blob_object in default_blob_register or bw_blob_register
@@ -239,8 +253,8 @@ class TestGlobalFunctionInputOutput(flow.unittest.TestCase):
         ret = foo_job([input]).get()
         test_case.assertTrue(np.allclose(output, ret.numpy_list()[0]))
 
-    def test_input_ndarray_contiguous(test_case):
-        _test_input_ndarray_contiguous(test_case, (10, 20, 30))
+    def test_input_ndarray_not_contiguous(test_case):
+        _test_input_ndarray_not_contiguous(test_case, (10, 20, 30))
 
 
 if __name__ == "__main__":
