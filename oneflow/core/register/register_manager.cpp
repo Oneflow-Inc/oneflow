@@ -187,7 +187,8 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     if (main_mem_ptr == nullptr) {
       cur_body_pointer = nullptr;
     } else {
-      cur_body_pointer = main_mem_ptr + rt_regst_desc->GetSoleBlobDesc()->ByteSizeOfBlobHeader();
+      cur_body_pointer =
+          main_mem_ptr + rt_regst_desc->GetSoleBlobDesc()->AlignedByteSizeOfBlobHeader();
     }
   }
   rt_regst_desc->ForEachBlobDescOffsetInOnRegst([&](int64_t ordinal, const LogicalBlobId& lbi,

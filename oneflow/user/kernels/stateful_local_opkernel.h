@@ -160,6 +160,9 @@ class LocalUserOpInferContext : public user_op::InferContext {
                                                                int32_t index) const override {
     UNIMPLEMENTED();
   }
+  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
+  }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override;
   const Shape& InputShape(const std::string& arg_name, int32_t index) const override {
@@ -180,10 +183,10 @@ class LocalUserOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return NonNullTensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
-  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return *const_cast<LocalUserOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -211,6 +214,28 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   void Update(const EagerBlobObjectListPtr& inputs, const EagerBlobObjectListPtr& outputs);
 
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+
  private:
   user_op::TensorDesc* NonNullTensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                          int32_t index) {
@@ -218,7 +243,7 @@ class LocalUserOpInferContext : public user_op::InferContext {
     if (!tensor_desc) { LOG(FATAL) << "Arg (" << arg_name << "," << index << ") is not found"; }
     return tensor_desc;
   }
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
     return composed_attrs_->Attr4Name(attr_name);
@@ -276,13 +301,12 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const std::shared_ptr<const Device>& device,
-                                          const AttrMap& base_attrs,
+                                          const Symbol<Device>& device, const AttrMap& base_attrs,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Symbol<Device>& device() const { return device_; }
   const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
@@ -353,7 +377,7 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  std::shared_ptr<const Device> device_;
+  Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserKernelCreateContext> create_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;

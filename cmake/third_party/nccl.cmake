@@ -1,6 +1,9 @@
 include (ExternalProject)
 
 option(NCCL_STATIC "" ON)
+if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
+   set(NCCL_STATIC OFF)
+endif()
 
 set(NCCL_INSTALL_DIR ${THIRD_PARTY_DIR}/nccl)
 set(NCCL_INCLUDE_DIR ${NCCL_INSTALL_DIR}/include)
@@ -36,6 +39,7 @@ ExternalProject_Add(nccl
     BUILD_IN_SOURCE 1
     BUILD_COMMAND make -j${PROC_NUM} src.build CUDA_HOME=${CUDA_TOOLKIT_ROOT_DIR}
     INSTALL_COMMAND make src.install PREFIX=${NCCL_INSTALL_DIR}
+    BUILD_BYPRODUCTS ${NCCL_LIBRARIES}
 )
 
 endif(THIRD_PARTY)
