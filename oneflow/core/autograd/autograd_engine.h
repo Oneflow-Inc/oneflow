@@ -185,7 +185,7 @@ class GraphAutogradEngine final : public AutogradEngine {
                                                           bool retain_graph,
                                                           bool create_graph) override;
   void ClearEngine() override{};
-  std::shared_ptr<FunctionNode> AddBackwardFuncPtr(
+  Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
           const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
