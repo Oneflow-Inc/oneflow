@@ -101,6 +101,11 @@ jobs:
         run: |
           sudo apt install -y tree
           echo "llvm_cache_dir=.cache/llvm" >> $GITHUB_ENV
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v2
@@ -114,11 +119,6 @@ jobs:
           version: "12.0"
           directory: ${{ env.llvm_cache_dir }}
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
-      - name: Check out OneFlow
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Build Clang plug-in
         run: |
           tree -a .
