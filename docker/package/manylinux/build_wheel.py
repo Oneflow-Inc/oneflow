@@ -148,7 +148,7 @@ def get_common_docker_args(
         house_dir_arg = f"-v {house_dir}:{house_dir}"
     build_dir_arg = get_build_dir_arg(cache_dir, oneflow_src_dir)
     proxy_env_arg = get_proxy_env_args() if use_system_proxy else ""
-    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir}"
+    return f"-v {oneflow_src_dir}:{oneflow_src_dir} {proxy_env_arg} {pwd_arg} {house_dir_arg} {cache_dir_arg} {build_dir_arg} -w {current_dir} --shm-size=8g"
 
 
 def build_third_party(
@@ -193,10 +193,10 @@ make -j`nproc` prepare_oneflow_third_party
 
 
 def get_python_bin(version):
-    assert version in ["3.5", "3.6", "3.7", "3.8"]
+    assert version in ["3.5", "3.6", "3.7", "3.8", "3.9"]
     py_ver = "".join(version.split("."))
     py_abi = f"cp{py_ver}-cp{py_ver}"
-    if py_ver != "38":
+    if version in ["3.5", "3.6", "3.7"]:
         py_abi = f"{py_abi}m"
     py_root = f"/opt/python/{py_abi}"
     py_bin = f"{py_root}/bin/python"
