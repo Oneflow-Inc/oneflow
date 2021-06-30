@@ -24,7 +24,7 @@ namespace {
 
 __device__ int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
                                         const int64_t in_dim_size) {
-  return max(min(static_cast<int64_t>(floorf((static_cast<float>(out_dim_idx) + 0.5f) * scale)),
+  return max(min(static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale))),
                  in_dim_size - 1),
              static_cast<int64_t>(0));
 }
