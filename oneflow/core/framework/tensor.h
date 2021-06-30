@@ -66,8 +66,8 @@ class Tensor {
   virtual DataType dtype() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> parallel_distribution() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
-  virtual Maybe<const Device> device() const = 0;
-  virtual Maybe<std::shared_ptr<const Device>*> mut_device() { OF_UNIMPLEMENTED(); }
+  virtual Maybe<Symbol<Device>> device() const = 0;
+  virtual Maybe<Symbol<Device>*> mut_device() { OF_UNIMPLEMENTED(); }
   virtual bool is_consistent() const = 0;
   virtual bool is_lazy() const = 0;
   virtual Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution()
@@ -173,8 +173,8 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     OF_UNIMPLEMENTED();
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { OF_UNIMPLEMENTED(); }
-  Maybe<const Device> device() const override { return impl_->device(); }
-  Maybe<std::shared_ptr<const Device>*> mut_device() override { return impl_->mut_device(); }
+  Maybe<Symbol<Device>> device() const override { return impl_->device(); }
+  Maybe<Symbol<Device>*> mut_device() override { return impl_->mut_device(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {
@@ -225,7 +225,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<MirroredTensor> api_detach() const override;
 
   static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                          const std::shared_ptr<const Device>& device, bool is_lazy,
+                                          const Symbol<Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
 
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
@@ -249,7 +249,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->parallel_distribution();
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
-  Maybe<const Device> device() const override { OF_UNIMPLEMENTED(); }
+  Maybe<Symbol<Device>> device() const override { OF_UNIMPLEMENTED(); }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
   Maybe<Symbol<cfg::ParallelDistribution>> consumer_forced_parallel_distribution() const override {

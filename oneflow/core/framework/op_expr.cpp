@@ -106,8 +106,8 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
   const auto& opkernel =
-      JUST(StatefulLocalOpKernel::New(op_conf, device.shared_from_this(), base_attrs(),
-                                      parallel_desc, input_arg_tuple(), output_arg_tuple()));
+      JUST(StatefulLocalOpKernel::New(op_conf, SymbolOf(device), base_attrs(), parallel_desc,
+                                      input_arg_tuple(), output_arg_tuple()));
   device2kernel_.emplace(device, opkernel);
   return opkernel;
 }
@@ -199,15 +199,15 @@ class UserOpExprInferContext : public user_op::InferContext {
     return *const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* OutputDType(const std::string& arg_name, int32_t index) override {
-    return const_cast<UserOpExprInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
+    return Dtype4ArgNameAndIndex(arg_name, index);
   }
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
-  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpExprInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -304,16 +304,16 @@ class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
     return user_op_expr_->indexed_output_pairs();
   }
 
-  std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
-                                                                    int64_t index) override {
+  Symbol<Device>* OutputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                     int64_t index) override {
     const auto& arg_tuple = *user_op_expr_->output_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
     return CHECK_JUST(output_tensors_->at(tuple_index)->mut_device());
   }
 
-  std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
-                                                                  int64_t index) const override {
+  Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string& name,
+                                                   int64_t index) const override {
     const auto& arg_tuple = *user_op_expr_->input_arg_tuple();
     int32_t tuple_index = arg_tuple.TensorTupleIndex4ArgNameAndIndex(name, index);
     CHECK_GE(tuple_index, 0);
@@ -372,8 +372,9 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
   return Maybe<void>::Ok();
 }
 
-Maybe<const Device> UserOpExpr::InferDevices(const AttrMap& attrs, const TensorTuple& input_tensors,
-                                             TensorTuple* output_tensors) const {
+Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
+                                               const TensorTuple& input_tensors,
+                                               TensorTuple* output_tensors) const {
   CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
   UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
   return TRY(device_infer_fn_(&device_infer_ctx));

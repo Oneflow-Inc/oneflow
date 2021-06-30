@@ -78,8 +78,8 @@ class InferContext {
   virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
                                                                                 int32_t) const = 0;
 
-  virtual bool InputIsDynamic4ArgNameAndIndex(const std::string&, int32_t) const = 0;
-  virtual bool* OutputIsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
+  virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
   virtual int64_t parallel_num() const = 0;
@@ -102,11 +102,9 @@ class DeviceInferContext {
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
 
-  virtual std::shared_ptr<const Device>* OutputTensorDevice4ArgNameAndIndex(const std::string&,
-                                                                            int64_t) = 0;
+  virtual Symbol<Device>* OutputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) = 0;
 
-  virtual std::shared_ptr<const Device> InputTensorDevice4ArgNameAndIndex(const std::string&,
-                                                                          int64_t) const = 0;
+  virtual Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) const = 0;
 
  protected:
   DeviceInferContext() = default;

@@ -37,10 +37,15 @@ namespace {
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
   const auto& shape = std::make_shared<Shape>();
   const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
 }
 
 }  // namespace
+
+Maybe<MirroredTensorImpl> LazyMirroredTensorImpl::detach() const {
+  auto detached_impl = std::make_shared<LazyMirroredTensorImpl>(tensor_meta_, false, true);
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
+}
 
 EagerMirroredTensorImpl::EagerMirroredTensorImpl()
     : MirroredTensorImpl(NewDefaultMirroredTensorMeta(), NewAutogradMeta(false, false)) {}
@@ -121,6 +126,13 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   eager_blob_object_->set_is_shape_synced(true);
   return eager_blob_object_->blob_desc().shape_ptr();
+}
+
+Maybe<MirroredTensorImpl> EagerMirroredTensorImpl::detach() const {
+  auto detached_impl =
+      std::make_shared<EagerMirroredTensorImpl>(tensor_meta_, tensor_storage_, false, true);
+  detached_impl->eager_blob_object_ = eager_blob_object_;
+  return std::shared_ptr<MirroredTensorImpl>(detached_impl);
 }
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
