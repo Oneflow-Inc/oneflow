@@ -115,7 +115,6 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Build Clang plug-in
-        id: check_unused_maybe
         run: |
           cd clang-plugin
           mkdir build
@@ -124,7 +123,6 @@ jobs:
           make -j$(nproc)
           echo "clang_plugin_path=${cmake_flags}" >> $GITHUB_ENV
       - name: Check unused Maybe
-        id: check_unused_maybe
         run: |
           mkdir build
           cd build
