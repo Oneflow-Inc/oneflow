@@ -374,6 +374,8 @@ class Tensor:
         def get_canonical_index(index, length, *, start=0):
             if index < 0:
                 index += length
+            if index > length or index < 0:
+                raise IndexError(f"Index should be in [0, {length}), but got {index}")
             return max(min(index, length), start)
 
         def get_slice_if_int(x):
@@ -457,7 +459,9 @@ class Tensor:
             value = flow.Tensor(*shape)
             value.fill_(scalar)
         else:
-            prepended_broadcasting_dims = range(len(self.shape) - len(unsqueeze_dims) - len(value.shape))
+            prepended_broadcasting_dims = range(
+                len(self.shape) - len(unsqueeze_dims) - len(value.shape)
+            )
             for dim in prepended_broadcasting_dims:
                 value = flow.experimental.unsqueeze(value, dim)
             for dim in unsqueeze_dims:
