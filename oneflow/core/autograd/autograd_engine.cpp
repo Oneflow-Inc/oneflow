@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_engine.h"
-#include <memory>
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
