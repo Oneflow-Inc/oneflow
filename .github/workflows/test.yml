@@ -130,7 +130,7 @@ jobs:
           cd build
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
-          make -j$(nproc)
+          cmake --build . -j$(nproc) --target of_ccobj
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
