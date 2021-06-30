@@ -132,6 +132,8 @@ jobs:
         run: |
           mkdir build
           cd build
+          export CC=${{ env.LLVM_PATH }}/bin/clang
+          export CXX=${{ env.LLVM_PATH }}/bin/clang++
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
