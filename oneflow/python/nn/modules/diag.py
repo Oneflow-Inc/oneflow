@@ -42,13 +42,20 @@ class Diag(Module):
 def diag_op(input, diagonal=0):
     r"""
     Returns a new tensor with the diagonal.
-
-    .. math::
+    If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
+    If input is a matrix (2-d tensor), then returns a 1-D tensor with diagonal elements of input.
 
     Args:
         input (Tensor): the input tensor.
-        diagonal (Optional[int], 0): The diagonal to consider. If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
+        diagonal (Optional[int], 0): The diagonal to consider. 
+        If diagonal = 0, it is the main diagonal. 
+        If diagonal > 0, it is above the main diagonal. 
+        If diagonal < 0, it is below the main diagonal. 
+        Defaults to 0.
 
+    Returns:
+        oneflow.Tensor: A Tensor with the diagonal.
+    
     For example:
 
     .. code-block:: python
