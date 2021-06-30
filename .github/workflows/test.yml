@@ -122,6 +122,8 @@ jobs:
       - name: Build Clang plug-in
         run: |
           tree ${{ env.LLVM_PATH }}
+          export CC=${{ env.LLVM_PATH }}/bin/clang
+          export CXX=${{ env.LLVM_PATH }}/bin/clang++
           cd tools/clang-plugin
           mkdir build
           cd build
