@@ -27,14 +27,26 @@ namespace oneflow {
 
 namespace {
 
+std::string SbpParallelToString(const cfg::SbpParallel& sbp_para) {
+  std::string sbp_str = "oneflow.sbp.";
+  if (sbp_para.has_broadcast_parallel()) {
+    sbp_str += "broadcast";
+  } else if (sbp_para.has_partial_sum_parallel()) {
+    sbp_str += "partial_sum";
+  } else if (sbp_para.has_split_parallel()) {
+    sbp_str += "split(axis=" + std::to_string(sbp_para.split_parallel().axis()) + ")";
+  } else {
+    UNIMPLEMENTED();
+  }
+  return sbp_str;
+}
+
 std::string ParallelDistributionSymbolToString(const Symbol<cfg::ParallelDistribution>& x) {
   std::stringstream ss;
   int32_t idx = 0;
   ss << "[";
   for (const auto& sbp_para : x->sbp_parallel()) {
-    SbpParallel proto_sbp;
-    sbp_para.ToProto(&proto_sbp);
-    ss << SbpParallelToString(proto_sbp);
+    ss << SbpParallelToString(sbp_para);
     if (++idx != x->sbp_parallel_size()) { ss << ", "; }
   }
   ss << "]";

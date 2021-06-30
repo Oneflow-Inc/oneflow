@@ -32,6 +32,7 @@ import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.tensor_str as tensor_str_util
 import oneflow as flow
 from oneflow._oneflow_internal.one import CastToConsistentOpExpr
+from oneflow._oneflow_internal.sbp import SbpSymbol
 
 
 def register_local_tensor_method(name=None):
@@ -820,20 +821,25 @@ class UndeterminedTensor:
             raise ValueError("Neither placement nor device found.")
         return device_type == "gpu" or device_type == "cuda"
 
-    def to(self, sbp, placement):
-        return _convert_tensor_to_consistent(self, sbp, placement)
+    def to_consistent(self, sbp, placement):
+        assert sbp is not None
+        if isinstance(sbp, SbpSymbol):
+            assert len(placement.hierarchy) == 1
+            parallel_distribution = [sbp]
+        else:
+            assert isinstance(sbp, (tuple, list)) and len(sbp) == len(
+                placement.hierarchy
+            )
+            for sbp_elem in sbp:
+                assert isinstance(
+                    sbp, SbpSymbol
+                ), "sbp must be sbp obj or list of sbp obj, please get sbp obj via oneflow.broadcast/oneflow.partial_sum/oneflow.split(axis=x)"
+            parallel_distribution = list(sbp)
+        return _convert_tensor_to_consistent(self, parallel_distribution, placement)
 
 
-# used in Tensor.to func
-def _convert_tensor_to_consistent(tensor, sbp, placement):
-    assert sbp is not None
-    if not isinstance(sbp, (tuple, list)):
-        assert len(placement.hierarchy) == 1
-        parallel_distribution = [sbp]
-    else:
-        assert isinstance(sbp, (tuple, list)) and len(sbp) == len(placement.hierarchy)
-        parallel_distribution = list(sbp)
-
+# used in Tensor.to_consistent func
+def _convert_tensor_to_consistent(tensor, parallel_distribution, placement):
     cast_to_consistent_op_expr = CastFromConsistentOpExpr(
         id_util.UniqueStr("cast_to_consistent"), parallel_distribution, placement,
     )
