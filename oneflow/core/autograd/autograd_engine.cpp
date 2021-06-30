@@ -279,7 +279,6 @@ Maybe<void> GraphTask::ComputeDependencies() {
 
   while (!stack.empty()) {
     FunctionNode* node = stack.top();
-    // TODO: check node could apply
     stack.pop();
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
     for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
@@ -358,7 +357,6 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
       node->ReleaseOutTensorArgs();
       continue;
     }
-    // CHECK_OR_RETURN(JUST(node->Apply(create_graph_)));
     if (/*bool not_ready_to_apply=*/!(JUST(node->Apply(create_graph_)))) { continue; }
     if (save_grad_for_leaf) { JUST(node->AccGrad4LeafTensor(create_graph_)); }
     JUST(node->AccGrad4RetainGradTensor());
