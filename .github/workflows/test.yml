@@ -92,6 +92,46 @@ jobs:
         run: |
           exit 1
 
+  static_check_with_clang:
+    name: Static check with Clang plug-in
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Cache LLVM and Clang
+        id: cache-llvm
+        uses: actions/cache@v2
+        with:
+          path: |
+            ./llvm
+          key: llvm-12.0
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: "12.0"
+          cached: ${{ steps.cache-llvm.outputs.cache-hit }}
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Build Clang plug-in
+        id: check_unused_maybe
+        run: |
+          cd clang-plugin
+          mkdir build
+          cd build
+          cmake .. -DCP_LLVM_INSTALL_DIR=${{ env.LLVM_PATH }}
+          make -j$(nproc)
+          echo "clang_plugin_path=${cmake_flags}" >> $GITHUB_ENV
+      - name: Check unused Maybe
+        id: check_unused_maybe
+        run: |
+          mkdir build
+          cd build
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
+          make -j$(nproc)
+
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]
