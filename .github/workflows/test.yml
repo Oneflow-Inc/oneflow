@@ -130,7 +130,7 @@ jobs:
           export CXX=clang++-12
           export ONEFLOW_MAYBE_CHECK_ONLY_FN=/oneflow/oneflow/
           cmake .. -C ../cmake/caches/international/cpu.cmake \
-            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
             -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
           cmake --build . -j$(nproc) --target oneflow_deps
