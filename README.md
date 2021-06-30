@@ -217,6 +217,11 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 ## Communication
 - [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
 - [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [Discord](https://discord.gg/4kpjGA5bZY)
+- [Twitter](https://twitter.com/OneFlowNews)
+- [Linkedin](https://www.linkedin.com/company/oneflow-inc)
+- [Medium](https://oneflow2020.medium.com)
+- [ZhiHu](https://www.zhihu.com/org/oneflow-17)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).
