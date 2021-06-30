@@ -61,6 +61,7 @@ Experimental features
 .. autofunction:: oneflow.experimental.zeros
 .. autofunction:: oneflow.experimental.zeros_like
 .. autofunction:: oneflow.experimental.ones_like
+.. autofunction:: oneflow.experimental.Tensor.new_ones
 .. autofunction:: oneflow.experimental.nn.Module
 .. autofunction:: oneflow.experimental.nn.Parameter
 .. autofunction:: oneflow.experimental.nn.Sequential
@@ -219,3 +220,5 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ZeroPad2d
 .. autofunction:: oneflow.experimental.tensor_buffer_to_tensor
 .. autofunction:: oneflow.experimental.tensor_to_tensor_buffer
+.. autofunction:: oneflow.experimental.Tensor.type_as
+.. autofunction:: oneflow.experimental.Tensor.long
