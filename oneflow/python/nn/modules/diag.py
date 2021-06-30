@@ -24,16 +24,21 @@ from typing import Optional
 class Diag(Module):
     def __init__(self, diagonal):
         super().__init__()
-        self._op = flow.builtin_op("diag").Input("in").Output("out").Attr("diagonal", diagonal).Build()
+        self._op = (
+            flow.builtin_op("diag")
+            .Input("in")
+            .Output("out")
+            .Attr("diagonal", diagonal)
+            .Build()
+        )
 
     def forward(self, input):
         return self._op(input)[0]
 
 
-
 @oneflow_export("diag")
 @experimental_api
-def diag_op(input, diagonal = 0):
+def diag_op(input, diagonal=0):
     r"""
     Returns a new tensor with the diagonal.
 
@@ -63,8 +68,8 @@ def diag_op(input, diagonal = 0):
 
     return Diag(diagonal)(input)
 
+
 if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=True)
-    
