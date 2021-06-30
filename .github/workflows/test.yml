@@ -99,7 +99,7 @@ jobs:
     steps:
       - name: Set environment variables
         run: |
-          set -x
+          sudo apt install -y tree
           echo "llvm_cache_dir=.cache/llvm" >> $GITHUB_ENV
       - name: Cache LLVM and Clang
         id: cache-llvm
@@ -121,6 +121,7 @@ jobs:
           repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Build Clang plug-in
         run: |
+          tree -a .
           ls ${{ env.LLVM_PATH }}
           cd tools/clang-plugin
           mkdir build
