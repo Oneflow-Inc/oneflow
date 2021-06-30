@@ -57,11 +57,11 @@ def less_equal_op(x, y):
         >>> flow.enable_eager_execution()
 
         >>> input1 = flow.Tensor(np.array([1, 2, 3]).astype(np.float32), dtype=flow.float32)
-        >>> input2 = flow.Tensor(np.array([1, 2, 4]).astype(np.float32), dtype=flow.float32)
+        >>> input2 = flow.Tensor(np.array([1, 1, 4]).astype(np.float32), dtype=flow.float32)
 
         >>> out = flow.le(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([1, 0, 1], dtype=oneflow.int8)
 
     """
     return LessEqual()(x, y)
