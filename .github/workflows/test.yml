@@ -93,7 +93,7 @@ jobs:
           exit 1
 
   static_check_with_clang:
-    name: Static check with Clang plug-in
+    name: Static analysis with Clang plug-in
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
