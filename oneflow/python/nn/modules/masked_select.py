@@ -45,18 +45,19 @@ class MaskedSelect(Module):
         broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
-            broadcast_x = flow.experimental.broadcast_like(
+            x = flow.experimental.broadcast_like(
                 x, broadcast_like_tensor, broadcast_axes=tuple(broadcast_x_axes)
             )
 
         if len(broadcast_mask_axes) != 0:
-            broadcast_mask = flow.experimental.broadcast_like(
+            mask = flow.experimental.broadcast_like(
                 mask, broadcast_like_tensor, broadcast_axes=tuple(broadcast_mask_axes)
             )
+        mask = mask.to(dtype=x.dtype)
 
-        res = flow.F.mul(broadcast_x, broadcast_mask)
+        res = flow.F.mul(x, mask)
         indices = flow.experimental.argwhere(res)
-        gather_res = flow.experimental.gather_nd(res, indices)
+        gather_res = flow.F.gather_nd(res, indices)
         gather_res = gather_res.flatten()
         return gather_res
 
