@@ -1012,9 +1012,7 @@ class Pow(Module):
 @register_tensor_op("pow")
 @experimental_api
 def pow_op(tensor, exponent):
-    r"""Takes the power of each element in input with exponent and returns a tensor with the result.
-    exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
-
+    r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
 
     .. math::
@@ -1024,11 +1022,17 @@ def pow_op(tensor, exponent):
 
     .. math::
         \text{out}_i = x_i ^ {\text{exponent}_i}
-​
+
+    Args:
+        - input (Tensor): the input tensor.
+        - exponent (int, float, Tensor): the exponent.
+
+    Returns:
+        Tensor: The result of variance on the specified axis of input Tensor
+
     For example:
 
     .. code-block:: python
-
 
         >>> import oneflow.experimental as flow
         >>> import numpy as np
@@ -1043,8 +1047,8 @@ def pow_op(tensor, exponent):
         >>> y = flow.Tensor(np.array([1.0, 2.0, 3.0, 4.0]))
         >>> out = flow.pow(x, y).numpy()
         >>> out
-        array([ 1.,  4.,  27., 256.], dtype=float32)
-
+        array([  1.,   4.,  27., 256.], dtype=float32)
+        
     """
     return Pow()(tensor, exponent)
 
