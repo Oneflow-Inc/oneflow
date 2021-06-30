@@ -135,6 +135,7 @@ jobs:
           export CC=${{ env.LLVM_PATH }}/bin/clang
           export CXX=${{ env.LLVM_PATH }}/bin/clang++
           export ONEFLOW_MAYBE_CHECK_ONLY_FN=/oneflow/
+          export LD_LIBRARY_PATH=${{ env.LLVM_PATH }}/lib:$LD_LIBRARY_PATH
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
