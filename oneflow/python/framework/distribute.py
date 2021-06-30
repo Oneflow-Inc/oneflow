@@ -162,20 +162,6 @@ def broadcast() -> oneflow._oneflow_internal.distribute.BroadcastDistribute:
     return oneflow._oneflow_internal.distribute.broadcast()
 
 
-@oneflow_export("distribute.partical_sum")
-def partical_sum() -> oneflow._oneflow_internal.distribute.ParticalSumDistribute:
-    r"""Generate a partical_sum scheme.
-
-    Returns:
-        ParticalSumDistribute: Partical_sum scheme object, often required by `with_distribute` method of `Blob` or `oneflow.get_variable`.
-
-    Example::
-        segment_ids = segment_ids.with_distribute(flow.distribute.partical_sum())
-
-    """
-    return oneflow._oneflow_internal.distribute.partical_sum()
-
-
 @oneflow_export("distribute.auto")
 def auto() -> oneflow._oneflow_internal.distribute.AutoDistribute:
     r"""Generate a broadcast scheme.

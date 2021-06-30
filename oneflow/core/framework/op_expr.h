@@ -29,9 +29,10 @@ limitations under the License.
 namespace oneflow {
 namespace cfg {
 
+class SbpParallel;
 class ParallelDistribution;
 
-}
+}  // namespace cfg
 namespace one {
 
 class OpExprGradFunctionIf;
@@ -184,9 +185,9 @@ class CastToConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   ~CastToConsistentOpExpr() = default;
 
-  static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
-                                           const std::vector<std::string>& sbp_parallels,
-                                           const std::shared_ptr<ParallelDesc>& parallel_desc);
+  static Maybe<CastToConsistentOpExpr> New(
+      const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+      const std::shared_ptr<ParallelDesc>& parallel_desc);
 
   static Maybe<CastToConsistentOpExpr> New(const std::string& op_name,
                                            Symbol<cfg::ParallelDistribution> parallel_distribution,
@@ -205,9 +206,9 @@ class CastFromConsistentOpExpr final : public CastConsistentOpExpr {
  public:
   ~CastFromConsistentOpExpr() = default;
 
-  static Maybe<CastFromConsistentOpExpr> New(const std::string& op_name,
-                                             const std::vector<std::string>& sbp_parallels,
-                                             const std::shared_ptr<ParallelDesc>& parallel_desc);
+  static Maybe<CastFromConsistentOpExpr> New(
+      const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
+      const std::shared_ptr<ParallelDesc>& parallel_desc);
 
   static Maybe<CastFromConsistentOpExpr> New(
       const std::string& op_name, Symbol<cfg::ParallelDistribution> parallel_distribution,

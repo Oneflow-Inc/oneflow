@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_meta.h"
@@ -266,7 +267,7 @@ py::class_<T, Tensor, std::shared_ptr<T>> ExportTensor(py::module& m, const char
 // used in mirrored_tensor.to(sbp, placement)
 Maybe<ConsistentTensor> CastLocalToConsistent(
     const std::shared_ptr<MirroredTensor>& mirrored_tensor,
-    const std::vector<std::string>& sbp_parallels,
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
   TensorTuple input_list;
   input_list.emplace_back(mirrored_tensor);
@@ -311,17 +312,23 @@ Maybe<MirroredTensor> CastConsistentToLocal(
 // used in consistent_tensor.to(sbp)
 Maybe<ConsistentTensor> CastParallelDistribution(
     const std::shared_ptr<ConsistentTensor>& consistent_tensor,
-    const std::vector<std::string>& sbp_parallels) {
+    const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) {
   TensorTuple input_list;
   input_list.emplace_back(consistent_tensor);
   auto outputs = std::make_shared<one::TensorTuple>(1);
+  std::vector<std::string> sbp_parallel_str_list(sbp_parallels.size());
+  {
+    for (int64_t i = 0; i < sbp_parallel_str_list.size(); ++i) {
+      sbp_parallel_str_list.at(i) = SbpParallelToString(*sbp_parallels.at(i));
+    }
+  }
   const auto& parallel_distribution_cast_op_expr =
       JUST(OpBuilder("hierarchical_parallel_cast", *JUST(UniqueStr("hierarchical_parallel_cast")))
                .Input("in")
                .Output("out")
-               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallels)
+               .Attr<std::vector<std::string>>("parallel_distribution", sbp_parallel_str_list)
                .Attr<std::string>("grad_mode", "restore")
-               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallels)
+               .Attr<std::vector<std::string>>("grad_parallel_distribution", sbp_parallel_str_list)
                .Build());
   const auto& session = JUST(GetDefaultSession());
   session->PushMirroredStrategyEnabled(false);
@@ -341,7 +348,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<MirroredTensor>(m, "LocalTensor")
       .def("to",
            [](const std::shared_ptr<MirroredTensor>& mirrored_tensor,
-              const std::vector<std::string>& sbp_parallels,
+              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
               const std::shared_ptr<ParallelDesc>& parallel_desc)
                -> std::shared_ptr<ConsistentTensor> {
              return CastLocalToConsistent(mirrored_tensor, sbp_parallels, parallel_desc)
@@ -350,7 +357,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   ExportTensor<ConsistentTensor>(m, "ConsistentTensor")
       .def("to",
            [](const std::shared_ptr<ConsistentTensor>& mirrored_tensor,
-              const std::vector<std::string>& sbp_parallels) -> std::shared_ptr<ConsistentTensor> {
+              const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels)
+               -> std::shared_ptr<ConsistentTensor> {
              return CastParallelDistribution(mirrored_tensor, sbp_parallels).GetPtrOrThrow();
            })
       .def("to_local",

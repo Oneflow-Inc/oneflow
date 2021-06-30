@@ -36,15 +36,11 @@ std::shared_ptr<AutoDistribute> g_auto(new AutoDistribute());
 
 std::shared_ptr<BroadcastDistribute> g_broadcast(new BroadcastDistribute());
 
-std::shared_ptr<ParticalSumDistribute> g_partical_sum(new ParticalSumDistribute());
-
 std::vector<std::shared_ptr<SplitDistribute>> g_split(MakeSplitDistributes(kAxisNumMax));
 
 std::shared_ptr<AutoDistribute> GlobalAutoDistribute() { return g_auto; }
 
 std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute() { return g_broadcast; }
-
-std::shared_ptr<ParticalSumDistribute> GlobalParticalSumDistribute() { return g_partical_sum; }
 
 Maybe<SplitDistribute> GlobalSplitDistribute(int axis) { return JUST(VectorAt(g_split, axis)); }
 

@@ -50,14 +50,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                                                           "AutoDistribute");
   py::class_<BroadcastDistribute, Distribute, std::shared_ptr<BroadcastDistribute>>(
       distribute, "BroadcastDistribute");
-  py::class_<ParticalSumDistribute, Distribute, std::shared_ptr<ParticalSumDistribute>>(
-      distribute, "ParticalSumDistribute");
   py::class_<SplitDistribute, Distribute, std::shared_ptr<SplitDistribute>>(distribute,
                                                                             "SplitDistribute")
       .def_property_readonly("axis", &SplitDistribute::axis);
   distribute.def("auto", &GlobalAutoDistribute);
   distribute.def("broadcast", &GlobalBroadcastDistribute);
-  distribute.def("partical_sum", &GlobalParticalSumDistribute);
   distribute.def("split", [](int axis) { return GlobalSplitDistribute(axis).GetPtrOrThrow(); });
 
   py::class_<BlobDesc, std::shared_ptr<BlobDesc>>(m, "BlobDesc")

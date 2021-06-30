@@ -827,28 +827,12 @@ class UndeterminedTensor:
 # used in Tensor.to func
 def _convert_tensor_to_consistent(tensor, sbp, placement):
     assert sbp is not None
-    if isinstance(sbp, (tuple, list)):
-        assert len(sbp) == len(placement.hierarchy)
+    if not isinstance(sbp, (tuple, list)):
+        assert len(placement.hierarchy) == 1
         parallel_distribution = [sbp]
     else:
-        assert len(placement.hierarchy) == 1
+        assert isinstance(sbp, (tuple, list)) and len(sbp) == len(placement.hierarchy)
         parallel_distribution = list(sbp)
-
-    def distribute_to_str(dist):
-        if dist is None:
-            return ""
-        elif type(dist) is str:
-            return dist
-        elif type(dist) is oneflow._oneflow_internal.distribute.SplitDistribute:
-            return "S({})".format(dist.axis)
-        elif type(dist) is oneflow._oneflow_internal.distribute.BroadcastDistribute:
-            return "B"
-        elif type(dist) is oneflow._oneflow_internal.distribute.ParticalSumDistribute:
-            return "P"
-        else:
-            raise ValueError("unsupported distribute")
-
-    parallel_distribution = list(map(distribute_to_str, parallel_distribution))
 
     cast_to_consistent_op_expr = CastFromConsistentOpExpr(
         id_util.UniqueStr("cast_to_consistent"), parallel_distribution, placement,

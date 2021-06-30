@@ -397,18 +397,14 @@ CastToConsistentOpExpr::CastToConsistentOpExpr(
     : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
 
 /* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
-    const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+    const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
   cfg::ParallelDistribution parallel_distribution;
-  cfg::SbpParallel sbp_parallel;
-  for (const std::string& sbp_parallel_str : sbp_parallels) {
-    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
-        << "invalid sbp_parallel: " << sbp_parallel_str;
-    *(parallel_distribution.mutable_sbp_parallel()->Add()) = sbp_parallel;
+  for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
+    *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
   }
-  return CastToConsistentOpExpr::New(op_name,
-                                     Symbol<cfg::ParallelDistribution>(parallel_distribution),
-                                     Symbol<ParallelDesc>(*parallel_desc));
+  return CastToConsistentOpExpr::New(op_name, SymbolOf(parallel_distribution),
+                                     SymbolOf(*parallel_desc));
 }
 
 /* static */ Maybe<CastToConsistentOpExpr> CastToConsistentOpExpr::New(
@@ -424,17 +420,14 @@ CastFromConsistentOpExpr::CastFromConsistentOpExpr(
     : CastConsistentOpExpr(op_name, parallel_distribution, parallel_desc) {}
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
-    const std::string& op_name, const std::vector<std::string>& sbp_parallels,
+    const std::string& op_name, const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels,
     const std::shared_ptr<ParallelDesc>& parallel_desc) {
   cfg::ParallelDistribution parallel_distribution;
-  cfg::SbpParallel sbp_parallel;
-  for (const std::string& sbp_parallel_str : sbp_parallels) {
-    CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_parallel_str, &sbp_parallel))
-        << "invalid sbp_parallel: " << sbp_parallel_str;
-    *(parallel_distribution.mutable_sbp_parallel()->Add()) = sbp_parallel;
+  for (Symbol<cfg::SbpParallel> sbp_symbol : sbp_parallels) {
+    *(parallel_distribution.mutable_sbp_parallel()->Add()) = *sbp_symbol;
   }
-  return CastFromConsistentOpExpr::New(op_name, parallel_distribution,
-                                       Symbol<ParallelDesc>(*parallel_desc));
+  return CastFromConsistentOpExpr::New(op_name, SymbolOf(parallel_distribution),
+                                       SymbolOf(*parallel_desc));
 }
 
 /* static */ Maybe<CastFromConsistentOpExpr> CastFromConsistentOpExpr::New(
