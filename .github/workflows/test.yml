@@ -100,7 +100,7 @@ jobs:
       - name: Set environment variables
         run: |
           set -x
-          echo "llvm_cache_dir=~/llvm" >> $GITHUB_ENV
+          echo "llvm_cache_dir=.cache/llvm" >> $GITHUB_ENV
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v2
