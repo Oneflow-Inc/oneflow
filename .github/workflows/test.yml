@@ -121,7 +121,7 @@ jobs:
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
       - name: Build Clang plug-in
         run: |
-          ls ${{ env.LLVM_PATH }}
+          tree ${{ env.LLVM_PATH }}
           cd tools/clang-plugin
           mkdir build
           cd build
