@@ -96,7 +96,7 @@ def masked_select_op(x, mask):
 @experimental_api
 def tensor_masked_select_op(x, mask):
     r"""
-    
+
     See :func:`oneflow.experimental.masked_select`
 
     """
@@ -106,4 +106,4 @@ def tensor_masked_select_op(x, mask):
 if __name__ == "__main__":
     import doctest
 
-    doctest.testmod(raise_on_error=False)
+    doctest.testmod(raise_on_error=True)
