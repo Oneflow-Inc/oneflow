@@ -42,7 +42,6 @@ locals()["uint8"] = oneflow._oneflow_internal.uint8
 locals()["record"] = oneflow._oneflow_internal.record
 locals()["tensor_buffer"] = oneflow._oneflow_internal.tensor_buffer
 
-
 from oneflow.python.version import __version__
 
 from oneflow.core.job.job_set_pb2 import ConfigProto
