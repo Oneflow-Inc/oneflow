@@ -103,7 +103,7 @@ jobs:
         with:
           path: |
             ./llvm
-          key: llvm-12.0
+          key: ${{ matrix.os }}-llvm-12
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
