@@ -97,17 +97,22 @@ jobs:
     runs-on: ubuntu-20.04
     if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
+      - name: Set environment variables
+        run: |
+          set -x
+          echo "llvm_cache_dir=~/llvm" >> $GITHUB_ENV
       - name: Cache LLVM and Clang
         id: cache-llvm
         uses: actions/cache@v2
         with:
           path: |
-            ./llvm
+            ${{ env.llvm_cache_dir }}
           key: ${{ runner.os }}-llvm-12
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
         with:
           version: "12.0"
+          directory: ${{ env.llvm_cache_dir }}
           cached: ${{ steps.cache-llvm.outputs.cache-hit }}
       - name: Check out OneFlow
         uses: actions/checkout@v2
