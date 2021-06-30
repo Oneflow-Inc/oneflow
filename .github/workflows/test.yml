@@ -127,7 +127,9 @@ jobs:
           cd build
           cmake .. -DCP_LLVM_INSTALL_DIR=${{ env.LLVM_PATH }}
           make -j$(nproc)
-          echo "clang_plugin_path=${PWD}/lib/libCheckUnusedMaybe.so" >> $GITHUB_ENV
+          clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
+          ldd ${clang_plugin_path}
+          echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
       - name: Check unused Maybe
         run: |
           mkdir build
