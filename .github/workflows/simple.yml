@@ -79,9 +79,12 @@ jobs:
           cmake_flags+=" -G '${{ matrix.cmake_generator }}'"
           cmake_flags+=" -DCMAKE_BUILD_TYPE=${{ matrix.cmake_build_type }}"
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
+          cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
+          cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
         shell: bash
       - name: Build (third party)
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           set -x
           mkdir -p build-third_party
@@ -91,6 +94,7 @@ jobs:
           cmake --build . -j $(nproc)
         shell: bash
       - name: Build (of_ccobj)
+        if: matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -98,7 +102,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target of_ccobj
         shell: bash
       - name: Build (oneflow_internal)
-        if: always()
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -106,7 +110,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_internal
         shell: bash
       - name: Build (oneflow_py)
-        if: always()
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -114,7 +118,7 @@ jobs:
           cmake --build . -j ${{ matrix.make_concurrency }} --target oneflow_py
         shell: bash
       - name: Build (oneflow_testexe)
-        if: always()
+        if: always() && matrix.cmake_generator != 'Ninja'
         run: |
           mkdir -p build
           cd build
@@ -126,7 +130,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. ${{ env.cmake_flags }} -DTHIRD_PARTY=OFF -DONEFLOW=ON
+          cmake .. ${{ env.cmake_flags }}
           cmake --build . -j ${{ matrix.make_concurrency }}
         shell: bash
       - name: Exe test
