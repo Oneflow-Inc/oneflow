@@ -116,6 +116,8 @@ class LogicalSliceAssign(Module):
         self.step = step
 
     def forward(self, x, update):
+        if update.dtype != x.dtype:
+            update = update.to(dtype=x.dtype)
         return flow.F.logical_slice_assign(
             x, update, start=self.start, stop=self.stop, step=self.step
         )
