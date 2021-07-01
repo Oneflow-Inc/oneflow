@@ -62,6 +62,11 @@ bool GlobalProcessCtx::IsThisProcessMaster() {
   return Global<ProcessCtx>::Get()->rank() == 0;
 }
 
+bool GlobalProcessCtx::IsMultiClient() {
+  CHECK_NOTNULL(Global<ProcessCtx>::Get());
+  return Global<ProcessCtx>::Get()->is_multi_client();
+}
+
 size_t GlobalProcessCtx::WorldSize() {
   CHECK_NOTNULL(Global<ProcessCtx>::Get());
   return Global<ProcessCtx>::Get()->ctrl_addr().size();

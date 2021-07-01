@@ -28,6 +28,7 @@ struct GlobalProcessCtx {
   static int64_t ThisNodeId();
   static int64_t NumOfProcessPerNode();
   static bool IsThisProcessMaster();
+  static bool IsMultiClient();
   static size_t WorldSize();
   static std::string LogDirEntry();
 };

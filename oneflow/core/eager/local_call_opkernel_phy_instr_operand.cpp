@@ -34,9 +34,9 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
     const {
-  // Sequantialize instructions in the same stream by consuming `compute_local_dep_object` of the
+  // Sequantialize nccl instructions by consuming `compute_local_dep_object` of the
   // same device.
-  if (opkernel().device()->type() == "cuda_d2d") {
+  if (opkernel().device()->type() == "nccl") {
     auto* device_dep_object = opkernel().device()->mut_compute_local_dep_object();
     DoEach(nullptr, device_dep_object->mut_local_dep_object()->mut_mirrored_object());
   }

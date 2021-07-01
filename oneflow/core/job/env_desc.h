@@ -24,8 +24,7 @@ namespace oneflow {
 class EnvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvDesc);
-  explicit EnvDesc(const EnvProto& env_proto, bool is_multi_client)
-      : env_proto_(env_proto), is_multi_client_(is_multi_client) {}
+  explicit EnvDesc(const EnvProto& env_proto) : env_proto_(env_proto) {}
   ~EnvDesc() = default;
 
   const EnvProto& env_proto() const { return env_proto_; }
@@ -40,11 +39,9 @@ class EnvDesc final {
   int32_t bootstrap_conf_ctrl_port() const;
   size_t TotalMachineNum() const;
   int64_t GetMachineId(const std::string& addr) const;
-  bool is_multi_client() const { return is_multi_client_; }
 
  private:
   EnvProto env_proto_;
-  bool is_multi_client_;
 };
 
 }  // namespace oneflow

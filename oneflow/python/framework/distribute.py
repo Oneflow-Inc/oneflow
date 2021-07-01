@@ -203,3 +203,8 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
+
+
+@oneflow_export("distributed.is_multi_client")
+def is_multi_client():
+    return oneflow._oneflow_internal.IsMultiClient()

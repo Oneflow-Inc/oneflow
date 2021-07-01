@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import os
 from collections import OrderedDict
 
 import oneflow as flow
@@ -55,15 +54,9 @@ def allreducefn(param_list, param, name, num):
     return allreduce
 
 
-def identity(x):
-    op = builtin_op("identity").Input("in").Output("out").Build()
-    return op(x)[0]
-
-
 @oneflow_export("ddp")
 def DDP(module: Module):
     num = flow.world_size()
-    # param_list = OrderedDict(reversed([(x, [False, False]) for x in module.parameters()]))
     param_list = OrderedDict(
         reversed([(x, [False, False, name]) for name, x in module.named_parameters()])
     )

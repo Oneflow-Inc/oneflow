@@ -48,4 +48,6 @@ inline size_t GetNodeSize() { return oneflow::GetNodeSize().GetOrThrow(); }
 
 inline size_t GetLocalRank() { return oneflow::GetLocalRank().GetOrThrow(); }
 
+inline bool IsMultiClient() { return oneflow::IsMultiClient().GetOrThrow(); }
+
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

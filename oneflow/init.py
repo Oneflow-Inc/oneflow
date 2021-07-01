@@ -16,8 +16,6 @@ limitations under the License.
 # __init__.py, rename to avoid being added to PYTHONPATH
 from __future__ import absolute_import
 
-import os
-
 import oneflow._oneflow_internal
 
 Size = oneflow._oneflow_internal.Size
@@ -67,21 +65,15 @@ oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 
 import oneflow.python.framework.env_util as env_util
 
-env_util.init_default_physical_env()
-
 env_util.api_env_init()
 
 del env_util
 
 
-def is_multi_client():
-    return True
-
-
 # capture oneflow methods so that they can be still accessed after `del oneflow`
 def _SyncOnMasterFn(get_rank, sync):
     def SyncOnMaster():
-        if is_multi_client() or get_rank() == 0:
+        if oneflow.python.framework.distribute.is_multi_client() or get_rank() == 0:
             sync()
 
     return SyncOnMaster
@@ -97,7 +89,7 @@ atexit.register(
     _SyncOnMasterFn(
         oneflow.python.framework.distribute.get_rank,
         oneflow._oneflow_internal.eager.multi_client.Sync
-        if is_multi_client()
+        if oneflow.python.framework.distribute.is_multi_client()
         else oneflow._oneflow_internal.eager.single_client.Sync,
     )
 )

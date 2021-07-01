@@ -93,8 +93,9 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto, bool is_multi
 #ifdef WITH_CUDA
   InitGlobalCudaDeviceProp();
 #endif
-  Global<EnvDesc>::New(env_proto, is_multi_client);
+  Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  Global<ProcessCtx>::Get()->set_is_multi_client(is_multi_client);
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {

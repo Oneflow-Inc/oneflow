@@ -58,7 +58,7 @@ inline Maybe<void> DestroyDefaultEnv() {
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get());
-  if (!Global<EnvDesc>::Get()->is_multi_client()) {
+  if (!GlobalProcessCtx::IsMultiClient()) {
     if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
   }
   ClusterInstruction::HaltBarrier();
@@ -99,6 +99,7 @@ inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }
 inline Maybe<size_t> GetWorldSize() { return GlobalProcessCtx::WorldSize(); }
 inline Maybe<size_t> GetNodeSize() { return GlobalProcessCtx::NodeSize(); }
 inline Maybe<size_t> GetLocalRank() { return GlobalProcessCtx::LocalRank(); }
+inline Maybe<bool> IsMultiClient() { return GlobalProcessCtx::IsMultiClient(); }
 
 }  // namespace oneflow
 
