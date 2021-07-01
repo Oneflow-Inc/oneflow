@@ -124,11 +124,12 @@ jobs:
           echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
       - name: Check unused Maybe (by building OneFlow with Clang plug-in)
         run: |
+          export PROJECT_DIR=${PWD}
           mkdir build
           cd build
           export CC=clang-12
           export CXX=clang++-12
-          export ONEFLOW_MAYBE_CHECK_ONLY_FN=/oneflow/oneflow/
+          export ONEFLOW_MAYBE_CHECK_ONLY_FN=${PROJECT_DIR}/oneflow/
           export ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
