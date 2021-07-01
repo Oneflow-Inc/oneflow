@@ -69,18 +69,19 @@ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool al
 template<typename T>
 T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
                           bool align_corners) {
+  T src_index;
   if (align_corners) {
-    return scale * static_cast<T>(dst_index);
+    src_index = scale * static_cast<T>(dst_index);
   } else {
-    T src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-    int64_t sx = static_cast<int64_t>(floorf(src_index));
-
-    src_index = (sx < 0) ? 0 : src_index;
-    if (scale > static_cast<T>(1.0)) {
-      src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
-    }
-    return src_index;
+    src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
   }
+  int64_t sx = static_cast<int64_t>(floorf(src_index));
+
+  src_index = (sx < 0) ? 0 : src_index;
+  if (scale > static_cast<T>(1.0)) {
+    src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
+  }
+  return src_index;
 }
 
 template<typename T>

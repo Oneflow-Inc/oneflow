@@ -65,9 +65,6 @@ REGISTER_USER_OP("upsample_grad")
       if (ctx->Attr<std::string>("data_format") != "channels_first" || dy_shape.NumAxes() != 4) {
         LOG(FATAL) << "upsample_nearest only supports NCHW";
       }
-      // *dx_shape = Shape({dy_shape.At(0), dy_shape.At(1),
-      //                    static_cast<int32_t>(std::round(dy_shape.At(2) / height_scale)),
-      //                    static_cast<int32_t>(std::round(dy_shape.At(3) / width_scale))});
       *dx_shape = ctx->InputShape("x", 0);
       return Maybe<void>::Ok();
     })
