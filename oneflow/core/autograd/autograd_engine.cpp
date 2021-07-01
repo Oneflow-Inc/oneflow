@@ -204,7 +204,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   return input_now_grads;
 }
 
-std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
+Maybe<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
     const std::string& op_type_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
@@ -212,7 +212,7 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
+      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
       StackFunctionNode* stack_function_node =
           dynamic_cast<StackFunctionNode*>(in_tensor->mut_grad_fn_node().get());
       if (!stack_function_node->is_in_stack()) {
@@ -229,7 +229,7 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   }
   func_node->set_is_in_stack(true);
   node_list_.push_front(func_node);
-  return func_node;
+  return std::static_pointer_cast<FunctionNode>(func_node);
 }
 
 void GraphFunctionNode::ReleaseData() {
@@ -413,7 +413,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   return input_now_grads;
 }
 
-std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
+Maybe<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
     const std::string& op_type_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
@@ -421,7 +421,7 @@ std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
+      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
     }
   }
 
