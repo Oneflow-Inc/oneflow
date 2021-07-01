@@ -20,8 +20,8 @@ namespace oneflow {
 namespace {
 
 REGISTER_USER_OP("mlir_jit")
-    .Input("in")
-    .Output("out")
+    .InputWithMinimum("in", 0)
+    .OutputWithMinimum("out", 0)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const Shape& in_shape = ctx->InputShape("in", 0);
       Shape* out_shape = ctx->OutputShape("out", 0);

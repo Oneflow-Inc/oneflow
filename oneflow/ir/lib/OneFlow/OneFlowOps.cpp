@@ -171,12 +171,41 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 
   if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
     if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-      NamedAttrList attributes(cast_op->getAttrDictionary());
+      NamedAttrList attributes;
       attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-      auto jit_op_name = cast_op->getAttrOfType<StringAttr>("op_name").getValue() + "@@"
-                         + mul_op->getAttrOfType<StringAttr>("op_name").getValue();
-      SmallString<64> data;
-      attributes.set("op_name", rewriter.getStringAttr(jit_op_name.toStringRef(data)));
+      // TODO: extract a function to strip attrs from a op to be replace
+      attributes.set("device_tag", mul_op.device_tagAttr());
+      attributes.set("hierarchy", mul_op.hierarchyAttr());
+      using LBNVec = SmallVector<StringRef, 8>;
+      using LBNSegVec = SmallVector<int32_t, 8>;
+
+      LBNVec input_lbn_segment_keys;
+      LBNSegVec input_lbn_segment_sizes;
+      input_lbn_segment_keys.push_back("in");
+      input_lbn_segment_sizes.push_back(1);
+
+      attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
+      attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
+
+      // TODO: extract a function to generate op name for jit op from ops being fused
+      SmallString<64> op_name_storage;
+      auto op_name = (cast_op.op_name() + "@@" + mul_op.op_name()).toStringRef(op_name_storage);
+      attributes.set("op_name", rewriter.getStringAttr(op_name));
+
+      LBNVec output_lbns;
+      LBNVec output_lbn_segment_keys;
+      LBNSegVec output_lbn_segment_sizes;
+      // TODO: use functions in oneflow to genearated bn
+      SmallString<64> output_lbn_storage;
+      output_lbns.push_back((op_name + "/" + "out_0").toStringRef(output_lbn_storage));
+      output_lbn_segment_keys.push_back("out");
+      output_lbn_segment_sizes.push_back(1);
+      attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
+      attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
+      attributes.set("output_lbn_segment_sizes",
+                     rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
+
+      attributes.set("scope_symbol_id", mul_op.scope_symbol_idAttr());
       auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(),
                                                 /* resultTypes */ mul_op->getResultTypes(),
                                                 /* operands */ cast_op->getOperands(),
