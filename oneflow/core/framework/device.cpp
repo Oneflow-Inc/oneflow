@@ -118,6 +118,11 @@ std::string Device::ToString() const {
   return ss.str();
 }
 
+std::ostream& operator<<(std::ostream& out, const Device& device) {
+  out << device.ToString();
+  return out;
+}
+
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = parallel_desc.device_tag();
   if (parallel_desc.device_tag() == "gpu") { type = "cuda"; }

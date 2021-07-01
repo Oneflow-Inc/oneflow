@@ -381,7 +381,7 @@ Maybe<void> GraphAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const Tensor
                                                                     bool retain_graph,
                                                                     bool create_graph) {
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
   GraphTask graph_task(outputs, retain_graph, create_graph);
   JUST(graph_task.ComputeDependencies());
@@ -400,7 +400,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
     inputs.at(i)->set_retain_grad(true);
   }
   for (int i = 0; i < outputs.size(); ++i) {
-    JUST(outputs.at(i)->now_grad_arg()->PushPartialTensor(out_grads.at(i)));
+    JUST(JUST(outputs.at(i)->now_grad_arg())->PushPartialTensor(out_grads.at(i)));
   }
 
   JUST(graph_task.ComputeDependenciesAndPruneNode(inputs));
@@ -408,7 +408,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
 
   // Gets input grads and resume retain_grad
   for (int i = 0; i < inputs.size(); ++i) {
-    input_now_grads->at(i) = inputs.at(i)->acc_grad();
+    input_now_grads->at(i) = JUST(inputs.at(i)->acc_grad());
     if (!ori_retain_grad.at(i)) {
       inputs.at(i)->set_acc_grad(nullptr);
       inputs.at(i)->set_retain_grad(false);
