@@ -376,6 +376,7 @@ jobs:
           extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
           echo "image_name=oneflow-test:0.1" >> $GITHUB_ENV
+          echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
       - name: Build docker image for testing
         run: |
           bash docker/ci/test/build.sh
@@ -473,7 +474,7 @@ jobs:
             ${{ env.extra_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
             ${{ env.image_name }} \
-            bash -c "python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
@@ -481,7 +482,7 @@ jobs:
             ${{ env.extra_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
             ${{ env.image_name }} \
-            bash -c "python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
