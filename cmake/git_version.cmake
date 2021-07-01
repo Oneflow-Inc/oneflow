@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
-
 execute_process(COMMAND git describe --tags --always --dirty=-snapshot
         WORKING_DIRECTORY ${OF_GIT_VERSION_ROOT}
         OUTPUT_VARIABLE GIT_REV
         ERROR_QUIET)
-
-if ("${GIT_REV}" STREQUAL "")
+if (("${GIT_REV}" STREQUAL "") OR (NOT BUILD_GIT_VERSION))
     set(GIT_REV "N/A")
 else()
     string(STRIP "${GIT_REV}" GIT_REV)
