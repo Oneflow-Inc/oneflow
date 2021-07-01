@@ -152,7 +152,7 @@ Maybe<Operator> MakeOp(const UserOpExpr& user_op_expr, const AttrMap& attrs,
         [&](int32_t i) { return output_mut_metas.at(i).mut_tensor_meta(); }));
   }
   const auto& op = JUST(MakeOp(user_op_expr, infer_args.attrs(), parallel_desc->device_tag()));
-  op->FillOpParallelDesc(parallel_desc.shared_from_symbol());
+  JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
   {
     // Infer parallel distribution.
     cfg::ParallelDistributionSignature parallel_distribution_constraints;
