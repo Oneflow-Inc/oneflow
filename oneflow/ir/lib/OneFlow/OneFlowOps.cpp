@@ -175,6 +175,7 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
       attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
       // TODO: extract a function to strip attrs from a op to be replace
       attributes.set("device_tag", mul_op.device_tagAttr());
+      attributes.set("device_name", mul_op.device_nameAttr());
       attributes.set("hierarchy", mul_op.hierarchyAttr());
       using LBNVec = SmallVector<StringRef, 8>;
       using LBNSegVec = SmallVector<int32_t, 8>;
