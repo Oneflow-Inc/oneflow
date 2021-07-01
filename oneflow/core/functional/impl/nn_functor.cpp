@@ -60,7 +60,7 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
-    std::vector<int32_t> kernel_size_vec;
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.push_back((weight->shape())->At(i + 2));
     }
@@ -88,17 +88,17 @@ class ConvBaseFunctor {
   int32_t num_spatial_dims_;
 };
 
-class Conv1DFunctor : public ConvBaseFunctor {
+class Conv1dFunctor : public ConvBaseFunctor {
  public:
-  Conv1DFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
+  Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
   }
 };
 
-class Conv2DFunctor : public ConvBaseFunctor {
+class Conv2dFunctor : public ConvBaseFunctor {
  public:
-  Conv2DFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
+  Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
   }
@@ -313,8 +313,8 @@ class NormalizationFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
-  m.add_functor<impl::Conv1DFunctor>("Conv1D");
-  m.add_functor<impl::Conv2DFunctor>("Conv2D");
+  m.add_functor<impl::Conv1dFunctor>("Conv1d");
+  m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::BroadcastMatMulFunctor>("BroadcastMatMul");

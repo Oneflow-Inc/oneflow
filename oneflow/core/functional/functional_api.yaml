@@ -240,13 +240,13 @@
 
 - name: "conv1d"
   signature:
-    "Tensor Conv1D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv1d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
   
