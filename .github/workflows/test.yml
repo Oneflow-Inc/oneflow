@@ -443,24 +443,46 @@ jobs:
           docker run $extra_docker_args \
             ${image_name} \
             bash -c "bash ci/test/try_install.sh && bash ci/test/dry_run_test.sh"
+      - name: Set environment variables (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          set -x
+          echo "image_tag=pytorch/pytorch:1.9.0-cuda10.2-cudnn7-runtime" >> $GITHUB_ENV
+          echo "image_url=https://oneflow-static.oss-cn-beijing.aliyuncs.com/img/pytorchpytorch1.9.0-cuda10.2-cudnn7-runtime.tar.gz" >> $GITHUB_ENV
+
+          extra_docker_args="${{ env.extra_docker_args }}"
+
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/pytorch/pytorch/1.9.0-cuda10.2-cudnn7-runtime"
+          extra_docker_args+=" -v ${img_cache_base_dir}/local-bin:/root/.local/bin"
+          extra_docker_args+=" -v ${img_cache_base_dir}/site-packages37:/root/.local/lib/python3.7/site-packages"
+
+      - name: Check image (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface'
+        run: |
+          if [[ "$(docker images -q ${{ env.image_tag }} 2> /dev/null)" == "" ]]; then
+            echo "should_load_img=1" >> $GITHUB_ENV
+          fi
+      - name: Load image (cuda_new_interface)
+        if: matrix.test_suite == 'cuda_new_interface' && env.should_load_img == '1'
+        run: |
+          wget ${{ env.image_url }}
+          docker load -i $(basename "${{ env.image_url }}")
       - name: Module API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
-          set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/modules \
-            ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            ${{ env.image_name }} \
+            bash -c "python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Tensor API test
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
-          set -x
           docker run \
-            $extra_docker_args \
+            ${{ env.extra_docker_args }} \
             -e ONEFLOW_TEST_DIR=$PWD/oneflow/python/test/tensor \
-            ${image_name} \
-            bash -c "bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
+            ${{ env.image_name }} \
+            bash -c "python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple && bash ci/test/try_install.sh && bash ci/test/generic_test.sh"
       - name: Op test
         timeout-minutes: 45
         if: matrix.test_suite == 'cpu' || matrix.test_suite == 'cuda_op' || matrix.test_suite == 'cpu_op_eager' || matrix.test_suite == 'cuda_op_eager'
