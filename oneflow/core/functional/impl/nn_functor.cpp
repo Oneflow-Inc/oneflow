@@ -309,6 +309,47 @@ class NormalizationFunctor {
   std::shared_ptr<OpExpr> norm_training_op_;
 };
 
+class PadFunctor {
+ public:
+  PadFunctor() {
+    constant_pad_ = CHECK_JUST(one::OpBuilder("constant_pad2d").Input("x").Output("y").Build());
+    reflect_pad_ = CHECK_JUST(one::OpBuilder("reflection_pad2d").Input("x").Output("y").Build());
+    replicate_pad_ = CHECK_JUST(one::OpBuilder("replication_pad2d").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& pad,
+                           const std::string& mode, const Scalar& value) const {
+    size_t padding_size = 2 * x->shape()->NumAxes();
+    CHECK_LE_OR_RETURN(pad.size(), padding_size)
+        << "Pad size should less than or equal to input axes * 2.";
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int64_t>>("padding", pad));
+    if (mode == "constant") {
+      if (IsFloatingDataType(x->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", JUST(value.As<double>())));
+        JUST(attrs.SetAttr<int64_t>("integral_value", 0));
+      } else if (IsIntegralDataType(x->dtype())) {
+        JUST(attrs.SetAttr<double>("floating_value", 0));
+        JUST(attrs.SetAttr<int64_t>("integral_value", JUST(value.As<int64_t>())));
+      } else {
+        UNIMPLEMENTED_THEN_RETURN() << "Data type should be floating or integral type.";
+      }
+      return OpInterpUtil::Dispatch<Tensor>(*constant_pad_, {x}, attrs);
+    } else if (mode == "reflect") {
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
+    } else if (mode == "replicate") {
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
+                                  << ", but only constant, reflect and replicate are valid.";
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> constant_pad_;
+  std::shared_ptr<OpExpr> reflect_pad_;
+  std::shared_ptr<OpExpr> replicate_pad_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -324,6 +365,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MaxPool2DFunctor>("MaxPool2D");
   m.add_functor<impl::SparseSoftmaxCrossEntropyFunctor>("SparseSoftmaxCrossEntropy");
   m.add_functor<impl::NormalizationFunctor>("Normalization");
+  m.add_functor<impl::PadFunctor>("Pad");
 };
 
 }  // namespace functional
