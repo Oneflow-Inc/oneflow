@@ -139,6 +139,10 @@
   signature: "Tensor Relu(Tensor x)"
   bind_python: True
 
+- name: "relu_grad"
+  signature: "Tensor ReluGrad(Tensor dy, Tensor y)"
+  bind_python: False
+
 - name: "hardtanh"
   signature: "Tensor HardTanh(Tensor x, *, Double min_val, Double max_val)"
   bind_python: True
@@ -163,6 +167,10 @@
   signature: "Tensor Gelu(Tensor x)"
   bind_python: True
 
+- name: "gelu_grad"
+  signature: "Tensor GeluGrad(Tensor dy, Tensor x)"
+  bind_python: False
+
 - name: "sigmoid"
   signature: "Tensor Sigmoid(Tensor x)"
   bind_python: True
@@ -171,6 +179,10 @@
   signature: "Tensor HardSigmoid(Tensor x)"
   bind_python: True
 
+- name: "hardsigmoid_grad"
+  signature: "Tensor HardSigmoidGrad(Tensor dy, Tensor x)"
+  bind_python: False
+
 - name: "softmax"
   signature: "Tensor Softmax(Tensor x)"
   bind_python: True
@@ -178,6 +190,10 @@
 - name: "hardswish"
   signature: "Tensor HardSwish(Tensor x)"
   bind_python: True
+
+- name: "hardswish_grad"
+  signature: "Tensor HardSwishGrad(Tensor dy, Tensor x)"
+  bind_python: False
 
 - name: "leaky_relu"
   signature: "Tensor LeakyRelu(Tensor x, *, Float alpha)"
@@ -240,7 +256,7 @@
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
@@ -260,7 +276,9 @@
   bind_python: False
 
 - name: "conv_bias_grad"
-  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  signature:
+    "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims,
+                         String data_format=\"channels_first\")"
   bind_python: False
 
 - name: "expand"
@@ -358,7 +376,9 @@
   bind_python: True
 
 - name: "slice_update"
-  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
+                        Int64List step)"
   bind_python: True
 
 - name: "logical_slice"
@@ -366,7 +386,9 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop,
+                             Int64List step)"
   bind_python: True
 
 - name: "squeeze"
@@ -467,3 +489,35 @@
 - name: "triu"
   signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
   bind_python: True
+  
+- name: "clip_by_scalar"
+  signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
+  bind_python: True
+
+- name: "clip_by_scalar_grad"
+  signature: "Tensor ClipByScalarGrad(Tensor dy, Tensor x, *, Scalar min, Scalar max)"
+  bind_python: False
+
+- name: "clip_by_scalar_min"
+  signature: "Tensor ClipByScalarMin(Tensor x, *, Scalar min)"
+  bind_python: True
+
+- name: "clip_by_scalar_min_grad"
+  signature: "Tensor ClipByScalarMinGrad(Tensor dy, Tensor x, *, Scalar min)"
+  bind_python: False
+
+- name: "clip_by_scalar_max"
+  signature: "Tensor ClipByScalarMax(Tensor x, *, Scalar max)"
+  bind_python: True
+
+- name: "clip_by_scalar_max_grad"
+  signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"
+  bind_python: False
+
+- name: "pad"
+  signature: "Tensor Pad(Tensor x, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: True
+
+- name: "pad_grad"
+  signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: False

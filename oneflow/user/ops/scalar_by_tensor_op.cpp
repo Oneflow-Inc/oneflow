@@ -54,7 +54,7 @@ using GetSbpFn = std::function<Maybe<void>(user_op::SbpContext*)>;
 GetSbpFn MakeGetSbpFn(GetSbpFn extra) {
   return [extra](user_op::SbpContext* ctx) -> Maybe<void> {
     JUST(extra(ctx));
-    GetBasicSbpSignature(ctx);
+    JUST(GetBasicSbpSignature(ctx));
     return Maybe<void>::Ok();
   };
 }
