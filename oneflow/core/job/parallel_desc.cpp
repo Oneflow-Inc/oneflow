@@ -148,14 +148,14 @@ Maybe<int64_t> ParallelDesc::ParallelId4MachineDeviceId(int64_t machine_id,
   return device_iter->second;
 }
 
-Maybe<const Device> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
+Maybe<Symbol<Device>> ParallelDesc::GetDevice4CurrentProcessCtx(int64_t* parallel_id) const {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
   if (TryGetParallelId(machine_id, device_id, parallel_id)) {
     return Device::ThreadLocalGetOrNew(device_tag(), device_id);
   } else {
-    return std::shared_ptr<const Device>();
+    return Symbol<Device>();
   }
 }
 

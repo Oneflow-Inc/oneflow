@@ -37,7 +37,7 @@ namespace {
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
   const auto& shape = std::make_shared<Shape>();
   const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
 }
 
 }  // namespace
@@ -207,9 +207,8 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 }
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithPhyTensor(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-    const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
-    bool is_leaf) {
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
+    bool requires_grad, bool is_leaf) {
   const auto& shape = consistent_tensor_meta->shape_ptr();
   const auto& dtype = consistent_tensor_meta->dtype();
   const auto& parallel_distribution = consistent_tensor_meta->parallel_distribution();
@@ -229,9 +228,8 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 }
 
 /*static*/ Maybe<EagerConsistentTensorImpl> EagerConsistentTensorImpl::NewWithoutPhyTensor(
-    Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-    const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
-    bool is_leaf) {
+    Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device, int64_t parallel_id,
+    bool requires_grad, bool is_leaf) {
   const auto& autograd_meta = NewAutogradMeta(requires_grad, is_leaf);
   auto* tensor_impl = new EagerConsistentTensorImpl(consistent_tensor_meta, autograd_meta,
                                                     std::shared_ptr<MirroredTensor>());

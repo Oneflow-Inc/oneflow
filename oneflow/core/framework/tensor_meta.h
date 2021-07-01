@@ -63,19 +63,19 @@ class TensorMeta : public user_op::TensorDesc {
 class MirroredTensorMeta : public TensorMeta {
  public:
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     const std::shared_ptr<const Device>& device)
+                     Symbol<Device> device)
       : TensorMeta(shape, dtype), device_(device) {}
   virtual ~MirroredTensorMeta() = default;
 
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Symbol<Device>& device() const { return device_; }
 
-  std::shared_ptr<const Device>* mut_device() { return &device_; }
+  Symbol<Device>* mut_device() { return &device_; }
 
   bool operator==(const MirroredTensorMeta& other) const;
   size_t CalcHashValue() const;
 
  private:
-  std::shared_ptr<const Device> device_;
+  Symbol<Device> device_;
 };
 
 class ConsistentTensorMeta : public TensorMeta {

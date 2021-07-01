@@ -92,14 +92,14 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Getters
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  const std::shared_ptr<const Device>& device() const { return tensor_meta_->device(); }
+  const Symbol<Device>& device() const { return tensor_meta_->device(); }
   const std::shared_ptr<const MirroredTensorMeta>& tensor_meta() const { return tensor_meta_; }
 
   // Setters
   MirroredTensorMeta* mut_tensor_meta() {
     return const_cast<MirroredTensorMeta*>(tensor_meta_.get());
   }
-  Maybe<std::shared_ptr<const Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
+  Maybe<Symbol<Device>*> mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() { OF_UNIMPLEMENTED(); }
 
   virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }
@@ -251,18 +251,15 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
                                               bool requires_grad, bool is_leaf);
 
   static Maybe<EagerConsistentTensorImpl> NewWithPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-      const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
-      bool is_leaf);
+      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
+      int64_t parallel_id, bool requires_grad, bool is_leaf);
 
   static Maybe<EagerConsistentTensorImpl> NewWithoutPhyTensor(
-      Symbol<ConsistentTensorMeta> consistent_tensor_meta,
-      const std::shared_ptr<const Device>& device, int64_t parallel_id, bool requires_grad,
-      bool is_leaf);
+      Symbol<ConsistentTensorMeta> consistent_tensor_meta, Symbol<Device> device,
+      int64_t parallel_id, bool requires_grad, bool is_leaf);
 
   typedef Maybe<EagerConsistentTensorImpl> (*NewMethod)(Symbol<ConsistentTensorMeta>,
-                                                        const std::shared_ptr<const Device>&,
-                                                        int64_t, bool, bool);
+                                                        Symbol<Device>, int64_t, bool, bool);
 
  private:
   EagerConsistentTensorImpl(Symbol<ConsistentTensorMeta> consistent_tensor_meta,

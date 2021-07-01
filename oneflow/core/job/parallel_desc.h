@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -93,7 +94,7 @@ class ParallelDesc final {
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
   // return empty shared_ptr if no Device found for current ProcessCtx.
-  Maybe<const Device> GetDevice4CurrentProcessCtx(int64_t* parallel_id) const;
+  Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(int64_t* parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;

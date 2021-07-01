@@ -503,22 +503,6 @@ void LinkTickTaskProto(Plan* plan, TaskProto* identity_tick, TaskProto* src_tick
   UpdateSoleObnRegstDescId(plan, identity_tick);
 }
 
-void FixRegstHostMemCase(TaskProto* task_proto,
-                         const std::function<const TaskProto*(int64_t)>& TaskProto4TaskId) {
-  for (auto& pair : *task_proto->mutable_produced_regst_desc()) {
-    auto* regst = &pair.second;
-    CHECK(regst->mem_case().has_host_mem());
-    CHECK_EQ(regst->mem_case().host_mem().has_cuda_pinned_mem(), false);
-    bool used_by_network = false;
-    for (int64_t consumer_task_id : regst->consumer_task_id()) {
-      const auto* consumer_task_proto = TaskProto4TaskId(consumer_task_id);
-      used_by_network =
-          used_by_network || (task_proto->machine_id() != consumer_task_proto->machine_id());
-    }
-    regst->mutable_mem_case()->mutable_host_mem()->set_used_by_network(used_by_network);
-  }
-}
-
 void LinkMainPlan(Plan* plan, Plan&& main_plan,
                   const std::vector<std::map<int64_t, std::string>>& identity_tick_op_names) {
   std::function<bool(const TaskProto*)> IsInterfaceTickTockTask;
@@ -558,7 +542,6 @@ void LinkMainPlan(Plan* plan, Plan&& main_plan,
           plan, identity_tick,
           sole_tick_op_name2sole_task.at(cs.machine_id2source_tick_op_name().at(machine_id)),
           sole_tick_op_name2sole_task.at(cs.machine_id2sink_tick_op_name().at(machine_id)));
-      FixRegstHostMemCase(identity_tick, TaskProto4TaskId);
     }
   }
   {
