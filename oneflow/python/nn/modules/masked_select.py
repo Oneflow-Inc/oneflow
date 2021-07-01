@@ -40,8 +40,8 @@ class MaskedSelect(Module):
             if max_dim != mask.shape[i]:
                 broadcast_mask_axes.append(i)
         broadcast_like_tensor = flow.experimental.zeros(
-            tuple(broadcast_like_shape), dtype=flow.float32
-        ).to(x.device.type)
+            tuple(broadcast_like_shape), dtype=flow.float32, device=x.device,
+        )
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
             x = flow.experimental.broadcast_like(
