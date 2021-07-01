@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -33,6 +34,7 @@ Maybe<void> ParseDeviceNameConf(const std::string& device_name, int64_t* mchn_id
                                 std::string* device_id_str);
 
 class ParallelContext;
+class Device;
 
 namespace cfg {
 class ParallelConf;
@@ -55,7 +57,7 @@ class ParallelDesc final {
   // Getters
   const Maybe<int64_t>& symbol_id() const { return symbol_id_; }
   DeviceType device_type() const { return device_type_; }
-  std::string device_tag() const { return parallel_conf_.device_tag(); }
+  const std::string& device_tag() const { return parallel_conf_.device_tag(); }
   std::shared_ptr<HashMap<int64_t, std::shared_ptr<std::vector<int64_t>>>>
   machine_id2sorted_dev_phy_ids() const {
     return machine_id2sorted_dev_phy_ids_;
@@ -91,6 +93,8 @@ class ParallelDesc final {
   Maybe<int64_t> MachineId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> DeviceId4ParallelId(int64_t parallel_id) const;
   Maybe<int64_t> ParallelId4MachineDeviceId(int64_t machine_id, int64_t device_id) const;
+  // return empty shared_ptr if no Device found for current ProcessCtx.
+  Maybe<Symbol<Device>> GetDevice4CurrentProcessCtx(int64_t* parallel_id) const;
   bool Containing(int64_t machine_id, int64_t device_id) const;
   // this api is exported to python as Containing
   bool Bigger(const ParallelDesc& rhs) const;
@@ -108,6 +112,7 @@ class ParallelDesc final {
   Maybe<void> SanityCheck();
   Maybe<void> CheckWithResourceDesc(const ResourceDesc& resource_desc);
   bool EqualsMachineId2SortedDevPhyIds(const ParallelDesc& rhs) const;
+  bool TryGetParallelId(int64_t machine_id, int64_t device_id, int64_t* parallel_id) const;
 
   Maybe<int64_t> symbol_id_;
   DeviceType device_type_;
