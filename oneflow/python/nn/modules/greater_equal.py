@@ -60,7 +60,7 @@ def greater_equal_op(x, y):
 
         >>> out = flow.ge(input1, input2)
         >>> out
-        tensor([1, 0, 0], dtype=oneflow.int8)
+        tensor([1, 1, 0], dtype=oneflow.int8)
 
     """
     return GreaterEqual()(x, y)
