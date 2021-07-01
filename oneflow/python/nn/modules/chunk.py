@@ -27,33 +27,37 @@ class Chunk(Module):
 
     def forward(self, input, chunks, dim):
         if dim is not None:
-            assert (
-                input.shape[dim] > 0
-            ), "chunk expects at least a 1-dimensional tensor"
+            assert input.shape[dim] > 0, "chunk expects at least a 1-dimensional tensor"
 
-            assert (
-                chunks > 0
-            ), "chunk expects `chunks` to be greater than 0"
-            
+            assert chunks > 0, "chunk expects `chunks` to be greater than 0"
+
             channel = input.dim()
             dim_size = input.shape[dim]
             chunk_size = (int)((dim_size + chunks - 1) / chunks)
-            last_chunk_size = chunk_size if dim_size % chunk_size == 0  else  dim_size % chunk_size
+            last_chunk_size = (
+                chunk_size if dim_size % chunk_size == 0 else dim_size % chunk_size
+            )
             chunk_dim_dict = {}
             tup_ndim = []
             splits = []
 
-            for chunk in range(0, chunks): 
+            for chunk in range(0, chunks):
                 if dim_size % chunk_size == 0:
                     start = chunk * chunk_size
                     stop = (chunk + 1) * chunk_size
                     step = 1
                 else:
-                    start = chunk * chunk_size if chunk < chunks -1 else dim_size - 1 - last_chunk_size
-                    stop = (chunk + 1) * chunk_size if chunk < chunks -1 else dim_size - 1
+                    start = (
+                        chunk * chunk_size
+                        if chunk < chunks - 1
+                        else dim_size - 1 - last_chunk_size
+                    )
+                    stop = (
+                        (chunk + 1) * chunk_size if chunk < chunks - 1 else dim_size - 1
+                    )
                     step = 1
                 chunk_dim_dict.setdefault(dim, []).append([start, stop, step])
-               
+
             for k, v in chunk_dim_dict.items():
                 for v_chunk in v:
                     tup_list = []
@@ -62,8 +66,10 @@ class Chunk(Module):
                             tup_list.append([None, None, None])
                         else:
                             tup_list.append(v_chunk)
-                    splits.append(flow.experimental.slice(input, slice_tup_list=tup_list))
-    
+                    splits.append(
+                        flow.experimental.slice(input, slice_tup_list=tup_list)
+                    )
+
             return splits
 
 
@@ -95,32 +101,8 @@ def chunk_op(input, chunks, dim):
     """
     return Chunk()(input, chunks, dim)
 
+
 if __name__ == "__main__":
     import doctest
 
     doctest.testmod(raise_on_error=False)
-
-                        
-
-            
-
-
-
-            
-                
-
-                            
-                             
-
-
-            
-
-
-
-
-
-
-            
-
-
-        

@@ -150,7 +150,7 @@ def logical_slice_assign_op(x, update, slice_tup_list: Sequence[Tuple[int, int, 
 
     Returns:
         [type]: [description]
-    """    
+    """
     start, stop, step = GetSliceAttrs(slice_tup_list, x.shape)
     return LogicalSliceAssign(start, stop, step)(x, update)
 

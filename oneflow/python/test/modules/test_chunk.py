@@ -25,12 +25,15 @@ from test_util import GenArgList
 
 
 def _test_chunk_forward(test_case, device):
-    input = flow.Tensor([[1, 2, 3], [7, 8, 9]], dtype = flow.float32)
+    input = flow.Tensor([[1, 2, 3], [7, 8, 9]], dtype=flow.float32)
     chunks = 2
-    dim = 0  
+    dim = 0
     of_out = flow.chunk(input, chunks, dim)
     print(of_out)
-    np_out = [flow.Tensor([[1., 2., 3.]], dtype=flow.float32), flow.Tensor([[7., 8., 9.]], dtype=flow.float32)]
+    np_out = [
+        flow.Tensor([[1.0, 2.0, 3.0]], dtype=flow.float32),
+        flow.Tensor([[7.0, 8.0, 9.0]], dtype=flow.float32),
+    ]
     test_case.assertTrue(np.allclose(of_out, np_out, 1e-5, 1e-5))
 
 
