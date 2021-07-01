@@ -150,7 +150,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       if (conf.attr<bool>("dynamic_out")) {
         FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
           user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
@@ -158,6 +158,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
@@ -194,7 +195,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       if (conf.attr<bool>("dynamic_out")) {
         FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
           user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
@@ -202,6 +203,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 

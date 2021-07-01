@@ -93,7 +93,7 @@ REGISTER_USER_OP("broadcast_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_modifier != nullptr);
+      CHECK_OR_RETURN(like_modifier != nullptr);
       like_modifier->set_requires_grad(false);
       Maybe<void>::Ok();
     })

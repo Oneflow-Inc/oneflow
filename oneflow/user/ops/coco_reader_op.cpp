@@ -91,35 +91,36 @@ REGISTER_CPU_ONLY_USER_OP("COCOReader")
       return Maybe<void>::Ok();
     })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
-                             const user_op::UserOpConfWrapper& conf) {
+                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
-      CHECK(image_modifier != nullptr);
+      CHECK_OR_RETURN(image_modifier != nullptr);
       image_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* image_id_modifier = GetOutputArgModifierFn("image_id", 0);
-      CHECK(image_id_modifier != nullptr);
+      CHECK_OR_RETURN(image_id_modifier != nullptr);
       image_id_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* image_size_modifier = GetOutputArgModifierFn("image_size", 0);
-      CHECK(image_size_modifier != nullptr);
+      CHECK_OR_RETURN(image_size_modifier != nullptr);
       image_size_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* gt_bbox_modifier = GetOutputArgModifierFn("gt_bbox", 0);
-      CHECK(gt_bbox_modifier != nullptr);
+      CHECK_OR_RETURN(gt_bbox_modifier != nullptr);
       gt_bbox_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* gt_label_modifier = GetOutputArgModifierFn("gt_label", 0);
-      CHECK(gt_label_modifier != nullptr);
+      CHECK_OR_RETURN(gt_label_modifier != nullptr);
       gt_label_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* gt_segm_modifier = GetOutputArgModifierFn("gt_segm", 0);
-      CHECK(gt_segm_modifier != nullptr);
+      CHECK_OR_RETURN(gt_segm_modifier != nullptr);
       gt_segm_modifier->set_header_infered_before_compute(false);
 
       user_op::OutputArgModifier* gt_segm_index_modifier =
           GetOutputArgModifierFn("gt_segm_index", 0);
-      CHECK(gt_segm_index_modifier != nullptr);
+      CHECK_OR_RETURN(gt_segm_index_modifier != nullptr);
       gt_segm_index_modifier->set_header_infered_before_compute(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
