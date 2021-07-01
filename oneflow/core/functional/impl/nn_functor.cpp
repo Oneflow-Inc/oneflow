@@ -50,7 +50,9 @@ class BiasAddFunctor {
 
 class ConvBaseFunctor {
  public:
-  ConvBaseFunctor() = default;
+  explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
+    bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
+  }
   virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
@@ -59,7 +61,7 @@ class ConvBaseFunctor {
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec;
-    for (int i = 0; i < kernel_size_shape_num; i++) {
+    for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.push_back((weight->shape())->At(i + 2));
     }
     JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
@@ -82,26 +84,23 @@ class ConvBaseFunctor {
 
  protected:
   std::shared_ptr<OpExpr> conv_op_;
-  std::shared_ptr<OpExpr> bias_op_ =
-      CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
-  int32_t kernel_size_shape_num;
+  std::shared_ptr<OpExpr> bias_op_;
+  int32_t num_spatial_dims_;
 };
 
 class Conv1DFunctor : public ConvBaseFunctor {
  public:
-  Conv1DFunctor() {
+  Conv1DFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
-    kernel_size_shape_num = 1;
   }
 };
 
 class Conv2DFunctor : public ConvBaseFunctor {
  public:
-  Conv2DFunctor() {
+  Conv2DFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
     conv_op_ =
         CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
-    kernel_size_shape_num = 2;
   }
 };
 
