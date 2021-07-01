@@ -321,7 +321,7 @@ Maybe<void> GetLogicalSliceSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
+Maybe<void> GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   const std::string update_grad_op_name = ctx->FwOp().op_name() + "_update_grad";
   ctx->DefineOp(update_grad_op_name, [&](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("slice")
@@ -357,6 +357,7 @@ void GenSliceUpdateGradOp(user_op::BackwardOpConfContext* ctx) {
   ctx->FwOp().InputGradBind(user_op::OpArg("x", 0), [&]() -> const std::string& {
     return ctx->GetOp(x_grad_op_name).output("y", 0);
   });
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

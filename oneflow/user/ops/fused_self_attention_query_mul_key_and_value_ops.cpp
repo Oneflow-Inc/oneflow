@@ -120,7 +120,7 @@ REGISTER_USER_OP("fused_self_attention_query_mul_key_and_value_grad")
     });
 
 REGISTER_USER_OP_GRAD("fused_self_attention_query_mul_key_and_value")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       std::string grad_op_name = ctx->FwOp().op_name() + "_grad";
 
       ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
@@ -136,6 +136,7 @@ REGISTER_USER_OP_GRAD("fused_self_attention_query_mul_key_and_value")
       ctx->FwOp().InputGradBind(user_op::OpArg("hidden_states", 0), [=]() -> const std::string& {
         return ctx->GetOp(grad_op_name).output("hidden_states_grad", 0);
       });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

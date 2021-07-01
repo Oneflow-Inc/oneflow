@@ -64,7 +64,7 @@ REGISTER_USER_OP("unpack")
           return Maybe<void>::Ok();
         });
 
-REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("pack")
@@ -76,6 +76,7 @@ REGISTER_USER_OP_GRAD("unpack").SetBackwardOpConfGenFn([](user_op::BackwardOpCon
   ctx->FwOp().InputGradBind(user_op::OpArg("in", 0), [&ctx, &grad_op_name]() -> const std::string& {
     return ctx->GetOp(grad_op_name).output("out", 0);
   });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

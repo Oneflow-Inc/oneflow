@@ -60,7 +60,7 @@ REGISTER_USER_OP("parallel_cast")
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 REGISTER_USER_OP_GRAD("parallel_cast")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       if (ctx->FwOp().NeedGenGradTensor4OpInput("in", 0)) {
         const auto& grad_sbp_parallel_str = ctx->FwOp().attr<std::string>("grad_sbp_parallel");
         if (grad_sbp_parallel_str.empty()) {
@@ -81,6 +81,7 @@ REGISTER_USER_OP_GRAD("parallel_cast")
           });
         }
       }
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

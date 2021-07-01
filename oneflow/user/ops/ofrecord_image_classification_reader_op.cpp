@@ -63,10 +63,10 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* image_modifier = GetOutputArgModifierFn("image", 0);
-      CHECK(image_modifier != nullptr);
+      CHECK_OR_RETURN(image_modifier != nullptr);
       image_modifier->set_header_infered_before_compute(false);
       user_op::OutputArgModifier* label_modifier = GetOutputArgModifierFn("label", 0);
-      CHECK(label_modifier != nullptr);
+      CHECK_OR_RETURN(label_modifier != nullptr);
       label_modifier->set_header_infered_before_compute(false);
       return Maybe<void>::Ok();
     })

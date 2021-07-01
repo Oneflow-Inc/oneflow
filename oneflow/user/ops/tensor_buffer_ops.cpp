@@ -154,7 +154,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       if (conf.attr<bool>("dynamic_out")) {
         FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
           user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
-          CHECK(out_i_modifier != nullptr);
+          CHECK_OR_RETURN(out_i_modifier != nullptr);
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
@@ -199,7 +199,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
       if (conf.attr<bool>("dynamic_out")) {
         FOR_RANGE(int64_t, i, 0, conf.output_size("out")) {
           user_op::OutputArgModifier* out_i_modifier = GetOutputArgModifierFn("out", i);
-          CHECK(out_i_modifier != nullptr);
+          CHECK_OR_RETURN(out_i_modifier != nullptr);
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }

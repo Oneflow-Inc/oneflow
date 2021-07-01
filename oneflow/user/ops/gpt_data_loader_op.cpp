@@ -85,7 +85,7 @@ REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       if (!conf.has_input("iteration", 0)) { return Maybe<void>::Ok(); }
       user_op::InputArgModifier* input_modifier = GetInputArgModifierFn("iteration", 0);
-      CHECK(input_modifier != nullptr);
+      CHECK_OR_RETURN(input_modifier != nullptr);
       input_modifier->set_is_mutable(true);
       input_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();

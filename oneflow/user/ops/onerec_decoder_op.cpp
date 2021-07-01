@@ -45,7 +45,7 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
-      Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
@@ -57,7 +57,7 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
-      CHECK(out_modifier != nullptr);
+      CHECK_OR_RETURN(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
       return Maybe<void>::Ok();
     })

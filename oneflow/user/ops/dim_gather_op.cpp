@@ -61,7 +61,7 @@ REGISTER_USER_OP("dim_gather")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-      CHECK(indices_modifier != nullptr);
+      CHECK_OR_RETURN(indices_modifier != nullptr);
       indices_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
@@ -134,7 +134,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
+      CHECK_OR_RETURN(like_arg_modifier != nullptr);
       like_arg_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
@@ -178,7 +178,7 @@ REGISTER_USER_OP("dim_scatter_add_like")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";
 
   ctx->DefineOp(op_grad_name, [&ctx](user_op::BackwardOpBuilder& builder) {
@@ -198,6 +198,7 @@ REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardO
                             [&ctx, &op_grad_name]() -> const std::string& {
                               return ctx->GetOp(op_grad_name).output("output", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace user_op

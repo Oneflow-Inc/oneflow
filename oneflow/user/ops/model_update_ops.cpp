@@ -456,7 +456,7 @@ REGISTER_USER_OP("momentum_update")
                             const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
-      Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferMomentumUpdateDataType);
 

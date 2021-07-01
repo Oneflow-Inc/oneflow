@@ -104,7 +104,7 @@ REGISTER_USER_OP("ctc_loss_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto ctc_loss_grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(ctc_loss_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("ctc_loss_grad")
@@ -124,6 +124,7 @@ REGISTER_USER_OP_GRAD("ctc_loss").SetBackwardOpConfGenFn([](user_op::BackwardOpC
                             [&ctx, &ctc_loss_grad_op_name]() -> const std::string& {
                               return ctx->GetOp(ctc_loss_grad_op_name).output("grad", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

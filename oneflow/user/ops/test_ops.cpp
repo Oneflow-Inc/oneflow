@@ -44,7 +44,7 @@ REGISTER_USER_OP("ccrelu_grad")
       const Shape& y_shape = ctx->InputShape("y", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == y_shape);
+      CHECK_OR_RETURN(dy_shape == y_shape);
       *dx_shape = y_shape;
       return Maybe<void>::Ok();
     })
@@ -151,7 +151,7 @@ REGISTER_USER_OP("TestSourceMultiGpuFixedOutNum")
       *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
 
       const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-      CHECK(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+      CHECK_OR_RETURN(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -175,7 +175,7 @@ REGISTER_USER_OP("TestMultiInput")
       const Shape& x1_shape = ctx->InputShape("x1", 0);
       const Shape& x2_shape = ctx->InputShape("x2", 0);
       Shape* y_shape = ctx->OutputShape("y", 0);
-      CHECK(x1_shape == x2_shape);
+      CHECK_OR_RETURN(x1_shape == x2_shape);
       *y_shape = x1_shape;
       return Maybe<void>::Ok();
     })

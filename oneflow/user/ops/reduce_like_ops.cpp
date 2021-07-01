@@ -89,7 +89,7 @@ REGISTER_USER_OP("reduce_sum_like")
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
       CHECK(like_arg_modifier != nullptr);
       like_arg_modifier->set_requires_grad(false);
-      Maybe<void>::Ok();
+      return Maybe<void>::Ok();
     });
 
 }  // namespace oneflow

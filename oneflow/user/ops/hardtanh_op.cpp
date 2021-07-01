@@ -58,7 +58,7 @@ REGISTER_USER_OP("hardtanh_grad")
       const Shape& y_shape = ctx->InputShape("y", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == y_shape);
+      CHECK_OR_RETURN(dy_shape == y_shape);
       *dx_shape = dy_shape;
       double min_val = ctx->Attr<double>("min_val");
       double max_val = ctx->Attr<double>("max_val");
@@ -82,7 +82,7 @@ REGISTER_USER_OP("hardtanh_grad")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("hardtanh").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("hardtanh").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto hardtanh_grad_op_name = ctx->FwOp().op_name() + "_grad";
   ctx->DefineOp(hardtanh_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("hardtanh_grad")
@@ -97,6 +97,7 @@ REGISTER_USER_OP_GRAD("hardtanh").SetBackwardOpConfGenFn([](user_op::BackwardOpC
                             [&ctx, &hardtanh_grad_op_name]() -> const std::string& {
                               return ctx->GetOp(hardtanh_grad_op_name).output("dx", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace

@@ -45,7 +45,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* mask_modifier = GetInputArgModifierFn("mask", 0);
-      CHECK(mask_modifier != nullptr);
+      CHECK_OR_RETURN(mask_modifier != nullptr);
       mask_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     })
@@ -75,7 +75,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
       const user_op::TensorDesc* softmax_y_desc = ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      CHECK(dy_desc->shape() == softmax_y_desc->shape());
+      CHECK_OR_RETURN(dy_desc->shape() == softmax_y_desc->shape());
       *dx_desc->mut_shape() = dy_desc->shape();
       *dx_desc->mut_is_dynamic() = dy_desc->is_dynamic();
       return Maybe<void>::Ok();
@@ -84,7 +84,7 @@ REGISTER_USER_OP("fused_tril_scale_softmax_mask_scale_grad")
       const user_op::TensorDesc* softmax_y_desc = ctx->TensorDesc4ArgNameAndIndex("softmax_y", 0);
       const user_op::TensorDesc* dy_desc = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
       user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      CHECK(dy_desc->data_type() == softmax_y_desc->data_type());
+      CHECK_OR_RETURN(dy_desc->data_type() == softmax_y_desc->data_type());
       *dx_desc->mut_data_type() = dy_desc->data_type();
       return Maybe<void>::Ok();
     })

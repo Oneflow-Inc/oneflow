@@ -71,7 +71,7 @@ REGISTER_USER_OP("where")
     })
     .SetGetSbpFn(GetWhereSbpSignatures);
 
-REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
   const auto zero_op_name = ctx->FwOp().op_name() + "_zero_grad";
   ctx->DefineOp(zero_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
     return builder.OpTypeName("zero_like")
@@ -108,6 +108,7 @@ REGISTER_USER_OP_GRAD("where").SetBackwardOpConfGenFn([](user_op::BackwardOpConf
                             [&ctx, &y_grad_op_name]() -> const std::string& {
                               return ctx->GetOp(y_grad_op_name).output("out", 0);
                             });
+  return Maybe<void>::Ok();
 });
 
 }  // namespace oneflow

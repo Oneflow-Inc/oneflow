@@ -487,7 +487,7 @@ REGISTER_USER_OP("cudnn_fused_normalization_add_relu_grad")
 #endif
 
 REGISTER_USER_OP_GRAD("normalization")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
 
@@ -658,10 +658,11 @@ REGISTER_USER_OP_GRAD("normalization")
                                 [&ctx, &beta_identity_op_name]() -> const std::string& {
                                   return ctx->GetOp(beta_identity_op_name).output("out", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP_GRAD("normalization_add_relu")
-    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
+    .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         builder.OpTypeName("normalization_add_relu_grad")
@@ -720,6 +721,7 @@ REGISTER_USER_OP_GRAD("normalization_add_relu")
                                 [&ctx, &beta_identity_op_name]() -> const std::string& {
                                   return ctx->GetOp(beta_identity_op_name).output("out", 0);
                                 });
+      return Maybe<void>::Ok();
     });
 
 }  // namespace
