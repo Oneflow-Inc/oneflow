@@ -57,6 +57,7 @@ class MlirJitKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+// TODO: figure out if device and dtype are necessary for this op?
 #define REGISTER_MLIR_JIT_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitKernel<device, dtype>>()                                              \
