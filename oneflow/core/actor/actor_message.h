@@ -31,9 +31,10 @@ enum class ActorCmd {
 
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
 
+constexpr uint8_t kActorMsgUserDataMaxSize = 32;
+
 class ActorMsg final {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(ActorMsg);
   ActorMsg() = default;
   ~ActorMsg() = default;
 
@@ -54,8 +55,13 @@ class ActorMsg final {
   int64_t piece_id() const;
   int64_t act_id() const;
   void* comm_net_token() const;
+  void set_comm_net_token(void* token);
   bool has_sole_empty_blob() const;
   int64_t eord_regst_desc_id() const;
+  void AddUserData(uint8_t size, const void* data);
+  uint8_t user_data_size() const;
+  const void* user_data() const;
+  bool IsDataRegstMsgToConsumer() const;
 
   // Serialize
   template<typename StreamT>
@@ -73,6 +79,7 @@ class ActorMsg final {
     void* comm_net_token;
     RegstStatus regst_status;
     bool has_sole_empty_blob;
+    bool is_data_regst_to_consumer;
   };
 
   int64_t src_actor_id_;
@@ -83,6 +90,8 @@ class ActorMsg final {
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
   };
+  uint8_t user_data_size_;
+  unsigned char user_data_[kActorMsgUserDataMaxSize];
 };
 
 template<typename StreamT>
