@@ -2522,64 +2522,6 @@ def amp_white_identity(
     return op.InferAndTryRun().SoleOutputBlob()
 
 
-
-def _check_scatter_blobs(input, dim, index, like_or_src):
-    assert dim < len(index.shape), ValueError(
-        "Value of dim is out of range(dim should be less than len(index.shape))"
-    )
-
-    assert len(input.shape) == len(index.shape) and len(input.shape) == len(
-        like_or_src.shape
-    ), ValueError("Number of dimensions of input, index and like/src should equal")
-
-    for i in range(0, len(input.shape)):
-        assert input.shape[i] == index.shape[i], ValueError(
-            "Shape of input and index should be same"
-        )
-        assert input.shape[i] <= like_or_src.shape[i], ValueError(
-            "Shape like/src blob should be larger than input"
-        )
-
-
-@oneflow_export("dim_scatter_update_like")
-def dim_scatter_update_like(
-    input: remote_blob_util.BlobDef,
-    dim: int,
-    index: remote_blob_util.BlobDef,
-    like: remote_blob_util.BlobDef,
-    name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    r"""This operator writes the elements specified by `index` along with the axis 
-    `dim` from the `input` into the output blob whose shape size specified by `like`.
-
-    Take a 3-D blob as example, the output is specified by:
-
-    .. code-block:: python
-
-        output[index[i][j][k]][j][k] = input[i][j][k]  # if dim == 0
-        output[i][index[i][j][k]][k] = input[i][j][k]  # if dim == 1
-        output[i][j][index[i][j][k]] = input[i][j][k]  # if dim == 2
-
-    `input`, `index` and `like` should have same number of dimensions. 
-    The shape of `input` and `index` should be the same. 
-    It is also required that sizes at dimension `d` of `index` and `like` should be equal 
-    for all dimensions d != dim.
-    
-    Moreover, the values of index must not exceeds the range of like blob at dim dimension.
-    
-    The return Blob `output` will have the same shape with `like`.
-
-    Args:
-        input (remote_blob_util.BlobDef): The input blob whose elments will be scatterd and updated to output.
-        dim (int): The axis along which to index
-        index (remote_blob_util.BlobDef): The index blob of elements to scatter
-        like (remote_blob_util.BlobDef): The like blob. The shape size of output will be same as like blob.
-        name (Optional[str], optional): The name of the operation. Defaults to None.
-
-    Returns:
-        remote_blob_util.BlobDef: The elements scattered from `input` will be returned as the output Blob.
-    
-
 @oneflow_export("zeros")
 @stable_api
 def zeros(
@@ -2646,6 +2588,83 @@ def ones(
 
     .. code-block:: python
 
+        def ones_job() -> tp.Numpy:
+            return flow.ones(shape=(2, 3), dtype=flow.float32)
+
+
+        out = ones_job()
+
+        # output: [[1. 1. 1.]
+        #          [1. 1. 1.]]
+    """
+    if name is None:
+        name = id_util.UniqueStr("Ones_")
+
+    if dtype is None:
+        dtype = flow.float32
+
+    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
+
+
+def _check_scatter_blobs(input, dim, index, like_or_src):
+    assert dim < len(index.shape), ValueError(
+        "Value of dim is out of range(dim should be less than len(index.shape))"
+    )
+
+    assert len(input.shape) == len(index.shape) and len(input.shape) == len(
+        like_or_src.shape
+    ), ValueError("Number of dimensions of input, index and like/src should equal")
+
+    for i in range(0, len(input.shape)):
+        assert input.shape[i] == index.shape[i], ValueError(
+            "Shape of input and index should be same"
+        )
+        assert input.shape[i] <= like_or_src.shape[i], ValueError(
+            "Shape like/src blob should be larger than input"
+        )
+
+@oneflow_export("dim_scatter_update_like")
+@stable_api
+def dim_scatter_update_like(
+    input: oneflow._oneflow_internal.BlobDesc,
+    dim: int,
+    index: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
+    name: Optional[str] = None,
+) -> oneflow._oneflow_internal.BlobDesc:
+    r"""This operator writes the elements specified by `index` along with the axis 
+    `dim` from the `input` into the output blob whose shape size specified by `like`.
+    
+    Take a 3-D blob as example, the output is specified by:
+    
+    .. code-block:: python
+        output[index[i][j][k]][j][k] = input[i][j][k]  # if dim == 0
+        output[i][index[i][j][k]][k] = input[i][j][k]  # if dim == 1
+        output[i][j][index[i][j][k]] = input[i][j][k]  # if dim == 2
+    
+    `input`, `index` and `like` should have same number of dimensions. 
+    The shape of `input` and `index` should be the same. 
+    It is also required that sizes at dimension `d` of `index` and `like` should be equal 
+    for all dimensions d != dim.
+    
+    Moreover, the values of index must not exceeds the range of like blob at dim dimension.
+    
+    The return Blob `output` will have the same shape with `like`.
+    
+    Args:
+        input (remote_blob_util.BlobDef): The input blob whose elments will be scatterd and updated to output.
+        dim (int): The axis along which to index
+        index (remote_blob_util.BlobDef): The index blob of elements to scatter
+        like (remote_blob_util.BlobDef): The like blob. The shape size of output will be same as like blob.
+        name (Optional[str], optional): The name of the operation. Defaults to None.
+    
+    Returns:
+        remote_blob_util.BlobDef: The elements scattered from `input` will be returned as the output Blob.
+
+    For example:
+
+    .. code-block:: python
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -2693,15 +2712,15 @@ def ones(
         .RemoteBlobList()[0]
     )
 
-
 @oneflow_export("dim_scatter_update")
+@stable_api
 def dim_scatter_update(
-    input: remote_blob_util.BlobDef,
+    input: oneflow._oneflow_internal.BlobDesc,
     dim: int,
-    index: remote_blob_util.BlobDef,
-    src: remote_blob_util.BlobDef,
+    index: oneflow._oneflow_internal.BlobDesc,
+    src: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow._oneflow_internal.BlobDesc:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimScatterUpdate_")
@@ -2719,13 +2738,14 @@ def dim_scatter_update(
 
 
 @oneflow_export("dim_scatter_add_like")
+@stable_api
 def dim_scatter_add_like(
-    input: remote_blob_util.BlobDef,
+    input: oneflow._oneflow_internal.BlobDesc,
     dim: int,
-    index: remote_blob_util.BlobDef,
-    like: remote_blob_util.BlobDef,
+    index: oneflow._oneflow_internal.BlobDesc,
+    like: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow._oneflow_internal.BlobDesc:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimScatterAddLike_")
@@ -2741,15 +2761,15 @@ def dim_scatter_add_like(
         .RemoteBlobList()[0]
     )
 
-
 @oneflow_export("dim_scatter_add")
+@stable_api
 def dim_scatter_add(
-    input: remote_blob_util.BlobDef,
+    input: oneflow._oneflow_internal.BlobDesc,
     dim: int,
-    index: remote_blob_util.BlobDef,
-    src: remote_blob_util.BlobDef,
+    index: oneflow._oneflow_internal.BlobDesc,
+    src: oneflow._oneflow_internal.BlobDesc,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow._oneflow_internal.BlobDesc:
     return (
         flow.user_op_builder(
             name if name is not None else id_util.UniqueStr("DimScatterAdd_")
@@ -2764,24 +2784,6 @@ def dim_scatter_add(
         .InferAndTryRun()
         .RemoteBlobList()[0]
     )
-=======
-        def ones_job() -> tp.Numpy:
-            return flow.ones(shape=(2, 3), dtype=flow.float32)
-
-
-        out = ones_job()
-
-        # output: [[1. 1. 1.]
-        #          [1. 1. 1.]]
-    """
-    if name is None:
-        name = id_util.UniqueStr("Ones_")
-
-    if dtype is None:
-        dtype = flow.float32
-
-    return flow.constant(value=1.0, shape=shape, dtype=dtype, name=name + "constant")
-
 
 @oneflow_export("profiler.nvtx_start")
 def nvtx_start(

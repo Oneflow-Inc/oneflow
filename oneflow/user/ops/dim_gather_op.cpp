@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/dim_gather_kernel_util.h"
 
 namespace oneflow {
 namespace user_op {
@@ -24,7 +23,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
   int64_t input_num_axes = in->shape().NumAxes();
   CHECK_GT_OR_RETURN(input_num_axes, 0);
-  CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
+  CHECK_LE_OR_RETURN(input_num_axes, 8); // kDimGatherMaxDimCount=8
 
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   int64_t index_num_axes = index->shape().NumAxes();
@@ -36,7 +35,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
   // split_axs should NOT equals dim when in consistent view
-  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
   auto is_split = in_sbp.has_split_parallel();
   if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
     int64_t split_axis = in_sbp.split_parallel().axis();
@@ -95,6 +94,16 @@ Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
       .Build();
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InferDtype(user_op::InferContext* ctx) {
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+  CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+  const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  *out->mut_data_type() = in->data_type();
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP("dim_gather")
@@ -104,14 +113,7 @@ REGISTER_USER_OP("dim_gather")
     .Attr<int32_t>("dim")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(GatherInputArgModifierFn)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
-      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
-      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
-      *out->mut_data_type() = in->data_type();
-      return Maybe<void>::Ok();
-    })
+    .SetDataTypeInferFn(InferDtype)
     .SetGetSbpFn(BuildSbp);
 
 
