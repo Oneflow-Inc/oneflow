@@ -166,7 +166,7 @@ Maybe<void> DefaultOpExprGradFunction::Init(const OpExpr& op) {
   input_size_ = fw_op_expr->indexed_ibns().size();
 
   OperatorConf fw_op_conf;
-  fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{});
+  JUST(fw_op_expr->BuildOpConf(&fw_op_conf, /*attrs=*/{}));
 
   // Generate backward operator conf for each input. The `LogicalBlobId` for
   // backward output gradient is dummy due to inaccessibility.

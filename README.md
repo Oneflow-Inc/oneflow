@@ -104,24 +104,56 @@
   - For more useful flags, plese run the script with flag `--help` or refer to the source code of the script.
 
 - #### Option 3: Build on bare metal
-  - Install dependencies. For instance, on Ubuntu 20.04, run:
-    ```
-    sudo apt install -y libmkl-full-dev nasm libc++-11-dev libncurses5 g++ gcc cmake gdb python3-pip
-    ```
-    If there is a prompt, it is recommended to select the option to make mkl the default BLAS library.
+  - Install dependencies
+    - on Ubuntu 20.04, run:
+      ```
+      sudo apt install -y libopenblas-dev nasm g++ gcc python3-pip cmake
+      ```
+    - on macOS, run:
+      ```
+      brew install nasm
+      ```
   - In the root directory of OneFlow source code, run:
 
     ```
     mkdir build
     cd build
-    cmake ..
+    ```
+
+  - Config the project, inside `build` directory:
+    - If you are in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/cn/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/cn/cpu.cmake
+      ```
+
+    - If you are not in China
+
+      run this to config for CUDA:
+      ```
+      cmake .. -C ../cmake/caches/international/cuda.cmake
+      ```
+
+      run this to config for CPU-only:
+      ```
+      cmake .. -C ../cmake/caches/international/cpu.cmake
+      ```
+
+  - Build the project, inside `build` directory, run:
+    ```
     make -j$(nproc)
     ```
 
-  - Add oneflow to your PYTHONPATH
+  - Add oneflow to your PYTHONPATH, inside `build` directory, run:
 
     ```
-    source build/source.sh
+    source source.sh
     ```
 
     Please note that this change is not permanent.
@@ -131,9 +163,6 @@
     ```
     python3 -m oneflow --doctor
     ```
-
-  - If you are in China, please add these CMake flags `-DTHIRD_PARTY_MIRROR=aliyun -DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple` for faster dependency downloads.
-  - For pure CPU build, please add this CMake flag `-DBUILD_CUDA=OFF`.
 </details>
 
 ### Troubleshooting
@@ -186,8 +215,19 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 - [BERT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/BERT)
 
 ## Communication
-- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues) : any install, bug, feature issues.
-- [www.oneflow.org](http://www.oneflow.org) : brand related information.
+- [GitHub issues](https://github.com/Oneflow-Inc/oneflow/issues): any install, bug, feature issues.
+- [www.oneflow.org](http://www.oneflow.org): brand related information.
+
+- ### 中文
+  - QQ 群: 331883
+  - 微信号（加好友入交流群）: OneFlowXZS
+  - [知乎](https://www.zhihu.com/org/oneflow-17)
+
+- ### International
+  - [Discord](https://discord.gg/4kpjGA5bZY)
+  - [Twitter](https://twitter.com/OneFlowNews)
+  - [LinkedIn](https://www.linkedin.com/company/oneflow-inc)
+  - [Medium](https://oneflow2020.medium.com)
 
 ## The Team
 OneFlow was originally developed by [OneFlow Inc](http://www.oneflow.org) and [Zhejiang Lab](http://www.zhejianglab.com/).

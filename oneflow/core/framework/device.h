@@ -20,6 +20,7 @@ limitations under the License.
 #include <string>
 #include <unordered_set>
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
 
@@ -27,7 +28,7 @@ class ParallelDesc;
 class MemoryCase;
 class VmLocalDepObject;
 
-class Device final : public std::enable_shared_from_this<Device> {
+class Device final {
  public:
   Device(const Device&) = default;
   Device(Device&&) = default;
@@ -45,11 +46,11 @@ class Device final : public std::enable_shared_from_this<Device> {
   const std::shared_ptr<const ParallelDesc>& parallel_desc_ptr() const;
   const std::shared_ptr<MemoryCase>& mem_case() const { return mem_case_; }
 
-  static Maybe<const Device> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
-  static Maybe<const Device> New(const std::string& type, int64_t device_id);
-  static Maybe<const Device> New(const std::string& typed);
+  static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
+  static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
+  static Maybe<Symbol<Device>> New(const std::string& typed);
 
-  static Maybe<const Device> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
+  static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
 
   Maybe<const std::string&> local_call_instruction_name() const;

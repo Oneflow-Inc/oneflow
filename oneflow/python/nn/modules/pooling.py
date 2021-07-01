@@ -103,8 +103,8 @@ class AvgPool2d(Module):
             stride=(2, 1),
         )
         x = flow.Tensor(shape=(1, 1, 10, 10))
-        of_y = of_avgpool2d(x)
-
+        of_y = of_avgpool2d(x)   
+        
     """
 
     def __init__(
@@ -118,8 +118,8 @@ class AvgPool2d(Module):
         name: Optional[str] = None,
     ):
         super().__init__()
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride) if (stride is not None) else kernel_size
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if (stride is not None) else kernel_size
 
         assert isinstance(padding, int) or isinstance(
             padding, tuple
@@ -130,30 +130,26 @@ class AvgPool2d(Module):
         assert count_include_pad is None, "count_include_pad not supported yet"
         assert divisor_override is None, "divisor_override not supported yet"
 
-        _channel_pos = "channels_first"
+        self._channel_pos = "channels_first"
         # TODO(yaochi): align with pytorch when padding is asymmetric
-        _padding_type, _pads_list = calc_pool_padding(
-            padding, get_dhw_offset(_channel_pos), 2
+        self._padding_type, _pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self._channel_pos), 2
         )
-        _padding_before = [pad[0] for pad in _pads_list]
-        _padding_after = [pad[1] for pad in _pads_list]
-
-        self._op = (
-            flow.builtin_op("avg_pool_2d", name)
-            .Attr("data_format", _channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", stride)
-            .Attr("ceil_mode", ceil_mode)
-            .Attr("padding", _padding_type)
-            .Attr("padding_before", _padding_before)
-            .Attr("padding_after", _padding_after)
-            .Input("x")
-            .Output("y")
-            .Build()
-        )
+        self._padding_before = [pad[0] for pad in _pads_list]
+        self._padding_after = [pad[1] for pad in _pads_list]
+        self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        res = self._op(x)[0]
+        res = flow.F.avg_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            padding=self._padding_type,
+            padding_before=self._padding_before,
+            padding_after=self._padding_after,
+            ceil_mode=self.ceil_mode,
+            data_format=self._channel_pos,
+        )
         return res
 
 
@@ -383,16 +379,16 @@ class MaxPool2d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 5, 3))
         >>> y = m(x)
-        >>> print(y.numpy()) #doctest: +ELLIPSIS
-        [[[[0.5488135  0.71518934 0.71518934 0.71518934 0.6458941 ]
-           ...
-           [0.56804454 0.92559665 0.92559665 0.92559665 0.5288949 ]]]]
+        >>> y #doctest: +ELLIPSIS
+        tensor([[[[0.5488, 0.7152, 0.7152, 0.7152, 0.6459],
+                  ...
+                  [0.568 , 0.9256, 0.9256, 0.9256, 0.5289]]]], dtype=oneflow.float32)
 
         >>> kernel_size, stride, padding = (2, 3), (4, 5), (1, 2)
         >>> m = flow.nn.MaxPool2d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 32, 20))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.size()
         flow.Size([9, 7, 9, 5])
 
     """
@@ -407,10 +403,12 @@ class MaxPool2d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        kernel_size = _pair(kernel_size)
-        strides = _pair(stride) if (stride is not None) else kernel_size
+        self.kernel_size = _pair(kernel_size)
+        self.strides = _pair(stride) if (stride is not None) else kernel_size
         data_format = "NCHW"
-        channel_pos = "channels_last" if data_format == "NHWC" else "channels_first"
+        self.channel_pos = (
+            "channels_last" if data_format == "NHWC" else "channels_first"
+        )
 
         assert return_indices is False, "Only support return_indices==False for now!"
         assert dilation == 1 or dilation == (1, 1), "Only support dilation==1 for now!"
@@ -423,29 +421,24 @@ class MaxPool2d(Module):
                 raise ValueError("error padding param!")
         else:
             raise ValueError("error padding param!")
-
-        padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(channel_pos), 2
+        self.padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 2
         )
-        padding_before = [pad[0] for pad in pads_list]
-        padding_after = [pad[1] for pad in pads_list]
-
-        self._op = (
-            flow.builtin_op("max_pool_2d")
-            .Attr("data_format", channel_pos)
-            .Attr("pool_size", kernel_size)
-            .Attr("strides", strides)
-            .Attr("ceil_mode", ceil_mode)
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Input("x")
-            .Output("y")
-            .Build()
-        )
+        self.padding_before = [pad[0] for pad in pads_list]
+        self.padding_after = [pad[1] for pad in pads_list]
+        self.ceil_mode = ceil_mode
 
     def forward(self, x):
-        return self._op(x)[0]
+        return flow.F.max_pool_2d(
+            x,
+            kernel_size=self.kernel_size,
+            stride=self.strides,
+            padding=self.padding_type,
+            padding_before=self.padding_before,
+            padding_after=self.padding_after,
+            ceil_mode=self.ceil_mode,
+            data_format=self.channel_pos,
+        )
 
 
 @oneflow_export("nn.MaxPool3d")
@@ -519,16 +512,15 @@ class MaxPool3d(Module):
         >>> np.random.seed(0)
         >>> x = flow.Tensor(np.random.rand(1, 1, 3, 5, 3))
         >>> y = m(x)
-        >>> print(y.numpy()) #doctest: +ELLIPSIS
-        [[[[[0.77815676 0.87001216 0.9786183  0.9786183  0.9786183 ]
-            ...
-            [0.9446689  0.9446689  0.9446689  0.6667667  0.6667667 ]]]]]
-
+        >>> y #doctest: +ELLIPSIS
+        tensor([[[[[0.7782, 0.87  , 0.9786, 0.9786, 0.9786],
+                   ...
+                   [0.9447, 0.9447, 0.9447, 0.6668, 0.6668]]]]], dtype=oneflow.float32)
         >>> kernel_size, stride, padding = (2, 2, 3), (3, 4, 5), (2, 1, 2)
         >>> m = flow.nn.MaxPool3d(kernel_size, stride, padding)
         >>> x = flow.Tensor(np.random.randn(9, 7, 11, 32, 20))
         >>> y = m(x)
-        >>> print(y.size())
+        >>> y.size()
         flow.Size([9, 7, 5, 9, 5])
 
     """

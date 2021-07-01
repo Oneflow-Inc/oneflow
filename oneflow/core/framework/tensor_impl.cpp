@@ -64,7 +64,7 @@ namespace {
 std::shared_ptr<const MirroredTensorMeta> NewDefaultMirroredTensorMeta() {
   const auto& shape = std::make_shared<Shape>();
   const auto& dtype = DataType::kInvalidDataType;
-  return std::make_shared<MirroredTensorMeta>(shape, dtype, std::shared_ptr<const Device>());
+  return std::make_shared<MirroredTensorMeta>(shape, dtype, Symbol<Device>());
 }
 
 }  // namespace
@@ -95,9 +95,10 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   const auto& parallel_desc = this->device()->parallel_desc_ptr();
   tensor_storage_->set_releaser_hook(
       [blob_object, parallel_desc](const std::shared_ptr<vm::TensorBuffer>&) {
-        PhysicalRun([&](InstructionsBuilder* builder) {
-          builder->ReleaseTensor(blob_object, parallel_desc);
-        });
+        CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+          JUST(builder->ReleaseTensor(blob_object, parallel_desc));
+          return Maybe<void>::Ok();
+        }));
       });
   return Maybe<void>::Ok();
 }
@@ -135,10 +136,11 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
 
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
-        this, [&synced](uint64_t) { synced = true; }, "const");
-  });
+  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
+        this, [&synced](uint64_t) { synced = true; }, "const"));
+    return Maybe<void>::Ok();
+  }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
     // spin wait

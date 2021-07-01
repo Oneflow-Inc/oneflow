@@ -129,6 +129,9 @@ class TestTensor(flow.unittest.TestCase):
         flow.nn.init.constant_(x, random_fill_val)
         test_case.assertTrue(np.allclose(x.numpy(), random_fill_val * np_ones))
 
+        test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
+        test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
+
     @unittest.skipIf(
         True, "consistent_tensor doesn't work right now",
     )
@@ -313,11 +316,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue("requires_grad=" in requires_grad_input_str)
 
     @unittest.skipIf(
-        # TODO(Liang Depeng): enable this test after tensor support indexing
-        # not flow.unittest.env.eager_execution_enabled(),
-        # "numpy doesn't work in lazy mode",
-        True,
-        "skip for now",
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
     )
     def test_indexing(test_case):
         class SliceExtracter:
@@ -328,6 +328,8 @@ class TestTensor(flow.unittest.TestCase):
 
         def compare_getitem_with_numpy(tensor, slices):
             np_arr = tensor.numpy()
+            print(np_arr[slices])
+            print(tensor[slices].numpy())
             test_case.assertTrue(np.array_equal(np_arr[slices], tensor[slices].numpy()))
 
         def compare_setitem_with_numpy(tensor, slices, value):
@@ -346,17 +348,11 @@ class TestTensor(flow.unittest.TestCase):
         compare_getitem_with_numpy(x, se[-1:])
         compare_setitem_with_numpy(x, se[-1:], v)
         compare_setitem_with_numpy(x, se[2::2], 2)
-
-        flow.nn.init.kaiming_normal_(x, a=0.1, mode="fan_out", nonlinearity="relu")
-
-        flow.nn.init.kaiming_uniform_(x)
-
-        flow.nn.init.xavier_normal_(x)
-
-        flow.nn.init.xavier_uniform_(x)
-
-        test_case.assertEqual(flow.nn.init.calculate_gain("conv2d"), 1)
-        test_case.assertEqual(flow.nn.init.calculate_gain("tanh"), 5.0 / 3)
+        x = flow.Tensor(2, 3, 4)
+        v = flow.Tensor(3)
+        compare_setitem_with_numpy(x, se[:, :, 2], v)
+        x = flow.Tensor(2, 3, 4)
+        compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @unittest.skipIf(
         not flow.unittest.env.eager_execution_enabled(),
@@ -1022,6 +1018,30 @@ class TestTensor(flow.unittest.TestCase):
         of_out = of_out.sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(x.grad.numpy(), np.exp(x.numpy()), 1e-4, 1e-4))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_mish(test_case):
+        def np_mish(x):
+            f = 1 + np.exp(x)
+            y = x * ((f * f - 1) / (f * f + 1))
+            y_grad = (f * f - 1) / (f * f + 1) + x * (4 * f * (f - 1)) / (
+                (f * f + 1) * (f * f + 1)
+            )
+            return [y, y_grad]
+
+        np_input = np.random.randn(2, 4, 5, 6,)
+        of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+        of_out = of_input.mish()
+
+        np_out, np_grad = np_mish(np_input)
+        test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+        of_out = of_out.sum()
+        of_out.backward()
+        test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
 if __name__ == "__main__":

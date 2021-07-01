@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -36,7 +37,7 @@ namespace one {
 
 namespace {
 
-Maybe<const Device> GetDefaultDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
@@ -51,8 +52,8 @@ Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>&
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                           const std::shared_ptr<const Device>& default_device,
-                           TensorTuple* outputs, const AttrMap& attrs) {
+                           const Symbol<Device>& default_device, TensorTuple* outputs,
+                           const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
@@ -73,7 +74,9 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
-  std::shared_ptr<const Device> op_device;
+  std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
+      std::make_shared<EagerBlobObjectList>(outputs->size());
+  Symbol<Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
   bool need_event_record = false;
@@ -170,7 +173,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
 static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  std::shared_ptr<const Device> default_device;
+  Symbol<Device> default_device;
   if (inputs.empty()) {
     default_device = JUST(GetDefaultDevice());
   } else {

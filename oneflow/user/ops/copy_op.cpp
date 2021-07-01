@@ -20,8 +20,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<const Device> MakeOpDevice(const std::shared_ptr<const Device>& in_device,
-                                 const std::shared_ptr<const Device>& out_device) {
+Maybe<Symbol<Device>> MakeOpDevice(const Symbol<Device>& in_device,
+                                   const Symbol<Device>& out_device) {
   if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
     return Device::New("cuda_d2h");
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
@@ -31,14 +31,13 @@ Maybe<const Device> MakeOpDevice(const std::shared_ptr<const Device>& in_device,
   }
 }
 
-std::function<Maybe<const Device>(user_op::DeviceInferContext* ctx)> GetDeviceInferFn() {
-  std::function<Maybe<const Device>(user_op::DeviceInferContext * ctx)> fn =
-      [](user_op::DeviceInferContext* ctx) -> Maybe<const Device> {
-    std::shared_ptr<const Device> out_device =
+std::function<Maybe<Symbol<Device>>(user_op::DeviceInferContext* ctx)> GetDeviceInferFn() {
+  std::function<Maybe<Symbol<Device>>(user_op::DeviceInferContext * ctx)> fn =
+      [](user_op::DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
+    Symbol<Device> out_device =
         JUST(Device::New(ctx->Attr<std::string>("device_type"), ctx->Attr<int64_t>("device_id")));
     *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) = out_device;
-    const std::shared_ptr<const Device>& in_device =
-        ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
+    const Symbol<Device>& in_device = ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
     return MakeOpDevice(in_device, out_device);
   };
   return fn;
@@ -58,6 +57,7 @@ REGISTER_USER_OP("copy")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 }  // namespace
 }  // namespace oneflow

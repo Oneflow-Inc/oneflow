@@ -126,8 +126,8 @@ class ReLU(Module):
         >>> relu = flow.nn.ReLU()
         >>> ndarr = np.asarray([1, -2, 3])
         >>> x = flow.Tensor(ndarr)
-        >>> relu(x).numpy()
-        array([1., 0., 3.], dtype=float32)
+        >>> relu(x)
+        tensor([1., 0., 3.], dtype=oneflow.float32)
 
     """
 
@@ -178,9 +178,9 @@ class ReLU6(Module):
         >>> input = flow.Tensor(x)
         >>> relu6 = flow.nn.ReLU6()
 
-        >>> out = relu6(input).numpy()
-        >>> print(out)
-        [0.  0.  0.5]
+        >>> out = relu6(input)
+        >>> out
+        tensor([0. , 0. , 0.5], dtype=oneflow.float32)
 
     """
 
@@ -219,9 +219,9 @@ class Tanh(Module):
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
-        >>> out = tanh(input).numpy()
-        >>> print(out)
-        [-0.7615942  0.         0.7615942]
+        >>> out = tanh(input)
+        >>> out
+        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
 
     """
 
@@ -261,9 +261,9 @@ def tanh_op(x):
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
-        >>> out = tanh(input).numpy()
-        >>> print(out)
-        [-0.7615942  0.         0.7615942]
+        >>> out = tanh(input)
+        >>> out
+        tensor([-0.7616,  0.    ,  0.7616], dtype=oneflow.float32)
 
     """
     return Tanh()(x)
@@ -303,9 +303,9 @@ class ELU(Module):
         >>> input = flow.Tensor(x)
         >>> elu = flow.nn.ELU()
 
-        >>> out = elu(input).numpy()
-        >>> print(out)
-        [-0.39346933  0.          0.5       ]
+        >>> out = elu(input)
+        >>> out
+        tensor([-0.3935,  0.    ,  0.5   ], dtype=oneflow.float32)
 
     """
 
@@ -345,9 +345,9 @@ class GELU(Module):
         >>> input = flow.Tensor(x)
         >>> gelu = flow.nn.GELU()
 
-        >>> out = gelu(input).numpy()
-        >>> print(out)
-        [-0.15426877  0.          0.34573123]
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
 
     """
 
@@ -387,9 +387,9 @@ def gelu_op(x):
         >>> input = flow.Tensor(x)
         >>> gelu = flow.nn.GELU()
 
-        >>> out = gelu(input).numpy()
-        >>> print(out)
-        [-0.15426877  0.          0.34573123]
+        >>> out = gelu(input)
+        >>> out
+        tensor([-0.1543,  0.    ,  0.3457], dtype=oneflow.float32)
 
     """
     return GELU()(x)
@@ -418,9 +418,9 @@ class Sigmoid(Module):
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> m = flow.nn.Sigmoid()
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [0.69367   0.6073567 0.5258555]
+        >>> out = m(x)
+        >>> out
+        tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
     """
 
     def __init__(self):
@@ -453,9 +453,9 @@ def sigmoid_op(x):
         >>> flow.enable_eager_execution()
 
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
-        >>> out = flow.sigmoid(x).numpy()
-        >>> print(out)
-        [0.69367   0.6073567 0.5258555]
+        >>> out = flow.sigmoid(x)
+        >>> out
+        tensor([0.6937, 0.6074, 0.5259], dtype=oneflow.float32)
 
     """
     return Sigmoid()(x)
@@ -493,9 +493,9 @@ class Hardsigmoid(Module):
         >>> input = flow.Tensor(x)
         >>> hardsigmoid = flow.nn.Hardsigmoid()
 
-        >>> out = hardsigmoid(input).numpy()
-        >>> print(out)
-        [0.41666666 0.5        0.5833333 ]
+        >>> out = hardsigmoid(input)
+        >>> out
+        tensor([0.4167, 0.5   , 0.5833], dtype=oneflow.float32)
 
 
     """
@@ -569,10 +569,10 @@ def softmax_op(tensor, dim=None):
         ...        [-1.31244969, -0.42528763,  1.47953856]]]
         ...    )
         ... )
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [[[0.15752424 0.3753552  0.46712062]
-          [0.05065432 0.12300029 0.8263454 ]]]
+        >>> out = m(x)
+        >>> out
+        tensor([[[0.1575, 0.3754, 0.4671],
+                 [0.0507, 0.123 , 0.8263]]], dtype=oneflow.float32)
     """
     return Softmax(dim)(tensor)
 
@@ -610,10 +610,10 @@ class LogSoftmax(Module):
         ...        [ 1.2552, -1.5747,  0.6923]]
         ...    )
         ... )
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [[-2.2513487 -3.8766491 -0.1346489]
-         [-0.4877046 -3.3176045 -1.0506046]]
+        >>> out = m(x)
+        >>> out
+        tensor([[-2.2513, -3.8766, -0.1346],
+                [-0.4877, -3.3176, -1.0506]], dtype=oneflow.float32)
     """
 
     def __init__(
@@ -670,9 +670,9 @@ class LogSigmoid(Module):
         >>> input = flow.Tensor(x)
         >>> logsigmoid = flow.nn.LogSigmoid()
 
-        >>> out = logsigmoid(input).numpy()
-        >>> print(out)
-        [-0.974077   -0.6931472  -0.47407696]
+        >>> out = logsigmoid(input)
+        >>> out
+        tensor([-0.9741, -0.6931, -0.4741], dtype=oneflow.float32)
 
     """
 
@@ -720,9 +720,9 @@ class Softplus(Module):
         >>> input = flow.Tensor(x)
         >>> softplus = flow.nn.Softplus()
 
-        >>> out = softplus(input).numpy()
-        >>> print(out)
-        [0.474077  0.6931472 0.974077 ]
+        >>> out = softplus(input)
+        >>> out
+        tensor([0.4741, 0.6931, 0.9741], dtype=oneflow.float32)
     """
 
     def __init__(self, beta: int = 1, threshold: int = 20):
@@ -771,9 +771,9 @@ class Hardswish(Module):
         >>> input = flow.Tensor(x)
         >>> hardswish = flow.nn.Hardswish()
 
-        >>> out = hardswish(input).numpy()
-        >>> print(out)
-        [-0.20833333  0.          0.29166666]
+        >>> out = hardswish(input)
+        >>> out
+        tensor([-0.2083,  0.    ,  0.2917], dtype=oneflow.float32)
 
     .. _`Searching for MobileNetV3`:
         https://arxiv.org/abs/1905.02244
@@ -829,9 +829,9 @@ class Hardtanh(Module):
         >>> m = flow.nn.Hardtanh()
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [0.2 0.3 1.  1. ]
+        >>> out = m(x)
+        >>> out
+        tensor([0.2, 0.3, 1. , 1. ], dtype=oneflow.float32)
 
     """
 
@@ -893,9 +893,9 @@ class LeakyReLU(Module):
         >>> m = flow.nn.LeakyReLU(0.1)
         >>> arr = np.array([0.2, 0.3, 3.0, 4.0])
         >>> x = flow.Tensor(arr)
-        >>> out = m(x).numpy()
-        >>> print(out)
-        [0.2 0.3 3.  4. ]
+        >>> out = m(x)
+        >>> out
+        tensor([0.2, 0.3, 3. , 4. ], dtype=oneflow.float32)
     """
 
     def __init__(self, negative_slope: float = 1e-2, inplace: bool = False):
@@ -904,6 +904,75 @@ class LeakyReLU(Module):
 
     def forward(self, x):
         return flow.F.leaky_relu(x, alpha=self.negative_slope)
+
+
+@oneflow_export("nn.Mish")
+@experimental_api
+class Mish(Module):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow.experimental as flow
+        >>> flow.enable_eager_execution()
+
+        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> mish = flow.nn.Mish()
+
+        >>> out = mish(input)
+        >>> out
+        tensor([0.8651, 1.944 , 2.9865], dtype=oneflow.float32)
+    """
+
+    def __init__(self, inplace: bool = False):
+        assert not inplace, "In-place operation is not currently supported"
+        super().__init__()
+
+    def forward(self, x):
+        return x * flow.experimental.tanh(flow.experimental.softplus(x))
+
+
+@oneflow_export("mish")
+@experimental_api
+def mish_op(x):
+    r"""Applies the element-wise function:
+
+    .. math::
+        \text{Mish}(x) = x * \text{Tanh}(\text{Softplus}(x))
+
+    .. note::
+        See `Mish: A Self Regularized Non-Monotonic Neural Activation Function <https://arxiv.org/abs/1908.08681>`_
+
+    See :mod:`oneflow.experimental.nn.Mish`
+    """
+
+    return Mish()(x)
+
+
+@register_tensor_op("mish")
+@experimental_api
+def mish_op_tensor(x):
+    r"""
+    mish() -> Tensor
+    See :func:`oneflow.experimental.mish`
+    """
+
+    return Mish()(x)
 
 
 if __name__ == "__main__":
