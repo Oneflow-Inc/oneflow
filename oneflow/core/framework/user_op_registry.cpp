@@ -83,6 +83,11 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
   return *this;
 }
 
+OpRegistry& OpRegistry::NoGrad() {
+  result_.no_grad = true;
+  return *this;
+}
+
 OpRegistry& OpRegistry::SetOutputBufferNum(int32_t num) {
   result_.same_output_regst_num = num;
   return *this;

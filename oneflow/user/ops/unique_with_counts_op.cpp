@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("unique_with_counts")
+REGISTER_NO_GRAD_USER_OP("unique_with_counts")
     .Input("x")
     .Output("y")
     .Output("idx")
