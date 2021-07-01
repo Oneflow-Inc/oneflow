@@ -1205,17 +1205,17 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           const auto parallel_conf =
               std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
-          const auto MakeParallelDescSymbol = [&parallel_conf]() -> int64_t {
+          const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
             int64_t symbol_id;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
               return Maybe<void>::Ok();
             };
-            LogicalRun(BuildInstruction);
+            JUST(LogicalRun(BuildInstruction));
             return symbol_id;
           };
-          (*symbol_map)[pair.first] = MakeParallelDescSymbol();
+          (*symbol_map)[pair.first] = JUST(MakeParallelDescSymbol());
         }
       }
       for (const auto& tbn : tmp_bns()) { (*symbol_map)[tbn] = parallel_desc_symbol_id; }

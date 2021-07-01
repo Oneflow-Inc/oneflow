@@ -139,8 +139,8 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
   std::shared_ptr<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>
       bn_in_op2blob_object =
           std::make_shared<HashMap<std::string, std::shared_ptr<compatible_py::BlobObject>>>();
-  builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
-                            bn_in_op2blob_object);
+  JUST(builder->RawStatelessCall(std::make_shared<cfg::OpAttribute>(*op_attribute), parallel_conf,
+                                 bn_in_op2blob_object));
   return JUST(MapAt(*bn_in_op2blob_object, "out"));
 }
 
@@ -453,7 +453,7 @@ Maybe<compatible_py::BlobObject> InstructionsBuilder::MakeReferenceBlobObject(
   CHECK((*parallel_desc_symbol) == (*op_arg_parallel_attr->parallel_desc_symbol()));
   std::shared_ptr<compatible_py::BlobObject> ref_blob_object =
       JUST(NewBlobObject(op_arg_parallel_attr, blob_object->op_arg_blob_attr()));
-  ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object});
+  JUST(ReplaceMirrored(parallel_desc_symbol, {ref_blob_object}, {blob_object}));
   return ref_blob_object;
 }
 
@@ -604,8 +604,8 @@ Maybe<void> InstructionsBuilder::Build121AssignInstruction(
   for (int64_t i = 0; i < parallel_num; ++i) { token_id_1.emplace_back(NewTokenId()); }
   std::tuple<std::vector<uint64_t>, std::vector<uint64_t>> token_ids =
       std::make_tuple(token_id_0, token_id_1);
-  BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids);
-  BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids);
+  JUST(BuildSendInstruction(ref_blob_object->parallel_desc_symbol(), value_blob_object, token_ids));
+  JUST(BuildRecvInstruction(value_blob_object->parallel_desc_symbol(), ref_blob_object, token_ids));
   return Maybe<void>::Ok();
 }
 
