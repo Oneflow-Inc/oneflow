@@ -1222,6 +1222,10 @@ class SmoothL1Loss(Module):
     def __init__(self, size_average=None, reduce=None, reduction: str = "mean", beta: float = 1.0,
     ) -> None:
         super().__init__()
+        if size_average is not None:
+            raise ValueError("Argument reduce is not supported yet")
+        if reduce is not None:
+            raise ValueError("Argument reduce is not supported yet")
         assert reduction in [
             "sum",
             "none",
