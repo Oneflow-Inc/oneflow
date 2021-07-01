@@ -41,8 +41,7 @@ class MaskedSelect(Module):
                 broadcast_mask_axes.append(i)
         broadcast_like_tensor = flow.experimental.zeros(
             tuple(broadcast_like_shape), dtype=flow.float32
-        )
-        broadcast_like_tensor = broadcast_like_tensor.to(x.device.type)
+        ).to(x.device.type)
         broadcast_like_tensor.requires_grad = x.requires_grad or mask.requires_grad
         if len(broadcast_x_axes) != 0:
             x = flow.experimental.broadcast_like(
@@ -85,8 +84,8 @@ def masked_select_op(x, mask):
 
         >>> x = flow.Tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
         >>> mask = x.gt(0.05)
-        >>> of_out = flow.masked_select(x, mask)
-        >>> of_out
+        >>> out = flow.masked_select(x, mask)
+        >>> out
         tensor([0.3139, 0.3898], dtype=oneflow.float32)
     """
     return MaskedSelect()(x, mask)
