@@ -43,16 +43,6 @@ void InputConsistentTensorMeta::assign(
   consumer_parallel_distribution_constraint_ = consumer_parallel_distribution_constraint;
 }
 
-Maybe<void> ConsistentTensorMetaInferArgs::Init(const TensorTuple& input_tensors,
-                                                Symbol<PlacementScope> placement_scope,
-                                                const AttrMap& attrs) {
-  input_consistent_tensor_metas_.resize(input_tensors.size());
-  placement_scope_ = placement_scope;
-  attrs_ = attrs;
-  JUST(InitInputConsistentTensorMetas(input_tensors));
-  return Maybe<void>::Ok();
-}
-
 size_t ConsistentTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<Symbol<PlacementScope>>()(placement_scope_);
   hash_value ^= std::hash<AttrMap>()(attrs_);
@@ -108,6 +98,17 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeParallelDistributionInferHints(
     hints->emplace_back(parallel_desc, blob_desc, parallel_distribution);
   }
   return Maybe<void>::Ok();
+}
+
+Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
+    const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
+    const AttrMap& attrs) {
+  std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
+  infer_args->input_consistent_tensor_metas_.resize(input_tensors.size());
+  infer_args->placement_scope_ = placement_scope;
+  infer_args->attrs_ = attrs;
+  JUST(infer_args->InitInputConsistentTensorMetas(input_tensors));
+  return infer_args;
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::InitInputConsistentTensorMetas(
