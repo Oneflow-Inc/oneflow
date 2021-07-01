@@ -58,7 +58,7 @@ OpNode::OpNode(const std::shared_ptr<const ParallelDesc>& parallel_desc,
     : parallel_desc_(parallel_desc),
       op_(ConstructOp(op_conf, parallel_desc->device_type())),
       ibns_(op_->input_bns().begin(), op_->input_bns().end()) {
-  op_->FillOpParallelDesc(parallel_desc);
+  CHECK_JUST(op_->FillOpParallelDesc(parallel_desc));
 }
 
 std::string OpNode::VisualStr() const {
