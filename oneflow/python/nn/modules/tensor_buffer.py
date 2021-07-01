@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Sequence
+from typing import Sequence, Optional
 
 import oneflow as flow
 from oneflow.python.nn.module import Module
@@ -120,6 +120,36 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
     
     """
     return TensorToTensorBuffer(instance_dims=instance_dims)(x)
+
+
+class GenTensorBuffer(Module):
+    def __init__(self, shape, shape_list, value_list, data_type, dynamic_out):
+        super().__init__()
+        self._op = (
+            flow.builtin_op("gen_tensor_buffer")
+            .Output("out")
+            .Attr("shape", shape)
+            .Attr("shape_list", shape_list)
+            .Attr("value_list", value_list)
+            .Attr("data_type", data_type)
+            .Attr("dynamic_out", dynamic_out)
+            .Build()
+        )
+
+    def forward(self):
+        return self._op()[0]
+
+
+@oneflow_export("gen_tensor_buffer")
+@experimental_api
+def gen_tensor_buffer(
+    shape: Sequence[int],
+    shape_list: Sequence[Sequence[int]],
+    value_list: Sequence[float],
+    data_type: Optional[flow.dtype] = flow.float32,
+    dynamic_out: Optional[bool] = False,
+):
+    return GenTensorBuffer(shape, shape_list, value_list, data_type, dynamic_out)()
 
 
 if __name__ == "__main__":

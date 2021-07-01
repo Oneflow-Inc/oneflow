@@ -1007,7 +1007,7 @@ class DynamicLossScalePolicy(LossScalePolicy):
         train_conf.mutable_dynamic_loss_scale_policy().set_increment_period(
             self.increment_period
         )
-        train_conf.mutable_dynamic_loss_scale_policy().set_ultiplier(self.multiplier)
+        train_conf.mutable_dynamic_loss_scale_policy().set_multiplier(self.multiplier)
 
 
 class Optimizer:

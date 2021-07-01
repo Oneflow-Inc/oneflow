@@ -1262,10 +1262,10 @@ Maybe<void> JobBuildAndInferCtx::Rebuild() {
   // build op graph
   OpGraph op_graph;
   if (Global<JobDesc>::Get()) {
-    op_graph.Init(*job_);
+    JUST(op_graph.Init(*job_));
   } else {
     auto scope = std::make_unique<GlobalJobDescScope>(job_->job_conf(), job_id());
-    op_graph.Init(*job_);
+    JUST(op_graph.Init(*job_));
   }
   // clear old job except job_conf
   job_->mutable_net()->Clear();
