@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<const Device> DeviceInferFn(user_op::DeviceInferContext* ctx) {
+Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
   *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
       ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
   return Device::New("cuda_d2d");

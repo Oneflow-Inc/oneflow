@@ -56,10 +56,11 @@ Maybe<void> SingleClientSync() {
 
 Maybe<void> MultiClientSync() {
   BlockingCounter bc(1);
-  PhysicalRun([&bc](InstructionsBuilder* builder) {
-    builder->ComputeGlobalFrontSeqBarrier();
-    builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); });
-  });
+  JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->ComputeGlobalFrontSeqBarrier());
+    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    return Maybe<void>::Ok();
+  }));
 
   bc.WaitUntilCntEqualZero();
 

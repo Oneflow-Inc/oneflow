@@ -180,8 +180,7 @@ def main():
         with_python = not args.no_python
         cmd = []
         if with_python:
-            cmd = ["nsys", "profile", "--stats=true", sys.executable, "-u"]
-            # cmd = [sys.executable, "-u"]
+            cmd = [sys.executable, "-u"]
             if args.module:
                 cmd.append("-m")
         else:
