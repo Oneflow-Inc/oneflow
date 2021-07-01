@@ -67,14 +67,14 @@ class TestTensor(flow.unittest.TestCase):
         np_int_arr = np.random.randint(-100, high=100, size=shape, dtype=np.int32)
         tensor = flow.Tensor(np_int_arr, dtype=flow.int32)
         test_case.assertEqual(tensor.dtype, flow.int32)
-        test_case.assertTrue(np_arr.flags['C_CONTIGUOUS'])
+        test_case.assertTrue(np_arr.flags["C_CONTIGUOUS"])
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_int_arr))
 
         # construct with not contiguous numpy data
         np_arr = np.random.random((1, 256, 256, 3)).astype(np.float32)
         np_arr = np_arr.transpose(0, 3, 1, 2)
         tensor = flow.Tensor(np_arr)
-        test_case.assertFalse(np_arr.flags['C_CONTIGUOUS'])
+        test_case.assertFalse(np_arr.flags["C_CONTIGUOUS"])
         test_case.assertTrue(np.array_equal(tensor.numpy(), np_arr))
 
     @unittest.skipIf(
