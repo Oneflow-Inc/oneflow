@@ -492,6 +492,10 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "triu"
+  signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
+  bind_python: True
+  
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
   bind_python: True
