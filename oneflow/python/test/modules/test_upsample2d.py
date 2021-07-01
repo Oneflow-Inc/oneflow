@@ -310,7 +310,6 @@ def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
-<<<<<<< HEAD
 def _test_interpolate(test_case, device):
     np_in = np.arange(1, 5).reshape((1, 1, 2, 2))
     of_in = flow.Tensor(
@@ -347,38 +346,20 @@ def _test_interpolate_aligncorner(test_case, device):
         dtype=flow.float32,
     )
     m = flow.nn.interpolate(scale_factor=2.5, mode="bilinear", align_corners=True)
-=======
-def _test_interpolate_float_scale(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 10).reshape((1, 1, 3, 3)),
-        device=flow.device(device),
-        dtype=flow.float32,
-        requires_grad=True,
-    )
-    m = flow.nn.Upsample(scale_factor=1.5)
->>>>>>> 95337ebc20fa93c28b67985c00aa24b98eb46d78
     of_out = m(input)
     np_out = np.array(
         [
             [
                 [
-<<<<<<< HEAD
                     [1.0000, 1.2500, 1.5000, 1.7500, 2.0000],
                     [1.5000, 1.7500, 2.0000, 2.2500, 2.5000],
                     [2.0000, 2.2500, 2.5000, 2.7500, 3.0000],
                     [2.5000, 2.7500, 3.0000, 3.2500, 3.5000],
                     [3.0000, 3.2500, 3.5000, 3.7500, 4.0000]
-=======
-                    [1.0, 1.0, 2.0, 3.0],
-                    [1.0, 1.0, 2.0, 3.0],
-                    [4.0, 4.0, 5.0, 6.0],
-                    [7.0, 7.0, 8.0, 9.0],
->>>>>>> 95337ebc20fa93c28b67985c00aa24b98eb46d78
                 ]
             ]
         ]
     )
-<<<<<<< HEAD
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
@@ -508,8 +489,8 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
         assert isinstance(scale_factor, float)
         h_ratios = scale_factor
         w_ratios = scale_factor
-        h_out = np.floor(scale_factor * h).astype(np.int32)
-        w_out = np.floor(scale_factor * w).astype(np.int32)
+        h_out = np.round(scale_factor * h).astype(np.int32)
+        w_out = np.round(scale_factor * w).astype(np.int32)
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
@@ -539,15 +520,6 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
     return out_img
 
 
-=======
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_grad = np.array([[[[4.0, 2.0, 2.0], [2.0, 1.0, 1.0], [2.0, 1.0, 1.0]]]])
-    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
-
-
->>>>>>> 95337ebc20fa93c28b67985c00aa24b98eb46d78
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -556,7 +528,6 @@ class TestUpsample2d(flow.unittest.TestCase):
     def test_upsample2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-<<<<<<< HEAD
             _test_upsample_and_interpolate_nearest,
             _test_upsample_and_interpolate_bilinear,
             # _test_upsample2d,
@@ -571,18 +542,6 @@ class TestUpsample2d(flow.unittest.TestCase):
             # _test_interpolate,
             # _test_interpolate_aligncorner,
             # _test_interpolate_backward
-=======
-            _test_upsample2d,
-            _test_upsample2d_bilinear,
-            _test_upsample2d_bilinear_aligncorner,
-            _test_UpsamplingNearest2d,
-            _test_UpsamplingBilinear2d,
-            _test_upsample2d_4dim,
-            _test_upsample2d_bilinear_4dim,
-            _test_upsample2d_backward,
-            _test_upsample2d_bilinear_aligncorner_backward,
-            _test_interpolate_float_scale,
->>>>>>> 95337ebc20fa93c28b67985c00aa24b98eb46d78
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         # The squre root of the range must be an integer.
