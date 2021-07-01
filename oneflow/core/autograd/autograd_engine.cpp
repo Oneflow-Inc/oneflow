@@ -21,11 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -48,11 +45,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { now_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
-    TensorTuple input = {autograd_meta->acc_grad(), now_grad};
-    TensorTuple output(1);
-    const auto& add = JUST(op_expr_helper::AddOp());
-    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
-    autograd_meta->set_acc_grad(output.at(0));
+    const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), now_grad));
+    autograd_meta->set_acc_grad(output);
   } else {
     autograd_meta->set_acc_grad(now_grad);
   }
