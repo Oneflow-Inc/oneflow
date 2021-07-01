@@ -93,8 +93,8 @@ Maybe<void> SplitLike::Apply(const SplitLikeInterpState* ctx, const TensorTuple&
     }
   }
   MutableAttrMap concat_attrs;
-  concat_attrs.SetAttr<int>("axis", axis_);
-  concat_attrs.SetAttr<int>("max_dim_size", ctx->max_dim_size);
+  JUST(concat_attrs.SetAttr<int>("axis", axis_));
+  JUST(concat_attrs.SetAttr<int>("max_dim_size", ctx->max_dim_size));
   in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*concat_op_, inputs, concat_attrs));
   return Maybe<void>::Ok();
 }
