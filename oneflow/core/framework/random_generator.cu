@@ -48,11 +48,11 @@ __global__ void SetupKernel(uint64_t seed, curandState* state) {
 
 }  // namespace
 
-void GeneratorImpl<DeviceType::kGPU>::CudaRandInit(uint64_t seed) {
+void DeviceGeneratorImpl<DeviceType::kGPU>::CudaRandInit(uint64_t seed) {
   SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
 }
 
-GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(uint64_t seed) {
+DeviceGeneratorImpl<DeviceType::kGPU>::DeviceGeneratorImpl(uint64_t seed) {
   seed_ = seed;
   device_type_ = DeviceType::kGPU;
   cudaDeviceProp prop;
@@ -64,9 +64,11 @@ GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(uint64_t seed) {
   CudaRandInit(seed);
 }
 
-GeneratorImpl<DeviceType::kGPU>::~GeneratorImpl() { OF_CUDA_CHECK(cudaFree(curand_states_)); }
+DeviceGeneratorImpl<DeviceType::kGPU>::~DeviceGeneratorImpl() {
+  OF_CUDA_CHECK(cudaFree(curand_states_));
+}
 
-template class GeneratorImpl<DeviceType::kGPU>;
+template class DeviceGeneratorImpl<DeviceType::kGPU>;
 
 }  // namespace one
 }  // namespace oneflow

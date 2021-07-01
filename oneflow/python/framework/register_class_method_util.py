@@ -25,7 +25,6 @@ import oneflow._oneflow_internal
 def RegisterMethod4Class():
     op_expr_util.RegisterMethod4UserOpExpr()
     functional.RegisterFunctionalApis()
-    generator.RegisterGeneratorApis()
 
     eager_blob_util.RegisterMethod4EagerPhysicalBlob()
 

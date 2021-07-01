@@ -42,13 +42,22 @@ uint64_t getNonDeterministicRandom() {
 
 void manual_seed(uint64_t seed) {
 #ifdef WITH_CUDA
-  const auto& cuda_gen = GetDefaultGenerator<DeviceType::kGPU>();
-  cuda_gen->manual_seed(seed);
+  const auto& cuda_gen = GetDefaultDeviceGenerator<DeviceType::kGPU>();
+  cuda_gen->set_seed(seed);
 #endif
-  const auto& cpu_gen = GetDefaultGenerator<DeviceType::kCPU>();
-  cpu_gen->manual_seed(seed);
-  const auto& auto_gen = GetDefaultGenerator<DeviceType::kAUTO>();
-  auto_gen->manual_seed(seed);
+  const auto& cpu_gen = GetDefaultDeviceGenerator<DeviceType::kCPU>();
+  cpu_gen->set_seed(seed);
+  const auto& auto_gen = GetDefaultAutoGenerator();
+  auto_gen->set_seed(seed);
+}
+
+const std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
+  return std::make_shared<AutoGeneratorImpl>(seed);
+}
+
+const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator() {
+  static auto generator = CreateAutoGenerator(getNonDeterministicRandom());
+  return generator;
 }
 
 }  // namespace one

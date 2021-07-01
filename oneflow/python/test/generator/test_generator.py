@@ -18,6 +18,16 @@ import oneflow as flow
 
 
 class TestGenerator(flow.unittest.TestCase):
+    def test_different_devices(test_case):
+        auto_gen = flow.Generator(device="auto")
+        cuda_gen = flow.Generator(device="cuda")
+        cpu_gen = flow.Generator(device="cpu")
+        test_case.assertTrue(auto_gen.initial_seed(), cuda_gen.initial_seed())
+        test_case.assertTrue(auto_gen.initial_seed(), cpu_gen.initial_seed())
+
+    def test_global_manual_seed(test_case):
+        flow.manual_seed(10)
+
     def test_generator_manual_seed(test_case):
         generator = flow.Generator()
         generator.manual_seed(1)

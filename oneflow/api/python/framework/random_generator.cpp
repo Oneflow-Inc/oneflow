@@ -15,17 +15,17 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/functional.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/random_generator.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("one", m) {
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  m.def("manual_seed", [](uint64_t seed) { return one::manual_seed(seed); });
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
+      .def(py::init<std::string>())
       .def(py::init<std::string, const int64_t>())
       .def("manual_seed", &one::Generator::set_seed)
       .def("initial_seed", &one::Generator::get_seed);

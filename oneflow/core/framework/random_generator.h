@@ -37,58 +37,59 @@ void manual_seed(uint64_t seed);
 // with good distribution of 0s and 1s in bit representation
 constexpr uint64_t default_rng_seed_val = 67280421310721;
 
-template<DeviceType device_type>
-class GeneratorImpl;
-
-class GeneratorImplBase {
+class GeneratorImpl {
  public:
-  GeneratorImplBase() = default;
-  virtual ~GeneratorImplBase() = default;
+  GeneratorImpl() = default;
+  virtual ~GeneratorImpl() = default;
 
   virtual void set_seed(const uint64_t seed) = 0;
   virtual uint64_t get_seed() const { return seed_; }
-  virtual DeviceType device_type() const { return device_type_; }
+  virtual const std::string& device_type() const { return device_type_; }
 
  protected:
-  DeviceType device_type_;
+  std::string device_type_;
   uint64_t seed_;
 };
 
-template<>
-class GeneratorImpl<DeviceType::kAUTO> : public GeneratorImplBase {
+template<DeviceType device_type>
+class DeviceGeneratorImpl;
+
+class AutoGeneratorImpl : public GeneratorImpl {
  public:
-  GeneratorImpl(uint64_t seed) {
+  AutoGeneratorImpl(uint64_t seed) {
     seed_ = seed;
-    device_type_ = DeviceType::kAUTO;
+    device_type_ = "auto";
   }
 
   void set_seed(const uint64_t seed) override {
+    seed_ = seed;
     for (const auto& it : generators_) { it.second->set_seed(seed); }
   }
 
   template<DeviceType device_type>
-  Maybe<GeneratorImpl<device_type>> GetDeviceGenerator() {
+  Maybe<DeviceGeneratorImpl<device_type>> GetDeviceGenerator() {
     CHECK_OR_RETURN(device_type != DeviceType::kInvalidDevice);
     auto it = generators_.find(device_type);
     if (it == generators_.end()) {
-      it = generators_.emplace(device_type, std::make_shared<GeneratorImpl<device_type>>(seed_))
+      it = generators_
+               .emplace(device_type, std::make_shared<DeviceGeneratorImpl<device_type>>(seed_))
                .first;
     }
-    return std::dynamic_pointer_cast<GeneratorImpl<device_type>>(it->second);
+    return std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(it->second);
   }
 
  private:
-  std::map<DeviceType, std::shared_ptr<GeneratorImplBase>> generators_;
+  std::map<DeviceType, std::shared_ptr<GeneratorImpl>> generators_;
 };
 
 template<>
-class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
+class DeviceGeneratorImpl<DeviceType::kCPU> : public GeneratorImpl {
  public:
-  GeneratorImpl(uint64_t seed) : mt19937_generator_(seed) {
+  DeviceGeneratorImpl(uint64_t seed) : mt19937_generator_(seed) {
     seed_ = seed;
     device_type_ = DeviceType::kCPU;
   }
-  virtual ~GeneratorImpl() = default;
+  virtual ~DeviceGeneratorImpl() = default;
 
   void set_seed(const uint64_t seed) override {
     seed_ = seed;
@@ -103,10 +104,10 @@ class GeneratorImpl<DeviceType::kCPU> : public GeneratorImplBase {
 
 #ifdef WITH_CUDA
 template<>
-class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase {
+class DeviceGeneratorImpl<DeviceType::kGPU> : public GeneratorImpl {
  public:
-  GeneratorImpl(uint64_t seed);
-  virtual ~GeneratorImpl();
+  DeviceGeneratorImpl(uint64_t seed);
+  virtual ~DeviceGeneratorImpl();
 
   const int32_t& block_num() const { return block_num_; }
   const int32_t& thread_num() const { return thread_num_; }
@@ -127,13 +128,16 @@ class GeneratorImpl<DeviceType::kGPU> : public GeneratorImplBase {
 
 class Generator final {
  public:
-  explicit Generator(std::string device = "auto", uint64_t seed = default_rng_seed_val) {
+  explicit Generator(std::string device, uint64_t seed) { init(device, seed); }
+  explicit Generator(std::string device) { init(device, default_rng_seed_val); }
+
+  void init(std::string device, uint64_t seed) {
     if (device == "cpu") {
-      gen_impl_ = std::make_shared<GeneratorImpl<DeviceType::kCPU>>(seed);
+      gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kCPU>>(seed);
     } else if (device == "cuda") {
-      gen_impl_ = std::make_shared<GeneratorImpl<DeviceType::kGPU>>(seed);
+      gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kGPU>>(seed);
     } else if (device == "auto") {
-      gen_impl_ = std::make_shared<GeneratorImpl<DeviceType::kAUTO>>(seed);
+      gen_impl_ = std::make_shared<AutoGeneratorImpl>(seed);
     } else {
       UNIMPLEMENTED() << " device unimplemented, device name: " << device;
     }
@@ -150,29 +154,35 @@ class Generator final {
   }
 
  private:
-  std::shared_ptr<GeneratorImplBase> gen_impl_;
+  std::shared_ptr<GeneratorImpl> gen_impl_;
 };
 
+const std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
+
+const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
+
 template<DeviceType device_type>
-const std::shared_ptr<GeneratorImpl<device_type>> CreateGenerator(uint64_t seed) {
-  return std::make_shared<GeneratorImpl<device_type>>(seed);
+const std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
+  return std::make_shared<DeviceGeneratorImpl<device_type>>(seed);
 }
 
 template<DeviceType device_type>
-const std::shared_ptr<GeneratorImpl<device_type>>& GetDefaultGenerator() {
-  static auto generator = CreateGenerator<device_type>(getNonDeterministicRandom());
+const std::shared_ptr<DeviceGeneratorImpl<device_type>>& GetDefaultDeviceGenerator() {
+  static auto generator = CreateDeviceGenerator<device_type>(getNonDeterministicRandom());
   return generator;
 }
 
 template<DeviceType device_type>
-const Maybe<GeneratorImpl<device_type>> TryGetDeviceGenerator(
-    const std::shared_ptr<GeneratorImplBase>& generator) {
-  const auto& gen = std::dynamic_pointer_cast<GeneratorImpl<device_type>>(generator);
-  if (gen->device_type() == DeviceType::kAUTO) {
-    return gen->template GetDeviceGenerator<device_type>();
+const Maybe<DeviceGeneratorImpl<device_type>> TryGetDeviceGenerator(
+    const std::shared_ptr<GeneratorImpl>& generator) {
+  if (generator->device_type() == "auto") {
+    const auto auto_gen = std::dynamic_pointer_cast<AutoGeneratorImpl>(generator);
+    CHECK_NOTNULL_OR_RETURN(auto_gen);
+    return auto_gen->template GetDeviceGenerator<device_type>();
   }
-  CHECK_OR_RETURN(gen->device_type() == device_type);
-  return gen;
+  const auto device_gen = std::dynamic_pointer_cast<DeviceGeneratorImpl<device_type>>(generator);
+  CHECK_NOTNULL_OR_RETURN(device_gen);
+  return device_gen;
 }
 
 }  // namespace one

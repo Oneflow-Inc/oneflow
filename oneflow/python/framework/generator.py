@@ -16,11 +16,19 @@ limitations under the License.
 from __future__ import absolute_import
 import oneflow
 import oneflow._oneflow_internal
+from oneflow.python.oneflow_export import oneflow_export
 
 
-def RegisterGeneratorApis():
-    import oneflow
-    import oneflow.experimental
+@oneflow_export("Generator")
+def MakeGenerator(device=None, seed=None):
+    if device is None:
+        device = "auto"
+    if seed is None:
+        return oneflow._oneflow_internal.Generator(device)
+    else:
+        return oneflow._oneflow_internal.Generator(device, seed)
 
-    setattr(oneflow, "Generator", oneflow._oneflow_internal.one.Generator)
-    setattr(oneflow.experimental, "Generator", oneflow._oneflow_internal.one.Generator)
+
+@oneflow_export("manual_seed")
+def manual_seed(seed):
+    oneflow._oneflow_internal.manual_seed(seed)
