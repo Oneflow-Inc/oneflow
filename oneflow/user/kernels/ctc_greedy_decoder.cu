@@ -42,17 +42,18 @@ __global__ void CtcGreedyDecodeGpuMultiThread(int64_t* decoded_ptr, T* neg_sum_l
     extern __shared__ int64_t shared_max_indices_memory[];
     int64_t* shared_max_indices = (int64_t*)shared_max_indices_memory;
     NdIndexOffsetHelper<int64_t, 3> input_helper(max_input_length, batch_size, num_labels);
-
     for (int64_t t = tid; t < max_input_length; t += blockDim.x) {
-      shared_max_indices[t] = -1;
-      T max_value = -FLT_MAX;
       const T* prob_data_t = &log_probs_ptr[input_helper.NdIndexToOffset(t, b, 0)];
+      int64_t max_indice = 0;
+      T max_value = -FLT_MAX;
       FOR_RANGE(int64_t, c, 0, num_labels) {
-        if (prob_data_t[c] > max_value) {
-          shared_max_indices[t] = c;
-          max_value = prob_data_t[c];
+        const T prob = prob_data_t[c];
+        if (prob > max_value) {
+          max_indice = c;
+          max_value = prob;
         }
       }
+      shared_max_indices[t] = max_indice;
     }
 
     __syncthreads();
@@ -61,14 +62,13 @@ __global__ void CtcGreedyDecodeGpuMultiThread(int64_t* decoded_ptr, T* neg_sum_l
       int64_t prev_indices = -1, t_dec = 0;
       FOR_RANGE(int64_t, t, 0, input_lengths_ptr[b]) {
         const T* prob_data_t = &log_probs_ptr[input_helper.NdIndexToOffset(t, b, 0)];
-
-        neg_sum_logits_ptr[b] -= prob_data_t[shared_max_indices[t]];
-        if (shared_max_indices[t] != num_labels - 1
-            && !(merge_repeated && (prev_indices == shared_max_indices[t]))) {
-          decoded_ptr[b * max_input_length + t_dec] = shared_max_indices[t];
+        const int64_t indice_t = shared_max_indices[t];
+        neg_sum_logits_ptr[b] -= prob_data_t[indice_t];
+        if (indice_t != num_labels - 1 && !(merge_repeated && (prev_indices == indice_t))) {
+          decoded_ptr[b * max_input_length + t_dec] = indice_t;
           t_dec++;
         }
-        prev_indices = shared_max_indices[t];
+        prev_indices = indice_t;
       }
       FOR_RANGE(int64_t, t, t_dec, max_input_length) { decoded_ptr[b * max_input_length + t] = 0; }
     }
