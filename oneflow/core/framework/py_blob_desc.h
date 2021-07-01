@@ -18,7 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
@@ -26,9 +26,29 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace cfg {
+
+class LogicalBlobId;
+class ParallelConf;
+
+}  // namespace cfg
+
 namespace compatible_py {
 
 static int64_t INVALID_SPLIT_AXIS = -22;
+
+class Tensor {
+ public:
+  virtual ~Tensor() = default;
+
+  virtual std::shared_ptr<cfg::LogicalBlobId> lbi() const = 0;
+  virtual std::string logical_blob_name() const = 0;
+  virtual std::string op_name() const = 0;
+  virtual std::string blob_name() const = 0;
+  virtual std::shared_ptr<Shape> shape() const = 0;
+  virtual DataType dtype() const = 0;
+  virtual std::shared_ptr<cfg::ParallelConf> parallel_conf() const = 0;
+};
 
 class BlobDesc : public Tensor {
  public:
