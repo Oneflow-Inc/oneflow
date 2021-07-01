@@ -177,7 +177,6 @@ def OneFlow_MlirJitOp : OneFlow_UserBaseOp<"mlir_jit", []> {}
 
 def OutlineFunction : NativeCodeCall<"OutlineFunction($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
-// FIXME: the order of mul_op and scalar is not guaranteed
 def OutlineFuseCastScale : Pat<
   (
     OneFlow_ScalarMulByTensorOp : $mul_op
