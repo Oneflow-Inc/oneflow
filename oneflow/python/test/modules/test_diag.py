@@ -23,8 +23,8 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_diag_one_dimen(test_case, value, device):
-    input = flow.Tensor(np.random.randn(3), device=flow.device(device))
+def _test_diag_dimen_forward(test_case, shape, diagonal, device):
+    input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.diag(input)
     np_out = np.diag(input.numpy())
     test_case.assertTrue(
@@ -34,42 +34,19 @@ def _test_diag_one_dimen(test_case, value, device):
         np.allclose(input.diag().numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
 
-    of_out = flow.diag(input, value)
-    np_out = np.diag(input.numpy(), value)
+    of_out = flow.diag(input, diagonal)
+    np_out = np.diag(input.numpy(), diagonal)
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
     test_case.assertTrue(
         np.allclose(
-            input.diag(diagonal=value).numpy(), np_out, 1e-5, 1e-5, equal_nan=True
+            input.diag(diagonal=diagonal).numpy(), np_out, 1e-5, 1e-5, equal_nan=True
         )
     )
 
 
-def _test_diag_other_dimen(test_case, value, device):
-    input = flow.Tensor(np.random.randn(3, 3), device=flow.device(device))
-    of_out = flow.diag(input)
-    np_out = np.diag(input.numpy())
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-    test_case.assertTrue(
-        np.allclose(input.diag().numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    of_out = flow.diag(input, value)
-    np_out = np.diag(input.numpy(), value)
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-    test_case.assertTrue(
-        np.allclose(
-            input.diag(diagonal=value).numpy(), np_out, 1e-5, 1e-5, equal_nan=True
-        )
-    )
-
-
-def _test_diag_one_dimen_backward(test_case, value, device):
+def _test_diag_one_dimen_backward(test_case, shape, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
@@ -93,7 +70,7 @@ def _test_diag_one_dimen_backward(test_case, value, device):
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
-    of_out = flow.diag(input, value).sum()
+    of_out = flow.diag(input, diagonal).sum()
     of_out.backward()
     np_grad = np.ones(shape=3)
     test_case.assertTrue(
@@ -103,7 +80,7 @@ def _test_diag_one_dimen_backward(test_case, value, device):
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
-    of_out = input.diag(diagonal=value).sum()
+    of_out = input.diag(diagonal=diagonal).sum()
     of_out.backward()
     np_grad = np.ones(shape=3)
     test_case.assertTrue(
@@ -111,7 +88,7 @@ def _test_diag_one_dimen_backward(test_case, value, device):
     )
 
 
-def _test_diag_other_dimen_backward(test_case, value, device):
+def _test_diag_other_dimen_backward(test_case, shape, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3, 3), device=flow.device(device), requires_grad=True
     )
@@ -135,17 +112,14 @@ def _test_diag_other_dimen_backward(test_case, value, device):
     input = flow.Tensor(
         np.random.randn(3, 3), device=flow.device(device), requires_grad=True
     )
-    of_out = flow.diag(input, value).sum()
+    of_out = flow.diag(input, diagonal).sum()
     of_out.backward()
-    print("value=", value)
-    if value > 0:
+    if diagonal > 0:
         np_grad = np.array([[0, 1, 0], [0, 0, 1], [0, 0, 0],])
-    elif value < 0:
+    elif diagonal < 0:
         np_grad = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0],])
     else:
         np_grad = np.identity(3)
-    print("flow:", input.grad.numpy())
-    print("numpy:", np_grad)
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
     )
@@ -153,17 +127,78 @@ def _test_diag_other_dimen_backward(test_case, value, device):
     input = flow.Tensor(
         np.random.randn(3, 3), device=flow.device(device), requires_grad=True
     )
-    of_out = input.diag(diagonal=value).sum()
+    of_out = input.diag(diagonal=diagonal).sum()
     of_out.backward()
-    print("value=", value)
-    if value > 0:
+    if diagonal > 0:
         np_grad = np.array([[0, 1, 0], [0, 0, 1], [0, 0, 0],])
-    elif value < 0:
+    elif diagonal < 0:
         np_grad = np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0],])
     else:
         np_grad = np.identity(3)
-    print("a.diag flow:", input.grad.numpy())
-    print("numpy:", np_grad)
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
+    )
+
+
+def _test_diag_other_dimen_non_square_backward(test_case, shape, diagonal, device):
+    input = flow.Tensor(
+        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    )
+    of_out = flow.diag(input).sum()
+    of_out.backward()
+    np_tmp = np.zeros([3, 1])
+    np_grad = np.identity(3)
+    np_grad = np.hstack((np_grad, np_tmp))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    input = flow.Tensor(
+        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    )
+    of_out = input.diag().sum()
+    of_out.backward()
+    np_tmp = np.zeros([3, 1])
+    np_grad = np.identity(3)
+    np_grad = np.hstack((np_grad, np_tmp))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    input = flow.Tensor(
+        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    )
+    of_out = flow.diag(input, diagonal).sum()
+    of_out.backward()
+    if diagonal > 0:
+        np_tmp = np.zeros([3, 1])
+        np_grad = np.identity(3)
+        np_grad = np.hstack((np_tmp, np_grad))
+    elif diagonal < 0:
+        np_grad = np.array([[0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0],])
+    else:
+        np_tmp = np.zeros([3, 1])
+        np_grad = np.identity(3)
+        np_grad = np.hstack((np_grad, np_tmp))
+    test_case.assertTrue(
+        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
+    )
+
+    input = flow.Tensor(
+        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
+    )
+    of_out = input.diag(diagonal=diagonal).sum()
+    of_out.backward()
+    if diagonal > 0:
+        np_tmp = np.zeros([3, 1])
+        np_grad = np.identity(3)
+        np_grad = np.hstack((np_tmp, np_grad))
+    elif diagonal < 0:
+        np_grad = np.array([[0, 0, 0, 0], [1, 0, 0, 0], [0, 1, 0, 0],])
+    else:
+        np_tmp = np.zeros([3, 1])
+        np_grad = np.identity(3)
+        np_grad = np.hstack((np_grad, np_tmp))
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
     )
@@ -177,12 +212,13 @@ class TestDiag(flow.unittest.TestCase):
     def test_diag(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_diag_one_dimen,
-            _test_diag_other_dimen,
+            _test_diag_dimen_forward,
             _test_diag_one_dimen_backward,
             _test_diag_other_dimen_backward,
+            _test_diag_other_dimen_non_square_backward,
         ]
-        arg_dict["value"] = [1, 0, -1]
+        arg_dict["shape"] = [(3,), (3, 3), (3, 4)]
+        arg_dict["diagonal"] = [1, 0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
