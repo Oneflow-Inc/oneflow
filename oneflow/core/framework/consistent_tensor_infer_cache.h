@@ -78,9 +78,6 @@ class ConsistentTensorMetaInferArgs final {
   Symbol<PlacementScope> placement_scope() const { return placement_scope_; }
   const AttrMap& attrs() const { return attrs_; }
 
-  Maybe<void> Init(const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
-                   const AttrMap& attrs);
-
   size_t hash_value() const;
 
   bool operator==(const ConsistentTensorMetaInferArgs& other) const;
@@ -96,13 +93,18 @@ class ConsistentTensorMetaInferArgs final {
       const UserOpExpr& user_op_expr, const std::vector<BlobDesc>& blob_descs,
       std::vector<ParallelDistributionInferHint>* hints) const;
 
-  static Maybe<ConsistentTensorMetaInferArgs> New() {
+  static Maybe<ConsistentTensorMetaInferArgs> New(const TensorTuple& input_tensors,
+                                                  Symbol<PlacementScope> placement_scope,
+                                                  const AttrMap& attrs) {
     std::shared_ptr<ConsistentTensorMetaInferArgs> infer_args(new ConsistentTensorMetaInferArgs());
+    infer_args->Init(input_tensors, placement_scope, attrs);
     return infer_args;
   }
 
  private:
   ConsistentTensorMetaInferArgs() = default;
+  Maybe<void> Init(const TensorTuple& input_tensors, Symbol<PlacementScope> placement_scope,
+                   const AttrMap& attrs);
   Maybe<void> InitInputConsistentTensorMetas(const TensorTuple& input_tensors);
 
   std::vector<InputConsistentTensorMeta> input_consistent_tensor_metas_;

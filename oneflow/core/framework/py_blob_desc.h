@@ -26,13 +26,6 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace cfg {
-
-class LogicalBlobId;
-class ParallelConf;
-
-}  // namespace cfg
-
 namespace compatible_py {
 
 static int64_t INVALID_SPLIT_AXIS = -22;
