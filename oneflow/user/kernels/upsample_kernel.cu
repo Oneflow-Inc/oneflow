@@ -73,9 +73,11 @@ __device__ T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, con
     return scale * static_cast<T>(dst_index);
   } else {
     T src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-    src_index = (src_index < 0) ? 0 : src_index;
+    int64_t sx = static_cast<int64_t>(floorf(src_index));
+
+    src_index = (sx < 0) ? 0 : src_index;
     if (scale > static_cast<T>(1.0)) {
-      src_index = src_index > in_len - 2 ? in_len - 2 : src_index;
+      src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
     }
     return src_index;
   }
