@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_ENABLE_RTTI ON) # turn this on to make it compatible with protobuf
-add_llvm_library(MLIROneFlowExtension STATIC
+add_llvm_library(MLIROneFlowExtension
   extension.cpp
   DEPENDS
 	LINK_LIBS PUBLIC
