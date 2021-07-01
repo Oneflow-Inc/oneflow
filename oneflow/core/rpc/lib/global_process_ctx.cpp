@@ -31,9 +31,10 @@ int64_t GlobalProcessCtx::Rank() {
 }
 
 int64_t GlobalProcessCtx::LocalRank() {
-  CHECK_NOTNULL(std::getenv("LOCAL_RANK"));
-  CHECK(IsStrInt(std::getenv("LOCAL_RANK")));
-  static int64_t local_rank = std::stol(std::getenv("LOCAL_RANK"));
+  char* local_rank_env = std::getenv("LOCAL_RANK");
+  if (!local_rank_env) { return 0; }
+  CHECK(IsStrInt(local_rank_env));
+  static int64_t local_rank = std::stol(local_rank_env);
   return local_rank;
 }
 
