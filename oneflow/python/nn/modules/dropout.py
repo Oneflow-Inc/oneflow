@@ -81,11 +81,11 @@ class Dropout(_DropoutNd):
         ...    ]
         ... )
         >>> x = flow.Tensor(arr)
-        >>> y = m(x).numpy()
-        >>> print(y)
-        [[-0.7797  0.2264  0.2458  0.4163]
-         [ 0.4299  0.3626 -0.4892  0.4141]
-         [-1.4115  1.2183 -0.5503  0.652 ]]
+        >>> y = m(x)
+        >>> y #doctest: +ELLIPSIS
+        tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
+                ...
+                [-1.4115,  1.2183, -0.5503,  0.652 ]], dtype=oneflow.float32)
 
 
     """
@@ -117,7 +117,7 @@ class Dropout(_DropoutNd):
         )
 
     def forward(self, x):
-        if self.p == 0.0:
+        if self.p == 0.0 or not self.training:
             return x
         mask = self._mask_op(x)[0]
         return self._op(x, mask)[0]

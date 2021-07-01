@@ -126,11 +126,11 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     } else {
       UNIMPLEMENTED_THEN_RETURN();
     }
-    FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
+    JUST(FillBlobParallelDesc([&](const std::string& bn) -> Maybe<const ParallelDesc> {
       auto it = bn2parallel_desc.find(bn);
       CHECK_OR_RETURN(it != bn2parallel_desc.end());
       return it->second;
-    });
+    }));
     return Maybe<void>::Ok();
   }
 };
