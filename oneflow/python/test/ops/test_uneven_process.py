@@ -21,7 +21,7 @@ import os
 @unittest.skipIf(flow.sysconfig.has_rpc_backend_grpc() == False, "lacks grpc")
 @flow.unittest.skip_unless_2n4d()
 @unittest.skipIf(
-    os.getenv("ONEFLOW_TEST_UNEVEN_PROCESS"), "this case only test unevne process",
+    not os.getenv("ONEFLOW_TEST_UNEVEN_PROCESS"), "this case only test unevne process",
 )
 class TestUnevenProcess(flow.unittest.TestCase):
     def test_uneven_process(test_case):

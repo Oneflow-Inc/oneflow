@@ -13,6 +13,7 @@ chmod -R o+w $test_tmp_dir
 cp -r $src_dir/oneflow/python/test $test_tmp_dir
 cd $test_tmp_dir
 
+ONEFLOW_TEST_UNEVEN_PROCESS=1 ONEFLOW_TEST_DEVICE_NUM=4 ONEFLOW_TEST_WORLD_SIZE=6 ONEFLOW_TEST_PROCESS_DISTRIBUTION=4,2 python3 test/ops/test_uneven_process.py --failfast --verbose
 ONEFLOW_TEST_DEVICE_NUM=1 python3 test/ops/test_assign.py --failfast --verbose
 ONEFLOW_TEST_DEVICE_NUM=1 python3 test/ops/test_two_node_boxing.py --failfast --verbose
 

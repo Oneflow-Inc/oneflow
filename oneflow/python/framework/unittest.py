@@ -157,7 +157,7 @@ def enable_uneven_process():
 def process_distribution():
     process_distribution_str = os.getenv("ONEFLOW_TEST_PROCESS_DISTRIBUTION")
     assert process_distribution_str
-    return process_distribution_str.split(",")
+    return list(map(int, process_distribution_str.split(",")))
 
 
 def has_process_distribution():
@@ -298,14 +298,19 @@ class TestCase(unittest.TestCase):
                         )
                         worker_env_proto = EnvProto()
                         worker_env_proto.CopyFrom(env_util.default_env_proto)
-                        worker_env_proto.ClearField("ctrl_bootstrap_conf")
+                        for bootstrap_conf in bootstrap_conf_list:
+                            print(bootstrap_conf)
                         for bootstrap_conf in bootstrap_conf_list:
                             if bootstrap_conf.rank == 0:
                                 continue
                             # set ctrl_bootstrap_conf of worker
                             assert bootstrap_conf.HasField("host")
+                            worker_env_proto.ClearField("ctrl_bootstrap_conf")
                             worker_env_proto.ctrl_bootstrap_conf.CopyFrom(
                                 bootstrap_conf
+                            )
+                            worker_env_proto.cpp_logging_conf.log_dir = "log_" + str(
+                                bootstrap_conf.rank
                             )
                             launch_worker_via_agent(
                                 host=bootstrap_conf.host, env_proto=worker_env_proto
