@@ -15,7 +15,7 @@ limitations under the License.
 """
 import unittest
 from collections import OrderedDict
-from math import floor
+from math import floor, ceil
 from typing import Tuple
 
 import torch
@@ -25,6 +25,7 @@ from test_util import GenArgList
 
 
 def _test_upsample_and_interpolate_nearest(test_case, device, in_range, out_size_or_scale):
+    print("in_range", in_range, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -52,18 +53,22 @@ def _test_upsample_and_interpolate_nearest(test_case, device, in_range, out_size
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
+    np_out = numpy_interpolate2d_nearest(np_in, out_size=out_size, scale_factor=scale_factor)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor)
+    print("np_out", np_out)
     print("torch_out", torch_out)
+    test_case.assertTrue(np.allclose(torch_out.cpu().numpy(), np_out, 1e-5, 1e-5))
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
 
-    for of_out in of_outs:
-        print("of_out", of_out)
-        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.numpy(), 1e-5, 1e-5))
+    # for of_out in of_outs:
+    #     print("of_out", of_out)
+    #     test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.numpy(), 1e-5, 1e-5))
 
 
 def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_size_or_scale):
+    print("in_range", in_range, "out_size_or_scale", out_size_or_scale)
     out_size = None
     scale_factor = None
     if isinstance(out_size_or_scale, Tuple):
@@ -71,7 +76,7 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_siz
     elif isinstance(out_size_or_scale, (float, int)):
         scale_factor = out_size_or_scale
     in_size = np.sqrt(in_range[1] - in_range[0]).astype(np.int32)
-    np_in = np.arange(*in_range, dtype=np.uint8).reshape((1, 1, in_size, in_size))
+    np_in = np.arange(*in_range, dtype=np.int32).reshape((1, 1, in_size, in_size))
     of_in = flow.Tensor(
         np_in,
         device=flow.device(device),
@@ -83,16 +88,17 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_siz
     if out_size is not None:
         m.append(flow.nn.Upsample(size=out_size, mode='bilinear'))
         m.append(flow.nn.interpolate(size=out_size, mode='bilinear'))
-        m.append(flow.nn.UpsamplingBilinear2d(size=out_size))
+        m.append(flow.nn.UpsamplingBilinear2d(size=out_size, align_corners=False))
     elif scale_factor is not None:
         m.append(flow.nn.Upsample(scale_factor=scale_factor, mode='bilinear'))
         m.append(flow.nn.interpolate(scale_factor=scale_factor, mode='bilinear'))
-        m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor))
+        m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor, align_corners=False))
         # out_size = [np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2)]
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    # np_out = numpy_bilinear_interpolation(np_in, out_size=out_size)
+    np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor)
+    print("np_out", np_out)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear')
     print("torch_out", torch_out)
     of_outs = []
@@ -100,7 +106,7 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_siz
         of_outs.append(it(of_in))
     for of_out in of_outs:
         print("of_out", of_out)
-        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out, 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.cpu().numpy(), 1e-5, 1e-5))
 
 
 def _test_upsample2d_bilinear_aligncorner(test_case, device):
@@ -417,65 +423,101 @@ def numpy_interpolate2d_nearest(img, scale_factor=None, out_size=None):
         assert isinstance(scale_factor, float)
         h_ratios = scale_factor
         w_ratios = scale_factor
-        h_out = np.round(scale_factor * h).astype(np.int32)
-        w_out = np.round(scale_factor * w).astype(np.int32)
+        h_out = np.floor(scale_factor * h).astype(np.int32)
+        w_out = np.floor(scale_factor * w).astype(np.int32)
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
     out_img = np.zeros([n, c, h_out, w_out], dtype=np.float32)
 
-    # y_pos = np.arange(h_out)
-    # x_pos = np.arange(w_out)
-    # y_pos = np.floor(y_pos / h_ratios).astype(np.int32)
-    # x_pos = np.floor(x_pos / w_ratios).astype(np.int32)
-    # y_pos[y_pos >= h] = h - 1
-    # x_pos[x_pos >= w] = w - 1
+    # mass assignment version
+    y_pos = np.arange(h_out)
+    x_pos = np.arange(w_out)
+    y_pos = np.floor(y_pos / h_ratios).astype(np.int32)
+    x_pos = np.floor(x_pos / w_ratios).astype(np.int32)
+    y_pos[y_pos >= h] = h - 1
+    x_pos[x_pos >= w] = w - 1
 
+    y_pos = y_pos.reshape(y_pos.shape[0], 1)
+    y_pos = np.tile(y_pos, (1, w_out))
+    x_pos = np.tile(x_pos, (h_out, 1))
+    assert y_pos.shape == x_pos.shape
+    out_img[:, :, :, :] = img[:, :, y_pos[:, :], x_pos[:, :]]
+
+    # navie loop version
     # for it in range(n):
     #     for ch in range(c):
-    for i in range(h_out):
-        for j in range(w_out):
-            org_i = min(round(i + 0.5 / h_ratios), h - 1)
-            org_j = min(round(j + 0.5 / w_ratios), w - 1)
-            out_img[:, :, i, j] = img[:, :, org_i, org_j]
+    # for i in range(h_out):
+    #     for j in range(w_out):
+    #         org_i = min(floor(i / h_ratios), h - 1)
+    #         org_j = min(floor(j / w_ratios), w - 1)
+    #         out_img[:, :, i, j] = img[:, :, org_i, org_j]
 
-    # y_pos = y_pos.reshape(y_pos.shape[0], 1)
-    # y_pos = np.tile(y_pos, (1, w_out))
-    # x_pos = np.tile(x_pos, (h_out, 1))
-    # assert y_pos.shape == x_pos.shape
-    # out_img[:, :, :, :] = img[:, :, y_pos[:, :], x_pos[:, :]]
     return out_img
 
 
+def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
+    r"""Bilinear interpolate2d implemented with numpy.
 
-def numpy_bilinear_interpolation(img, out_size):
-    h_out, w_out = out_size
-    n, c = img.shape[:2]
-    h, w = img.shape[-2:]
-    w_ratios = w_out / w
-    h_ratios = h_out / h
+        Args:
+            img (Tuple[int, int, int, int]): input numpy
+            scale_factor(Float): scale ratios
+            out_size (Tuple[int, int]): output sizes
+            img (Tuple[int, int, int, int]): output numpy
 
-    out = np.zeros((n, c, h_out, w_out), dtype=np.float32)
+        Shape:
+            - Input: :math:`(N, C{in}, H_{in}, W_{in})
+            - Output: :math:`(N_{out}, C_{out},H_{out}, W_{out})` where
+
+        .. math::
+              H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
+
+        .. math::
+              W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
+    """
+    w = img.shape[3]
+    h = img.shape[2]
+    c = img.shape[1]
+    n = img.shape[0]
+
+    if out_size is not None:
+        h_out = out_size[0]
+        w_out = out_size[1]
+        h_ratios = h_out / h
+        w_ratios = w_out / w
+    elif scale_factor is not None:
+        assert isinstance(scale_factor, float)
+        h_ratios = scale_factor
+        w_ratios = scale_factor
+        h_out = np.floor(scale_factor * h).astype(np.int32)
+        w_out = np.floor(scale_factor * w).astype(np.int32)
+    else:
+        raise ValueError("Either out_size or scale_factor should not be None")
+
+    out_img = np.zeros([n, c, h_out, w_out], dtype=np.float32)
+
     for it in range(n):
         for ch in range(c):
             for out_y in range(h_out):
                 for out_x in range(w_out):
-                    in_x = round(out_x / w_ratios)  # src + 0.5 = (dst +0.5) * scale
-                    in_y = round(out_y / h_ratios)
+                    # in_x = round(out_x / w_ratios)  # src + 0.5 = (dst +0.5) * scale
+                    # in_y = round(out_y / h_ratios)
+                    in_x = (out_x + 0.5) / w_ratios - 0.5
+                    in_y = (out_y + 0.5) / h_ratios - 0.5
+                    in_x = min(max(0, in_x), w - 2)
+                    in_y = min(max(0, in_y), h - 2)
 
-
-                    in_x_0 = int(np.floor(in_x))
-                    in_y_0 = int(np.floor(in_y))
-                    in_x_1 = min(in_x_0 + 1, w - 1)
-                    in_y_1 = min(in_y_0 + 1, h - 1)
-
+                    in_x_0 = floor(in_x)
+                    in_y_0 = floor(in_y)
+                    in_x_1 = ceil(in_x)
+                    in_y_1 = ceil(in_y)
 
                     value0 = (in_x_1 - in_x) * img[it, ch, in_y_0, in_x_0] + (in_x - in_x_0) * img[
                         it, ch, in_y_0, in_x_1]
                     value1 = (in_x_1 - in_x) * img[it, ch, in_y_1, in_x_0] + (in_x - in_x_0) * img[
                         it, ch, in_y_1, in_x_1]
-                    out[it, ch, out_y, out_x] = (in_y_1 - in_y) * value0 + (in_y - in_y_0) * value1
-    return out
+                    out_img[it, ch, out_y, out_x] = (in_y_1 - in_y) * value0 + (in_y - in_y_0) * value1
+    return out_img
 
 
 @unittest.skipIf(

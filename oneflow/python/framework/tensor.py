@@ -430,8 +430,13 @@ class Tensor:
             squeeze_dims = [0]
 
         start, stop, step, _ = self._get_slice_obj(key)
+        _tensor_shape = list(self.shape)
+        if(start >= _tensor_shape or stop >= _tensor_shape):
+            raise StopIteration
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         return res.squeeze(dim=squeeze_dims)
+
+
 
     @_auto_determine
     @register_local_tensor_method()
