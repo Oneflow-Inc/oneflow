@@ -19,9 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 void DumpVersionInfo() {
-#ifdef WITH_GIT_VERSION
   LOG(INFO) << "OneFlow git version: " << GetOneFlowGitVersion();
-#endif  // WITH_GIT_VERSION
   auto dump_info_funcs = DeviceRegistryMgr::Get().DumpVersionInfoFuncs();
   for (auto dev_func_pair : dump_info_funcs) { dev_func_pair.second(); }
 }

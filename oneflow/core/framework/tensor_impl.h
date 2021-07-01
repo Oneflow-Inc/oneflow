@@ -116,18 +116,18 @@ class TensorImpl {
 class MirroredTensorMeta : public TensorMeta {
  public:
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                     const std::shared_ptr<const Device>& device)
+                     const Symbol<Device>& device)
       : TensorMeta(shape, dtype), device_(device) {}
 
-  const std::shared_ptr<const Device>& device() const { return device_; }
+  const Symbol<Device>& device() const { return device_; }
 
-  std::shared_ptr<const Device>* mut_device() { return &device_; }
+  Symbol<Device>* mut_device() { return &device_; }
 
   bool operator==(const MirroredTensorMeta& other) const;
   size_t CalcHashValue() const;
 
  private:
-  std::shared_ptr<const Device> device_;
+  Symbol<Device> device_;
 };
 
 class MirroredTensorImpl : public TensorImpl {
@@ -136,14 +136,14 @@ class MirroredTensorImpl : public TensorImpl {
 
   // Getters
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  const std::shared_ptr<const Device>& device() const { return tensor_meta_->device(); }
+  const Symbol<Device>& device() const { return tensor_meta_->device(); }
   const std::shared_ptr<const MirroredTensorMeta>& tensor_meta() const { return tensor_meta_; }
 
   // Setters
   MirroredTensorMeta* mut_tensor_meta() {
     return const_cast<MirroredTensorMeta*>(tensor_meta_.get());
   }
-  std::shared_ptr<const Device>* mut_device() { return mut_tensor_meta()->mut_device(); }
+  Symbol<Device>* mut_device() { return mut_tensor_meta()->mut_device(); }
   virtual Maybe<void> set_tensor_storage(std::shared_ptr<TensorStorage> tensor_storage) = 0;
 
   virtual Maybe<MirroredTensorImpl> detach() const { OF_UNIMPLEMENTED(); }

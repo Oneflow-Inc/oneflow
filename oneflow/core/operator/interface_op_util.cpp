@@ -85,7 +85,7 @@ Maybe<void> InterfaceOpUtil::GetInputLikeOpSbpSignature(const InterfaceBlobConf&
                                                         const PbRpf<std::string>& input_bns,
                                                         const PbRpf<std::string>& output_bns,
                                                         cfg::SbpSignature* sbp_signature) {
-  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true);
+  JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, true));
   return Maybe<void>::Ok();
 }
 
@@ -93,7 +93,7 @@ Maybe<void> InterfaceOpUtil::GetOutputLikeOpSbpSignature(const InterfaceBlobConf
                                                          const PbRpf<std::string>& input_bns,
                                                          const PbRpf<std::string>& output_bns,
                                                          cfg::SbpSignature* sbp_signature) {
-  GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false);
+  JUST(GetSbpSignature(blob_conf, input_bns, output_bns, sbp_signature, false));
   return Maybe<void>::Ok();
 }
 
