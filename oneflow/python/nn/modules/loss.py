@@ -1207,7 +1207,12 @@ class SmoothL1Loss(Module):
         tensor([2.03], dtype=oneflow.float32)
     """
 
-    def __init__(self, size_average=None, reduce=None, reduction: str = "mean", beta: float = 1.0,
+    def __init__(
+        self,
+        size_average=None,
+        reduce=None,
+        reduction: str = "mean",
+        beta: float = 1.0,
     ) -> None:
         super().__init__()
         if size_average is not None:
@@ -1232,8 +1237,7 @@ class SmoothL1Loss(Module):
             .Build()
         )
 
-    def forward(self, input, target,
-    )-> Tensor:
+    def forward(self, input, target,) -> Tensor:
 
         loss = self._op(input, target)[0]
 

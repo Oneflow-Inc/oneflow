@@ -67,13 +67,19 @@ def _np_smoothl1loss_grad(np_input, np_target, beta=1.0):
         "sum": np_input_grad_sum,
     }
 
+
 def _test_smoothl1loss_impl(test_case, device, shape, data_type, reduction, beta):
     x = np.random.randn(*shape).astype(type_name_to_np_type[data_type])
     y = np.random.randn(*shape).astype(type_name_to_np_type[data_type])
     input = flow.Tensor(
-        x, dtype=type_name_to_flow_type[data_type], requires_grad=True, device=flow.device(device)
+        x,
+        dtype=type_name_to_flow_type[data_type],
+        requires_grad=True,
+        device=flow.device(device),
     )
-    target = flow.Tensor(y, dtype=type_name_to_flow_type[data_type], device=flow.device(device))
+    target = flow.Tensor(
+        y, dtype=type_name_to_flow_type[data_type], device=flow.device(device)
+    )
 
     # forward
     loss = flow.nn.SmoothL1Loss(reduction=reduction, beta=beta)
@@ -85,9 +91,7 @@ def _test_smoothl1loss_impl(test_case, device, shape, data_type, reduction, beta
     # backward
     of_out = of_out.sum()
     of_out.backward()
-    np_grad = _np_smoothl1loss_grad(x, y, beta=beta)[
-        reduction
-    ]
+    np_grad = _np_smoothl1loss_grad(x, y, beta=beta)[reduction]
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
@@ -103,7 +107,7 @@ class TestSmoothL1LossModule(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [
-            (10,3),
+            (10, 3),
             (100,),
         ]
         arg_dict["data_type"] = ["float32", "double", "int32"]
