@@ -106,11 +106,12 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
   {
     Shape squeezed_in_shape;
     Shape squeezed_out_shape;
-    ReshapeUserOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis);
-    ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape, &out_squeezed_axis2original_axis);
-    ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
-                                                   parallel_num,
-                                                   &squeezed_group_start_in_axis2out_axis);
+    JUST(ReshapeUserOpUtil::Squeeze(in_shape, &squeezed_in_shape, &in_squeezed_axis2original_axis));
+    JUST(ReshapeUserOpUtil::Squeeze(out_shape, &squeezed_out_shape,
+                                    &out_squeezed_axis2original_axis));
+    JUST(ReshapeUserOpUtil::GetGroupStartInAxis2OutAxis(squeezed_in_shape, squeezed_out_shape,
+                                                        parallel_num,
+                                                        &squeezed_group_start_in_axis2out_axis));
   }
   for (const auto& pair : squeezed_group_start_in_axis2out_axis) {
     int64_t start_in_axis = in_squeezed_axis2original_axis.at(pair.first);
@@ -184,11 +185,12 @@ Maybe<void> ReshapeUserOpUtil::InferParallelDistribution(
           .PartialSum(user_op::OpArg("in", 0))
           .PartialSum(user_op::OpArg("out", 0))
           .Build();
-      GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"like", 0}, {"out", 0}},
-                                    parallel_hierarchy.At(i), &builder);
+      JUST(GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}},
+                                         {{"like", 0}, {"out", 0}}, parallel_hierarchy.At(i),
+                                         &builder));
     } else {
-      GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"out", 0}},
-                                    parallel_hierarchy.At(i), &builder);
+      JUST(GetReshapeUserOpSbpSignatures(in_shape, out_shape, {{"in", 0}}, {{"out", 0}},
+                                         parallel_hierarchy.At(i), &builder));
     }
 
     const cfg::SbpSignature* matched_sbp_signature = nullptr;
