@@ -14,12 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/user_op_registry.h"
-
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/framework/attr_value_accessor.h"
 #include "oneflow/core/framework/sbp_context.h"
-#include "oneflow/core/framework/batch_axis_context.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -142,12 +143,18 @@ OpRegistry& OpRegistry::DefaultedAttr(const std::string& name, AttrType type,
 }
 
 OpRegistry& OpRegistry::SetTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
-  result_.tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  SetLogicalTensorDescInferFn(tensor_desc_infer_fn);
+  SetPhysicalTensorDescInferFn(tensor_desc_infer_fn);
   return *this;
 }
 
-OpRegistry& OpRegistry::SetBatchAxisInferFn(BatchAxisInferFn batch_axis_infer_fn) {
-  result_.batch_axis_infer_fn = std::move(batch_axis_infer_fn);
+OpRegistry& OpRegistry::SetLogicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.logical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetPhysicalTensorDescInferFn(TensorDescInferFn tensor_desc_infer_fn) {
+  result_.physical_tensor_desc_infer_fn = std::move(tensor_desc_infer_fn);
   return *this;
 }
 
@@ -160,9 +167,8 @@ OpRegistry& OpRegistry::SetGetSbpFn(GetSbpFn get_sbp_fn) {
   result_.get_sbp_fn = std::move(get_sbp_fn);
   return *this;
 }
-
-OpRegistry& OpRegistry::SetInferSbpSignatureFn(InferSbpSignatureFn infer_sbp_signature_fn) {
-  result_.infer_sbp_signature_fn = std::move(infer_sbp_signature_fn);
+OpRegistry& OpRegistry::SetSbpSignatureInferFn(SbpSignatureInferFn sbp_signature_infer_fn) {
+  result_.sbp_signature_infer_fn = std::move(sbp_signature_infer_fn);
   return *this;
 }
 
@@ -176,27 +182,83 @@ OpRegistry& OpRegistry::SetOutputArgModifyFn(OutputArgModifyFn output_arg_modify
   return *this;
 }
 
-OpRegistry& OpRegistry::SetInferOutputBlobTimeShapeFn(
-    InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn) {
-  result_.infer_output_blob_time_shape_fn = std::move(infer_output_blob_time_shape_fn);
+OpRegistry& OpRegistry::SetOutputBlobTimeShapeInferFn(
+    OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn) {
+  result_.output_blob_time_shape_infer_fn = std::move(output_blob_time_shape_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetParallelDistributionInferFn(
+    ParallelDistributionInferFn parallel_distribution_infer_fn) {
+  result_.parallel_distribution_infer_fn = std::move(parallel_distribution_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetDataTypeInferFn(DataTypeInferFn data_type_infer_fn) {
+  result_.data_type_infer_fn = std::move(data_type_infer_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetDeviceInferFn(DeviceInferFn device_infer_fn) {
+  result_.device_infer_fn = std::move(device_infer_fn);
   return *this;
 }
 
 OpRegistry& OpRegistry::Finish() {
-  CHECK(result_.tensor_desc_infer_fn != nullptr)
+  CHECK(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
+  if (!result_.physical_tensor_desc_infer_fn) {
+    const auto& logical_fn = result_.logical_tensor_desc_infer_fn;
+    result_.physical_tensor_desc_infer_fn =
+        [logical_fn](user_op::InferContext* ctx) -> Maybe<void> {
+      if (ctx->parallel_num() == 1) {
+        logical_fn(ctx);
+      } else {
+        for (const auto& pair : ctx->inputs()) {
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc* in_logical =
+              ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          const TensorDesc* in_physical = ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          CHECK_OR_RETURN(*JUST(GetPhysicalShape(in_logical->shape(), parallel_distribution,
+                                                 ctx->parallel_desc(), ctx->parallel_ctx()))
+                          == in_physical->shape());
+        }
+        for (const auto& pair : ctx->outputs()) {
+          TensorDesc* desc = ctx->OutputTensorDesc(pair.first, pair.second);
+          *desc = *ctx->LogicalTensorDesc4ArgNameAndIndex(pair.first, pair.second);
+          const auto& parallel_distribution =
+              ctx->ParallelDistribution4ArgNameAndIndex(pair.first, pair.second);
+          *desc->mut_shape() = *JUST(GetPhysicalShape(desc->shape(), parallel_distribution,
+                                                      ctx->parallel_desc(), ctx->parallel_ctx()));
+        }
+      }
+      return Maybe<void>::Ok();
+    };
+  }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.batch_axis_infer_fn == nullptr) {
-    result_.batch_axis_infer_fn = BatchAxisInferFnUtil::DefaultAsFirstHasValueInput;
-  }
-  if (result_.get_sbp_fn == nullptr) {
-    result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
-  }
-  if (result_.input_arg_modify_fn == nullptr) {
-    result_.input_arg_modify_fn = [](GetInputArgModifier, const UserOpConfWrapper&) {};
-  }
-  if (result_.output_arg_modify_fn == nullptr) {
-    result_.output_arg_modify_fn = [](GetOutputArgModifier, const UserOpConfWrapper&) {};
+  CHECK(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
+  if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
+    result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<Symbol<Device>> {
+      for (const auto& pair : ctx->inputs()) {
+        const Symbol<Device>& input_device =
+            ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
+        CHECK_EQ(JUST(input_device->of_type()), "cpu");
+      }
+      Symbol<Device> default_device;
+      {
+        if (ctx->inputs().size() != 0) {
+          const auto& first_input_name = ctx->inputs().begin()->first;
+          default_device = ctx->InputTensorDevice4ArgNameAndIndex(first_input_name, 0);
+        } else {
+          default_device = JUST(Device::New("cpu"));
+        }
+      }
+      for (const auto& pair : ctx->outputs()) {
+        *ctx->OutputTensorDevice4ArgNameAndIndex(pair.first, pair.second) = default_device;
+      }
+      return default_device;
+    };
   }
   return *this;
 }

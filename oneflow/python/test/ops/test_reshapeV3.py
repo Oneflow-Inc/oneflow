@@ -48,8 +48,6 @@ def distribute_reshape_test(device_type, device_num, input_shape, shape):
             return x, loss
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x, loss = ReshapeJob().get()
 
 

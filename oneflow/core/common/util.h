@@ -34,10 +34,10 @@ limitations under the License.
 #include <queue>
 #include <random>
 #include <thread>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
+#include <cfenv>
 
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 
@@ -53,6 +53,15 @@ struct hash<std::pair<T0, T1>> {
     auto h0 = std::hash<T0>{}(p.first);
     auto h1 = std::hash<T1>{}(p.second);
     return h0 ^ h1;
+  }
+};
+
+template<typename T>
+struct hash<std::vector<T>> {
+  std::size_t operator()(const std::vector<T>& vec) const {
+    std::size_t hash_value = 0;
+    for (const auto& elem : vec) { hash_value ^= std::hash<T>()(elem); }
+    return hash_value;
   }
 };
 
@@ -96,12 +105,6 @@ template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {
   return lhs.lock().get() == rhs.lock().get();
 }
-
-template<typename Key, typename T, typename Hash = std::hash<Key>>
-using HashMap = std::unordered_map<Key, T, Hash>;
-
-template<typename Key, typename Hash = std::hash<Key>>
-using HashSet = std::unordered_set<Key, Hash>;
 
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
@@ -155,6 +158,7 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+const size_t kHostAlignSize = 64;
 const size_t kCudaAlignSize = 512;
 const size_t kCudaMemAllocAlignSize = 512;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
@@ -199,6 +203,18 @@ bool IsKernelSafeInt32(int64_t n);
 inline void HashCombine(size_t* seed, size_t hash) {
   *seed ^= (hash + 0x9e3779b9 + (*seed << 6U) + (*seed >> 2U));
 }
+
+class RoundModeGuard final {
+ public:
+  RoundModeGuard(int mode) {
+    saved_mode_ = std::fegetround();
+    CHECK_EQ(std::fesetround(mode), 0);
+  }
+  ~RoundModeGuard() { std::fesetround(saved_mode_); }
+
+ private:
+  int saved_mode_;
+};
 
 }  // namespace oneflow
 

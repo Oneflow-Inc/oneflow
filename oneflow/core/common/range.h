@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_COMMON_RANGE_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/range.pb.h"
 
 namespace oneflow {
@@ -40,6 +41,9 @@ class Range final {
   int64_t& mut_end() { return end_; }
 
   int64_t size() const { return end_ - begin_; }
+
+  Maybe<void> ForEachSubRange(int64_t sub_range_size,
+                              const std::function<Maybe<void>(const Range&)>& DoEachRange) const;
 
   void ToProto(RangeProto* ret) const;
 

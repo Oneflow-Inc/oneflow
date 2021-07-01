@@ -23,19 +23,19 @@ namespace oneflow {
 namespace xrt {
 namespace mola {
 
-bool XlaExecutable::Run(const std::vector<Parameter> &inputs,
-                        const ExecutableRunOptions &run_options, bool block_until_done) {
+bool XlaExecutable::Run(const std::vector<Parameter>& inputs,
+                        const ExecutableRunOptions& run_options, bool block_until_done) {
   CHECK_EQ(inputs.size(), input_shapes_.size())
       << "Size mismatch between input params and input shapes.";
   XlaExecutableRunContext run_context(run_options, device_);
   // Translate inputs to ShapedBuffer for suitable running the executable.
-  const auto &input_buffers =                             // NOLINT
+  const auto& input_buffers =                             // NOLINT
       run_context.PopulateInputs(inputs, input_shapes_);  // NOLINT
 
   // Populate output params to reuse the buffers in allocator. This helps
   // to reduce memory occupancy and avoid extra copy between temporary
   // buffers and output buffers.
-  const auto &return_params = run_options.return_params;
+  const auto& return_params = run_options.return_params;
   run_context.PopulateResultBuffers(return_params, executable_.get());
 
   MOLA_CHECK_AND_ASSIGN(auto run_result, [&]() {

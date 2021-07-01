@@ -57,8 +57,9 @@ def margin_loss(loss_m1, loss_m2, loss_m3, s, inputs, labels):
 
 
 def test_combined_margin_loss(
-    test_case, input_shape, label_shape, data_type, m1, m2, m3, s
+    test_case, device_type, input_shape, label_shape, data_type, m1, m2, m3, s
 ):
+    assert device_type in ["gpu", "cpu"]
     flow.clear_default_session()
     flow.config.gpu_device_num(4)
     func_config = flow.FunctionConfig()
@@ -70,7 +71,7 @@ def test_combined_margin_loss(
         x: oft.Numpy.Placeholder(input_shape, dtype=flow.float32),
         labels: oft.Numpy.Placeholder(label_shape, dtype=flow.int32),
     ):
-        with flow.scope.placement("gpu", "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             v = flow.get_variable(
                 name="v",
                 shape=(1,),
@@ -88,7 +89,7 @@ def test_combined_margin_loss(
             x1 = flow.cast(x1, data_type)
             x2 = flow.cast(x2, data_type)
 
-        with flow.scope.placement("gpu", "0:0-3"):
+        with flow.scope.placement(device_type, "0:0-3"):
             y1 = (
                 flow.combined_margin_loss(
                     x1.with_distribute(flow.distribute.split(1)),
@@ -101,7 +102,7 @@ def test_combined_margin_loss(
             )
             y2 = margin_loss(m1, m2, m3, s, x2, labels)
 
-        with flow.scope.placement("gpu", "0:0"):
+        with flow.scope.placement(device_type, "0:0"):
             y1 = flow.cast(y1, flow.float)
             y2 = flow.cast(y2, flow.float)
 
@@ -115,10 +116,10 @@ def test_combined_margin_loss(
         return loss
 
     x = np.random.uniform(low=-1, high=1, size=input_shape).astype(np.float32)
-    labels = np.random.randint(0, 100, size=(*label_shape,)).astype(np.int32)
+    labels = np.random.randint(0, 1000, size=(*label_shape,)).astype(np.int32)
     test_job(x, labels).get()
 
-    tol = 1e-4
+    tol = 2e-3
 
     y1 = test_global_storage.Get("y1")
     y2 = test_global_storage.Get("y2")
@@ -131,15 +132,15 @@ def test_combined_margin_loss(
 
 @flow.unittest.skip_unless_1n4d()
 class TestCombinedMarginLoss(flow.unittest.TestCase):
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_case(test_case):
         arg_dict = OrderedDict()
-        arg_dict["input_shape"] = [(512, 1000)]
-        arg_dict["label_shape"] = [(512,)]
+        arg_dict["device_type"] = ["gpu", "cpu"]
+        arg_dict["input_shape"] = [(64, 1000)]
+        arg_dict["label_shape"] = [(64,)]
         arg_dict["data_type"] = [flow.float32]
-        arg_dict["m1"] = [1.0]
+        arg_dict["m1"] = [0.3]
         arg_dict["m2"] = [0.5]
-        arg_dict["m3"] = [0.5]
+        arg_dict["m3"] = [0.4]
         arg_dict["s"] = [5]
         for arg in GenArgDict(arg_dict):
             test_combined_margin_loss(test_case, **arg)

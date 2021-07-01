@@ -16,13 +16,13 @@ limitations under the License.
 #include "oneflow/core/persistence/persistent_out_stream.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
 PersistentOutStream::PersistentOutStream(fs::FileSystem* fs, const std::string& file_path) {
   std::string file_dir = Dirname(file_path);
-  OfCallOnce(Global<MachineCtx>::Get()->GetThisCtrlAddr() + "/" + file_dir, fs,
+  OfCallOnce(GlobalProcessCtx::LogDirEntry() + "/" + file_dir, fs,
              &fs::FileSystem::RecursivelyCreateDirIfNotExist, file_dir);
   fs->NewWritableFile(file_path, &file_);
 }

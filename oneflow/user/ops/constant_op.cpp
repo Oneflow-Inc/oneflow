@@ -25,24 +25,23 @@ REGISTER_USER_OP("constant")
     .Attr<DataType>("dtype")
     .Attr<Shape>("shape")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
-      auto dtype = ctx->Attr<DataType>("dtype");
       DimVector dim_vec;
       if (shape.NumAxes() > 0) {
         dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
       }
       if (dim_vec.empty()) { dim_vec.push_back(1); }
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       *out_shape = Shape(dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      auto dtype = ctx->Attr<DataType>("dtype");
+      *ctx->OutputDType("out", 0) = dtype;
       return Maybe<void>::Ok();
     });
 

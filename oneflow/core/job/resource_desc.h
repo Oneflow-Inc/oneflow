@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 #define ONEFLOW_CORE_JOB_RESOURCE_DESC_H_
 
+#include <set>
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/env_desc.h"
 
@@ -26,12 +28,14 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
-  explicit ResourceDesc(const Resource& resource) : resource_(resource) {}
+  ResourceDesc(const Resource& resource, int64_t num_process_per_node);
+  ResourceDesc(const Resource& resource)
+      : resource_(resource) {}  // TODO(yaochi): Only for eager, remove it later
 
   ~ResourceDesc() = default;
 
-  size_t TotalMachineNum() const;
-  const Machine& machine(int32_t idx) const;
+  const std::set<int64_t>& process_ranks() const { return process_ranks_; }
+  __attribute__((deprecated)) Machine machine(int32_t idx) const;
   size_t CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
   size_t rdma_mem_block_byte() const { return resource_.rdma_mem_block_mbyte() * kMB; }
   size_t rdma_recv_msg_buf_byte() const { return resource_.rdma_recv_msg_buf_mbyte() * kMB; }
@@ -52,14 +56,19 @@ class ResourceDesc final {
   size_t thread_local_cache_max_size() const { return resource_.thread_local_cache_max_size(); }
   int32_t ComputeThreadPoolSize() const;
   bool enable_debug_mode() const;
+  bool enable_dry_run() const;
   CollectiveBoxingConf collective_boxing_conf() const;
+  bool nccl_use_compute_stream() const;
 
   void SetMachineNum(int32_t val) { resource_.set_machine_num(val); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
+  bool enable_tensor_float_32_compute() const { return resource_.enable_tensor_float_32_compute(); }
   const Resource& resource() const { return resource_; }
+  void DumpCudnnConf(const JobConfigProto& job_conf);
 
  private:
   Resource resource_;
+  std::set<int64_t> process_ranks_;
 };
 
 }  // namespace oneflow

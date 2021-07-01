@@ -18,35 +18,25 @@ from __future__ import absolute_import
 import oneflow.python.eager.gradient_util as gradient_util
 import oneflow.python.eager.op_executor as op_executor
 import oneflow.core.operator.op_attribute_pb2 as op_attribute_pb
-import oneflow.core.job.job_conf_pb2 as job_conf_pb
 import oneflow.core.job.scope_pb2 as scope_pb
 import oneflow.core.job.placement_pb2 as placement_pb
 from google.protobuf import text_format
-import oneflow.python.eager.blob_register as blob_register_util
 import oneflow.python.framework.scope_util as scope_util
-import oneflow.python.framework.scope_symbol as scope_symbol
-import oneflow.python.eager.vm_util as vm_util
 import oneflow.python.eager.symbol_storage as symbol_storage
+import oneflow._oneflow_internal
 
 
-def AddScopeToStorage(scope_symbol_id, scope_proto_str):
-    if symbol_storage.HasSymbol4SerializedScopeProto(scope_proto_str):
-        return
-    scope_proto = text_format.Parse(scope_proto_str, scope_pb.ScopeProto())
-    parent_scope_symbol = symbol_storage.GetSymbol4Id(
-        scope_proto.parent_scope_symbol_id
-    )
-    symbol = scope_symbol.ScopeSymbol(scope_symbol_id, scope_proto, parent_scope_symbol)
-    symbol_storage.SetSymbol4Id(scope_symbol_id, symbol)
-    symbol_storage.SetSymbol4SerializedScopeProto(scope_proto_str, symbol)
-
-
-def MakeScopeSymbol(job_conf_str, parallel_conf, is_mirrored):
-    job_conf = text_format.Parse(job_conf_str, job_conf_pb.JobConfigProto())
+def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
+    parallel_hierarchy = None
+    if parallel_conf.has_hierarchy():
+        parallel_hierarchy = oneflow._oneflow_internal.Size(
+            tuple(parallel_conf.hierarchy().dim())
+        )
     return scope_util.MakeInitialScope(
         job_conf,
         parallel_conf.device_tag(),
         list(parallel_conf.device_name()),
+        parallel_hierarchy,
         is_mirrored,
     ).symbol_id
 
@@ -58,13 +48,13 @@ def MakeParallelDescSymbol(parallel_conf):
         nonlocal symbol_id
         symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
 
-    vm_util.LogicalRun(BuildInstruction)
+    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
     return symbol_id
 
 
 def MirroredCast(op_attribute_str, parallel_conf):
     op_attribute = text_format.Parse(op_attribute_str, op_attribute_pb.OpAttribute())
-    blob_register = blob_register_util.GetDefaultBlobRegister()
+    blob_register = oneflow._oneflow_internal.GetDefaultBlobRegister()
     is_cast_to_mirrored = op_attribute.op_conf.HasField("cast_to_mirrored_conf")
     is_cast_from_mirrored = op_attribute.op_conf.HasField("cast_from_mirrored_conf")
     assert is_cast_to_mirrored or is_cast_from_mirrored
@@ -100,7 +90,7 @@ def _AddOutputBlobObjectReleaser4InputBlobObject(op_attribute, blob_register):
 
 
 def _MakeReleaser4MirroredCastBlobObject(op_attribute, blob_register):
-    def ReleaseMirroredBlobObject(*args):
+    def ReleaseMirroredBlobObject(obj):
         for obn in op_attribute.output_bns:
             lbi = op_attribute.arg_signature.bn_in_op2lbi[obn]
             lbn = "%s/%s" % (lbi.op_name, lbi.blob_name)

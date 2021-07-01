@@ -21,7 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 namespace pyext {
-void RegisterPyKernelCaller(const std::string& op_type_name);
+void RegisterPyKernelCaller(const std::string& op_module_name);
 void RegisterPyKernels(PyObject* py_kernels);
 }  // namespace pyext
 }  // namespace oneflow

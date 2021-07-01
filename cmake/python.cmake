@@ -1,3 +1,16 @@
+if (NOT DEFINED Python3_EXECUTABLE)
+  execute_process(
+    COMMAND which python3
+    RESULT_VARIABLE STATUS
+    OUTPUT_VARIABLE OUTPUT
+    ERROR_QUIET
+  )
+  if(STATUS EQUAL 0)
+    string(STRIP ${OUTPUT} STRIPPED)
+    message(STATUS "Using Python3 from 'which python3': ${STRIPPED}")
+    set(Python3_EXECUTABLE ${STRIPPED})
+  endif()
+endif()
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
 message(STATUS "Python3 specified. Version found: " ${Python3_VERSION})
 set(Python_EXECUTABLE ${Python3_EXECUTABLE})
@@ -6,9 +19,17 @@ message(STATUS "Using Python executable: " ${Python_EXECUTABLE})
 message(STATUS "Installing necessary Python packages...")
 set(requirements_txt ${PROJECT_SOURCE_DIR}/dev-requirements.txt)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${requirements_txt})
+message(STATUS "PIP_INDEX_MIRROR: ${PIP_INDEX_MIRROR}")
+if(PIP_INDEX_MIRROR)
+  set(extra_index_arg "-i")
+endif()
 execute_process(
-  COMMAND ${Python_EXECUTABLE} -m pip install -r ${requirements_txt} --user
+  COMMAND ${Python_EXECUTABLE} -m pip install ${extra_index_arg} ${PIP_INDEX_MIRROR} -r ${requirements_txt} --user
+  RESULT_VARIABLE PIP_INSTALL_STATUS
 )
+if(NOT PIP_INSTALL_STATUS EQUAL 0)
+  message(FATAL_ERROR "fail to install pip packages")
+endif()
 message(STATUS "Python packages are installed.")
 
 find_package(Python3 COMPONENTS Development NumPy)

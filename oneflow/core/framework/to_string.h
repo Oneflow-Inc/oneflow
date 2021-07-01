@@ -23,7 +23,7 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<const char*> DeviceTag4DeviceType(DeviceType device_type);
+Maybe<std::string> DeviceTag4DeviceType(DeviceType device_type);
 Maybe<DeviceType> DeviceType4DeviceTag(const std::string& device_tag);
 
 template<>
@@ -33,7 +33,7 @@ inline std::string ToString(const DataType& data_type) {
 
 template<>
 inline std::string ToString(const DeviceType& device_type) {
-  return CHECK_JUST(DeviceTag4DeviceType(device_type));
+  return *CHECK_JUST(DeviceTag4DeviceType(device_type));
 }
 
 template<>

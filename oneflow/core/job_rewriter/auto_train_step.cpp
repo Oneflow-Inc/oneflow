@@ -47,7 +47,6 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
   variable_conf->set_out("out");
   *variable_conf->mutable_shape()->mutable_dim()->Add() = 1;
   variable_conf->set_data_type(DataType::kInt64);
-  variable_conf->mutable_split_axis()->clear_value();
   variable_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(0);
 
   OperatorConf identity_op_conf{};
@@ -66,8 +65,8 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
         std::make_shared<cfg::JobConfigProto>(job->job_conf());
     const std::shared_ptr<cfg::ParallelConf>& cfg_parallel_conf =
         std::make_shared<cfg::ParallelConf>(parallel_conf);
-    scope_symbol_id =
-        Global<ForeignCallback>::Get()->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
+    scope_symbol_id = (*Global<std::shared_ptr<ForeignCallback>>::Get())
+                          ->MakeScopeSymbol(cfg_job_conf, cfg_parallel_conf, false);
   }
 
   auto scalar_add_op = user_op::UserOpConfWrapperBuilder(train_step_name + "-ScalarAdd")

@@ -20,6 +20,7 @@ from datetime import datetime
 import numpy
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
+import oneflow.core.job.initializer_conf_pb2 as initializer_conf_util
 
 # _DATA_DIR = "/dataset/imagenet_227/train/32"
 _DATA_DIR = "/dataset/PNGS/PNG227/of_record_repeated"
@@ -173,7 +174,7 @@ def alexnet(args, images, labels, trainable=True):
     pool5 = flow.nn.avg_pool2d(conv5, 3, 2, "VALID", "NCHW", name="pool5")
 
     def _get_initializer():
-        kernel_initializer = op_conf_util.InitializerConf()
+        kernel_initializer = initializer_conf_util.InitializerConf()
         kernel_initializer.truncated_normal_conf.std = 0.816496580927726
         return kernel_initializer
 
@@ -247,7 +248,7 @@ def main(args):
 
     func_config = flow.FunctionConfig()
     func_config.default_data_type(flow.float)
-    #  print(func_config.function_desc.job_config_proto)
+
     @flow.global_function(func_config)
     def alexnet_eval_job():
         with flow.scope.consistent_view():

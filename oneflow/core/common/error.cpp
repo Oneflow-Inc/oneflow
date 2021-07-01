@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/error.h"
+#include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 
@@ -24,6 +25,11 @@ namespace {
 void LogError(const Error& error) {
   // gdb break point
   LOG(ERROR) << error->msg();
+}
+
+std::shared_ptr<cfg::ErrorProto>* MutThreadLocalError() {
+  thread_local std::shared_ptr<cfg::ErrorProto> error;
+  return &error;
 }
 
 }  // namespace
@@ -54,6 +60,13 @@ Error Error::JobSetEmptyError() {
 Error Error::DeviceTagNotFoundError() {
   auto error = std::make_shared<cfg::ErrorProto>();
   error->mutable_device_tag_not_found_error();
+  return error;
+}
+
+Error Error::ValueError(const std::string& error_summary) {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->set_error_summary(error_summary);
+  error->mutable_value_error();
   return error;
 }
 
@@ -229,5 +242,43 @@ Error Error::GradientFunctionNotFound() {
   error->mutable_gradient_function_not_found_error();
   return error;
 }
+
+Error Error::SymbolIdUninitialized() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_symbol_id_uninitialized_error();
+  return error;
+}
+
+Error Error::CompileOptionWrong() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_compile_option_wrong_error();
+  return error;
+}
+
+Error Error::InputDeviceNotMatchError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  auto* input_device_not_match_error = error->mutable_input_device_not_match_error();
+  input_device_not_match_error->add_info(
+      std::string("The devices of input tensors are inconsistent，please try to use tensor.to or "
+                  "module.to to correct it."));
+  return error;
+}
+
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  *MutThreadLocalError() = error;
+  CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
+  switch (error->error_type_case()) {
+#define MAKE_ENTRY(cls)                                      \
+  case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
+    throw OF_PP_CAT(cls, Exception)(error->DebugString());
+
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
+
+#undef MAKE_ENTRY
+    default: UNIMPLEMENTED();
+  }
+}
+
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }
 
 }  // namespace oneflow

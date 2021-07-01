@@ -18,12 +18,15 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
 #include "oneflow/core/operator/op_attribute.pb.h"
 
 namespace oneflow {
+
+class Device;
 
 namespace user_op {
 
@@ -32,14 +35,16 @@ class UserOpConfWrapper;
 class InferContext;
 class SbpContext;
 class InferSbpSignatureFnContext;
-class BatchAxisContext;
 class InferOutputBlobTimeShapeFnContext;
+class InferParallelDistributionFnContext;
+class DeviceInferContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
-using BatchAxisInferFn = std::function<Maybe<void>(BatchAxisContext*)>;
+using DataTypeInferFn = std::function<Maybe<void>(InferContext*)>;
+using DeviceInferFn = std::function<Maybe<Symbol<Device>>(DeviceInferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
-using InferSbpSignatureFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
+using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
 using GetInputArgModifier =
     std::function<InputArgModifier*(const std::string& in_arg_name, int32_t in_arg_index)>;
@@ -48,7 +53,8 @@ using OutputArgModifier = OutputBlobModifier;
 using GetOutputArgModifier =
     std::function<OutputArgModifier*(const std::string& out_arg_name, int32_t out_arg_index)>;
 using OutputArgModifyFn = std::function<void(GetOutputArgModifier, const UserOpConfWrapper&)>;
-using InferOutputBlobTimeShapeFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
+using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTimeShapeFnContext*)>;
+using ParallelDistributionInferFn = std::function<Maybe<void>(InferParallelDistributionFnContext*)>;
 
 struct OpRegistryResult {
   OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
@@ -59,15 +65,18 @@ struct OpRegistryResult {
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
-  TensorDescInferFn tensor_desc_infer_fn;
-  BatchAxisInferFn batch_axis_infer_fn;
+  TensorDescInferFn logical_tensor_desc_infer_fn;
+  TensorDescInferFn physical_tensor_desc_infer_fn;
   GetSbpFn get_sbp_fn;
-  InferSbpSignatureFn infer_sbp_signature_fn;
+  SbpSignatureInferFn sbp_signature_infer_fn;
+  DataTypeInferFn data_type_infer_fn;
+  DeviceInferFn device_infer_fn;
   // TODO(niuchong): move input_arg_modify_fn out of OpRegistryResult since it is more about
   // performance other than op definition
   InputArgModifyFn input_arg_modify_fn;
   OutputArgModifyFn output_arg_modify_fn;
-  InferOutputBlobTimeShapeFn infer_output_blob_time_shape_fn;
+  OutputBlobTimeShapeInferFn output_blob_time_shape_infer_fn;
+  ParallelDistributionInferFn parallel_distribution_infer_fn;
 };
 
 class OpRegistry final {
@@ -101,13 +110,17 @@ class OpRegistry final {
   OpRegistry& Attr(const std::string& name);
 
   OpRegistry& SetTensorDescInferFn(TensorDescInferFn fn);
-  OpRegistry& SetBatchAxisInferFn(BatchAxisInferFn fn);
+  OpRegistry& SetLogicalTensorDescInferFn(TensorDescInferFn fn);
+  OpRegistry& SetPhysicalTensorDescInferFn(TensorDescInferFn fn);
   OpRegistry& SetGetSbpFn(GetSbpFn fn);
-  OpRegistry& SetInferSbpSignatureFn(InferSbpSignatureFn fn);
+  OpRegistry& SetSbpSignatureInferFn(SbpSignatureInferFn fn);
   OpRegistry& SetInputArgModifyFn(InputArgModifyFn fn);
   OpRegistry& SetOutputArgModifyFn(OutputArgModifyFn fn);
-  OpRegistry& SetInferOutputBlobTimeShapeFn(InferOutputBlobTimeShapeFn fn);
+  OpRegistry& SetOutputBlobTimeShapeInferFn(OutputBlobTimeShapeInferFn fn);
+  OpRegistry& SetParallelDistributionInferFn(ParallelDistributionInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
+  OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
+  OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
 
   OpRegistry& Finish();
   OpRegistryResult GetResult() { return result_; }

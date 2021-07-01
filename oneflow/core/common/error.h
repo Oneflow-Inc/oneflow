@@ -28,6 +28,12 @@ class Error final {
   Error(const Error&) = default;
   ~Error() = default;
 
+  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
+  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
+  cfg::ErrorProto* operator->() { return error_proto_.get(); }
+  operator std::string() const;
+  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+
   // r-value reference is used to supporting expressions like `Error().AddStackFrame("foo.cpp",
   // "Bar") << "invalid value"` because operator<<() need r-value reference
   Error&& AddStackFrame(const std::string& location, const std::string& function);
@@ -36,6 +42,7 @@ class Error final {
   static Error ProtoParseFailedError();
   static Error JobSetEmptyError();
   static Error DeviceTagNotFoundError();
+  static Error ValueError(const std::string& error_summary);
   static Error JobNameExistError();
   static Error JobNameEmptyError();
   static Error JobNameNotEqualError();
@@ -69,19 +76,22 @@ class Error final {
   // gradient
   static Error GradientFunctionNotFound();
 
-  std::shared_ptr<cfg::ErrorProto> error_proto() const { return error_proto_; }
-  const cfg::ErrorProto* operator->() const { return error_proto_.get(); }
-  cfg::ErrorProto* operator->() { return error_proto_.get(); }
-  operator std::string() const;
-  void Assign(const Error& other) { error_proto_ = other.error_proto_; }
+  // symbol
+  static Error SymbolIdUninitialized();
+
+  static Error CompileOptionWrong();
+
+  static Error InputDeviceNotMatchError();
 
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };
 
-// r-value reference is used to supporting expressions like `Error() << "invalid value"`
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error);
+const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError();
+
 template<typename T>
-Error&& operator<<(Error&& error, const T& x) {
+Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
   ss << x;
   if (error->stack_frame().empty()) {
@@ -90,6 +100,13 @@ Error&& operator<<(Error&& error, const T& x) {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);
     stack_frame_top->set_error_msg(stack_frame_top->error_msg() + ss.str());
   }
+  return error;
+}
+
+// r-value reference is used to supporting expressions like `Error() << "invalid value"`
+template<typename T>
+Error&& operator<<(Error&& error, const T& x) {
+  error << x;
   return std::move(error);
 }
 

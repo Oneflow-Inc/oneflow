@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
+#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
@@ -42,32 +43,12 @@ class OpArg final {
   int32_t index_;
 };
 
-class AttrVal {
- public:
-  AttrVal() = default;
-  virtual ~AttrVal() = default;
-
- private:
-  OF_DISALLOW_COPY_AND_MOVE(AttrVal)
-};
-
-template<typename T>
-class TypedAttrVal final : public AttrVal {
- public:
-  TypedAttrVal(T v) : val_(v) {}
-  ~TypedAttrVal() = default;
-
-  const T& val() const { return val_; }
-
- private:
-  OF_DISALLOW_COPY_AND_MOVE(TypedAttrVal)
-
-  T val_;
-};
+class AttrVal;
 
 class UserOpConfWrapper final {
  public:
   UserOpConfWrapper(const OperatorConf&);
+  UserOpConfWrapper(std::shared_ptr<const OperatorConf> op_conf);
   const OperatorConf& op_conf() const;
   const UserOpConf& user_op_conf() const;
   const std::string& op_name() const;
@@ -80,14 +61,17 @@ class UserOpConfWrapper final {
   int32_t output_size(const std::string& arg_name) const;
 
   template<typename T>
-  const T& attr(const std::string& attr_name) const;
+  const T& attr(const std::string& attr_name) const {
+    return CHECK_JUST(attrs_.GetAttr<T>(attr_name));
+  }
+  const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const;
 
  private:
   UserOpConfWrapper() = default;
   friend class UserOpConfWrapperBuilder;
 
-  OperatorConf op_conf_;
-  HashMap<std::string, std::shared_ptr<AttrVal>> attrs_;
+  std::shared_ptr<const OperatorConf> op_conf_;
+  AttrMap attrs_;
 };
 
 using UserOpInputGradGetFn = std::function<const std::string&()>;
@@ -132,7 +116,7 @@ class UserOpWrapper final {
  private:
   UserOpConfWrapper conf_;
   std::function<LogicalBlobId*(const std::string&)> diff_fn_;
-  HashMap<std::string, TensorDesc> bn2tensor_desc_;
+  HashMap<std::string, NaiveTensorDesc> bn2tensor_desc_;
 };
 
 class UserOpConfWrapperBuilder final {

@@ -30,7 +30,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_LT_OR_RETURN(axis, like_num_axes);
   FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
     const user_op::TensorDesc* like_i_desc = ctx->TensorDesc4ArgNameAndIndex("like", i);
-    user_op::TensorDesc* out_i_desc = ctx->TensorDesc4ArgNameAndIndex("out", i);
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
     CHECK_EQ_OR_RETURN(like_i_desc->shape().NumAxes(), like_num_axes);
     FOR_RANGE(int64_t, j, 0, like_num_axes) {
       if (j == axis) {
@@ -48,7 +48,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
       out_i_dim_vec.push_back(in_desc->shape().At(j));
     }
     *out_i_desc->mut_shape() = Shape(out_i_dim_vec);
-    *out_i_desc->mut_data_type() = in_desc->data_type();
     out_i_desc->set_is_dynamic(like_i_desc->is_dynamic());
   }
   if (dynamic_dim_size == 0) {
@@ -59,21 +58,22 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
+    user_op::TensorDesc* out_i_desc = ctx->OutputTensorDesc("out", i);
+    *out_i_desc->mut_data_type() = in_desc->data_type();
+  }
+  return Maybe<void>::Ok();
+}
+
 void SetLikeArgModifier(user_op::GetInputArgModifier GetInputArgModifierFn,
                         const user_op::UserOpConfWrapper& user_op_conf) {
   FOR_RANGE(int32_t, i, 0, user_op_conf.input_size("like")) {
     user_op::InputArgModifier* like_modifier = GetInputArgModifierFn("like", i);
     CHECK_NOTNULL(like_modifier);
-    like_modifier->set_use_header_only(true);
     like_modifier->set_requires_grad(false);
   }
-}
-
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  FOR_RANGE(int32_t, i, 0, ctx->outputs().size()) {
-    *ctx->BatchAxis4ArgNameAndIndex("out", i) = *ctx->BatchAxis4ArgNameAndIndex("like", i);
-  }
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> GetSbpSignature(user_op::SbpContext* ctx) {
@@ -163,8 +163,8 @@ REGISTER_USER_OP("split_like")
     .Attr<int64_t>("axis")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(SetLikeArgModifier)
-    .SetBatchAxisInferFn(InferBatchAxis)
-    .SetGetSbpFn(GetSbpSignature);
+    .SetGetSbpFn(GetSbpSignature)
+    .SetDataTypeInferFn(InferDataType);
 
 REGISTER_USER_OP_GRAD("split_like").SetGenBackwardOpConfFn(GenGradOp);
 

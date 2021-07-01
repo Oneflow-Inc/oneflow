@@ -29,6 +29,8 @@ struct ReduceSbpUtil final {
                                                                   int32_t num_axes);
   static std::function<bool(int32_t)> MakePredicatorIsReducedAxis(const PbRf<int32_t>& axes,
                                                                   int32_t num_axes);
+  static void GetRegularAxes(int64_t num_axes, const std::vector<int32_t>& reduce_axes,
+                             HashSet<int32_t>* axes);
 };
 
 }  // namespace oneflow

@@ -22,14 +22,14 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
   return regst_desc_->consumers_actor_id();
 }
 
-Regst::Regst() {
+Regst::Regst()
+    : regst_desc_(nullptr),
+      main_mem_ptr_(nullptr),
+      separated_header_mem_ptr_(nullptr),
+      comm_net_token_(nullptr) {
   status_.regst_desc_id = -1;
   status_.piece_id = -1;
   status_.act_id = -1;
-  status_.col_id = 0;
-  status_.max_col_id = 0;
-  regst_desc_ = nullptr;
-  comm_net_token_ = nullptr;
 }
 
 Regst::~Regst() {
@@ -43,11 +43,7 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   if (ordinal >= 0) {
     return sorted_blob_vec_.at(ordinal).get();
   } else {
-    if (lbi.is_packed_id()) {
-      return packed_blob_.get();
-    } else {
-      return nullptr;
-    }
+    return nullptr;
   }
 }
 
@@ -71,6 +67,22 @@ Blob* Regst::GetMutSoleBlob() {
 const Blob* Regst::GetSoleBlob() const {
   CHECK_EQ(GetBlobSize(), 1);
   return sorted_blob_vec_.front().get();
+}
+
+void* Regst::comm_net_token() {
+  void* token = comm_net_token_.load(std::memory_order_relaxed);
+  if (token != nullptr) { return token; }
+  {
+    std::lock_guard<std::mutex> lock(comm_net_token_mutex_);
+    token = comm_net_token_;
+    if (token != nullptr) { return token; }
+    CHECK(main_mem_ptr() != nullptr);
+    CHECK(separated_header_mem_ptr() == nullptr);
+    token = Global<CommNet>::Get()->RegisterMemory(main_mem_ptr(),
+                                                   this->regst_desc()->MainByteSize4OneRegst());
+    comm_net_token_ = token;
+    return token;
+  }
 }
 
 }  // namespace oneflow

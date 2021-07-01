@@ -30,8 +30,9 @@ REGISTER_USER_OP("same_padding")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const TensorDesc* x_desc = ctx->TensorDesc4ArgNameAndIndex("x", 0);
-      TensorDesc* y_desc = ctx->TensorDesc4ArgNameAndIndex("y", 0);
-      *y_desc = *x_desc;
+      TensorDesc* y_desc = ctx->OutputTensorDesc("y", 0);
+      *y_desc->mut_shape() = x_desc->shape();
+      *y_desc->mut_is_dynamic() = x_desc->is_dynamic();
       const std::string& data_format = ctx->Attr<std::string>("data_format");
       const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
       const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
@@ -68,6 +69,10 @@ REGISTER_USER_OP("same_padding")
           .PartialSum(user_op::OpArg("y", 0))
           .Build();
       return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("same_padding_grad")
@@ -80,7 +85,8 @@ REGISTER_USER_OP("same_padding_grad")
     .Attr<std::vector<int32_t>>("strides")
     .Attr<std::vector<int32_t>>("dilation_rate")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->TensorDesc4ArgNameAndIndex("dx", 0) = *ctx->TensorDesc4ArgNameAndIndex("x_like", 0);
+      *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -113,6 +119,10 @@ REGISTER_USER_OP("same_padding_grad")
           .Broadcast(user_op::OpArg("dy", 0))
           .Broadcast(user_op::OpArg("dx", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x_like", 0);
       return Maybe<void>::Ok();
     });
 

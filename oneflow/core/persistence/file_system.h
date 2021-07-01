@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/job/file_system_conf.pb.h"
 
 namespace oneflow {
 
@@ -130,7 +129,7 @@ class FileSystem {
 
   // Creates the specified directory.
   virtual void CreateDir(const std::string& dirname) = 0;
-  void CreateDirIfNotExist(const std::string& dirname);
+  virtual void CreateDirIfNotExist(const std::string& dirname);
   virtual void RecursivelyCreateDir(const std::string& dirname);
   void RecursivelyCreateDirIfNotExist(const std::string& dirname);
 
@@ -164,16 +163,17 @@ class FileSystem {
 
  protected:
   FileSystem() = default;
+
+ private:
+  std::string SplitRecursiveDir(const std::string& dirname, std::vector<std::string>& sub_dirs);
 };
 
 }  // namespace fs
 
 fs::FileSystem* LocalFS();
-
-fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
 fs::FileSystem* DataFS();
-fs::FileSystem* DataFS(int64_t session_id);
 fs::FileSystem* SnapshotFS();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_

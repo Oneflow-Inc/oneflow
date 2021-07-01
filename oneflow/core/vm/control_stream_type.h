@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_CONTROL_VM_STREAM_TYPE_H_
 
 #include "oneflow/core/vm/stream_type.h"
-#include "oneflow/core/vm/infer_stream_type.h"
 #include "oneflow/core/vm/instruction.msg.h"
 
 namespace oneflow {
@@ -46,6 +45,7 @@ class ControlStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
 
   bool SharingVirtualMachineThread() const override { return true; }
+  bool IsControlStreamType() const override { return true; }
   void Infer(VirtualMachine* vm, Instruction* instruction) const override;
   void Compute(VirtualMachine* vm, Instruction* instruction) const override;
   void Infer(VirtualMachine* vm, InstructionMsg* instr_msg) const override;

@@ -75,8 +75,6 @@ def compare_with_np(device_type, x_shape, like0_shape, like1_shape, dtype):
         return y0, y1
 
     # OneFlow
-    check_point = flow.train.CheckPoint()
-    check_point.init()
     x = np.random.randn(*x_shape).astype(np.float32)
     y0, y1 = SplitLikeJob(x).get()
     assert (like0_shape[0] + like1_shape[0]) == x_shape[0]

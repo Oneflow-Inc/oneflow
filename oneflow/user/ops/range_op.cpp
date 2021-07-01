@@ -23,23 +23,21 @@ REGISTER_USER_OP("range")
     .Attr<int64_t>("limit")
     .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
       int64_t start = ctx->Attr<int64_t>("start");
       int64_t delta = ctx->Attr<int64_t>("delta");
       int64_t limit = ctx->Attr<int64_t>("limit");
       int64_t range_elem_cnt = (((limit - start) + delta - 1)
                                 / delta);  // Do the ceil division, ceil((limit-start)/delta)
-      auto dtype = ctx->Attr<DataType>("dtype");
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = dtype;
       *out_shape = Shape({range_elem_cnt});
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->clear_value();  // clear batch axis
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     });
 

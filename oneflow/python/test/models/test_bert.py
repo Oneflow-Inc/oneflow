@@ -165,7 +165,7 @@ def BuildPreTrainNet(
 
 def CreateOptimizer():
     lr_warmup = flow.optimizer.warmup.linear(1000, 0)
-    lr_scheduler = flow.optimizer.PolynomialSchduler(
+    lr_scheduler = flow.optimizer.PolynomialScheduler(
         FLAGS.lr, 100000, 0.0, warmup=lr_warmup
     )
     return flow.optimizer.AdamW(

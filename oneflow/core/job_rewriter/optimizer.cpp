@@ -19,40 +19,23 @@ limitations under the License.
 
 namespace oneflow {
 
-void GenerateOptimizerOpConfWrapperStruct::Call(JobPassCtx* ctx, const VariableOp& var_op,
-                                                const ParallelConf& parallel_conf,
-                                                JobBuilder* job_builder,
-                                                const LogicalBlobId& diff_lbi_of_var_out) const {
-  (*func_)(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+void GenerateOptimizerOpConfWrapperStruct::Call(JobPassCtx* ctx, const OpNode& var_op_node,
+                                                const std::string& model_diff_lbn,
+                                                const OptimizerConf& optimizer_conf,
+                                                JobBuilder* job_builder) const {
+  (*func_)(ctx, var_op_node, model_diff_lbn, optimizer_conf, job_builder);
 }
 
-void GenerateOptimizerOpConfIf(JobPassCtx* ctx, const VariableOp& var_op,
-                               const ParallelConf& parallel_conf, JobBuilder* job_builder,
-                               const LogicalBlobId& diff_lbi_of_var_out) {
-  const auto& train_conf = GlobalJobDesc().job_conf().train_conf();
-  auto optimizer_case = train_conf.model_update_conf().normal_mdupdt_case();
+void AddOptimizerOp(JobPassCtx* ctx, const OpNode& var_op_node, const std::string& model_diff_lbn,
+                    const OptimizerConf& optimizer_conf, JobBuilder* job_builder) {
+  const auto optimizer_case = optimizer_conf.normal_mdupdt_case();
   auto* obj = NewObj<int32_t, GenerateOptimizerOpConfWrapperStruct>(optimizer_case);
-  obj->Call(ctx, var_op, parallel_conf, job_builder, diff_lbi_of_var_out);
+  obj->Call(ctx, var_op_node, model_diff_lbn, optimizer_conf, job_builder);
 }
 
-void AddOptimizerOpConf(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                        const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi) {
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    const VariableOp* var_op = dynamic_cast<const VariableOp*>(&op_node->op());
-    if (var_op == nullptr) { return; }
-    if (lbi2diff_lbi.find(var_op->BnInOp2Lbi(var_op->SoleObn())) == lbi2diff_lbi.end()) { return; }
-
-    LogicalBlobId diff_lbi_of_var_out = lbi2diff_lbi.at(var_op->BnInOp2Lbi(var_op->SoleObn()));
-    const auto& parallel_desc = op_node->parallel_desc();
-    GenerateOptimizerOpConfIf(ctx, *var_op, parallel_desc.parallel_conf(), job_builder,
-                              diff_lbi_of_var_out);
-  });
-}
-
-float GetOptimizerWeightDecayRate(const NormalModelUpdateOpUserConf& model_update_conf,
-                                  const VariableOp& op) {
-  if (model_update_conf.has_weight_decay_conf()) {
-    const WeightDecayConf& weight_decay_conf = model_update_conf.weight_decay_conf();
+float GetOptimizerWeightDecayRate(const OptimizerConf& optimizer_conf, const VariableOp& op) {
+  if (optimizer_conf.has_weight_decay_conf()) {
+    const WeightDecayConf& weight_decay_conf = optimizer_conf.weight_decay_conf();
     std::function<bool(const std::string& op_name)> WeightDecayFilter;
     if (weight_decay_conf.has_includes()) {
       WeightDecayFilter = [&](const std::string& op_name) {

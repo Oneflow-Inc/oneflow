@@ -11,7 +11,6 @@ RUN yum update -y && yum install -y rdma-core-devel \
     make \
     git \
     centos-release-scl \
-    swig \
     intel-mkl-2020.0-088 \
     zlib-devel \
     curl-devel \

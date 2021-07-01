@@ -28,20 +28,15 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
-  bool IsReadyForBuild() override;
 
   TaskType GetTaskType() const override { return TaskType::kNormalForward; }
-  bool HasBackwardCompTaskNode();
 
  private:
-  bool IsAllOutNodeNormalForward() const;
-  bool CanProduceSeperatedRegstsForEachOutBlob() const;
   void ProduceOutRegstByNameAndBlockNum(const std::string& name, size_t mem_block_num);
   void BuildExecGphAndRegst() override;
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildTmp7BufRegsts();
-  void InferProducedDataRegstTimeShape() override;
 };
 
 }  // namespace oneflow

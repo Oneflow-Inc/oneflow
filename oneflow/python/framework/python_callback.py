@@ -18,7 +18,11 @@ from __future__ import absolute_import
 import traceback
 
 import oneflow.python.framework.ofblob as ofblob
-import oneflow_api
+import oneflow._oneflow_internal.oneflow.core.operator.op_attribute as op_attribute_cfg
+import oneflow._oneflow_internal.oneflow.core.job.placement as placement_cfg
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
+import oneflow._oneflow_internal.oneflow.core.job.scope as scope_cfg
+import oneflow._oneflow_internal
 
 
 def GetIdForRegisteredCallback(cb):
@@ -34,9 +38,9 @@ def DeleteRegisteredCallback(cb):
     del unique_id2handler[id(cb)]
 
 
-class PythonCallback(oneflow_api.ForeignCallback):
+class PythonCallback(oneflow._oneflow_internal.ForeignCallback):
     def __init__(self):
-        oneflow_api.ForeignCallback.__init__(self)
+        oneflow._oneflow_internal.ForeignCallback.__init__(self)
 
     def OfBlobCall(self, unique_id, of_blob_ptr):
         try:
@@ -69,28 +73,11 @@ class PythonCallback(oneflow_api.ForeignCallback):
             print(traceback.format_exc())
             raise e
 
-    def EagerCastFromMirrored(self, op_attribute, parallel_conf):
-        try:
-            # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
-            interpreter_callback.CastFromMirrored(str(op_attribute), parallel_conf)
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
-    def AddScopeToPyStorage(self, scope_symbol_id, scope_proto_str):
-        try:
-            return interpreter_callback.AddScopeToStorage(
-                scope_symbol_id, scope_proto_str
-            )
-        except Exception as e:
-            print(traceback.format_exc())
-            raise e
-
     def MakeScopeSymbol(self, job_conf, parallel_conf, is_mirrored):
         try:
             # TODO(hanbinbin): str() will be removed after proto obj is replaced with cfg obj in python side
             return interpreter_callback.MakeScopeSymbol(
-                str(job_conf), parallel_conf, is_mirrored
+                job_conf, parallel_conf, is_mirrored
             )
         except Exception as e:
             print(traceback.format_exc())

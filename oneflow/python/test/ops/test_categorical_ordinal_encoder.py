@@ -42,9 +42,6 @@ def _test_categorical_ordinal_encoder(
             # z = flow.layers.categorical_ordinal_encoder(x, capacity=320)
             return y, z
 
-    check_point = flow.train.CheckPoint()
-    check_point.init()
-
     tokens = np.random.randint(-sys.maxsize, sys.maxsize, size=[num_tokens]).astype(
         flow.convert_oneflow_dtype_to_numpy_dtype(dtype)
     )

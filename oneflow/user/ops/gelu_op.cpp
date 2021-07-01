@@ -21,13 +21,9 @@ REGISTER_USER_OP("gelu")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* in_shape = ctx->Shape4ArgNameAndIndex("in", 0);
-      Shape* out_shape = ctx->Shape4ArgNameAndIndex("out", 0);
-      *out_shape = *in_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      const Shape& in_shape = ctx->InputShape("in", 0);
+      Shape* out_shape = ctx->OutputShape("out", 0);
+      *out_shape = in_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -39,6 +35,10 @@ REGISTER_USER_OP("gelu")
             .Build();
       }
       return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+      return Maybe<void>::Ok();
     });
 
 REGISTER_USER_OP("gelu_grad")
@@ -46,15 +46,11 @@ REGISTER_USER_OP("gelu_grad")
     .Input("dy")
     .Output("dx")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape* x_shape = ctx->Shape4ArgNameAndIndex("x", 0);
-      const Shape* dy_shape = ctx->Shape4ArgNameAndIndex("dy", 0);
-      Shape* dx_shape = ctx->Shape4ArgNameAndIndex("dx", 0);
-      CHECK(*dy_shape == *x_shape);
-      *dx_shape = *dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("dx", 0) = *ctx->BatchAxis4ArgNameAndIndex("x", 0);
+      const Shape& x_shape = ctx->InputShape("x", 0);
+      const Shape& dy_shape = ctx->InputShape("dy", 0);
+      Shape* dx_shape = ctx->OutputShape("dx", 0);
+      CHECK(dy_shape == x_shape);
+      *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -71,6 +67,11 @@ REGISTER_USER_OP("gelu_grad")
           .PartialSum(user_op::OpArg("dy", 0))
           .PartialSum(user_op::OpArg("dx", 0))
           .Build();
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+      *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
       return Maybe<void>::Ok();
     });
 

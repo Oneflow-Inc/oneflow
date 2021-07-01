@@ -37,6 +37,12 @@ limitations under the License.
 //
 // 5. Register kernels in dim_gather_kernels.cpp:
 //    REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_mul_like", Mul);
+=======
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
+#include "oneflow/core/ndarray/xpu_util.h"
+#include "oneflow/core/common/nd_index_offset_helper.h"
 
 namespace oneflow {
 namespace user_op {
@@ -56,6 +62,33 @@ OF_DEVICE_FUNC void DoDimGatherBinop(const DimOpIndexNdHelper<IDX_T>& input_nd_h
 
     IDX_T input_offset = input_nd_helper.NdIndexToOffset(coordinate, ndim);
     bin_op(input + input_offset, output + index_offset);
+    output[index_offset] = input[input_offset];
+  }
+}
+
+template<typename T>
+struct DeviceAdd {
+  OF_DEVICE_FUNC static void Invoke(const T* x, T* y) {
+#ifdef __CUDA_ARCH__
+    cuda::atomic::Add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
+#else
+    *y += *x;
+#endif
+  };
+};
+
+template<typename IN_T, typename IDX_T>
+OF_DEVICE_FUNC void DoDimScatterAdd(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+                                    const DimOpIndexNdHelper<IDX_T>& output_nd_helper, int ndim,
+                                    int64_t elem_cnt, int32_t dim, const IDX_T* index,
+                                    const IN_T* input, IN_T* output) {
+  XPU_1D_KERNEL_LOOP(input_offset, elem_cnt) {
+    IDX_T coordinate[kDimGatherMaxDimCount] = {0};
+    input_nd_helper.OffsetToNdIndex(input_offset, coordinate, ndim);
+    coordinate[dim] = index[input_offset];
+
+    IDX_T output_offset = output_nd_helper.NdIndexToOffset(coordinate, ndim);
+    DeviceAdd<IN_T>::Invoke(input + input_offset, output + output_offset);
   }
 }
 

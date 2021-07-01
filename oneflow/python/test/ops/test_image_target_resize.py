@@ -138,7 +138,9 @@ def _compare_image_target_resize_with_cv(
         test_case.assertTrue(np.allclose(image_scale, resized_scale))
 
 
-@flow.unittest.skip_unless_1n1d()
+# @flow.unittest.skip_unless_1n1d()
+# TODO(zhangwenxiao, jiangxuefei): refine in multi-client
+@unittest.skipIf(True, "skip for now because of single-client tensor_list removed")
 class TestImageTargetResize(flow.unittest.TestCase):
     def test_image_target_resize(test_case):
         _compare_image_target_resize_with_cv(

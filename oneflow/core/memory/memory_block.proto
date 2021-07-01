@@ -12,6 +12,8 @@ message MemBlockProto {
   optional int64 chunk_id = 6 [default = -1];
   optional int64 chunk_offset = 7 [default = -1];
   required int64 mem_size = 8;
+  // NOTE(chengcheng): thrd id hint is used by packed separated block group order.
+  optional int64 thrd_id_hint = 9 [default = -1];
 }
 
 message ChunkProto {

@@ -32,7 +32,7 @@ class AccKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    KernelUtil<device_type, T>::Axpy(ctx->device_ctx(), in->shape().elem_cnt(), GetOneVal<T>(),
+    NewKernelUtil<device_type>::Axpy(ctx->device_ctx(), in->shape().elem_cnt(), GetOneVal<T>(),
                                      in->dptr<T>(), 1, out->mut_dptr<T>(), 1);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -45,8 +45,11 @@ class AccKernel final : public user_op::OpKernel {
           (user_op::HobDeviceTag() == device)                    \
           & (user_op::HobDataType("out", 0) == GetDataType<OF_PP_PAIR_FIRST(dtype)>::value));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
-
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+#ifdef WITH_CUDA
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ACC_KERNEL, OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 FLOAT16_DATA_TYPE_SEQ)
+#endif
 #undef REGISTER_ACC_KERNEL
 
 }  // namespace

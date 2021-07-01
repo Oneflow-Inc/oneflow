@@ -20,18 +20,18 @@ limitations under the License.
 namespace oneflow {
 namespace pyext {
 
-void RegisterPyKernelCaller(const std::string& op_type_name) {
+void RegisterPyKernelCaller(const std::string& op_module_name) {
   // register python op kernel
   auto reg = user_op::UserOpRegistryMgr::Get()
-                 .CheckAndGetOpKernelRegistry(op_type_name)
-                 .SetCreateFn<PyKernel>()
+                 .CheckAndGetOpKernelRegistry(op_module_name + "_forward")
+                 .SetCreateFn<PyForwardKernel>()
                  .SetIsMatchedHob(
                      ((user_op::HobDeviceTag() == "cpu") & (user_op::HobDeviceSubTag() == "py")));
   user_op::UserOpRegistryMgr::Get().Register(reg.Finish().GetResult());
   // register python grad op kernel
   auto grad_reg = user_op::UserOpRegistryMgr::Get()
-                      .CheckAndGetOpKernelRegistry(op_type_name + "_grad")
-                      .SetCreateFn<PyGradKernel>()
+                      .CheckAndGetOpKernelRegistry(op_module_name + "_backward")
+                      .SetCreateFn<PyBackwardKernel>()
                       .SetIsMatchedHob(((user_op::HobDeviceTag() == "cpu")
                                         & (user_op::HobDeviceSubTag() == "py")));
   user_op::UserOpRegistryMgr::Get().Register(grad_reg.Finish().GetResult());

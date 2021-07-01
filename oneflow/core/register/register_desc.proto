@@ -13,13 +13,10 @@ message LbiBlobDescPair {
 
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
-  required BlobDescProto packed_blob_desc = 2;
   required ShapeProto time_shape = 3;
 }
 
 message CtrlRegstDesc {
-  optional int64 reliant_regst_desc_id = 1;
-  optional int32 returned_regst_num = 2 [default = 1];
 }
 
 message RegstDescTypeProto {

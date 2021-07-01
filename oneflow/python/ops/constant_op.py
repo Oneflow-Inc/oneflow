@@ -21,37 +21,37 @@ from typing import Optional, Sequence, Union
 import oneflow as flow
 import oneflow.core.operator.op_conf_pb2 as op_conf_util
 import oneflow.core.register.logical_blob_id_pb2 as logical_blob_id_util
-import oneflow.python.framework.dtype as dtype_util
 import oneflow.python.framework.interpret_util as interpret_util
 import oneflow.python.framework.id_util as id_util
 import oneflow.python.framework.remote_blob as remote_blob_util
-from oneflow.python.oneflow_export import oneflow_export
+from oneflow.python.oneflow_export import oneflow_export, stable_api
+import oneflow._oneflow_internal
 
 
 @oneflow_export("constant")
 def constant(
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     shape: Optional[Sequence[int]] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    """This operator creates a constant Blob. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator creates a constant Blob.
 
     Args:
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         shape (Optional[Sequence[int]], optional): The shape of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
-        NotImplementedError: The data type of value should be int or float. 
+        NotImplementedError: The data type of value should be int or float.
 
     Returns:
-        remote_blob_util.BlobDef: The result blob. 
+        oneflow._oneflow_internal.BlobDesc: The result blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -60,8 +60,8 @@ def constant(
 
         @flow.global_function()
         def constant_Job() -> tp.Numpy:
-            constant_blob = flow.constant(value=1.5, 
-                                        shape=(1, 3, 3), 
+            constant_blob = flow.constant(value=1.5,
+                                        shape=(1, 3, 3),
                                         dtype=flow.float)
             return constant_blob
 
@@ -83,8 +83,12 @@ def constant(
 
     if isinstance(value, float):
         is_floating_value = True
+        floating_value = float(value)
+        integer_value = int(0)
     else:
         is_floating_value = False
+        floating_value = float(0)
+        integer_value = int(value)
     if shape is not None:
         assert isinstance(shape, (list, tuple))
     else:
@@ -93,8 +97,8 @@ def constant(
         flow.user_op_builder(name)
         .Op("constant")
         .Output("out")
-        .Attr("floating_value", float(value))
-        .Attr("integer_value", int(value))
+        .Attr("floating_value", floating_value)
+        .Attr("integer_value", integer_value)
         .Attr("is_floating_value", is_floating_value)
         .Attr("dtype", dtype)
         .Attr("shape", shape)
@@ -107,22 +111,22 @@ def constant(
 @oneflow_export("constant_scalar")
 def constant_scalar(
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    """This operator creates a constant scalar Blob. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator creates a constant scalar Blob.
 
     Args:
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result blob. 
+        oneflow._oneflow_internal.BlobDesc: The result blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -131,7 +135,7 @@ def constant_scalar(
 
         @flow.global_function()
         def constant_scalar_Job() -> tp.Numpy:
-            constant_scalar = flow.constant_scalar(value=2.5, 
+            constant_scalar = flow.constant_scalar(value=2.5,
                                                 dtype=flow.float)
             return constant_scalar
 
@@ -146,28 +150,28 @@ def constant_scalar(
 
 @oneflow_export("constant_like")
 def constant_like(
-    like: remote_blob_util.BlobDef,
+    like: oneflow._oneflow_internal.BlobDesc,
     value: Union[int, float],
-    dtype: Optional[dtype_util.dtype] = None,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    """This operator creates a constant Blob that has the same shape as `like`. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator creates a constant Blob that has the same shape as `like`.
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
+        like (oneflow._oneflow_internal.BlobDesc): A Blob.
         value (Union[int, float]): The constant value of Blob.
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Raises:
-        NotImplementedError: The data type of value should be int or float. 
+        NotImplementedError: The data type of value should be int or float.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -176,11 +180,11 @@ def constant_like(
 
         @flow.global_function()
         def constant_like_Job() -> tp.Numpy:
-            constant_blob = flow.constant(value=1.5, 
-                                        shape=(1, 3, 3), 
+            constant_blob = flow.constant(value=1.5,
+                                        shape=(1, 3, 3),
                                         dtype=flow.float)
-            constant_like_blob = flow.constant_like(like=constant_blob, 
-                                                    value=5.5, 
+            constant_like_blob = flow.constant_like(like=constant_blob,
+                                                    value=5.5,
                                                     dtype=flow.float)
             return constant_like_blob
 
@@ -206,7 +210,11 @@ def constant_like(
     else:
         raise NotImplementedError
     if dtype is not None:
-        setattr(op_conf.constant_like_conf, "data_type", dtype.oneflow_proto_dtype)
+        setattr(
+            op_conf.constant_like_conf,
+            "data_type",
+            oneflow._oneflow_internal.deprecated.GetProtoDtype4OfDtype(dtype),
+        )
     setattr(op_conf.constant_like_conf, "out", "out")
     interpret_util.Forward(op_conf)
     out_lbi = logical_blob_id_util.LogicalBlobId()
@@ -216,24 +224,25 @@ def constant_like(
 
 
 @oneflow_export("ones_like")
+@stable_api
 def ones_like(
-    like: remote_blob_util.BlobDef,
-    dtype: Optional[dtype_util.dtype] = None,
+    like: oneflow._oneflow_internal.BlobDesc,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
+) -> oneflow._oneflow_internal.BlobDesc:
     """This operator creates a Blob with all elements set to `1` that has the same shape as `like`.
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        like (oneflow._oneflow_internal.BlobDesc): A Blob.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -242,10 +251,10 @@ def ones_like(
 
         @flow.global_function()
         def ones_like_Job() -> tp.Numpy:
-            constant_blob = flow.constant(value=1.5, 
-                                        shape=(1, 3, 3), 
+            constant_blob = flow.constant(value=1.5,
+                                        shape=(1, 3, 3),
                                         dtype=flow.float)
-            ones_like_blob = flow.ones_like(like=constant_blob, 
+            ones_like_blob = flow.ones_like(like=constant_blob,
                                             dtype=flow.float)
             return ones_like_blob
 
@@ -261,24 +270,25 @@ def ones_like(
 
 
 @oneflow_export("zeros_like")
+@stable_api
 def zeros_like(
-    like: remote_blob_util.BlobDef,
-    dtype: Optional[dtype_util.dtype] = None,
+    like: oneflow._oneflow_internal.BlobDesc,
+    dtype: Optional[flow.dtype] = None,
     name: Optional[str] = None,
-) -> remote_blob_util.BlobDef:
-    """This operator creates a Blob that has the same shape as `like` whose all elements are set to `0`. 
+) -> oneflow._oneflow_internal.BlobDesc:
+    """This operator creates a Blob that has the same shape as `like` whose all elements are set to `0`.
 
     Args:
-        like (remote_blob_util.BlobDef): A Blob. 
-        dtype (Optional[dtype_util.dtype], optional): The data type of Blob. Defaults to None.
+        like (oneflow._oneflow_internal.BlobDesc): A Blob.
+        dtype (Optional[flow.dtype], optional): The data type of Blob. Defaults to None.
         name (Optional[str], optional): The name for the operation. Defaults to None.
 
     Returns:
-        remote_blob_util.BlobDef: The result Blob. 
+        oneflow._oneflow_internal.BlobDesc: The result Blob.
 
-    For example: 
+    For example:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -287,10 +297,10 @@ def zeros_like(
 
         @flow.global_function()
         def zeros_like_Job() -> tp.Numpy:
-            constant_blob = flow.constant(value=1.5, 
-                                        shape=(1, 3, 3), 
+            constant_blob = flow.constant(value=1.5,
+                                        shape=(1, 3, 3),
                                         dtype=flow.float)
-            zeros_like_blob = flow.zeros_like(like=constant_blob, 
+            zeros_like_blob = flow.zeros_like(like=constant_blob,
                                             dtype=flow.float)
             return zeros_like_blob
 

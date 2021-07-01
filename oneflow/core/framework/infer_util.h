@@ -19,14 +19,16 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/tensor_desc.h"
+#include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 
 class Shape;
-enum DataType;
 class JobDesc;
+class Device;
 
 namespace user_op {
 
@@ -36,37 +38,82 @@ class InferContext {
  public:
   virtual ~InferContext() = default;
 
+  virtual TensorDesc* OutputTensorDesc(const std::string&, int32_t) = 0;
   virtual TensorDesc* TensorDesc4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
+  virtual const Shape& InputShape(const std::string&, int32_t) const = 0;
+  virtual Shape* OutputShape(const std::string&, int32_t) = 0;
   virtual Shape* Shape4ArgNameAndIndex(const std::string&, int32_t) = 0;
+  virtual const DataType& InputDType(const std::string&, int32_t) const = 0;
+  virtual DataType* OutputDType(const std::string&, int32_t) = 0;
   virtual DataType* Dtype4ArgNameAndIndex(const std::string&, int32_t) = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
   virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+  virtual const std::string& input(const std::string& arg_name, int32_t index) const = 0;
+  virtual const std::string& output(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_input(const std::string& arg_name, int32_t index) const = 0;
+  virtual bool has_output(const std::string& arg_name, int32_t index) const = 0;
+  virtual int32_t input_size(const std::string& arg_name) const = 0;
+  virtual int32_t output_size(const std::string& arg_name) const = 0;
+  virtual const std::string& op_name() const = 0;
+  virtual const std::string& op_type_name() const = 0;
+  virtual const std::string& device_tag() const = 0;
 
   template<typename T>
-  T Attr(const std::string& attr_name) const {
-    return conf_.attr<T>(attr_name);
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
   }
 
   virtual const ParallelContext& parallel_ctx() const = 0;
-  virtual const JobDesc& job_desc() const = 0;
-  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const ParallelDesc& parallel_desc() const = 0;
 
+  virtual const JobDesc* job_desc() const {
+    UNIMPLEMENTED();
+    return nullptr;
+  };
+  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
+                                                              int32_t) const = 0;
+
+  virtual const cfg::ParallelDistribution& ParallelDistribution4ArgNameAndIndex(const std::string&,
+                                                                                int32_t) const = 0;
+
+  virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
+  virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;
   virtual bool* IsDynamic4ArgNameAndIndex(const std::string&, int32_t) = 0;
-  virtual bool* IsTensorList4ArgNameAndIndex(const std::string&, int32_t) = 0;
 
-  const UserOpConfWrapper& user_op_conf() const { return conf_; }
+  virtual int64_t parallel_num() const = 0;
 
  protected:
-  InferContext(UserOpConfWrapper&& conf) : conf_(std::move(conf)) {}
+  InferContext() = default;
   InferContext(const InferContext&) = delete;
-  InferContext(InferContext&&) = delete;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
+};
 
- private:
-  UserOpConfWrapper conf_;
+class DeviceInferContext {
+ public:
+  virtual ~DeviceInferContext() = default;
+
+  template<typename T>
+  const T& Attr(const std::string& attr_name) const {
+    return AttrValueCast<T>(*Attr4Name(attr_name));
+  }
+
+  virtual const std::vector<std::pair<std::string, int32_t>>& inputs() const = 0;
+  virtual const std::vector<std::pair<std::string, int32_t>>& outputs() const = 0;
+
+  virtual Symbol<Device>* OutputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) = 0;
+
+  virtual Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) const = 0;
+
+ protected:
+  DeviceInferContext() = default;
+  virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
 struct TensorDescInferFnUtil {
   static Maybe<void> Unchanged(InferContext*);
+  static Maybe<void> UnchangedDataType(InferContext*);
   static Maybe<void> InOutCorrespond(InferContext*);
 };
 

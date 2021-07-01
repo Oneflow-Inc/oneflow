@@ -49,8 +49,6 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
                 flow.assign(ref, value + ones)
                 return value
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
         zeros = np.zeros((10,)).astype(np.float32)
         ones = np.ones((10,)).astype(np.float32)
 
@@ -96,8 +94,6 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
                 flow.assign(ref, ref + ones)
                 return value
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
         zeros = np.zeros((10,)).astype(np.float32)
         ones = np.ones((10,)).astype(np.float32)
 
@@ -153,8 +149,6 @@ class Test1dSspVariableProxy(flow.unittest.TestCase):
                 ).minimize(loss)
                 return loss
 
-        checkpoint = flow.train.CheckPoint()
-        checkpoint.init()
         zeros = np.zeros((10,)).astype(np.float32)
         ones = np.ones((10,)).astype(np.float32)
 

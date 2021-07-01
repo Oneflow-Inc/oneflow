@@ -35,11 +35,11 @@ enum class TrtValueKind : int {
   kWeight = 2,
 };
 
-inline bool IsUndefKind(const TrtValueKind &kind) { return kind == TrtValueKind::kUndef; }
+inline bool IsUndefKind(const TrtValueKind& kind) { return kind == TrtValueKind::kUndef; }
 
-inline bool IsTensorKind(const TrtValueKind &kind) { return kind == TrtValueKind::kTensor; }
+inline bool IsTensorKind(const TrtValueKind& kind) { return kind == TrtValueKind::kTensor; }
 
-inline bool IsWeightKind(const TrtValueKind &kind) { return kind == TrtValueKind::kWeight; }
+inline bool IsWeightKind(const TrtValueKind& kind) { return kind == TrtValueKind::kWeight; }
 
 #define FOREACH_TENSORRT_LAYER(__macro) \
   __macro(Input);                       \
@@ -87,13 +87,13 @@ class TrtBuilder {
 
   util::Map<int64_t, TrtValueKind> value_kinds_;
   util::Map<int64_t, Parameter> params_;
-  util::Map<int64_t, nvinfer1::ITensor *> tensors_;
+  util::Map<int64_t, nvinfer1::ITensor*> tensors_;
   util::Map<int64_t, nvinfer1::Weights> weights_;
 
   util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> host_weights_;
 
  public:
-  explicit TrtBuilder(const std::string &name) : builder_name_(name), next_handle_(-1) {
+  explicit TrtBuilder(const std::string& name) : builder_name_(name), next_handle_(-1) {
     static nv::Logger logger;
     builder_.reset(nvinfer1::createInferBuilder(logger));
     nvinfer1::NetworkDefinitionCreationFlags flags =
@@ -102,41 +102,41 @@ class TrtBuilder {
     network_.reset(builder_->createNetworkV2(flags));
   }
 
-  const std::string &name() const { return builder_name_; }
+  const std::string& name() const { return builder_name_; }
 
-  nvinfer1::ITensor *GetTensor(int64_t handle);
+  nvinfer1::ITensor* GetTensor(int64_t handle);
 
-  nvinfer1::Weights &GetWeight(int64_t handle);
+  nvinfer1::Weights& GetWeight(int64_t handle);
 
-  const TrtValueKind &ValueKind(int64_t handle) const {
+  const TrtValueKind& ValueKind(int64_t handle) const {
     CHECK_GT(value_kinds_.count(handle), 0)
         << "Handle " << handle << " has not been built for this builder.";
     return value_kinds_.at(handle);
   }
 
-  nvinfer1::IBuilder *builder() const { return builder_.get(); }
+  nvinfer1::IBuilder* builder() const { return builder_.get(); }
 
-  nvinfer1::INetworkDefinition *network() const { return network_.get(); }
+  nvinfer1::INetworkDefinition* network() const { return network_.get(); }
 
   // Returns handle for the added parameter.
-  int64_t AddParameter(const Parameter &param);
+  int64_t AddParameter(const Parameter& param);
 
   // Returns handle for the added tensor.
-  int64_t AddTensor(nvinfer1::ITensor *tensor);
+  int64_t AddTensor(nvinfer1::ITensor* tensor);
 
   // Returns handle for the added weight.
-  int64_t AddWeight(nvinfer1::Weights &weight);
+  int64_t AddWeight(nvinfer1::Weights& weight);
 
   nv::unique_ptr<nvinfer1::IBuilder> ReleaseBuilder() { return std::move(builder_); }
 
   nv::unique_ptr<nvinfer1::INetworkDefinition> ReleaseNetwork() { return std::move(network_); }
 
-  const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>> &host_weights() const {
+  const util::Map<std::string, std::shared_ptr<std::vector<uint8_t>>>& host_weights() const {
     return host_weights_;
   }
 
   void MarkOutput(int64_t handle) {
-    nvinfer1::ITensor *output = GetTensor(handle);
+    nvinfer1::ITensor* output = GetTensor(handle);
     network_->markOutput(*output);
   }
 
@@ -144,7 +144,7 @@ class TrtBuilder {
 
 #define TRT_BUILDER_ADD_LAYER(Layer)                          \
   template<typename... Args>                                  \
-  auto add##Layer(Args &&... args) {                          \
+  auto add##Layer(Args&&... args) {                           \
     return network_->add##Layer(std::forward<Args>(args)...); \
   }
 

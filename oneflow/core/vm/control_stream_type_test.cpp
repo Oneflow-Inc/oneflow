@@ -36,8 +36,6 @@ namespace test {
 
 namespace {
 
-using InstructionMsgList = OBJECT_MSG_LIST(InstructionMsg, instr_msg_link);
-
 TEST(ControlStreamType, new_symbol_symbol) {
   auto vm_desc = ObjectMsgPtr<VmDesc>::New(TestUtil::NewVmResourceDesc().Get());
   TestUtil::AddStreamDescByInstrNames(vm_desc.Mutable(), {"NewSymbol"});

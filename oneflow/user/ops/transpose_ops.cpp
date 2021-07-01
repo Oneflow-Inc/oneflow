@@ -33,37 +33,22 @@ REGISTER_USER_OP("transpose")
     .Input("input")
     .Output("output")
     .Attr<std::vector<int32_t>>("perm")
-    .Attr<bool>("batch_axis_non_change")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc* in_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("input", 0);
-      user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("output", 0);
       const Shape& in_shape = in_tensor_desc->shape();
       Shape* out_shape = out_tensor_desc->mut_shape();
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
       CHECK_EQ_OR_RETURN(perm.size(), in_shape.NumAxes());
       CheckIsPerm(perm);
       // if (perm.at(0) != 0) { CHECK_OR_RETURN(!in_tensor_desc->is_dynamic()); }
-      *out_tensor_desc = *in_tensor_desc;
+      *out_tensor_desc->mut_shape() = in_tensor_desc->shape();
+      *out_tensor_desc->mut_is_dynamic() = in_tensor_desc->is_dynamic();
       FOR_RANGE(size_t, i, 0, perm.size()) { out_shape->Set(i, in_shape.At(perm[i])); }
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      // TODO：
-      // Whether to infer the batch axis according to the param "batch_axis_non_change"
-      // The param "batch_axis_non_change" will be deleted after batch_axis has been depreciated
-      if (ctx->BatchAxis4ArgNameAndIndex("input", 0)->has_value()) {
-        if (ctx->Attr<bool>("batch_axis_non_change")) {
-          ctx->BatchAxis4ArgNameAndIndex("output", 0)
-              ->set_value(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value());
-        } else {
-          const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");
-          ctx->BatchAxis4ArgNameAndIndex("output", 0)
-              ->set_value(perm.at(ctx->BatchAxis4ArgNameAndIndex("input", 0)->value()));
-        }
-      } else {
-        ctx->BatchAxis4ArgNameAndIndex("output", 0)->clear_value();
-      }
-
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -76,7 +61,7 @@ REGISTER_USER_OP("transpose")
         if (axis < 0) { axis += perm.size(); }
         CHECK_GE(axis, 0);
         CHECK_LT(axis, perm.size());
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), axis).Build();
+        ctx->NewBuilder().Split(ctx->inputs(), axis).Split(ctx->outputs(), i).Build();
       }
       ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
       return Maybe<void>::Ok();
@@ -87,8 +72,6 @@ REGISTER_USER_OP_GRAD("transpose")
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         const auto& tmp = op.attr<std::vector<int32_t>>("perm");
-        bool batch_axis_non_change = op.attr<bool>(
-            "batch_axis_non_change");  // TODO: To be removed after batch_axis has been depreciated
         std::vector<int32_t> perm;
         perm.resize(tmp.size());
         FOR_RANGE(int32_t, i, 0, tmp.size()) { perm.at(tmp.at(i)) = i; }
@@ -97,9 +80,6 @@ REGISTER_USER_OP_GRAD("transpose")
                 .Input("input", op.GetGradTensorWithOpOutput("output", 0))
                 .Output("output")
                 .Attr<std::vector<int32_t>>("perm", perm)
-                .Attr<bool>("batch_axis_non_change",
-                            batch_axis_non_change)  // TODO：To be removed after batch_axis has been
-                                                    // depreciated
                 .Build();
         op.BindGradTensorWithOpInput(transpose_grad_op.output("output", 0), "input", 0);
         AddOp(transpose_grad_op);

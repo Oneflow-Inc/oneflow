@@ -66,17 +66,6 @@ void GatherInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn
   indices_modifier->set_requires_grad(false);
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
-  if (indices_batch_axis->has_value()) {
-    CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-    CHECK_LE_OR_RETURN(
-        indices_batch_axis->value(),
-        ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
-  }
-  *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
@@ -115,8 +104,16 @@ REGISTER_USER_OP("dim_gather")
     .Attr<int32_t>("dim")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(GatherInputArgModifierFn)
-    .SetBatchAxisInferFn(InferBatchAxis)
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+      CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+      const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+      *out->mut_data_type() = in->data_type();
+      return Maybe<void>::Ok();
+    })
     .SetGetSbpFn(BuildSbp);
+
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";

@@ -30,15 +30,13 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
     .Attr<Shape>("batch_padding")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
-      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(in_tensor->shape().NumAxes() == 1 && in_tensor->shape().At(0) >= 1);
       const Shape& static_shape = ctx->Attr<Shape>("static_shape");
       DimVector dim_vec(1 + static_shape.NumAxes());
       dim_vec[0] = in_tensor->shape().At(0);
       FOR_RANGE(int64_t, i, 1, dim_vec.size()) { dim_vec[i] = static_shape.At(i - 1); }
       *out_tensor->mut_shape() = Shape(dim_vec);
-      *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
       out_tensor->set_is_dynamic(ctx->Attr<bool>("is_dynamic"));
       return Maybe<void>::Ok();
     })
@@ -55,15 +53,17 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
           .Build();
       return Maybe<void>::Ok();
     })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      CHECK_EQ_OR_RETURN(ctx->BatchAxis4ArgNameAndIndex("in", 0)->value(), 0);
-      ctx->BatchAxis4ArgNameAndIndex("out", 0)->set_value(0);
-      return Maybe<void>::Ok();
-    })
     .SetOutputArgModifyFn([](user_op::GetOutputArgModifier GetOutputArgModifierFn,
                              const user_op::UserOpConfWrapper& conf) {
       user_op::OutputArgModifier* out_modifier = GetOutputArgModifierFn("out", 0);
       CHECK(out_modifier != nullptr);
       out_modifier->set_header_infered_before_compute(false);
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+      CHECK_OR_RETURN(in_tensor->data_type() == DataType::kTensorBuffer);
+      *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
+      return Maybe<void>::Ok();
     });
 }

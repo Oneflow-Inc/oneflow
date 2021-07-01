@@ -22,12 +22,7 @@ REGISTER_USER_OP("arg_sort")
     .Output("out")
     .Attr<std::string>("direction")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->Shape4ArgNameAndIndex("out", 0) = *ctx->Shape4ArgNameAndIndex("in", 0);
-      *ctx->Dtype4ArgNameAndIndex("out", 0) = DataType::kInt32;
-      return Maybe<void>::Ok();
-    })
-    .SetBatchAxisInferFn([](user_op::BatchAxisContext* ctx) -> Maybe<void> {
-      *ctx->BatchAxis4ArgNameAndIndex("out", 0) = *ctx->BatchAxis4ArgNameAndIndex("in", 0);
+      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -43,6 +38,10 @@ REGISTER_USER_OP("arg_sort")
                        const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
       const std::string& direction = op_conf.attr<std::string>("direction");
       CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+      return Maybe<void>::Ok();
+    })
+    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
+      *ctx->OutputDType("out", 0) = DataType::kInt32;
       return Maybe<void>::Ok();
     });
 

@@ -32,14 +32,12 @@ if __name__ == "__main__":
     BLACK_VER = "19.10b0"
     if os.system(version_cmd.format("black", BLACK_VER)):
         print(
-            'Please install black {black_version}. For instance, run "pip3 install black=={} --user"'.format(
-                {"black_version": BLACK_VER}
-            )
+            f"Please install black {BLACK_VER}. For instance, run 'python3 -m pip install black=={BLACK_VER} --user'"
         )
         sys.exit(1)
 
     cmd_line = sys.executable + " -m black " + "."
     if arguments.fix == False:
-        cmd_line += " --check -v"
+        cmd_line += " --check"
     if os.system(cmd_line):
         sys.exit(1)
