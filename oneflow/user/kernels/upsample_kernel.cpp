@@ -123,12 +123,9 @@ static void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
     const T top_right = in_dptr[top_offset + params.right_w_index];
     const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
     const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    // const T top = top_left + (top_right - top_left) * params.w_lerp;
-    // const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    // out_dptr[index] = top + (bottom - top) * params.h_lerp;
-    const T u = params.h_lerp, v = params.w_lerp;
-    out_dptr[index] = (1 - u) * (1 - v) * top_left + (1 - u) * v * top_right
-                      + u * (1 - v) * bottom_left + u * v * bottom_right;
+    const T top = top_left + (top_right - top_left) * params.w_lerp;
+    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
+    out_dptr[index] = top + (bottom - top) * params.h_lerp;
   }
 }
 

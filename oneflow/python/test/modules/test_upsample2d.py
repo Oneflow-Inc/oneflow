@@ -306,7 +306,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     )
     m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
     of_out = m(input)
-    np_out = np.array([[[[1.]]]])
+    np_out = np.array([[[[1.0]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
     of_out = of_out.sum()
     of_out.backward()
