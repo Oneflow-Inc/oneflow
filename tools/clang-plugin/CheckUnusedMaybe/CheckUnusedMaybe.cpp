@@ -60,7 +60,6 @@ public:
       }
     }
 
-    llvm::outs() << "start checking maybe\n";
     for (const auto &x : stmt->children()) {
       if (ExprWithCleanups *expr = dyn_cast<ExprWithCleanups>(x)) {
         std::string type = expr->getType().getAsString();
