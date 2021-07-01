@@ -649,11 +649,11 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
     const one::EagerBlobObjectListPtr& input_eager_blob_objects,
     const one::EagerBlobObjectListPtr& output_eager_blob_objects, const AttrMap& attrs,
     const std::shared_ptr<const ParallelDesc>& parallel_desc_sym,
-    const std::string& instr_type_name, bool is_inplace) {
+    const std::string& instr_type_name) {
   ObjectMsgPtr<vm::InstructionMsg> instruction =
       ObjectMsgPtr<vm::InstructionMsg>::New(instr_type_name);
   auto phy_instr_operand = std::make_shared<vm::LocalCallOpKernelPhyInstrOperand>(
-      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs, is_inplace);
+      opkernel, input_eager_blob_objects, output_eager_blob_objects, attrs);
   *instruction->mut_parallel_desc() = parallel_desc_sym;
   *instruction->mutable_phy_instr_operand() = phy_instr_operand;
   instruction_list_->EmplaceBack(std::move(instruction));

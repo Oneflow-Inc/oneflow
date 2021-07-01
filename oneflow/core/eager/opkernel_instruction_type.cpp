@@ -447,7 +447,7 @@ struct LocalCallOpKernelUtil final {
     operand->set_user_opkernel(
         JUST(operand->mut_opkernel()->ChooseOpKernel(operand->inputs(), operand->outputs())));
     JUST(CheckOutputBlobObjectsMemCase(operand, instruction->stream()));
-    if (!operand->is_inplace()) { JUST(InitOutputBlobs(operand)); }
+    JUST(InitOutputBlobs(operand));
     JUST(InferTempStorageBlobDesc(operand));
     JUST(ResetTempStorageBlob(operand));
     return Maybe<void>::Ok();
@@ -456,7 +456,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> Compute(vm::Instruction* instruction) {
     auto* operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
     DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-    if (!operand->is_inplace()) { JUST(AllocateOutputBlobsMemory(operand, device_ctx)); }
+    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
@@ -512,7 +512,7 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> InitOutputBlobs(LocalCallOpKernelPhyInstrOperand* operand) {
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       CHECK_OR_RETURN(static_cast<bool>(blob_object));
-      JUST(blob_object->InitBlob());
+      JUST(blob_object->TryInitBlob());
       return Maybe<void>::Ok();
     }));
     return Maybe<void>::Ok();
