@@ -92,7 +92,7 @@ class Graph(object):
     
     def named_state(self):
         for _, b in self._blocks.items():
-            prefix = b.name_prefix + b.name + "."
+            prefix = b.name + "."
             p_gen = b.origin.named_parameters()
             for n, p in p_gen:
                 yield prefix + n, p

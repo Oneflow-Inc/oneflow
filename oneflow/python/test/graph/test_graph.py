@@ -118,24 +118,32 @@ class TestGraph(flow.unittest.TestCase):
 
         g = CustomGraph()
 
+        # check set train to True
         g.train(True)
         test_case.assertEqual(g.training, True)
         test_case.assertEqual(g.m.training, True)
         test_case.assertEqual(g.m.layer.conv1.training, True)
-        g.config.enable_fuse_add_to_output(True)
-        print(g.config.proto)
 
+        # check set train to False
         g.train(False)
         test_case.assertEqual(g.training, False)
         test_case.assertEqual(g.training, False)
         test_case.assertEqual(g.m.training, False)
         test_case.assertEqual(g.m.layer.conv1.training, False)
 
+        # set graph config
+        g.config.enable_fuse_add_to_output(True)
+        print(g.config.proto)
         g.config.enable_fuse_add_to_output(False)
         print(g.config.proto)
 
-        print(g.config.enable_fuse_add_to_output)
+        # check named_state get the right tensor
         print(tuple((n, id(t)) for n, t in g.named_state()))
+        for n, t in g.named_state():
+            test_case.assertEqual(id(eval("g." + n)), id(t))
+
+        # print repr of nn.Graph
+        print(repr(g))
 
     # TODO(): test_add_optimizer
 
