@@ -188,7 +188,8 @@ void ParallelDistributionSignatureToSbpSignature(
     cfg::SbpSignature* sbp_signature) {
   for (const auto& pair : parallel_distribution_signature.bn_in_op2parallel_distribution()) {
     CHECK_EQ(pair.second.sbp_parallel_size(), 1);
-    (*sbp_signature->mutable_bn_in_op2sbp_parallel())[pair.first] = pair.second.sbp_parallel(0);
+    (*sbp_signature->mutable_bn_in_op2sbp_parallel())[pair.first] =
+        cfg::SbpParallel(pair.second.sbp_parallel(0));
   }
 }
 
