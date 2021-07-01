@@ -129,6 +129,7 @@ jobs:
           export CC=clang-12
           export CXX=clang++-12
           export ONEFLOW_MAYBE_CHECK_ONLY_FN=/oneflow/oneflow/
+          export ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp
           cmake .. -C ../cmake/caches/international/cpu.cmake \
             -DCMAKE_BUILD_TYPE=Release \
             -DBUILD_TESTING=ON \
