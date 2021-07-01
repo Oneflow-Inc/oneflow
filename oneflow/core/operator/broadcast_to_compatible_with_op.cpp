@@ -42,7 +42,7 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   Shape broadcasted_shape(x_desc->shape());
   FOR_RANGE(int64_t, i, 0, num_compatibles) {
     const BlobDesc* compatible_i = BlobDesc4BnInOp(GenRepeatedBn("compatible", i));
-    GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape);
+    JUST(GetBroadcastShape(broadcasted_shape, compatible_i->shape(), &broadcasted_shape));
   }
   BlobDesc* y_desc = BlobDesc4BnInOp("y");
   y_desc->CopyFrom(*x_desc);
@@ -97,7 +97,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
     Shape broadcasted_shape{1};
     for (const std::string ibn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
-      GetBroadcastShape(broadcasted_shape, input_shape, &broadcasted_shape);
+      JUST(GetBroadcastShape(broadcasted_shape, input_shape, &broadcasted_shape));
     }
 
     const int64_t broadcast_num_axes = broadcasted_shape.NumAxes();

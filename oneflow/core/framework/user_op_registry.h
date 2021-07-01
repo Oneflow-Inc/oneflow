@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -41,7 +42,7 @@ class DeviceInferContext;
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using DataTypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using DeviceInferFn = std::function<Maybe<const Device>(DeviceInferContext*)>;
+using DeviceInferFn = std::function<Maybe<Symbol<Device>>(DeviceInferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
