@@ -313,6 +313,21 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
+    input = flow.Tensor(
+        np.arange(1, 10, dtype=np.int32).reshape((1, 1, 3, 3)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+    of_out = m(input)
+    np_out = np.array([[[[1.0]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
