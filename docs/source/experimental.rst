@@ -75,10 +75,13 @@ Experimental features
 .. autofunction:: oneflow.experimental.nn.ConvTranspose2d
 .. autofunction:: oneflow.experimental.nn.Dropout
 .. autofunction:: oneflow.experimental.eq
+.. autofunction:: oneflow.experimental.ne
 .. autofunction:: oneflow.experimental.to
 .. autofunction:: oneflow.experimental.Tensor.to
 .. autofunction:: oneflow.experimental.equal
 .. autofunction:: oneflow.experimental.Tensor.eq
+.. autofunction:: oneflow.experimental.not_equal
+.. autofunction:: oneflow.experimental.Tensor.ne
 .. autofunction:: oneflow.experimental.exp
 .. autofunction:: oneflow.experimental.Tensor.exp
 .. autofunction:: oneflow.experimental.erf
@@ -93,8 +96,12 @@ Experimental features
 .. autofunction:: oneflow.experimental.Tensor.flatten
 .. autofunction:: oneflow.experimental.gt
 .. autofunction:: oneflow.experimental.Tensor.gt
+.. autofunction:: oneflow.experimental.ge
+.. autofunction:: oneflow.experimental.Tensor.ge
 .. autofunction:: oneflow.experimental.lt
 .. autofunction:: oneflow.experimental.Tensor.lt
+.. autofunction:: oneflow.experimental.le
+.. autofunction:: oneflow.experimental.Tensor.le
 .. autofunction:: oneflow.experimental.nn.Identity
 .. autofunction:: oneflow.experimental.nn.PixelShuffle
 .. autofunction:: oneflow.experimental.nn.Linear
