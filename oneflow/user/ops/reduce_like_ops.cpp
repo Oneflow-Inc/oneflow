@@ -87,7 +87,7 @@ REGISTER_USER_OP("reduce_sum_like")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
-      CHECK(like_arg_modifier != nullptr);
+      CHECK_OR_RETURN(like_arg_modifier != nullptr);
       like_arg_modifier->set_requires_grad(false);
       return Maybe<void>::Ok();
     });

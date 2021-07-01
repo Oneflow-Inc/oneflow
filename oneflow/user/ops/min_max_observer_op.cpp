@@ -53,7 +53,7 @@ REGISTER_USER_OP("min_max_observer")
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
                             const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
-      CHECK(in != nullptr);
+      CHECK_OR_RETURN(in != nullptr);
       in->set_requires_grad(false);
       return Maybe<void>::Ok();
     })

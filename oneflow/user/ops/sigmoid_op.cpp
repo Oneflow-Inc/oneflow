@@ -51,7 +51,7 @@ REGISTER_USER_OP("sigmoid_grad")
       const Shape& y_shape = ctx->InputShape("y", 0);
       const Shape& dy_shape = ctx->InputShape("dy", 0);
       Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK(dy_shape == y_shape);
+      CHECK_OR_RETURN(dy_shape == y_shape);
       *dx_shape = dy_shape;
       return Maybe<void>::Ok();
     })
