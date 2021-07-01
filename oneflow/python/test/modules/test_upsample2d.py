@@ -22,6 +22,9 @@ import torch
 import numpy as np
 import oneflow.experimental as flow
 from test_util import GenArgList
+import cv2
+import PIL
+import PIL.Image as Image
 
 
 def _test_upsample_and_interpolate_nearest(test_case, device, in_range, out_size_or_scale):
@@ -100,6 +103,59 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_siz
     np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor)
     print("np_out", np_out)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear')
+    print("torch_out", torch_out)
+    of_outs = []
+    for it in m:
+        of_outs.append(it(of_in))
+    for of_out in of_outs:
+        print("of_out", of_out)
+        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.cpu().numpy(), 1e-5, 1e-5))
+
+
+def _test_upsample_and_interpolate_bilinear_align_corners(test_case, device, in_range, out_size_or_scale):
+    print("in_range", in_range, "out_size_or_scale", out_size_or_scale)
+    out_size = None
+    scale_factor = None
+    if isinstance(out_size_or_scale, Tuple):
+        out_size = out_size_or_scale
+    elif isinstance(out_size_or_scale, (float, int)):
+        scale_factor = out_size_or_scale
+    in_size = np.sqrt(in_range[1] - in_range[0]).astype(np.int32)
+    np_in = np.arange(*in_range, dtype=np.int32).reshape((1, 1, in_size, in_size))
+    of_in = flow.Tensor(
+        np_in,
+        device=flow.device(device),
+        dtype=flow.float32,
+    )
+    torch_in = torch.tensor(np_in, device=torch.device(device), dtype=torch.float32)
+    pil_in = Image.fromarray(np_in[0, 0].astype(np.uint8), 'L')
+    cv_in = np.asarray(pil_in)
+
+    m = []
+    if out_size is not None:
+        m.append(flow.nn.Upsample(size=out_size, mode='bilinear', align_corners=True))
+        m.append(flow.nn.interpolate(size=out_size, mode='bilinear', align_corners=True))
+        m.append(flow.nn.UpsamplingBilinear2d(size=out_size))
+    elif scale_factor is not None:
+        m.append(flow.nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=True))
+        m.append(flow.nn.interpolate(scale_factor=scale_factor, mode='bilinear', align_corners=True))
+        m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor))
+        cv_out_size = tuple(np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2))
+    else:
+        raise ValueError("Either out_size or scale_factor should not be None")
+
+    # np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor, )
+    # print("np_out", np_out)
+    if out_size is None:
+        pil_out = pil_in.resize(cv_out_size, resample=PIL.Image.BILINEAR)
+        cv_out = cv2.resize(cv_in, cv_out_size, interpolation=cv2.INTER_LINEAR)
+    else:
+        print(cv_in.shape)
+        pil_out = pil_in.resize(out_size, resample=PIL.Image.BILINEAR)
+        cv_out = cv2.resize(cv_in, out_size, interpolation=cv2.INTER_LINEAR)
+    print("pil_out", np.array(pil_out))
+    print("cv_out", cv_out)
+    torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear', align_corners=True)
     print("torch_out", torch_out)
     of_outs = []
     for it in m:
@@ -310,6 +366,7 @@ def _test_upsample2d_bilinear_aligncorner_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+
 def _test_interpolate(test_case, device):
     np_in = np.arange(1, 5).reshape((1, 1, 2, 2))
     of_in = flow.Tensor(
@@ -339,7 +396,8 @@ def _test_interpolate(test_case, device):
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
-def _test_interpolate_aligncorner(test_case, device):
+
+def _test_interpolate_nearest_float_scale(test_case, device):
     input = flow.Tensor(
         np.arange(1, 5).reshape((1, 1, 2, 2)),
         device=flow.device(device),
@@ -388,6 +446,7 @@ def _test_interpolate_backward(test_case, device):
     )
 
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 
 def numpy_interpolate2d_nearest(img, scale_factor=None, out_size=None):
@@ -512,8 +571,8 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
 
                     in_x_0 = floor(in_x)
                     in_y_0 = floor(in_y)
-                    in_x_1 = ceil(in_x + eps)
-                    in_y_1 = ceil(in_y + eps)
+                    in_x_1 = min(ceil(in_x + eps), w - 1)
+                    in_y_1 = min(ceil(in_y + eps), h - 1)
 
                     flag_x = 1
                     flag_y = 1
@@ -538,6 +597,7 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
     return out_img
 
 
+
 @unittest.skipIf(
     not flow.unittest.env.eager_execution_enabled(),
     ".numpy() doesn't work in lazy mode",
@@ -547,7 +607,8 @@ class TestUpsample2d(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_upsample_and_interpolate_nearest,
-            _test_upsample_and_interpolate_bilinear,
+            # _test_upsample_and_interpolate_bilinear,
+            _test_upsample_and_interpolate_bilinear_align_corners,
             # _test_upsample2d,
             # _test_upsample2d_bilinear,
             # _test_upsample2d_bilinear_aligncorner,

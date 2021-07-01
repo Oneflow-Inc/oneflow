@@ -67,12 +67,17 @@ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool al
 }
 
 template<typename T>
-T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, bool align_corners) {
+T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
+                          bool align_corners) {
   if (align_corners) {
     return scale * static_cast<T>(dst_index);
   } else {
     T src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-    return (src_index < 0) ? 0 : src_index;
+    src_index = (src_index < 0) ? 0 : src_index;
+    if (scale > static_cast<T>(1.0)) {
+      src_index = src_index > in_len - 2 ? in_len - 2 : src_index;
+    }
+    return src_index;
   }
 }
 
@@ -90,8 +95,8 @@ template<typename T>
 void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                       const int64_t in_height, const int64_t in_width, const T scale_h,
                       const T scale_w, BilinearParam<T>* params) {
-  const T in_h = GetAreaPixelSourceIndex(scale_h, h, align_corners);
-  const T in_w = GetAreaPixelSourceIndex(scale_w, w, align_corners);
+  const T in_h = GetAreaPixelSourceIndex(scale_h, h, in_height, align_corners);
+  const T in_w = GetAreaPixelSourceIndex(scale_w, w, in_width, align_corners);
   params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
   params->bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
   params->h_lerp = in_h - floorf(in_h);
@@ -118,9 +123,12 @@ static void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
     const T top_right = in_dptr[top_offset + params.right_w_index];
     const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
     const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    const T top = top_left + (top_right - top_left) * params.w_lerp;
-    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    out_dptr[index] = top + (bottom - top) * params.h_lerp;
+    // const T top = top_left + (top_right - top_left) * params.w_lerp;
+    // const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
+    // out_dptr[index] = top + (bottom - top) * params.h_lerp;
+    const T u = params.h_lerp, v = params.w_lerp;
+    out_dptr[index] = (1 - u) * (1 - v) * top_left + (1 - u) * v * top_right
+                      + u * (1 - v) * bottom_left + u * v * bottom_right;
   }
 }
 
