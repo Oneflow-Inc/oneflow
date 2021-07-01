@@ -256,7 +256,7 @@
 
 - name: "conv2d"
   signature:
-    "Tensor Conv2D(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
+    "Tensor Conv2d(Tensor x, Tensor weight, *, Tensor bias=None, Int32List stride, 
                    Int32List padding, Int32List dilation, Int32 groups=1)"
   bind_python: True
 
@@ -276,7 +276,9 @@
   bind_python: False
 
 - name: "conv_bias_grad"
-  signature: "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims, String data_format=\"channels_first\")"
+  signature:
+    "Tensor ConvBiasGrad(Tensor dy, *, Int32 num_spatial_dims,
+                         String data_format=\"channels_first\")"
   bind_python: False
 
 - name: "expand"
@@ -374,7 +376,9 @@
   bind_python: True
 
 - name: "slice_update"
-  signature: "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Tensor SliceUpdate(Tensor x, Tensor update, *, Int64List start, Int64List stop,
+                        Int64List step)"
   bind_python: True
 
 - name: "logical_slice"
@@ -382,7 +386,9 @@
   bind_python: True
 
 - name: "logical_slice_assign"
-  signature: "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop, Int64List step)"
+  signature:
+    "Void LogicalSliceAssign(Tensor ref, Tensor value, *, Int64List start, Int64List stop,
+                             Int64List step)"
   bind_python: True
 
 - name: "squeeze"
@@ -502,4 +508,12 @@
 
 - name: "clip_by_scalar_max_grad"
   signature: "Tensor ClipByScalarMaxGrad(Tensor dy, Tensor x, *, Scalar max)"
+  bind_python: False
+
+- name: "pad"
+  signature: "Tensor Pad(Tensor x, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
+  bind_python: True
+
+- name: "pad_grad"
+  signature: "Tensor PadGrad(Tensor dy, *, Int64List pad, String mode=\"constant\", Scalar value=0)"
   bind_python: False
