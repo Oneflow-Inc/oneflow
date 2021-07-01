@@ -16,7 +16,6 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
-import itertools
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
@@ -26,6 +25,7 @@ from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
+import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
@@ -90,7 +90,7 @@ class Graph(object):
     def training(self):
         return self.config.training
     
-    def named_state(self):
+    def _named_state(self):
         for _, b in self._blocks.items():
             prefix = b.name + "."
             p_gen = b.origin.named_parameters()
@@ -99,6 +99,10 @@ class Graph(object):
             b_gen = b.origin.named_buffers()
             for n, b in b_gen:
                 yield prefix + n, b
+    
+    @property
+    def state_tensortuple(self):
+        return tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
 
     def train(self, mode: bool = True):
         self.config._train(mode)

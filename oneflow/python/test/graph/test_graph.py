@@ -137,10 +137,11 @@ class TestGraph(flow.unittest.TestCase):
         g.config.enable_fuse_add_to_output(False)
         print(g.config.proto)
 
-        # check named_state get the right tensor
-        print(tuple((n, id(t)) for n, t in g.named_state()))
-        for n, t in g.named_state():
+        # check _named_state get the right tensor
+        print(tuple((n, id(t)) for n, t in g._named_state()))
+        for n, t in g._named_state():
             test_case.assertEqual(id(eval("g." + n)), id(t))
+        print(g.state_tensortuple)
 
         # print repr of nn.Graph
         print(repr(g))
