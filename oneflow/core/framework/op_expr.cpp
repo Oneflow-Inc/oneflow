@@ -80,7 +80,7 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
-    user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val);
+    JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
   return Maybe<void>::Ok();
@@ -91,7 +91,7 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
-  BuildOpConf(op_conf.get(), {});
+  JUST(BuildOpConf(op_conf.get(), {}));
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
   const auto& opkernel =
