@@ -57,8 +57,7 @@ class MaskedSelect(Module):
         res = flow.F.mul(x, mask)
         indices = flow.experimental.argwhere(res)
         gather_res = flow.F.gather_nd(res, indices)
-        gather_res = gather_res.flatten()
-        return gather_res
+        return gather_res.flatten()
 
 
 @oneflow_export("masked_select")
