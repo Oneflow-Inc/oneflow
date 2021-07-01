@@ -451,10 +451,10 @@ jobs:
           echo "image_url=https://oneflow-static.oss-cn-beijing.aliyuncs.com/img/pytorchpytorch1.9.0-cuda10.2-cudnn7-runtime.tar.gz" >> $GITHUB_ENV
 
           extra_docker_args="${{ env.extra_docker_args }}"
-
           img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/pytorch/pytorch/1.9.0-cuda10.2-cudnn7-runtime"
           extra_docker_args+=" -v ${img_cache_base_dir}/local-bin:/root/.local/bin"
           extra_docker_args+=" -v ${img_cache_base_dir}/site-packages37:/root/.local/lib/python3.7/site-packages"
+          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
 
       - name: Check image (cuda_new_interface)
         if: matrix.test_suite == 'cuda_new_interface'
