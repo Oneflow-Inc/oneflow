@@ -70,8 +70,8 @@ StackFunctionNode::StackFunctionNode(
   input_meta_datas_.resize(inputs.size());
   next_functions_->reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
-    input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
-    if (input_meta_datas_.at(i)->requires_grad()) {
+    if (inputs.at(i)->requires_grad()) {
+      input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
       next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
     }
   }
@@ -249,8 +249,8 @@ GraphFunctionNode::GraphFunctionNode(
   input_meta_datas_.resize(inputs.size());
   next_functions_->reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
-    input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
-    if (input_meta_datas_.at(i)->requires_grad()) {
+    if (inputs.at(i)->requires_grad()) {
+      input_meta_datas_.at(i) = inputs.at(i)->mut_autograd_meta();
       next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
     }
   }
@@ -258,6 +258,9 @@ GraphFunctionNode::GraphFunctionNode(
   output_meta_datas_.resize(outputs.size());
   output_tensor_infos_.reserve(outputs.size());
   for (int i = 0; i < outputs.size(); ++i) {
+    const auto& autograd_meta =
+        NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
+    outputs.at(i)->set_autograd_meta(autograd_meta);
     output_meta_datas_.at(i) = outputs.at(i)->mut_autograd_meta();
     output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
   }
