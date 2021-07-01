@@ -145,12 +145,18 @@ Maybe<compatible_py::BlobObject> MakeNewBlobObjectLike(
 }
 
 Maybe<void> _ReleaseLogicalObject(compatible_py::Object* obj) {
-  JUST(LogicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(LogicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> _ReleasePhysicalObject(compatible_py::Object* obj) {
-  JUST(PhysicalRun([&obj](InstructionsBuilder* build) { build->DeleteObject(obj); }));
+  JUST(PhysicalRun([&obj](InstructionsBuilder* build) -> Maybe<void> {
+    JUST(build->DeleteObject(obj));
+    return Maybe<void>::Ok();
+  }));
   return Maybe<void>::Ok();
 }
 
