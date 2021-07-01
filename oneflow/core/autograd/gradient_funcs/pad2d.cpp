@@ -101,7 +101,7 @@ class ConstantPad2d : public OpExprGradFunction<ConstantPad2dInterpState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("paddings"));
+    ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
     if (IsFloatingDataType(inputs.at(0)->dtype())) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_value"));
     } else if (IsIntegralDataType(inputs.at(0)->dtype())) {
