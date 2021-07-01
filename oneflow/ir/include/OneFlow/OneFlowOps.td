@@ -58,6 +58,9 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = []> :
     );
 }
 
+// Why don't we merge ctrl in/out and data in/out into operand_segment/result_segment_sizes?
+// 1. We only need to erase operand_segment/result_segment_sizes when we are creating a concrete user op
+// 2. Isolating data and ctrl make debug easier and produced IR more human-readable
 class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
         OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments])> {
     let summary = "";

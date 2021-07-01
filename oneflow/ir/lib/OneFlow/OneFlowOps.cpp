@@ -75,7 +75,7 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     }
     // In principle, a concrete user op has no ctrl input/output. Some benefits:
     // 1. simplify things
-    // 2. make conversion / code gen more doable
+    // 2. make conversion and code gen more doable
     // 3. enable the reuse of established MLIR infra like built-in traits
     else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
       if (/* convert opaque elementwise user op to a concrete op */ op_type_name.equals("abs")
