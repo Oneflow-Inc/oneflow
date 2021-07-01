@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/kernel/new_kernel_util.h"
 
 namespace oneflow {
 
@@ -42,6 +43,33 @@ REGISTER_USER_OP("mlir_jit")
       *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
       return Maybe<void>::Ok();
     });
+
+template<DeviceType device_type, typename T>
+class MlirJitKernel final : public user_op::OpKernel {
+ public:
+  MlirJitKernel() = default;
+  ~MlirJitKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(ERROR) << "MlirJitKernel::Compute";
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_MLIR_JIT_KERNEL(device, dtype)                                                 \
+  REGISTER_USER_KERNEL("mlir_jit")                                                              \
+      .SetCreateFn<MlirJitKernel<device, dtype>>()                                              \
+      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
+                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
+        return Maybe<void>::Ok();                                                               \
+      });
+
+REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, float)
+REGISTER_MLIR_JIT_KERNEL(DeviceType::kCPU, double)
 
 }  // namespace
 
