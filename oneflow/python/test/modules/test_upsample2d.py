@@ -62,9 +62,9 @@ def _test_upsample_and_interpolate_nearest(test_case, device, in_range, out_size
     for it in m:
         of_outs.append(it(of_in))
 
-    # for of_out in of_outs:
-    #     print("of_out", of_out)
-    #     test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.numpy(), 1e-5, 1e-5))
+    for of_out in of_outs:
+        print("of_out", of_out)
+        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.numpy(), 1e-5, 1e-5))
 
 
 def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_size_or_scale):
