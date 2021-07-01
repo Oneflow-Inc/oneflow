@@ -174,7 +174,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(GetWallTime());
-    FillScalarInSummary(value, tag, e->mutable_summary());
+    CHECK_JUST(FillScalarInSummary(value, tag, e->mutable_summary()));
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
@@ -183,7 +183,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(GetWallTime());
-    FillHistogramInSummary<T>(value, tag, e->mutable_summary());
+    CHECK_JUST(FillHistogramInSummary<T>(value, tag, e->mutable_summary()));
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 
@@ -192,7 +192,7 @@ struct EventWriterHelper<DeviceType::kCPU, T> {
     std::unique_ptr<Event> e{new Event};
     e->set_step(step);
     e->set_wall_time(GetWallTime());
-    FillImageInSummary(tensor, tag, e->mutable_summary());
+    CHECK_JUST(FillImageInSummary(tensor, tag, e->mutable_summary()));
     Global<EventsWriter>::Get()->AppendQueue(std::move(e));
   }
 };
