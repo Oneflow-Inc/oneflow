@@ -29,7 +29,7 @@ static const size_t kMB = 1024 * 1024;
 class ResourceDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ResourceDesc);
-  ResourceDesc(const Resource& resource, const NumProcessDistribution& num_process_distribution);
+  ResourceDesc(const Resource& resource, size_t world_size);
   ResourceDesc(const Resource& resource)
       : resource_(resource) {}  // TODO(yaochi): Only for eager, remove it later
 

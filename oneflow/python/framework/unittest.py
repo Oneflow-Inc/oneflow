@@ -147,6 +147,26 @@ def device_num():
         return 1
 
 
+def enable_uneven_process():
+    if os.getenv("ONEFLOW_TEST_UNEVEN_PROCESS"):
+        return True
+    else:
+        return False
+
+
+def process_distribution():
+    process_distribution_str = os.getenv("ONEFLOW_TEST_PROCESS_DISTRIBUTION")
+    assert process_distribution_str
+    return process_distribution_str.split(",")
+
+
+def has_process_distribution():
+    if os.getenv("ONEFLOW_TEST_PROCESS_DISTRIBUTION"):
+        return True
+    else:
+        return False
+
+
 def enable_init_by_host_list():
     return os.getenv("ONEFLOW_TEST_ENABLE_INIT_BY_HOST_LIST") == "1"
 
@@ -245,36 +265,77 @@ class TestCase(unittest.TestCase):
                     config_rank_ctrl_port = -1
                     if ctrl_port:
                         config_rank_ctrl_port = int(ctrl_port)
-
-                    if has_world_size():
-                        config_world_size = world_size()
-                    else:
-                        config_world_size = 0
-
                     config_node_size = -1
                     env_node_size = os.getenv("ONEFLOW_TEST_NODE_SIZE")
                     if env_node_size:
                         config_node_size = int(env_node_size)
-
-                    bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                        node_list(),
-                        int(master_port),
-                        config_world_size,
-                        config_rank_ctrl_port,
-                        config_node_size,
-                    )
-                    worker_env_proto = EnvProto()
-                    worker_env_proto.CopyFrom(env_util.default_env_proto)
-                    worker_env_proto.ClearField("ctrl_bootstrap_conf")
-                    for bootstrap_conf in bootstrap_conf_list:
-                        if bootstrap_conf.rank == 0:
-                            continue
-                        # set ctrl_bootstrap_conf of worker
-                        assert bootstrap_conf.HasField("host")
-                        worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
-                        launch_worker_via_agent(
-                            host=bootstrap_conf.host, env_proto=worker_env_proto
+                    if enable_uneven_process():
+                        assert (
+                            has_world_size()
+                        ), "env var ONEFLOW_TEST_WORLD_SIZE not set"
+                        assert (
+                            has_process_distribution()
+                        ), "env var ONEFLOW_TEST_PROCESS_DISTRIBUTION not set"
+                        assert (
+                            len(process_distribution()) == node_size()
+                        ), "num of process distribution must be epual to node size"
+                        assert (
+                            sum(process_distribution()) == world_size()
+                        ), "num of process distribution must be epual to world size"
+                        config_world_size = world_size()
+                        node_host_list = []
+                        for i in range(node_size()):
+                            node_host_list = (
+                                node_host_list
+                                + [node_list()[i]] * process_distribution()[i]
+                            )
+                        bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                            node_host_list,
+                            int(master_port),
+                            config_world_size,
+                            config_rank_ctrl_port,
+                            config_node_size,
                         )
+                        worker_env_proto = EnvProto()
+                        worker_env_proto.CopyFrom(env_util.default_env_proto)
+                        worker_env_proto.ClearField("ctrl_bootstrap_conf")
+                        for bootstrap_conf in bootstrap_conf_list:
+                            if bootstrap_conf.rank == 0:
+                                continue
+                            # set ctrl_bootstrap_conf of worker
+                            assert bootstrap_conf.HasField("host")
+                            worker_env_proto.ctrl_bootstrap_conf.CopyFrom(
+                                bootstrap_conf
+                            )
+                            launch_worker_via_agent(
+                                host=bootstrap_conf.host, env_proto=worker_env_proto
+                            )
+                    else:
+                        if has_world_size():
+                            config_world_size = world_size()
+                        else:
+                            config_world_size = 0
+                        bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
+                            node_list(),
+                            int(master_port),
+                            config_world_size,
+                            config_rank_ctrl_port,
+                            config_node_size,
+                        )
+                        worker_env_proto = EnvProto()
+                        worker_env_proto.CopyFrom(env_util.default_env_proto)
+                        worker_env_proto.ClearField("ctrl_bootstrap_conf")
+                        for bootstrap_conf in bootstrap_conf_list:
+                            if bootstrap_conf.rank == 0:
+                                continue
+                            # set ctrl_bootstrap_conf of worker
+                            assert bootstrap_conf.HasField("host")
+                            worker_env_proto.ctrl_bootstrap_conf.CopyFrom(
+                                bootstrap_conf
+                            )
+                            launch_worker_via_agent(
+                                host=bootstrap_conf.host, env_proto=worker_env_proto
+                            )
                 _unittest_worker_initilized = True
         elif device_num() > 1 and enable_multi_process():
             master_port = find_free_port()

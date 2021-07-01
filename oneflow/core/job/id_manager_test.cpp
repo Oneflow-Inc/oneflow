@@ -54,8 +54,7 @@ void New() {
     (*Global<RankInfoInCluster>::Get()->mutable_rank2node_id())[i] = i;
     (*Global<RankInfoInCluster>::Get()->mutable_node_id2rankoffset())[i] = i;
   }
-  Global<ResourceDesc, ForSession>::New(GetResource(),
-                                        GlobalProcessCtx::NumProcessDistributionInCluster());
+  Global<ResourceDesc, ForSession>::New(GetResource(), GlobalProcessCtx::WorldSize());
   Global<IDMgr>::New();
 }
 
