@@ -41,7 +41,6 @@ class Diag(Module):
 @experimental_api
 def diag_op(input, diagonal=0):
     r"""
-    Returns a new tensor with the diagonal elements of input.
     If input is a vector (1-D tensor), then returns a 2-D square tensor with the elements of input as the diagonal.
     If input is a matrix (2-D tensor), then returns a 1-D tensor with diagonal elements of input.
 
@@ -53,6 +52,9 @@ def diag_op(input, diagonal=0):
         If diagonal < 0, it is below the main diagonal. 
         Defaults to 0.
     
+    Returns:
+        oneflow.Tensor: the output tensor.
+
     For example:
 
     .. code-block:: python
@@ -70,8 +72,8 @@ def diag_op(input, diagonal=0):
         ... )
 
         >>> input = flow.Tensor(arr, dtype=flow.float32)
-        >>> output = flow.diag(input)
-        # output [1. 5. 9.]  
+        >>> flow.diag(input)
+        tensor([1., 5., 9.], dtype=oneflow.float32)
     """
 
     return Diag(diagonal)(input)
