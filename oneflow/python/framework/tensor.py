@@ -497,18 +497,6 @@ class Tensor:
     def __le__(self, other):
         return self.le(other)
 
-    @register_local_tensor_method()
-    def __eq__(self, other):
-        return self.eq(other)
-
-    @register_local_tensor_method()
-    def __ne__(self, other):
-        return self.ne(other)
-
-    @register_local_tensor_method()
-    def __hash__(self):
-        return id(self)
-
     def __array__(self):
         TODO()
 
