@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -36,23 +37,18 @@ namespace one {
 
 namespace {
 
-Maybe<const Device> GetDefaultDevice() { return Device::New("cpu", 0); }
+Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
-  auto* tensor_ptr = dynamic_cast<MirroredTensor*>(tensor.get());
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr);
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr->mut_impl());
-  auto* tensor_impl = dynamic_cast<EagerMirroredTensorImpl*>(tensor_ptr->mut_impl());
-  CHECK_NOTNULL_OR_RETURN(tensor_impl);
-  return tensor_impl;
+  return tensor->mut_eager_mirrored_tensor_impl();
 }
 
 }  // namespace
 
 Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
-                           const std::shared_ptr<const Device>& default_device,
-                           TensorTuple* outputs, const AttrMap& attrs) {
+                           const Symbol<Device>& default_device, TensorTuple* outputs,
+                           const AttrMap& attrs) {
   std::shared_ptr<EagerBlobObjectList> input_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(inputs.size());
   for (int i = 0; i < inputs.size(); i++) {
@@ -70,7 +66,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
-  std::shared_ptr<const Device> op_device;
+  Symbol<Device> op_device;
   std::shared_ptr<const ParallelDesc> op_parallel_desc;
   bool need_check_mem_case = true;
   bool need_event_record = false;
@@ -81,7 +77,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *tensor_impl->mut_device() = default_device;
+      *JUST(tensor_impl->mut_device()) = default_device;
     }
   } else {
     need_check_mem_case = false;
@@ -98,7 +94,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(user_op_expr.InferLogicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->tensor_meta().get();
+        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
@@ -110,7 +106,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
   }
 
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
@@ -150,7 +146,7 @@ Maybe<void> RunEmptyOp(TensorTuple* outputs) {
 static Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
                                   TensorTuple* outputs, const AttrMap& attrs) {
   CHECK_EQ_OR_RETURN(outputs->size(), user_op_expr.output_size());
-  std::shared_ptr<const Device> default_device;
+  Symbol<Device> default_device;
   if (inputs.empty()) {
     default_device = JUST(GetDefaultDevice());
   } else {

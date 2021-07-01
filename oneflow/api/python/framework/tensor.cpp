@@ -50,9 +50,8 @@ template<>
 struct TensorExportUtil<MirroredTensor> final {
   static std::shared_ptr<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
                                                     const DType* dtype,
-                                                    const std::shared_ptr<const Device>& device,
-                                                    bool is_lazy, bool requires_grad,
-                                                    bool is_leaf) {
+                                                    const Symbol<Device>& device, bool is_lazy,
+                                                    bool requires_grad, bool is_leaf) {
     return MirroredTensor::MakeTensor(shape, dtype->data_type(), device, is_lazy, requires_grad,
                                       is_leaf)
         .GetPtrOrThrow();
@@ -160,8 +159,8 @@ const std::string& ApiGetCopyMirroredTensorFromNumpyFuncName(const Tensor& tenso
   return *GetCopyMirroredTensorFromNumpyFuncName(tensor.dtype()).GetPtrOrThrow();
 }
 
-std::shared_ptr<const Device> TensorGetDevice(const MirroredTensor& tensor) {
-  return tensor.device().GetPtrOrThrow();
+Symbol<Device> TensorGetDevice(const MirroredTensor& tensor) {
+  return tensor.device().GetOrThrow();
 }
 
 std::shared_ptr<const ParallelDesc> TensorGetParallelDesc(const ConsistentTensor& tensor) {
@@ -174,10 +173,11 @@ std::tuple<std::vector<Shape>, std::vector<const DType*>> GetTensorBufferShapesA
   std::vector<const DType*> dtypes;
   std::atomic<bool> synced(false);
 
-  PhysicalRun([&](InstructionsBuilder* builder) {
-    builder->AccessBlobByCallback(
-        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const");
-  });
+  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->AccessBlobByCallback(
+        tensor, [&synced](uint64_t of_blob_ptr) { synced = true; }, "const"));
+    return Maybe<void>::Ok();
+  }));
 
   Global<ForeignLockHelper>::Get()->WithScopedRelease([&synced]() {
     while (!synced) {}
