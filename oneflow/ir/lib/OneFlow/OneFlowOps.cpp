@@ -40,9 +40,7 @@ static mlir::LogicalResult verify(ConstantOp op) { return mlir::success(); }
 
 template<typename OpType>
 LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
-  const int32_t num_ctrl_outputs =
-      *(op.result_segment_sizes().template getValues<uint32_t>()).end();
-  if (op.ctrl_output() && op.ctrl_output().use_empty() && num_ctrl_outputs != 0) {
+  if (op.ctrl_output() && op.ctrl_output().use_empty()) {
     const int32_t num_data_outputs =
         *(op.result_segment_sizes().template getValues<uint32_t>()).begin();
     NamedAttrList attributes(op->getAttrDictionary());
@@ -61,6 +59,10 @@ LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
   return failure();
 }
 
+bool IsCtrlOutTrimmed(oneflow::UserOp& op) { return !op.ctrl_output(); }
+
+bool IsCtrlInAbsent(oneflow::UserOp& op) { return op.ctrl_inputs().empty(); }
+
 struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
   ConcreteUserOps(mlir::MLIRContext* context)
       : OpRewritePattern<oneflow::UserOp>(context, /*benefit=*/1) {}
@@ -70,53 +72,61 @@ struct ConcreteUserOps : public mlir::OpRewritePattern<oneflow::UserOp> {
     op.getODSResults(0);
     if (succeeded(TrimRedundantCtrl(op, rewriter))) {
       return success();
-    } else if (/* convert opaque elementwise user op to a concrete op */ op_type_name.equals("abs")
-               || op_type_name.equals("ceil") || op_type_name.equals("floor")
-               || op_type_name.equals("relu") || op_type_name.equals("rint")
-               || op_type_name.equals("round") || op_type_name.equals("sign")
-               || op_type_name.equals("negative") || op_type_name.equals("reciprocal")
-               || op_type_name.equals("cast")) {
-      NamedAttrList attributes(op->getAttrDictionary());
-      attributes.erase("operand_segment_sizes");
-      attributes.erase("result_segment_sizes");
-      auto unknownLoc = UnknownLoc::get(rewriter.getContext());
-      OperationState state(unknownLoc, "oneflow." + op_type_name.str());
-      state.addAttributes(attributes);
-      state.addOperands(op->getOperands());
-      assert(op.data_input().size() == 1);
-      assert(op.data_output().size() == 1);
-      state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-      if (auto elementwise = rewriter.createOperation(state)) {
-        op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
-        op->erase();
-        return success();
-      }
-    } else if (op_type_name.equals("scalar_mul_by_tensor")) {
-      assert(op.data_input().size() == 2);
-      assert(op.data_output().size() == 1);
-      // TODO: refine repetitive code
-      NamedAttrList attributes(op->getAttrDictionary());
-      attributes.erase("operand_segment_sizes");
-      attributes.erase("result_segment_sizes");
-      auto unknownLoc = UnknownLoc::get(rewriter.getContext());
-      OperationState state(unknownLoc, "oneflow." + op_type_name.str());
-      state.addAttributes(attributes);
-      SmallVector<::mlir::Value, 2> operands;
-      for (std::tuple<const mlir::Attribute&, mlir::Value> kv :
-           llvm::zip(op.input_lbn_segment_keysAttr(), op.data_input())) {
-        auto k = std::get<0>(kv).dyn_cast<StringAttr>().getValue();
-        auto v = std::get<1>(kv);
-        if (k.equals("x")) { operands.insert(operands.begin(), v); }
-        if (k.equals("scalar")) { operands.insert(operands.end(), v); }
-      }
-      state.addOperands(operands);
-      state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-      if (auto elementwise = rewriter.createOperation(state)) {
-        op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
-        op->erase();
-        return success();
+    }
+    // In principle, a concrete user op has no ctrl input/output. Some benefits:
+    // 1. simplify things
+    // 2. make conversion / code gen more doable
+    // 3. enable the reuse of established MLIR infra like built-in traits
+    else if (IsCtrlOutTrimmed(op) && IsCtrlInAbsent(op)) {
+      if (/* convert opaque elementwise user op to a concrete op */ op_type_name.equals("abs")
+          || op_type_name.equals("ceil") || op_type_name.equals("floor")
+          || op_type_name.equals("relu") || op_type_name.equals("rint")
+          || op_type_name.equals("round") || op_type_name.equals("sign")
+          || op_type_name.equals("negative") || op_type_name.equals("reciprocal")
+          || op_type_name.equals("cast")) {
+        NamedAttrList attributes(op->getAttrDictionary());
+        attributes.erase("operand_segment_sizes");
+        attributes.erase("result_segment_sizes");
+        auto unknownLoc = UnknownLoc::get(rewriter.getContext());
+        OperationState state(unknownLoc, "oneflow." + op_type_name.str());
+        state.addAttributes(attributes);
+        state.addOperands(op->getOperands());
+        assert(op.data_input().size() == 1);
+        assert(op.data_output().size() == 1);
+        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+        if (auto elementwise = rewriter.createOperation(state)) {
+          op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
+          op->erase();
+          return success();
+        }
+      } else if (op_type_name.equals("scalar_mul_by_tensor")) {
+        assert(op.data_input().size() == 2);
+        assert(op.data_output().size() == 1);
+        // TODO: refine repetitive code
+        NamedAttrList attributes(op->getAttrDictionary());
+        attributes.erase("operand_segment_sizes");
+        attributes.erase("result_segment_sizes");
+        auto unknownLoc = UnknownLoc::get(rewriter.getContext());
+        OperationState state(unknownLoc, "oneflow." + op_type_name.str());
+        state.addAttributes(attributes);
+        SmallVector<::mlir::Value, 2> operands;
+        for (std::tuple<const mlir::Attribute&, mlir::Value> kv :
+             llvm::zip(op.input_lbn_segment_keysAttr(), op.data_input())) {
+          auto k = std::get<0>(kv).dyn_cast<StringAttr>().getValue();
+          auto v = std::get<1>(kv);
+          if (k.equals("x")) { operands.insert(operands.begin(), v); }
+          if (k.equals("scalar")) { operands.insert(operands.end(), v); }
+        }
+        state.addOperands(operands);
+        state.addTypes(op.getODSResults(0 /* data out */).getTypes());
+        if (auto elementwise = rewriter.createOperation(state)) {
+          op.data_output().front().replaceAllUsesWith(elementwise->getResult(0));
+          op->erase();
+          return success();
+        }
       }
     }
+
     return failure();
   }
 };
