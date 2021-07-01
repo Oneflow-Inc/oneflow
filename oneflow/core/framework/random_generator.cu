@@ -48,13 +48,20 @@ __global__ void SetupKernel(uint64_t seed, curandState* state) {
 
 }  // namespace
 
+void GeneratorImpl<DeviceType::kGPU>::CudaRandInit(uint64_t seed) {
+  SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
+}
+
 GeneratorImpl<DeviceType::kGPU>::GeneratorImpl(uint64_t seed) {
+  seed_ = seed;
+  device_type_ = DeviceType::kGPU;
   cudaDeviceProp prop;
+  // FIXME: will this cause issue by always using cuda:0's property?
   OF_CUDA_CHECK(cudaGetDeviceProperties(&prop, 0));
   block_num_ = prop.multiProcessorCount;
   thread_num_ = GetThreadNum(prop);
   OF_CUDA_CHECK(cudaMalloc(&curand_states_, block_num_ * thread_num_ * sizeof(curandState)));
-  SetupKernel<<<block_num_, thread_num_>>>(seed, curand_states_);
+  CudaRandInit(seed);
 }
 
 GeneratorImpl<DeviceType::kGPU>::~GeneratorImpl() { OF_CUDA_CHECK(cudaFree(curand_states_)); }
