@@ -55,7 +55,7 @@ class CustomModule(flow.nn.Module):
     ".numpy() doesn't work in lazy mode",
 )
 class TestGraph(flow.unittest.TestCase):
-    def test_add_nested_module(test_case):
+    def _test_add_nested_module(test_case):
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
 
@@ -105,7 +105,7 @@ class TestGraph(flow.unittest.TestCase):
         # g got the same result as m
         test_case.assertTrue(np.array_equal(y.numpy(), z.numpy()))
 
-    def test_graph_config(test_case):
+    def _test_graph_config(test_case):
         class CustomGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
@@ -124,6 +124,10 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.m.training, True)
         test_case.assertEqual(g.m.layer.conv1.training, True)
 
+        # set graph config
+        g.config.enable_fuse_add_to_output(True)
+
+        print(g.config.proto)
         # check set train to False
         g.train(False)
         test_case.assertEqual(g.training, False)
@@ -132,20 +136,30 @@ class TestGraph(flow.unittest.TestCase):
         test_case.assertEqual(g.m.layer.conv1.training, False)
 
         # set graph config
-        g.config.enable_fuse_add_to_output(True)
-        print(g.config.proto)
         g.config.enable_fuse_add_to_output(False)
         print(g.config.proto)
 
         # check _named_state get the right tensor
-        print(tuple((n, id(t)) for n, t in g._named_state()))
         for n, t in g._named_state():
             test_case.assertEqual(id(eval("g." + n)), id(t))
-        print(g.state_tensortuple)
 
         # print repr of nn.Graph
         print(repr(g))
 
+    def test_graph_compile(test_case):
+        class CustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModule()
+                self.config.enable_auto_mixed_precision(True)
+
+            def build(self, x):
+                x = self.m(x)
+                return x
+
+        g = CustomGraph()
+        g._compile()
+    
     # TODO(): test_add_optimizer
 
 

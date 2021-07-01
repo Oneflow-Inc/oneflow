@@ -100,6 +100,7 @@ Maybe<void> SessionGlobalObjectsScope::Init(const ConfigProto& config_proto) {
   Global<ResourceDesc, ForSession>::New(config_proto.resource(),
                                         GlobalProcessCtx::NumOfProcessPerNode());
   Global<const IOConf>::New(config_proto.io_conf());
+  // TODO(xuxiaoyu): bug here
   Global<const IOConf>::SessionNew(config_proto.session_id(), config_proto.io_conf());
   Global<const ProfilerConf>::New(config_proto.profiler_conf());
   Global<IDMgr>::New();

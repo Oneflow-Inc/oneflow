@@ -17,15 +17,18 @@ from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 
-import oneflow as flow
+import oneflow._oneflow_internal
+import oneflow.core.job.job_set_pb2 as job_set_util
+import oneflow.python.framework.c_api_util as c_api_util
 import oneflow.python.framework.id_util as id_util
+import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
 from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
 from oneflow.python.nn.optimizer.optimizer import Optimizer
 from oneflow.python.framework.function_util import FunctionConfig
-import oneflow.python.framework.tensor_tuple_util as tensor_tuple_util
+from oneflow.python.framework.session_util import _TryCompleteConfigProto
 
 
 @oneflow_export("nn.Graph", "nn.graph.Graph")
@@ -36,17 +39,75 @@ class Graph(object):
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
-        self._runnable_func = None
+        self._is_compiled = False
+        self._resource_config_proto = None
         self.train(True)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def training(self):
+        return self.config.training
+
+    @property
+    def resource_config(self):
+        if not oneflow._oneflow_internal.IsEnvInited():
+            oneflow.env.init()
+        if self._resource_config_proto is None:
+            self._resource_config_proto = self._get_default_resource_config()
+            _TryCompleteConfigProto(self._resource_config_proto)
+        return self._resource_config_proto
+
+    @property
+    def state_tensortuple(self):
+        return tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
 
     def build(self, *args):
         raise NotImplementedError()
+    
+    def add_optimizer(
+        self,
+        name: str,
+        optimizer: Optimizer = None,
+        lr_scheduler=None,
+        grad_clipping_conf=None,
+        weight_decay_conf=None,
+    ):
+        self._optimizers[name] = self.OptimizerConfig(
+            optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
+        )
+
+    def train(self, mode: bool = True):
+        self.config._train(mode)
+        for name, block in self._blocks.items():
+            assert block.type == "module"
+            block.origin.train(mode)
+
+    
+    def _named_state(self):
+        for _, b in self._blocks.items():
+            prefix = b.name + "."
+            p_gen = b.origin.named_parameters()
+            for n, p in p_gen:
+                yield prefix + n, p
+            b_gen = b.origin.named_buffers()
+            for n, b in b_gen:
+                yield prefix + n, b
+    
+    def _compile(self):
+        print("try to compile")
+        assert not self._is_compiled, "nn.Graph " + self_name + " has already been compiled."
+        print(self.resource_config)
+        c_api_util.InitLazyGlobalSession(self.resource_config)
+        # for job_name, func_desc in self.job_name2function_desc_.items():
+        #     compiler.Compile(self, func_desc, self.config_proto)
+        # oneflow._oneflow_internal.StartLazyGlobalSession()
+        self._is_compiled = True
 
     def __call__(self, *args):
-        if self._runnable_func is None:
-            # TODO(): implement compile
-            self._runnable_func = vm_api.compile_job(self, *args)
-        return self._runnable_func(*args)
+        ...
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds a module to the current graph as a block.
@@ -69,46 +130,6 @@ class Graph(object):
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
         self._blocks[name] = Block(self._name + ".", name, module)
-
-    def add_optimizer(
-        self,
-        name: str,
-        optimizer: Optimizer = None,
-        lr_scheduler=None,
-        grad_clipping_conf=None,
-        weight_decay_conf=None,
-    ):
-        self._optimizers[name] = self.OptimizerConfig(
-            optimizer, lr_scheduler, grad_clipping_conf, weight_decay_conf
-        )
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def training(self):
-        return self.config.training
-    
-    def _named_state(self):
-        for _, b in self._blocks.items():
-            prefix = b.name + "."
-            p_gen = b.origin.named_parameters()
-            for n, p in p_gen:
-                yield prefix + n, p
-            b_gen = b.origin.named_buffers()
-            for n, b in b_gen:
-                yield prefix + n, b
-    
-    @property
-    def state_tensortuple(self):
-        return tensor_tuple_util.convert_to_tensor_tuple(tuple(t for _, t in self._named_state()))
-
-    def train(self, mode: bool = True):
-        self.config._train(mode)
-        for name, block in self._blocks.items():
-            assert block.type == "module"
-            block.origin.train(mode)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
@@ -147,6 +168,20 @@ class Graph(object):
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
+    
+    @staticmethod
+    def _get_default_resource_config():
+        config_proto = job_set_util.ConfigProto()
+        config_proto.resource.machine_num = 0
+        if oneflow._oneflow_internal.flags.with_cuda():
+            config_proto.resource.gpu_device_num = 1
+        else:
+            config_proto.resource.cpu_device_num = 1
+            config_proto.resource.gpu_device_num = 0
+        config_proto.io_conf.SetInParent()
+        # TODO(): rm fake session id
+        config_proto.session_id = -1
+        return config_proto
 
 
 @oneflow_export("nn.graph.Block")
