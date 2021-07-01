@@ -88,9 +88,10 @@ class Importer {
                                              std::vector<NamedAttribute>& attr_vec);
   LogicalResult AddDeviceName(const ::oneflow::OperatorConf& op,
                               std::vector<NamedAttribute>& attr_vec);
-  LogicalResult AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
+  LogicalResult AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                        std::vector<NamedAttribute>& attr_vec);
-  LogicalResult AddResultSegmentSizes(int output_lbns_size, std::vector<NamedAttribute>& attr_vec);
+  LogicalResult AddResultSegmentSizes(int32_t output_lbns_size,
+                                      std::vector<NamedAttribute>& attr_vec);
   LogicalResult InsertOpResults(Operation*);
   LogicalResult ProcessUserOp(const ::oneflow::OperatorConf& op);
   LogicalResult ProcessSystemOp(const ::oneflow::OperatorConf& op);
@@ -136,7 +137,7 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   using LBNSegVec = SmallVector<int32_t, 8>;
   LBNVec input_lbn_segment_keys;
   LBNSegVec input_lbn_segment_sizes;
-  int data_input_size = 0;
+  int32_t data_input_size = 0;
   for (auto& input : op.user_conf().input()) {
     input_lbn_segment_keys.push_back(input.first);
     input_lbn_segment_sizes.push_back(input.second.s_size());
@@ -150,7 +151,7 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   LBNVec output_lbns;
   LBNVec output_lbn_segment_keys;
   LBNSegVec output_lbn_segment_sizes;
-  int data_output_size = 0;
+  int32_t data_output_size = 0;
   for (auto& output : op.user_conf().output()) {
     output_lbns.insert(output_lbns.end(), output.second.s().begin(), output.second.s().end());
     output_lbn_segment_keys.push_back(output.first);
@@ -267,7 +268,7 @@ LogicalResult Importer::namedAttributesFromUserOp(const ::oneflow::OperatorConf&
       attr_vec.emplace_back(kv);
     }
     else if (value.has_at_list_data_type()) {
-      auto stringified_list = llvm::map_range(value.at_list_data_type().val(), [&](int t) {
+      auto stringified_list = llvm::map_range(value.at_list_data_type().val(), [&](int32_t t) {
         std::string stringified = "";
         assert(succeeded(StringifyDataType(static_cast<::oneflow::DataType>(t), stringified)));
         return stringified;
@@ -327,14 +328,14 @@ LogicalResult Importer::AppendDataInOperand(const std::string& lbn,
   }
 }
 
-LogicalResult Importer::AddOperandSegmentSizes(int input_lbns_size, int ctrl_in_size,
+LogicalResult Importer::AddOperandSegmentSizes(int32_t input_lbns_size, int32_t ctrl_in_size,
                                                std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(builder_.getNamedAttr(
       "operand_segment_sizes", builder_.getI32VectorAttr({input_lbns_size, ctrl_in_size})));
   return success();
 }
 
-LogicalResult Importer::AddResultSegmentSizes(int output_lbns_size,
+LogicalResult Importer::AddResultSegmentSizes(int32_t output_lbns_size,
                                               std::vector<NamedAttribute>& attr_vec) {
   attr_vec.push_back(builder_.getNamedAttr(
       "result_segment_sizes",
@@ -523,7 +524,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
     OperationState state(FileLineColLoc::get(context_, op.name(), 0, 0), "oneflow.user");
     for (auto na : attr_vec) {
       if (na.first.str() == "input_lbn_segment_sizes") {
-        int data_input_size = 0;
+        int32_t data_input_size = 0;
         for (auto segment_size : na.second.dyn_cast<ArrayAttr>()) {
           data_input_size += segment_size.dyn_cast<IntegerAttr>().getInt();
         }
@@ -643,7 +644,7 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                   ::oneflow::UserOpConf* user_conf) {
   const std::string op_name = user_op_adaptor.op_name().getValue().str();
-  int input_idx = 0;
+  int32_t input_idx = 0;
   if (auto keys = user_op_adaptor.input_lbn_segment_keys()) {
     auto sizes = user_op_adaptor.input_lbn_segment_sizes();
     if (keys.size() != sizes.size()) {
@@ -653,11 +654,11 @@ LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op
       return failure();
     };
     // every key
-    for (int key_idx = 0; key_idx < keys.size(); key_idx++) {
+    for (int32_t key_idx = 0; key_idx < keys.size(); key_idx++) {
       auto input_key = keys[key_idx].dyn_cast<StringAttr>().getValue().str();
       auto input_size = sizes[key_idx].dyn_cast<IntegerAttr>().getInt();
       // every input for one key
-      for (int i = 0; i < input_size; i++) {
+      for (int32_t i = 0; i < input_size; i++) {
         if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
           const std::string output_lbn_in_source_op =
               result.getDefiningOp()
@@ -682,15 +683,15 @@ LogicalResult ConvertUseropInputs(Operation* op, oneflow::UserOpAdaptor& user_op
 
 LogicalResult ConvertUseropOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
                                    ::oneflow::UserOpConf* user_conf) {
-  int output_key_idx = -1;
-  int segment_offset = 0;
+  int32_t output_key_idx = -1;
+  int32_t segment_offset = 0;
   for (auto result_and_idx : llvm::enumerate(GetDataOutputResults(op))) {
     const size_t result_idx = result_and_idx.index();
     if (result_idx == segment_offset) {
       output_key_idx += 1;
-      int size = user_op_adaptor.output_lbn_segment_sizes()[output_key_idx]
-                     .dyn_cast<IntegerAttr>()
-                     .getInt();
+      int32_t size = user_op_adaptor.output_lbn_segment_sizes()[output_key_idx]
+                         .dyn_cast<IntegerAttr>()
+                         .getInt();
       segment_offset += size;
     }
     const std::string& output_key = user_op_adaptor.output_lbn_segment_keys()[output_key_idx]
