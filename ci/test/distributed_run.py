@@ -387,6 +387,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--remote_host", action="append", default=[])
     parser.add_argument("--oneflow_wheel_path", type=str, required=False, default=None)
+    parser.add_argument(
+        "--oneflow_wheel_python_version", type=str, required=False, default=None
+    )
     parser.add_argument("--oneflow_build_path", type=str, required=False, default=None)
     parser.add_argument("--custom_img_tag", type=str, required=False, default=None)
     parser.add_argument("--cmd", type=str, required=False, default=None)
@@ -408,8 +411,26 @@ if __name__ == "__main__":
         whl_paths = [
             name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
         ]
-        assert len(whl_paths) == 1
-        oneflow_wheel_path = whl_paths[0]
+        if len(whl_paths) == 1:
+            oneflow_wheel_path = whl_paths[0]
+        else:
+            assert args.oneflow_wheel_python_version
+            assert args.oneflow_wheel_python_version in [
+                "3.6",
+                "3.7",
+                "3.8",
+                "3.9",
+                "3.10",
+                "3.11",
+            ]
+            ver_cat = args.oneflow_wheel_python_version.replace(".", "")
+            found = False
+            for whl_path in whl_paths:
+                if f"cp{ver_cat}" in whl_path:
+                    oneflow_wheel_path = whl_path
+                    found = True
+            assert found, whl_paths
+
     this_host = args.this_host
     this_host = resolve_hostname_hardcoded(this_host)
 
