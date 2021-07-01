@@ -92,7 +92,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
             params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4> index_helper,
+  static void Maxpool2dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
     DoCUDAMaxPool2dBackward<T>
@@ -102,7 +102,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
             params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4));
   }
 
-  static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5> index_helper,
+  static void Maxpool3dForward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                const int64_t elem_num, const T* src, T* dest, int64_t* indice_ptr,
                                const PoolingParams3D& params_3d) {
     DoCUDAMaxPool3dForward<T>
@@ -118,7 +118,7 @@ struct PoolingKernelUtil<DeviceType::kGPU, T> {
             params_3d.dilation_3d()[0], params_3d.dilation_3d()[1], params_3d.dilation_3d()[2]);
   }
 
-  static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5> index_helper,
+  static void Maxpool3dBackward(DeviceCtx* ctx, const NdIndexOffsetHelper<int64_t, 5>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const int64_t* indice_ptr, const PoolingParams3D& params_3d) {
     DoCUDAMaxPool3dBackward<T>
