@@ -276,20 +276,22 @@ void SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgM
   arg_modifier->set_is_mutable(true);
 }
 
-void AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                           const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
+  return Maybe<void>::Ok();
 }
 
-void LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                           const user_op::UserOpConfWrapper& conf) {
   SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0);
   SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> InferRmsPropUpdateTensorDesc(user_op::InferContext* ctx) {
@@ -383,8 +385,9 @@ REGISTER_USER_OP("sgd_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferSGDUpdateDataType);
 
@@ -417,8 +420,9 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
 
@@ -449,9 +453,10 @@ REGISTER_USER_OP("momentum_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
+      Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferMomentumUpdateDataType);
 
@@ -488,9 +493,10 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
+      return  Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 
@@ -651,12 +657,13 @@ REGISTER_USER_OP("rmsprop_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "mean_square", 0);
       if (conf.attr<bool>("centered")) {
         SetInputArgModifierMutable(GetInputArgModifierFn, "mean_gradient", 0);
       }
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferRmsPropUpdateDataType);
 
@@ -688,9 +695,10 @@ REGISTER_USER_OP("lars_update")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper& conf) -> void {
+                            const user_op::UserOpConfWrapper& conf) -> Maybe<void> {
       SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0);
       SetInputArgModifierMutable(GetInputArgModifierFn, "momentum", 0);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn(InferLarsUpdateDataType);
 

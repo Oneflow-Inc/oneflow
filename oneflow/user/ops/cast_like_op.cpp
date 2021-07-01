@@ -27,10 +27,11 @@ REGISTER_USER_OP("cast_like")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* dtype_like_modifier = GetInputArgModifierFn("dtype_like", 0);
       CHECK_NOTNULL(dtype_like_modifier);
       dtype_like_modifier->set_requires_grad(false);
+      Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();

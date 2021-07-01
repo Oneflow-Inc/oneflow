@@ -38,10 +38,11 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_raw_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
@@ -70,10 +71,11 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_bytes_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::SplitForEachAxis)
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -97,10 +99,11 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
@@ -142,10 +145,11 @@ REGISTER_CPU_ONLY_USER_OP("ofrecord_image_decoder_random_crop")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in_modifier = GetInputArgModifierFn("in", 0);
       CHECK_NOTNULL(in_modifier);
       in_modifier->set_requires_grad(false);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       user_op::TensorDesc* in_tensor = ctx->TensorDesc4ArgNameAndIndex("in", 0);

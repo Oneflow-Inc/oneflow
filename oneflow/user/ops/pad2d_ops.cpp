@@ -83,10 +83,11 @@ REGISTER_USER_OP("reflection_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
       CHECK_NOTNULL(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -175,10 +176,11 @@ REGISTER_USER_OP("replication_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
       CHECK_NOTNULL(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
@@ -269,10 +271,11 @@ REGISTER_USER_OP("constant_pad2d")
     })
     .SetGetSbpFn(GetOpSbpSignature)
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* x_modifier = GetInputArgModifierFn("x", 0);
       CHECK_NOTNULL(x_modifier);
       x_modifier->set_requires_grad(true);
+      return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);

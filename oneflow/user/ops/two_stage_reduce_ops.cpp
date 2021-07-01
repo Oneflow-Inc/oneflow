@@ -264,10 +264,11 @@ REGISTER_REDUCE_DEVICE_STAGE_USER_OP_GRAD("reduce_max_device_stage", "reduce_max
       .SetTensorDescInferFn(InferReduceGlobalStageTensorDescFn)                   \
       .SetDataTypeInferFn(InferReduceGlobalStageDtypeFn)                          \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn, \
-                              const user_op::UserOpConfWrapper&) {                \
+                              const user_op::UserOpConfWrapper&) -> Maybe<void>{  \
         user_op::InputArgModifier* device_count_modifier =                        \
             GetInputArgModifierFn("device_count", 0);                             \
         device_count_modifier->set_requires_grad(false);                          \
+        return Maybe<void>::Ok();                                                 \
       })                                                                          \
       .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {                  \
         ctx->NewBuilder()                                                         \

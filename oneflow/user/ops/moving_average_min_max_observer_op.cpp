@@ -59,7 +59,7 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       return Maybe<void>::Ok();
     })
     .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) {
+                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
       user_op::InputArgModifier* in = GetInputArgModifierFn("in", 0);
       CHECK(in != nullptr);
       in->set_requires_grad(false);
@@ -78,6 +78,7 @@ REGISTER_USER_OP("moving_average_min_max_observer")
       CHECK(moving_min != nullptr);
       moving_min->set_requires_grad(false);
       moving_min->set_is_mutable(true);
+      return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       // NOTE(Liang Depeng): all inputs need to be broadcast in order to accuratly calculate the

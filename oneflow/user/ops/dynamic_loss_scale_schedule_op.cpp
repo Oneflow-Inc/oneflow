@@ -44,7 +44,7 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                         const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* loss_scale = GetInputArgModifierFn("loss_scale", 0);
   CHECK(loss_scale != nullptr);
@@ -52,6 +52,7 @@ void InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierF
   user_op::InputArgModifier* good_step_counter = GetInputArgModifierFn("good_step_counter", 0);
   CHECK(good_step_counter != nullptr);
   good_step_counter->set_is_mutable(true);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace

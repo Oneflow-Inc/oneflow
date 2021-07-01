@@ -157,10 +157,11 @@ void GenBackwardOpConf4SparseCrossEntropy(const std::string& op_type_name,
       .Attr<int64_t>("depth")                                                          \
       .SetTensorDescInferFn(InferTensorDescFn)                                         \
       .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,      \
-                              const user_op::UserOpConfWrapper&) {                     \
+                              const user_op::UserOpConfWrapper&) -> Maybe<void> {      \
         user_op::InputArgModifier* label_modifier = GetInputArgModifierFn("label", 0); \
         CHECK(label_modifier != nullptr);                                              \
         label_modifier->set_requires_grad(false);                                      \
+        return Maybe<void>::Ok();                                                      \
       })                                                                               \
       .SetGetSbpFn(GetSbpFn<sbp_sig>)                                                  \
       .SetDataTypeInferFn(InferDataType);

@@ -70,7 +70,7 @@ std::function<Maybe<void>(const std::string&)> MakeSetParamDataTypeFn(user_op::I
   };
 }
 
-void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
+Maybe<void> FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                         const user_op::UserOpConfWrapper& conf) {
   bool training;
   if (conf.op_type_name() == "normalization") {
@@ -86,6 +86,7 @@ void FwInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierF
   CHECK(moving_variance_modifier != nullptr);
   moving_variance_modifier->set_is_mutable(training);
   moving_variance_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
 }
 
 Maybe<void> FwGetSbpFn(user_op::SbpContext* ctx) {
