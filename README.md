@@ -4,6 +4,12 @@
 
 [![Simple CI](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml/badge.svg)](https://github.com/Oneflow-Inc/oneflow/actions/workflows/simple.yml)
 
+## Latest News
+- Version 4.0.0 is out!
+  - New Pytorch flavored APIs (`import oneflow.experimental as flow`)
+  - New [models and examples](https://github.com/Oneflow-Inc/models)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.4.0)
+
 ## Install OneFlow
 
   ### System Requirements
