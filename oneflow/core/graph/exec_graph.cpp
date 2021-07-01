@@ -116,18 +116,18 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
 
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1
       && parallel_distribution_signature != nullptr) {
-    CheckPhysicalBlobDesc(
+    CHECK_JUST(CheckPhysicalBlobDesc(
         *op(), op()->input_bns(),
         std::bind(&Operator::GetLogicalBlobDesc4Ibn, op().get(), std::placeholders::_1),
-        parallel_distribution_signature, parallel_ctx, GetBlobDesc4BnInOp);
+        parallel_distribution_signature, parallel_ctx, GetBlobDesc4BnInOp));
   }
   CHECK_JUST(op_->InferBlobDescsIf(GetBlobDesc4BnInOp, parallel_ctx, &GlobalJobDesc()));
   if (op_node != nullptr && parallel_ctx->parallel_num() > 1
       && parallel_distribution_signature != nullptr) {
-    CheckPhysicalBlobDesc(
+    CHECK_JUST(CheckPhysicalBlobDesc(
         *op(), op()->output_bns(),
         std::bind(&Operator::GetLogicalBlobDesc4Obn, op().get(), std::placeholders::_1),
-        parallel_distribution_signature, parallel_ctx, GetBlobDesc4BnInOp);
+        parallel_distribution_signature, parallel_ctx, GetBlobDesc4BnInOp));
   }
   CHECK_JUST(op_->InferInplaceObn2IbnIf(&mut_inplace_obn2ibn_, &con_inplace_obn2ibn_,
                                         GetBlobDesc4BnInOp, parallel_ctx));
