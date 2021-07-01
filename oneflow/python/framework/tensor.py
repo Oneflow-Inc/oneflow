@@ -435,9 +435,6 @@ class Tensor:
             pass
 
         start, stop, step, _ = self._get_slice_obj(key)
-        _tensor_shape = list(self.shape)
-        if(start >= _tensor_shape or stop >= _tensor_shape):
-            raise StopIteration
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
         if squeeze_dims is not None:
             res = res.squeeze(dim=squeeze_dims)

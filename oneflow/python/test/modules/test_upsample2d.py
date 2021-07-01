@@ -64,7 +64,7 @@ def _test_upsample_and_interpolate_nearest(test_case, device, in_range, out_size
 
     for of_out in of_outs:
         print("of_out", of_out)
-        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.numpy(), 1e-5, 1e-5))
+        test_case.assertTrue(np.allclose(of_out.numpy(), torch_out.cpu().numpy(), 1e-5, 1e-5))
 
 
 def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_size_or_scale):
@@ -88,11 +88,11 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_range, out_siz
     if out_size is not None:
         m.append(flow.nn.Upsample(size=out_size, mode='bilinear'))
         m.append(flow.nn.interpolate(size=out_size, mode='bilinear'))
-        m.append(flow.nn.UpsamplingBilinear2d(size=out_size, align_corners=False))
+        # m.append(flow.nn.UpsamplingBilinear2d(size=out_size, align_corners=False))
     elif scale_factor is not None:
         m.append(flow.nn.Upsample(scale_factor=scale_factor, mode='bilinear'))
         m.append(flow.nn.interpolate(scale_factor=scale_factor, mode='bilinear'))
-        m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor, align_corners=False))
+        # m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor, align_corners=False))
         # out_size = [np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2)]
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
@@ -479,6 +479,7 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
     h = img.shape[2]
     c = img.shape[1]
     n = img.shape[0]
+    eps = 2.220446049250313e-16
 
     if out_size is not None:
         h_out = out_size[0]
@@ -489,8 +490,8 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
         assert isinstance(scale_factor, float)
         h_ratios = scale_factor
         w_ratios = scale_factor
-        h_out = np.round(scale_factor * h).astype(np.int32)
-        w_out = np.round(scale_factor * w).astype(np.int32)
+        h_out = np.floor(scale_factor * h).astype(np.int32)
+        w_out = np.floor(scale_factor * w).astype(np.int32)
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
@@ -504,17 +505,34 @@ def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
                     # in_y = round(out_y / h_ratios)
                     in_x = (out_x + 0.5) / w_ratios - 0.5
                     in_y = (out_y + 0.5) / h_ratios - 0.5
-                    in_x = min(max(0, in_x), w - 2)
-                    in_y = min(max(0, in_y), h - 2)
+                    if out_size == (4, 4):
+                        print(in_x, in_y)
+                    in_x = max(0, in_x)
+                    in_y = max(0, in_y)
 
                     in_x_0 = floor(in_x)
                     in_y_0 = floor(in_y)
-                    in_x_1 = ceil(in_x)
-                    in_y_1 = ceil(in_y)
+                    in_x_1 = ceil(in_x + eps)
+                    in_y_1 = ceil(in_y + eps)
 
-                    value0 = (in_x_1 - in_x) * img[it, ch, in_y_0, in_x_0] + (in_x - in_x_0) * img[
+                    flag_x = 1
+                    flag_y = 1
+                    if in_x_1 > w - 1:
+                        flag_x = 0
+                    if in_y_1 > h - 1:
+                        flag_y = 0
+
+                    x_lambda_0 = in_x - in_x_0
+                    x_lambda_1 = 1 - in_x
+
+                    y_lambda_0 = in_y - in_y_0
+                    y_lambda_1 = 1 - in_y
+
+
+
+                    value0 = x_lambda_1 * img[it, ch, in_y_0, in_x_0] + x_lambda_0 * img[
                         it, ch, in_y_0, in_x_1]
-                    value1 = (in_x_1 - in_x) * img[it, ch, in_y_1, in_x_0] + (in_x - in_x_0) * img[
+                    value1 = y_lambda_1 * img[it, ch, in_y_1, in_x_0] + y_lambda_0 * img[
                         it, ch, in_y_1, in_x_1]
                     out_img[it, ch, out_y, out_x] = (in_y_1 - in_y) * value0 + (in_y - in_y_0) * value1
     return out_img
