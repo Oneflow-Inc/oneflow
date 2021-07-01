@@ -237,9 +237,7 @@ OpRegistry& OpRegistry::Finish() {
     };
   }
   if (result_.check_fn == nullptr) { result_.check_fn = CheckAttrFnUtil::NoCheck; }
-  if (result_.get_sbp_fn == nullptr) {
-    result_.get_sbp_fn = GetSbpFnUtil::DefaultBroadcastToBroadcast;
-  }
+  CHECK(result_.get_sbp_fn != nullptr) << "No Sbp function for " << result_.op_type_name;
   if (result_.cpu_only_supported && result_.device_infer_fn == nullptr) {
     result_.device_infer_fn = [](DeviceInferContext* ctx) -> Maybe<const Device> {
       for (const auto& pair : ctx->inputs()) {
