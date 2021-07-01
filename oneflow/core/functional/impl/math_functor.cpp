@@ -192,6 +192,160 @@ class CastFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ClipByScalarFunctor {
+ public:
+  ClipByScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min,
+                           const Scalar& max) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", 0));
+      JUST(attrs.SetAttr<double>("floating_max", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ClipByScalarGradFunctor {
+ public:
+  ClipByScalarGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const Scalar& min,
+                           const Scalar& max) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
+      JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", 0));
+      JUST(attrs.SetAttr<double>("floating_max", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
+      JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ClipByScalarMinFunctor {
+ public:
+  ClipByScalarMinFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_min").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ClipByScalarMinGradFunctor {
+ public:
+  ClipByScalarMinGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_min_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const Scalar& min) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", JUST(min.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_min", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_min", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_min", JUST(min.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ClipByScalarMaxFunctor {
+ public:
+  ClipByScalarMaxFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("clip_by_scalar_max").Input("x").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_max", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ClipByScalarMaxGradFunctor {
+ public:
+  ClipByScalarMaxGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("clip_by_scalar_max_grad").Input("dy").Input("x").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& x, const Scalar& max) const {
+    MutableAttrMap attrs;
+    if (IsFloatingDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_max", JUST(max.As<double>())));
+      JUST(attrs.SetAttr<int64_t>("integral_max", 0));
+    } else if (IsIntegralDataType(x->dtype())) {
+      JUST(attrs.SetAttr<double>("floating_max", 0));
+      JUST(attrs.SetAttr<int64_t>("integral_max", JUST(max.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "Only support floating or integral data type.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -204,6 +358,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RangeFunctor>("Range");
   m.add_functor<impl::ArgMaxFunctor>("ArgMax");
   m.add_functor<impl::CastFunctor>("Cast");
+  m.add_functor<impl::ClipByScalarFunctor>("ClipByScalar");
+  m.add_functor<impl::ClipByScalarGradFunctor>("ClipByScalarGrad");
+  m.add_functor<impl::ClipByScalarMinFunctor>("ClipByScalarMin");
+  m.add_functor<impl::ClipByScalarMinGradFunctor>("ClipByScalarMinGrad");
+  m.add_functor<impl::ClipByScalarMaxFunctor>("ClipByScalarMax");
+  m.add_functor<impl::ClipByScalarMaxGradFunctor>("ClipByScalarMaxGrad");
 };
 
 }  // namespace functional
