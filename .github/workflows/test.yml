@@ -455,7 +455,6 @@ jobs:
           extra_docker_args+=" -v ${img_cache_base_dir}/local-bin:/root/.local/bin"
           extra_docker_args+=" -v ${img_cache_base_dir}/site-packages37:/root/.local/lib/python3.7/site-packages"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-
       - name: Check image (cuda_new_interface)
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
