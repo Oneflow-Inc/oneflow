@@ -16,6 +16,7 @@ limitations under the License.
 from __future__ import absolute_import
 from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
+import itertools
 
 import oneflow as flow
 import oneflow.python.framework.id_util as id_util
@@ -31,7 +32,7 @@ from oneflow.python.framework.function_util import FunctionConfig
 @experimental_api
 class Graph(object):
     def __init__(self):
-        self._name = id_util.UniqueStr(self.__class__.__name__)
+        self._name = id_util.UniqueStr(self.__class__.__name__ + "_")
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
@@ -88,6 +89,16 @@ class Graph(object):
     @property
     def training(self):
         return self.config.training
+    
+    def named_state(self):
+        for _, b in self._blocks.items():
+            prefix = b.name_prefix + b.name + "."
+            p_gen = b.origin.named_parameters()
+            for n, p in p_gen:
+                yield prefix + n, p
+            b_gen = b.origin.named_buffers()
+            for n, b in b_gen:
+                yield prefix + n, b
 
     def train(self, mode: bool = True):
         self.config._train(mode)

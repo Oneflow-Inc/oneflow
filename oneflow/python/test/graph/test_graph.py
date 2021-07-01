@@ -135,7 +135,7 @@ class TestGraph(flow.unittest.TestCase):
         print(g.config.proto)
 
         print(g.config.enable_fuse_add_to_output)
-        print(repr(g))
+        print(tuple((n, id(t)) for n, t in g.named_state()))
 
     # TODO(): test_add_optimizer
 
