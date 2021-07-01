@@ -18,7 +18,8 @@ from collections import OrderedDict, namedtuple
 from typing import Union, TypeVar, Iterator, Optional, Set, Tuple, Dict, List, Callable
 
 import oneflow as flow
-from oneflow.python.oneflow_export import oneflow_export
+import oneflow.python.framework.id_util as id_util
+from oneflow.python.oneflow_export import oneflow_export, experimental_api
 from oneflow.python.nn.module import Module
 from oneflow.python.framework.tensor import Tensor
 from oneflow.python.nn.parameter import Parameter
@@ -30,8 +31,9 @@ from oneflow.python.framework.function_util import FunctionConfig
 @experimental_api
 class Graph(object):
     def __init__(self):
+        self._name = id_util.UniqueStr(self.__class__.__name__)
         self.config = GraphConfig()
-        self._nodes = OrderedDict()
+        self._blocks = OrderedDict()
         self._optimizers = OrderedDict()
         self._runnable_func = None
         self.train(True)
@@ -45,13 +47,13 @@ class Graph(object):
             self._runnable_func = vm_api.compile_job(self, *args)
         return self._runnable_func(*args)
 
-    def add_module(self, name: str, module: Module = None) -> None:
-        r"""Adds a child module to the current graph.
+    def _add_block(self, name: str, module: Module = None) -> None:
+        r"""Adds a module to the current graph as a block.
 
-        The module can be accessed as an attribute using the given name.
+        The block can be accessed as an attribute using the given name.
 
         Args:
-            name (string): name of the child module. The child module can be
+            name (string): name of the child block. The child block can be
                 accessed from this graph using the given name
             module (Module): child module to be added to the graph.
         """
@@ -59,13 +61,13 @@ class Graph(object):
             raise TypeError("{} is not a Module subclass".format(type(module)))
         elif not isinstance(name, str):
             raise TypeError("module name should be a string. Got {}".format(type(name)))
-        elif hasattr(self, name) and name not in self._nodes:
+        elif hasattr(self, name) and name not in self._blocks:
             raise KeyError("attribute '{}' already exists".format(name))
         elif "." in name:
             raise KeyError('module name can\'t contain ".", got: {}'.format(name))
         elif name == "":
             raise KeyError('module name can\'t be empty string ""')
-        self._nodes[name] = Node(name, module)
+        self._blocks[name] = Block(self._name + ".", name, module)
 
     def add_optimizer(
         self,
@@ -80,19 +82,22 @@ class Graph(object):
         )
 
     @property
+    def name(self):
+        return self._name
+
+    @property
     def training(self):
         return self.config.training
 
     def train(self, mode: bool = True):
         self.config._train(mode)
-        # TODO(): set sub module to mode
-        for name, node in self._nodes.items():
-            assert node.type == "module"
-            node.origin.train(mode)
+        for name, block in self._blocks.items():
+            assert block.type == "module"
+            block.origin.train(mode)
 
     def __setattr__(self, name: str, value=None):
         if isinstance(value, Module):
-            self.add_module(name, value)
+            self._add_block(name, value)
         elif isinstance(value, Optimizer):
             raise AttributeError(
                 "'{}' object are not allowed to set Optimizer attribute named '{}', please use add_optimizer(...) instead.".format(
@@ -103,9 +108,9 @@ class Graph(object):
             object.__setattr__(self, name, value)
 
     def __getattr__(self, name: str):
-        if "_nodes" in self.__dict__:
-            if name in self._nodes:
-                return self._nodes[name]
+        if "_blocks" in self.__dict__:
+            if name in self._blocks:
+                return self._blocks[name]
         if name in self.__dict__:
             return self.__dict__[name]
         raise AttributeError(
@@ -114,30 +119,31 @@ class Graph(object):
 
     def __repr__(self):
         lines = None
-        if len(self._nodes) > 0:
+        if len(self._blocks) > 0:
             child_lines = []
-            for n, m in self._nodes.items():
+            for n, m in self._blocks.items():
                 mod_str = repr(m)
                 mod_str = _add_indent(mod_str, 2)
                 child_lines.append(mod_str)
             lines = child_lines
 
-        main_str = "(" + self.__class__.__name__ + ":graph): ("
+        main_str = "(" + self._name + ":" + self.__class__.__name__ + ":graph): ("
         if lines is not None:
             main_str += "\n  " + "\n  ".join(lines) + "\n"
         main_str += ")"
         return main_str
 
 
-@oneflow_export("nn.graph.Node")
+@oneflow_export("nn.graph.Block")
 @experimental_api
-class Node(object):
-    def __init__(self, name: str, value: Union[Module, Parameter, Tensor] = None):
-        assert not isinstance(value, Node)
+class Block(object):
+    def __init__(self, prefix: str = "", name: str = "" , value: Union[Module, Parameter, Tensor] = None):
+        assert not isinstance(value, Block)
         self._name = name
+        self._name_prefix = prefix
         self._type = ""
         self._origin = value
-        self._config = NodeConfig()
+        self._config = BlockConfig()
 
         if isinstance(value, Module):
             self._type = "module"
@@ -145,11 +151,11 @@ class Node(object):
             self._parameters = OrderedDict()
             self._buffers = OrderedDict()
             for n, m in list(value.named_children()):
-                self.__setattr__(n, Node(n, m))
+                self.__setattr__(n, Block(self._name_prefix  + self._name + ".", n, m))
             for n, p in list(value.named_parameters("", False)):
-                self.__setattr__(n, Node(n, p))
+                self.__setattr__(n, Block(self._name_prefix + self._name + "." , n, p))
             for n, b in list(value.named_buffers("", False)):
-                self.__setattr__(n, Node(n, b))
+                self.__setattr__(n, Block(self._name_prefix + self._name + "." , n, b))
         elif isinstance(value, Parameter):
             self._type = "parameter"
         elif isinstance(value, Tensor):
@@ -167,6 +173,10 @@ class Node(object):
     @property
     def name(self):
         return self._name
+    
+    @property
+    def name_prefix(self):
+        return self._name_prefix
 
     @property
     def type(self):
@@ -182,13 +192,11 @@ class Node(object):
         return self._origin.__class__.__call__(self, *args)
 
     def forward(self, *args):
-        # TODO():
-        # set current graph is self in GraphInfo
         assert self._type == "module"
         return self._origin.__class__.forward(self, *args)
 
     def __setattr__(self, name: str, value=None) -> None:
-        if value is None or not isinstance(value, Node):
+        if value is None or not isinstance(value, Block):
             self.__dict__[name] = value
         else:
             dicts_or_sets = (
@@ -229,13 +237,13 @@ class Node(object):
             if "_parameters" in self.__dict__:
                 _parameters = self.__dict__["_parameters"]
                 if name in _parameters:
-                    # TODO(): return node when need config
+                    # TODO(): return block when need config
                     # return _parameters[name]
                     return _parameters[name].origin
             if "_buffers" in self.__dict__:
                 _buffers = self.__dict__["_buffers"]
                 if name in _buffers:
-                    # TODO(): return node when need config
+                    # TODO(): return block when need config
                     # return _buffers[name]
                     return _buffers[name].origin
             if name in self._origin.__dict__:
@@ -276,8 +284,6 @@ class Node(object):
         main_str += ")"
         return main_str
 
-
-# TODO(): move the config api into nn.Graph
 @oneflow_export("nn.graph.GraphConfig")
 @experimental_api
 class GraphConfig(FunctionConfig):
@@ -303,11 +309,11 @@ class GraphConfig(FunctionConfig):
             self.function_desc.job_config_proto.mutable_predict_conf()
 
 
-@oneflow_export("nn.graph.NodeConfig")
+@oneflow_export("nn.graph.BlockConfig")
 @experimental_api
-class NodeConfig(object):
+class BlockConfig(object):
     def __init__(self):
-        # TODO(): implement config for node
+        # TODO(): implement config for block 
         pass
 
 
