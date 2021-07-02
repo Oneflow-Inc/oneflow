@@ -10,7 +10,7 @@ proxy_args+=" --build-arg HTTPS_PROXY=${HTTPS_PROXY}"
 proxy_args+=" --build-arg http_proxy=${http_proxy}"
 proxy_args+=" --build-arg https_proxy=${https_proxy}"
 
-img_tag="oneflow-test:0.2" # update me if any of related files are changed
+img_tag="oneflow-test-v2:0.1" # update me if any of related files are changed
 if [[ "$(docker images -q ${img_tag} 2> /dev/null)" == "" ]]; then
   docker build --rm $proxy_args \
     -t $img_tag .

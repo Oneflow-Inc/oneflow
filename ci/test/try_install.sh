@@ -4,13 +4,16 @@ set -xe
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 wheel_path=${ONEFLOW_WHEEL_PATH:-"$PWD/wheelhouse"}
 index=${ONEFLOW_PIP_INDEX}
-pkg_name=${ONEFLOW_PACKAGE_NAME}
+pkg_name=${ONEFLOW_PACKAGE_NAME:-"oneflow"}
 
 if [ -n "$index" ]; then
     python3 -m pip install --find-links ${index} ${pkg_name}
 elif [ -d "$wheel_path" ]; then
     ls -la $wheel_path
-    python3 -m pip install --user $wheel_path/*.whl
+    export PATH=/root/.local/bin:$PATH
+    python3 -m pip install piprepo --user
+    piprepo build $wheel_path
+    python3 -m pip install -U --user --extra-index-url file://${wheel_path}/simple ${pkg_name}
 elif [ -e "$wheel_path" ]; then
     python3 -m pip install --user "$wheel_path"
 elif [ -d "$src_dir" ]; then

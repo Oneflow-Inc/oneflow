@@ -6,5 +6,4 @@ pycocotools
 opencv-python==4.2.0.34
 scipy
 pillow
-tensorflow-addons==0.9.1
 piprepo

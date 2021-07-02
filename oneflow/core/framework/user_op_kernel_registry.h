@@ -93,7 +93,7 @@ class OpKernelRegistry final {
   OpKernelRegistry& SetInferTmpSizeFn(InferTmpSizeFn fn);
   OpKernelRegistry& SetInplaceProposalFn(InplaceProposalFn fn);
 
-  OpKernelRegistry& Finish();
+  Maybe<OpKernelRegistry&> Finish();
   OpKernelRegistryResult GetResult() { return result_; }
 
  private:
