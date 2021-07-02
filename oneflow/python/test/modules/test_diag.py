@@ -30,7 +30,7 @@ def _test_diag_forward(test_case, shape, diagonal, device):
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
-    
+
     test_case.assertTrue(
         np.allclose(
             input.diag(diagonal=diagonal).numpy(), np_out, 1e-5, 1e-5, equal_nan=True
@@ -48,7 +48,7 @@ def _test_diag_one_dim_backward(test_case, diagonal, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
     )
-    
+
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
