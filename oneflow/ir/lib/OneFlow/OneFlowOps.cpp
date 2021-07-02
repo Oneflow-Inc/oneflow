@@ -208,7 +208,8 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
 
       // TODO: extract a function to generate op name for jit op from ops being fused
       SmallString<64> op_name_storage;
-      auto op_name = (cast_op.op_name() + "@@" + mul_op.op_name()).toStringRef(op_name_storage);
+      auto op_name =
+          (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
       attributes.set("op_name", rewriter.getStringAttr(op_name));
 
       LBNVec output_lbns;
@@ -231,6 +232,11 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
       cast_op.erase();
+
+      // create a function to be lowered
+      auto func_type = rewriter.getFunctionType(llvm::None, llvm::None);
+      auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
+      rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
       return created->getResults();
     }
   }
