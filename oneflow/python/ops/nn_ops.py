@@ -1465,7 +1465,7 @@ def tf_conv2d(
     if padding.upper() == "SAME":
         padding = "SAME_UPPER"
     return flow.nn.conv2d(
-        input, filters, strides, padding, data_format, dilations, groups, name
+        input, filters, strides, padding, None, data_format, dilations, groups, name
     )
 
 
