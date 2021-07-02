@@ -131,6 +131,7 @@ jobs:
         shell: bash
       - name: Build (ALL)
         if: always()
+        continue-on-error: ${{ matrix.cmake_generator == 'Ninja' && ${{ matrix.build_shared_libs }} == 'ON' }}
         run: |
           mkdir -p build
           cd build
