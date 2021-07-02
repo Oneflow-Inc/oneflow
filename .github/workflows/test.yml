@@ -192,7 +192,10 @@ jobs:
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=''"
           fi
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-          echo "" >> $GITHUB_ENV
+
+          img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-manylinux2014-cuda10.2/0.1"
+          pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
+          echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
@@ -432,7 +435,7 @@ jobs:
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           upload_core: ${{ contains(github.event.pull_request.labels.*.name, 'upload-core') }}
       - name: Print backtrace (distributed test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && steps.distributed_try_3.outcome=='failure' && matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run \
@@ -508,6 +511,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_test.sh"
       - name: Model serve test
+        id: model_serve_test
         if: matrix.test_suite == 'cuda'
         run: |
           set -x
@@ -516,7 +520,7 @@ jobs:
             ${image_name} \
             bash -c "python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_model_serve_test.sh"
       - name: Print backtrace (serving test)
-        if: always() && matrix.test_suite == 'cuda'
+        if: always() && steps.model_serve_test.outcome=='failure'  && matrix.test_suite == 'cuda'
         run: |
           set -x
           docker run ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
