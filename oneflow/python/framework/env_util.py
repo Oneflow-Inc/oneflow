@@ -78,7 +78,7 @@ def init_default_physical_env():
     if log_dir:
         default_physical_env_proto.cpp_logging_conf.log_dir = log_dir
     default_physical_env_proto.is_default_physical_env = True
-    CompleteEnvProto(default_physical_env_proto)
+    CompleteEnvProto(default_physical_env_proto, False)
     c_api_util.InitDefaultEnv(default_physical_env_proto)
 
 
