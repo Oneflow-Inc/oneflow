@@ -50,7 +50,7 @@ def diag_op(input, diagonal=0):
             If diagonal = 0, it is the main diagonal. If diagonal > 0, it is above the main diagonal. If diagonal < 0, it is below the main diagonal. Defaults to 0.
     
     Returns:
-        oneflow.Tensor: the output tensor.
+        oneflow.Tensor: the output Tensor.
 
     For example:
 
