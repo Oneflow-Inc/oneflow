@@ -32,8 +32,8 @@ __global__ void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = GetNearestInputIndexFunc(h, scale_h, in_height);
-    const int64_t in_w = GetNearestInputIndexFunc(w, scale_w, in_width);
+    const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
+    const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
     out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
   }
 }
@@ -47,8 +47,8 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
   CUDA_1D_KERNEL_LOOP(index, elem_cnt) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t dx_h = GetNearestInputIndexFunc(h, scale_h, dx_height);
-    const int64_t dx_w = GetNearestInputIndexFunc(w, scale_w, dx_width);
+    const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
+    const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
     cuda::atomic::Add(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w), dy_dptr[index]);
   }
 }
@@ -64,7 +64,7 @@ __global__ void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
     BilinearParam<T> params;
-    GetBilinearParamFunc(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
+    GetBilinearParam(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
     const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
     const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
     const T top_left = in_dptr[top_offset + params.left_w_index];
@@ -88,7 +88,7 @@ __global__ void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dpt
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     BilinearParam<T> params;
-    GetBilinearParamFunc(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
+    GetBilinearParam(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
     const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
     const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
     const T dy = dy_dptr[index];
@@ -203,9 +203,8 @@ class UpsampleBilinearGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_blob->shape().At(3);
     const int64_t out_height = y_blob->shape().At(2);
     const int64_t out_width = y_blob->shape().At(3);
-    const T scale_height =
-        GetAreaPixelScaleFunc(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScaleFunc(in_width, out_width, align_corners, width_scale);
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
     RUN_CUDA_KERNEL((UpsampleBilinearForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     x_blob->dptr<T>(), in_helper, out_helper, in_height, in_width, scale_height,
                     scale_width, align_corners, y_blob->mut_dptr<T>());
@@ -239,9 +238,8 @@ class UpsampleBilinearGradGPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_blob->shape().At(3);
     const int64_t out_height = dy_blob->shape().At(2);
     const int64_t out_width = dy_blob->shape().At(3);
-    const T scale_height =
-        GetAreaPixelScaleFunc(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScaleFunc(in_width, out_width, align_corners, width_scale);
+    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
     RUN_CUDA_KERNEL((UpsampleBilinearBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
                     dy_blob->dptr<T>(), dy_helper, dx_helper, in_height, in_width, scale_height,
                     scale_width, align_corners, dx_blob->mut_dptr<T>());

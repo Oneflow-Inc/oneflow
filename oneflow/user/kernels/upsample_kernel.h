@@ -15,8 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
-OF_DEVICE_FUNC static int64_t GetNearestInputIndexFunc(const int64_t out_dim_idx, const float scale,
-                                                       const int64_t in_dim_size) {
+OF_DEVICE_FUNC static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
+                                                   const int64_t in_dim_size) {
   int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
   index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
   index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
@@ -24,8 +24,8 @@ OF_DEVICE_FUNC static int64_t GetNearestInputIndexFunc(const int64_t out_dim_idx
 }
 
 template<typename T>
-OF_DEVICE_FUNC T GetAreaPixelScaleFunc(const int64_t input_size, const int64_t output_size,
-                                       bool align_corners, const T scale) {
+OF_DEVICE_FUNC T GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
+                                   bool align_corners, const T scale) {
   if (align_corners) {
     if (output_size > 1) {
       return static_cast<T>(input_size - 1) / (output_size - 1);
@@ -48,10 +48,9 @@ struct BilinearParam {
 };
 
 template<typename T>
-OF_DEVICE_FUNC void GetBilinearParamFunc(const bool align_corners, const int64_t h, const int64_t w,
-                                         const int64_t in_height, const int64_t in_width,
-                                         const T scale_h, const T scale_w,
-                                         BilinearParam<T>* params) {
+OF_DEVICE_FUNC void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
+                                     const int64_t in_height, const int64_t in_width,
+                                     const T scale_h, const T scale_w, BilinearParam<T>* params) {
   T h1r;
   if (align_corners) {
     h1r = scale_h * static_cast<T>(h);
