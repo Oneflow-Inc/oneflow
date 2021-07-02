@@ -227,7 +227,9 @@ class FeedContext(object):
     def _AsContiguousNdArray(self, ndarray):
         if isinstance(ndarray, numpy.ndarray):
             return (
-                ndarray if ndarray.data.contiguous else numpy.ascontiguousarray(ndarray)
+                ndarray
+                if ndarray.flags["C_CONTIGUOUS"]
+                else numpy.ascontiguousarray(ndarray)
             )
         elif isinstance(ndarray, (tuple, list)):
             return type(ndarray)(self._AsContiguousNdArray(a) for a in ndarray)
