@@ -75,12 +75,24 @@
   signature: "Tensor BroadcastEqual(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_not_equal"
+  signature: "Tensor BroadcastNotEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_greater"
   signature: "Tensor BroadcastGreater(Tensor x, Tensor y)"
   bind_python: True
 
+- name: "broadcast_greater_equal"
+  signature: "Tensor BroadcastGreaterEqual(Tensor x, Tensor y)"
+  bind_python: True
+
 - name: "broadcast_less"
   signature: "Tensor BroadcastLess(Tensor x, Tensor y)"
+  bind_python: True
+
+- name: "broadcast_less_equal"
+  signature: "Tensor BroadcastLessEqual(Tensor x, Tensor y)"
   bind_python: True
 
 - name: "pow"
@@ -486,6 +498,10 @@
     "Tensor UnsortedSegmentSumLike(Tensor x, Tensor segment_ids, Tensor like, *, Int64 axis)"
   bind_python: False
 
+- name: "triu"
+  signature: "Tensor Triu(Tensor x, Int64 diagonal=0)"
+  bind_python: True
+  
 - name: "clip_by_scalar"
   signature: "Tensor ClipByScalar(Tensor x, *, Scalar min, Scalar max)"
   bind_python: True

@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     .Input("in")
     .Output("out")
     .Attr<Shape>("instance_shape")
@@ -54,7 +54,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("instance_dims")
@@ -91,7 +91,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Output("out")
     .Attr<Shape>("shape")
     .Attr<std::vector<Shape>>("shape_list")
@@ -117,7 +117,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .Input("in")
     .OutputWithMinimum("out", 1)
     .Attr<Shape>("out_shape")
@@ -161,7 +161,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     })
     .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
     .Input("in")
     .OutputWithMinimum("out", 1)
     .Attr<std::vector<Shape>>("out_shapes")

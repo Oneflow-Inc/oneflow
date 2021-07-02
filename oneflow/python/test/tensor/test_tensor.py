@@ -776,6 +776,10 @@ class TestTensor(flow.unittest.TestCase):
         np_out = np.clip(input.numpy(), 0.1, 0.5)
         test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def _test_cast_tensor_function(test_case):
         shape = (2, 3, 4, 5)
         np_arr = np.random.randn(*shape).astype(np.float32)
@@ -983,6 +987,10 @@ class TestTensor(flow.unittest.TestCase):
             np.allclose(input.grad.numpy(), np_grad, 1e-4, 1e-4, equal_nan=True)
         )
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_ceil(test_case):
         x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.ceil()
@@ -993,6 +1001,10 @@ class TestTensor(flow.unittest.TestCase):
         of_out.backward()
         test_case.assertTrue(np.allclose(x.grad.numpy(), np.zeros((2, 3)), 1e-4, 1e-4))
 
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
     def test_tensor_expm1(test_case):
         x = flow.Tensor(np.random.randn(2, 3), requires_grad=True)
         of_out = x.expm1()
@@ -1026,6 +1038,31 @@ class TestTensor(flow.unittest.TestCase):
         of_out = of_out.sum()
         of_out.backward()
         test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    @unittest.skipIf(
+        not flow.unittest.env.eager_execution_enabled(),
+        "numpy doesn't work in lazy mode",
+    )
+    def test_tensor_triu(test_case):
+        def np_triu(x, diagonal):
+            y = np.triu(x, diagonal)
+            y_grad = np.triu(np.ones_like(x), diagonal)
+            return [y, y_grad]
+
+        diagonal_list = [2, -1]
+        for diagonal in diagonal_list:
+            np_input = np.random.randn(2, 4, 6)
+            of_input = flow.Tensor(np_input, dtype=flow.float32, requires_grad=True)
+            of_out = of_input.triu(diagonal)
+
+            np_out, np_grad = np_triu(np_input, diagonal)
+            test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+
+            of_out = of_out.sum()
+            of_out.backward()
+            test_case.assertTrue(
+                np.allclose(of_input.grad.numpy(), np_grad, 1e-5, 1e-5)
+            )
 
 
 if __name__ == "__main__":
