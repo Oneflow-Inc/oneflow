@@ -36,6 +36,7 @@ class NetSocketDeviceDescriptor : public DeviceDescriptor {
   int32_t Ordinal() const;
   const std::string& Name() const;
   const std::string& Address() const;
+  const std::string& PCIBusID() const;
   void Serialize(std::string* serialized) const;
   static std::shared_ptr<const NetSocketDeviceDescriptor> Query(int32_t ordinal,
                                                                 const std::string& name,

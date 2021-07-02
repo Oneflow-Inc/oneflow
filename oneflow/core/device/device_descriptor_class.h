@@ -28,7 +28,7 @@ class DeviceDescriptorClass {
   virtual ~DeviceDescriptorClass() = default;
 
   virtual std::shared_ptr<const DeviceDescriptorList> QueryDeviceDescriptorList() const = 0;
-  virtual const std::string& Name() const = 0;
+  virtual std::string Name() const = 0;
   virtual void SerializeDeviceDescriptorList(
       const std::shared_ptr<const DeviceDescriptorList>& list, std::string* serialized) const = 0;
   virtual std::shared_ptr<const DeviceDescriptorList> DeserializeDeviceDescriptorList(
