@@ -328,6 +328,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     np_grad = np.array([[[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
+
     input = flow.Tensor(
         np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
         device=flow.device(device),
@@ -342,6 +343,7 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     of_out.backward()
     np_grad = np.array([[[[1.75, 1.75], [1.5, 1.5], [1.5, 1.5], [1.5, 1.5], [1.75, 1.75]]]])
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
 
 
 def _test_upsample_bilinear_align_corners(test_case, device):
@@ -381,9 +383,9 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_interpolate_nearest_float_scale,
             _test_interpolate_bilinear_float_scale,
             _test_upsample_bilinear_align_corners,
-        ]
         arg_dict["device"] = [
             "cpu", "cuda",
+
         ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])

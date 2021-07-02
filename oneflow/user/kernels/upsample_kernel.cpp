@@ -67,8 +67,9 @@ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool al
                          : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
   } else {
     return 0;
-  }
 }
+
+
 
 template<typename T>
 struct BilinearParam {
@@ -84,6 +85,7 @@ template<typename T>
 void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                       const int64_t in_height, const int64_t in_width, const T scale_h,
                       const T scale_w, BilinearParam<T>* params) {
+
   T h1r;
   if (align_corners) {
     h1r = scale_h * static_cast<T>(h);
@@ -110,6 +112,7 @@ void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w
   params->left_w_index = w1;
   params->right_w_index = w1 + w1p;
   params->w_lerp = w1r - w1;
+
 }
 
 template<typename T>
