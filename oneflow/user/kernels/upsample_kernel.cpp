@@ -23,7 +23,7 @@ namespace {
 
 static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
                                     const int64_t in_dim_size) {
-  int64_t index = static_cast<int64_t>(floorf((static_cast<float>(out_dim_idx) + 0.5f) * scale));
+  int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
   index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
   index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
   return index;
@@ -67,13 +67,21 @@ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool al
 }
 
 template<typename T>
-T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, bool align_corners) {
+T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
+                          bool align_corners) {
+  T src_index;
   if (align_corners) {
-    return scale * static_cast<T>(dst_index);
+    src_index = scale * static_cast<T>(dst_index);
   } else {
-    T src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-    return (src_index < 0) ? 0 : src_index;
+    src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
   }
+  int64_t sx = static_cast<int64_t>(floorf(src_index));
+
+  src_index = (sx < 0) ? 0 : src_index;
+  if (scale > static_cast<T>(1.0)) {
+    src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
+  }
+  return src_index;
 }
 
 template<typename T>
@@ -90,8 +98,8 @@ template<typename T>
 void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                       const int64_t in_height, const int64_t in_width, const T scale_h,
                       const T scale_w, BilinearParam<T>* params) {
-  const T in_h = GetAreaPixelSourceIndex(scale_h, h, align_corners);
-  const T in_w = GetAreaPixelSourceIndex(scale_w, w, align_corners);
+  const T in_h = GetAreaPixelSourceIndex(scale_h, h, in_height, align_corners);
+  const T in_w = GetAreaPixelSourceIndex(scale_w, w, in_width, align_corners);
   params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
   params->bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
   params->h_lerp = in_h - floorf(in_h);

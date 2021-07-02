@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("onerec_decoder")
     .Input("in")
     .Output("out")
     .Attr<std::string>("key")
