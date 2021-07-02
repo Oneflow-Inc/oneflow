@@ -380,7 +380,7 @@ jobs:
           extra_docker_args+=" --shm-size=8g --rm -w $PWD -v $PWD:$PWD"
           extra_docker_args+=" -v /dataset:/dataset -v /model_zoo:/model_zoo"
           echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-          echo "image_name=oneflow-test:0.1" >> $GITHUB_ENV
+          echo "image_name=oneflow-test:0.2" >> $GITHUB_ENV
           echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
 
           img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-test/0.1"
