@@ -130,7 +130,6 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
   MaxPool2dGradKernel() = default;
   ~MaxPool2dGradKernel() = default;
 
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -163,7 +162,6 @@ class MaxPool3dKernel final : public user_op::OpKernel {
   MaxPool3dKernel() = default;
   ~MaxPool3dKernel() = default;
 
-
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -193,7 +191,6 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
  public:
   MaxPool3dGradKernel() = default;
   ~MaxPool3dGradKernel() = default;
-
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
