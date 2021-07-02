@@ -76,7 +76,7 @@ def _test_view_backward(test_case, device):
     ".numpy() doesn't work in lazy mode",
 )
 class TestModule(flow.unittest.TestCase):
-    def test_reshape(test_case):
+    def test_view(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_view,
