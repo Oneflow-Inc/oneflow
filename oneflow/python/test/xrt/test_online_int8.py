@@ -40,7 +40,9 @@ def make_trt_job(
         x=flow.FixedTensorDef(x_shape, dtype=dtype),
         weight=flow.FixedTensorDef(w_shape, dtype=dtype),
     ):
-        return flow.nn.conv2d(x, weight, strides, padding, None, data_format, dilation_rate)
+        return flow.nn.conv2d(
+            x, weight, strides, padding, None, data_format, dilation_rate
+        )
 
     return trt_conv2d_job
 
