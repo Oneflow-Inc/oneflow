@@ -62,26 +62,12 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
 template<typename T>
 __host__ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
                              bool align_corners, const T scale) {
-  return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1)
-                       : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
-}
-
-template<typename T>
-__device__ T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
-                                     bool align_corners) {
-  T src_index;
-  if (align_corners) {
-    src_index = scale * static_cast<T>(dst_index);
+  if (output_size > 1) {
+    return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1)
+                         : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
   } else {
-    src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
+    return 0;
   }
-  int64_t sx = static_cast<int64_t>(floorf(src_index));
-
-  src_index = (sx < 0) ? 0 : src_index;
-  if (scale > static_cast<T>(1.0)) {
-    src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
-  }
-  return src_index;
 }
 
 template<typename T>
@@ -98,14 +84,32 @@ template<typename T>
 __device__ void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                                  const int64_t in_height, const int64_t in_width, const T scale_h,
                                  const T scale_w, BilinearParam<T>* params) {
-  const T in_h = GetAreaPixelSourceIndex(scale_h, h, in_height, align_corners);
-  const T in_w = GetAreaPixelSourceIndex(scale_w, w, in_width, align_corners);
-  params->top_h_index = in_h > 0.0 ? floorf(in_h) : 0;
-  params->bottom_h_index = (in_h < in_height - 1) ? ceilf(in_h) : in_height - 1;
-  params->h_lerp = in_h - floorf(in_h);
-  params->left_w_index = in_w > 0.0 ? floorf(in_w) : 0;
-  params->right_w_index = (in_w < in_width - 1) ? ceilf(in_w) : in_width - 1;
-  params->w_lerp = in_w - floorf(in_w);
+  T h1r;
+  if (align_corners) {
+    h1r = scale_h * static_cast<T>(h);
+  } else {
+    h1r = (static_cast<T>(h) + 0.5f) * scale_h - 0.5f;
+    h1r = h1r < 0 ? 0 : h1r;
+  }
+  const int64_t h1 = h1r;
+  const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
+
+  T w1r;
+  if (align_corners) {
+    w1r = scale_w * static_cast<T>(w);
+  } else {
+    w1r = (static_cast<T>(w) + 0.5f) * scale_w - 0.5f;
+    w1r = w1r < 0 ? 0 : w1r;
+  }
+  const int64_t w1 = w1r;
+  const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
+
+  params->top_h_index = h1;
+  params->bottom_h_index = h1 + h1p;
+  params->h_lerp = h1r - h1;
+  params->left_w_index = w1;
+  params->right_w_index = w1 + w1p;
+  params->w_lerp = w1r - w1;
 }
 
 template<typename T>
