@@ -92,6 +92,52 @@ jobs:
         run: |
           exit 1
 
+  static_analysis_with_clang_plug_in:
+    name: Static analysis with Clang plug-in
+    runs-on: ubuntu-20.04
+    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    steps:
+      - name: Check out OneFlow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - name: Install dependencies
+        run: |
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
+          sudo apt-get update
+          sudo apt-get install -y llvm-12 llvm-12-dev llvm-12-tools clang-12 libclang-common-12-dev libclang-12-dev \
+            libopenblas-dev nasm python3-pip ninja-build
+
+      - name: Build Clang plug-in
+        run: |
+          export CC=clang-12
+          export CXX=clang++-12
+          cd tools/clang-plugin
+          mkdir build
+          cd build
+          cmake .. -DCP_LLVM_INSTALL_DIR=/usr/lib/llvm-12
+          make -j$(nproc)
+          clang_plugin_path="${PWD}/lib/libCheckUnusedMaybe.so"
+          ldd ${clang_plugin_path}
+          echo "clang_plugin_path=${clang_plugin_path}" >> $GITHUB_ENV
+      - name: Check unused Maybe (by building OneFlow with Clang plug-in)
+        run: |
+          export PROJECT_DIR=${PWD}
+          mkdir build
+          cd build
+          export CC=clang-12
+          export CXX=clang++-12
+          export ONEFLOW_MAYBE_CHECK_ONLY_FN=${PROJECT_DIR}/oneflow/
+          export ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp
+          cmake .. -C ../cmake/caches/international/cpu.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_CXX_FLAGS="-fplugin=${{ env.clang_plugin_path }}"
+          cmake --build . -j$(nproc) --target oneflow_deps
+          cmake --build . -j$(nproc)
+
   wait_for_gpu_slot:
     name: Wait for GPU slots
     runs-on: [self-hosted, scheduler]

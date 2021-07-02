@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_resize_to_fixed")
     .Input("in")
     .Output("out")
     .Output("scale")
@@ -85,7 +85,7 @@ REGISTER_CPU_ONLY_USER_OP("image_resize_to_fixed")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_resize_keep_aspect_ratio")
     .Input("in")
     .Output("out")
     .Output("size")
