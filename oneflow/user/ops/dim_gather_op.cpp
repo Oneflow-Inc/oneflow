@@ -36,7 +36,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
   // split_axs should NOT equals dim when in consistent view
-  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
   auto is_split = in_sbp.has_split_parallel();
   if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
     int64_t split_axis = in_sbp.split_parallel().axis();
@@ -66,17 +66,6 @@ void GatherInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn
   indices_modifier->set_requires_grad(false);
 }
 
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  OptInt64* indices_batch_axis = ctx->BatchAxis4ArgNameAndIndex("index", 0);
-  if (indices_batch_axis->has_value()) {
-    CHECK_GE_OR_RETURN(indices_batch_axis->value(), 0);
-    CHECK_LE_OR_RETURN(
-        indices_batch_axis->value(),
-        ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape().NumAxes() - 1);
-  }
-  *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *indices_batch_axis;
-  return Maybe<void>::Ok();
-}
 
 Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
@@ -106,6 +95,16 @@ Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
       .Build();
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InferDtype(user_op::InferContext* ctx) {
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+  CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+  const TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("input", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  *out->mut_data_type() = in->data_type();
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 REGISTER_USER_OP("dim_gather")
@@ -115,7 +114,7 @@ REGISTER_USER_OP("dim_gather")
     .Attr<int32_t>("dim")
     .SetTensorDescInferFn(InferTensorDesc)
     .SetInputArgModifyFn(GatherInputArgModifierFn)
-    .SetBatchAxisInferFn(InferBatchAxis)
+    .SetDataTypeInferFn(InferDtype)
     .SetGetSbpFn(BuildSbp);
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {

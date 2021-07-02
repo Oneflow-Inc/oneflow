@@ -15,6 +15,11 @@ limitations under the License.
 */
 #ifndef ONEFLOW_USER_KERNELS_DIM_GAHTER_SCATTER__UTIL_H_
 #define ONEFLOW_USER_KERNELS_DIM_GAHTER_SCATTER__UTIL_H_
+
+#ifdef WITH_CUDA
+#include "oneflow/core/cuda/atomic.cuh"
+#endif  // WITH_CUDA
+
 #include "oneflow/core/ndarray/xpu_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/framework/framework.h"
@@ -37,7 +42,8 @@ template<typename T>
 struct DeviceBinOp {
   OF_DEVICE_FUNC static void Add(const T* x, T* y) {
 #ifdef __CUDA_ARCH__
-    gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
+    // gpu_atomic_add(y, *x);  // TODO:(YaoChi), refine add using float16 -> half -> float -> half
+    cuda::atomic::Add(y, *x); 
 #else
     *y += *x;
 #endif
