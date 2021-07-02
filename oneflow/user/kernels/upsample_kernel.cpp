@@ -16,18 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
+#include "oneflow/user/kernels/upsample_kernel.h"
 
 namespace oneflow {
 
 namespace {
-
-static int64_t GetNearestInputIndex(const int64_t out_dim_idx, const float scale,
-                                    const int64_t in_dim_size) {
-  int64_t index = static_cast<int64_t>(std::floor((static_cast<float>(out_dim_idx) * scale)));
-  index = index > in_dim_size - 1 ? in_dim_size - 1 : index;
-  index = index < static_cast<int64_t>(0) ? static_cast<int64_t>(0) : index;
-  return index;
-}
 
 template<typename T>
 static void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
@@ -38,8 +31,8 @@ static void UpsampleNearestForward(const int64_t elem_cnt, const T* in_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t in_h = GetNearestInputIndex(h, scale_h, in_height);
-    const int64_t in_w = GetNearestInputIndex(w, scale_w, in_width);
+    const int64_t in_h = GetNearestInputIndexFunc(h, scale_h, in_height);
+    const int64_t in_w = GetNearestInputIndexFunc(w, scale_w, in_width);
     out_dptr[index] = in_dptr[in_helper.NdIndexToOffset(n, c, in_h, in_w)];
   }
 }
@@ -53,66 +46,10 @@ static void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr,
   for (int64_t index = 0; index < elem_cnt; ++index) {
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
-    const int64_t dx_h = GetNearestInputIndex(h, scale_h, dx_height);
-    const int64_t dx_w = GetNearestInputIndex(w, scale_w, dx_width);
+    const int64_t dx_h = GetNearestInputIndexFunc(h, scale_h, dx_height);
+    const int64_t dx_w = GetNearestInputIndexFunc(w, scale_w, dx_width);
     *(dx_dptr + dx_helper.NdIndexToOffset(n, c, dx_h, dx_w)) += dy_dptr[index];
   }
-}
-
-template<typename T>
-T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool align_corners,
-                    const T scale) {
-  if (align_corners) {
-    if (output_size > 1) {
-      return static_cast<T>(input_size - 1) / (output_size - 1);
-    } else {
-      return 0;
-    }
-  } else {
-    return (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
-  }
-}
-
-template<typename T>
-struct BilinearParam {
-  int64_t top_h_index;
-  int64_t bottom_h_index;
-  int64_t left_w_index;
-  int64_t right_w_index;
-  T w_lerp;
-  T h_lerp;
-};
-
-template<typename T>
-void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
-                      const int64_t in_height, const int64_t in_width, const T scale_h,
-                      const T scale_w, BilinearParam<T>* params) {
-  T h1r;
-  if (align_corners) {
-    h1r = scale_h * static_cast<T>(h);
-  } else {
-    h1r = (static_cast<T>(h) + 0.5f) * scale_h - 0.5f;
-    h1r = h1r < 0 ? 0 : h1r;
-  }
-  const int64_t h1 = h1r;
-  const int64_t h1p = (h1 < in_height - 1) ? 1 : 0;
-
-  T w1r;
-  if (align_corners) {
-    w1r = scale_w * static_cast<T>(w);
-  } else {
-    w1r = (static_cast<T>(w) + 0.5f) * scale_w - 0.5f;
-    w1r = w1r < 0 ? 0 : w1r;
-  }
-  const int64_t w1 = w1r;
-  const int64_t w1p = (w1 < in_width - 1) ? 1 : 0;
-
-  params->top_h_index = h1;
-  params->bottom_h_index = h1 + h1p;
-  params->h_lerp = h1r - h1;
-  params->left_w_index = w1;
-  params->right_w_index = w1 + w1p;
-  params->w_lerp = w1r - w1;
 }
 
 template<typename T>
@@ -126,7 +63,7 @@ static void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
     int64_t n, c, h, w;
     out_helper.OffsetToNdIndex(index, n, c, h, w);
     BilinearParam<T> params;
-    GetBilinearParam(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
+    GetBilinearParamFunc(align_corners, h, w, in_height, in_width, scale_h, scale_w, &params);
     const int64_t top_offset = in_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
     const int64_t bottom_offset = in_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
     const T top_left = in_dptr[top_offset + params.left_w_index];
@@ -150,7 +87,7 @@ static void UpsampleBilinearBackward(const int64_t elem_cnt, const T* dy_dptr,
     int64_t n, c, h, w;
     dy_helper.OffsetToNdIndex(index, n, c, h, w);
     BilinearParam<T> params;
-    GetBilinearParam(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
+    GetBilinearParamFunc(align_corners, h, w, dx_height, dx_width, scale_h, scale_w, &params);
     const int64_t top_offset = dx_helper.NdIndexToOffset(n, c, params.top_h_index, 0);
     const int64_t bottom_offset = dx_helper.NdIndexToOffset(n, c, params.bottom_h_index, 0);
     const T dy = dy_dptr[index];
@@ -258,8 +195,9 @@ class UpsampleBilinearCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = x_blob->shape().At(3);
     const int64_t out_height = y_blob->shape().At(2);
     const int64_t out_width = y_blob->shape().At(3);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    const T scale_height =
+        GetAreaPixelScaleFunc(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScaleFunc(in_width, out_width, align_corners, width_scale);
     UpsampleBilinearForward<T>(elem_cnt, x_blob->dptr<T>(), in_helper, out_helper, in_height,
                                in_width, scale_height, scale_width, align_corners,
                                y_blob->mut_dptr<T>());
@@ -293,8 +231,9 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
     const int64_t in_width = dx_blob->shape().At(3);
     const int64_t out_height = dy_blob->shape().At(2);
     const int64_t out_width = dy_blob->shape().At(3);
-    const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
-    const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
+    const T scale_height =
+        GetAreaPixelScaleFunc(in_height, out_height, align_corners, height_scale);
+    const T scale_width = GetAreaPixelScaleFunc(in_width, out_width, align_corners, width_scale);
     UpsampleBilinearBackward<T>(elem_cnt, dy_blob->dptr<T>(), dy_helper, dx_helper, in_height,
                                 in_width, scale_height, scale_width, align_corners,
                                 dx_blob->mut_dptr<T>());
