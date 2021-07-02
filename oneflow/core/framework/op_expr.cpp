@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
@@ -91,7 +92,7 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   auto* user_op_conf = op_conf->mutable_user_conf();
   for (const auto& it : attrs) {
     AttrValue attr_val;
-    user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val);
+    JUST(user_op::AttrValueUtil::ToProtoAttrValue(*it.second, &attr_val));
     (*(user_op_conf->mutable_attr()))[it.first] = attr_val;
   }
   return Maybe<void>::Ok();
@@ -102,7 +103,7 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
   if (it != device2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
-  BuildOpConf(op_conf.get(), {});
+  JUST(BuildOpConf(op_conf.get(), {}));
   op_conf->set_device_tag(JUST(device.of_type()));
   std::shared_ptr<const ParallelDesc> parallel_desc = device.parallel_desc_ptr();
   const auto& opkernel =
@@ -114,22 +115,19 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(const Device& device) 
 
 template<>
 Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
-  const std::string& op_type_name = op_proto_.op_type_name();
-  const user_op::OpGradRegistryResult* val =
-      user_op::UserOpRegistryMgr::Get().GetOpGradRegistryResult(op_type_name);
-  if (val) { return false; }
-  return !IsClassRegistered<std::string, OpExprGradFunctionIf>(op_type_name);
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
+  CHECK_NOTNULL_OR_RETURN(registry);
+  return registry->no_grad;
 }
 
 template<>
 Maybe<OpExprGradClosure> BuiltinOpExprImpl<UserOpConf>::GetOrCreateOpGradClosure() const {
   if (!op_grad_func_.get()) {
-    if (IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())) {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
-    } else {
-      op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>("default"));
-    }
-    CHECK_NOTNULL_OR_RETURN(op_grad_func_.get());
+    CHECK_OR_RETURN((IsClassRegistered<std::string, OpExprGradFunctionIf>(proto().op_type_name())))
+        << "The gradient function for op " << proto().op_type_name()
+        << " is not found. Please check whether it has been implemented and registered correctly.";
+    op_grad_func_.reset(NewObj<std::string, OpExprGradFunctionIf>(proto().op_type_name()));
     JUST(op_grad_func_->Init(*this));
   }
   return std::make_shared<OpExprGradClosure>(op_grad_func_);
@@ -247,6 +245,23 @@ class UserOpExprInferContext : public user_op::InferContext {
   const std::string& op_type_name() const override { return user_op_expr_->op_type_name(); }
   const std::string& device_tag() const override { return device_tag_; }
 
+ private:
+  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
+      const std::string& attr_name) const override {
+    return composed_attrs_.Attr4Name(attr_name);
+  }
+  const UserOpExpr* user_op_expr_;
+  const ComposedAttrMap composed_attrs_;
+  const std::string& device_tag_;
+  const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
+  const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
+};
+
+class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
+ public:
+  using UserOpExprInferContext::UserOpExprInferContext;
+  ~UserOpExprLogicalInferContext() = default;
+
   const user_op::TensorDesc* LogicalTensorDesc4ArgNameAndIndex(const std::string& name,
                                                                int32_t index) const override {
     UNIMPLEMENTED();
@@ -274,17 +289,6 @@ class UserOpExprInferContext : public user_op::InferContext {
     UNIMPLEMENTED();
     return 1;
   }
-
- private:
-  const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_.Attr4Name(attr_name);
-  }
-  const UserOpExpr* user_op_expr_;
-  const ComposedAttrMap composed_attrs_;
-  const std::string& device_tag_;
-  const std::function<const TensorMeta*(int32_t)>& tensor_meta4input_index_;
-  const std::function<TensorMeta*(int32_t)>& tensor_meta4output_index_;
 };
 
 class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
@@ -339,7 +343,7 @@ UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const Att
     : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
       base_attrs_(base_attrs) {}
 
-Maybe<void> UserOpExpr::Init() {
+Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(op_proto_.op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
@@ -348,6 +352,7 @@ Maybe<void> UserOpExpr::Init() {
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
   if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
 
@@ -357,7 +362,7 @@ Maybe<void> UserOpExpr::Init() {
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
   std::shared_ptr<UserOpExpr> op_expr(
       new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
-  JUST(op_expr->Init());
+  JUST(op_expr->Init(op_expr));
   return op_expr;
 }
 
@@ -365,8 +370,8 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
     const AttrMap& attrs, const std::string& device_tag,
     const std::function<const TensorMeta*(int32_t)>& TensorMeta4InputIndex,
     const std::function<TensorMeta*(int32_t)>& TensorMeta4OutputIndex) const {
-  UserOpExprInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
-                                   TensorMeta4OutputIndex);
+  UserOpExprLogicalInferContext infer_ctx(this, attrs, device_tag, TensorMeta4InputIndex,
+                                          TensorMeta4OutputIndex);
   JUST(shape_infer_fn_(&infer_ctx));
   JUST(dtype_infer_fn_(&infer_ctx));
   return Maybe<void>::Ok();

@@ -175,8 +175,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               session->PopMirroredStrategyEnabled();
               return Maybe<void>::Ok();
             });
-    GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                       backward_fn, inputs, outputs);
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
+                                                            backward_fn, inputs, outputs));
   }
   return Maybe<void>::Ok();
 }

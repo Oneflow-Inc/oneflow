@@ -117,7 +117,7 @@ class Dropout(_DropoutNd):
         )
 
     def forward(self, x):
-        if self.p == 0.0:
+        if self.p == 0.0 or not self.training:
             return x
         mask = self._mask_op(x)[0]
         return self._op(x, mask)[0]

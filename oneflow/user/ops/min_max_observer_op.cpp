@@ -19,7 +19,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("min_max_observer")
+REGISTER_NO_GRAD_USER_OP("min_max_observer")
     .Input("in")
     .Output("scale")
     .Output("zero_point")
