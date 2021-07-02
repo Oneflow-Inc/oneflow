@@ -107,8 +107,6 @@ class StackFunctionNode final : public FunctionNode {
 
  private:
   bool is_in_stack_;
-  std::vector<std::function<const std::shared_ptr<Tensor>&(const std::shared_ptr<Tensor>&)>>
-      post_hooks_;
 };
 
 class StackAutogradEngine final : public AutogradEngine {
