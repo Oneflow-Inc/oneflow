@@ -1,7 +1,9 @@
 name: Simple CI
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [review_requested]
+    branches:
+      - "*"
   push:
     branches:
       - master
@@ -22,6 +24,7 @@ jobs:
           access_token: ${{ github.token }}
   hosted:
     name: CPU-only
+    if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot'))
     runs-on: ${{ matrix.os }}
     needs: [cancel_previous]
     strategy:
@@ -127,6 +130,7 @@ jobs:
         shell: bash
       - name: Build (ALL)
         if: always()
+        continue-on-error: ${{ startsWith(runner.os, 'macOS') && matrix.cmake_generator == 'Ninja' && matrix.build_shared_libs == 'ON' }}
         run: |
           mkdir -p build
           cd build
