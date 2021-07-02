@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("count_not_finite")
+REGISTER_NO_GRAD_USER_OP("count_not_finite")
     .Input("x")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -41,7 +41,7 @@ REGISTER_USER_OP("count_not_finite")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("multi_count_not_finite")
+REGISTER_NO_GRAD_USER_OP("multi_count_not_finite")
     .InputWithMinimum("x", 1)
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
