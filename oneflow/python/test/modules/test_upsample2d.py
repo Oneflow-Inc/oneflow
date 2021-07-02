@@ -56,11 +56,8 @@ def _test_upsample_and_interpolate_nearest(test_case, device, in_size, out_size_
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    np_out = numpy_interpolate2d_nearest(np_in, out_size=out_size, scale_factor=scale_factor)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor)
-    print("np_out", np_out)
     print("torch_out", torch_out)
-    test_case.assertTrue(np.allclose(torch_out.cpu().numpy(), np_out, 1e-5, 1e-5))
     of_outs = []
     for it in m:
         of_outs.append(it(of_in))
@@ -90,17 +87,12 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_size, out_size
     if out_size is not None:
         m.append(flow.nn.Upsample(size=out_size, mode='bilinear'))
         m.append(flow.nn.interpolate(size=out_size, mode='bilinear'))
-        # m.append(flow.nn.UpsamplingBilinear2d(size=out_size, align_corners=False))
     elif scale_factor is not None:
         m.append(flow.nn.Upsample(scale_factor=scale_factor, mode='bilinear'))
         m.append(flow.nn.interpolate(scale_factor=scale_factor, mode='bilinear'))
-        # m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor, align_corners=False))
-        # out_size = [np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2)]
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor)
-    print("np_out", np_out)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear')
     print("torch_out", torch_out)
     of_outs = []
@@ -143,8 +135,7 @@ def _test_upsample_and_interpolate_bilinear_align_corners(test_case, device, in_
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    # np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor, )
-    # print("np_out", np_out)
+
     if out_size is None:
         pil_out = pil_in.resize(cv_out_size, resample=PIL.Image.BILINEAR)
         cv_out = cv2.resize(cv_in, cv_out_size, interpolation=cv2.INTER_LINEAR)
@@ -240,8 +231,7 @@ def _test_upsample_and_interpolate_bilinear_backward(test_case, device, in_size,
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    np_out = numpy_bilinear_interpolation(np_in, out_size=out_size, scale_factor=scale_factor)
-    print("np_out", np_out)
+
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear')
     torch_out = torch_out.sum()
     torch_out.backward()
@@ -289,19 +279,9 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(test_case, de
         m.append(flow.nn.Upsample(scale_factor=scale_factor, mode='bilinear', align_corners=True))
         m.append(flow.nn.interpolate(scale_factor=scale_factor, mode='bilinear', align_corners=True))
         m.append(flow.nn.UpsamplingBilinear2d(scale_factor=scale_factor))
-        cv_out_size = tuple(np.floor(scale_factor * in_size).astype(np.uint8) for _ in range(2))
     else:
         raise ValueError("Either out_size or scale_factor should not be None")
 
-    if out_size is None:
-        pil_out = pil_in.resize(cv_out_size, resample=PIL.Image.BILINEAR)
-        cv_out = cv2.resize(cv_in, cv_out_size, interpolation=cv2.INTER_LINEAR)
-    else:
-        print(cv_in.shape)
-        pil_out = pil_in.resize(out_size, resample=PIL.Image.BILINEAR)
-        cv_out = cv2.resize(cv_in, out_size, interpolation=cv2.INTER_LINEAR)
-    print("pil_out", np.array(pil_out))
-    print("cv_out", cv_out)
     torch_out = torch.nn.functional.interpolate(torch_in, size=out_size, scale_factor=scale_factor, mode='bilinear')
     torch_out = torch_out.sum()
     torch_out.backward()
@@ -319,155 +299,6 @@ def _test_upsample_and_interpolate_bilinear_align_corners_backward(test_case, de
         print("of_out_grad", of_in.grad)
         test_case.assertTrue(np.allclose(of_in.grad.numpy(), torch_in.grad.numpy(), 1e-5, 1e-5))
         of_in.grad = None
-
-
-
-def numpy_interpolate2d_nearest(img, scale_factor=None, out_size=None):
-    r"""Nearest interpolate2d implemented with numpy.
-
-        Args:
-            img (Tuple[int, int, int, int]): input numpy
-            scale_factor(Float): scale ratios
-            out_size (Tuple[int, int]): output sizes
-            img (Tuple[int, int, int, int]): output numpy
-
-        Shape:
-            - Input: :math:`(N, C{in}, H_{in}, W_{in})
-            - Output: :math:`(N_{out}, C_{out},H_{out}, W_{out})` where
-
-        .. math::
-              H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
-
-        .. math::
-              W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
-    """
-    w = img.shape[3]
-    h = img.shape[2]
-    c = img.shape[1]
-    n = img.shape[0]
-
-    if out_size is not None:
-        h_out = out_size[0]
-        w_out = out_size[1]
-        h_ratios = h_out / h
-        w_ratios = w_out / w
-    elif scale_factor is not None:
-        assert isinstance(scale_factor, float)
-        h_ratios = scale_factor
-        w_ratios = scale_factor
-        h_out = np.floor(scale_factor * h).astype(np.int32)
-        w_out = np.floor(scale_factor * w).astype(np.int32)
-    else:
-        raise ValueError("Either out_size or scale_factor should not be None")
-
-    out_img = np.zeros([n, c, h_out, w_out], dtype=np.float32)
-
-    # mass assignment version
-    y_pos = np.arange(h_out)
-    x_pos = np.arange(w_out)
-    y_pos = np.floor(y_pos / h_ratios).astype(np.int32)
-    x_pos = np.floor(x_pos / w_ratios).astype(np.int32)
-    y_pos[y_pos >= h] = h - 1
-    x_pos[x_pos >= w] = w - 1
-
-    y_pos = y_pos.reshape(y_pos.shape[0], 1)
-    y_pos = np.tile(y_pos, (1, w_out))
-    x_pos = np.tile(x_pos, (h_out, 1))
-    assert y_pos.shape == x_pos.shape
-    out_img[:, :, :, :] = img[:, :, y_pos[:, :], x_pos[:, :]]
-
-    # navie loop version
-    # for it in range(n):
-    #     for ch in range(c):
-    # for i in range(h_out):
-    #     for j in range(w_out):
-    #         org_i = min(floor(i / h_ratios), h - 1)
-    #         org_j = min(floor(j / w_ratios), w - 1)
-    #         out_img[:, :, i, j] = img[:, :, org_i, org_j]
-
-    return out_img
-
-
-def numpy_bilinear_interpolation(img, scale_factor=None, out_size=None):
-    r"""Bilinear interpolate2d implemented with numpy.
-
-        Args:
-            img (Tuple[int, int, int, int]): input numpy
-            scale_factor(Float): scale ratios
-            out_size (Tuple[int, int]): output sizes
-            img (Tuple[int, int, int, int]): output numpy
-
-        Shape:
-            - Input: :math:`(N, C{in}, H_{in}, W_{in})
-            - Output: :math:`(N_{out}, C_{out},H_{out}, W_{out})` where
-
-        .. math::
-              H_{out} = \left\lfloor H_{in} \times \text{scale_factor} \right\rfloor
-
-        .. math::
-              W_{out} = \left\lfloor W_{in} \times \text{scale_factor} \right\rfloor
-    """
-    w = img.shape[3]
-    h = img.shape[2]
-    c = img.shape[1]
-    n = img.shape[0]
-    eps = 2.220446049250313e-16
-
-    if out_size is not None:
-        h_out = out_size[0]
-        w_out = out_size[1]
-        h_ratios = h_out / h
-        w_ratios = w_out / w
-    elif scale_factor is not None:
-        assert isinstance(scale_factor, float)
-        h_ratios = scale_factor
-        w_ratios = scale_factor
-        h_out = np.floor(scale_factor * h).astype(np.int32)
-        w_out = np.floor(scale_factor * w).astype(np.int32)
-    else:
-        raise ValueError("Either out_size or scale_factor should not be None")
-
-    out_img = np.zeros([n, c, h_out, w_out], dtype=np.float32)
-
-    for it in range(n):
-        for ch in range(c):
-            for out_y in range(h_out):
-                for out_x in range(w_out):
-                    # in_x = round(out_x / w_ratios)  # src + 0.5 = (dst +0.5) * scale
-                    # in_y = round(out_y / h_ratios)
-                    in_x = (out_x + 0.5) / w_ratios - 0.5
-                    in_y = (out_y + 0.5) / h_ratios - 0.5
-
-                    in_x = max(0, in_x)
-                    in_y = max(0, in_y)
-
-                    in_x_0 = floor(in_x)
-                    in_y_0 = floor(in_y)
-                    in_x_1 = min(ceil(in_x + eps), w - 1)
-                    in_y_1 = min(ceil(in_y + eps), h - 1)
-
-                    flag_x = 1
-                    flag_y = 1
-                    if in_x_1 > w - 1:
-                        flag_x = 0
-                    if in_y_1 > h - 1:
-                        flag_y = 0
-
-                    x_lambda_0 = in_x - in_x_0
-                    x_lambda_1 = 1 - in_x
-
-                    y_lambda_0 = in_y - in_y_0
-                    y_lambda_1 = 1 - in_y
-
-
-
-                    value0 = x_lambda_1 * img[it, ch, in_y_0, in_x_0] + x_lambda_0 * img[
-                        it, ch, in_y_0, in_x_1]
-                    value1 = y_lambda_1 * img[it, ch, in_y_1, in_x_0] + y_lambda_0 * img[
-                        it, ch, in_y_1, in_x_1]
-                    out_img[it, ch, out_y, out_x] = (in_y_1 - in_y) * value0 + (in_y - in_y_0) * value1
-    return out_img
-
 
 
 @unittest.skipIf(
