@@ -255,6 +255,33 @@ class Tensor:
         else:
             return None
 
+    @grad.setter
+    def grad(self, new_grad):
+        if self._local_or_consistent_tensor is not None:
+            if new_grad is None:
+                self._local_or_consistent_tensor.set_grad(None)
+            else:
+                new_grad_detach = new_grad.detach()
+                self.check_grad(self._local_or_consistent_tensor.grad, new_grad_detach)
+                self._local_or_consistent_tensor.set_grad(new_grad)
+        else:
+            if new_grad is None:
+                self._undetermined_tensor.set_grad(None)
+            else:
+                new_grad_detach = new_grad.detach()
+                self.check_grad(self._undetermined_tensor.grad, new_grad_detach)
+                self._undetermined_tensor.set_grad(new_grad)
+
+    @staticmethod
+    def check_grad(grad, new_grad):
+        print(grad.dtype, new_grad.dtype)
+        print(grad.device, new_grad.device)
+        print(grad.dtype, new_grad.dtype)
+
+
+
+
+
     @property
     def grad_fn(self):
         if self._local_or_consistent_tensor is not None:
@@ -490,14 +517,6 @@ class Tensor:
     @register_local_tensor_method()
     def __lt__(self, other):
         return self.lt(other)
-
-    @register_local_tensor_method()
-    def __ge__(self, other):
-        return self.ge(other)
-
-    @register_local_tensor_method()
-    def __le__(self, other):
-        return self.le(other)
 
     def __array__(self):
         TODO()
