@@ -374,6 +374,8 @@ class Tensor:
         def get_canonical_index(index, length, *, start=0):
             if index < 0:
                 index += length
+            if index > length or index < 0:
+                raise IndexError(f"Index should be in [0, {length}), but got {index}")
             return max(min(index, length), start)
 
         def get_slice_if_int(x):
@@ -428,21 +430,43 @@ class Tensor:
             )
         elif isinstance(key, int):
             squeeze_dims = [0]
+        else:
+            # do nothing
+            pass
 
         start, stop, step, _ = self._get_slice_obj(key)
         res = flow.experimental.slice(self, list(zip(start, stop, step)))
-        return res.squeeze(dim=squeeze_dims)
+        if squeeze_dims is not None:
+            res = res.squeeze(dim=squeeze_dims)
+        return res
 
     @_auto_determine
     @register_local_tensor_method()
     def __setitem__(self, key, value):
         if isinstance(key, tuple):
             key = self._transform_ellipsis_type(key)
+            unsqueeze_dims = list(
+                filter(lambda idx: isinstance(key[idx], int), range(len(key)))
+            )
+        elif isinstance(key, int):
+            unsqueeze_dims = [0]
+        else:
+            unsqueeze_dims = []
+
         start, stop, step, shape = self._get_slice_obj(key)
         if isinstance(value, (int, float)):
             scalar = value
             value = flow.Tensor(*shape)
             value.fill_(scalar)
+        else:
+            prepended_broadcasting_dims = range(
+                len(self.shape) - len(unsqueeze_dims) - len(value.shape)
+            )
+            for dim in prepended_broadcasting_dims:
+                value = flow.experimental.unsqueeze(value, dim)
+            for dim in unsqueeze_dims:
+                value = flow.experimental.unsqueeze(value, dim)
+            value = flow.experimental.expand(value, *shape)
 
         flow.experimental.tmp.logical_slice_assign(
             self, value, list(zip(start, stop, step))
@@ -464,6 +488,14 @@ class Tensor:
     @register_local_tensor_method()
     def __lt__(self, other):
         return self.lt(other)
+
+    @register_local_tensor_method()
+    def __ge__(self, other):
+        return self.ge(other)
+
+    @register_local_tensor_method()
+    def __le__(self, other):
+        return self.le(other)
 
     def __array__(self):
         TODO()

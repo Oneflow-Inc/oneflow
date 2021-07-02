@@ -28,7 +28,7 @@ from oneflow._oneflow_internal.autograd import backward as backward_api
 def grad(
     outputs: Union[Tensor, Sequence[Tensor]],
     inputs: Union[Tensor, Sequence[Tensor]],
-    out_grads: Union[Tensor, Sequence[Tensor], None],
+    out_grads: Union[Tensor, Sequence[Tensor], None] = None,
     retain_graph: bool = False,
     create_graph: bool = False,
 ) -> Tuple[Tensor]:

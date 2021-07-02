@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("ofrecord_image_classification_reader")
     .Output("image")
     .Output("label")
     .Attr<std::string>("data_dir")

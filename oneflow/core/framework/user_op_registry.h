@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/user_op_def.pb.h"
 #include "oneflow/core/framework/user_op_attr.pb.h"
 #include "oneflow/core/framework/user_op_conf.pb.h"
@@ -41,7 +42,7 @@ class DeviceInferContext;
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
 using DataTypeInferFn = std::function<Maybe<void>(InferContext*)>;
-using DeviceInferFn = std::function<Maybe<const Device>(DeviceInferContext*)>;
+using DeviceInferFn = std::function<Maybe<Symbol<Device>>(DeviceInferContext*)>;
 using GetSbpFn = std::function<Maybe<void>(SbpContext*)>;
 using SbpSignatureInferFn = std::function<Maybe<void>(InferSbpSignatureFnContext*)>;
 using InputArgModifier = InputBlobModifier;
@@ -56,11 +57,12 @@ using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTime
 using ParallelDistributionInferFn = std::function<Maybe<void>(InferParallelDistributionFnContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), same_output_regst_num(-1) {}
+  OpRegistryResult() : cpu_only_supported(false), no_grad(false), same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
+  bool no_grad;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -97,6 +99,7 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
+  OpRegistry& NoGrad();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
   __attribute__((deprecated)) OpRegistry& Attr(const std::string& name, AttrType type);

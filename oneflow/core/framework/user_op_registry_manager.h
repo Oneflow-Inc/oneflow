@@ -75,6 +75,10 @@ struct UserOpRegisterTrigger final {
 
 #define REGISTER_CPU_ONLY_USER_OP(name) REGISTER_USER_OP(name).SupportCpuOnly()
 
+#define REGISTER_NO_GRAD_USER_OP(name) REGISTER_USER_OP(name).NoGrad()
+
+#define REGISTER_NO_GRAD_CPU_ONLY_USER_OP(name) REGISTER_NO_GRAD_USER_OP(name).SupportCpuOnly()
+
 #define REGISTER_USER_OP_GRAD(name)                                                               \
   static ::oneflow::user_op::UserOpRegisterTrigger<::oneflow::user_op::OpGradRegistry> OF_PP_CAT( \
       g_register_trigger, __COUNTER__) =                                                          \

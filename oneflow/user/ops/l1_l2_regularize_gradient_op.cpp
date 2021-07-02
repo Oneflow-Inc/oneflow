@@ -38,7 +38,7 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("l1_l2_regularize_gradient")
+REGISTER_NO_GRAD_USER_OP("l1_l2_regularize_gradient")
     .Input("model")
     .Input("model_diff")
     .Output("out")
