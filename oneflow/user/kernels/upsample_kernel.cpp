@@ -69,16 +69,19 @@ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size, bool al
 template<typename T>
 T GetAreaPixelSourceIndex(const T scale, const int64_t dst_index, const int64_t in_len,
                           bool align_corners) {
+  T src_index;
   if (align_corners) {
-    return scale * static_cast<T>(dst_index);
+    src_index = scale * static_cast<T>(dst_index);
   } else {
-    T src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
-    src_index = (src_index < 0) ? 0 : src_index;
-    if (scale > static_cast<T>(1.0)) {
-      src_index = src_index > in_len - 2 ? in_len - 2 : src_index;
-    }
-    return src_index;
+    src_index = (static_cast<T>(dst_index) + 0.5f) * scale - 0.5f;
   }
+  int64_t sx = static_cast<int64_t>(floorf(src_index));
+
+  src_index = (sx < 0) ? 0 : src_index;
+  if (scale > static_cast<T>(1.0)) {
+    src_index = sx >= in_len - 1 ? in_len - 2 : static_cast<T>(sx);
+  }
+  return src_index;
 }
 
 template<typename T>
@@ -123,12 +126,9 @@ static void UpsampleBilinearForward(const int64_t elem_cnt, const T* in_dptr,
     const T top_right = in_dptr[top_offset + params.right_w_index];
     const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
     const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    // const T top = top_left + (top_right - top_left) * params.w_lerp;
-    // const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    // out_dptr[index] = top + (bottom - top) * params.h_lerp;
-    const T u = params.h_lerp, v = params.w_lerp;
-    out_dptr[index] = (1 - u) * (1 - v) * top_left + (1 - u) * v * top_right
-                      + u * (1 - v) * bottom_left + u * v * bottom_right;
+    const T top = top_left + (top_right - top_left) * params.w_lerp;
+    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
+    out_dptr[index] = top + (bottom - top) * params.h_lerp;
   }
 }
 
