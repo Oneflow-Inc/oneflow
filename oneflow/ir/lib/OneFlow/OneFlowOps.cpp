@@ -226,15 +226,19 @@ OpFoldResult OpTrait::impl::foldInvolutionOfIdenticalPlacement(Operation* op) {
                      rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
 
       attributes.set("scope_symbol_id", mul_op.scope_symbol_idAttr());
+      SmallVector<::mlir::Value, 2> operands;
+      operands.push_back(cast_op.x());
+      operands.push_back(mul_op.scalar());
       auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(),
                                                 /* resultTypes */ mul_op->getResultTypes(),
-                                                /* operands */ cast_op->getOperands(),
+                                                /* operands */ operands,
                                                 /* attributes */ attributes);
       cast_op.replaceAllUsesWith(created);
       cast_op.erase();
 
       // create a function to be lowered
-      auto func_type = rewriter.getFunctionType(llvm::None, llvm::None);
+      auto func_type =
+          rewriter.getFunctionType(created->getOperandTypes(), created.getResultTypes());
       auto function = mlir::FuncOp::create(mul_op->getLoc(), op_name, func_type);
       rewriter.getBlock()->getParent()->getParentOp()->getBlock()->push_back(function);
       return created->getResults();
