@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("abcd")
+REGISTER_USER_OP("return_first_input")
     .InputWithMinimum("in", 1)
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {

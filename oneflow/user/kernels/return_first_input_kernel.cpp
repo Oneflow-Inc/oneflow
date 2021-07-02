@@ -20,10 +20,10 @@ namespace oneflow {
 
 namespace {
 
-class AbcdKernel final : public user_op::OpKernel {
+class ReturnFirstInputKernel final : public user_op::OpKernel {
  public:
-  AbcdKernel() = default;
-  ~AbcdKernel() override = default;
+  ReturnFirstInputKernel() = default;
+  ~ReturnFirstInputKernel() override = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -40,7 +40,9 @@ class AbcdKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("abcd").SetCreateFn<AbcdKernel>().SetIsMatchedHob(user_op::HobTrue());
+REGISTER_USER_KERNEL("return_first_input")
+    .SetCreateFn<ReturnFirstInputKernel>()
+    .SetIsMatchedHob(user_op::HobTrue());
 
 }  // namespace
 }  // namespace oneflow

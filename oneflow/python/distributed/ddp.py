@@ -68,7 +68,7 @@ def DDP(module: Module):
         param_list = module2params[module]
         for item in param_list.values():
             item[0], item[1] = False, False
-        output = flow.experimental.abcd(output, *param_list.keys())
+        output = flow.experimental.return_first_input(output, *param_list.keys())
         return output
 
     module.register_forward_hook(hook)
