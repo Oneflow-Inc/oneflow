@@ -196,6 +196,8 @@ jobs:
           img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/oneflow-manylinux2014-cuda10.2/0.1"
           pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
           echo "pip_cache_docker_args=${pip_cache_docker_args}" >> $GITHUB_ENV
+
+          echo "pip_index_mirror=https://pypi.tuna.tsinghua.edu.cn/simple" >> $GITHUB_ENV
       - name: Fix permissions
         run: |
           docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
@@ -221,7 +223,7 @@ jobs:
             ${{ env.extra_docker_args }} ${{ env.pip_cache_docker_args }} \
             -v ${wheelhouse_dir}:${wheelhouse_dir} --env ONEFLOW_WHEEL_PATH=${wheelhouse_dir} \
             oneflow-manylinux2014-cuda10.2:0.1 \
-            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
+            bash -c "export PATH=/opt/python/cp36-cp36m/bin:$PATH && source scl_source enable devtoolset-7 && python3 -m pip config set global.index-url ${{ env.pip_index_mirror }} && bash ci/test/try_install.sh && bash ci/test/1node_custom_op_test.sh"
       - name: Remove cache
         if: ${{ failure() }}
         run: |
