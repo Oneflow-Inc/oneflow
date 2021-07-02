@@ -36,13 +36,13 @@ struct InitializeWithConfUtil final {
 #undef MAKE_INITIALIZE_SWITCH_ENTRY
 };
 
-const cfg::ParallelDistribution GetParallelDistribution(const KernelConf& kernel_conf,
-                                                        const std::string& bn_in_op) {
+cfg::ParallelDistribution GetParallelDistribution(const KernelConf& kernel_conf,
+                                                  const std::string& bn_in_op) {
   const auto& parallel_distribution_map =
       kernel_conf.op_attribute().parallel_distribution_signature().bn_in_op2parallel_distribution();
   const auto& it = parallel_distribution_map.find(bn_in_op);
   CHECK(it != parallel_distribution_map.end());
-  return it->second;
+  return cfg::ParallelDistribution(it->second);
 }
 
 class OnDemandHostBlob final {
@@ -68,7 +68,7 @@ class OnDemandHostBlob final {
 
  private:
   void Init() {
-    header.resize(blob_desc_->ByteSizeOfBlobHeader());
+    header.resize(blob_desc_->AlignedByteSizeOfBlobHeader());
     data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
     MemoryCase host_mem_case;
     host_mem_case.mutable_host_mem();

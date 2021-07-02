@@ -7,7 +7,6 @@ message CudaPinnedMemory {
 
 message HostMemory {
   optional CudaPinnedMemory cuda_pinned_mem = 1;
-  optional bool used_by_network = 2 [default = false];
 }
 
 message DeviceCudaMemory {

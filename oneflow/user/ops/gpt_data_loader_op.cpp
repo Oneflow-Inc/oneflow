@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .OptionalInput("iteration")
     .Output("out")
     .Attr<std::string>("data_file_prefix")
@@ -36,12 +36,12 @@ REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       int64_t sample_len = ctx->Attr<int64_t>("seq_length") + ctx->Attr<int64_t>("label_length");
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_shape() = Shape({batch_size, sample_len});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
       *out_desc->mut_data_type() = ctx->Attr<DataType>("dtype");
       return Maybe<void>::Ok();
     })
@@ -88,6 +88,7 @@ REGISTER_CPU_ONLY_USER_OP("megatron_gpt_mmap_data_loader")
       CHECK(input_modifier != nullptr);
       input_modifier->set_is_mutable(true);
       input_modifier->set_requires_grad(false);
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace oneflow

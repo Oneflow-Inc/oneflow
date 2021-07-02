@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -39,7 +39,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                       && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
 
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
       int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -70,7 +70,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
       CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
 
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
       CHECK_EQ_OR_RETURN(output_dtype,
                          DataType::kFloat);  // only support float now; for float16 in future
@@ -79,7 +79,7 @@ REGISTER_CPU_ONLY_USER_OP("crop_mirror_normalize_from_tensorbuffer")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
+REGISTER_NO_GRAD_USER_OP("crop_mirror_normalize_from_uint8")
     .Input("in")
     .OptionalInput("mirror")
     .Output("out")
@@ -97,7 +97,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
       CHECK_OR_RETURN(mirror_tensor.shape().NumAxes() == 1
                       && in_tensor.shape().At(0) == mirror_tensor.shape().At(0));
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t N = in_tensor.shape().At(0);
       int64_t H = ctx->Attr<int64_t>("crop_h");
       int64_t W = ctx->Attr<int64_t>("crop_w");
@@ -135,7 +135,7 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       const user_op::TensorDesc& mirror_tensor = ctx->InputTensorDesc("mirror", 0);
       CHECK_EQ_OR_RETURN(mirror_tensor.data_type(), DataType::kInt8);
 
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       DataType output_dtype = ctx->Attr<DataType>("output_dtype");
       CHECK_EQ_OR_RETURN(output_dtype,
                          DataType::kFloat);  // only support float now; for float16 in future
@@ -143,20 +143,20 @@ REGISTER_USER_OP("crop_mirror_normalize_from_uint8")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("coin_flip")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("coin_flip")
     .Output("out")
     .Attr<float>("probability", 0.5)
     .Attr<int64_t>("batch_size")
     .Attr<int64_t>("seed", -1)
     .Attr<bool>("has_seed", false)
     .SetLogicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       *out_tensor->mut_shape() = Shape({batch_size});
       return Maybe<void>::Ok();
     })
     .SetPhysicalTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       int64_t batch_size = ctx->Attr<int64_t>("batch_size");
       const ParallelContext& parallel_ctx = ctx->parallel_ctx();
       const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
@@ -173,12 +173,12 @@ REGISTER_CPU_ONLY_USER_OP("coin_flip")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       *out_tensor->mut_data_type() = DataType::kInt8;
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("image_random_crop")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_random_crop")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("num_attempts", 10)
@@ -188,7 +188,7 @@ REGISTER_CPU_ONLY_USER_OP("image_random_crop")
     .Attr<std::vector<float>>("random_aspect_ratio", {0.75, 1.333333})
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       *out_tensor->mut_shape() = in_tensor.shape();
       *out_tensor->mut_is_dynamic() = in_tensor.is_dynamic();
       return Maybe<void>::Ok();

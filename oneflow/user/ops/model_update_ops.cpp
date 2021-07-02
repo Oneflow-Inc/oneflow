@@ -347,7 +347,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
-REGISTER_USER_OP("sgd_update")
+REGISTER_NO_GRAD_USER_OP("sgd_update")
     .Input("model")
     .Input("model_diff")
     .OptionalInput("learning_rate")
@@ -376,7 +376,7 @@ REGISTER_USER_OP("sgd_update")
     })
     .SetDataTypeInferFn(InferSGDUpdateDataType);
 
-REGISTER_USER_OP("indexed_slices_sgd_update")
+REGISTER_NO_GRAD_USER_OP("indexed_slices_sgd_update")
     .Input("model")
     .Input("model_diff_indices")
     .Input("model_diff_values")
@@ -410,7 +410,7 @@ REGISTER_USER_OP("indexed_slices_sgd_update")
     })
     .SetDataTypeInferFn(InferIndexedSlicesSGDUpdateDataType);
 
-REGISTER_USER_OP("momentum_update")
+REGISTER_NO_GRAD_USER_OP("momentum_update")
     .Input("model")
     .Input("model_diff")
     .Input("momentum")
@@ -443,7 +443,7 @@ REGISTER_USER_OP("momentum_update")
     })
     .SetDataTypeInferFn(InferMomentumUpdateDataType);
 
-REGISTER_USER_OP("indexed_slices_momentum_update")
+REGISTER_NO_GRAD_USER_OP("indexed_slices_momentum_update")
     .Input("model")
     .Input("model_diff_indices")
     .Input("model_diff_values")
@@ -482,7 +482,7 @@ REGISTER_USER_OP("indexed_slices_momentum_update")
     })
     .SetDataTypeInferFn(InferIndexedSlicesMomentumUpdateDataType);
 
-REGISTER_USER_OP("adam_update")
+REGISTER_NO_GRAD_USER_OP("adam_update")
     .Input("model")
     .Input("model_diff")
     .OptionalInput("learning_rate")
@@ -515,7 +515,7 @@ REGISTER_USER_OP("adam_update")
     .SetInputArgModifyFn(AdamInputArgModifyFn)
     .SetDataTypeInferFn(InferAdamUpdateDataType);
 
-REGISTER_USER_OP("indexed_slices_adam_update")
+REGISTER_NO_GRAD_USER_OP("indexed_slices_adam_update")
     .Input("model")
     .Input("model_diff_indices")
     .Input("model_diff_values")
@@ -556,7 +556,7 @@ REGISTER_USER_OP("indexed_slices_adam_update")
     .SetInputArgModifyFn(AdamInputArgModifyFn)
     .SetDataTypeInferFn(InferIndexedSlicesAdamUpdateDataType);
 
-REGISTER_USER_OP("lamb_update")
+REGISTER_NO_GRAD_USER_OP("lamb_update")
     .Input("m")
     .Input("v")
     .Input("beta1_t")
@@ -576,9 +576,10 @@ REGISTER_USER_OP("lamb_update")
     .SetTensorDescInferFn(InferLambUpdateTensorDesc)
     // every bn has sbp broadcast signature
     .SetInputArgModifyFn(LambInputArgModifyFn)
-    .SetDataTypeInferFn(InferLambUpdateDataType);
+    .SetDataTypeInferFn(InferLambUpdateDataType)
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_USER_OP("adam_bias_correction_learning_rate")
+REGISTER_NO_GRAD_USER_OP("adam_bias_correction_learning_rate")
     .Input("learning_rate")
     .Input("train_step")
     .Output("out")
@@ -586,18 +587,18 @@ REGISTER_USER_OP("adam_bias_correction_learning_rate")
     .Attr<float>("beta2", 0.999)
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputShape("out", 0) = ctx->InputShape("learning_rate", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("out", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("learning_rate", 0);
+      *ctx->OutputIsDynamic("out", 0) = ctx->InputIsDynamic("learning_rate", 0);
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       *ctx->OutputDType("out", 0) = ctx->InputDType("learning_rate", 0);
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 // every bn has sbp broadcast signature
 
-REGISTER_USER_OP("rmsprop_update")
+REGISTER_NO_GRAD_USER_OP("rmsprop_update")
     .Input("model")
     .Input("model_diff")
     .OptionalInput("learning_rate")
@@ -647,7 +648,7 @@ REGISTER_USER_OP("rmsprop_update")
     })
     .SetDataTypeInferFn(InferRmsPropUpdateDataType);
 
-REGISTER_USER_OP("lars_update")
+REGISTER_NO_GRAD_USER_OP("lars_update")
     .Input("model")
     .Input("model_diff")
     .Input("learning_rate")

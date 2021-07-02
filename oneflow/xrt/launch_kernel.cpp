@@ -87,7 +87,9 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
       xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
-      for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, pair.second}); }
+      for (auto& pair : sbp_signatures) {
+        cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
+      }
       const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &this->job_desc(), &parallel_ctx,
@@ -178,9 +180,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(
   run_options.return_params = return_params;
   bool block_until_done = true;
   if (device_type == DeviceType::kGPU) {
+#ifdef WITH_CUDA
     run_options.stream = ctx.device_ctx->cuda_stream();
     run_options.device_memory_limit = FLAGS_max_workspace_bytes;
     block_until_done = false;
+#else
+    UNIMPLEMENTED() << "wasn't compile with CUDA";
+#endif  // WITH_CUDA
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
     CHECK_EQ(device_type, DeviceType::kGPU);

@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_USER_OP("cast_to_tick")
+REGISTER_NO_GRAD_USER_OP("cast_to_tick")
     .Input("in")
     .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
@@ -53,7 +53,8 @@ REGISTER_USER_OP("cast_to_tick")
             out_distribution->add_sbp_parallel()->mutable_broadcast_parallel();
           }
           return Maybe<void>::Ok();
-        });
+        })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace
 

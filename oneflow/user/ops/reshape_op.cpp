@@ -41,7 +41,7 @@ Maybe<void> InferParallelDistributionFn(user_op::InferParallelDistributionFnCont
 Maybe<void> LogicalTensorDescInferFn(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
@@ -59,7 +59,7 @@ Maybe<void> TensorDescInferFn(user_op::InferContext* ctx) {
   CHECK_GE_OR_RETURN(shape.NumAxes(), 1);
   FOR_RANGE(int32_t, i, 0, shape.NumAxes()) { CHECK_GT_OR_RETURN(shape.At(i), 0); }
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
-  user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);

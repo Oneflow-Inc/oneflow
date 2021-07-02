@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from typing import List, Dict, Callable, Union, Iterator, Tuple
-from types import GeneratorType
+import collections
 
 import oneflow as flow
 
@@ -96,7 +96,7 @@ class Adam(Optimizer):
         self._default_options["scale"] = scale
 
         # Add parameters
-        if isinstance(parameters, GeneratorType):
+        if isinstance(parameters, collections.abc.Iterator):
             self.param_groups.append(ParamGroup(parameters, self._default_options))
         else:  # List[Dict]
             for param in parameters:

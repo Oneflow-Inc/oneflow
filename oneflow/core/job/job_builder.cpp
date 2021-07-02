@@ -124,7 +124,8 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
       const auto& op_name2sbp_sig = job_parallel_view_conf->op_name2sbp_signature_conf();
       const auto it = op_name2sbp_sig.find(pair.first);
       CHECK(it != op_name2sbp_sig.end());
-      CheckSbpSignatureAndParallelDistributionEquals(it->second, pair.second);
+      CheckSbpSignatureAndParallelDistributionEquals(
+          cfg::SbpSignature(it->second), cfg::ParallelDistributionSignature(pair.second));
     }
   }
   FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {

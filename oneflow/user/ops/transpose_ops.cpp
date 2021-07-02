@@ -35,7 +35,7 @@ REGISTER_USER_OP("transpose")
     .Attr<std::vector<int32_t>>("perm")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("input", 0);
-      user_op::TensorDesc* out_tensor_desc = ctx->TensorDesc4ArgNameAndIndex("output", 0);
+      user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("output", 0);
       const Shape& in_shape = in_tensor_desc.shape();
       Shape* out_shape = out_tensor_desc->mut_shape();
       const auto& perm = ctx->Attr<std::vector<int32_t>>("perm");

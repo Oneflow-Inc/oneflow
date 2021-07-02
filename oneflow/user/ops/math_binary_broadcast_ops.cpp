@@ -28,20 +28,20 @@ bool IsScalarTensor(const user_op::TensorDesc* tensor) {
 Maybe<void> InferTensorDescBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  user_op::TensorDesc* tensor_z = ctx->TensorDesc4ArgNameAndIndex("z", 0);
+  user_op::TensorDesc* tensor_z = ctx->OutputTensorDesc("z", 0);
 
   size_t output_num_axes = std::max(tensor_x.shape().NumAxes(), tensor_y.shape().NumAxes());
   if (IsScalarTensor(&tensor_x)) {
     *ctx->OutputShape("z", 0) = ctx->InputShape("y", 0);
-    *ctx->OutputIsDynamic4ArgNameAndIndex("z", 0) = ctx->InputIsDynamic4ArgNameAndIndex("y", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("y", 0);
   } else if (IsScalarTensor(&tensor_y)) {
     *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->OutputIsDynamic4ArgNameAndIndex("z", 0) = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
   } else {
     const auto& x_shape = CreateLeftExtendedShape(ShapeView(tensor_x.shape()), output_num_axes);
     const auto& y_shape = CreateLeftExtendedShape(ShapeView(tensor_y.shape()), output_num_axes);
     *ctx->OutputShape("z", 0) = ctx->InputShape("x", 0);
-    *ctx->OutputIsDynamic4ArgNameAndIndex("z", 0) = ctx->InputIsDynamic4ArgNameAndIndex("x", 0);
+    *ctx->OutputIsDynamic("z", 0) = ctx->InputIsDynamic("x", 0);
     Shape out_shape(x_shape);
     FOR_RANGE(int64_t, i, 0, x_shape.NumAxes()) {
       CHECK_OR_RETURN(x_shape.At(i) == 1 || y_shape.At(i) == 1 || x_shape.At(i) == y_shape.At(i))
@@ -181,20 +181,23 @@ Maybe<void> GetBinaryBroadcastSbpSignature(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_BINARY_BROADCAST_USER_OP(op_name, sbp_suffix, tensor_suffix) \
-  REGISTER_USER_OP(op_name)                                                   \
-      .Input("x")                                                             \
-      .Input("y")                                                             \
-      .Output("z")                                                            \
-      .SetTensorDescInferFn(InferTensorDescBinaryBroadcast##tensor_suffix)    \
-      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##sbp_suffix>)    \
-      .SetDataTypeInferFn(InferDataTypeBinaryBroadcast##tensor_suffix);
+#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix)      \
+  REGISTER_USER_OP(op_name)                                            \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastNormal)      \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastNormal);
 
-#define REGISTER_BINARY_BROADCAST_NORMAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Normal)
-
-#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix) \
-  REGISTER_BINARY_BROADCAST_USER_OP(op_name, suffix, Logical)
+#define REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP(op_name, suffix)     \
+  REGISTER_NO_GRAD_USER_OP(op_name)                                    \
+      .Input("x")                                                      \
+      .Input("y")                                                      \
+      .Output("z")                                                     \
+      .SetTensorDescInferFn(InferTensorDescBinaryBroadcastLogical)     \
+      .SetGetSbpFn(GetBinaryBroadcastSbpSignature<BinaryFunc##suffix>) \
+      .SetDataTypeInferFn(InferDataTypeBinaryBroadcastLogical);
 
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_NORMAL_USER_OP, MATH_BINARY_BROADCAST_FUNC_SEQ)
 OF_PP_FOR_EACH_TUPLE(REGISTER_BINARY_BROADCAST_LOGICAL_USER_OP,

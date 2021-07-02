@@ -19,14 +19,14 @@ namespace oneflow {
 
 namespace {
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     .Input("in")
     .Output("out")
     .Attr<Shape>("instance_shape")
     .Attr<DataType>("dtype")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       out->set_is_dynamic(in.is_dynamic());
       const auto& instance_shape = ctx->Attr<Shape>("instance_shape");
       DimVector dim_vec;
@@ -38,7 +38,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const auto data_type = ctx->Attr<DataType>("dtype");
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(IsPODDataType(data_type));
       *out->mut_data_type() = data_type;
       return Maybe<void>::Ok();
@@ -54,7 +54,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_tensor")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .Input("in")
     .Output("out")
     .Attr<int32_t>("instance_dims")
@@ -63,7 +63,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       const Shape& in_shape = in.shape();
       const auto& instance_dims = ctx->Attr<int32_t>("instance_dims");
       CHECK_LT_OR_RETURN(instance_dims, in_shape.NumAxes());
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       out->set_is_dynamic(in.is_dynamic());
       DimVector out_dim_vec;
       out_dim_vec.insert(out_dim_vec.end(), in_shape.dim_vec().cbegin(),
@@ -74,7 +74,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
       CHECK_OR_RETURN(IsPODDataType(in.data_type()));
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
     })
@@ -91,7 +91,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_to_tensor_buffer")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Output("out")
     .Attr<Shape>("shape")
     .Attr<std::vector<Shape>>("shape_list")
@@ -99,7 +99,7 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
     .Attr<DataType>("data_type")
     .Attr<bool>("dynamic_out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       const Shape& shape = ctx->Attr<Shape>("shape");
       const int64_t num_tensor_buffers = shape.elem_cnt();
       const std::vector<Shape>& shape_list = ctx->Attr<std::vector<Shape>>("shape_list");
@@ -111,12 +111,13 @@ REGISTER_CPU_ONLY_USER_OP("gen_tensor_buffer")
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = DataType::kTensorBuffer;
       return Maybe<void>::Ok();
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
     .Input("in")
     .OutputWithMinimum("out", 1)
     .Attr<Shape>("out_shape")
@@ -130,7 +131,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
       int64_t num_tensor_buffers = in.shape().elem_cnt();
       for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
         *out_i->mut_shape() = out_shape;
         out_i->set_is_dynamic(dynamic_out);
       }
@@ -143,7 +144,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
       CHECK_OR_RETURN(IsPODDataType(out_dtype));
       int64_t num_tensor_buffers = ctx->outputs().size();
       for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
         *out_i->mut_data_type() = out_dtype;
       }
       return Maybe<void>::Ok();
@@ -157,9 +158,10 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
-REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
     .Input("in")
     .OutputWithMinimum("out", 1)
     .Attr<std::vector<Shape>>("out_shapes")
@@ -173,7 +175,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
       const bool dynamic_out = ctx->Attr<bool>("dynamic_out");
       int64_t num_tensor_buffers = in.shape().elem_cnt();
       for (int64_t i = 0; i < num_tensor_buffers; ++i) {
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
         *out_i->mut_shape() = out_shapes[i];
         out_i->set_is_dynamic(dynamic_out);
       }
@@ -186,7 +188,7 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
       int64_t num_tensor_buffers = ctx->outputs().size();
       for (int64_t i = 0; i < num_tensor_buffers; ++i) {
         CHECK_OR_RETURN(IsPODDataType(out_dtypes[i]));
-        user_op::TensorDesc* out_i = ctx->TensorDesc4ArgNameAndIndex("out", i);
+        user_op::TensorDesc* out_i = ctx->OutputTensorDesc("out", i);
         *out_i->mut_data_type() = out_dtypes[i];
       }
       return Maybe<void>::Ok();
@@ -200,7 +202,8 @@ REGISTER_CPU_ONLY_USER_OP("tensor_buffer_to_list_of_tensors_v2")
           out_i_modifier->set_header_infered_before_compute(false);
         }
       }
-    });
+    })
+    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
 
 }  // namespace
 

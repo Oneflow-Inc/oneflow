@@ -21,7 +21,7 @@ REGISTER_USER_OP("square_sum")
     .Input("x")
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
       *y->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
@@ -45,13 +45,13 @@ REGISTER_USER_OP("multi_square_sum")
     .InputWithMinimum("x", 1)
     .Output("y")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
       *y->mut_shape() = Shape({1});
       return Maybe<void>::Ok();
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& x_0 = ctx->InputTensorDesc("x", 0);
-      user_op::TensorDesc* y = ctx->TensorDesc4ArgNameAndIndex("y", 0);
+      user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
       for (int64_t i = 1; i < ctx->input_size("x"); ++i) {
         const user_op::TensorDesc& x_i = ctx->InputTensorDesc("x", i);
         CHECK_EQ_OR_RETURN(x_i.data_type(), x_0.data_type());

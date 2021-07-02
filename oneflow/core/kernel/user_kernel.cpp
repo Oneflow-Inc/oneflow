@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/framework/op_kernel_infer_cache.h"
-#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/kernel/blob_tensor_view.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_conf.h"
@@ -199,7 +199,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
             kernel_conf.op_attribute().parallel_distribution_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = kernel_conf.op_attribute().sbp_signature();
+      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
@@ -229,10 +229,13 @@ class UserKernelOpInferContext : public user_op::InferContext {
         << "Arg (" << arg_name << "," << index << ") is not found";
     return &(it->second);
   }
+
   const user_op::TensorDesc& InputTensorDesc(const std::string& arg_name,
                                              int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->TensorDesc4ArgNameAndIndex(arg_name,
                                                                                     index);
+  }  user_op::TensorDesc* OutputTensorDesc(const std::string& arg_name, int32_t index) override {
+    return TensorDesc4ArgNameAndIndex(arg_name, index);
   }
   user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
                                                   int32_t index) override {
@@ -258,10 +261,10 @@ class UserKernelOpInferContext : public user_op::InferContext {
   DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return TensorDesc4ArgNameAndIndex(arg_name, index)->mut_data_type();
   }
-  bool InputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+  bool InputIsDynamic(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserKernelOpInferContext*>(this)->IsDynamic4ArgNameAndIndex(arg_name, index);
   }
-  bool* OutputIsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  bool* OutputIsDynamic(const std::string& arg_name, int32_t index) override {
     return IsDynamic4ArgNameAndIndex(arg_name, index);
   }
   bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
@@ -311,8 +314,30 @@ class UserKernelOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return parallel_ctx_.parallel_num(); }
 
+  const std::string& input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().input(arg_name, index);
+  }
+  const std::string& output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().output(arg_name, index);
+  }
+  bool has_input(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_input(arg_name, index);
+  }
+  bool has_output(const std::string& arg_name, int32_t index) const override {
+    return user_op_conf().has_output(arg_name, index);
+  }
+  int32_t input_size(const std::string& arg_name) const override {
+    return user_op_conf().input_size(arg_name);
+  }
+  int32_t output_size(const std::string& arg_name) const override {
+    return user_op_conf().output_size(arg_name);
+  }
+  const std::string& op_name() const override { return user_op_conf().op_name(); }
+  const std::string& op_type_name() const override { return user_op_conf().op_type_name(); }
+  const std::string& device_tag() const override { return user_op_conf().op_conf().device_tag(); }
+
  private:
-  const user_op::UserOpConfWrapper& user_op_conf() const override { return user_op_conf_; }
+  const user_op::UserOpConfWrapper& user_op_conf() const { return user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
     return user_op_conf().Attr4Name(attr_name);

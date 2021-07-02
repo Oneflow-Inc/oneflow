@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("in_top_k")
+REGISTER_NO_GRAD_USER_OP("in_top_k")
     .Input("targets")
     .Input("predictions")
     .Attr<int32_t>("k")
@@ -25,7 +25,7 @@ REGISTER_USER_OP("in_top_k")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& targets = ctx->InputTensorDesc("targets", 0);
       const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       CHECK_EQ_OR_RETURN(targets.shape().NumAxes(), 1);
       CHECK_EQ_OR_RETURN(predictions.shape().NumAxes(), 2);
       const bool is_dynamic = targets.is_dynamic();
@@ -43,7 +43,7 @@ REGISTER_USER_OP("in_top_k")
       CHECK_OR_RETURN(IsIndexDataType(targets.data_type()));
       const user_op::TensorDesc& predictions = ctx->InputTensorDesc("predictions", 0);
       CHECK_EQ_OR_RETURN(predictions.data_type(), DataType::kFloat);
-      user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
       *out->mut_data_type() = kInt8;
       return Maybe<void>::Ok();
     });

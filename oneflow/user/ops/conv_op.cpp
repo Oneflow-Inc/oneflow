@@ -38,7 +38,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(NDims, strides.size());
     CHECK_EQ_OR_RETURN(NDims, padding_before.size());
 
-    user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+    user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
     DimVector out_shape(NDims + 2);
     out_shape.at(0) = in.shape().At(0);
     const size_t c_dim = data_format == "channels_first" ? 1 : NDims + 1;
@@ -73,7 +73,7 @@ Maybe<void> InferTensorDesc4Conv(user_op::InferContext* ctx) {
     for (size_t i = 0; i < NDims; ++i) { weight_shape.at(idx_offset + i) = kernel_size.at(i); }
 
     const user_op::TensorDesc& weight = ctx->InputTensorDesc("weight", 0);
-    CHECK_EQ(weight.shape(), Shape(weight_shape));
+    CHECK_EQ_OR_RETURN(weight.shape(), Shape(weight_shape));
   }
 
   bool has_bias = ctx->has_input("bias", 0);
@@ -322,8 +322,7 @@ REGISTER_USER_OP("conv_data_grad")
         CHECK_EQ_OR_RETURN(add_to_output.shape(), x_like.shape());
       }
       *ctx->OutputShape("dx", 0) = ctx->InputShape("x_like", 0);
-      *ctx->OutputIsDynamic4ArgNameAndIndex("dx", 0) =
-          ctx->InputIsDynamic4ArgNameAndIndex("x_like", 0);
+      *ctx->OutputIsDynamic("dx", 0) = ctx->InputIsDynamic("x_like", 0);
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
@@ -395,7 +394,7 @@ REGISTER_USER_OP("conv_filter_grad")
         filter_diff_dim_vec.push_back(x.shape().dim_vec().back() / groups);
       }
 
-      user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+      user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
       *filter_diff->mut_shape() = Shape(filter_diff_dim_vec);
       filter_diff->set_is_dynamic(false);
 
@@ -413,7 +412,7 @@ REGISTER_USER_OP("conv_filter_grad")
       const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
       const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
       CHECK_EQ_OR_RETURN(x.data_type(), dy.data_type());
-      user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+      user_op::TensorDesc* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);
       *filter_diff->mut_data_type() = x.data_type();
       return Maybe<void>::Ok();
     });

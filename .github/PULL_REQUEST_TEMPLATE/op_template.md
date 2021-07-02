@@ -13,13 +13,13 @@
  - [ ] Op 反向梯度注册
 
 ### Kernel
- - [ ] CPU in:float32 
+ - [ ] CPU in:float32
  - [ ] CPU in:float64
  - [ ] CPU in:int32
  - [ ] CPU in:int64
  - [ ] CPU in:int8
 
- - [ ] GPU in:float32 
+ - [ ] GPU in:float32
  - [ ] GPU in:float64
  - [ ] GPU in:int32
  - [ ] GPU in:int64
@@ -33,12 +33,12 @@
  - [ ] Example 
 
 ### 测试
- - [ ] 单机单卡  CPU Test Case 
- - [ ] 单机单卡  GPU Test Case 
- - [ ] 单机多卡  CPU Test Case 
+ - [ ] 单机单卡  CPU Test Case
+ - [ ] 单机单卡  GPU Test Case
+ - [ ] 单机多卡  CPU Test Case
  - [ ] 单机多卡  GPU Test Case
- - [ ] 分布式  CPU Test Case  
- - [ ] 分布式  GPU Test Case  
+ - [ ] 分布式  CPU Test Case
+ - [ ] 分布式  GPU Test Case
 
 ## GPU 有效带宽
 带 GPU 的 Op，请参考 https://github.com/Oneflow-Inc/OneTeam/issues/167 测试有效带宽，并附带测试报告。
@@ -61,9 +61,9 @@ PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: sqrt_2_grad elapsed(ms): 0.2907
 
 ## PR Checklist
  - [ ] PR 标题语句通畅，明确表达 PR 内容，适合直接作为新版本发布时的 changelog
- - [ ] 代码格式化 
+ - [ ] 代码格式化
  - [ ] 已经本地编译通过
  - [ ] 已本地针对改动测试
  - [ ] 已添加 type 标签:(填写 type 标签名，如 `bug, enhancement, purge, feature, documentation`)
- - [ ] 已添加 component 标签:(填写 component 标签名，如 `op, system, eager, build, xla, python, ci, test, tooling, onnx`)
+ - [ ] 已添加 component 标签:(填写 component 标签名，如 `op, system, eager, build, xla, python, ci, test, tooling`)
  - [ ] Draft 转正式 PR 前已请人 Review

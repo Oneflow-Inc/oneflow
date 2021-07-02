@@ -48,10 +48,12 @@ ArgTuple::ArgTuple(const std::vector<std::string>& indexed_bns) : indexed_bns_(i
   for (const auto& bn : indexed_bns) { indexed_arg_name_and_index_.push_back(GetPair(bn)); }
   InitArgName2BnIndex2TensorTupleIndex(indexed_arg_name_and_index_,
                                        &arg_name2bn_index2tensor_tuple_index_);
+  for (int i = 0; i < indexed_bns.size(); ++i) {
+    bn_in_op2tensor_tuple_index_[indexed_bns.at(i)] = i;
+  }
 }
 
-std::size_t ArgTuple::TensorTupleIndex4ArgNameAndIndex(const std::string& name,
-                                                       int32_t index) const {
+int32_t ArgTuple::TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const {
   const auto& map = arg_name2bn_index2tensor_tuple_index_;
   const auto& iter = map.find(name);
   if (iter == map.end()) { return -1; }

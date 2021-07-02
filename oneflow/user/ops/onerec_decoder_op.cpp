@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("onerec_decoder")
     .Input("in")
     .Output("out")
     .Attr<std::string>("key")
@@ -30,7 +30,7 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
     .Attr<Shape>("batch_padding")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(in_tensor.shape().NumAxes() == 1 && in_tensor.shape().At(0) >= 1);
       const Shape& static_shape = ctx->Attr<Shape>("static_shape");
       DimVector dim_vec(1 + static_shape.NumAxes());
@@ -61,7 +61,7 @@ REGISTER_CPU_ONLY_USER_OP("onerec_decoder")
     })
     .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
-      user_op::TensorDesc* out_tensor = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+      user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
       CHECK_OR_RETURN(in_tensor.data_type() == DataType::kTensorBuffer);
       *out_tensor->mut_data_type() = ctx->Attr<DataType>("data_type");
       return Maybe<void>::Ok();
