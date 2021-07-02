@@ -43,7 +43,6 @@ class DType final {
 
   bool operator==(const DType& other) const { return this->data_type() == other.data_type(); }
 
-  operator DataType() const { return data_type_; }
   DataType data_type() const { return data_type_; }
   bool is_signed() const;
   bool is_complex() const;

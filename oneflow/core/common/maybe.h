@@ -308,7 +308,7 @@ inline bool MaybeIsOk(Maybe<void>&& maybe) {
 #define CHECK_OR_RETURN(expr)                                                    \
   if (!(expr))                                                                   \
   return Error::CheckFailedError().AddStackFrame(MAYBE_FAILED_LOC, __FUNCTION__) \
-         << " Check failed: " << OF_PP_STRINGIZE(expr) << "\t"
+         << " Check failed: " << OF_PP_STRINGIZE(expr) << " "
 
 #define CHECK_EQ_OR_RETURN(lhs, rhs) \
   CHECK_OR_RETURN((lhs) == (rhs)) << "(" << (lhs) << " vs " << (rhs) << ") "

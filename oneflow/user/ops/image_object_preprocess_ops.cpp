@@ -26,7 +26,7 @@ Maybe<void> GetSbp(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_CPU_ONLY_USER_OP("image_flip")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_flip")
     .Input("in")
     .Input("flip_code")
     .Output("out")
@@ -52,7 +52,7 @@ REGISTER_CPU_ONLY_USER_OP("image_flip")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("object_bbox_flip")
     .Input("bbox")
     .Input("image_size")
     .Input("flip_code")
@@ -84,7 +84,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_flip")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("object_bbox_scale")
     .Input("bbox")
     .Input("scale")
     .Output("out")
@@ -110,7 +110,7 @@ REGISTER_CPU_ONLY_USER_OP("object_bbox_scale")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
     .Input("poly")
     .Input("image_size")
     .Input("flip_code")
@@ -142,7 +142,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_flip")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
     .Input("poly")
     .Input("scale")
     .Output("out")
@@ -168,7 +168,7 @@ REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_scale")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("image_normalize")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_normalize")
     .Input("in")
     .Attr<std::vector<float>>("std")
     .Attr<std::vector<float>>("mean")
@@ -188,7 +188,7 @@ REGISTER_CPU_ONLY_USER_OP("image_normalize")
       return Maybe<void>::Ok();
     });
 
-REGISTER_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("object_segmentation_polygon_to_mask")
     .Input("poly")
     .Input("poly_index")
     .Input("image_size")

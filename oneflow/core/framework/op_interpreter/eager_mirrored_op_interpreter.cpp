@@ -41,12 +41,7 @@ Maybe<Symbol<Device>> GetDefaultDevice() { return Device::New("cpu", 0); }
 
 Maybe<EagerMirroredTensorImpl*> TensorImpl4Tensor(const std::shared_ptr<Tensor>& tensor) {
   CHECK_OR_RETURN(static_cast<bool>(tensor));
-  auto* tensor_ptr = dynamic_cast<MirroredTensor*>(tensor.get());
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr);
-  CHECK_NOTNULL_OR_RETURN(tensor_ptr->mut_impl());
-  auto* tensor_impl = dynamic_cast<EagerMirroredTensorImpl*>(tensor_ptr->mut_impl());
-  CHECK_NOTNULL_OR_RETURN(tensor_impl);
-  return tensor_impl;
+  return tensor->mut_eager_mirrored_tensor_impl();
 }
 
 }  // namespace
@@ -82,7 +77,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     op_parallel_desc = op_device->parallel_desc_ptr();
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
-      *tensor_impl->mut_device() = default_device;
+      *JUST(tensor_impl->mut_device()) = default_device;
     }
   } else {
     need_check_mem_case = false;
@@ -99,7 +94,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   JUST(user_op_expr.InferLogicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
-        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->tensor_meta().get();
+        return CHECK_JUST(TensorImpl4Tensor(inputs.at(i)))->mut_tensor_meta();
       },
       [&](int32_t i) -> TensorMeta* {
         return CHECK_JUST(TensorImpl4Tensor(outputs->at(i)))->mut_tensor_meta();
@@ -111,7 +106,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
   }
 
-  const auto kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Device(*op_device));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
