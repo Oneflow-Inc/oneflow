@@ -97,15 +97,6 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, const LogicalBlobId& lbi) {
   set_lbi(lbi);
 }
 
-void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  mem_case->mutable_host_mem()->set_used_by_network(true);
-}
-
-void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  CHECK(mem_case->has_host_mem());
-  mem_case->mutable_host_mem()->set_used_by_network(true);
-}
-
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());

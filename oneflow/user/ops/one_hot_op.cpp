@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("one_hot")
+REGISTER_NO_GRAD_USER_OP("one_hot")
     .Input("indices")
     .Output("out")
     .Attr<int64_t>("depth")

@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_CPU_ONLY_USER_OP("bernoulli")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("bernoulli")
     .Input("in")
     .Output("out")
     .Attr<int64_t>("seed", -1)
