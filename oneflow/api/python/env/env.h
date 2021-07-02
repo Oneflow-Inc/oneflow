@@ -60,8 +60,9 @@ inline Maybe<void> DestroyEnv() {
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get());
   if (!GlobalProcessCtx::IsMultiClient()) {
     if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
+  } else {
+    ClusterInstruction::HaltBarrier();
   }
-  ClusterInstruction::HaltBarrier();
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
