@@ -457,8 +457,8 @@ jobs:
         if: matrix.test_suite == 'cuda_new_interface'
         run: |
           set -x
-          echo "image_tag=pytorch/pytorch:1.9.0-cuda10.2-cudnn7-runtime" >> $GITHUB_ENV
-          echo "image_url=https://oneflow-static.oss-cn-beijing.aliyuncs.com/img/pytorchpytorch1.9.0-cuda10.2-cudnn7-runtime.tar.gz" >> $GITHUB_ENV
+          echo "image_tag=oneflow-test-v2:0.1" >> $GITHUB_ENV
+          echo "image_url=https://oneflow-static.oss-cn-beijing.aliyuncs.com/docker_images/oneflow-test-v2.0.1.tar.gz" >> $GITHUB_ENV
 
           img_cache_base_dir="$HOME/ci-cache/${{ github.repository }}/pytorch/pytorch/1.9.0-cuda10.2-cudnn7-runtime"
           pip_cache_docker_args="-v ${img_cache_base_dir}/dotcache/pip:/root/.cache/pip"
