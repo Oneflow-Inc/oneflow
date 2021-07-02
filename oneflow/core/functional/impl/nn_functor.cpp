@@ -48,21 +48,22 @@ class BiasAddFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class Conv2dFunctor {
+class ConvBaseFunctor {
  public:
-  Conv2dFunctor() {
-    conv_op_ =
-        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+  explicit ConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
+  virtual ~ConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
                            const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap conv_attrs;
-    std::vector<int32_t> kernel_size_vec;
-    for (int i = 0; i < 2; i++) { kernel_size_vec.push_back((weight->shape())->At(i + 2)); }
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    for (int i = 0; i < num_spatial_dims_; i++) {
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + 2));
+    }
     JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
@@ -81,9 +82,26 @@ class Conv2dFunctor {
     }
   }
 
- private:
+ protected:
   std::shared_ptr<OpExpr> conv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  int32_t num_spatial_dims_;
+};
+
+class Conv1dFunctor : public ConvBaseFunctor {
+ public:
+  Conv1dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/1) {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv1d").Input("in").Input("weight").Output("out").Build());
+  }
+};
+
+class Conv2dFunctor : public ConvBaseFunctor {
+ public:
+  Conv2dFunctor() : ConvBaseFunctor(/*num_spatial_dims_=*/2) {
+    conv_op_ =
+        CHECK_JUST(one::OpBuilder("conv2d").Input("in").Input("weight").Output("out").Build());
+  }
 };
 
 class MatMulBaseFunctor {
@@ -379,6 +397,7 @@ class PadFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::BiasAddFunctor>("BiasAdd");
+  m.add_functor<impl::Conv1dFunctor>("Conv1d");
   m.add_functor<impl::Conv2dFunctor>("Conv2d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
