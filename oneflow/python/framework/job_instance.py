@@ -73,7 +73,7 @@ def MakeJobInstance(*arg, **kw):
     return job_instance
 
 
-class JobInstance(oneflow._oneflow_internal.ForeignJobInstance):
+class JobInstance(oneflow._oneflow_internal.JobInstance):
     def __init__(
         self,
         job_name,
@@ -83,7 +83,7 @@ class JobInstance(oneflow._oneflow_internal.ForeignJobInstance):
         pull_cb=None,
         finish_cb=None,
     ):
-        oneflow._oneflow_internal.ForeignJobInstance.__init__(self)
+        oneflow._oneflow_internal.JobInstance.__init__(self)
         self.thisown = 0
         self.job_name_ = str(job_name)
         self.sole_input_op_name_in_user_job_ = str(sole_input_op_name_in_user_job)

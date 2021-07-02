@@ -20,11 +20,11 @@ limitations under the License.
 
 namespace oneflow {
 
-class ForeignJobInstance {
+class JobInstance {
  public:
-  ForeignJobInstance() = default;
+  JobInstance() = default;
 
-  virtual ~ForeignJobInstance() = default;
+  virtual ~JobInstance() = default;
 
   virtual std::string job_name() const { UNIMPLEMENTED(); }
   virtual std::string sole_input_op_name_in_user_job() const { UNIMPLEMENTED(); }
