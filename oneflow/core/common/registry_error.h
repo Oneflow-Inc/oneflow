@@ -13,18 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/extension/python/py_kernel_registry.h"
+#ifndef ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
+#define ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
 
-namespace py = pybind11;
+#include "oneflow/core/common/maybe.h"
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("RegisterPyKernelCaller", [](const std::string& op_module_name) {
-    ::oneflow::pyext::RegisterPyKernelCaller(op_module_name).GetOrThrow();
-  });
-  m.def("RegisterPyKernels",
-        [](py::object py_kernels) { ::oneflow::pyext::RegisterPyKernels(py_kernels.ptr()); });
-}
+namespace oneflow {
+
+Maybe<void> CheckAndClearRegistryFlag();
+
+void CatchRegistryError(const std::function<Maybe<void>()>&);
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_REGISTRY_ERROR_H
