@@ -124,7 +124,7 @@ class OpRegistry final {
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
   OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
 
-  OpRegistry& Finish();
+  Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }
 
  private:
