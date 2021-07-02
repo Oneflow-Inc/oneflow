@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
-REGISTER_USER_OP("empty")
+REGISTER_NO_GRAD_USER_OP("empty")
     .Output("out")
     .SetOutputBufferNum(1)
     .Attr<DataType>("dtype")

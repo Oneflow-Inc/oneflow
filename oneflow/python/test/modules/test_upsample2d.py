@@ -455,6 +455,23 @@ def _test_interpolate_backward(test_case, device):
     test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
+    input = flow.Tensor(
+        np.arange(1, 11, dtype=np.int32).reshape((1, 1, 5, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(size=(4, 4), mode="bilinear")
+    of_out = m(input)
+    np_out = np.array([[[[1.25, 1.5, 2.0, 2.25], [3.75, 4.0, 4.5, 4.75], [6.25, 6.5, 7.0, 7.25], [8.75, 9.0, 9.5, 9.75]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.75, 1.75], [1.5, 1.5], [1.5, 1.5], [1.5, 1.5], [1.75, 1.75]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+
 def _test_upsample_bilinear_align_corners(test_case, device):
     input = flow.Tensor(
         np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
@@ -640,6 +657,7 @@ class TestUpsample2d(flow.unittest.TestCase):
     def test_upsample2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
+<<<<<<< HEAD
             _test_upsample_and_interpolate_nearest,
             _test_upsample_and_interpolate_bilinear,
             _test_upsample_and_interpolate_bilinear_align_corners,
@@ -672,6 +690,24 @@ class TestUpsample2d(flow.unittest.TestCase):
         # The squre root of the range must be an integer.
         arg_dict["in_size"] = [(1, 1, 2, 3), (1, 1, 5, 2), (1, 1, 3, 6), (2, 3, 2, 6), (4, 2, 4, 2)]
         arg_dict["out_size_or_scale"] = [(4, 4), (5, 5), 1.5, 0.5, 2.5]
+=======
+            _test_upsample2d,
+            _test_upsample2d_bilinear,
+            _test_upsample2d_bilinear_aligncorner,
+            _test_UpsamplingNearest2d,
+            _test_UpsamplingBilinear2d,
+            _test_upsample2d_4dim,
+            _test_upsample2d_bilinear_4dim,
+            _test_upsample2d_backward,
+            _test_upsample2d_bilinear_aligncorner_backward,
+            _test_interpolate_nearest_float_scale,
+            _test_interpolate_bilinear_float_scale,
+            _test_upsample_bilinear_align_corners,
+        arg_dict["device"] = [
+            "cpu", "cuda",
+
+        ]
+>>>>>>> ced2c6ecb59fae43798af6b944bbdfa26ec9e3f3
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
