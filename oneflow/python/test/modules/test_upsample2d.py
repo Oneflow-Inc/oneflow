@@ -306,8 +306,44 @@ def _test_interpolate_bilinear_float_scale(test_case, device):
     )
     m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
     of_out = m(input)
-    np_out = np.array([[[[1.]]]])
+    np_out = np.array([[[[1.0]]]])
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+    input = flow.Tensor(
+        np.arange(1, 10, dtype=np.int32).reshape((1, 1, 3, 3)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear")
+    of_out = m(input)
+    np_out = np.array([[[[1.0]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
+
+
+def _test_upsample_bilinear_align_corners(test_case, device):
+    input = flow.Tensor(
+        np.arange(1, 5, dtype=np.int32).reshape((1, 1, 2, 2)),
+        device=flow.device(device),
+        dtype=flow.float32,
+        requires_grad=True,
+    )
+    m = flow.nn.Upsample(scale_factor=0.5, mode="bilinear", align_corners=True)
+    of_out = m(input)
+    np_out = np.array([[[[1.0]]]])
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+    of_out = of_out.sum()
+    of_out.backward()
+    np_grad = np.array([[[[1.0, 0.0], [0.0, 0.0]]]])
+    test_case.assertTrue(np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5))
 
 
 @unittest.skipIf(
@@ -329,6 +365,7 @@ class TestUpsample2d(flow.unittest.TestCase):
             _test_upsample2d_bilinear_aligncorner_backward,
             _test_interpolate_nearest_float_scale,
             _test_interpolate_bilinear_float_scale,
+            _test_upsample_bilinear_align_corners,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
