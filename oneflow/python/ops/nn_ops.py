@@ -212,6 +212,7 @@ def conv_op(
     conv_type,
     inputs,
     filters,
+    bias,
     padding_before,
     channel_pos,
     kernel_size_list,
@@ -220,7 +221,7 @@ def conv_op(
     groups,
     name,
 ):
-    return (
+    op_builder = (
         flow.user_op_builder(name if name is not None else id_util.UniqueStr("Conv_"))
         .Op(conv_type)
         .Input("in", [inputs])
@@ -233,10 +234,10 @@ def conv_op(
         .Attr("strides", strides)
         .Attr("dilation_rate", dilations)
         .Attr("groups", groups)
-        .Build()
-        .InferAndTryRun()
-        .RemoteBlobList()[0]
     )
+    if bias is not None:
+        op_builder = op_builder.Input("bias", [bias])
+    return op_builder.Build().InferAndTryRun().RemoteBlobList()[0]
 
 
 @oneflow_export("nn.conv1d")
@@ -397,6 +398,7 @@ def conv1d(
                     "conv1d",
                     in_split_list[i],
                     filter_split_list[i],
+                    None,
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -412,6 +414,7 @@ def conv1d(
             "conv1d",
             inputs,
             filters,
+            None,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -428,6 +431,7 @@ def conv2d(
     filters: oneflow._oneflow_internal.BlobDesc,
     strides: Union[int, IntPair],
     padding: Union[str, Tuple[IntPair, IntPair, IntPair, IntPair]],
+    bias: Optional[oneflow._oneflow_internal.BlobDesc] = None,
     data_format: str = "NCHW",
     dilations: Optional[Union[int, IntPair]] = None,
     groups: int = 1,
@@ -509,6 +513,9 @@ def conv2d(
     assert len(input.shape) == 4
     assert len(filters.shape) == 4
 
+    if bias is not None:
+        assert len(bias.shape) == 1
+
     if isinstance(strides, (list, tuple)):
         assert len(strides) == 2, ValueError(
             "strides length must be 2 when passed as a list."
@@ -568,7 +575,8 @@ def conv2d(
     assert groups <= inputs.shape[in_channel_axis]
     assert inputs.shape[in_channel_axis] % groups == 0
     assert filters.shape[filter_in_axis] == inputs.shape[in_channel_axis] // groups
-
+    if bias is not None:
+        assert bias.shape[filter_out_axis] == filters.shape[filter_out_axis]
     if (
         groups > 1
         and flow.current_scope().device_parallel_desc_symbol.device_tag == "cpu"
@@ -576,6 +584,11 @@ def conv2d(
         in_split_list = ConvUtil.split(inputs, axis=in_channel_axis, split_num=groups)
         filter_split_list = ConvUtil.split(
             filters, axis=filter_out_axis, split_num=groups
+        )
+        bias_spilt_list = (
+            ConvUtil.split(bias, axis=filter_out_axis, split_num=groups)
+            if bias is not None
+            else [None for _ in range(groups)]
         )
         out_list = []
         name = name if name is not None else id_util.UniqueStr("Conv2d_")
@@ -585,6 +598,7 @@ def conv2d(
                     "conv2d",
                     in_split_list[i],
                     filter_split_list[i],
+                    bias_spilt_list[i],
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -600,6 +614,7 @@ def conv2d(
             "conv2d",
             inputs,
             filters,
+            bias,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -783,6 +798,7 @@ def conv3d(
                     "conv3d",
                     in_split_list[i],
                     filter_split_list[i],
+                    None,
                     padding_before,
                     channel_pos,
                     kernel_size_list,
@@ -798,6 +814,7 @@ def conv3d(
             "conv3d",
             inputs,
             filters,
+            None,
             padding_before,
             channel_pos,
             kernel_size_list,
@@ -1448,7 +1465,7 @@ def tf_conv2d(
     if padding.upper() == "SAME":
         padding = "SAME_UPPER"
     return flow.nn.conv2d(
-        input, filters, strides, padding, data_format, dilations, groups, name
+        input, filters, strides, padding, None, data_format, dilations, groups, name
     )
 
 
@@ -2202,7 +2219,7 @@ def max_pool2d(
     ceil_mode: bool = False,
     name: Optional[str] = None,
 ) -> oneflow._oneflow_internal.BlobDesc:
-    r""" Performs the 2d-max pooling on the input `Blob`.
+    r"""Performs the 2d-max pooling on the input `Blob`.
 
     Args:
         input (oneflow._oneflow_internal.BlobDesc): A 4-D `Blob` of the format specified by data_format.
