@@ -375,6 +375,29 @@
                        Int32List strides, Bool ceil_mode)"
   bind_python: False
 
+- name: "maxpool_2d"
+  signature:
+    "TensorTuple Maxpool2D(Tensor x, *, String data_format=\"channels_first\", String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "maxpool_3d"
+  signature:
+    "TensorTuple Maxpool3D(Tensor x, *, String data_format=\"channels_first\", String padding,
+                      Int32List padding_before, Int32List padding_after,
+                      Int32List kernel_size, Int32List stride, Int32List dilation, 
+                      Bool return_indices=True, Bool ceil_mode=False)"
+  bind_python: True
+
+- name: "pooling_grad"
+  signature:
+    "Tensor PoolingNdGrad(Tensor x, Tensor y, Tensor indice, Tensor dy, *, String mode, Int32 ndims, String data_format,
+                       String padding, Int32List padding_before, Int32List padding_after, Int32List kernel_size,
+                       Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode)"
+  bind_python: False
+
 - name: "prelu"
   signature: "Tensor PRelu(Tensor x, Tensor alpha)"
   bind_python: True

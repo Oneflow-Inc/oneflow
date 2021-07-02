@@ -22,17 +22,12 @@ namespace oneflow {
 
 struct PoolingOpKernelState final : public user_op::OpKernelState {
   PoolingParams3D params_3d;
-  bool is_dynamic;
-  PoolingOpKernelState(PoolingParams3D params_3d, bool is_dynamic)
-      : params_3d(params_3d), is_dynamic(is_dynamic) {}
+  PoolingOpKernelState(PoolingParams3D params_3d) : params_3d(params_3d) {}
   const PoolingParams3D& GetParams3D() { return params_3d; }
-  void Update(const ShapeView& x_shape) {
-    if (is_dynamic) { params_3d.Reset(x_shape); }
-  }
 };
 
-std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelInitContext* ctx,
-                                                              const int32_t& dim) {
+std::shared_ptr<PoolingOpKernelState> DoCreateOpKernelState(user_op::KernelComputeContext* ctx,
+                                                            const int32_t& dim) {
   const Shape& x_shape = ctx->TensorDesc4ArgNameAndIndex("x", 0)->shape();
   const std::string& padding = ctx->Attr<std::string>("padding");
   const std::string& data_format = ctx->Attr<std::string>("data_format");
@@ -44,11 +39,10 @@ std::shared_ptr<user_op::OpKernelState> DoCreateOpKernelState(user_op::KernelIni
   const bool return_indices = ctx->Attr<bool>("return_indices");
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
 
-  bool is_dynamic = ctx->TensorDesc4ArgNameAndIndex("x", 0)->is_dynamic();
   PoolingParams3D params_3d =
       PoolingParams3D(dim, x_shape, data_format, padding, padding_before, padding_after,
                       kernel_size, stride, dilation, return_indices, ceil_mode);
-  std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d, is_dynamic));
+  std::shared_ptr<PoolingOpKernelState> state(new PoolingOpKernelState(params_3d));
   return std::move(state);
 }
 
@@ -106,21 +100,22 @@ class MaxPool2dKernel final : public user_op::OpKernel {
   MaxPool2dKernel() = default;
   ~MaxPool2dKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
+  // std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+  //     user_op::KernelInitContext* ctx) const override {
+  //   return DoCreateOpKernelState(ctx, 2);
+  // }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
 
-    auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
-    CHECK(pooling_state != nullptr);
-    pooling_state->Update(x->shape());
+    const auto& pooling_state = DoCreateOpKernelState(ctx, 2);
+    // auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
+    // CHECK(pooling_state != nullptr);
+    // pooling_state->Update(x->shape());
     const PoolingParams3D& params_3d = pooling_state->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
@@ -143,21 +138,22 @@ class MaxPool2dGradKernel final : public user_op::OpKernel {
   MaxPool2dGradKernel() = default;
   ~MaxPool2dGradKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 2);
-  }
+  // std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+  //     user_op::KernelInitContext* ctx) const override {
+  //   return DoCreateOpKernelState(ctx, 2);
+  // }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
-    CHECK(pooling_state != nullptr);
-    pooling_state->Update(dx->shape());
+    const auto& pooling_state = DoCreateOpKernelState(ctx, 2);
+    // auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
+    // CHECK(pooling_state != nullptr);
+    // pooling_state->Update(dx->shape());
     const PoolingParams3D& params_3d = pooling_state->GetParams3D();
 
     const int64_t elem_num = dy->shape().elem_cnt();
@@ -182,21 +178,22 @@ class MaxPool3dKernel final : public user_op::OpKernel {
   MaxPool3dKernel() = default;
   ~MaxPool3dKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
+  // std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+  //     user_op::KernelInitContext* ctx) const override {
+  //   return DoCreateOpKernelState(ctx, 3);
+  // }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
 
-    auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
-    CHECK(pooling_state != nullptr);
-    pooling_state->Update(x->shape());
+    const auto& pooling_state = DoCreateOpKernelState(ctx, 3);
+    // auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
+    // CHECK(pooling_state != nullptr);
+    // pooling_state->Update(x->shape());
     const PoolingParams3D& params_3d = pooling_state->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
@@ -219,21 +216,22 @@ class MaxPool3dGradKernel final : public user_op::OpKernel {
   MaxPool3dGradKernel() = default;
   ~MaxPool3dGradKernel() = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return DoCreateOpKernelState(ctx, 3);
-  }
+  // std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
+  //     user_op::KernelInitContext* ctx) const override {
+  //   return DoCreateOpKernelState(ctx, 3);
+  // }
 
  private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* indice = ctx->Tensor4ArgNameAndIndex("indice", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
-    CHECK(pooling_state != nullptr);
-    pooling_state->Update(dx->shape());
+    const auto& pooling_state = DoCreateOpKernelState(ctx, 3);
+    // auto* pooling_state = dynamic_cast<PoolingOpKernelState*>(state);
+    // CHECK(pooling_state != nullptr);
+    // pooling_state->Update(dx->shape());
     const PoolingParams3D& params_3d = pooling_state->GetParams3D();
 
     const int64_t elem_num = dy->shape().elem_cnt();

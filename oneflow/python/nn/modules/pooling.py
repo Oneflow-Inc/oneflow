@@ -312,48 +312,44 @@ class MaxPool1d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        kernel_size = _pair(tuple(kernel_size)[0])
-        strides = _pair(tuple(stride)[0]) if (stride is not None) else kernel_size
+        self.kernel_size = _pair(tuple(kernel_size)[0])
+        self.stride = _pair(tuple(stride)[0]) if (stride is not None) else kernel_size
         data_format = "NCL"  # Only suport "NCL" for now!
-        channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
-        dilation = _GetSequence(dilation, 2, "dilation")
+        self.channel_pos = "channels_first" if data_format == "NCL" else "channels_last"
+        self.dilation = _GetSequence(dilation, 2, "dilation")
         padding = _pair(tuple(padding)[0])
         self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
 
         if len(padding) == 2:
-            if channel_pos == "channels_first":
+            if self.channel_pos == "channels_first":
                 padding = (0, 0, padding[0], padding[1])
             else:
                 raise ValueError("error padding param!")
         else:
             raise ValueError("error padding param!")
 
-        padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(channel_pos), 2
+        self.padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 2
         )
-        padding_before = [pad[0] for pad in pads_list]
-        padding_after = [pad[1] for pad in pads_list]
-
-        self._op = (
-            flow.builtin_op("maxpool_2d")
-            .Input("x")
-            .Output("y")
-            .Output("indice")
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Attr("data_format", channel_pos)
-            .Attr("kernel_size", kernel_size)
-            .Attr("stride", strides)
-            .Attr("dilation", dilation)
-            .Attr("return_indices", return_indices)
-            .Attr("ceil_mode", ceil_mode)
-            .Build()
-        )
+        self.padding_before = [pad[0] for pad in pads_list]
+        self.padding_after = [pad[1] for pad in pads_list]
 
     def forward(self, x):
         expand_x = x.unsqueeze(dim=2)
-        expand_y, expand_indice = self._op(expand_x)
+        expand_y, expand_indice = flow.F.maxpool_2d(
+            expand_x,
+            data_format=self.channel_pos,
+            padding=self.padding_type,
+            padding_before=self.padding_before,
+            padding_after=self.padding_after,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
+
         y = expand_y.squeeze(dim=2)
         indice = expand_indice.squeeze(dim=2)
         if self.return_indices:
@@ -450,14 +446,17 @@ class MaxPool2d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        kernel_size = _pair(kernel_size)
-        strides = _pair(stride) if (stride is not None) else kernel_size
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride) if (stride is not None) else kernel_size
         data_format = "NCHW"  # Only suport "NCHW" for now!
-        channel_pos = "channels_first" if data_format == "NCHW" else "channels_last"
-        dilation = _GetSequence(dilation, 2, "dilation")
-        padding = _pair(padding)
+        self.channel_pos = (
+            "channels_first" if data_format == "NCHW" else "channels_last"
+        )
+        self.dilation = _GetSequence(dilation, 2, "dilation")
         self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
 
+        padding = _pair(padding)
         if len(padding) == 2:
             if data_format == "NCHW":
                 padding = (0, 0, padding[0], padding[1])
@@ -466,37 +465,30 @@ class MaxPool2d(Module):
         else:
             raise ValueError("error padding param!")
 
-        padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(channel_pos), 2
-        )
-        padding_before = [pad[0] for pad in pads_list]
-        padding_after = [pad[1] for pad in pads_list]
-
-        self._op = (
-            flow.builtin_op("maxpool_2d")
-            .Input("x")
-            .Output("y")
-            .Output("indice")
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Attr("data_format", channel_pos)
-            .Attr("kernel_size", kernel_size)
-            .Attr("stride", strides)
-            .Attr("dilation", dilation)
-            .Attr("return_indices", return_indices)
-            .Attr("ceil_mode", ceil_mode)
-            .Build()
+        self.padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 2
         )
         self.padding_before = [pad[0] for pad in pads_list]
         self.padding_after = [pad[1] for pad in pads_list]
-        self.ceil_mode = ceil_mode
 
     def forward(self, x):
+        y, indice = flow.F.maxpool_2d(
+            x,
+            data_format=self.channel_pos,
+            padding=self.padding_type,
+            padding_before=self.padding_before,
+            padding_after=self.padding_after,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
+
         if self.return_indices:
-            res = self._op(x)
-            return res[0], res[1]
-        return self._op(x)[0]
+            return y, indice
+        else:
+            return y
 
 
 @oneflow_export("nn.MaxPool3d")
@@ -593,13 +585,16 @@ class MaxPool3d(Module):
         ceil_mode: bool = False,
     ):
         super().__init__()
-        kernel_size = _triple(kernel_size)
-        strides = _triple(stride) if (stride is not None) else kernel_size
+        self.kernel_size = _triple(kernel_size)
+        self.stride = _triple(stride) if (stride is not None) else kernel_size
         data_format = "NCDHW"
-        channel_pos = "channels_last" if data_format == "NDHWC" else "channels_first"
-        dilation = _GetSequence(dilation, 3, "dilation")
+        self.channel_pos = (
+            "channels_last" if data_format == "NDHWC" else "channels_first"
+        )
+        self.dilation = _GetSequence(dilation, 3, "dilation")
         padding = _triple(padding)
         self.return_indices = return_indices
+        self.ceil_mode = ceil_mode
 
         if len(padding) == 3:
             if data_format == "NCDHW":
@@ -609,34 +604,30 @@ class MaxPool3d(Module):
         else:
             raise ValueError("error padding param!")
 
-        padding_type, pads_list = calc_pool_padding(
-            padding, get_dhw_offset(channel_pos), 3
+        self.padding_type, pads_list = calc_pool_padding(
+            padding, get_dhw_offset(self.channel_pos), 3
         )
-        padding_before = [pad[0] for pad in pads_list]
-        padding_after = [pad[1] for pad in pads_list]
-
-        self._op = (
-            flow.builtin_op("maxpool_3d")
-            .Input("x")
-            .Output("y")
-            .Output("indice")
-            .Attr("padding", padding_type)
-            .Attr("padding_before", padding_before)
-            .Attr("padding_after", padding_after)
-            .Attr("data_format", channel_pos)
-            .Attr("kernel_size", kernel_size)
-            .Attr("stride", strides)
-            .Attr("dilation", dilation)
-            .Attr("return_indices", return_indices)
-            .Attr("ceil_mode", ceil_mode)
-            .Build()
-        )
+        self.padding_before = [pad[0] for pad in pads_list]
+        self.padding_after = [pad[1] for pad in pads_list]
 
     def forward(self, x):
+        y, indice = flow.F.maxpool_3d(
+            x,
+            data_format=self.channel_pos,
+            padding=self.padding_type,
+            padding_before=self.padding_before,
+            padding_after=self.padding_after,
+            kernel_size=self.kernel_size,
+            stride=self.stride,
+            dilation=self.dilation,
+            return_indices=True,
+            ceil_mode=self.ceil_mode,
+        )
+
         if self.return_indices:
-            res = self._op(x)
-            return res[0], res[1]
-        return self._op(x)[0]
+            return y, indice
+        else:
+            return y
 
 
 if __name__ == "__main__":
