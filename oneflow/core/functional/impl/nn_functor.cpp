@@ -62,7 +62,7 @@ class ConvBaseFunctor {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
     for (int i = 0; i < num_spatial_dims_; i++) {
-      kernel_size_vec.push_back((weight->shape())->At(i + 2));
+      kernel_size_vec.at(i) = ((weight->shape())->At(i + 2));
     }
     JUST(conv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(0)));
     JUST(conv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
