@@ -62,7 +62,7 @@ def conv2d_layer(
         trainable=trainable,
     )
     output = flow.nn.conv2d(
-        input, weight, strides, padding, data_format, dilation_rate, name=name
+        input, weight, strides, padding, None, data_format, dilation_rate, name=name
     )
     if use_bias:
         bias = flow.get_variable(
