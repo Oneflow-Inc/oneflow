@@ -52,7 +52,14 @@ class ResnetBuilder(object):
         )
 
         return flow.nn.conv2d(
-            input, weight, strides, padding, self.data_format, dilations, name=name
+            input,
+            weight,
+            strides,
+            padding,
+            None,
+            self.data_format,
+            dilations,
+            name=name,
         )
 
     def _batch_norm(self, inputs, name=None, last=False):
