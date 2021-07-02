@@ -35,7 +35,7 @@ def _test_upsample_and_interpolate_nearest(test_case, device, in_size, out_size_
         out_size = out_size_or_scale
     elif isinstance(out_size_or_scale, (float, int)):
         scale_factor = out_size_or_scale
-    in_range = (1, in_size[3] * in_size[2] + 1)
+    in_range = (1, in_size[3] * in_size[2] * in_size[1] * in_size[0] + 1)
     np_in = np.arange(*in_range).reshape(in_size)
     of_in = flow.Tensor(
         np_in,
@@ -78,7 +78,7 @@ def _test_upsample_and_interpolate_bilinear(test_case, device, in_size, out_size
         out_size = out_size_or_scale
     elif isinstance(out_size_or_scale, (float, int)):
         scale_factor = out_size_or_scale
-    in_range = (1, in_size[3] * in_size[2] + 1)
+    in_range = (1, in_size[3] * in_size[2] * in_size[1] * in_size[0] + 1)
     np_in = np.arange(*in_range).reshape(in_size)
     of_in = flow.Tensor(
         np_in,
@@ -120,7 +120,7 @@ def _test_upsample_and_interpolate_bilinear_align_corners(test_case, device, in_
         out_size = out_size_or_scale
     elif isinstance(out_size_or_scale, (float, int)):
         scale_factor = out_size_or_scale
-    in_range = (1, in_size[3] * in_size[2] + 1)
+    in_range = (1, in_size[3] * in_size[2] * in_size[1] * in_size[0] + 1)
     np_in = np.arange(*in_range).reshape(in_size)
     of_in = flow.Tensor(
         np_in,
@@ -234,55 +234,55 @@ def _test_upsample_and_interpolate_bilinear_align_corners(test_case, device, in_
 #     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-4, 1e-4))
 
 
-def _test_upsample2d_4dim(test_case, device):
-    input = flow.Tensor(
-        np.arange(1, 37).reshape((2, 2, 3, 3)),
-        device=flow.device(device),
-        dtype=flow.float32,
-    )
-    m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
-    of_out = m(input)
-    np_out = np.array(
-        [
-            [
-                [
-                    [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, ],
-                    [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, ],
-                    [4.0, 4.0, 5.0, 5.0, 6.0, 6.0, ],
-                    [4.0, 4.0, 5.0, 5.0, 6.0, 6.0, ],
-                    [7.0, 7.0, 8.0, 8.0, 9.0, 9.0, ],
-                    [7.0, 7.0, 8.0, 8.0, 9.0, 9.0, ],
-                ],
-                [
-                    [10.0, 10.0, 11.0, 11.0, 12.0, 12.0, ],
-                    [10.0, 10.0, 11.0, 11.0, 12.0, 12.0, ],
-                    [13.0, 13.0, 14.0, 14.0, 15.0, 15.0, ],
-                    [13.0, 13.0, 14.0, 14.0, 15.0, 15.0, ],
-                    [16.0, 16.0, 17.0, 17.0, 18.0, 18.0, ],
-                    [16.0, 16.0, 17.0, 17.0, 18.0, 18.0, ],
-                ],
-            ],
-            [
-                [
-                    [19.0, 19.0, 20.0, 20.0, 21.0, 21.0, ],
-                    [19.0, 19.0, 20.0, 20.0, 21.0, 21.0, ],
-                    [22.0, 22.0, 23.0, 23.0, 24.0, 24.0, ],
-                    [22.0, 22.0, 23.0, 23.0, 24.0, 24.0, ],
-                    [25.0, 25.0, 26.0, 26.0, 27.0, 27.0, ],
-                    [25.0, 25.0, 26.0, 26.0, 27.0, 27.0, ],
-                ],
-                [
-                    [28.0, 28.0, 29.0, 29.0, 30.0, 30.0, ],
-                    [28.0, 28.0, 29.0, 29.0, 30.0, 30.0, ],
-                    [31.0, 31.0, 32.0, 32.0, 33.0, 33.0, ],
-                    [31.0, 31.0, 32.0, 32.0, 33.0, 33.0, ],
-                    [34.0, 34.0, 35.0, 35.0, 36.0, 36.0, ],
-                    [34.0, 34.0, 35.0, 35.0, 36.0, 36.0, ],
-                ],
-            ],
-        ]
-    )
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
+# def _test_upsample2d_4dim(test_case, device):
+#     input = flow.Tensor(
+#         np.arange(1, 37).reshape((2, 2, 3, 3)),
+#         device=flow.device(device),
+#         dtype=flow.float32,
+#     )
+#     m = flow.nn.Upsample(scale_factor=2.0, mode="nearest")
+#     of_out = m(input)
+#     np_out = np.array(
+#         [
+#             [
+#                 [
+#                     [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, ],
+#                     [1.0, 1.0, 2.0, 2.0, 3.0, 3.0, ],
+#                     [4.0, 4.0, 5.0, 5.0, 6.0, 6.0, ],
+#                     [4.0, 4.0, 5.0, 5.0, 6.0, 6.0, ],
+#                     [7.0, 7.0, 8.0, 8.0, 9.0, 9.0, ],
+#                     [7.0, 7.0, 8.0, 8.0, 9.0, 9.0, ],
+#                 ],
+#                 [
+#                     [10.0, 10.0, 11.0, 11.0, 12.0, 12.0, ],
+#                     [10.0, 10.0, 11.0, 11.0, 12.0, 12.0, ],
+#                     [13.0, 13.0, 14.0, 14.0, 15.0, 15.0, ],
+#                     [13.0, 13.0, 14.0, 14.0, 15.0, 15.0, ],
+#                     [16.0, 16.0, 17.0, 17.0, 18.0, 18.0, ],
+#                     [16.0, 16.0, 17.0, 17.0, 18.0, 18.0, ],
+#                 ],
+#             ],
+#             [
+#                 [
+#                     [19.0, 19.0, 20.0, 20.0, 21.0, 21.0, ],
+#                     [19.0, 19.0, 20.0, 20.0, 21.0, 21.0, ],
+#                     [22.0, 22.0, 23.0, 23.0, 24.0, 24.0, ],
+#                     [22.0, 22.0, 23.0, 23.0, 24.0, 24.0, ],
+#                     [25.0, 25.0, 26.0, 26.0, 27.0, 27.0, ],
+#                     [25.0, 25.0, 26.0, 26.0, 27.0, 27.0, ],
+#                 ],
+#                 [
+#                     [28.0, 28.0, 29.0, 29.0, 30.0, 30.0, ],
+#                     [28.0, 28.0, 29.0, 29.0, 30.0, 30.0, ],
+#                     [31.0, 31.0, 32.0, 32.0, 33.0, 33.0, ],
+#                     [31.0, 31.0, 32.0, 32.0, 33.0, 33.0, ],
+#                     [34.0, 34.0, 35.0, 35.0, 36.0, 36.0, ],
+#                     [34.0, 34.0, 35.0, 35.0, 36.0, 36.0, ],
+#                 ],
+#             ],
+#         ]
+#     )
+#     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5))
 
 
 def _test_upsample2d_bilinear_4dim(test_case, device):
@@ -670,7 +670,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         # The squre root of the range must be an integer.
-        arg_dict["in_size"] = [(1, 1, 2, 3), (1, 1, 5, 2), (1, 1, 3, 6)]
+        arg_dict["in_size"] = [(1, 1, 2, 3), (1, 1, 5, 2), (1, 1, 3, 6), (2, 3, 2, 6), (4, 2, 4, 2)]
         arg_dict["out_size_or_scale"] = [(4, 4), (5, 5), 1.5, 0.5, 2.5]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
