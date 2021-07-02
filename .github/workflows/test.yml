@@ -111,7 +111,7 @@ jobs:
             libopenblas-dev nasm python3-pip ninja-build
       - name: Set environment variables
         run: |
-          echo 'all_exports="CC=clang-12 CXX=clang++-12 ONEFLOW_MAYBE_CHECK_ONLY_FN==${PWD}/oneflow/ ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp"' >> $GITHUB_ENV
+          echo all_exports="CC=clang-12 CXX=clang++-12 ONEFLOW_MAYBE_CHECK_ONLY_FN=${PWD}/oneflow/ ONEFLOW_MAYBE_CHECK_SKIP_FN=.cfg.cpp" >> $GITHUB_EN
       - name: Build Clang plug-in
         run: |
           export ${{ env.all_exports }}
