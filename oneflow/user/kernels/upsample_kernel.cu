@@ -62,16 +62,13 @@ __global__ void UpsampleNearestBackward(const int64_t elem_cnt, const T* dy_dptr
 template<typename T>
 __host__ T GetAreaPixelScale(const int64_t input_size, const int64_t output_size,
                              bool align_corners, const T scale) {
-
   if (output_size > 1) {
     return align_corners ? static_cast<T>(input_size - 1) / (output_size - 1)
                          : (scale > 0. ? 1.0 / scale : static_cast<T>(input_size) / output_size);
   } else {
     return 0;
-
+  }
 }
-
-
 
 template<typename T>
 struct BilinearParam {
@@ -87,7 +84,6 @@ template<typename T>
 __device__ void GetBilinearParam(const bool align_corners, const int64_t h, const int64_t w,
                                  const int64_t in_height, const int64_t in_width, const T scale_h,
                                  const T scale_w, BilinearParam<T>* params) {
-
   T h1r;
   if (align_corners) {
     h1r = scale_h * static_cast<T>(h);
@@ -114,7 +110,6 @@ __device__ void GetBilinearParam(const bool align_corners, const int64_t h, cons
   params->left_w_index = w1;
   params->right_w_index = w1 + w1p;
   params->w_lerp = w1r - w1;
-
 }
 
 template<typename T>
