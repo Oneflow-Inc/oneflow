@@ -14,13 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <cstdint>
-#include "oneflow/core/common/error.h"
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/framework/user_op_registry.h"
-#include "oneflow/user/kernels/dim_gather_scatter_util.h"
+#include "oneflow/core/framework/framework.h"
 
 namespace oneflow {
-
 namespace user_op {
 
 namespace {
@@ -29,7 +25,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
   const TensorDesc* like = ctx->TensorDesc4ArgNameAndIndex("like", 0);
   const TensorDesc* src = ctx->TensorDesc4ArgNameAndIndex("src", 0);
-
   int32_t dim = ctx->Attr<int32_t>("dim");
 
   const cfg::SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
@@ -40,7 +35,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int64_t input_num_axes = input->shape().NumAxes();
   CHECK_GT_OR_RETURN(input_num_axes, 0);
-  CHECK_LE_OR_RETURN(input_num_axes, kDimGatherMaxDimCount);
+  CHECK_LE_OR_RETURN(input_num_axes, 8); // kDimGatherMaxDimCount=8
 
   int64_t index_num_axes = index->shape().NumAxes();
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
@@ -91,6 +86,7 @@ Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgMo
   return Maybe<void>::Ok();
 }
 
+
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_src) {
   ctx->NewBuilder()
       .PartialSum(user_op::OpArg("input", 0))
@@ -109,6 +105,14 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
   _SetSbp(ctx, "src");
   return Maybe<void>::Ok();
 }
+
+Maybe<void> InferDtype(user_op::InferContext* ctx) {
+  const TensorDesc* index = ctx->TensorDesc4ArgNameAndIndex("index", 0);
+  CHECK_OR_RETURN(IsIndexDataType(index->data_type()));
+  *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 // #define REGISTER_SCATTER_LIKE_OP(optypename)   \
@@ -132,6 +136,8 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
 //       .SetTensorDescInferFn(InferTensorDesc)          \
 //       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
 //       .SetGetSbpFn(SetSbpInplace)
+//       .SetDataTypeInferFn(InferDtype)          \
+//       .SetGetSbpFn(SetSbpLike)
 
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
@@ -141,7 +147,20 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
       .Output("output")                        \
       .Attr<int32_t>("dim")                    \
       .SetTensorDescInferFn(InferTensorDesc)   \
+      .SetDataTypeInferFn(InferDtype)          \
       .SetGetSbpFn(SetSbpLike)
+
+// #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
+//   REGISTER_USER_OP(optypename)                        \
+//       .OptionalInput("src")                           \
+//       .Input("input")                                 \
+//       .Input("index")                                 \
+//       .Output("output")                               \
+//       .Attr<int32_t>("dim")                           \
+//       .SetTensorDescInferFn(InferTensorDesc)          \
+//       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
+//       .SetDataTypeInferFn(InferDtype)                 \
+//       .SetGetSbpFn(SetSbpInplace)
 
 #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
   REGISTER_USER_OP(optypename)                        \
@@ -151,6 +170,7 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
       .Output("output")                               \
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
+      .SetDataTypeInferFn(InferDtype)                 \
       .SetGetSbpFn(SetSbpInplace)
 
 
@@ -172,15 +192,15 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
                                   });                                                    \
       });
 
-REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
-REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
-REGISTER_SCATTER_INPLACE_OP("dim_scatter_add");
-REGISTER_SCATTER_INPLACE_OP("dim_scatter_update");
+// REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
+// REGISTER_SCATTER_LIKE_OP("dim_scatter_update_like");
+// REGISTER_SCATTER_INPLACE_OP("dim_scatter_add");
+// REGISTER_SCATTER_INPLACE_OP("dim_scatter_update");
 
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
-REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
+// REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add_like");
+// REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update_like");
+// REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_add");
+// REGISTER_USER_OP_GRAD_SCATTER("dim_scatter_update");
 
 }  // namespace user_op
 }  // namespace oneflow

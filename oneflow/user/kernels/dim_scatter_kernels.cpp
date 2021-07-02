@@ -104,7 +104,7 @@ Maybe<void> SetInplace(const user_op::InferContext&,
 #define REGISTER_DIM_SCATTER_INPLACE_GPUKERNELS(optypename, binop)
 #endif  // WITH_CUDA
 
-#define REGISTER_SCATTER_INTPLACE_KERNEL(optypename, binop)   \
+#define REGISTER_SCATTER_INPLACE_KERNEL(optypename, binop)   \
   REGISTER_DIM_SCATTER_INPLACE_CPUKERNELS(optypename, binop); \
   REGISTER_DIM_SCATTER_INPLACE_GPUKERNELS(optypename, binop);
 
@@ -163,8 +163,8 @@ IMPLEMENT_DIMSCATTER_KERNEL_CLASS(Update);
 
 REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_add_like", Add);
 REGISTER_SCATTER_OUTPLACE_KERNEL("dim_scatter_update_like", Update);
-REGISTER_SCATTER_INTPLACE_KERNEL("dim_scatter_add", Add);
-REGISTER_SCATTER_INTPLACE_KERNEL("dim_scatter_update", Update);
+REGISTER_SCATTER_INPLACE_KERNEL("dim_scatter_add", Add);
+REGISTER_SCATTER_INPLACE_KERNEL("dim_scatter_update", Update);
 
 }  // namespace user_op
 }  // namespace oneflow

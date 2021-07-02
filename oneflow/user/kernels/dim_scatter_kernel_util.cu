@@ -15,7 +15,7 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 // #include "oneflow/core/kernel/util/cuda_kernel_util.h"
-
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/dim_scatter_kernel_util.h"
 
 namespace oneflow {
