@@ -27,7 +27,7 @@ bool PowerOfTwo(T x) {
 
 }  // namespace
 
-REGISTER_CPU_ONLY_USER_OP("image_batch_align")
+REGISTER_NO_GRAD_CPU_ONLY_USER_OP("image_batch_align")
     .Input("in")
     .Output("out")
     .Attr<Shape>("shape")
