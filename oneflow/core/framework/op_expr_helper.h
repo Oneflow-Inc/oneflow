@@ -22,9 +22,6 @@ limitations under the License.
 namespace oneflow {
 namespace op_expr_helper {
 
-Maybe<one::UserOpExpr> EagerNcclAllReduceOp(int32_t n);
-Maybe<one::UserOpExpr> EagerNcclAllReduceOp(int32_t n, const std::string& name);
-
 Maybe<one::UserOpExpr> AddNOp(int32_t n);
 Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name);
 

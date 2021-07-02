@@ -27,19 +27,6 @@ static std::string UniqueOpName(const std::string& prefix) {
   return *CHECK_JUST(UniqueStr(prefix));
 }
 
-Maybe<one::UserOpExpr> EagerNcclAllReduceOp(int32_t n) {
-  return EagerNcclAllReduceOp(n, UniqueOpName("eager_nccl_all_reduce"));
-}
-Maybe<one::UserOpExpr> EagerNcclAllReduceOp(int32_t n, const std::string& name) {
-  std::string parallel_conf =
-      "device_tag: \"gpu\", device_name: \"0:0-" + std::to_string(n - 1) + "\"";
-  return one::OpBuilder("eager_nccl_all_reduce", name)
-      .Input("in")
-      .Output("out")
-      .Attr("parallel_conf", parallel_conf)
-      .Build();
-}
-
 Maybe<one::UserOpExpr> AddNOp(int32_t n) { return AddNOp(n, UniqueOpName("add_n")); }
 Maybe<one::UserOpExpr> AddNOp(int32_t n, const std::string& name) {
   return one::OpBuilder("add_n", name).Input("in", n).Output("out").Build();
