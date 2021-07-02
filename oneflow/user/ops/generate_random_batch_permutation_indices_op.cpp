@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("generate_random_batch_permutation_indices")
+REGISTER_NO_GRAD_USER_OP("generate_random_batch_permutation_indices")
     .Input("x")
     .Output("y")
     .Attr<int64_t>("seed")
