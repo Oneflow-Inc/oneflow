@@ -25,20 +25,12 @@ from test_util import GenArgList
 
 def _test_diag_dimen_forward(test_case, shape, diagonal, device):
     input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
-    of_out = flow.diag(input)
-    np_out = np.diag(input.numpy())
-    test_case.assertTrue(
-        np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-    test_case.assertTrue(
-        np.allclose(input.diag().numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
-    )
-
     of_out = flow.diag(input, diagonal)
     np_out = np.diag(input.numpy(), diagonal)
     test_case.assertTrue(
         np.allclose(of_out.numpy(), np_out, 1e-5, 1e-5, equal_nan=True)
     )
+    
     test_case.assertTrue(
         np.allclose(
             input.diag(diagonal=diagonal).numpy(), np_out, 1e-5, 1e-5, equal_nan=True
@@ -46,27 +38,7 @@ def _test_diag_dimen_forward(test_case, shape, diagonal, device):
     )
 
 
-def _test_diag_one_dimen_backward(test_case, shape, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.diag(input).sum()
-    of_out.backward()
-    np_grad = np.ones(shape=3)
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    input = flow.Tensor(
-        np.random.randn(3), device=flow.device(device), requires_grad=True
-    )
-    of_out = input.diag().sum()
-    of_out.backward()
-    np_grad = np.ones(shape=3)
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
+def _test_diag_one_dimen_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
@@ -76,7 +48,7 @@ def _test_diag_one_dimen_backward(test_case, shape, diagonal, device):
     test_case.assertTrue(
         np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
     )
-
+    
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
@@ -88,27 +60,7 @@ def _test_diag_one_dimen_backward(test_case, shape, diagonal, device):
     )
 
 
-def _test_diag_other_dimen_backward(test_case, shape, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3, 3), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.diag(input).sum()
-    of_out.backward()
-    np_grad = np.identity(3)
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    input = flow.Tensor(
-        np.random.randn(3, 3), device=flow.device(device), requires_grad=True
-    )
-    of_out = input.diag().sum()
-    of_out.backward()
-    np_grad = np.identity(3)
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
+def _test_diag_other_dimen_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3, 3), device=flow.device(device), requires_grad=True
     )
@@ -140,31 +92,7 @@ def _test_diag_other_dimen_backward(test_case, shape, diagonal, device):
     )
 
 
-def _test_diag_other_dimen_non_square_backward(test_case, shape, diagonal, device):
-    input = flow.Tensor(
-        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.diag(input).sum()
-    of_out.backward()
-    np_tmp = np.zeros([3, 1])
-    np_grad = np.identity(3)
-    np_grad = np.hstack((np_grad, np_tmp))
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
-    input = flow.Tensor(
-        np.random.randn(3, 4), device=flow.device(device), requires_grad=True
-    )
-    of_out = input.diag().sum()
-    of_out.backward()
-    np_tmp = np.zeros([3, 1])
-    np_grad = np.identity(3)
-    np_grad = np.hstack((np_grad, np_tmp))
-    test_case.assertTrue(
-        np.allclose(input.grad.numpy(), np_grad, 1e-5, 1e-5, equal_nan=True)
-    )
-
+def _test_diag_other_dimen_non_square_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3, 4), device=flow.device(device), requires_grad=True
     )
@@ -209,15 +137,21 @@ def _test_diag_other_dimen_non_square_backward(test_case, shape, diagonal, devic
     ".numpy() doesn't work in lazy mode",
 )
 class TestDiag(flow.unittest.TestCase):
-    def test_diag(test_case):
+    def test_diag_forward(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(3,), (3, 3), (3, 4)]
+        arg_dict["diagonal"] = [1, 0, -1]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_diag_dimen_forward(test_case, *arg[0:])
+
+    def test_diag_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_diag_dimen_forward,
             _test_diag_one_dimen_backward,
             _test_diag_other_dimen_backward,
             _test_diag_other_dimen_non_square_backward,
         ]
-        arg_dict["shape"] = [(3,), (3, 3), (3, 4)]
         arg_dict["diagonal"] = [1, 0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
