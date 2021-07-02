@@ -54,7 +54,6 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("output", 0);
   *out->mut_shape() = index->shape();
   *out->mut_data_type() = in->data_type();
-
   return Maybe<void>::Ok();
 }
 
