@@ -67,6 +67,8 @@ class Device final {
   std::shared_ptr<VmLocalDepObject> compute_local_dep_object_;
 };
 
+Maybe<const std::string&> GetLocalCallInstructionName(const std::string& device_tag);
+
 }  // namespace oneflow
 
 namespace std {

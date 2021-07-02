@@ -17,7 +17,7 @@ limitations under the License.
 
 namespace oneflow {
 
-REGISTER_USER_OP("CategoricalOrdinalEncode")
+REGISTER_NO_GRAD_USER_OP("CategoricalOrdinalEncode")
     .Input("table")
     .Input("size")
     .Input("in")

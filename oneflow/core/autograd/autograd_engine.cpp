@@ -21,11 +21,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/framework/tensor_tuple.h"
-#include "oneflow/core/framework/op_expr.h"
-#include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
-#include "oneflow/core/framework/op_builder.h"
-#include "oneflow/core/framework/op_expr_helper.h"
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
@@ -48,11 +45,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     if (new_grad) { now_grad = new_grad; }
   }
   if (autograd_meta->acc_grad()) {
-    TensorTuple input = {autograd_meta->acc_grad(), now_grad};
-    TensorTuple output(1);
-    const auto& add = JUST(op_expr_helper::AddOp());
-    JUST(JUST(OpInterpUtil::GetInterpreter())->Apply(*add, input, &output));
-    autograd_meta->set_acc_grad(output.at(0));
+    const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), now_grad));
+    autograd_meta->set_acc_grad(output);
   } else {
     autograd_meta->set_acc_grad(now_grad);
   }
@@ -204,7 +198,7 @@ Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   return input_now_grads;
 }
 
-std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
+Maybe<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
     const std::string& op_type_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
@@ -212,7 +206,7 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
+      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
       StackFunctionNode* stack_function_node =
           dynamic_cast<StackFunctionNode*>(in_tensor->mut_grad_fn_node().get());
       if (!stack_function_node->is_in_stack()) {
@@ -229,7 +223,7 @@ std::shared_ptr<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
   }
   func_node->set_is_in_stack(true);
   node_list_.push_front(func_node);
-  return func_node;
+  return std::static_pointer_cast<FunctionNode>(func_node);
 }
 
 void GraphFunctionNode::ReleaseData() {
@@ -413,7 +407,7 @@ Maybe<TensorTuple> GraphAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
   return input_now_grads;
 }
 
-std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
+Maybe<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
     const std::string& op_type_name,
     const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
         backward_fn,
@@ -421,7 +415,7 @@ std::shared_ptr<FunctionNode> GraphAutogradEngine::AddBackwardFuncPtr(
   // Firstly push function_node of tensor in stack which is leaf and requires_grad
   for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
     if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { AddAccumulateFunctionNode(in_tensor); }
+      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
     }
   }
 
