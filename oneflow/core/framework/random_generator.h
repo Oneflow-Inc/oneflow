@@ -40,15 +40,17 @@ constexpr uint64_t default_rng_seed_val = 67280421310721;
 class GeneratorImpl {
  public:
   GeneratorImpl() = default;
+  GeneratorImpl(const uint64_t& seed, const std::string& device_type)
+      : seed_(seed), device_type_(device_type) {}
   virtual ~GeneratorImpl() = default;
 
-  virtual void set_seed(const uint64_t seed) = 0;
-  virtual uint64_t get_seed() const { return seed_; }
-  virtual const std::string& device_type() const { return device_type_; }
+  virtual void set_seed(uint64_t seed) = 0;
+  const uint64_t& get_seed() const { return seed_; }
+  const std::string& device_type() const { return device_type_; }
 
  protected:
-  std::string device_type_;
   uint64_t seed_;
+  std::string device_type_;
 };
 
 template<DeviceType device_type>
@@ -56,12 +58,9 @@ class DeviceGeneratorImpl;
 
 class AutoGeneratorImpl : public GeneratorImpl {
  public:
-  AutoGeneratorImpl(uint64_t seed) {
-    seed_ = seed;
-    device_type_ = "auto";
-  }
+  AutoGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, "auto") {}
 
-  void set_seed(const uint64_t seed) override {
+  void set_seed(uint64_t seed) override {
     seed_ = seed;
     for (const auto& it : generators_) { it.second->set_seed(seed); }
   }
@@ -85,13 +84,10 @@ class AutoGeneratorImpl : public GeneratorImpl {
 template<>
 class DeviceGeneratorImpl<DeviceType::kCPU> : public GeneratorImpl {
  public:
-  DeviceGeneratorImpl(uint64_t seed) : mt19937_generator_(seed) {
-    seed_ = seed;
-    device_type_ = DeviceType::kCPU;
-  }
+  DeviceGeneratorImpl(uint64_t seed) : GeneratorImpl(seed, "cpu"), mt19937_generator_(seed) {}
   virtual ~DeviceGeneratorImpl() = default;
 
-  void set_seed(const uint64_t seed) override {
+  void set_seed(uint64_t seed) override {
     seed_ = seed;
     mt19937_generator_.seed(seed_);
   }
@@ -114,7 +110,7 @@ class DeviceGeneratorImpl<DeviceType::kGPU> : public GeneratorImpl {
   curandState* curand_states() const { return curand_states_; }
   void CudaRandInit(uint64_t seed);
 
-  void set_seed(const uint64_t seed) override {
+  void set_seed(uint64_t seed) override {
     seed_ = seed;
     CudaRandInit(seed_);
   }
@@ -124,7 +120,7 @@ class DeviceGeneratorImpl<DeviceType::kGPU> : public GeneratorImpl {
   int32_t block_num_;
   int32_t thread_num_;
 };
-#endif
+#endif  // WITH_CUDA
 
 class Generator final {
  public:
@@ -134,18 +130,22 @@ class Generator final {
   void init(std::string device, uint64_t seed) {
     if (device == "cpu") {
       gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kCPU>>(seed);
-    } else if (device == "cuda") {
+    }
+#ifdef WITH_CUDA
+    else if (device == "cuda") {
       gen_impl_ = std::make_shared<DeviceGeneratorImpl<DeviceType::kGPU>>(seed);
-    } else if (device == "auto") {
+    }
+#endif  // WITH_CUDA
+    else if (device == "auto") {
       gen_impl_ = std::make_shared<AutoGeneratorImpl>(seed);
     } else {
       UNIMPLEMENTED() << " device unimplemented, device name: " << device;
     }
   }
 
-  void set_seed(const uint64_t seed) { gen_impl_->set_seed(seed); }
+  void set_seed(uint64_t seed) { gen_impl_->set_seed(seed); }
 
-  uint64_t get_seed() const { return gen_impl_->get_seed(); }
+  const uint64_t& get_seed() const { return gen_impl_->get_seed(); }
 
   uint64_t seed() {
     uint64_t seed = getNonDeterministicRandom();
@@ -157,12 +157,12 @@ class Generator final {
   std::shared_ptr<GeneratorImpl> gen_impl_;
 };
 
-const std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
+std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed);
 
 const std::shared_ptr<AutoGeneratorImpl>& GetDefaultAutoGenerator();
 
 template<DeviceType device_type>
-const std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
+std::shared_ptr<DeviceGeneratorImpl<device_type>> CreateDeviceGenerator(uint64_t seed) {
   return std::make_shared<DeviceGeneratorImpl<device_type>>(seed);
 }
 

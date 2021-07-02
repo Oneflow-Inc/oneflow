@@ -44,14 +44,14 @@ void manual_seed(uint64_t seed) {
 #ifdef WITH_CUDA
   const auto& cuda_gen = GetDefaultDeviceGenerator<DeviceType::kGPU>();
   cuda_gen->set_seed(seed);
-#endif
+#endif  // WITH_CUDA
   const auto& cpu_gen = GetDefaultDeviceGenerator<DeviceType::kCPU>();
   cpu_gen->set_seed(seed);
   const auto& auto_gen = GetDefaultAutoGenerator();
   auto_gen->set_seed(seed);
 }
 
-const std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
+std::shared_ptr<AutoGeneratorImpl> CreateAutoGenerator(uint64_t seed) {
   return std::make_shared<AutoGeneratorImpl>(seed);
 }
 
