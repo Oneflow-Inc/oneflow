@@ -62,11 +62,10 @@ def api_env_init() -> bool:
 def env_init():
     global default_env_proto
     assert len(default_env_proto.machine) > 0
-    is_multi_client = IsMultiClient()
+    is_multi_client = _DetectIsMultiClientByEnvVarsAndUpdateEnvProto()
     CompleteEnvProto(default_env_proto)
     c_api_util.InitEnv(default_env_proto, is_multi_client)
     if is_multi_client:
-        # scope_util.InitScopeStack()
         pass
     else:
         if oneflow._oneflow_internal.CurrentMachineId() == 0:
@@ -400,7 +399,7 @@ def GetEnvDefaultParallelConf(device_tag):
     return device_tag2default_parallel_conf[device_tag]
 
 
-def IsMultiClient():
+def _DetectIsMultiClientByEnvVarsAndUpdateEnvProto():
     if (
         os.getenv("MASTER_ADDR")
         and os.getenv("MASTER_PORT")
