@@ -36,7 +36,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(input_num_axes, index_num_axes);
 
   // split_axs should NOT equals dim when in consistent view
-  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
   auto is_split = in_sbp.has_split_parallel();
   if (ctx->parallel_ctx().parallel_num() != 1 && is_split) {
     int64_t split_axis = in_sbp.split_parallel().axis();
@@ -65,7 +65,6 @@ void GatherInputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 }
-
 
 Maybe<void> BuildSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
@@ -113,7 +112,6 @@ REGISTER_USER_OP("dim_gather")
       return Maybe<void>::Ok();
     })
     .SetGetSbpFn(BuildSbp);
-
 
 REGISTER_USER_OP_GRAD("dim_gather").SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) {
   const auto op_grad_name = ctx->FwOp().op_name() + "_grad";

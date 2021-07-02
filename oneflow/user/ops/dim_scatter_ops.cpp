@@ -32,7 +32,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
-  const SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
+  const cfg::SbpParallel& input_sbp = ctx->SbpParallel4ArgNameAndIndex("input", 0);
   int64_t split_axis = input_sbp.split_parallel().axis();
   if (ctx->parallel_ctx().parallel_num() != 1 && input_sbp.has_split_parallel()) {
     CHECK_NE_OR_RETURN(split_axis, dim) << "split_axis should NOT equal dim";
@@ -70,7 +70,7 @@ Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierF
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* like_arg_modifier = GetInputArgModifierFn("like", 0);
   CHECK(like_arg_modifier != nullptr);
-  like_arg_modifier->set_use_header_only(true);
+  // like_arg_modifier->set_use_header_only(true);
   like_arg_modifier->set_requires_grad(false);
 
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
@@ -88,13 +88,6 @@ Maybe<void> InplaceInputArgModifierFn(user_op::GetInputArgModifier GetInputArgMo
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
   CHECK(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> InferBatchAxis(user_op::BatchAxisContext* ctx) {
-  CHECK_OR_RETURN(*ctx->BatchAxis4ArgNameAndIndex("index", 0)
-                  == *ctx->BatchAxis4ArgNameAndIndex("input", 0));
-  *ctx->BatchAxis4ArgNameAndIndex("output", 0) = *ctx->BatchAxis4ArgNameAndIndex("input", 0);
   return Maybe<void>::Ok();
 }
 
@@ -118,6 +111,28 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
 }
 }  // namespace
 
+// #define REGISTER_SCATTER_LIKE_OP(optypename)   \
+//   REGISTER_USER_OP(optypename)                 \
+//       .Input("like")                           \
+//       .Input("input")                          \
+//       .Input("index")                          \
+//       .Output("output")                        \
+//       .Attr<int32_t>("dim")                    \
+//       .SetTensorDescInferFn(InferTensorDesc)   \
+//       .SetInputArgModifyFn(InputArgModifierFn) \
+//       .SetGetSbpFn(SetSbpLike)
+
+// #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
+//   REGISTER_USER_OP(optypename)                        \
+//       .OptionalInput("src")                           \
+//       .Input("input")                                 \
+//       .Input("index")                                 \
+//       .Output("output")                               \
+//       .Attr<int32_t>("dim")                           \
+//       .SetTensorDescInferFn(InferTensorDesc)          \
+//       .SetInputArgModifyFn(InplaceInputArgModifierFn) \
+//       .SetGetSbpFn(SetSbpInplace)
+
 #define REGISTER_SCATTER_LIKE_OP(optypename)   \
   REGISTER_USER_OP(optypename)                 \
       .Input("like")                           \
@@ -126,8 +141,6 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
       .Output("output")                        \
       .Attr<int32_t>("dim")                    \
       .SetTensorDescInferFn(InferTensorDesc)   \
-      .SetInputArgModifyFn(InputArgModifierFn) \
-      .SetBatchAxisInferFn(InferBatchAxis)     \
       .SetGetSbpFn(SetSbpLike)
 
 #define REGISTER_SCATTER_INPLACE_OP(optypename)       \
@@ -138,9 +151,8 @@ Maybe<void> SetSbpInplace(user_op::SbpContext* ctx) {
       .Output("output")                               \
       .Attr<int32_t>("dim")                           \
       .SetTensorDescInferFn(InferTensorDesc)          \
-      .SetInputArgModifyFn(InplaceInputArgModifierFn) \
-      .SetBatchAxisInferFn(InferBatchAxis)            \
       .SetGetSbpFn(SetSbpInplace)
+
 
 #define REGISTER_USER_OP_GRAD_SCATTER(optypename)                                        \
   REGISTER_USER_OP_GRAD(optypename)                                                      \

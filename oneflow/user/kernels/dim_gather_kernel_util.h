@@ -37,7 +37,6 @@ limitations under the License.
 //
 // 5. Register kernels in dim_gather_kernels.cpp:
 //    REGISTER_GATHER_OUTPLACE_KERNEL("dim_gather_mul_like", Mul);
-=======
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/atomic.cuh"
 #endif  // WITH_CUDA
