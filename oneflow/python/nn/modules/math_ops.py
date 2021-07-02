@@ -1695,18 +1695,6 @@ def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True
     return Topk(k=k, dim=dim, largest=largest, sorted=sorted)(input)
 
 
-@oneflow_export("return_first_input")
-@experimental_api
-def return_first_input(*args):
-    op = (
-        flow.builtin_op("return_first_input")
-        .Input("in", len(args))
-        .Output("out")
-        .Build()
-    )
-    return op(*args)[0]
-
-
 if __name__ == "__main__":
     import doctest
 

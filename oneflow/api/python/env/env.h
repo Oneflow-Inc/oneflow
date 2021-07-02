@@ -57,7 +57,6 @@ inline Maybe<void> DestroyDefaultEnv() {
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get());
   if (!GlobalProcessCtx::IsMultiClient()) {
     if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
   } else {

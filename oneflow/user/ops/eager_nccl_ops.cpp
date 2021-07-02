@@ -14,17 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
-Maybe<Symbol<Device>> DeviceInferFn(user_op::DeviceInferContext* ctx) {
-  *ctx->OutputTensorDevice4ArgNameAndIndex("out", 0) =
-      ctx->InputTensorDevice4ArgNameAndIndex("in", 0);
-  return Device::New("nccl");
-}
-
-REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
+REGISTER_USER_OP("eager_nccl_all_reduce")
     .Input("in")
     .Output("out")
     .Attr<std::string>("parallel_conf")
@@ -32,7 +25,6 @@ REGISTER_NO_GRAD_USER_OP("eager_nccl_all_reduce")
       *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
       return Maybe<void>::Ok();
     })
-    .SetDeviceInferFn(DeviceInferFn)
     .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
       ctx->NewBuilder()
           .PartialSum(user_op::OpArg("in", 0))

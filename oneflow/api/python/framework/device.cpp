@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/control/global_process_ctx.h"
 
 namespace py = pybind11;
 
@@ -30,7 +29,7 @@ struct DeviceExportUtil final {
     std::string::size_type pos = type_and_id.find(':');
     if (pos == std::string::npos) { pos = type_and_id.size(); }
     std::string type = type_and_id.substr(0, pos);
-    int device_id = type == "cpu" ? 0 : GlobalProcessCtx::LocalRank();
+    int device_id = 0;
     if (pos < type_and_id.size()) {
       std::string id = type_and_id.substr(pos + 1);
       if (!IsStrInt(id)) { throw std::runtime_error("Invalid device string: " + type_and_id); }
