@@ -23,7 +23,7 @@ import oneflow.experimental as flow
 from test_util import GenArgList
 
 
-def _test_diag_dimen_forward(test_case, shape, diagonal, device):
+def _test_diag_forward(test_case, shape, diagonal, device):
     input = flow.Tensor(np.random.randn(*shape), device=flow.device(device))
     of_out = flow.diag(input, diagonal)
     np_out = np.diag(input.numpy(), diagonal)
@@ -38,7 +38,7 @@ def _test_diag_dimen_forward(test_case, shape, diagonal, device):
     )
 
 
-def _test_diag_one_dimen_backward(test_case, diagonal, device):
+def _test_diag_one_dim_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3), device=flow.device(device), requires_grad=True
     )
@@ -60,7 +60,7 @@ def _test_diag_one_dimen_backward(test_case, diagonal, device):
     )
 
 
-def _test_diag_other_dimen_backward(test_case, diagonal, device):
+def _test_diag_other_dim_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3, 3), device=flow.device(device), requires_grad=True
     )
@@ -92,7 +92,7 @@ def _test_diag_other_dimen_backward(test_case, diagonal, device):
     )
 
 
-def _test_diag_other_dimen_non_square_backward(test_case, diagonal, device):
+def _test_diag_other_dim_non_square_backward(test_case, diagonal, device):
     input = flow.Tensor(
         np.random.randn(3, 4), device=flow.device(device), requires_grad=True
     )
@@ -143,14 +143,14 @@ class TestDiag(flow.unittest.TestCase):
         arg_dict["diagonal"] = [1, 0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
-            _test_diag_dimen_forward(test_case, *arg[0:])
+            _test_diag_forward(test_case, *arg[0:])
 
     def test_diag_backward(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_diag_one_dimen_backward,
-            _test_diag_other_dimen_backward,
-            _test_diag_other_dimen_non_square_backward,
+            _test_diag_one_dim_backward,
+            _test_diag_other_dim_backward,
+            _test_diag_other_dim_non_square_backward,
         ]
         arg_dict["diagonal"] = [1, 0, -1]
         arg_dict["device"] = ["cpu", "cuda"]
