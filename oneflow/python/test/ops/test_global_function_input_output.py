@@ -44,16 +44,7 @@ def _test_input_ndarray_not_contiguous(test_case, shape):
             slice_list.append(slice(None))
 
     slice_input = input[tuple(slice_list)]
-    assert (
-        not slice_input.data.contiguous
-    ), "shape: {}\nslice axis: {}, start~stop: {}~{}\nsliced shape: {}\nflags:\n{}".format(
-        shape,
-        rand_axis,
-        rand_dim_slice_start,
-        rand_dim_slice_stop,
-        slice_input.shape,
-        slice_input.flags,
-    )
+    test_case.assertFalse(slice_input.data.c_contiguous)
 
     flow.clear_default_session()
 
@@ -79,6 +70,8 @@ def _test_input_ndarray_not_contiguous(test_case, shape):
         return y
 
     transpose_input = input.T
+    test_case.assertFalse(transpose_input.data.c_contiguous)
+
     ret = foo_job(transpose_input).get()
     test_case.assertTrue(ret.numpy().data.c_contiguous)
     test_case.assertTrue(np.array_equal(ret.numpy(), transpose_input + 1.0))
