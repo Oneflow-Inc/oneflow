@@ -510,7 +510,7 @@ if __name__ == "__main__":
             )
         )
     default_docker_image = "oneflow-test:$USER"
-    ci_user_docker_image = "oneflow-test:0.1"
+    ci_user_docker_image = "oneflow-test:0.2"
     img_tag = None
     if args.custom_img_tag == None:
         if is_img_existing(default_docker_image):
