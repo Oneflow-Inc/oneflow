@@ -159,7 +159,7 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/gh-action-scheduler-v2@90d574ebc5df68a6333b6f607042278ffb19c8e4
+      - uses: Oneflow-Inc/gh-action-scheduler-v2@00f7b818d4ba10363d55d163a9827ec9132aba0f
         name: Wait for GPU slot
         if: env.is_secrets_accessible == '1'
         env:
