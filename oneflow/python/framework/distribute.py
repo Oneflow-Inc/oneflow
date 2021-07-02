@@ -22,7 +22,6 @@ from oneflow.python.oneflow_export import (
     oneflow_export,
     oneflow_deprecate,
     oneflow_export_value,
-    experimental_api,
 )
 import oneflow._oneflow_internal
 import traceback
